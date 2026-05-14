@@ -6,33 +6,191 @@ chapter: 3
 examples:
   - render-targets/bloom-lite
   - render-targets/post-processing-chain
-  - render-targets/trail-feedback
-  - render-targets/water-mirror
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 6.3 Post-processing
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Post-processing gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Post-processing means rendering a scene — or parts of one — into off-screen [`RenderTexture`](/ExoJS/en/api/render-texture/) targets, running filters on those targets, and compositing the results back onto the canvas. This is the pattern behind bloom, color grading, motion trails, screen-wide shader effects, and any multi-pass render flow where a filter treats the whole scene as one image.
+
+The building blocks — `RenderTexture`, `Filter`, `RenderTargetPass` — are already covered in their own chapters. This chapter is about composition: how to chain passes so the GPU produces a final frame that is more than the sum of individually drawn sprites.
+
+## A single post-process pass
+
+The minimal pattern: render your scene into a `RenderTexture`, apply a filter, display the result:
+
+```js
+import { BlurFilter, RenderTargetPass, RenderTexture, Sprite } from '@codexo/exojs';
+
+init(loader) {
+    this.sceneRt = new RenderTexture(800, 600);
+    this.blur = new BlurFilter({ radius: 4, quality: 2 });
+    this.blurredRt = new RenderTexture(800, 600);
+    this.final = new Sprite(this.blurredRt);
+}
+
+draw(backend) {
+    // 1. Render the full scene into sceneRt
+    backend.execute(new RenderTargetPass(
+        () => {
+            backend.clear();
+            this.worldLayer.render(backend);
+        },
+        { target: this.sceneRt, view: this.sceneRt.view }
+    ));
+
+    // 2. Apply blur: sceneRt → filter → blurredRt
+    this.blur.apply(backend, this.sceneRt, this.blurredRt);
+
+    // 3. Display the result on the canvas
+    backend.clear();
+    this.final.render(backend);
+}
+```
+
+[`RenderTargetPass`](/ExoJS/en/api/render-target-pass/) wraps a draw callback and redirects its output to a target texture. `backend.execute()` runs the pass immediately. `filter.apply(backend, inputRt, outputRt)` reads from one `RenderTexture` and writes filtered output to another.
+
+## Bloom (lite)
+
+Bloom requires two renderings of the same scene: one at normal brightness (the base), one with only the bright parts tinted and blurred (the glow). The glow is composited additively over the base:
+
+```js
+init(loader) {
+    this.baseRt = new RenderTexture(800, 600);
+    this.glowRt = new RenderTexture(800, 600);
+    this.blurredRt = new RenderTexture(800, 600);
+
+    this.baseSprite = new Sprite(this.baseRt);
+    this.glowSprite = new Sprite(this.blurredRt)
+        .setTint(new Color(255, 255, 255, 0.8))
+        .setBlendMode(BlendModes.Additive);
+
+    this.blur = new BlurFilter({ radius: 10, quality: 2 });
+}
+
+draw(backend) {
+    // Pass 1: base scene at normal tint
+    backend.execute(new RenderTargetPass(
+        () => {
+            backend.clear();
+            this.bunny.setTint(Color.white);
+            this.bunny.render(backend);
+        },
+        { target: this.baseRt, view: this.baseRt.view }
+    ));
+
+    // Pass 2: glow scene — same geometry, bright warm tint
+    backend.execute(new RenderTargetPass(
+        () => {
+            backend.clear();
+            this.bunny.setTint(new Color(255, 230, 190));
+            this.bunny.render(backend);
+        },
+        { target: this.glowRt, view: this.glowRt.view }
+    ));
+
+    // Pass 3: blur the glow
+    this.blur.apply(backend, this.glowRt, this.blurredRt);
+
+    // Composite: base + blurred glow (additive)
+    backend.clear();
+    this.baseSprite.render(backend);
+    this.glowSprite.render(backend);
+}
+```
+
+The key insight: the glow pass renders the same geometry with a bright tint. Only the bright regions survive into the blurred glow — the dark regions have near-zero contribution. The additive blend mode prevents the glow from over-brightening the base.
+
+## Filter chains on a render target
+
+Instead of a single filter, pass the output through a chain:
+
+```js
+const blur = new BlurFilter({ radius: 6, quality: 2 });
+const color = new ColorFilter(new Color(140, 190, 255));
+
+// Render scene → sceneRt
+backend.execute(new RenderTargetPass(
+    () => { backend.clear(); this.scene.render(backend); },
+    { target: this.sceneRt, view: this.sceneRt.view }
+));
+
+// sceneRt → blur → tmpRt
+blur.apply(backend, this.sceneRt, this.tmpRt);
+
+// tmpRt → color → outRt
+color.apply(backend, this.tmpRt, this.outRt);
+
+// Display outRt
+backend.clear();
+this.final.render(backend);
+```
+
+Each `filter.apply()` call is one additional render pass. For a chain of N filters you need N `RenderTexture` instances (or fewer if you reuse them for subsequent steps — the engine reuses render target memory across filter passes internally when filters are on a `RenderNode`, but explicit `filter.apply()` calls require explicit texture management).
+
+## Trail feedback
+
+Reuse a render target as its own input to create motion trails:
+
+```js
+init(loader) {
+    this.feedbackRt = new RenderTexture(800, 600);
+    this.decay = new Sprite(this.feedbackRt)
+        .setTint(new Color(255, 255, 255, 0.93));  // 93% opaque = 7% fade per frame
+    this.hero = new Sprite(loader.get(Texture, 'hero')).setAnchor(0.5);
+    this.final = new Sprite(this.feedbackRt);
+}
+
+draw(backend) {
+    // Draw the previous frame (at 93% opacity) plus the hero on top
+    backend.execute(new RenderTargetPass(
+        () => {
+            this.decay.render(backend);
+            this.hero.render(backend);
+        },
+        { target: this.feedbackRt, view: this.feedbackRt.view }
+    ));
+
+    // Display the result
+    backend.clear();
+    this.final.render(backend);
+}
+```
+
+Each frame, the previous frame's image fades slightly (the decay sprite's alpha=0.93), and the hero's current position is drawn on top. After several frames, older positions fade away while newer ones remain visible — a self-erasing trail. The same technique works for light streaks, ghost images, and feedback-based shader effects.
+
+## RenderTargetPass vs. filter.apply
+
+Two ways to write into a `RenderTexture`:
+
+| Method | What it does |
+|---|---|
+| `backend.execute(RenderTargetPass)` | Runs a draw callback with the target set as active render target. Used for *scene rendering*. |
+| `filter.apply(backend, inputRt, outputRt)` | Runs the filter shader/program on an input texture, producing filtered output. Used for *post-render passes*. |
+
+You compose them: render scenes with `RenderTargetPass`, apply filters with `filter.apply`, display the final result with a sprite.
+
+## When to use per-node filters vs. post-processing
+
+- Per-node filter (`sprite.filters = [blur]`): Filter affects one drawable's rendered output. Good for that one glowing character in an otherwise sharp scene.
+- Post-processing: Filter affects the entire scene rendered into a target. Good for screen-wide effects — bloom, color grading, CRT simulation.
+- Both together: Per-node filters for individual effects, post-processing chain for scene-wide compositing.
+
+The cost is in passes. A post-processing chain with 3 RTS and 2 filters costs at least 4 passes (scene render + filter A + filter B + final composite). Per-node filters cost 1 pass per filtered node per frame. The render pipeline debugger ([7.6 Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/)) helps you count these.
 
 ## Examples
 
 <a id="bloom-lite"></a>
 <ExamplePreview chapter="render-targets" slug="bloom-lite" />
-Bloom Lite isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+A moving bunny with bloom: base pass, glow pass, blur of glow, additive composite.
 
 <a id="post-processing-chain"></a>
 <ExamplePreview chapter="render-targets" slug="post-processing-chain" />
-Post Processing Chain isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="trail-feedback"></a>
-<ExamplePreview chapter="render-targets" slug="trail-feedback" />
-Trail Feedback isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Two animating circles rendered into a `RenderTexture`, then blurred, then tinted, then displayed.
 
-<a id="water-mirror"></a>
-<ExamplePreview chapter="render-targets" slug="water-mirror" />
-Water Mirror isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+## Where to go next
 
-{/* TODO: prose */}
-
+The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/), covers attaching custom GLSL or WGSL shaders to `Mesh` drawables — the geometry-space complement to the screen-space filter and post-processing techniques covered here.

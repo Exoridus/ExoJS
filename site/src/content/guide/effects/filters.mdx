@@ -5,64 +5,159 @@ part: 6
 chapter: 1
 examples:
   - filters/blur-filter
-  - filters/chromatic-aberration
-  - filters/color-filter
-  - filters/crt-scanlines
-  - filters/custom-fragment-shader
   - filters/filter-stack
-  - filters/metaballs
-  - filters/noise-vignette
-  - filters/palette-cycling
-  - showcase/color-grading
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 6.1 Filters
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Filters gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A [`Filter`](/ExoJS/en/api/filter/) is a post-render effect applied to a single drawable's output. Every `RenderNode` — sprites, containers, graphics, meshes, text — carries a `filters` array. Each filter in that array transforms the node's rendered pixels before the result composites into the parent.
+
+Filters are the right tool for per-node visual effects: soften an avatar with blur, tint a background container, apply a CRT shader to a whole scene layer. They are not screen-wide post-processing — that belongs to [Post-processing](/ExoJS/en/guide/effects/post-processing/), which combines `RenderTexture` targets with filter chains. The relationship: a filter is the building block; post-processing is the composition technique.
+
+## Attaching filters
+
+Filters go on the drawable. The array is processed in order — filter 0 receives the node's raw render, filter 1 receives filter 0's output, and so on:
+
+```js
+import { BlurFilter, ColorFilter } from '@codexo/exojs';
+
+const blur = new BlurFilter({ radius: 3, quality: 2 });
+const tint = new ColorFilter(new Color(140, 210, 255));
+
+sprite.filters = [blur, tint];
+```
+
+Set `filters` to an empty array to clear the chain. Assigning a new array replaces the old one — you don't need to manually remove individual filters. A null or empty array means no extra render passes.
+
+Each filter in the chain costs one additional render pass per frame for that drawable. Three filters on a container means three extra passes. The [Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/) chapter covers pass-count inspection and reduction strategies.
+
+## BlurFilter
+
+A box blur, not a shader — it works by rendering the input texture multiple times at symmetric pixel offsets with additive blending. Higher quality produces more offset samples per axis and a smoother result at the cost of more draw calls:
+
+```js
+const blur = new BlurFilter({ radius: 4, quality: 2 });
+sprite.filters = [blur];
+
+// Live — animate the radius without reconstructing anything
+blur.radius = tween.progress * 12;
+blur.quality = 3;
+```
+
+`radius` clamps to >= 0 (0 = no blur). `quality` floors to >= 1 and controls sample count: `quality * 2 + 1` samples per axis. For most cases quality 1 or 2 is sufficient — higher values are useful for large-radius fast-moving blurs where undersampling creates visible gaps.
+
+## ColorFilter
+
+Multiplies the rendered output by a tint color. The simplest filter — one multiplicative blend:
+
+```js
+const color = new ColorFilter(new Color(255, 160, 120));
+sprite.filters = [color];
+
+// Live — mutate the color without rebuilding anything
+color.color.setRGB(180, 220, 255);
+```
+
+Use for tinting, flash effects, fade-to-black, or any per-drawable color manipulation that should happen after the node's own tint and blend mode are applied.
+
+## LutFilter
+
+Maps every pixel through a Look-Up Table texture. Two modes:
+
+- **1D LUT** (palette): `N×1` texture, indexed by a single channel. Palette cycling, posterisation, indexed-color effects.
+- **3D LUT** (color grading): `N²×N` unwrapped cube texture with trilinear interpolation. Cinematic color grading, film stock emulation, tone mapping.
+
+```js
+import { LutFilter } from '@codexo/exojs';
+
+// From a DaVinci/OBS/Photoshop-exported PNG strip
+const lutTexture = LutFilter.fromImage(myPngImage);
+const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lutTexture);
+sprite.filters = [filter];
+
+// Switch LUTs live without rebuilding the filter
+filter.setLut(differentLutTexture);
+```
+
+`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with the correct sampling parameters (nearest, clamp, no mip). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation.
+
+## Custom shader filters
+
+`WebGl2ShaderFilter` and `WebGpuShaderFilter` accept a fragment shader source and an optional uniforms map. They render a fullscreen quad and execute the shader against the filter input texture:
+
+```js
+import { WebGl2ShaderFilter } from '@codexo/exojs';
+
+const waveFilter = new WebGl2ShaderFilter({
+    fragmentSource: `
+        #version 300 es
+        precision mediump float;
+        uniform sampler2D uTexture;
+        uniform float uTime;
+        in vec2 vUv;
+        out vec4 fragColor;
+
+        void main() {
+            vec2 uv = vUv;
+            uv.y += sin(uv.x * 12.0 + uTime * 3.0) * 0.03;
+            fragColor = texture(uTexture, uv);
+        }
+    `,
+    uniforms: { uTime: 0 },
+});
+
+sprite.filters = [waveFilter];
+
+// Update uniforms per frame
+update(delta) {
+    this._time += delta.seconds;
+    waveFilter.uniforms.uTime = this._time;
+}
+```
+
+Use `WebGpuShaderFilter` identically for WebGPU — same `fragmentSource` and `uniforms` shape, only the shader language differs (WGSL instead of GLSL). For backend-portable filters, construct the appropriate variant based on `app.backend.backendType`.
+
+Both auto-bind `uTexture` (the filter input) and `uResolution` (output dimensions) — you don't declare these in your fragment source unless you want to read them. Custom uniforms are set from the `uniforms` map before each pass. Accepted value types: `number`, `[n, n]`/`[n, n, n]`/`[n, n, n, n]` tuples, `Float32Array`, `Int32Array`, `Texture`, and `RenderTexture`.
+
+## Composition and layering
+
+Filters on a `Container` apply to the container's entire rendered subtree — every child is drawn into an off-screen target first, then the filter chain processes that target. A blur on a container blurs all children together, not individually:
+
+```js
+const world = new Container();
+world.filters = [new BlurFilter({ radius: 2 })];
+world.addChild(hero);   // hero is drawn into container's RT, then blurred
+world.addChild(enemy);  // enemy is drawn into same RT, then blurred
+```
+
+Filters on individual children inside an unfiltered container each get their own pass. The cost model: one filtered container with N children costs 1 + filter_count passes (children batch into one RT). N individually filtered children cost N * (1 + filter_count) passes.
+
+For static subtrees that don't change every frame, set `container.cacheAsBitmap = true`. The filter chain bakes once and subsequent frames skip the per-frame re-rendering — one texture draw instead of the full subtree + filters.
+
+## Filters vs. MeshShader
+
+A filter transforms a drawable's rendered pixels — it operates on the 2D output, in screen texture space. A `MeshShader` replaces the drawable's vertex and fragment stages entirely — it operates in geometry space. The distinction matters:
+
+- Use a filter for post-render effects: blur, tint, color grade, CRT scanlines, vignette.
+- Use a `MeshShader` for per-vertex effects: displacement, custom lighting, procedural geometry.
+- Use both together: a `MeshShader` on the mesh, plus a filter on the mesh's parent container.
+
+The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/), covers `MeshShader` in detail.
 
 ## Examples
 
 <a id="blur-filter"></a>
 <ExamplePreview chapter="filters" slug="blur-filter" />
-Blur Filter isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="chromatic-aberration"></a>
-<ExamplePreview chapter="filters" slug="chromatic-aberration" />
-Chromatic Aberration isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="color-filter"></a>
-<ExamplePreview chapter="filters" slug="color-filter" />
-Color Filter isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="crt-scanlines"></a>
-<ExamplePreview chapter="filters" slug="crt-scanlines" />
-Crt Scanlines isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="custom-fragment-shader"></a>
-<ExamplePreview chapter="filters" slug="custom-fragment-shader" />
-Custom Fragment Shader isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A single `BlurFilter` with an interactive radius slider — the basic filter pattern.
 
 <a id="filter-stack"></a>
 <ExamplePreview chapter="filters" slug="filter-stack" />
-Filter Stack isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="metaballs"></a>
-<ExamplePreview chapter="filters" slug="metaballs" />
-Metaballs isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Three filters chained on one sprite — blur, tint, and a custom shader — demonstrating filter ordering and composition.
 
-<a id="noise-vignette"></a>
-<ExamplePreview chapter="filters" slug="noise-vignette" />
-Noise Vignette isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+## Where to go next
 
-<a id="palette-cycling"></a>
-<ExamplePreview chapter="filters" slug="palette-cycling" />
-Palette Cycling isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="color-grading"></a>
-<ExamplePreview chapter="showcase" slug="color-grading" />
-Color Grading isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-{/* TODO: prose */}
-
+The next chapter, [Particles](/ExoJS/en/guide/effects/particles/), covers the data-oriented particle system — spawn modules, update modules, distributions, and CPU/GPU auto-routing.

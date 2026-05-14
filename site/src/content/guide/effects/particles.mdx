@@ -4,45 +4,215 @@ description: 'Spawn and tune particle systems for environmental and reactive eff
 part: 6
 chapter: 2
 examples:
-  - particles/bonfire
-  - particles/cursor-attractor-particles
-  - particles/custom-wgsl-module
   - particles/emitter-basics
-  - particles/fireworks
-  - particles/gpu-particles
+  - particles/bonfire
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 6.2 Particles
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Particles gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A [`ParticleSystem`](/ExoJS/en/api/particle-system/) is a `Drawable` that manages thousands of animated sprites with data-oriented performance. Instead of creating and destroying individual `Sprite` instances per particle, the system stores particle state in parallel typed arrays (Struct-of-Arrays) and mutates them in bulk. This keeps the work per-particle extremely lean — no allocations, no GC pressure, no per-sprite transform tree overhead.
+
+The mental model: you register modules that describe how particles *spawn*, what they *do over their lifetime*, and what happens when they *die*. The system calls those modules each frame against its internal arrays. You never write a per-particle `update` loop.
+
+## Construction
+
+A particle system needs a texture and a capacity:
+
+```js
+import { ParticleSystem, Texture } from '@codexo/exojs';
+
+const system = new ParticleSystem(loader.get(Texture, 'spark'), {
+    capacity: 4000,
+});
+```
+
+`capacity` (default 4096) is the maximum number of particles the system can have alive at once. It's fixed at construction — the backing typed arrays are allocated immediately.
+
+The system is a `Drawable`, so it has a position, rotation, scale, tint, blend mode, and participates in the scene graph like any sprite:
+
+```js
+system.setPosition(400, 500);
+system.setBlendMode(BlendModes.Additive);
+```
+
+Particle positions are local to the system — setting the system's position moves the whole emitter.
+
+## Spawn modules
+
+A spawn module creates new particles each frame. Two built-in spawners cover the common cases:
+
+**`RateSpawn`** — continuous emission at a configurable rate (particles per second):
+
+```js
+import { ConeDirection, Constant, RateSpawn, Range, Vector } from '@codexo/exojs';
+
+system.addSpawnModule(new RateSpawn({
+    rate: new Constant(180),                            // 180 particles / second
+    lifetime: new Range(0.6, 1.4),                      // random lifetime in seconds
+    velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 70, 180),
+    scale: new Constant(new Vector(0.35, 0.35)),
+}));
+```
+
+**`BurstSpawn`** — named bursts at scheduled times, with optional looping:
+
+```js
+import { BurstSpawn } from '@codexo/exojs';
+
+system.addSpawnModule(new BurstSpawn({
+    schedule: [{ time: 0, count: 100 }],  // 100 particles at t=0
+    lifetime: new Range(0.5, 1.2),
+    velocity: new ConeDirection.omni(80, 240),  // full 360° spread
+    scale: new Constant(new Vector(0.4, 0.4)),
+}));
+
+// Re-trigger the burst schedule from t=0
+myBurst.reset();
+```
+
+Every spawn config property that takes a value — `lifetime`, `position`, `velocity`, `scale`, `rotation`, `rotationSpeed`, `tint`, `textureIndex` — accepts a `Distribution<T>` rather than a fixed value. Distributions are sampled per-particle at spawn time.
+
+## Distributions
+
+Distributions let each spawned particle get a different value. The most commonly used:
+
+| Distribution | What it produces |
+|---|---|
+| `Constant(value)` | The same value every time |
+| `Range(min, max)` | Uniform random number in `[min, max]` |
+| `VectorRange(xMin, xMax, yMin, yMax)` | Independent uniform random per axis |
+| `ConeDirection(angle, halfAngle, minSpeed, maxSpeed)` | Velocity vector within a directional cone |
+| `ConeDirection.omni(minSpeed, maxSpeed)` | Full 360° omnidirectional velocity |
+| `Curve(keys)` | Piecewise-linear spline evaluated over a particle's lifetime normalised progress (0..1) |
+| `Gradient(keys)` | Same as `Curve` but interpolates `Color` values |
+
+`Curve` and `Gradient` are `LifetimeFunction<T>` rather than `Distribution<T>` — they're evaluated with a normalised lifetime `t` in 0..1, not sampled at spawn. They're typically used with update modules, not spawn modules.
+
+## Update modules
+
+Update modules mutate particle state each frame. Every built-in update module that works on both backends declares a `wgsl()` contribution — when a WebGPU backend is active and every registered update module is GPU-eligible, the system auto-compiles a composite WGSL compute shader and runs the full update pipeline on the GPU in a single dispatch. When any module lacks a `wgsl()` contribution, or when running on WebGL2, the system falls back to CPU. You don't configure this — it's automatic.
+
+The frequently-used update modules:
+
+```js
+import {
+    AlphaFadeOverLifetime,
+    ApplyForce,
+    ColorOverLifetime,
+    Drag,
+    ScaleOverLifetime,
+    Turbulence,
+} from '@codexo/exojs';
+
+// Constant acceleration (gravity, wind)
+system.addUpdateModule(new ApplyForce(0, 240));
+
+// Speed-based drag
+system.addUpdateModule(new Drag(0.1));
+
+// Fade alpha over lifetime (requires a Curve)
+system.addUpdateModule(new AlphaFadeOverLifetime(
+    new Curve([{ t: 0, v: 1 }, { t: 1, v: 0 }])
+));
+
+// Full color interpolation over lifetime
+system.addUpdateModule(new ColorOverLifetime(
+    new Gradient([
+        { t: 0, color: new Color(255, 200, 100, 1) },
+        { t: 1, color: new Color(0, 0, 0, 0) },
+    ])
+));
+
+// Animated scale
+system.addUpdateModule(new ScaleOverLifetime(
+    new Curve([{ t: 0, v: 0.5 }, { t: 0.3, v: 1.2 }, { t: 1, v: 0.1 }])
+));
+
+// Procedural noise-based motion
+system.addUpdateModule(new Turbulence(30, 0.01));
+```
+
+Update modules must be registered before the first `update()` call. After that, the module list is locked. This is because GPU mode compiles the composite shader at first update — adding modules later would require a recompile.
+
+Other available update modules: `RotateOverLifetime`, `VelocityOverLifetime`, `AttractToPoint`, `RepelFromPoint`, `OrbitalForce`, `ColorOverSpeed`. The API reference documents each one's constructor options and GPU eligibility.
+
+## Death modules
+
+A death module fires once per particle when its lifetime expires. The only built-in death module is `SpawnOnDeath`:
+
+```js
+import { SpawnOnDeath } from '@codexo/exojs';
+
+system.addDeathModule(new SpawnOnDeath(
+    childSystem,     // target ParticleSystem
+    childBurst,       // SpawnModule that spawns into childSystem
+    3                 // spawn childBurst.apply(...) this many times
+));
+```
+
+`SpawnOnDeath` forwards the dying particle's position to the child system's spawn, so each child burst appears at the parent's death location.
+
+## Per-frame loop
+
+`ParticleSystem` is a `Drawable` — it renders itself when you call `system.render(backend)` in `draw`. Call `system.update(delta)` in your scene's `update`:
+
+```js
+update(delta) {
+    this.system.update(delta);
+}
+
+draw(backend) {
+    backend.clear();
+    this.system.render(backend);
+}
+```
+
+The update loop runs spawn modules, advances particle state (velocity integration, elapsed time), runs update modules, compacts dead particles, and — in GPU mode — uploads dirty slots and dispatches the compute shader. `render()` draws the system as a single instanced draw call, regardless of particle count.
+
+## SoA channels (direct access)
+
+For manual spawning or custom logic, the system exposes its internal arrays as public `readonly` references:
+
+```js
+system.posX[i]         // X position of particle i
+system.posY[i]         // Y position
+system.velX[i]         // X velocity
+system.velY[i]         // Y velocity
+system.scaleX[i]       // X scale factor
+system.scaleY[i]       // Y scale factor
+system.rotations[i]    // rotation in radians
+system.rotationSpeeds[i] // rotation speed in rad/s
+system.color[i]        // packed 0xAABBGGRR uint32
+system.elapsed[i]      // seconds since spawn
+system.lifetime[i]     // total lifetime; -1 sentinel = dead in GPU mode
+```
+
+Mutate these arrays directly if you need per-particle logic that doesn't fit a module. `system.spawn()` allocates one slot and returns its index (or -1 at capacity). `system.clearParticles()` resets to zero alive. `system.aliveCount` reports how many particles are currently active. `system.gpuMode` reports whether the GPU composite shader path is active.
+
+## GPU auto-routing
+
+The decision is per-system and automatic. When:
+1. A `WebGpuBackend` is active
+2. Every registered update module implements `wgsl()`
+
+...the system compiles a composite WGSL compute shader that integrates position, velocity, rotation, and every module's dynamic behavior in one dispatch, writing directly into the renderer's instance vertex buffer. No CPU readback in the steady state. The `gpu-particles` example demonstrates this at 60,000 particles.
+
+If conditions aren't met (WebGL2 backend, or any module without `wgsl()`), the system runs on CPU with the same API. Your scene code is identical — no branching, no backend checks.
 
 ## Examples
 
-<a id="bonfire"></a>
-<ExamplePreview chapter="particles" slug="bonfire" />
-Bonfire isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="cursor-attractor-particles"></a>
-<ExamplePreview chapter="particles" slug="cursor-attractor-particles" />
-Cursor Attractor Particles isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="custom-wgsl-module"></a>
-<ExamplePreview chapter="particles" slug="custom-wgsl-module" />
-Custom Wgsl Module isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
 <a id="emitter-basics"></a>
 <ExamplePreview chapter="particles" slug="emitter-basics" />
-Emitter Basics isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="fireworks"></a>
-<ExamplePreview chapter="particles" slug="fireworks" />
-Fireworks isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A single upward emitter with gravity and fade — `RateSpawn` + `ApplyForce` + `AlphaFadeOverLifetime`.
 
-<a id="gpu-particles"></a>
-<ExamplePreview chapter="particles" slug="gpu-particles" />
-Gpu Particles isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+<a id="bonfire"></a>
+<ExamplePreview chapter="particles" slug="bonfire" />
 
-{/* TODO: prose */}
+A bonfire effect with additive blending — `RateSpawn` with random position and upward velocity, plus `ColorOverLifetime` from ember-orange to transparent black.
 
+## Where to go next
+
+The next chapter, [Post-processing](/ExoJS/en/guide/effects/post-processing/), covers scene-wide multi-pass rendering — how to combine `RenderTexture` targets with filter chains for bloom, trails, and composited color grading.
