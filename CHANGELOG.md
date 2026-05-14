@@ -4,6 +4,58 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-05-14
+
+### Site / Guide
+
+- **Full English Guide complete through Parts 3–8.** Drawing (5 chapters),
+  Input (4), Audio (4), Effects (3), Advanced (5), and Recipes (8) are now
+  written, editorially consistent, and source-verified against the engine
+  API as shipped in v0.8.3.
+
+- **v0.8.3 feature chapters integrated.** Audio-reactive visualization (5.5),
+  Custom mesh shaders (6.4), and Render pipeline debugging (7.6) reflect the
+  `BeatDetector` visual getters, `AudioAnalyser` mel/log spectrum API,
+  `MeshShader` dual GLSL + WGSL class shape, and `RenderPassInspectorLayer`.
+
+- **Full-guide editorial and source/API verification pass.** All 38 drafted
+  chapters verified for internal consistency, correct API surface references,
+  and accurate example cross-links. Terminology, heading conventions, and
+  cross-part forward/backward references aligned in a single pass.
+
+- **39 English Guide routes verified across dark/light and desktop/mobile
+  screenshot matrix.** 156/156 captures successful (39 routes × 2 themes ×
+  2 viewports).
+
+### Release Tooling
+
+- **`scripts/release.mjs` replaced by `scripts/release.ts`.** Script is now
+  type-checked as part of the TypeScript codebase.
+
+- **`scripts/generate-release-notes.ts`.** New standalone tool that extracts
+  a version section from `CHANGELOG.md`, resolves the previous semver tag from
+  git history or the changelog, fills the `.github/templates/release-notes.md`
+  template, and writes the result to a specified output path. Exposed as
+  `npm run release:notes`.
+
+- **GitHub Releases now receive populated changelog-driven markdown bodies.**
+  The CI release workflow calls `release:notes` and passes the rendered file
+  to `gh release create --notes-file`.
+
+- **Historical tag support.** `release:notes` can generate notes for any past
+  tag (e.g., `v0.8.2`, `v0.8.3`) — useful for backfilling GitHub Release pages.
+
+- **Windows-safe `npm pack --dry-run` in `verify:package`.** The `--cache`
+  flag now points to a project-local `.npm-cache` directory, avoiding the
+  cross-user npm cache permission error that affected `verify:release` on
+  Windows CI.
+
+### Verification
+
+- Engine: typecheck clean, lint:strict 0/0, 1338/1338 tests, `verify:release` green.
+- Site: 494-page build clean, `check-ts` 0 errors / 0 warnings.
+- Screenshot smoke: 36/36. Guide visual matrix: 156/156 captures.
+
 ## [0.8.3] - 2026-05-10
 
 ### Engine — Rendering
