@@ -5,7 +5,6 @@ part: 4
 chapter: 2
 examples:
   - input/mouse-and-pointer
-  - input/multitouch
   - input/pointer-to-world
 ---
 
@@ -13,21 +12,186 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 4.2 Mouse and pointer
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Mouse and pointer gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+ExoJS unifies mouse, touch, and pen input under a single pointer system built on the browser's Pointer Events API. Every pointer is represented by a [`Pointer`](/ExoJS/en/api/pointer/) instance with a canvas-pixel position, button state, pressure, tilt, and a slot index. The [`InputManager`](/ExoJS/en/api/input-manager/) tracks up to 16 simultaneous pointers — enough for ten-finger multitouch, plus a mouse, plus a pen — with no additional configuration.
+
+## Pointer signals
+
+The application's input manager emits these pointer signals:
+
+| Signal | Fires when |
+|--------|------------|
+| `onPointerDown` | A pointer presses (mouse button down, finger touches, pen contacts) |
+| `onPointerMove` | A pointer moves while active |
+| `onPointerUp` | A pointer releases |
+| `onPointerTap` | A pointer releases within 500 ms without significant movement |
+| `onPointerSwipe` | A pointer releases after moving beyond the distance threshold |
+| `onPointerEnter` | A pointer enters the canvas boundary |
+| `onPointerLeave` | A pointer leaves the canvas boundary |
+| `onPointerCancel` | The browser cancels the pointer (interruption, gesture takeover) |
+
+Each signal's callback receives the `Pointer` instance:
+
+```js
+app.input.onPointerMove.add(pointer => {
+    this.crosshair.position.set(pointer.x, pointer.y);
+});
+
+app.input.onPointerTap.add(pointer => {
+    this.placeBuilding(pointer.x, pointer.y);
+});
+```
+
+The pointer's `position` is in canvas-local pixel space — `(0, 0)` is the top-left of the canvas, regardless of CSS size or page scroll.
+
+## Primary pointer convenience
+
+`Pointer.X`, `Pointer.Y`, and `Pointer.Active` are channel constants that always reference the primary pointer (normally the mouse, or the first finger to touch). These can be used with the binding API just like keyboard channels:
+
+```js
+this.inputs.onActive(Pointer.Active, () => {
+    this.isPointing = true;
+});
+this.inputs.onStop(Pointer.Active, () => {
+    this.isPointing = false;
+});
+```
+
+The signal-style API (`app.input.onPointerMove`) is typically more ergonomic for pointer input than the binding API, since pointer data includes position, pressure, and tilt — not just an active/inactive boolean.
+
+## Multi-touch
+
+Each pointer gets a slot index (0–15). Per-slot channel constants let you track individual fingers for multi-touch:
+
+```js
+import { Pointer } from '@codexo/exojs';
+
+// Slot 1 (second finger)
+this.inputs.onActive(Pointer.Slot1X, value => {
+    this.touchX = value * this.app.canvas.width;
+});
+```
+
+For most multi-touch use cases, tracking pointer instances by ID via the signal API is simpler:
+
+```js
+init(loader) {
+    this.pointers = new Map();
+
+    this.app.input.onPointerDown.add(p => {
+        this.pointers.set(p.id, { x: p.x, y: p.y });
+    });
+
+    this.app.input.onPointerMove.add(p => {
+        if (this.pointers.has(p.id)) {
+            this.pointers.set(p.id, { x: p.x, y: p.y });
+        }
+    });
+
+    this.app.input.onPointerUp.add(p => {
+        this.pointers.delete(p.id);
+    });
+
+    this.app.input.onPointerCancel.add(p => {
+        this.pointers.delete(p.id);
+    });
+}
+```
+
+## Gesture recognition
+
+The input manager includes built-in gesture recognizers for common multi-touch patterns:
+
+```js
+app.input.onPinch.add((scale, center) => {
+    // scale > 1 = spreading fingers, scale < 1 = pinching
+    this.camera.zoom *= scale;
+});
+
+app.input.onRotate.add((angleDelta, center) => {
+    // angleDelta in radians — positive = clockwise rotation
+    this.map.rotate(angleDelta);
+});
+
+app.input.onLongPress.add(pointer => {
+    // pointer held without significant movement for >= 500 ms
+    this.showContextMenu(pointer.x, pointer.y);
+});
+```
+
+These are high-level events built on top of the raw pointer signals. They track two pointers for pinch/rotate and a single pointer with a 500 ms timer for long-press. No additional setup is required beyond subscribing.
+
+## Pointer-to-world coordinates
+
+Pointer positions are in canvas pixel space. To map them into scene world coordinates — for placing objects, selecting units, or aiming — invert the active view's transform:
+
+```js
+import { Vector } from '@codexo/exojs';
+
+_toWorld(screenX, screenY) {
+    const { width, height } = this.app.canvas;
+    const clipX = (screenX / width) * 2 - 1;
+    const clipY = 1 - (screenY / height) * 2;
+
+    const matrix = this._view.getInverseTransform();
+    return new Vector(
+        matrix.a * clipX + matrix.b * clipY + matrix.x,
+        matrix.c * clipX + matrix.d * clipY + matrix.y,
+    );
+}
+```
+
+If the default view is active (no camera transform), the canvas-pixel position is already the world position and no mapping is needed.
+
+## Interactive sprites
+
+A `Sprite` (or any `RenderNode`) can be made interactive and draggable directly:
+
+```js
+init(loader) {
+    this.sprite = new Sprite(loader.get(Texture, 'hero'));
+    this.sprite.setAnchor(0.5);
+    this.sprite.setPosition(400, 300);
+
+    this.sprite.interactive = true;  // respond to pointer events
+    this.sprite.draggable = true;    // enable drag behavior
+}
+```
+
+Setting `interactive = true` makes the sprite participate in hit testing. Setting `draggable = true` lets the user drag it with the pointer — the engine handles pointer tracking and position updates.
+
+## Pointer properties
+
+The `Pointer` instance passed to every signal callback carries the properties you typically need:
+
+```js
+pointer.x, pointer.y   // canvas-local pixel position
+pointer.position       // Vector with current x and y
+pointer.buttons        // bitmask: 1=left, 2=right, 4=middle
+pointer.isPrimary      // true for mouse or first finger to touch
+pointer.type           // 'mouse', 'touch', or 'pen'
+```
+
+For hover-vs-drag discrimination, check `pointer.buttons` in `onPointerMove` — it fires for every movement, including when no button is pressed. The API reference documents the full property set including `pressure`, `tiltX`/`tiltY` (pen tilt), `startPos` (press-down position for tap/swipe logic), and `currentState`.
+
+## When to use which
+
+- **Signal API** (`app.input.onPointerMove` etc.) for raw pointer data — position tracking, custom gesture detection, drawing apps.
+- **Binding API** (`this.inputs.onActive(Pointer.Left)` etc.) for simple button/binary state — holding mouse button to fire, right-click context menus.
+- **Interactive sprites** (`interactive`/`draggable`) for drag-and-drop and click-on-object behavior without manual hit testing.
+- **Gesture signals** (`onPinch`/`onRotate`/`onLongPress`) for map zoom/rotate and touch-hold menus.
 
 ## Examples
 
 <a id="mouse-and-pointer"></a>
 <ExamplePreview chapter="input" slug="mouse-and-pointer" />
-Mouse And Pointer isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="multitouch"></a>
-<ExamplePreview chapter="input" slug="multitouch" />
-Multitouch isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A draggable sprite with a crosshair that follows the primary pointer.
 
 <a id="pointer-to-world"></a>
 <ExamplePreview chapter="input" slug="pointer-to-world" />
-Pointer To World isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Tapping on a zoomed, pannable grid to place markers at the correct world coordinates.
 
+## Where to go next
+
+The next chapter, [Gamepad](/ExoJS/en/guide/input/gamepad/), covers the four-slot gamepad system — button and axis listeners, vibration, slot strategies, and per-pad connection lifecycle.

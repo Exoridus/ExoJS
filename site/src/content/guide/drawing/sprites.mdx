@@ -15,29 +15,167 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 3.2 Sprites
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Sprites gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A [`Sprite`](/ExoJS/en/api/sprite/) is the primary drawable for textured quads — rectangles that display an image, a sub-region of an image, or a rendered-to-texture surface. Most visible content in a 2D scene passes through sprites.
+
+## From texture to screen
+
+A sprite needs a texture. The shortest path from file to visible quad:
+
+```js
+import { Scene, Sprite, Texture } from '@codexo/exojs';
+
+class MyScene extends Scene {
+    async load(loader) {
+        await loader.load(Texture, { hero: 'image/hero.png' });
+    }
+
+    init(loader) {
+        this.hero = new Sprite(loader.get(Texture, 'hero'));
+        this.addChild(this.hero);
+    }
+
+    draw(backend) {
+        backend.clear();
+        this.root.render(backend);
+    }
+}
+```
+
+The sprite's rendered size defaults to the texture's pixel dimensions. The sprite draws a quad from `(0, 0)` to `(texture.width, texture.height)` in local space.
+
+## Positioning and anchor
+
+A sprite's position places its anchor point in the parent's coordinate space. By default the anchor is `(0, 0)` — the top-left corner — so `setPosition(400, 300)` places the top-left of the sprite at world position `(400, 300)`.
+
+`setAnchor(0.5)` centers the anchor at the sprite's middle, making `setPosition(400, 300)` place the sprite's center at `(400, 300)`:
+
+```js
+init(loader) {
+    const { width, height } = this.app.canvas;
+
+    this.hero = new Sprite(loader.get(Texture, 'hero'));
+    this.hero.setAnchor(0.5);
+    this.hero.setPosition(width / 2, height / 2);
+    this.addChild(this.hero);
+}
+```
+
+`setAnchor(x, y)` accepts two arguments for separate horizontal and vertical anchors. A value of 0 is left/top, 0.5 is center, 1 is right/bottom.
+
+## Size and scale
+
+`sprite.width` and `sprite.height` report the rendered pixel dimensions (texture frame size multiplied by absolute scale). Setting them adjusts the scale to match:
+
+```js
+this.hero.width = 64;  // scale.x becomes 64 / textureFrame.width
+this.hero.height = 64; // scale.y becomes 64 / textureFrame.height
+```
+
+`setScale(x, y)` sets raw scale factors. A scale of `(2, 2)` doubles the sprite's visual size; `(-1, 1)` mirrors it horizontally.
+
+## Tinting
+
+`sprite.tint` is a `Color` or an `[r, g, b, a]` tuple that multiplies the sprite's pixel colors at draw time. White tint `([1, 1, 1, 1])` leaves the texture unchanged. A red tint mutes green and blue channels. Tinting does not allocate or create new textures:
+
+```js
+this.hero.tint = [1, 0.5, 0.5, 1];   // reddish tint
+this.hero.tint = [0.5, 0.5, 1, 0.8]; // blue tint, 80% opacity
+```
+
+## Texture frames
+
+A sprite can display a sub-region of its texture through `textureFrame`. This is the mechanism behind spritesheet frame selection:
+
+```js
+import { Rectangle } from '@codexo/exojs';
+
+// Show only the top-left 32x32 pixels of a 128x128 texture
+this.sprite.setTextureFrame(new Rectangle(0, 0, 32, 32));
+```
+
+By default `setTextureFrame` resets the sprite's width and height to the frame's dimensions. Pass `false` as the second argument to keep the current display size — useful for animation where frame dimensions vary but the on-screen size should stay constant:
+
+```js
+this.sprite.setTextureFrame(new Rectangle(32, 0, 32, 32), false);
+```
+
+Call `resetTextureFrame()` to restore the full texture.
+
+## Blend modes
+
+`sprite.blendMode` controls how the sprite composites with pixels already in the framebuffer. The default is normal alpha blending. Alternative modes (`add`, `multiply`, `screen`, `erase`) are available via `BlendModes`:
+
+```js
+import { BlendModes } from '@codexo/exojs';
+
+this.glow.blendMode = BlendModes.Add;
+```
+
+Blend modes are per-sprite. Combined with tinting they cover common glow, shadow, and knock-out compositing without needing custom shaders.
+
+## Spritesheets
+
+A [`Spritesheet`](/ExoJS/en/api/spritesheet/) slices a single texture atlas into named frames and optional animation sequences. It accepts a JSON descriptor in the Aseprite / TexturePacker format:
+
+```js
+import { Spritesheet } from '@codexo/exojs';
+
+const sheet = new Spritesheet(texture, {
+    frames: {
+        'walk_01': { frame: { x: 0, y: 0, w: 32, h: 32 } },
+        'walk_02': { frame: { x: 32, y: 0, w: 32, h: 32 } },
+        'walk_03': { frame: { x: 64, y: 0, w: 32, h: 32 } },
+    },
+    animations: {
+        walk: ['walk_01', 'walk_02', 'walk_03'],
+    },
+});
+
+// Pre-built Sprite for a single frame
+const sprite = sheet.sprites.get('walk_01');
+this.addChild(sprite);
+
+// Rectangle for a single frame (useful for textureFrame)
+const frame = sheet.frames.get('walk_01');
+```
+
+The `animations` map feeds into `AnimatedSprite.fromSpritesheet()`, covered in the [Animation](/ExoJS/en/guide/drawing/animation/) chapter.
+
+## Non-image textures
+
+`Sprite` accepts any `Texture` or `RenderTexture`. This means sprites can display video frames, SVG rasterizations, off-screen renders, or `DataTexture` pixel buffers — any source the engine can wrap as a `Texture`:
+
+```js
+// Video as a sprite texture
+import { Texture, Video } from '@codexo/exojs';
+
+const video = loader.get(Video, 'intro');
+const sprite = new Sprite(video.texture);
+
+// A RenderTexture (offscreen render) as a sprite texture
+const rt = new RenderTexture(256, 256);
+// ... render something into rt ...
+const sprite = new Sprite(rt);
+```
+
+## Sprite transforms in the graph
+
+A `Sprite` inherits from `Drawable`, which extends `RenderNode`. This means every sprite carries a full transform (position, rotation, scale, origin) and participates in the scene graph as a node. When a sprite is a child of a rotated `Container`, it rotates with the container. When it has its own `filters` array, those filters apply to the sprite's rendered quad before it composites into the parent.
+
+Collision helpers — `sprite.contains(x, y)` for point tests and `sprite.getBounds()` for AABB queries — work on the sprite's world-space quad and account for rotation.
 
 ## Examples
 
 <a id="sprite-basics"></a>
 <ExamplePreview chapter="sprites-textures" slug="sprite-basics" />
-Sprite Basics isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="blendmodes"></a>
-<ExamplePreview chapter="sprites-textures" slug="blendmodes" />
-Blendmodes isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A single sprite in the center of the canvas, rotating and cycling through tints.
 
 <a id="spritesheet-frames"></a>
 <ExamplePreview chapter="sprites-textures" slug="spritesheet-frames" />
-Spritesheet Frames isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="svg-drawable"></a>
-<ExamplePreview chapter="sprites-textures" slug="svg-drawable" />
-Svg Drawable isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Navigating a spritesheet's frames by name — the texture-frame mechanism in practice.
 
-<a id="video-drawable"></a>
-<ExamplePreview chapter="sprites-textures" slug="video-drawable" />
-Video Drawable isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+## Where to go next
 
-{/* TODO: prose */}
-
+The next chapter, [Text](/ExoJS/en/guide/drawing/text/), covers GPU-accelerated text rendering — font loading, styling, layout, and using text nodes in the scene graph.

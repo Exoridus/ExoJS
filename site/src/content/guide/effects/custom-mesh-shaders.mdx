@@ -9,7 +9,262 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 6.4 Custom mesh shaders
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Custom mesh shaders gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A [`Mesh`](/ExoJS/en/api/mesh/) normally renders with the engine's built-in batch shader — textured or untextured, vertex-colored or uniform-tinted, lit with the mesh's own tint and blend mode. That covers most use cases. When you need something the default shader does not do — procedural displacement, custom lighting, multi-texture mixing, a Shadertoy-style effect mapped onto geometry — you attach a [`MeshShader`](/ExoJS/en/api/mesh-shader/).
 
-{/* TODO: prose */}
+`MeshShader` holds a pair of shader programs (one for WebGL2, one for WebGPU) and a map of uniform values. One `MeshShader` instance can be shared across multiple meshes; the renderer caches compiled programs and pipelines per-instance.
 
+## When to use a MeshShader vs. a filter
+
+A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filter/) or [`WebGpuShaderFilter`](/ExoJS/en/api/web-gpu-shader-filter/)) applies a post-processing effect to a drawable's final rendered output — it works in screen space on the full viewport or on the drawable's rendered texture. A `MeshShader` replaces the drawable's vertex and fragment stages entirely. The distinction matters:
+
+- Use a filter when the effect is screen-space — blur, color grade, CRT scanlines, vignette.
+- Use a `MeshShader` when the effect is geometry-space — vertex displacement, per-vertex animation, custom UV mapping, or when the fragment shader needs to compute its own world position from interpolated attributes.
+- Use both together: a `MeshShader` on the mesh for geometry effects, plus a filter on its parent container for post-processing.
+
+## Construction
+
+At least one language source is required. Pass `glsl` for WebGL2, `wgsl` for WebGPU, or both for cross-backend meshes:
+
+```js
+import { MeshShader } from '@codexo/exojs';
+
+const waveShader = new MeshShader({
+    glsl: {
+        vertex: `
+            #version 300 es
+            layout(location = 0) in vec2 a_position;
+            layout(location = 1) in vec2 a_texcoord;
+            layout(location = 2) in vec4 a_color;
+
+            uniform mat3 u_projection;
+            uniform mat3 u_translation;
+            uniform float u_time;
+
+            out vec2 v_texcoord;
+            out vec4 v_color;
+
+            void main() {
+                vec2 pos = a_position;
+                pos.y += sin(pos.x * 0.05 + u_time) * 10.0;
+
+                gl_Position = vec4((u_projection * u_translation * vec3(pos, 1.0)).xy, 0.0, 1.0);
+                v_texcoord = a_texcoord;
+                v_color = a_color;
+            }
+        `,
+        fragment: `
+            #version 300 es
+            precision mediump float;
+
+            in vec2 v_texcoord;
+            in vec4 v_color;
+
+            uniform vec4 u_tint;
+            uniform sampler2D u_texture;
+
+            out vec4 fragColor;
+
+            void main() {
+                vec4 texColor = texture(u_texture, v_texcoord);
+                fragColor = texColor * v_color * u_tint;
+            }
+        `,
+    },
+    wgsl: `
+        struct VertexInput {
+            @location(0) position: vec2<f32>,
+            @location(1) texcoord: vec2<f32>,
+            @location(2) color: vec4<f32>,
+        };
+
+        struct VertexOutput {
+            @builtin(position) position: vec4<f32>,
+            @location(0) texcoord: vec2<f32>,
+            @location(1) color: vec4<f32>,
+        };
+
+        struct MeshUniforms {
+            projection: mat3x3<f32>,
+            translation: mat3x3<f32>,
+            tint: vec4<f32>,
+        };
+
+        struct UserUniforms {
+            time: f32,
+        };
+
+        @group(0) @binding(0) var<uniform> u_mesh: MeshUniforms;
+        @group(1) @binding(0) var u_texture: texture_2d<f32>;
+        @group(1) @binding(1) var u_sampler: sampler;
+        @group(2) @binding(0) var<uniform> u_user: UserUniforms;
+
+        @vertex
+        fn vertexMain(in: VertexInput) -> VertexOutput {
+            var out: VertexOutput;
+            var pos = in.position;
+            pos.y += sin(pos.x * 0.05 + u_user.time) * 10.0;
+
+            let clip = u_mesh.projection * u_mesh.translation * vec3<f32>(pos, 1.0);
+            out.position = vec4<f32>(clip.xy, 0.0, 1.0);
+            out.texcoord = in.texcoord;
+            out.color = in.color;
+            return out;
+        }
+
+        @fragment
+        fn fragmentMain(in: VertexOutput) -> @location(0) vec4<f32> {
+            let tex = textureSample(u_texture, u_sampler, in.texcoord);
+            return tex * in.color * u_mesh.tint;
+        }
+    `,
+    uniforms: { u_time: 0 },
+});
+```
+
+The shader compiles lazily on first draw. If the active backend has no source for the given language, the renderer throws a clear error — it does not silently fall back to the default shader.
+
+## Vertex layout
+
+The vertex layout is fixed and matches the default mesh shader. Custom vertex shaders must declare these attributes at the specified locations:
+
+**GLSL:**
+```glsl
+layout(location = 0) in vec2 a_position;   // from mesh.vertices
+layout(location = 1) in vec2 a_texcoord;   // from mesh.uvs (or 0,0 when absent)
+layout(location = 2) in vec4 a_color;      // from mesh.colors (or 1,1,1,1 when absent)
+```
+
+**WGSL:**
+```wgsl
+struct VertexInput {
+    @location(0) position: vec2<f32>,
+    @location(1) texcoord: vec2<f32>,
+    @location(2) color: vec4<f32>,
+};
+```
+
+The renderer supplies the vertex stream from `mesh.vertices`, `mesh.uvs`, and `mesh.colors` at these locations before every draw, same as the built-in shader.
+
+## Auto-bound uniforms
+
+The renderer automatically sets four uniforms when the shader declares them. You do not need to supply them in `MeshShader.uniforms`:
+
+| Uniform | GLSL declaration | WGSL binding | Source |
+|---------|------------------|--------------|--------|
+| `u_projection` | `uniform mat3 u_projection;` | `u_mesh.projection` in `@group(0)` | Active view's projection matrix |
+| `u_translation` | `uniform mat3 u_translation;` | `u_mesh.translation` in `@group(0)` | Mesh's global transform (position + rotation + scale + origin) |
+| `u_tint` | `uniform vec4 u_tint;` | `u_mesh.tint` in `@group(0)` | `mesh.tint` as RGBA in 0–1 |
+| `u_texture` | `uniform sampler2D u_texture;` | `u_texture` + `u_sampler` in `@group(1)` | `mesh.texture` bound to slot 0 |
+
+You can omit any of them. If your fragment shader ignores the texture and samples nothing, leave `u_texture` undeclared and the renderer skips it. The auto-bound uniforms are detected by name — the shader declares them, the renderer provides them.
+
+## User uniforms
+
+Anything you put in `MeshShader.uniforms` is set after the auto-binds. Mutate the `uniforms` map between frames to drive animated effects:
+
+```js
+update(delta) {
+    this.waveShader.uniforms.u_time = this.clock.elapsedSeconds;
+    this.waveShader.uniforms.u_waveAmp = 10 + this.detector.pulse * 15;
+}
+```
+
+Accepted uniform value types:
+
+- `number` — maps to a 1-component float
+- `[number, number]` / `[number, number, number]` / `[number, number, number, number]` — maps to vec2/3/4
+- `Float32Array` / `Int32Array` — passed as raw array uniform data
+- `Texture` / `RenderTexture` — bound to texture slots starting at slot 1 (slot 0 is the mesh's own texture)
+
+In WGSL, user uniforms belong to `@group(2)`. Scalar/vector/matrix uniforms declared as a struct are packed into `@group(2) @binding(0)`. Each `Texture`/`RenderTexture` uniform claims its own binding, declaration order, with its sampler at the next binding index.
+
+## Attaching to a Mesh
+
+Pass a `MeshShader` in the mesh constructor's `shader` option:
+
+```js
+import { Mesh, MeshShader } from '@codexo/exojs';
+
+const shader = new MeshShader({
+    glsl: { vertex: vertSrc, fragment: fragSrc },
+    uniforms: { u_time: 0 },
+});
+
+const mesh = new Mesh({
+    shader,
+    vertices: new Float32Array([
+         0,   0,
+       100,   0,
+         0, 100,
+    ]),
+    uvs: new Float32Array([
+        0, 0,
+        1, 0,
+        0, 1,
+    ]),
+    texture: myTexture,
+});
+```
+
+The mesh renders with the same transform, tint, blend mode, filters, masks, and `cacheAsBitmap` behavior as a default mesh. Only the GPU program changes.
+
+## Sharing and lifecycle
+
+One `MeshShader` can be attached to many meshes. The renderer compiles one program (WebGL2) or pipeline (WebGPU) per unique `MeshShader` instance, then reuses it across all meshes that reference it.
+
+Call `shader.destroy()` to release cached GPU resources on every backend the shader was used on. After `destroy`, the shader can still be reused — renderers will recompile on the next draw — but the typical pattern is to drop the reference.
+
+When a mesh is destroyed, its `MeshShader` is left untouched. The shader outlives the mesh unless you destroy it explicitly. This means a single shader can survive scene transitions.
+
+## Detecting uniform drift
+
+When you write shaders for both GLSL and WGSL, keeping uniform names synchronized across languages becomes a manual task. `getDeclaredUniforms()` reflects uniform declarations from each language's source via lightweight regex parsing. Companion method `detectUniformDrift()` compares the two and reports names that appear in only one language:
+
+```js
+const drift = shader.detectUniformDrift();
+// drift.onlyInGlsl → ['u_waveAmp']
+// drift.onlyInWgsl → ['u_displacement']
+```
+
+Auto-bound uniforms (`u_projection`, `u_translation`, `u_tint`, `u_texture`, `u_mesh`) are excluded from the comparison — they are intentionally declared differently across languages. Use `detectUniformDrift` in a CI check to catch typos and mismatches:
+
+```js
+import assert from 'node:assert';
+
+const drift = shader.detectUniformDrift();
+assert.deepStrictEqual(drift.onlyInGlsl, [], 'GLSL-only uniforms found');
+assert.deepStrictEqual(drift.onlyInWgsl, [], 'WGSL-only uniforms found');
+```
+
+Reflection is best-effort regex parsing, not a full GLSL/WGSL grammar — it serves CI and editor tooling, not runtime binding decisions.
+
+## Migration from 0.8.2
+
+In 0.8.2, custom mesh shaders used a plain `MeshShaderConfig` interface passed directly into `MeshOptions`:
+
+```js
+// 0.8.2 — removed in 0.8.3
+new Mesh({
+    vertices: ...,
+    shader: {
+        vertexSource: '...',
+        fragmentSource: '...',
+        uniforms: { ... },
+    },
+});
+```
+
+In 0.8.3, `MeshShader` is a class. The old `vertexSource` / `fragmentSource` flat properties become `glsl: { vertex, fragment }`. WGSL support is new. No backwards-compatibility shim exists — the 0.8.x series is pre-1.0:
+
+```js
+// 0.8.3
+const shader = new MeshShader({
+    glsl: { vertex: '...', fragment: '...' },
+    uniforms: { ... },
+});
+new Mesh({ vertices: ..., shader });
+```
+
+## Where to go next
+
+The previous chapter, [Post-processing](/ExoJS/en/guide/effects/post-processing/), covers render-target chains for bloom, trails, and mirror effects — the complement to custom geometry shaders. If you need a screen-space shader effect rather than a geometry-space one, see [Filters](/ExoJS/en/guide/effects/filters/), which covers `WebGl2ShaderFilter` and `WebGpuShaderFilter` for custom fragment shaders applied as post-processing passes.

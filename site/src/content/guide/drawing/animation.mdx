@@ -17,37 +17,247 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 3.4 Animation
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Animation gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+ExoJS gives you three layers of animation control, each suited to a different kind of motion:
+
+1. **Manual frame-loop animation** — you write `update(delta)` logic that mutates transforms or values directly. Covered in [Core Concepts](/ExoJS/en/guide/core-concepts/scene-lifecycle/).
+2. **Tweens** — automated interpolation of numeric properties over time, with easing, delay, repeat, yoyo, chaining, and lifecycle callbacks. Driven by the application's `TweenManager` (`app.tweens`).
+3. **Animated sprites** — frame-based sprite animation from named clips (`AnimatedSprite`), optionally sourced from a `Spritesheet`.
+
+All three can coexist in one scene. Use tweens for UI transitions and canned motion paths; use manual updates for physics, input-driven movement, and any logic where the next position depends on something other than time alone; use animated sprites for character animation playback.
+
+## Tweens
+
+A [`Tween`](/ExoJS/en/api/tween/) interpolates numeric properties on any target object from their current value to configured end values over a duration in seconds. Create one through `app.tweens.create(target)`, configure it fluently, and call `start()`:
+
+```js
+init(loader) {
+    this.sprite = new Sprite(loader.get(Texture, 'hero'));
+    this.sprite.setAnchor(0.5);
+    this.sprite.setPosition(100, 300);
+
+    this.app.tweens.create(this.sprite.position)
+        .to({ x: 700 }, 1.5)
+        .easing(Ease.cubicInOut)
+        .start();
+}
+```
+
+Start values are captured lazily on the first update after `start()`, so you can configure a tween in `init` and mutate the target between construction and `start()` without affecting the baseline.
+
+### Tween lifecycle
+
+| Method | Effect |
+|--------|--------|
+| `.to(properties, duration)` | Set end values and duration. Replaces any prior `to()`. |
+| `.delay(seconds)` | Wait before interpolation begins. Default 0. |
+| `.easing(fn)` | Easing function. Default `Ease.linear`. |
+| `.repeat(count)` | Extra cycles after the first. `-1` = infinite. |
+| `.yoyo(enabled)` | Reverse direction on each repeat. |
+| `.start()` | Begin playback. |
+| `.pause()` | Freeze at current position. |
+| `.resume()` | Continue from where it paused. |
+| `.stop()` | Halt without finishing. `onComplete` does not fire. |
+| `.chain(nextTween)` | Automatically start `nextTween` when this one completes. |
+
+State is readable at `tween.state`: `Idle`, `Active`, `Paused`, `Stopped`, or `Complete`. Progress is readable at `tween.progress` (0–1, already eased).
+
+### Callbacks
+
+```js
+this.app.tweens.create(sprite)
+    .to({ rotation: 360 }, 2)
+    .onStart(() => console.log('started'))
+    .onUpdate(t => console.log(`progress: ${t}`))
+    .onComplete(() => console.log('finished'))
+    .onRepeat(() => console.log('cycled'))
+    .repeat(2)
+    .start();
+```
+
+- `onStart` fires once when interpolation begins (after any delay).
+- `onUpdate` fires every active frame, receiving the eased progress 0–1.
+- `onRepeat` fires at each repeat cycle boundary.
+- `onComplete` fires when all cycles finish naturally. Does not fire on `stop()`.
+
+### Easing functions
+
+`Ease` provides 30 standard Penner easing functions. All accept normalized time `t` in [0, 1] and return an eased value that starts at 0 and ends at 1:
+
+```js
+import { Ease } from '@codexo/exojs';
+
+Ease.linear
+Ease.quadIn     Ease.quadOut     Ease.quadInOut
+Ease.cubicIn    Ease.cubicOut    Ease.cubicInOut
+Ease.quartIn    Ease.quartOut    Ease.quartInOut
+Ease.quintIn    Ease.quintOut    Ease.quintInOut
+Ease.sineIn     Ease.sineOut     Ease.sineInOut
+Ease.expoIn     Ease.expoOut     Ease.expoInOut
+Ease.circIn     Ease.circOut     Ease.circInOut
+Ease.backIn     Ease.backOut     Ease.backInOut
+Ease.bounceIn   Ease.bounceOut   Ease.bounceInOut
+Ease.elasticIn  Ease.elasticOut  Ease.elasticInOut
+```
+
+`In` variants start slow and accelerate. `Out` variants start fast and decelerate. `InOut` combines both — slow at both ends, fast in the middle.
+
+### Tween chains
+
+Chain tweens to build sequenced motion without nesting callbacks:
+
+```js
+const moveRight = this.app.tweens.create(sprite.position)
+    .to({ x: 700 }, 1.0)
+    .easing(Ease.cubicInOut);
+
+const moveDown = this.app.tweens.create(sprite.position)
+    .to({ y: 500 }, 0.8)
+    .easing(Ease.cubicOut);
+
+const fadeOut = this.app.tweens.create(sprite)
+    .to({ alpha: 0 }, 0.5);
+
+moveRight
+    .chain(moveDown)
+    .chain(fadeOut)
+    .start();
+```
+
+`chain()` returns the next tween, so you can build sequences in a single expression:
+
+```js
+this.app.tweens.create(sprite.position)
+    .to({ x: 700 }, 1.0)
+    .chain(
+        this.app.tweens.create(sprite.position)
+            .to({ y: 500 }, 0.8)
+    )
+    .chain(
+        this.app.tweens.create(sprite)
+            .to({ alpha: 0 }, 0.5)
+    )
+    .start();
+```
+
+Only the first tween in the chain needs a `start()` call — each chained tween automatically starts when its predecessor completes.
+
+### Interruption and replacement
+
+Calling `start()` on an active tween restarts it from zero. To replace a running animation cleanly, stop the old tween and start a new one on the same target:
+
+```js
+// Interrupt the current move and slide to a new position
+this._activeTween?.stop();
+this._activeTween = this.app.tweens.create(sprite.position)
+    .to({ x: newTarget }, 0.3)
+    .easing(Ease.cubicOut)
+    .start();
+```
+
+### Only numeric properties interpolate
+
+Tween interpolation is purely numeric. Attempting to tween a non-number property logs a warning and skips it. Vector properties must be accessed by their numeric fields (`sprite.position.x`, `sprite.position.y`). `Color`, `Vector`, and `Matrix` objects cannot be tweened directly — tween their individual number components instead.
+
+## Animated sprites
+
+[`AnimatedSprite`](/ExoJS/en/api/animated-sprite/) extends `Sprite` with frame-based animation playback from named clips. Each clip is a sequence of texture-frame rectangles with a playback speed.
+
+### Defining clips
+
+```js
+import { AnimatedSprite, Rectangle } from '@codexo/exojs';
+
+const player = new AnimatedSprite(texture);
+
+player.defineClip('walk', {
+    frames: [
+        new Rectangle(0, 0, 32, 32),
+        new Rectangle(32, 0, 32, 32),
+        new Rectangle(64, 0, 32, 32),
+        new Rectangle(96, 0, 32, 32),
+    ],
+    fps: 10,       // frames per second (default 12)
+    loop: true,    // default true
+});
+```
+
+Multiple clips can be registered on the same `AnimatedSprite`:
+
+```js
+player.defineClip('idle', { frames: [new Rectangle(0, 32, 32, 32)], fps: 1, loop: true });
+player.defineClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 0, loop: false });
+```
+
+Call `setClips()` to replace all clips at once with a map.
+
+### Playback control
+
+```js
+player.play('walk');                        // start from frame 0
+player.play('walk', { restart: false });    // resume if same clip
+player.play('walk', { loop: false });       // override loop setting for this play
+
+player.pause();    // freeze playback
+player.resume();   // continue
+player.stop();     // stop and rewind to frame 0
+```
+
+The `onFrame` signal fires on every frame advance; `onComplete` fires when a non-looping clip reaches its last frame:
+
+```js
+player.onFrame.add((clip, frame) => {
+    console.log(`Frame ${frame} of clip "${clip}"`);
+});
+
+player.onComplete.add(clip => {
+    player.play('idle');
+});
+```
+
+Call `player.update(delta)` each frame. The delta can be a `Time` object (from the scene's `update`) or a number in seconds:
+
+```js
+update(delta) {
+    this.player.update(delta);
+}
+```
+
+### From a Spritesheet
+
+If a `Spritesheet` has animation data, `AnimatedSprite.fromSpritesheet()` creates a configured instance directly:
+
+```js
+import { AnimatedSprite, Spritesheet } from '@codexo/exojs';
+
+const sheet = new Spritesheet(texture, spritesheetJson);
+const hero = AnimatedSprite.fromSpritesheet(sheet);
+hero.play('walk');
+```
+
+The spritesheet's `animations` map — ordered lists of frame names — becomes named `AnimatedSprite` clips, each frame rectangle sourced from the spritesheet's `frames` map.
+
+### When to use
+
+Use `AnimatedSprite` when you have frame strips from a texture atlas and want clip-based playback with names, speeds, and looping. Use manual `sprite.setTextureFrame()` calls in `update` when you need per-frame logic beyond simple clip playback — responsive frame selection based on game state, for example.
+
+## Standing tween vs. frame-loop animation
+
+Tweens are driven by the `TweenManager` on every frame via `app.tweens.update(delta)`, which happens automatically. You never call `update` on individual tweens unless you created them standalone (without a manager).
+
+Frame-loop animation — the `update(delta)` pattern where you read `delta.seconds` and multiply transforms — is the right choice for continuous motion that doesn't have a defined endpoint: character movement, physics, any state that evolves based on input or simulation. Tweens are the right choice for motion with a clear start and end: UI transitions, camera pans, scripted sequences, one-shot effects.
 
 ## Examples
 
-<a id="easing-curves"></a>
-<ExamplePreview chapter="tweens-animation" slug="easing-curves" />
-Easing Curves isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+<a id="tween-basics"></a>
+<ExamplePreview chapter="tweens-animation" slug="tween-basics" />
+
+A sprite sliding between two positions with chained tweens and on-screen status text.
 
 <a id="frame-animation"></a>
 <ExamplePreview chapter="tweens-animation" slug="frame-animation" />
-Frame Animation isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="interrupt-and-replace"></a>
-<ExamplePreview chapter="tweens-animation" slug="interrupt-and-replace" />
-Interrupt And Replace isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Manual frame-loop animation without tweens — comparing delta-based vs. fixed-step motion.
 
-<a id="tween-basics"></a>
-<ExamplePreview chapter="tweens-animation" slug="tween-basics" />
-Tween Basics isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+## Where to go next
 
-<a id="tween-chains"></a>
-<ExamplePreview chapter="tweens-animation" slug="tween-chains" />
-Tween Chains isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="tween-from-array"></a>
-<ExamplePreview chapter="tweens-animation" slug="tween-from-array" />
-Tween From Array isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="tween-with-yoyo"></a>
-<ExamplePreview chapter="tweens-animation" slug="tween-with-yoyo" />
-Tween With Yoyo isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-{/* TODO: prose */}
-
+The next chapter, [Render targets](/ExoJS/en/guide/drawing/render-targets/), covers off-screen rendering — how to draw into a `RenderTexture` and reuse it as a sprite texture for compositing, caching, or post-processing.

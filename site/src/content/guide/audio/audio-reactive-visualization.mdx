@@ -3,13 +3,267 @@ title: '5.5 Audio-reactive visualization'
 description: 'Bridge audio analysis and beat-detection state into the render pipeline via DataTexture and BeatDetector polling.'
 part: 5
 chapter: 5
+examples:
+  - showcase/audio-visualisation
+  - beat-detection/beat-sync-pulse
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 5.5 Audio-reactive visualization
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Audio-reactive visualization gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+An audio-reactive scene is one where visuals move, change color, or trigger effects in response to the music or sound currently playing. ExoJS gives you two building blocks for this: [`AudioAnalyser`](/ExoJS/en/api/audio-analyser/) for per-frame spectrum data, and [`BeatDetector`](/ExoJS/en/api/beat-detector/) for rhythmic timing. You combine them inside `update` — sample what you need, map it to visual properties, and let the renderer handle the rest.
 
-{/* TODO: prose */}
+## The pipeline
 
+The flow is the same for any audio-reactive setup:
+
+1. Tap an audio source (`Sound`, `Music`, `AudioBus`) with an `AudioAnalyser` and/or a `BeatDetector`.
+2. In `update`, read spectrum values, beat envelopes, or subdivision phase.
+3. Apply those readings to drawable properties — scale, position, tint, shader uniforms, particle spawns.
+
+Both the analyser and the beat detector connect as parallel taps. They never affect the source's main audio routing, so you can attach them to anything that's already playing.
+
+## Building an analyser
+
+An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and time-domain data. You point it at a source, then call its getters each frame:
+
+```js
+import { AudioAnalyser, Music, Scene } from '@codexo/exojs';
+
+class VisualizerScene extends Scene {
+    async load(loader) {
+        await loader.load(Music, { track: 'audio/track.ogg' });
+    }
+
+    init(loader) {
+        this.music = loader.get(Music, 'track').setLoop(true).play();
+        this.analyser = new AudioAnalyser({ fftSize: 1024 });
+        this.analyser.source = this.music;
+    }
+
+    update(delta) {
+        this.spectrum = this.analyser.getSpectrum();
+    }
+}
+```
+
+You can also pass `source` as a constructor option: `new AudioAnalyser({ source: this.music, fftSize: 1024 })`. Either form works; the setter is useful when you need to switch sources at runtime.
+
+## Spectrum sampling strategies
+
+The raw FFT returns N bins linearly spaced from 0 Hz to the Nyquist frequency (half the sample rate). For most visualizations this spacing is awkward — bass gets a handful of bins, treble gets hundreds.
+
+`AudioAnalyser` gives you four ways to read the spectrum, each with a byte and a float variant:
+
+| Method | Output | Use case |
+|--------|--------|----------|
+| `getSpectrum()` | `Uint8Array` (0–255 per bin) | Direct bar-graph visualizations |
+| `getSpectrumFloat()` | `Float32Array` (dBFS per bin) | Precise amplitude measurement |
+| `getSpectrumMel()` | `Uint8Array` (0–255 per band) | Perceptually-weighted display bands |
+| `getSpectrumLog()` | `Uint8Array` (0–255 per band) | Octave-uniform display (each octave gets equal visual width) |
+
+The mel and log methods accept an optional `bands` parameter (default 32) and frequency range (`fMin`/`fMax`, default 20 Hz to 20 kHz, clamped to Nyquist). The filterbanks are built once per `(bands, fMin, fMax, fftSize)` combination and cached on the analyser instance — subsequent calls at the same parameters are just a weighted sum.
+
+```js
+update(delta) {
+    const mel32 = this.analyser.getSpectrumMel(null, { bands: 32 });
+    // mel32[0] is the lowest mel band, mel32[31] is the highest
+
+    const log64 = this.analyser.getSpectrumLog(null, { bands: 64 });
+    // log64[b] covers ~1/64 of the log2(fMax/fMin) octave range
+
+    // Quick band energy without building a filterbank
+    const bass = this.analyser.getBandEnergy(20, 250);
+    const { low, mid, high } = this.analyser.getLowMidHigh();
+    const overall = this.analyser.getRms();
+}
+```
+
+## Beat-driven animation: polling vs. events
+
+`BeatDetector` gives you both event-style signals and per-frame polling getters. Which one you use depends on what kind of visual you are driving.
+
+The event signals — `onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange` — fire when the worklet processor detects a beat and dispatches a message to the main thread. Use them for one-shot side effects: spawning a particle burst, triggering a screen flash, advancing a sequencer:
+
+```js
+this.detector = new BeatDetector();
+this.detector.source = this.music;
+
+this.detector.onBeat.add(() => {
+    this.particleBurst.reset();
+    this.flash = 0.3;
+});
+```
+
+For continuous animation — something that smoothly decays between beats rather than snapping — use the polling getters inside `update`:
+
+| Getter | Returns | Description |
+|--------|---------|-------------|
+| `pulse` | `number` (0–1) | Decaying envelope. Peaks at 1 on every beat, then halves every `pulseHalfLife` seconds (default 0.15). |
+| `barPulse` | `number` (0–1) | Same shape, but resets only on downbeats and decays per `barPulseHalfLife` (default 0.3). |
+| `justBeat` | `boolean` | `true` for the visual frame(s) within `justBeatWindow` seconds of a beat onset (default 0.03). |
+| `secondsSinceLastBeat` | `number` | Elapsed time in seconds since the most recent beat. Returns 0 before the detector locks. |
+| `subdivisionPhase(n)` | `number` (0–1) | Phase within an N-subdivision of the current beat. `subdivisionPhase(4)` gives 16th-note phase. |
+
+These are all pure derivations from the detector's internal state — they do not allocate, do not fire events, and are safe to call every frame:
+
+```js
+update(delta) {
+    const beat = this.detector.pulse;
+    const downbeat = this.detector.barPulse;
+
+    // Smoothly scale a sprite on every beat
+    this.sprite.setScale(1 + beat * 0.25);
+
+    // Brighter tint on the downbeat
+    this.sprite.tint = [
+        1,
+        1 - 0.4 * downbeat,
+        1 - 0.4 * downbeat,
+        1,
+    ];
+
+    // Flash white exactly on beat
+    if (this.detector.justBeat) {
+        this.sprite.tint = [1, 1, 1, 1];
+    }
+
+    // Animate something on 16th notes
+    const sub = this.detector.subdivisionPhase(4);
+    if (sub < 0.05) this.sixteenthFlash = 0.1;
+}
+```
+
+Tune the envelope shapes with the mutable public fields `pulseHalfLife`, `barPulseHalfLife`, and `justBeatWindow`. Smaller values give snappier responses; larger values give longer afterglow.
+
+## Spectrograms with DataTexture
+
+When you want a scrolling spectrogram — a 2D texture that updates each frame with a new column of frequency data — use [`DataTexture`](/ExoJS/en/api/data-texture/). Its pixels live in a CPU-side typed array that you mutate directly, then upload to the GPU with `commit()` or `commitRect()`.
+
+`DataTexture` defaults to nearest-neighbor filtering with clamp-to-edge wrapping, which is what you want for spectrum data where bilinear filtering would corrupt sampled values.
+
+A simple scrolling spectrogram:
+
+```js
+import { DataTexture } from '@codexo/exojs';
+
+init(loader) {
+    this.analyser = new AudioAnalyser({ fftSize: 512 });
+    this.analyser.source = this.music;
+
+    this.specTex = new DataTexture({
+        width: 256,    // scroll history in columns
+        height: 64,    // one row per mel band
+        format: 'r8',
+    });
+
+    this.specSprite = new Sprite(this.specTex);
+    this.specSprite.setAnchor(0, 1);
+    this.specSprite.setPosition(0, this.app.canvas.height);
+
+    this.col = 0;
+}
+
+update(delta) {
+    const bands = this.analyser.getSpectrumMel(null, { bands: 64 });
+    const buf = this.specTex.buffer;
+
+    // Write one column of spectrum data
+    for (let row = 0; row < 64; row++) {
+        buf[this.col * 64 + row] = bands[row];
+    }
+
+    this.col = (this.col + 1) % 256;
+    this.specTex.commit();
+
+    // Shift the visible region so the newest column is at the right edge
+    this.specSprite.setSize(256, 64);
+}
+```
+
+For ring-buffer patterns where only the newest column changes, `commitRect(col, 0, 1, 64)` uploads just that one-pixel-wide column — cheaper than uploading the whole texture every frame.
+
+## A compact practical scene
+
+Here is a complete scene that combines an analyser-driven bar graph with beat-triggered background color changes:
+
+```js
+import {
+    Application, AudioAnalyser, BeatDetector,
+    Color, Graphics, Music, Scene,
+} from '@codexo/exojs';
+
+const app = new Application({ width: 800, height: 600 });
+document.body.append(app.canvas);
+
+class AudioReactiveScene extends Scene {
+    async load(loader) {
+        await loader.load(Music, { track: 'audio/track.ogg' });
+    }
+
+    init(loader) {
+        const { width, height } = this.app.canvas;
+
+        this.music = loader.get(Music, 'track').setLoop(true).play();
+
+        this.analyser = new AudioAnalyser({ source: this.music, fftSize: 512 });
+        this.detector = new BeatDetector({ source: this.music });
+
+        this.bars = new Graphics();
+        this.addChild(this.bars);
+    }
+
+    update(delta) {
+        const bands = this.analyser.getSpectrumMel(null, { bands: 32 });
+        const { width, height } = this.app.canvas;
+        const barW = width / bands.length;
+
+        this.bars.clear();
+        for (let i = 0; i < bands.length; i++) {
+            const h = (bands[i] / 255) * height;
+            const hue = (i / bands.length) * 360;
+            this.bars.fillColor = Color.fromHSL(hue, 0.8, 0.55);
+            this.bars.drawRectangle(
+                i * barW, height - h,
+                barW - 1, h,
+            );
+        }
+
+        // Pulse the background on beat
+        const bg = Color.fromHSL(240, 0.3, 0.1 + this.detector.pulse * 0.15);
+        this.app.clearColor = bg;
+    }
+
+    draw(backend) {
+        backend.clear();
+        this.bars.render(backend);
+    }
+}
+
+app.start(new AudioReactiveScene());
+```
+
+## Timing semantics
+
+A few things to keep in mind when working with audio-driven visuals:
+
+- The analyser spectrum reflects the current frame's audio buffer. You sample it once per `update` call; the `AnalyserNode`'s `smoothingTimeConstant` (default 0.8) smooths between consecutive analyses.
+- Beat detector events are dispatched from the worklet processor to the main thread. They arrive asynchronously and may be arbitrarily close to or slightly behind the visual frame; the worklet's internal temporal resolution is finer than `requestAnimationFrame` cadence. The polling getters (`pulse`, `justBeat`, `subdivisionPhase`) sample the detector's most recent cached state on the main thread.
+- `justBeat` is `true` for at most one or two visual frames per beat (with the default 30ms window at 60fps). If your frame rate drops below ~30fps, you may miss a `justBeat` window. For critical beat-triggered effects, prefer the `onBeat` signal — it is dispatched per-beat and consumed on the main thread alongside the next update cycle.
+
+## Examples
+
+<a id="audio-visualisation"></a>
+<ExamplePreview chapter="showcase" slug="audio-visualisation" />
+
+A full audio visualisation: frequency-domain bars, time-domain waveform overlay, and per-band energy meters drawn on a 2D canvas then uploaded as a texture.
+
+<a id="beat-sync-pulse"></a>
+<ExamplePreview chapter="beat-detection" slug="beat-sync-pulse" />
+
+A sprite pulses on every beat; particles burst on the `onBeat` signal.
+
+## Where to go next
+
+The previous chapter, [Beat detection](/ExoJS/en/guide/audio/beat-detection/), covers tempo tracking, frequency bands, and working with `BeatDetector`'s event signals in detail. For color-oriented effects driven by audio — palette cycling, noise overlays, shader filters — see [Filters](/ExoJS/en/guide/effects/filters/). If you want to write a custom shader that samples a spectrogram `DataTexture`, the next section's chapter [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/) covers that.

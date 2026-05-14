@@ -15,29 +15,149 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 3.3 Text
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Text gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+[`Text`](/ExoJS/en/api/text/) renders GPU-accelerated text strings as nodes in the scene graph. Each `Text` instance rasterizes its glyphs into the engine's shared glyph atlas and draws them as a single `Mesh` — one draw call per text node, regardless of string length. The node extends `Container` and inherits full transform, filter, blend, and mask support.
+
+## A minimal text node
+
+```js
+import { Text } from '@codexo/exojs';
+
+const label = new Text('Hello', {
+    fill: 'white',
+    fontSize: 24,
+    fontFamily: 'Arial',
+});
+```
+
+The second argument is a `TextStyleOptions` object — all properties are optional, all have defaults. The `TextStyle` is stored as `text.style` and can be replaced wholesale with `setStyle()` or mutated property-by-property:
+
+```js
+label.style.fontSize = 32;
+label.style.fillColor = Color.tomato;
+label.setText('Updated'); // triggers mesh rebuild
+```
+
+## Font loading
+
+System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load a `FontFace` in the scene's `load` hook:
+
+```js
+async load(loader) {
+    await loader.load(FontFace, {
+        myFont: 'font/MyFont.woff2',
+    }, { family: 'MyFont' });
+}
+
+init(loader) {
+    this.title = new Text('Custom Font', {
+        fontFamily: 'MyFont',
+        fontSize: 48,
+        fill: 'white',
+    });
+}
+```
+
+The `FontFace` asset is registered with the document's `document.fonts` set. Once loaded, it becomes available to all `Text` instances via the `fontFamily` style property.
+
+## Style properties
+
+`TextStyle` exposes these configurable properties:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `fontFamily` | `string` | `'Arial'` | CSS font family name |
+| `fontSize` | `number` | `20` | Font size in pixels |
+| `fontWeight` | `string` | `'bold'` | CSS font weight |
+| `fontStyle` | `'normal' \| 'italic'` | `'normal'` | Font style |
+| `fill` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Glyph rasterization fill |
+| `fillColor` | `Color` | `Color.white` | Mesh tint multiplier (avoid re-rasterization) |
+| `stroke` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Glyph rasterization stroke |
+| `strokeThickness` | `number` | `1` | Stroke width in pixels |
+| `align` | `'left' \| 'center' \| 'right'` | `'left'` | Text alignment |
+| `lineHeight` | `number` | `1.2` | Multiplier on `fontSize` for vertical spacing |
+| `wordWrap` | `boolean` | `false` | Enable word-wrap |
+| `wordWrapWidth` | `number` | `100` | Max width in pixels before wrapping |
+| `baseline` | `CanvasTextBaseline` | `'alphabetic'` | Canvas text baseline |
+| `lineJoin` | `CanvasLineJoin` | `'miter'` | Stroke line join style |
+| `miterLimit` | `number` | `10` | Stroke miter limit |
+| `padding` | `number` | `0` | Extra padding around glyph bounding boxes |
+
+Glyphs are always rasterized in white. The `fillColor` property multiplies the mesh at draw time via `Mesh.tint`, so changing it is free — no atlas re-rasterization. The canvas `fill` and `stroke` properties only matter during initial glyph rasterization.
+
+## Multiline text and word-wrap
+
+Multiline text works by embedding `\n` characters in the string:
+
+```js
+const dialog = new Text('Line one\nLine two\nLine three', {
+    fill: 'white',
+    fontSize: 18,
+    lineHeight: 1.5,
+});
+```
+
+Enable word-wrap to break lines at a fixed pixel width:
+
+```js
+const wrapped = new Text(longString, {
+    fill: 'white',
+    fontSize: 16,
+    wordWrap: true,
+    wordWrapWidth: 400,
+});
+```
+
+## Alignment
+
+The `align` property controls horizontal positioning relative to the `Text` node's local origin:
+
+```js
+const centered = new Text('Centered Title', {
+    align: 'center',
+    fill: 'white',
+    fontSize: 32,
+});
+centered.setPosition(canvasWidth / 2, 20);
+```
+
+A center-aligned text node at `(400, 20)` centers its glyphs horizontally around `x=400` in local space.
+
+## Text in the scene graph
+
+`Text` extends `Container`, so it carries position, rotation, scale, origin, and anchor. You can rotate text, tint the whole node, apply filters, and nest it inside other containers:
+
+```js
+this.ui = new Container();
+this.scoreLabel = new Text('Score: 0', { fill: 'white', fontSize: 24 });
+this.scoreLabel.setPosition(10, 10);
+this.ui.addChild(this.scoreLabel);
+this.addChild(this.ui);
+```
+
+The text node's internal mesh is a `Container` child. `setText()` destroys the previous mesh and builds a new one. This means:
+- Changing text every frame is fine — the old mesh is discarded and a fresh one is built.
+- Updating `style.fillColor` alone does not rebuild the mesh; it only changes the mesh tint.
+- Changing any other style property (font size, family, etc.) requires a call to `setStyle()` or `style` assignment, which rebuilds the mesh.
+
+## Text constraints
+
+- The glyph atlas is shared across all `Text` instances. Very long strings with many unique glyphs may cause atlas fragmentation; the atlas auto-expands to accommodate.
+- `Text` does not expose per-character styling. Use separate `Text` instances for mixed-style strings.
+- `Text` does not measure or report its pixel dimensions through the public API — the mesh bounds reflect the glyph quad size but measured width/height in pixels is not exposed as a public getter.
+- Custom fonts must be loaded through the `Loader` and registered via `FontFace` — inline `@font-face` CSS rules in the page are not automatically visible to the text system.
 
 ## Examples
 
 <a id="basic-text"></a>
 <ExamplePreview chapter="text-fonts" slug="basic-text" />
-Basic Text isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+A text node with a custom web font, updating its string each frame.
 
 <a id="multiline-and-wrap"></a>
 <ExamplePreview chapter="text-fonts" slug="multiline-and-wrap" />
-Multiline And Wrap isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="stroke-and-shadow"></a>
-<ExamplePreview chapter="text-fonts" slug="stroke-and-shadow" />
-Stroke And Shadow isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Multiline text with alignment, line-height, and word-wrap control.
 
-<a id="web-fonts"></a>
-<ExamplePreview chapter="text-fonts" slug="web-fonts" />
-Web Fonts isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+## Where to go next
 
-<a id="text-glitch"></a>
-<ExamplePreview chapter="text-fonts" slug="text-glitch" />
-Text Glitch isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-{/* TODO: prose */}
-
+The next chapter, [Animation](/ExoJS/en/guide/drawing/animation/), covers frame-based sprite animation, tweens for interpolated motion, and how to combine manual frame-loop updates with automated tween-driven timing.

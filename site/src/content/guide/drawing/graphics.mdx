@@ -15,29 +15,159 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 3.1 Graphics
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Graphics gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+[`Graphics`](/ExoJS/en/api/graphics/) is a `Container` that builds vector shapes and filled meshes procedurally at runtime. Each call to `drawCircle`, `drawRectangle`, `drawLine`, or any of the path commands appends a new colored [`Mesh`](/ExoJS/en/api/mesh/) child. `Graphics` inherits full filter, blend, tint, and mask support from `Container`, so every shape you draw participates in the scene graph the same way a `Sprite` would.
+
+Use `Graphics` when you need shapes that are defined in code rather than loaded from an image — UI frames, debug overlays, particle decals, health bars, level-editor annotations, or any geometry you assemble from primitives.
+
+## Fill, stroke, and the active color
+
+`Graphics` holds a `fillColor` and a `lineColor`, both `Color` instances. When you call a fill shape method (`drawRectangle`, `drawCircle`, `drawPolygon`, `drawStar`, `drawEllipse`), the shape is filled with the current `fillColor`. When `lineWidth` is greater than zero, the shape is also outlined with the current `lineColor`.
+
+```js
+import { Color, Graphics } from '@codexo/exojs';
+
+const g = new Graphics();
+g.fillColor = Color.tomato;
+g.lineColor = Color.darkRed;
+g.lineWidth = 3;
+
+g.drawRectangle(0, 0, 120, 80);
+g.drawCircle(200, 40, 40);
+```
+
+Each draw call creates a separate `Mesh`. Changing `fillColor` between calls produces multi-colored output without creating a new `Graphics` instance:
+
+```js
+g.fillColor = Color.tomato;
+g.drawCircle(0, 0, 30);
+
+g.fillColor = Color.steelBlue;
+g.drawRectangle(40, -20, 60, 40);
+```
+
+## Built-in shapes
+
+Seven shape methods cover the common cases. All coordinates are in the `Graphics` object's local space and participate in its transform.
+
+**Rectangles:**
+```js
+g.drawRectangle(x, y, width, height);
+```
+
+**Circles:**
+```js
+g.drawCircle(centerX, centerY, radius);
+```
+
+**Ellipses:**
+```js
+g.drawEllipse(centerX, centerY, radiusX, radiusY);
+```
+
+**Polygons** from a flat `[x0, y0, x1, y1, ...]` array:
+```js
+g.drawPolygon([0, -30, 30, 30, -30, 30]); // triangle
+```
+
+**Stars** with configurable points, inner radius, and rotation (default inner radius is half the outer radius):
+```js
+g.drawStar(centerX, centerY, points, radius, innerRadius, rotationDegrees);
+```
+
+**Lines** between two explicit points (does not use or affect the pen position):
+```js
+g.drawLine(startX, startY, endX, endY);
+```
+
+**Paths** from a flat point array, drawn as a stroked polyline:
+```js
+g.drawPath([x0, y0, x1, y1, x2, y2, ...]);
+```
+
+## Path and pen commands
+
+`Graphics` tracks a cursor position. Path commands move the cursor and emit stroked line segments:
+
+```js
+g.moveTo(50, 50);
+g.lineTo(150, 100);
+g.lineTo(100, 200);
+
+// Quadratic Bézier curve: one control point
+g.moveTo(20, 20);
+g.quadraticCurveTo(cpX, cpY, toX, toY);
+
+// Cubic Bézier curve: two control points
+g.bezierCurveTo(cpX1, cpY1, cpX2, cpY2, toX, toY);
+
+// Arc tangent to two lines through (x1,y1)
+g.arcTo(x1, y1, x2, y2, radius);
+
+// Explicit arc
+g.drawArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise);
+```
+
+Each of these emits a `drawPath` call behind the scenes. The `currentPoint` property reflects where the pen currently sits.
+
+## Clearing and reusing
+
+`clear()` removes all child meshes and resets the pen state (position, colors, line width). The `Graphics` object itself stays alive. This is the right pattern for per-frame redrawing:
+
+```js
+update(delta) {
+    this.g.clear();
+
+    this.g.fillColor = Color.tomato;
+    for (let i = 0; i < this.values.length; i++) {
+        const h = this.values[i] * 200;
+        this.g.drawRectangle(i * 30, -h, 26, h);
+    }
+}
+```
+
+For shapes that do not change, create the `Graphics` once in `init` and never call `clear`. The meshes live as children and render identically each frame.
+
+## Graphics in the scene graph
+
+Because `Graphics` extends `Container`, it inherits position, rotation, scale, and origin. A single `Graphics` object with several drawn shapes behaves as a group — rotating the `Graphics` rotates all its shape children together:
+
+```js
+init(loader) {
+    this.group = new Graphics();
+    this.group.fillColor = Color.goldenrod;
+    this.group.drawCircle(-40, 0, 20);
+    this.group.drawCircle(40, 0, 20);
+    this.group.drawRectangle(-10, -15, 20, 30);
+
+    this.group.setPosition(this.app.canvas.width / 2, this.app.canvas.height / 2);
+    this.addChild(this.group);
+}
+
+update(delta) {
+    this.group.rotate(60 * delta.seconds);
+}
+```
+
+## Graphics vs. Mesh
+
+`Graphics` is a convenience builder on top of [`Mesh`](/ExoJS/en/api/mesh/). If you need direct control over vertex indices, UVs, per-vertex colors, textures, or custom shaders, construct a `Mesh` directly. `Graphics` is the right choice when the geometry is simple enough to describe with shape primitives and you want the immediate-mode API.
+
+## Performance
+
+Each draw method on `Graphics` creates a new `Mesh` child. A tight loop that calls `drawCircle` 500 times per frame creates 500 meshes per frame. For static shapes this is fine — create once, never clear. For per-frame redrawing of many shapes, consider whether a single `Mesh` with a custom vertex buffer, a `ParticleSystem`, or a pre-built `Graphics` with transform-only animation is a better fit.
 
 ## Examples
 
 <a id="graphics-primitives"></a>
 <ExamplePreview chapter="geometry-graphics" slug="graphics-primitives" />
-Graphics Primitives isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="infinite-grid"></a>
-<ExamplePreview chapter="geometry-graphics" slug="infinite-grid" />
-Infinite Grid isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="mesh-triangle"></a>
-<ExamplePreview chapter="geometry-graphics" slug="mesh-triangle" />
-Mesh Triangle isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
-<a id="mesh-textured-quad"></a>
-<ExamplePreview chapter="geometry-graphics" slug="mesh-textured-quad" />
-Mesh Textured Quad isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+All seven shape primitives on one canvas, each animated differently.
 
 <a id="mesh-deformed-grid"></a>
 <ExamplePreview chapter="geometry-graphics" slug="mesh-deformed-grid" />
-Mesh Deformed Grid isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Animated vertex deformation on a `Mesh` — the lower-level primitive `Graphics` builds on.
 
+## Where to go next
+
+The next chapter, [Sprites](/ExoJS/en/guide/drawing/sprites/), covers the primary textured drawable — loading images, positioning, sizing, and the relationship between textures and sprites.

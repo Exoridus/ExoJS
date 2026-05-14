@@ -12,17 +12,159 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 3.5 Render targets
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Render targets gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+The canvas is the default render target — every `backend.clear()` and `sprite.render(backend)` goes there. A [`RenderTexture`](/ExoJS/en/api/render-texture/) is a second target: an off-screen surface you can draw into and then sample as a texture on a sprite, apply filters to, or composite back into the main scene.
+
+This is the foundation of multi-pass rendering in ExoJS: render-to-texture for caching, minimaps, picture-in-picture views, reflection maps, and as a staging area before post-processing.
+
+## Creating a RenderTexture
+
+A `RenderTexture` has pixel dimensions and optional sampler parameters:
+
+```js
+import { RenderTexture } from '@codexo/exojs';
+
+const rt = new RenderTexture(256, 256);
+```
+
+The constructor accepts an optional `SamplerOptions` object to control how the texture is sampled when used on a sprite:
+
+```js
+const rt = new RenderTexture(512, 512, {
+    scaleMode: ScaleModes.Nearest,  // default Linear
+    wrapMode: WrapModes.Repeat,     // default ClampToEdge
+});
+```
+
+Default sampler settings — linear filtering, clamp-to-edge wrapping, premultiplied alpha, no mipmap generation — match the typical "render-to-texture then display" use case.
+
+## Drawing into a RenderTexture
+
+Set the render target on the backend, draw normally, then restore the canvas:
+
+```js
+init(loader) {
+    const backend = this.app.backend;
+
+    this.offscreen = new RenderTexture(256, 256);
+
+    // Redirect rendering to the off-screen target
+    backend.setRenderTarget(this.offscreen);
+
+    backend.clear();
+    this.someSprite.render(backend);
+    this.someContainer.render(backend);
+
+    // Restore the canvas
+    backend.setRenderTarget(null);
+}
+```
+
+Everything between `setRenderTarget(rt)` and `setRenderTarget(null)` draws into the `RenderTexture` instead of the canvas. The `clear()` call clears the render texture, not the canvas. After restoring the canvas, the `RenderTexture` holds the result as a sampled texture.
+
+## Using the result
+
+Once drawn, a `RenderTexture` can be assigned to any `Sprite`:
+
+```js
+this.display = new Sprite(this.offscreen);
+this.display.setPosition(400, 300);
+this.display.setAnchor(0.5);
+this.addChild(this.display);
+```
+
+The sprite displays the off-screen render as its texture. You can position, scale, rotate, tint, and filter it like any other sprite.
+
+## Updating each frame
+
+The render-to-texture step typically happens once during `init` for static content, or inside `draw` for content that changes per frame:
+
+```js
+draw(backend) {
+    // 1. Draw game world into the off-screen target
+    backend.setRenderTarget(this.offscreen);
+    backend.clear();
+    this.worldLayer.render(backend);
+    backend.setRenderTarget(null);
+
+    // 2. Draw the main scene — the off-screen result is now a texture
+    backend.clear();
+    this.display.render(backend);
+    this.hud.render(backend);
+}
+```
+
+The `updateSource()` method on `RenderTexture` signals the GPU backend that the texture contents have changed. This is called automatically by the backend when the render target is released — you do not need to call it manually after `setRenderTarget(null)`.
+
+## RenderTexture as a RenderTarget
+
+`RenderTexture` extends [`RenderTarget`](/ExoJS/en/api/render-target/), which carries a `View` for camera control, size management, and viewport configuration. When drawing into a `RenderTexture`, the render target's view determines the coordinate system. By default it uses a pixel-aligned view matching the texture dimensions:
+
+```js
+const rt = new RenderTexture(400, 300);
+
+// Optionally set a custom view (camera)
+const customView = new View(200, 150, 400, 300);
+rt.setView(customView);
+```
+
+The `resize()` method changes the texture dimensions. `powerOfTwo` reports whether both dimensions are powers of two — relevant for some mipmap and tiling scenarios.
+
+## Use cases
+
+**Cached layers.** Render a complex, static container once into a `RenderTexture`, then display the result as a sprite. Subsequent frames skip the container's render tree entirely — one texture draw instead of N child draws:
+
+```js
+init(loader) {
+    this.buildComplexScene(); // builds this.staticLayer
+
+    this.cache = new RenderTexture(
+        Math.ceil(this.staticLayer.width),
+        Math.ceil(this.staticLayer.height),
+    );
+
+    const backend = this.app.backend;
+    backend.setRenderTarget(this.cache);
+    backend.clear();
+    this.staticLayer.render(backend);
+    backend.setRenderTarget(null);
+
+    this.cachedSprite = new Sprite(this.cache);
+    this.staticLayer.visible = false;
+}
+
+draw(backend) {
+    backend.clear();
+    this.cachedSprite.render(backend);
+    // ... dynamic content on top ...
+}
+```
+
+**Mini-maps.** Render the full world from a zoomed-out view into a small `RenderTexture`, then display it scaled down in a corner sprite.
+
+**Compositing.** Render two independent scene layers into separate `RenderTexture` instances, then composite them with different blend modes, tints, or filters applied to the result sprites.
+
+**Staging for post-processing.** Render a scene into a `RenderTexture`, apply a filter to the sprite that displays it, and render the result to the canvas. The [Post-processing](/ExoJS/en/guide/effects/post-processing/) chapter covers this pattern in detail.
+
+## RenderTexture vs. cacheAsBitmap
+
+`cacheAsBitmap` on a `RenderNode` bakes the node's subtree into an internal texture automatically. Use `cacheAsBitmap` when the cached content doesn't need to be repositioned, scaled, filtered, or displayed in multiple places — it's a simple on/off toggle. Use a `RenderTexture` when you need explicit control over when the cache updates, what view it uses, or how the result is displayed (multiple sprites, custom sampler settings, composited with blend modes).
+
+## Lifecycle
+
+`RenderTexture` owns GPU resources. Call `destroy()` when the texture is no longer needed to release the backing framebuffer and texture. The engine does not garbage-collect GPU objects automatically.
 
 ## Examples
 
 <a id="render-to-texture"></a>
 <ExamplePreview chapter="render-targets" slug="render-to-texture" />
-Render To Texture isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+A container of 25 sprites rendered once into a `RenderTexture`, then displayed as a single sprite alongside the original container for comparison.
 
 <a id="mini-map"></a>
 <ExamplePreview chapter="render-targets" slug="mini-map" />
-Mini Map isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+A zoomed-out view of a tile map rendered into a small `RenderTexture` and displayed as a corner mini-map.
 
+## Where to go next
+
+The next section, [Input](/ExoJS/en/guide/input/keyboard/), covers keyboard, mouse, pointer, and gamepad handling — the other half of making interactive scenes. If you want to extend the render-to-texture pattern into multi-pass filtering and screen-space effects, see [Post-processing](/ExoJS/en/guide/effects/post-processing/) in the Effects section.

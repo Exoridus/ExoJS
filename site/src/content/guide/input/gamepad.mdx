@@ -12,17 +12,230 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 4.3 Gamepad
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Gamepad gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+ExoJS manages gamepads through four stable slot mailboxes. Each slot is a [`Gamepad`](/ExoJS/en/api/gamepad/) instance that lives for the application's full lifetime — a physical controller moves in when connected, moves out when disconnected, and your listeners stay attached through both transitions. Address pads by slot (0–3, stable across reconnect) rather than by browser index (which the browser may reassign).
+
+## The four-slot model
+
+```js
+const pad0 = app.input.gamepads[0];  // always exists, may be disconnected
+const pad1 = app.input.getGamepad(1); // same thing, reads more clearly
+
+if (pad0.connected) {
+    console.log(pad0.info.name); // e.g. "Xbox Wireless Controller"
+}
+```
+
+The `gamepads` array is always length 4. Check `pad.connected` before reading pad state. Convenience accessors on the input manager:
+
+```js
+app.input.hasGamepad               // true when at least one pad is connected
+app.input.connectedGamepadCount    // how many slots are occupied
+app.input.firstConnectedGamepad    // first in slot order, or null
+app.input.connectedGamepads        // subset of gamepads[] that are connected
+```
+
+## Lifecycle: connect and disconnect
+
+Subscribe to lifecycle signals at either level:
+
+```js
+// Per-slot — fires only for that specific slot
+pad0.onConnect.add(() => {
+    console.log('Controller connected to slot 0');
+});
+pad0.onDisconnect.add(() => {
+    console.log('Slot 0 disconnected');
+});
+
+// Global — fires for any slot
+app.input.onGamepadConnected.add(pad => {
+    console.log(`Controller connected to slot ${pad.slot}`);
+});
+app.input.onGamepadDisconnected.add(pad => {
+    console.log(`Slot ${pad.slot} disconnected`);
+});
+```
+
+Listeners survive disconnect/reconnect cycles. A binding registered on an empty slot activates automatically when a pad connects later.
+
+## Slot strategies
+
+Two strategies control how slots fill and empty, set via `ApplicationOptions.gamepadSlotStrategy`:
+
+- **`'sticky'`** (default): Each pad keeps its slot. A disconnect leaves a gap; the next pad fills the lowest empty slot. This preserves button-prompts like "Press A (controller 1)" across reconnect.
+- **`'compact'`**: On disconnect, higher-numbered slots shift down to keep `gamepads[0..N-1]` densely populated. "Controller 2" becomes "controller 1" if the first player disconnects. Use this for local multiplayer where player number maps directly to slot.
+
+When a compact shift occurs, `pad.onPadReassigned` fires on the receiving slot with the source slot it moved from.
+
+## Buttons
+
+The [`GamepadButton`](/ExoJS/en/api/gamepad-button/) namespace provides 24 named button channels. Buttons use cross-platform semantic names rather than per-console labels:
+
+```js
+import { GamepadButton } from '@codexo/exojs';
+
+const pad = app.input.getGamepad(0);
+
+// --- Binding-style listeners (attach to a specific pad) ---
+pad.onTrigger(GamepadButton.South, () => {
+    this.player.jump();  // A on Xbox, ✕ on PlayStation, B on Switch
+});
+
+pad.onActive(GamepadButton.West, value => {
+    this.player.attack(value);  // X on Xbox, □ on PlayStation, Y on Switch
+});
+pad.onStop(GamepadButton.West, () => {
+    this.player.stopAttack();
+});
+
+// --- Signal-style listeners (per-button transition events) ---
+pad.onButtonDown.add((button, value) => {
+    console.log(`${button.constructor.name} pressed at ${value}`);
+});
+pad.onButtonUp.add((button, value) => {
+    console.log(`${button.constructor.name} released`);
+});
+```
+
+The buttons you usually reach for:
+
+| Constant | Conventional use |
+|----------|-----------------|
+| `South` | Primary action (Xbox A, PS ✕) — jump, confirm |
+| `East` | Secondary action (Xbox B, PS ○) — cancel, back |
+| `West` | Tertiary action (Xbox X, PS □) — attack, interact |
+| `North` | Quaternary action (Xbox Y, PS △) — special, menu |
+| `DPadUp/Down/Left/Right` | Menu navigation, weapon select |
+| `LeftShoulder / RightShoulder` | Bumpers — modifier, dash |
+| `LeftTrigger / RightTrigger` | Analog triggers (0–1) — accelerate, aim |
+| `LeftStick / RightStick` | Stick clicks (L3 / R3) — sprint |
+| `Select / Start` | Menu / pause buttons |
+
+The [`GamepadButton` API reference](/ExoJS/en/api/gamepad-button/) lists the full 24-button namespace including `Guide`, `Share`, `Capture`, `Touchpad`, and `Paddle1–Paddle4` for Elite/Edge/Steam Deck controllers.
+
+## Axes
+
+The [`GamepadAxis`](/ExoJS/en/api/gamepad-axis/) namespace provides both split-direction and aggregate signed channels:
+
+**Split-direction (0–1, "button-style"):**
+```
+GamepadAxis.LeftStickLeft   GamepadAxis.LeftStickRight
+GamepadAxis.LeftStickUp     GamepadAxis.LeftStickDown
+GamepadAxis.RightStickLeft  GamepadAxis.RightStickRight
+GamepadAxis.RightStickUp    GamepadAxis.RightStickDown
+```
+
+Each fires when pushed in its direction. Use these when you want `onActive`/`onStop` bindings that mirror keyboard-style input.
+
+**Aggregate signed (-1 to 1, "stick-style"):**
+```
+GamepadAxis.LeftStickX      GamepadAxis.LeftStickY
+GamepadAxis.RightStickX     GamepadAxis.RightStickY
+```
+
+A single signed value per axis — negative is left/up, positive is right/down. The callback receives the full -1..1 range, making a single line of code drive 2D movement:
+
+```js
+pad.onActive(GamepadAxis.LeftStickX, value => {
+    this.move.x = value;  // -1..1, already deadzoned
+});
+pad.onStop(GamepadAxis.LeftStickX, () => {
+    this.move.x = 0;
+});
+pad.onActive(GamepadAxis.LeftStickY, value => {
+    this.move.y = value;
+});
+pad.onStop(GamepadAxis.LeftStickY, () => {
+    this.move.y = 0;
+});
+```
+
+Aggregate channels are bipolar — they preserve the full signed range and apply a deadzone (default 0.2). Values within the deadzone read as 0.
+
+**Touchpad channels** (`TouchpadX/Y`, `Touchpad2X/Y`) cover PlayStation and Steam Deck touchpad surfaces in 0..1 range.
+
+## Capability detection
+
+Not every controller has every button or axis. A detached Joy-Con has no right stick; a basic pad has no paddles. Use `hasChannel()` to gate optional bindings:
+
+```js
+if (pad.hasChannel(GamepadAxis.RightStickX)) {
+    pad.onActive(GamepadAxis.RightStickX, value => {
+        this.camera.rotate(value * delta.seconds * 90);
+    });
+}
+
+if (pad.hasChannel(GamepadButton.Paddle1)) {
+    pad.onActive(GamepadButton.Paddle1, value => {
+        this.player.dash();
+    });
+}
+```
+
+Binding to a channel the pad doesn't declare is harmless — the listener simply never fires — but `hasChannel()` lets you offer alternative controls or skip setup entirely.
+
+## Vibration
+
+The Web Gamepad API exposes dual-rumble actuators on most modern controllers. Check support and trigger effects:
+
+```js
+if (pad.canVibrate) {
+    pad.vibrate({
+        duration: 200,           // ms
+        weakMagnitude: 0.5,     // low-frequency rumble 0..1
+        strongMagnitude: 0.8,   // high-frequency rumble 0..1
+        startDelay: 0,
+    });
+}
+
+// Stop rumble early
+pad.stopVibration();
+```
+
+`vibrate()` is async and resolves when the effect finishes or is cancelled. Call `stopVibration()` to cut a running effect short (e.g. when the player releases a trigger). Both methods are silent no-ops on unsupported hardware.
+
+## Per-pad vs. global listeners
+
+Two patterns coexist:
+
+| Pattern | How | Lifecycle |
+|---------|-----|-----------|
+| Per-pad bindings | `pad.onTrigger(button, cb)` | Tied to one slot. Unbind with `.unbind()`. |
+| Per-pad signals | `pad.onButtonDown.add(cb)` | Tied to one slot. Remove with `.remove(cb)`. |
+| Global signals | `app.input.onAnyGamepadButtonDown.add(cb)` | Fires for every slot. Filter on `pad.slot`. |
+
+Per-pad bindings are the typical choice for game logic — the player number maps to a slot, and bindings are registered once in `init`. Global signals are useful for debug overlays and device-config UIs that need to see every connected pad at once.
+
+## Connected-gamepad detection at init
+
+The `gamepads` array is populated before `init` runs, but the browser's gamepad API only reports connected pads after a button press on some platforms (a browser security restriction). In `init`, check `app.input.connectedGamepads`; if empty, wait for the `onGamepadConnected` signal:
+
+```js
+init(loader) {
+    const pad = app.input.firstConnectedGamepad;
+
+    if (pad) {
+        this.bindPad(pad);
+    }
+
+    app.input.onGamepadConnected.add(p => {
+        if (!this._activePad) this.bindPad(p);
+    });
+}
+```
 
 ## Examples
 
 <a id="gamepad"></a>
 <ExamplePreview chapter="input" slug="gamepad" />
-Gamepad isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+Visual gamepad state display: buttons, sticks, D-pad, and triggers mapped to on-screen sprites.
 
 <a id="multi-gamepad"></a>
 <ExamplePreview chapter="input" slug="multi-gamepad" />
-Multi Gamepad isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Four sprites, each controlled by a separate gamepad slot via aggregate signed stick axes.
 
+## Where to go next
+
+The next chapter, [Action mapping](/ExoJS/en/guide/input/action-mapping/), covers how to unify keyboard and gamepad input behind intent-driven action names so gameplay code never hard-codes a specific device.
