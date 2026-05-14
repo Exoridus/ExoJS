@@ -5,7 +5,6 @@ part: 5
 chapter: 4
 examples:
   - beat-detection/beat-sync-pulse
-  - beat-detection/frequency-bands
   - beat-detection/tempo-tracking
 ---
 
@@ -13,21 +12,173 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 5.4 Beat detection
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Beat detection gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+The [`BeatDetector`](/ExoJS/en/api/beat-detector/) analyses an audio signal in real time using a self-contained `AudioWorkletProcessor`. It detects tempo, beat positions, and bar/downbeat structure, then reports results back to the main thread as both discrete events (`onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange`) and per-frame polling getters. You use the events for one-shot triggers and the getters for continuous animation — both are covered in detail in [5.5 Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/).
+
+This chapter covers what the detector does and the events it fires. The next chapter covers what you do with that information.
+
+## Connecting a source
+
+The detector taps any audio source — `Sound`, `Music`, `AudioBus`, `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain:
+
+```js
+import { BeatDetector, Music } from '@codexo/exojs';
+
+const music = loader.get(Music, 'track').setLoop(true).play();
+const detector = new BeatDetector();
+detector.source = music;
+```
+
+You can also pass the source as a constructor option:
+
+```js
+const detector = new BeatDetector({ source: music });
+```
+
+The detector runs its own FFT inside the worklet processor. No `AudioAnalyser` is required — `BeatDetector` handles frequency analysis internally. The `fftSize` option (default 2048) and `hopSize` (default 512) control the worklet's internal analysis window.
+
+## Tempo and confidence
+
+Two read-only getters give you the detector's current tempo estimate:
+
+```js
+update(delta) {
+    const bpm = this.detector.tempo;           // 0 before lock-in
+    const confidence = this.detector.confidence; // 0..1
+}
+```
+
+`tempo` returns 0 until the detector has enough data to lock onto a stable beat. `confidence` rises as the beat grid stabilises. The `onTempoChange` signal fires when the detector settles on a new tempo:
+
+```js
+detector.onTempoChange.add((newBpm, oldBpm) => {
+    console.log(`Tempo changed from ${oldBpm} to ${newBpm} BPM`);
+});
+```
+
+The `settlingMs` option (default 1500) suppresses beat and tempo events for an initial period after the source starts, giving the worklet time to build a reliable estimate.
+
+## Event signals
+
+Four signals fire at discrete moments in the music:
+
+| Signal | Fires when | Payload |
+|--------|------------|---------|
+| `onBeat` | A beat occurs | `BeatInfo` — audio time, tempo, confidence, energy, isDownbeat, beatInBar |
+| `onDownbeat` | The first beat of a bar | Same `BeatInfo` |
+| `onBarStart` | A new bar begins | `BarInfo` — audio time, tempo, confidence, barNumber |
+| `onTempoChange` | Tempo estimate changes | `(newBpm, oldBpm)` |
+
+Use `onBeat` for things that should happen on every beat — a sprite pulses, a particle burst fires, a UI element flashes:
+
+```js
+detector.onBeat.add(info => {
+    this.pulse = 0.3;
+    this.particleBurst.reset();
+});
+```
+
+Use `onDownbeat` for events that should only fire on the "one" — a brighter flash, a bar-level visual change, a camera shake:
+
+```js
+detector.onDownbeat.add(info => {
+    this.barFlash = 0.5;
+});
+```
+
+`BeatInfo` carries `isDownbeat` and `beatInBar` so you can use the general `onBeat` signal and filter inside the callback:
+
+```js
+detector.onBeat.add(info => {
+    if (info.isDownbeat) {
+        // big effect on beat 1
+    } else if (info.beatInBar === 3) {
+        // secondary emphasis on beat 3
+    }
+});
+```
+
+## State getters
+
+The detector exposes read-only state you can poll every frame:
+
+```js
+detector.tempo              // BPM, or 0 before lock
+detector.confidence         // 0..1 locking quality
+detector.beatPhase          // 0..1 phase within current beat
+detector.barPosition        // 1..N beat within current bar
+detector.barLength          // beats per bar (default 4)
+detector.timeSignature      // { numerator, denominator }
+detector.rms                // 0..1 overall RMS energy
+detector.onsetStrength      // 0..1 onset novelty at current frame
+detector.bandEnergy         // { low, mid, high } band energies
+detector.tempoCandidates    // readonly array of { bpm, score } candidates
+detector.lookahead          // readonly array of upcoming beats
+```
+
+These are pure derivations from the detector's most recent worklet state update — no allocation, no event dispatch.
+
+## Bar and time-signature tracking
+
+The detector attempts 4/4 vs. 3/4 time-signature detection when `enableTimeSignatureDetection` is `true` (the default). Set it `false` in the constructor to lock to 4/4:
+
+```js
+const detector = new BeatDetector({
+    enableTimeSignatureDetection: false,
+});
+```
+
+`barPosition` (1-based) tells you which beat you're on within the current bar. `barLength` reports the detected bar length. Together they let you build sequencers, rhythm-game logic, and procedural music controllers that follow the music's structure.
+
+## Worklet processor
+
+`BeatDetector` uses an `AudioWorkletProcessor` that runs entirely in the Web Audio rendering thread. It applies a Hann window, runs a radix-2 FFT, computes mel-band energies, detects onsets via spectral flux, builds a tempogram with autocorrelation, and tracks beat phase with a dynamic-programming grid. All of this is internal — the public API is the events and getters listed above.
+
+The first call to `update(delta)` in your scene fires after the worklet message handler has processed the most recent state update. Beat events (`onBeat`, `onDownbeat`, etc.) are dispatched during the SceneManager's update loop alongside your scene's `update`. They arrive asynchronously — the worklet's temporal resolution is finer than `requestAnimationFrame`, so a beat event may arrive slightly before or after the visual frame that should react to it. For precise per-frame timing, prefer the polling getters (see [5.5 Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/)).
+
+## Configuring the detector
+
+Construction options with their defaults:
+
+```js
+const detector = new BeatDetector({
+    minBpm: 50,                            // minimum detectable tempo
+    maxBpm: 250,                           // maximum detectable tempo
+    fftSize: 2048,                         // internal FFT window
+    hopSize: 512,                          // samples between successive FFTs
+    tempoWindowSec: 6,                     // sliding window for tempogram
+    settlingMs: 1500,                      // initial suppression period
+    melBands: 24,                          // mel filterbank bands
+    enableTimeSignatureDetection: true,    // auto-detect 3/4 vs 4/4
+    source: music,                         // initial source (optional)
+});
+```
+
+`minBpm` and `maxBpm` constrain the tempo search. `tempoWindowSec` controls how much history the autocorrelation uses — larger values give more stable tempo estimates on steady music but slower reaction to tempo changes. `melBands` controls the granularity of the internal onset detection; the default of 24 is sufficient for most music.
+
+## Lifecycle
+
+Create one detector per scene (or share across scenes if the same source persists). Destroy it when you're done:
+
+```js
+destroy() {
+    this.detector.destroy();
+}
+```
+
+`destroy()` disconnects the worklet node, clears the signal subscribers, and releases references. The worklet processor itself stays registered for the duration of the page — that's a browser-level concern, not a leak.
 
 ## Examples
 
 <a id="beat-sync-pulse"></a>
 <ExamplePreview chapter="beat-detection" slug="beat-sync-pulse" />
-Beat Sync Pulse isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="frequency-bands"></a>
-<ExamplePreview chapter="beat-detection" slug="frequency-bands" />
-Frequency Bands isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A sprite pulses on every beat and particles burst on the `onBeat` signal — the canonical beat-reactive pattern.
 
 <a id="tempo-tracking"></a>
 <ExamplePreview chapter="beat-detection" slug="tempo-tracking" />
-Tempo Tracking isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Live BPM display with a confidence bar, demonstrating the `tempo` and `confidence` getters.
 
+## Where to go next
+
+The next chapter, [Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/), covers how to bridge the detector's output into the render pipeline — polling getters for continuous animation, spectrum data from `AudioAnalyser`, spectrograms with `DataTexture`, and building full audio-reactive scenes.

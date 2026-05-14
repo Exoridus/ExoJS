@@ -5,34 +5,180 @@ part: 5
 chapter: 3
 examples:
   - audio-fx/compressor
-  - audio-fx/ducking
   - audio-fx/reverb-and-delay
-  - audio-fx/vocoder
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 5.3 Audio effects
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Audio effects gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Every bus in ExoJS carries a filter chain — an ordered list of [`AudioFilter`](/ExoJS/en/api/audio-filter/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every `Music` instance routing through the music bus. You can also create custom buses for isolated effect chains.
+
+## The filter chain
+
+A bus's filter chain is `inputNode → [filter₁ → filter₂ → ...] → panNode → outputNode`. Adding a filter appends it to the end of the chain. Order matters — a compressor before reverb sounds different from a compressor after reverb.
+
+```js
+import { CompressorFilter, DelayFilter, ReverbFilter } from '@codexo/exojs';
+
+const compressor = new CompressorFilter({ threshold: -20, ratio: 8 });
+const reverb = new ReverbFilter({ wet: 0.3 });
+const delay = new DelayFilter({ delaySeconds: 0.25, wet: 0.2, feedback: 0.4 });
+
+app.audio.master.addFilter(compressor);
+app.audio.master.addFilter(reverb);
+app.audio.sound.addFilter(delay);
+```
+
+Remove a filter to take it out of the chain without destroying it:
+
+```js
+app.audio.master.removeFilter(reverb);
+```
+
+Filters are reusable — move one from bus to bus by removing it from the old bus and adding it to the new one. Destroy a filter with `filter.destroy()` when it's no longer needed anywhere.
+
+## CompressorFilter
+
+A dynamics compressor that clamps the dynamic range of audio passing through it. Useful for evening out volume, adding punch to SFX, and preventing clipping when many sounds play simultaneously:
+
+```js
+const compressor = new CompressorFilter({
+    threshold: -24,   // dBFS — signals above this get compressed
+    ratio: 12,        // 1:1 = no compression, 20:1 = near-limiting
+    attack: 0.003,    // seconds — how fast compression kicks in
+    release: 0.25,    // seconds — how fast it lets go
+    knee: 30,         // dB — softens the threshold transition
+});
+
+app.audio.master.addFilter(compressor);
+```
+
+All properties are live get/set. The `compressor.reduction` getter returns the current gain reduction in dB (always ≤ 0) — useful for live level metering:
+
+```js
+update(delta) {
+    const gr = this.compressor.reduction;
+    this.meterBar.height = Math.abs(gr) * 10; // scale to pixels
+}
+```
+
+## ReverbFilter and DelayFilter
+
+`ReverbFilter` simulates acoustic space by convolving audio through a procedurally-generated impulse response:
+
+```js
+const reverb = new ReverbFilter({
+    durationSeconds: 2,   // IR length — longer = bigger space
+    decay: 2,             // exponential decay factor
+    wet: 0.4,             // 0 = dry only, 1 = wet only
+});
+```
+
+`DelayFilter` creates an echo with configurable feedback:
+
+```js
+const delay = new DelayFilter({
+    delaySeconds: 0.3,    // echo interval
+    feedback: 0.45,       // 0 = one echo, 0.95 = long tail
+    wet: 0.5,             // dry/wet mix
+});
+```
+
+Both expose live `wet`, `delaySeconds`, `feedback`, `decay`, and `durationSeconds` properties. Changing `durationSeconds` or `decay` on a reverb rebuilds the impulse response — prefer to keep these stable during playback.
+
+## DuckingFilter
+
+A sidechain compressor — when the sidechain bus exceeds a threshold, the main signal is attenuated. Common use case: automatically lower music volume when voice-over plays:
+
+```js
+import { AudioBus, DuckingFilter } from '@codexo/exojs';
+
+const voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
+app.audio.registerBus(voiceBus);
+
+const ducker = new DuckingFilter({
+    sidechain: voiceBus,
+    threshold: -30,   // dBFS — sidechain level that triggers ducking
+    ratio: 6,         // gain reduction ratio
+    attackMs: 25,     // how fast ducking engages
+    releaseMs: 260,   // how fast audio recovers after sidechain drops
+});
+
+app.audio.music.addFilter(ducker);
+```
+
+`threshold`, `ratio`, `attackMs`, and `releaseMs` are live get/set. The `filter.ready` promise resolves when the worklet processor is loaded and the chain is fully wired.
+
+## Shaping and modulation
+
+Several filters cover tone shaping and modulation effects:
+
+```js
+import { ChorusFilter, EqualizerFilter, HighpassFilter, LowpassFilter } from '@codexo/exojs';
+
+// Three-band equalizer — low shelf, peaking mid, high shelf
+const eq = new EqualizerFilter({ low: 3, mid: -2, high: 4 });
+
+// Frequency cuts — animate the frequency property for sweeps
+const lp = new LowpassFilter({ frequency: 2000, resonance: 1 });
+const hp = new HighpassFilter({ frequency: 200, resonance: 1 });
+
+// Modulated delay for thickness and doubling (native nodes, instant startup)
+const chorus = new ChorusFilter({ rateHz: 1.5, depthMs: 5, wet: 0.5 });
+```
+
+All parameters on these filters are live get/set. The [`EqualizerFilter` API reference](/ExoJS/en/api/equalizer-filter/) documents individual band frequencies; the [`ChorusFilter`](/ExoJS/en/api/chorus-filter/) and [`LowpassFilter`](/ExoJS/en/api/lowpass-filter/) references cover constructor options in detail.
+
+## Worklet-based effects
+
+Three filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletFilter`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
+
+```js
+import { GranularFilter, PitchShiftFilter, VocoderFilter } from '@codexo/exojs';
+
+// Granular pitch shifting (0.25x to 4x)
+const shifter = new PitchShiftFilter({ pitch: 1.2, wet: 1.0 });
+
+// Cross-synthesis between a carrier signal and a modulator bus
+const vocoder = new VocoderFilter({ modulator: modulatorBus, numBands: 14 });
+
+// Slices input into short grains with random pitch and time offset
+const granular = new GranularFilter({ grainSize: 0.05, density: 50, wet: 1.0 });
+```
+
+All three have live `wet` controls. `PitchShiftFilter` exposes `pitch`; `GranularFilter` exposes `grainSize`, `density`, `spread`, `pitchMin`, and `pitchMax` for real-time grain cloud manipulation. The API reference documents the full constructor options for each.
+
+## Custom buses
+
+Bus-level filters affect everything on that bus. Create isolated chains for specific sound categories:
+
+```js
+const ambientBus = new AudioBus('ambient', { parent: app.audio.master });
+app.audio.registerBus(ambientBus);
+
+ambientBus.addFilter(new ReverbFilter({ wet: 0.6, durationSeconds: 3 }));
+ambientBus.addFilter(new LowpassFilter({ frequency: 800 }));
+
+const wind = loader.get(Sound, 'wind');
+wind.bus = ambientBus; // now routes through reverb + lowpass
+wind.setLoop(true).play();
+```
+
+`registerBus` stores the bus by name, retrievable later via `app.audio.getBus('ambient')`. `unregisterBus` removes and destroys a custom bus. The three built-in buses (`master`, `music`, `sound`) cannot be unregistered.
 
 ## Examples
 
 <a id="compressor"></a>
 <ExamplePreview chapter="audio-fx" slug="compressor" />
-Compressor isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="ducking"></a>
-<ExamplePreview chapter="audio-fx" slug="ducking" />
-Ducking isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Interactive compressor with live gain-reduction meter — drag sliders to adjust threshold, ratio, attack, and release.
 
 <a id="reverb-and-delay"></a>
 <ExamplePreview chapter="audio-fx" slug="reverb-and-delay" />
-Reverb And Delay isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="vocoder"></a>
-<ExamplePreview chapter="audio-fx" slug="vocoder" />
-Vocoder isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Reverb and delay filters on the SFX bus, with live wet/dry and delay-time sliders.
 
-{/* TODO: prose */}
+## Where to go next
 
+The next chapter, [Beat detection](/ExoJS/en/guide/audio/beat-detection/), covers tempo tracking and beat analysis — how to sync game logic to the rhythm of your music.

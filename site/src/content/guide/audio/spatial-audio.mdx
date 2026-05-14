@@ -5,7 +5,6 @@ part: 5
 chapter: 2
 examples:
   - spatial-audio/listener-and-source
-  - spatial-audio/moving-source
   - spatial-audio/falloff-curves
 ---
 
@@ -13,21 +12,133 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 5.2 Spatial audio
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Spatial audio gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Spatial audio in ExoJS is 2D: a single shared listener and any number of sound sources, each with a world-space position. The engine maps the 2D coordinates to the Web Audio API's 3D panner behind the scenes — you work in the same pixel coordinates your sprites and containers use, and the audio system pans and attenuates accordingly.
+
+## The listener
+
+The [`AudioListener`](/ExoJS/en/api/audio-listener/) is a singleton at `app.audio.listener`. Set its position directly or point it at a target that updates every frame:
+
+```js
+// Static listener — audio doesn't move
+app.audio.listener.position.set(400, 300);
+
+// Dynamic listener — audio follows a scene node
+app.audio.listener.target = this.player;
+
+// Dynamic listener — audio follows a plain object (useful with views)
+this.camera = { x: 0, y: 0 };
+app.audio.listener.target = this.camera;
+```
+
+When `target` is set, the listener reads the target's `x` and `y` each frame automatically. Use `target` for cameras, player characters, or any moving viewpoint. Set `position` directly when the listener is fixed.
+
+Valid target types are:
+- A `SceneNode` (Sprite, Container, etc.) — reads from its global transform
+- A `View` — reads from its `center`
+- A plain `{ x, y }` object — reads the properties directly
+- `null` — stops auto-tracking
+
+## Sound sources
+
+A `Sound` becomes spatial the moment you assign a `position`:
+
+```js
+const pickup = loader.get(Sound, 'pickup-sfx');
+pickup.position = { x: 320, y: 180 };
+pickup.play();
+```
+
+The audio pans left when the source is left of the listener, right when to the right. Volume attenuates with distance according to the configured distance model.
+
+Setting `position` to `null` makes the sound non-spatial again — it plays at full volume in both channels regardless of listener position.
+
+## Distance models
+
+Three attenuation curves control how volume drops with distance:
+
+| Model | Behavior |
+|-------|----------|
+| `'linear'` | Full volume at `refDistance`, linear falloff to silence at `maxDistance`. Simplest to reason about. |
+| `'inverse'` | Full volume at `refDistance`, inverse-proportional falloff beyond. Natural-sounding drop-off. |
+| `'exponential'` | Full volume at `refDistance`, exponential falloff beyond. Sharpest near-field drop-off. |
+
+Configure per-sound via constructor options or live setters:
+
+```js
+const ambient = new Sound(audioBuffer, {
+    distanceModel: 'exponential',
+    refDistance: 100,      // pixels — full volume within this radius
+    maxDistance: 800,      // pixels — silence beyond this (linear only)
+    rolloffFactor: 1.5,    // steepness multiplier (all models)
+});
+ambient.position = { x: 0, y: 0 };
+ambient.setLoop(true).play();
+```
+
+`refDistance` (default 50) is the radius around the listener where the sound plays at full volume. `maxDistance` (default 1000) only applies to the linear model. `rolloffFactor` (default 1) scales the steepness — higher values make the sound drop off faster.
+
+All four properties are live setters on `Sound`:
+
+```js
+sound.distanceModel = 'inverse';
+sound.refDistance = 80;
+sound.rolloffFactor = 2;
+```
+
+## Practical use
+
+The most common pattern is to set the listener's target to the camera or player once in `init`, then assign positions to spatial sounds when they play:
+
+```js
+init(loader) {
+    this.pickupSfx = loader.get(Sound, 'pickup-sfx');
+    this.pickupSfx.setVolume(0.6);
+
+    app.audio.listener.target = this.player;
+}
+
+update(delta) {
+    // ... game logic ...
+
+    if (pickupCollected) {
+        this.pickupSfx.position = { x: item.x, y: item.y };
+        this.pickupSfx.play();
+    }
+}
+```
+
+For ambient sounds that should follow the listener's general area but not overlap, set a large `refDistance`:
+
+```js
+const waterfall = loader.get(Sound, 'waterfall');
+waterfall.distanceModel = 'inverse';
+waterfall.refDistance = 300;
+waterfall.position = { x: 600, y: 200 };
+waterfall.setLoop(true).play();
+```
+
+## Sounds per frame
+
+Spatial updates happen automatically — the `AudioManager` runs `listener._tick()` each frame, which reads the target position and writes to the Web Audio `PannerNode` for every spatial `Sound`. You do not need to call any per-frame update on spatial sources. Assign a position, call `play()`, and the engine handles the rest.
+
+## Browser constraints
+
+The Web Audio `PannerNode` maps to 3D space. ExoJS sets Z=0 for both listener and sources and uses forward=-Z with up=+Y, which produces correct left/right panning for 2D scenes. The elevation axis (up/down) is unused — all audio is co-planar with the listener.
+
+Stereo pan is achieved through interaural time difference and attenuation, not a simple balance knob. The result is that a source placed to the listener's right sounds subtly different from one placed to the left at the same distance — this is the Web Audio panner's intended behavior and can't be disabled. If you need precise channel-level control without spatial effects, route through a bus with `pan` rather than using spatial positioning.
 
 ## Examples
 
 <a id="listener-and-source"></a>
 <ExamplePreview chapter="spatial-audio" slug="listener-and-source" />
-Listener And Source isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="moving-source"></a>
-<ExamplePreview chapter="spatial-audio" slug="moving-source" />
-Moving Source isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A draggable sound source and a fixed listener — drag the source to hear pan and attenuation change in real time.
 
 <a id="falloff-curves"></a>
 <ExamplePreview chapter="spatial-audio" slug="falloff-curves" />
-Falloff Curves isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Three sound sources with different distance models, with live attenuation readouts as you move the listener.
 
+## Where to go next
+
+The next chapter, [Audio effects](/ExoJS/en/guide/audio/audio-effects/), covers the audio filter system — how to shape sound with compressors, EQs, reverb, delay, and worklet-based effects like pitch shifting and ducking.
