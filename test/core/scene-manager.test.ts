@@ -265,43 +265,95 @@ describe('SceneManager', () => {
     expect(opaqueDraw).toHaveBeenCalledTimes(1);
   });
 
-  test('input routing supports capture, passthrough, and transparent top scenes', async () => {
+  test('passthrough scene returning true consumes input and stops propagation', async () => {
     const app = createApplicationStub();
     const manager = new SceneManager(app);
     const baseInput = jest.fn();
-    const captureInput = jest.fn();
-    const passthroughInput = jest.fn();
-    const transparentInput = jest.fn();
-    const base = makeScene({
-      handleInput: baseInput,
-    });
-    const capture = makeScene({
-      handleInput: captureInput,
-    });
-    const passthrough = makeScene({
-      handleInput: passthroughInput,
-    });
-    const transparent = makeScene({
-      handleInput: transparentInput,
-    });
+    const passthroughInput = jest.fn(() => true);
+    const base = makeScene({ handleInput: baseInput });
+    const passthrough = makeScene({ handleInput: passthroughInput });
 
     await manager.setScene(base);
-    await manager.pushScene(capture, { input: 'capture' });
+    await manager.pushScene(passthrough, { input: 'passthrough' });
+
     app.input.onKeyDown.dispatch(1);
-    expect(captureInput).toHaveBeenCalledTimes(1);
+
+    expect(passthroughInput).toHaveBeenCalledTimes(1);
+    expect(baseInput).toHaveBeenCalledTimes(0);
+  });
+
+  test('passthrough scene returning false does not consume input', async () => {
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
+    const baseInput = jest.fn();
+    const passthroughInput = jest.fn(() => false);
+    const base = makeScene({ handleInput: baseInput });
+    const passthrough = makeScene({ handleInput: passthroughInput });
+
+    await manager.setScene(base);
+    await manager.pushScene(passthrough, { input: 'passthrough' });
+
+    app.input.onKeyDown.dispatch(2);
+
+    expect(passthroughInput).toHaveBeenCalledTimes(1);
+    expect(baseInput).toHaveBeenCalledTimes(1);
+  });
+
+  test('passthrough scene returning undefined does not consume input', async () => {
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
+    const baseInput = jest.fn();
+    const passthroughInput = jest.fn();
+    const base = makeScene({ handleInput: baseInput });
+    const passthrough = makeScene({ handleInput: passthroughInput });
+
+    await manager.setScene(base);
+    await manager.pushScene(passthrough, { input: 'passthrough' });
+
+    app.input.onKeyDown.dispatch(3);
+
+    expect(passthroughInput).toHaveBeenCalledTimes(1);
+    expect(baseInput).toHaveBeenCalledTimes(1);
+  });
+
+  test('capture mode always stops propagation regardless of return value', async () => {
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
+    const baseInput = jest.fn();
+    const captureFalseInput = jest.fn(() => false);
+    const captureUndefinedInput = jest.fn();
+    const base = makeScene({ handleInput: baseInput });
+    const captureFalse = makeScene({ handleInput: captureFalseInput });
+    const captureUndefined = makeScene({ handleInput: captureUndefinedInput });
+
+    await manager.setScene(base);
+    await manager.pushScene(captureFalse, { input: 'capture' });
+    app.input.onKeyDown.dispatch(4);
+    expect(captureFalseInput).toHaveBeenCalledTimes(1);
     expect(baseInput).toHaveBeenCalledTimes(0);
 
     await manager.popScene();
-    await manager.pushScene(passthrough, { input: 'passthrough' });
-    app.input.onKeyDown.dispatch(2);
-    expect(passthroughInput).toHaveBeenCalledTimes(1);
-    expect(baseInput).toHaveBeenCalledTimes(1);
+    await manager.pushScene(captureUndefined, { input: 'capture' });
+    app.input.onKeyDown.dispatch(5);
+    expect(captureUndefinedInput).toHaveBeenCalledTimes(1);
+    expect(baseInput).toHaveBeenCalledTimes(0);
+  });
 
-    await manager.popScene();
+  test('transparent mode skips top scene input and allows propagation below', async () => {
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
+    const baseInput = jest.fn();
+    const transparentInput = jest.fn(() => true);
+    const base = makeScene({ handleInput: baseInput });
+    const transparent = makeScene({ handleInput: transparentInput });
+
+    await manager.setScene(base);
     await manager.pushScene(transparent, { input: 'transparent' });
-    app.input.onKeyDown.dispatch(3);
+
+    app.input.onKeyDown.dispatch(6);
+
     expect(transparentInput).toHaveBeenCalledTimes(0);
-    expect(baseInput).toHaveBeenCalledTimes(2);
+    expect(baseInput).toHaveBeenCalledTimes(1);
   });
 
   test('failed push keeps active scene stack intact', async () => {

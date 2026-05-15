@@ -463,7 +463,7 @@ export class SceneManager {
 
       const handled = entry.scene.handleInput(event);
 
-      if (handled === false || entry.policy.input === 'capture') {
+      if (handled === true || entry.policy.input === 'capture') {
         break;
       }
     }
