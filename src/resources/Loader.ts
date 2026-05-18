@@ -4,7 +4,11 @@ import { Signal } from '@/core/Signal';
 import { Texture } from '@/rendering/texture/Texture';
 import { Video } from '@/rendering/video/Video';
 
+import { Asset, AssetImpl } from './Asset';
+import { Assets, AssetsImpl } from './Assets';
+import type { AssetInput, InferAssetResource } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
+import { LoadingQueue } from './LoadingQueue';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
@@ -36,6 +40,11 @@ import { Json, SvgAsset, TextAsset, VttAsset } from './tokens';
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Loadable = abstract new (...args: any[]) => any;
+
+/** Maps each key of an `AssetInput` map to its resolved runtime resource type. */
+export type InferLoadedMap<M extends Record<string, AssetInput>> = {
+  [K in keyof M]: InferAssetResource<M[K]>;
+};
 
 /**
  * Maps a {@link Loadable} constructor to the concrete type returned by
@@ -125,6 +134,7 @@ interface QueueEntry {
  */
 export class Loader {
   private readonly _registry = new FactoryRegistry();
+  private readonly _assetTypeMap = new Map<string, AssetConstructor>();
   private readonly _resources = new Map<AssetConstructor, Map<string, unknown>>();
   private readonly _manifest = new Map<AssetConstructor, Map<string, ManifestEntry>>();
   private readonly _bundles = new Map<string, readonly QueueEntry[]>();
@@ -178,6 +188,23 @@ export class Loader {
    */
   public register<T>(type: AssetConstructor<T>, factory: AssetFactory<T>): this {
     this._registry.register(type, factory);
+
+    return this;
+  }
+
+  /**
+   * Associates a string type name (e.g. `'tileMap'`) with the constructor
+   * used as the asset token and, optionally, registers a factory for it.
+   *
+   * Required for declaration-merge extensions of {@link AssetDefinitions}
+   * so that `loader.load({ map: { type: 'tileMap', source: '…' } })` works.
+   */
+  public registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory<unknown>): this {
+    this._assetTypeMap.set(typeName, ctor);
+
+    if (factory) {
+      this._registry.register(ctor, factory);
+    }
 
     return this;
   }
@@ -354,6 +381,9 @@ export class Loader {
    * - **Single path** — resolves with the finished asset.
    * - **Array of paths** — resolves with an ordered array of assets.
    * - **Record** — resolves with a record whose keys match the input keys.
+   * - **Asset<T>** — single typed asset reference.
+   * - **Assets<M>** — typed asset container; keys become aliases.
+   * - **Config map** — inline `{ alias: { type, source, … } }` definition.
    *
    * In-flight and already-loaded assets are de-duplicated: calling `load`
    * for the same (type, alias) pair while a fetch is in progress attaches
@@ -362,43 +392,129 @@ export class Loader {
    * Supply a custom `options` object to pass factory-specific configuration
    * (e.g. audio decoding hints or image format overrides).
    */
-  public load<T = unknown>(type: typeof Json, path: string, options?: unknown): Promise<T>;
-  public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): Promise<T[]>;
-  public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): Promise<Record<K, T>>;
+  public load<T = unknown>(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>;
+  public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>;
+  public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>;
+
+  // -----------------------------------------------------------------------
+  // Loading — new Asset / Assets / config-map overloads
+  // -----------------------------------------------------------------------
+
+  public load<T>(asset: Asset<T>): LoadingQueue<T>;
+  public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
 
   // -----------------------------------------------------------------------
   // Loading — generic overloads (return type inferred from class)
   // -----------------------------------------------------------------------
 
-  public load<T extends Loadable>(type: T, path: string, options?: unknown): Promise<LoadReturn<T>>;
-  public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): Promise<Array<LoadReturn<T>>>;
-  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, string>>, options?: unknown): Promise<Record<K, LoadReturn<T>>>;
+  public load<T extends Loadable>(type: T, path: string, options?: unknown): LoadingQueue<LoadReturn<T>>;
+  public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): LoadingQueue<Array<LoadReturn<T>>>;
+  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
 
   // -----------------------------------------------------------------------
   // Loading — implementation
   // -----------------------------------------------------------------------
 
-  public async load(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>, options?: unknown): Promise<unknown> {
-    const ctor = type;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<any> {
+    // 1. Single Asset<T>
+    if (arg0 instanceof AssetImpl) {
+      const asset = arg0 as Asset<unknown>;
+      const alias = asset._config.source;
 
-    if (typeof source === 'string') {
-      return this._loadSingle(ctor, source, options);
+      return this._createLoadingQueue([{ alias, asset }], results => results.get(alias));
     }
 
-    if (Array.isArray(source)) {
-      return Promise.all((source as readonly string[]).map(path => this._loadSingle(ctor, path, options)));
+    // 2. Assets<M> container
+    if (arg0 instanceof AssetsImpl) {
+      const container = arg0 as Assets<Record<string, AssetInput>>;
+      const items = Object.entries(container.entries).map(([alias, a]) => ({
+        alias,
+        asset: a as Asset<unknown>,
+      }));
+
+      return this._createLoadingQueue(items, results => {
+        const out: Record<string, unknown> = {};
+
+        for (const { alias } of items) {
+          out[alias] = results.get(alias);
+        }
+
+        return out;
+      });
     }
 
-    const entries = Object.entries(source as Record<string, string>);
-    const result: Record<string, unknown> = {};
+    // 3. Old path: first arg is a Loadable constructor
+    if (typeof arg0 === 'function') {
+      const ctor = arg0 as Loadable;
+      const source = arg1 as string | readonly string[] | Readonly<Record<string, string>>;
+      const options = arg2;
 
-    await Promise.all(
-      entries.map(async ([alias, path]) => {
-        result[alias] = await this._loadSingle(ctor, alias, options, path);
-      }),
-    );
+      if (typeof source === 'string') {
+        let queue!: LoadingQueue<unknown>;
+        const promise = this._loadSingle(ctor, source, options).then(
+          v => { queue._notifyItem(true); return v; },
+          e => { queue._notifyItem(false); throw e; },
+        );
 
-    return result;
+        queue = new LoadingQueue(promise, 1);
+
+        return queue;
+      }
+
+      if (Array.isArray(source)) {
+        const paths = source as readonly string[];
+        let queue!: LoadingQueue<unknown[]>;
+        const results: unknown[] = new Array(paths.length);
+        const promises = paths.map((path, i) =>
+          this._loadSingle(ctor, path, options).then(
+            v => { results[i] = v; queue._notifyItem(true); },
+            e => { queue._notifyItem(false); throw e; },
+          ),
+        );
+
+        const promise = Promise.all(promises).then(() => results);
+
+        queue = new LoadingQueue(promise, paths.length);
+
+        return queue;
+      }
+
+      // Record<string, string>
+      const entries = Object.entries(source as Record<string, string>);
+      const result: Record<string, unknown> = {};
+      let queue!: LoadingQueue<Record<string, unknown>>;
+      const promises = entries.map(([alias, path]) =>
+        this._loadSingle(ctor, alias, options, path).then(
+          v => { result[alias] = v; queue._notifyItem(true); },
+          e => { queue._notifyItem(false); throw e; },
+        ),
+      );
+
+      const promise = Promise.all(promises).then(() => result);
+
+      queue = new LoadingQueue(promise, entries.length);
+
+      return queue;
+    }
+
+    // 4. Plain config map: Record<string, AssetInput>
+    const configMap = arg0 as Record<string, AssetInput>;
+    const items = Object.entries(configMap).map(([alias, value]) => ({
+      alias,
+      asset: (value instanceof AssetImpl ? value : new (Asset as { new(c: AssetInput): Asset<unknown> })(value)) as Asset<unknown>,
+    }));
+
+    return this._createLoadingQueue(items, results => {
+      const out: Record<string, unknown> = {};
+
+      for (const { alias } of items) {
+        out[alias] = results.get(alias);
+      }
+
+      return out;
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -520,7 +636,39 @@ export class Loader {
    * discarded once it arrives rather than written to the store, preventing
    * a stale value from being committed after an explicit unload.
    */
-  public unload(type: Loadable, alias: string): this {
+  public unload<T>(asset: Asset<T>): this;
+  public unload<M extends Record<string, AssetInput>>(assets: Assets<M>): this;
+  public unload(type: Loadable, alias: string): this;
+  public unload(arg0: unknown, arg1?: unknown): this {
+    if (arg0 instanceof AssetImpl) {
+      const asset = arg0 as Asset<unknown>;
+      const ctor = this._assetTypeMap.get(asset.type);
+
+      if (ctor) {
+        this._unloadOne(ctor, asset._config.source);
+      }
+
+      return this;
+    }
+
+    if (arg0 instanceof AssetsImpl) {
+      const container = arg0 as Assets<Record<string, AssetInput>>;
+
+      for (const [alias, a] of Object.entries(container.entries)) {
+        const ctor = this._assetTypeMap.get((a as Asset<unknown>).type);
+
+        if (ctor) {
+          this._unloadOne(ctor, alias);
+        }
+      }
+
+      return this;
+    }
+
+    return this._unloadOne(arg0 as Loadable, arg1 as string);
+  }
+
+  private _unloadOne(type: Loadable, alias: string): this {
     const ctor = type;
     const key = this._key(ctor, alias);
 
@@ -675,6 +823,35 @@ export class Loader {
     }
 
     return this._waitForBackgroundEntry(type, alias);
+  }
+
+  private _createLoadingQueue<T>(
+    items: Array<{ alias: string; asset: Asset<unknown> }>,
+    buildResult: (results: Map<string, unknown>) => T,
+  ): LoadingQueue<T> {
+    const results = new Map<string, unknown>();
+    let queue!: LoadingQueue<T>;
+
+    const itemPromises = items.map(({ alias, asset }) => {
+      const ctor = this._assetTypeMap.get(asset.type);
+
+      if (!ctor) {
+        return Promise.reject<void>(
+          new Error(`No constructor registered for asset type "${asset.type}". Call registerAssetType() first.`),
+        );
+      }
+
+      return this._loadSingle(ctor, alias, undefined, asset._config.source).then(
+        resource => { results.set(alias, resource); queue._notifyItem(true); },
+        error    => { queue._notifyItem(false); throw error; },
+      );
+    });
+
+    const promise = Promise.all(itemPromises).then(() => buildResult(results));
+
+    queue = new LoadingQueue<T>(promise, items.length);
+
+    return queue;
   }
 
   private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
@@ -994,6 +1171,11 @@ export class Loader {
     this._registry.register(SvgAsset, new SvgFactory());
     this._registry.register(VttAsset, new VttFactory());
     this._registry.register(ArrayBuffer, new BinaryFactory());
+
+    this._assetTypeMap.set('texture', Texture);
+    this._assetTypeMap.set('sound', Sound);
+    this._assetTypeMap.set('music', Music);
+    this._assetTypeMap.set('json', Json);
 
     if (typeof FontFace !== 'undefined') {
       this._registry.register(FontFace, new FontFactory());
