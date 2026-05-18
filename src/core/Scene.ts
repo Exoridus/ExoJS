@@ -1,6 +1,5 @@
+import type { Tween } from '@/animation/Tween';
 import type { InputBinding, InputBindingOptions, InputChannel } from '@/input/InputBinding';
-import type { Pointer } from '@/input/Pointer';
-import type { Vector } from '@/math/Vector';
 import { Container } from '@/rendering/Container';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderNode } from '@/rendering/RenderNode';
@@ -10,12 +9,11 @@ import type { Application } from './Application';
 import type { Time } from './Time';
 
 /**
- * Scene-bound input proxy that automatically disposes its bindings when
- * the owning scene unloads. Created lazily on first access via
- * {@link Scene.inputs}; do not instantiate directly.
+ * Scene-bound input proxy. Bindings created here are automatically unbound
+ * when the owning scene is destroyed. Access via {@link Scene.inputs}.
  */
 class SceneInputs {
-  private readonly _bindings: Set<InputBinding> = new Set<InputBinding>();
+  private readonly _bindings: Set<InputBinding> = new Set();
 
   public constructor(private readonly _scene: Scene) {}
 
@@ -35,9 +33,9 @@ class SceneInputs {
     return this._track(this._scene.app!.input.onTrigger(channel, callback, options));
   }
 
-  /** @internal Called by Scene.destroy. */
+  /** @internal */
   public _disposeAll(): void {
-    for (const binding of [...this._bindings]) {
+    for (const binding of this._bindings) {
       binding.unbind();
     }
 
@@ -46,7 +44,41 @@ class SceneInputs {
 
   private _track(binding: InputBinding): InputBinding {
     this._bindings.add(binding);
+
     return binding;
+  }
+}
+
+/**
+ * Scene-bound tween proxy. Tweens created or added here are automatically
+ * stopped when the owning scene is destroyed. Access via {@link Scene.tweens}.
+ */
+class SceneTweens {
+  private readonly _tweens: Set<Tween> = new Set();
+
+  public constructor(private readonly _scene: Scene) {}
+
+  public create<T extends object>(target: T): Tween<T> {
+    const tween = this._scene.app!.tweens.create(target);
+    this._tweens.add(tween);
+
+    return tween;
+  }
+
+  public add(tween: Tween): this {
+    this._scene.app!.tweens.add(tween);
+    this._tweens.add(tween);
+
+    return this;
+  }
+
+  /** @internal */
+  public _disposeAll(): void {
+    for (const tween of this._tweens) {
+      tween.stop();
+    }
+
+    this._tweens.clear();
   }
 }
 
@@ -58,38 +90,10 @@ class SceneInputs {
  */
 export type SceneStackMode = 'overlay' | 'modal' | 'opaque';
 
-/**
- * How a {@link Scene} interacts with the input event stream.
- * - `'capture'`: receive events; do not forward to scenes below.
- * - `'passthrough'`: receive events; also forward to scenes below.
- * - `'transparent'`: do not receive events; forward to scenes below.
- */
-export type SceneInputMode = 'capture' | 'passthrough' | 'transparent';
-
 /** Bag of overrides for {@link Scene.setParticipationPolicy}. */
 export interface SceneParticipationPolicy {
   mode?: SceneStackMode;
-  input?: SceneInputMode;
 }
-
-/**
- * Discriminated union of input events delivered to {@link Scene.handleInput}.
- * Returning `true` from the handler stops further propagation down the
- * scene stack (consume the event); falsy/`undefined` lets the next scene
- * see it (subject to the receiving scene's {@link SceneInputMode}).
- */
-export type SceneInputEvent =
-  | { type: 'keyDown'; channel: number }
-  | { type: 'keyUp'; channel: number }
-  | { type: 'pointerEnter'; pointer: Pointer }
-  | { type: 'pointerLeave'; pointer: Pointer }
-  | { type: 'pointerDown'; pointer: Pointer }
-  | { type: 'pointerMove'; pointer: Pointer }
-  | { type: 'pointerUp'; pointer: Pointer }
-  | { type: 'pointerTap'; pointer: Pointer }
-  | { type: 'pointerSwipe'; pointer: Pointer }
-  | { type: 'pointerCancel'; pointer: Pointer }
-  | { type: 'mouseWheel'; wheel: Vector };
 
 /**
  * A scene's lifecycle host. Subclass to define scene behavior:
@@ -113,8 +117,8 @@ export class Scene {
   protected _app: Application | null = null;
   protected readonly _root = new Container();
   protected _stackMode: SceneStackMode = 'overlay';
-  protected _inputMode: SceneInputMode = 'capture';
-  protected _inputs: SceneInputs | null = null;
+  private _inputs: SceneInputs | null = null;
+  private _tweens: SceneTweens | null = null;
 
   public get app(): Application | null {
     return this._app;
@@ -142,13 +146,11 @@ export class Scene {
   }
 
   /**
-   * Scene-bound input registry. Bindings created via
-   * `this.inputs.onTrigger(...)` etc. are automatically disposed when the
-   * scene unloads — no manual cleanup required.
+   * Scene-bound input registry. Bindings created via `this.inputs.onTrigger(...)`
+   * etc. are automatically unbound when the scene is destroyed — no manual
+   * cleanup required.
    *
-   * Lazily instantiated on first access; throws if accessed before
-   * {@link Scene.app} is set (i.e. before the scene is registered with
-   * a {@link SceneManager}).
+   * Throws if accessed before the scene is attached to an {@link Application}.
    */
   public get inputs(): SceneInputs {
     if (this._inputs === null) {
@@ -162,20 +164,31 @@ export class Scene {
     return this._inputs;
   }
 
+  /**
+   * Scene-bound tween registry. Tweens created via `this.tweens.create(...)`
+   * are automatically stopped when the scene is destroyed — no manual cleanup
+   * required.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get tweens(): SceneTweens {
+    if (this._tweens === null) {
+      if (this._app === null) {
+        throw new Error('Scene.tweens is unavailable before the scene is attached to an Application.');
+      }
+
+      this._tweens = new SceneTweens(this);
+    }
+
+    return this._tweens;
+  }
+
   public get stackMode(): SceneStackMode {
     return this._stackMode;
   }
 
   public set stackMode(mode: SceneStackMode) {
     this._stackMode = mode;
-  }
-
-  public get inputMode(): SceneInputMode {
-    return this._inputMode;
-  }
-
-  public set inputMode(mode: SceneInputMode) {
-    this._inputMode = mode;
   }
 
   public addChild(child: RenderNode): this {
@@ -195,17 +208,12 @@ export class Scene {
       this._stackMode = policy.mode;
     }
 
-    if (policy.input) {
-      this._inputMode = policy.input;
-    }
-
     return this;
   }
 
   public getParticipationPolicy(): SceneParticipationPolicy {
     return {
       mode: this._stackMode,
-      input: this._inputMode,
     };
   }
 
@@ -257,16 +265,6 @@ export class Scene {
   }
 
   /**
-   * Input event hook. Override to react to keyboard, pointer, and wheel
-   * events delivered to this scene by the {@link InputManager}. Return
-   * `true` to consume the event (stops it propagating to scenes below);
-   * any other return value lets it through.
-   */
-  public handleInput(_event: SceneInputEvent): boolean | void {
-    // override in subclass
-  }
-
-  /**
    * Async asset teardown hook. Called when the scene is finally popped
    * off the stack. Use the loader to release assets that are scene-private
    * and not shared with another scene still on the stack.
@@ -278,6 +276,8 @@ export class Scene {
   public destroy(): void {
     this._inputs?._disposeAll();
     this._inputs = null;
+    this._tweens?._disposeAll();
+    this._tweens = null;
     this._root.destroy();
     this._app = null;
   }
