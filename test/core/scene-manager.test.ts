@@ -72,7 +72,7 @@ const tick = (manager: SceneManager, milliseconds = 16): void => {
   manager.update(new Time(milliseconds));
 };
 
-type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'draw' | 'handleInput' | 'unload'>>;
+type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'draw' | 'unload'>>;
 
 const makeScene = (hooks: SceneHooks = {}): Scene => Object.assign(new Scene(), hooks);
 
@@ -191,7 +191,7 @@ describe('SceneManager', () => {
 
     await manager.setScene(base);
     tick(manager);
-    await manager.pushScene(overlay, { mode: 'modal', input: 'capture' });
+    await manager.pushScene(overlay, { mode: 'modal' });
     tick(manager);
 
     expect(baseLoad).toHaveBeenCalledTimes(1);
@@ -218,7 +218,7 @@ describe('SceneManager', () => {
     const overlay = makeScene({ update: overlayUpdate, draw: overlayDraw });
 
     await manager.setScene(base);
-    await manager.pushScene(overlay, { mode: 'overlay', input: 'passthrough' });
+    await manager.pushScene(overlay, { mode: 'overlay' });
     tick(manager);
 
     expect(baseUpdate).toHaveBeenCalledTimes(1);
@@ -237,7 +237,7 @@ describe('SceneManager', () => {
     const modal = makeScene({ update: modalUpdate, draw: modalDraw });
 
     await manager.setScene(base);
-    await manager.pushScene(modal, { mode: 'modal', input: 'capture' });
+    await manager.pushScene(modal, { mode: 'modal' });
     tick(manager);
 
     expect(baseUpdate).toHaveBeenCalledTimes(0);
@@ -256,104 +256,13 @@ describe('SceneManager', () => {
     const opaque = makeScene({ update: opaqueUpdate, draw: opaqueDraw });
 
     await manager.setScene(base);
-    await manager.pushScene(opaque, { mode: 'opaque', input: 'capture' });
+    await manager.pushScene(opaque, { mode: 'opaque' });
     tick(manager);
 
     expect(baseUpdate).toHaveBeenCalledTimes(0);
     expect(baseDraw).toHaveBeenCalledTimes(0);
     expect(opaqueUpdate).toHaveBeenCalledTimes(1);
     expect(opaqueDraw).toHaveBeenCalledTimes(1);
-  });
-
-  test('passthrough scene returning true consumes input and stops propagation', async () => {
-    const app = createApplicationStub();
-    const manager = new SceneManager(app);
-    const baseInput = jest.fn();
-    const passthroughInput = jest.fn(() => true);
-    const base = makeScene({ handleInput: baseInput });
-    const passthrough = makeScene({ handleInput: passthroughInput });
-
-    await manager.setScene(base);
-    await manager.pushScene(passthrough, { input: 'passthrough' });
-
-    app.input.onKeyDown.dispatch(1);
-
-    expect(passthroughInput).toHaveBeenCalledTimes(1);
-    expect(baseInput).toHaveBeenCalledTimes(0);
-  });
-
-  test('passthrough scene returning false does not consume input', async () => {
-    const app = createApplicationStub();
-    const manager = new SceneManager(app);
-    const baseInput = jest.fn();
-    const passthroughInput = jest.fn(() => false);
-    const base = makeScene({ handleInput: baseInput });
-    const passthrough = makeScene({ handleInput: passthroughInput });
-
-    await manager.setScene(base);
-    await manager.pushScene(passthrough, { input: 'passthrough' });
-
-    app.input.onKeyDown.dispatch(2);
-
-    expect(passthroughInput).toHaveBeenCalledTimes(1);
-    expect(baseInput).toHaveBeenCalledTimes(1);
-  });
-
-  test('passthrough scene returning undefined does not consume input', async () => {
-    const app = createApplicationStub();
-    const manager = new SceneManager(app);
-    const baseInput = jest.fn();
-    const passthroughInput = jest.fn();
-    const base = makeScene({ handleInput: baseInput });
-    const passthrough = makeScene({ handleInput: passthroughInput });
-
-    await manager.setScene(base);
-    await manager.pushScene(passthrough, { input: 'passthrough' });
-
-    app.input.onKeyDown.dispatch(3);
-
-    expect(passthroughInput).toHaveBeenCalledTimes(1);
-    expect(baseInput).toHaveBeenCalledTimes(1);
-  });
-
-  test('capture mode always stops propagation regardless of return value', async () => {
-    const app = createApplicationStub();
-    const manager = new SceneManager(app);
-    const baseInput = jest.fn();
-    const captureFalseInput = jest.fn(() => false);
-    const captureUndefinedInput = jest.fn();
-    const base = makeScene({ handleInput: baseInput });
-    const captureFalse = makeScene({ handleInput: captureFalseInput });
-    const captureUndefined = makeScene({ handleInput: captureUndefinedInput });
-
-    await manager.setScene(base);
-    await manager.pushScene(captureFalse, { input: 'capture' });
-    app.input.onKeyDown.dispatch(4);
-    expect(captureFalseInput).toHaveBeenCalledTimes(1);
-    expect(baseInput).toHaveBeenCalledTimes(0);
-
-    await manager.popScene();
-    await manager.pushScene(captureUndefined, { input: 'capture' });
-    app.input.onKeyDown.dispatch(5);
-    expect(captureUndefinedInput).toHaveBeenCalledTimes(1);
-    expect(baseInput).toHaveBeenCalledTimes(0);
-  });
-
-  test('transparent mode skips top scene input and allows propagation below', async () => {
-    const app = createApplicationStub();
-    const manager = new SceneManager(app);
-    const baseInput = jest.fn();
-    const transparentInput = jest.fn(() => true);
-    const base = makeScene({ handleInput: baseInput });
-    const transparent = makeScene({ handleInput: transparentInput });
-
-    await manager.setScene(base);
-    await manager.pushScene(transparent, { input: 'transparent' });
-
-    app.input.onKeyDown.dispatch(6);
-
-    expect(transparentInput).toHaveBeenCalledTimes(0);
-    expect(baseInput).toHaveBeenCalledTimes(1);
   });
 
   test('failed push keeps active scene stack intact', async () => {

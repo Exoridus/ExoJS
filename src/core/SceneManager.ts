@@ -1,17 +1,14 @@
-import type { Pointer } from '@/input/Pointer';
-import type { Vector } from '@/math/Vector';
 import { Mesh } from '@/rendering/mesh/Mesh';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 
 import type { Application } from './Application';
 import { Color } from './Color';
-import type { Scene, SceneInputEvent, SceneInputMode, SceneParticipationPolicy, SceneStackMode } from './Scene';
+import type { Scene, SceneParticipationPolicy, SceneStackMode } from './Scene';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
 interface ResolvedSceneParticipationPolicy {
   readonly mode: SceneStackMode;
-  readonly input: SceneInputMode;
 }
 
 interface SceneStackEntry {
@@ -40,7 +37,7 @@ export interface SetSceneOptions {
 
 /**
  * Options passed to {@link SceneManager.pushScene}. Inherits
- * {@link SceneParticipationPolicy} so the pushed scene's stack/input mode
+ * {@link SceneParticipationPolicy} so the pushed scene's stack mode
  * can be overridden at the call site without subclassing.
  */
 export interface PushSceneOptions extends SceneParticipationPolicy {
@@ -85,20 +82,15 @@ const defaultFadeTransitionDuration = 220;
 /**
  * Stack-based scene controller owned by {@link Application}. Maintains an
  * ordered stack of {@link Scene} instances, each tagged with its
- * participation policy ({@link SceneStackMode} + {@link SceneInputMode}).
+ * participation policy ({@link SceneStackMode}).
  * Scenes higher on the stack overlay scenes lower; the policy of each
- * scene determines whether scenes below continue to update / render and
- * whether input events propagate down past it.
+ * scene determines whether scenes below continue to update / render.
  *
  * Use {@link SceneManager.setScene} to replace the entire stack with one
  * scene, {@link SceneManager.pushScene} to overlay a new scene on top, and
  * {@link SceneManager.popScene} to remove the topmost. All three accept an
  * optional fade transition.
  *
- * Input from the {@link InputManager} is automatically routed through the
- * stack top-to-bottom; each scene's {@link Scene.handleInput} return value
- * plus the scene's input policy decide whether the next scene below
- * receives the event.
  */
 export class SceneManager {
   private readonly _app: Application;
@@ -117,8 +109,6 @@ export class SceneManager {
 
   public constructor(app: Application) {
     this._app = app;
-
-    this._subscribeInputRouting();
   }
 
   public get scene(): Scene | null {
@@ -257,8 +247,6 @@ export class SceneManager {
   }
 
   public destroy(): void {
-    this._unsubscribeInputRouting();
-
     if (this._transition) {
       const transition = this._transition;
 
@@ -361,9 +349,8 @@ export class SceneManager {
   private _resolveParticipationPolicy(scene: Scene, overrides: SceneParticipationPolicy = {}): ResolvedSceneParticipationPolicy {
     const scenePolicy = scene.getParticipationPolicy();
     const mode = overrides.mode ?? scenePolicy.mode ?? 'overlay';
-    const input = overrides.input ?? scenePolicy.input ?? (mode === 'overlay' ? 'passthrough' : 'capture');
 
-    return { mode, input };
+    return { mode };
   }
 
   private _resolveParticipants(): { updateScenes: Scene[]; drawScenes: Scene[] } {
@@ -396,122 +383,6 @@ export class SceneManager {
 
     return { updateScenes, drawScenes };
   }
-
-  private _subscribeInputRouting(): void {
-    const inputManager = (this._app as Partial<Application>).input as {
-      onKeyDown?: { add?: (handler: (channel: number) => void) => unknown };
-      onKeyUp?: { add?: (handler: (channel: number) => void) => unknown };
-      onPointerEnter?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerLeave?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerDown?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerMove?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerUp?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerTap?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerSwipe?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerCancel?: { add?: (handler: (pointer: Pointer) => void) => unknown };
-      onMouseWheel?: { add?: (handler: (wheel: Vector) => void) => unknown };
-    };
-
-    inputManager.onKeyDown?.add?.(this._handleKeyDown);
-    inputManager.onKeyUp?.add?.(this._handleKeyUp);
-    inputManager.onPointerEnter?.add?.(this._handlePointerEnter);
-    inputManager.onPointerLeave?.add?.(this._handlePointerLeave);
-    inputManager.onPointerDown?.add?.(this._handlePointerDown);
-    inputManager.onPointerMove?.add?.(this._handlePointerMove);
-    inputManager.onPointerUp?.add?.(this._handlePointerUp);
-    inputManager.onPointerTap?.add?.(this._handlePointerTap);
-    inputManager.onPointerSwipe?.add?.(this._handlePointerSwipe);
-    inputManager.onPointerCancel?.add?.(this._handlePointerCancel);
-    inputManager.onMouseWheel?.add?.(this._handleMouseWheel);
-  }
-
-  private _unsubscribeInputRouting(): void {
-    const inputManager = (this._app as Partial<Application>).input as {
-      onKeyDown?: { remove?: (handler: (channel: number) => void) => unknown };
-      onKeyUp?: { remove?: (handler: (channel: number) => void) => unknown };
-      onPointerEnter?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerLeave?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerDown?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerMove?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerUp?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerTap?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerSwipe?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onPointerCancel?: { remove?: (handler: (pointer: Pointer) => void) => unknown };
-      onMouseWheel?: { remove?: (handler: (wheel: Vector) => void) => unknown };
-    };
-
-    inputManager.onKeyDown?.remove?.(this._handleKeyDown);
-    inputManager.onKeyUp?.remove?.(this._handleKeyUp);
-    inputManager.onPointerEnter?.remove?.(this._handlePointerEnter);
-    inputManager.onPointerLeave?.remove?.(this._handlePointerLeave);
-    inputManager.onPointerDown?.remove?.(this._handlePointerDown);
-    inputManager.onPointerMove?.remove?.(this._handlePointerMove);
-    inputManager.onPointerUp?.remove?.(this._handlePointerUp);
-    inputManager.onPointerTap?.remove?.(this._handlePointerTap);
-    inputManager.onPointerSwipe?.remove?.(this._handlePointerSwipe);
-    inputManager.onPointerCancel?.remove?.(this._handlePointerCancel);
-    inputManager.onMouseWheel?.remove?.(this._handleMouseWheel);
-  }
-
-  private _dispatchInput(event: SceneInputEvent): void {
-    for (let index = this._stack.length - 1; index >= 0; index--) {
-      const entry = this._stack[index];
-
-      if (entry.policy.input === 'transparent') {
-        continue;
-      }
-
-      const handled = entry.scene.handleInput(event);
-
-      if (handled === true || entry.policy.input === 'capture') {
-        break;
-      }
-    }
-  }
-
-  private readonly _handleKeyDown = (channel: number): void => {
-    this._dispatchInput({ type: 'keyDown', channel });
-  };
-
-  private readonly _handleKeyUp = (channel: number): void => {
-    this._dispatchInput({ type: 'keyUp', channel });
-  };
-
-  private readonly _handlePointerEnter = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerEnter', pointer });
-  };
-
-  private readonly _handlePointerLeave = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerLeave', pointer });
-  };
-
-  private readonly _handlePointerDown = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerDown', pointer });
-  };
-
-  private readonly _handlePointerMove = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerMove', pointer });
-  };
-
-  private readonly _handlePointerUp = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerUp', pointer });
-  };
-
-  private readonly _handlePointerTap = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerTap', pointer });
-  };
-
-  private readonly _handlePointerSwipe = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerSwipe', pointer });
-  };
-
-  private readonly _handlePointerCancel = (pointer: Pointer): void => {
-    this._dispatchInput({ type: 'pointerCancel', pointer });
-  };
-
-  private readonly _handleMouseWheel = (wheel: Vector): void => {
-    this._dispatchInput({ type: 'mouseWheel', wheel });
-  };
 
   private async _runWithTransition(action: () => Promise<void>, transition?: SceneTransition): Promise<void> {
     if (transition?.type !== 'fade') {
