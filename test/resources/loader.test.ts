@@ -1374,3 +1374,183 @@ describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () =
     expect(global.fetch).toHaveBeenCalledWith('/images/hero.png', expect.anything());
   });
 });
+
+describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  function makeMockStore(): { store: CacheStore; saves: Array<{ storageName: string; key: string }> } {
+    const saves: Array<{ storageName: string; key: string }> = [];
+    const store: CacheStore = {
+      load:    async () => null,
+      save:    async (storageName, key) => { saves.push({ storageName, key }); },
+      delete:  async () => true,
+      clear:   async () => true,
+      destroy: () => {},
+    };
+    return { store, saves };
+  }
+
+  function mockFetch(body: string): void {
+    global.fetch = jest.fn(async (): Promise<Response> => ({
+      ok: true, status: 200, statusText: 'OK',
+      text: async () => body,
+      json: async () => JSON.parse(body),
+      arrayBuffer: async () => Buffer.from(body).buffer,
+    }) as unknown as Response);
+  }
+
+  test('context.fetchText saves to __ctx_text store with source as key', async () => {
+    mockFetch('hello');
+    const { store, saves } = makeMockStore();
+    const loader = new Loader({ resourcePath: '/', cache: store });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => ctx.fetchText(config.source),
+    });
+
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+
+    expect(saves).toContainEqual({ storageName: '__ctx_text', key: 'file.txt' });
+  });
+
+  test('context.fetchJson saves to __ctx_json store with source as key', async () => {
+    mockFetch('{"n":1}');
+    const { store, saves } = makeMockStore();
+    const loader = new Loader({ resourcePath: '/', cache: store });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => {
+        const data = await ctx.fetchJson<{ n: number }>(config.source);
+        return String(data.n);
+      },
+    });
+
+    await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
+
+    expect(saves).toContainEqual({ storageName: '__ctx_json', key: 'data.json' });
+  });
+
+  test('context.fetchArrayBuffer saves to __ctx_binary store with source as key', async () => {
+    mockFetch('bytes');
+    const { store, saves } = makeMockStore();
+    const loader = new Loader({ resourcePath: '/', cache: store });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => {
+        const buf = await ctx.fetchArrayBuffer(config.source);
+        return String(buf.byteLength);
+      },
+    });
+
+    await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
+
+    expect(saves).toContainEqual({ storageName: '__ctx_binary', key: 'data.bin' });
+  });
+
+  test('context.fetchText serves from store cache on second call (no network)', async () => {
+    mockFetch('cached-text');
+    const cachedText = 'cached-text';
+    let loadCallCount = 0;
+    const store: CacheStore = {
+      load:    async (storageName, key) => {
+        if (storageName === '__ctx_text' && key === 'file.txt') {
+          loadCallCount++;
+          return cachedText;
+        }
+        return null;
+      },
+      save:    async () => {},
+      delete:  async () => true,
+      clear:   async () => true,
+      destroy: () => {},
+    };
+    const loader = new Loader({ resourcePath: '/', cache: store });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => ctx.fetchText(config.source),
+    });
+
+    // First load — populates _resources; context.fetchText goes to network, store has no entry yet
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    // Second load — served from _resources, handler not called, store not consulted
+    (global.fetch as jest.Mock).mockClear();
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regression)', () => {
+  test('unload(asset) removes only aliases for the matching getIdentityKey identity', async () => {
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      getIdentityKey: (config) => `${config.source}:${config.format}`,
+      load: async (config) => `result:${config.format}`,
+    });
+
+    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
+    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+
+    await loader.load({ tmxA: tmxMap, tmxB: tmxMap, rpgA: rpgMap });
+
+    const ctor = loader['_assetTypeMap'].get('richAsset')!;
+
+    expect(loader.has(ctor, 'tmxA')).toBe(true);
+    expect(loader.has(ctor, 'tmxB')).toBe(true);
+    expect(loader.has(ctor, 'rpgA')).toBe(true);
+
+    loader.unload(tmxMap);
+
+    expect(loader.has(ctor, 'tmxA')).toBe(false);
+    expect(loader.has(ctor, 'tmxB')).toBe(false);
+    expect(loader.has(ctor, 'rpgA')).toBe(true); // unaffected — different identity
+  });
+
+  test('unload(asset) without getIdentityKey still removes all source-based aliases', async () => {
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config) => `result:${config.source}`,
+    });
+
+    const asset = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+
+    await loader.load({ a: asset, b: asset });
+
+    const ctor = loader['_assetTypeMap'].get('richAsset')!;
+
+    expect(loader.has(ctor, 'a')).toBe(true);
+    expect(loader.has(ctor, 'b')).toBe(true);
+
+    loader.unload(asset);
+
+    expect(loader.has(ctor, 'a')).toBe(false);
+    expect(loader.has(ctor, 'b')).toBe(false);
+  });
+
+  test('unload(asset) with getIdentityKey does not affect a different format identity', async () => {
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      getIdentityKey: (config) => `${config.source}:${config.format}`,
+      load: async (config) => `result:${config.format}`,
+    });
+
+    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
+    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+
+    await loader.load({ tmxA: tmxMap, rpgA: rpgMap });
+
+    const ctor = loader['_assetTypeMap'].get('richAsset')!;
+
+    loader.unload(rpgMap);
+
+    expect(loader.has(ctor, 'tmxA')).toBe(true);  // untouched
+    expect(loader.has(ctor, 'rpgA')).toBe(false);
+  });
+});
