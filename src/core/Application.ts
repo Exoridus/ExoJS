@@ -8,8 +8,7 @@ import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
-import type { CacheStore } from '@/resources/CacheStore';
-import { Loader } from '@/resources/Loader';
+import { Loader, type LoaderOptions } from '@/resources/Loader';
 
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
@@ -27,25 +26,46 @@ export enum ApplicationStatus {
   Stopped = 4,
 }
 
-export interface ApplicationOptions {
-  canvas: HTMLCanvasElement;
-  width: number;
-  height: number;
-  debug: boolean;
-  clearColor: Color;
-  spriteRendererBatchSize: number;
-  particleRendererBatchSize: number;
-  gamepadDefinitions: GamepadDefinition[];
-  gamepadSlotStrategy: GamepadSlotStrategy;
-  pointerDistanceThreshold: number;
-  webglAttributes: WebGLContextAttributes;
-  resourcePath: string;
-  requestOptions: RequestInit;
-  cache?: CacheStore | readonly CacheStore[];
-  backend?: BackendConfig;
+export interface CanvasApplicationOptions {
+  /** Existing canvas element to use. If omitted, Application creates one. */
+  element?: HTMLCanvasElement;
+  /** Logical canvas width. Default: 800. */
+  width?: number;
+  /** Logical canvas height. Default: 600. */
+  height?: number;
+  /** Device/render pixel ratio applied to the backing buffer. Default: 1. */
+  pixelRatio?: number;
+  /** Canvas tabIndex. Default: -1, preserving current behavior. */
+  tabIndex?: number;
+  /** CSS image-rendering hint applied to the canvas style. */
+  imageRendering?: 'auto' | 'pixelated' | 'crisp-edges';
 }
 
-type DefaultApplicationOptions = Omit<ApplicationOptions, 'canvas'>;
+export interface RenderingApplicationOptions {
+  /** WebGL2-only debug wrapper. Ignored by WebGPU. */
+  debug?: boolean;
+  /** WebGL2 context attributes. Ignored by WebGPU. */
+  webglAttributes?: WebGLContextAttributes;
+  /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
+  spriteRendererBatchSize?: number;
+  /** WebGL2 particle renderer batch size. Ignored by WebGPU. */
+  particleRendererBatchSize?: number;
+}
+
+export interface InputApplicationOptions {
+  gamepadDefinitions?: GamepadDefinition[];
+  gamepadSlotStrategy?: GamepadSlotStrategy;
+  pointerDistanceThreshold?: number;
+}
+
+export interface ApplicationOptions {
+  clearColor?: Color;
+  backend?: BackendConfig;
+  canvas?: CanvasApplicationOptions;
+  loader?: LoaderOptions;
+  rendering?: RenderingApplicationOptions;
+  input?: InputApplicationOptions;
+}
 
 export interface WebGl2BackendConfig {
   type: 'webgl2';
@@ -68,17 +88,21 @@ export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBack
 
 const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
 const defaultBackendConfig: AutoBackendConfig = { type: 'auto' };
-
-const defaultAppSettings: DefaultApplicationOptions = {
+const defaultCanvasSettings = {
   width: 800,
   height: 600,
-  clearColor: Color.cornflowerBlue,
+  pixelRatio: 1,
+  tabIndex: -1,
+} as const;
+const defaultLoaderFetchOptions: RequestInit = {
+  method: 'GET',
+  mode: 'cors',
+  cache: 'default',
+};
+const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
   debug: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
   particleRendererBatchSize: 8192, // ~ 1.18mb
-  gamepadDefinitions: [],
-  gamepadSlotStrategy: 'sticky',
-  pointerDistanceThreshold: 10,
   webglAttributes: {
     alpha: false,
     antialias: false,
@@ -87,14 +111,11 @@ const defaultAppSettings: DefaultApplicationOptions = {
     stencil: false,
     depth: false,
   },
-  resourcePath: '',
-  requestOptions: {
-    method: 'GET',
-    mode: 'cors',
-    cache: 'default',
-  },
-  cache: undefined,
-  backend: defaultBackendConfig,
+};
+const defaultInputSettings: Required<InputApplicationOptions> = {
+  gamepadDefinitions: [],
+  gamepadSlotStrategy: 'sticky',
+  pointerDistanceThreshold: 10,
 };
 
 /**
@@ -142,6 +163,7 @@ export class Application {
   private readonly _frameClock: Clock = new Clock();
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
+  private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
   private _frameCount = 0;
   private _frameRequest = 0;
   private _backendType: 'webgl2' | 'webgpu';
@@ -151,24 +173,61 @@ export class Application {
   private _cursor = 'default';
   private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
 
-  public constructor(appSettings?: Partial<ApplicationOptions>) {
-    this.options = {
-      canvas: appSettings?.canvas ?? createDefaultCanvas(),
-      ...defaultAppSettings,
-      ...appSettings,
-      backend: appSettings?.backend ?? defaultBackendConfig,
-    };
-    this.canvas = this.options.canvas;
+  public constructor(appSettings: ApplicationOptions = {}) {
+    const canvasOptions = appSettings.canvas ?? {};
+    const loaderOptions = appSettings.loader ?? {};
+    const renderingOptions = appSettings.rendering ?? {};
+    const inputOptions = appSettings.input ?? {};
+    const canvas = canvasOptions.element ?? createDefaultCanvas();
 
-    if (!this.canvas.hasAttribute('tabindex')) {
-      this.canvas.setAttribute('tabindex', '-1');
+    const logicalWidth = canvasOptions.width ?? defaultCanvasSettings.width;
+    const logicalHeight = canvasOptions.height ?? defaultCanvasSettings.height;
+    this._pixelRatio = canvasOptions.pixelRatio ?? defaultCanvasSettings.pixelRatio;
+    this.canvas = canvas;
+    this._applyCanvasSize(logicalWidth, logicalHeight);
+
+    if (canvasOptions.tabIndex !== undefined) {
+      this.canvas.tabIndex = canvasOptions.tabIndex;
+    } else if (!this.canvas.hasAttribute('tabindex')) {
+      this.canvas.tabIndex = defaultCanvasSettings.tabIndex;
     }
 
-    this.loader = new Loader({
-      resourcePath: this.options.resourcePath,
-      requestOptions: this.options.requestOptions,
-      cache: this.options.cache,
-    });
+    if (canvasOptions.imageRendering !== undefined) {
+      this.canvas.style.imageRendering = canvasOptions.imageRendering;
+    }
+
+    this.options = {
+      clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
+      backend: appSettings.backend ?? defaultBackendConfig,
+      canvas: {
+        element: this.canvas,
+        width: logicalWidth,
+        height: logicalHeight,
+        pixelRatio: this._pixelRatio,
+        tabIndex: this.canvas.tabIndex,
+        imageRendering: canvasOptions.imageRendering,
+      },
+      loader: {
+        basePath: loaderOptions.basePath ?? '',
+        fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
+        cache: loaderOptions.cache,
+        cacheStrategy: loaderOptions.cacheStrategy,
+        concurrency: loaderOptions.concurrency,
+      },
+      rendering: {
+        debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
+        webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
+        spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
+        particleRendererBatchSize: renderingOptions.particleRendererBatchSize ?? defaultRenderingSettings.particleRendererBatchSize,
+      },
+      input: {
+        gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
+        gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
+        pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
+      },
+    };
+
+    this.loader = new Loader(this.options.loader);
     this._backendType = this.resolveInitialBackendType();
     this._backend = this.createBackend(this._backendType);
     this.input = new InputManager(this);
@@ -352,6 +411,14 @@ export class Application {
    * notified.
    */
   public resize(width: number, height: number): this {
+    this._applyCanvasSize(width, height);
+    this.options.canvas = {
+      ...(this.options.canvas ?? {}),
+      width,
+      height,
+      pixelRatio: this._pixelRatio,
+    };
+
     this.backend.resize(width, height);
     this.onResize.dispatch(width, height, this);
 
@@ -473,5 +540,15 @@ export class Application {
     const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU }>;
 
     return !!gpuNavigator.gpu;
+  }
+
+  private _applyCanvasSize(width: number, height: number): void {
+    const renderWidth = Math.round(width * this._pixelRatio);
+    const renderHeight = Math.round(height * this._pixelRatio);
+
+    this.canvas.width = renderWidth;
+    this.canvas.height = renderHeight;
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
   }
 }

@@ -396,8 +396,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 320,
-          height: 240,
+          canvas: { width: 320, height: 240 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -428,8 +427,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 320,
-          height: 240,
+          canvas: { width: 320, height: 240 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -459,8 +457,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 320,
-          height: 240,
+          canvas: { width: 320, height: 240 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -479,15 +476,16 @@ describe('WebGpuBackend', () => {
     }
   });
 
-  test('initializes the WebGPU canvas/backbuffer from the application size', async () => {
+  test('initializes using pre-sized canvas backbuffer plus application logical size', async () => {
     const environment = createMockWebGpuEnvironment();
 
     try {
+      environment.canvas.width = 640;
+      environment.canvas.height = 360;
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 640,
-          height: 360,
+          canvas: { width: 640, height: 360 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -514,8 +512,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 640,
-          height: 360,
+          canvas: { width: 640, height: 360 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -538,8 +535,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -575,8 +571,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -617,8 +612,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -659,8 +653,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -698,8 +691,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -736,8 +728,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -778,8 +769,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -815,8 +805,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -858,8 +847,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -905,8 +893,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -943,8 +930,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -989,8 +975,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1035,8 +1020,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1080,8 +1064,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1141,8 +1124,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1199,8 +1181,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1263,8 +1244,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1304,8 +1284,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1335,8 +1314,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1369,8 +1347,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1406,8 +1383,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1445,8 +1421,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1490,8 +1465,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1541,8 +1515,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1593,8 +1566,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1645,8 +1617,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1693,8 +1664,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1739,8 +1709,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1786,8 +1755,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1823,8 +1791,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1864,8 +1831,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1914,8 +1880,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -1955,8 +1920,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2014,8 +1978,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2049,8 +2012,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2087,8 +2049,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2108,8 +2069,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2134,8 +2094,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2163,8 +2122,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2197,8 +2155,7 @@ describe('WebGpuBackend', () => {
       const app = {
         canvas: environment.canvas,
         options: {
-          width: 128,
-          height: 128,
+          canvas: { width: 128, height: 128 },
           clearColor: Color.black,
         },
       } as unknown as Application;
@@ -2217,3 +2174,4 @@ describe('WebGpuBackend', () => {
     }
   });
 });
+

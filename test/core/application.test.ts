@@ -19,6 +19,8 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
 interface ApplicationTestHarness {
   readonly Application: typeof import('@/core/Application').Application;
   readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
+  readonly LoaderMock: jest.Mock;
+  readonly InputManagerMock: jest.Mock;
   readonly webglManager: {
     initialize: jest.Mock;
     flush: jest.Mock;
@@ -89,6 +91,8 @@ const loadApplicationHarness = (
   };
   const BackendMock = jest.fn(() => webglManager);
   const WebGpuBackendMock = jest.fn(() => webgpuManager);
+  const LoaderMock = jest.fn(() => loader);
+  const InputManagerMock = jest.fn(() => inputManager);
   let Application!: typeof import('@/core/Application').Application;
   let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
 
@@ -100,10 +104,10 @@ const loadApplicationHarness = (
     WebGpuBackend: WebGpuBackendMock,
   }));
   jest.doMock('@/resources/Loader', () => ({
-    Loader: jest.fn(() => loader),
+    Loader: LoaderMock,
   }));
   jest.doMock('@/input/InputManager', () => ({
-    InputManager: jest.fn(() => inputManager),
+    InputManager: InputManagerMock,
   }));
   jest.doMock('@/input/InteractionManager', () => ({
     InteractionManager: jest.fn(() => ({
@@ -125,6 +129,8 @@ const loadApplicationHarness = (
   return {
     Application,
     ApplicationStatus,
+    LoaderMock,
+    InputManagerMock,
     webglManager,
     webgpuManager,
     BackendMock,
@@ -192,7 +198,7 @@ describe('Application', () => {
       const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
 
       new Application({
-        canvas: document.createElement('canvas'),
+        canvas: { element: document.createElement('canvas') },
       });
 
       expect(WebGpuBackendMock).toHaveBeenCalledTimes(1);
@@ -209,7 +215,7 @@ describe('Application', () => {
       const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
 
       new Application({
-        canvas: document.createElement('canvas'),
+        canvas: { element: document.createElement('canvas') },
       });
 
       expect(BackendMock).toHaveBeenCalledTimes(1);
@@ -226,7 +232,7 @@ describe('Application', () => {
       const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
 
       new Application({
-        canvas: document.createElement('canvas'),
+        canvas: { element: document.createElement('canvas') },
         backend: { type: 'webgl2' },
       });
 
@@ -250,7 +256,7 @@ describe('Application', () => {
         webglInitialize,
       });
       const app = new Application({
-        canvas: document.createElement('canvas'),
+        canvas: { element: document.createElement('canvas') },
       });
 
       await app.start({} as import('@/core/Scene').Scene);
@@ -277,7 +283,7 @@ describe('Application', () => {
     try {
       const { Application, webgpuManager, BackendMock } = loadApplicationHarness({ webgpuInitialize });
       const app = new Application({
-        canvas: document.createElement('canvas'),
+        canvas: { element: document.createElement('canvas') },
         backend: { type: 'webgpu' },
       });
 
@@ -297,11 +303,11 @@ describe('Application', () => {
     try {
       const { Application } = loadApplicationHarness();
       const webgpuApp = new Application({
-        canvas: document.createElement('canvas'),
+        canvas: { element: document.createElement('canvas') },
         backend: { type: 'webgpu' },
       });
       const webglApp = new Application({
-        canvas: document.createElement('canvas'),
+        canvas: { element: document.createElement('canvas') },
         backend: { type: 'webgl2' },
       });
 
@@ -312,6 +318,137 @@ describe('Application', () => {
     } finally {
       restoreGpu();
     }
+  });
+
+  test('constructs canvas from grouped canvas options (width/height + element)', () => {
+    const { Application } = loadApplicationHarness();
+    const canvas = document.createElement('canvas');
+    const app = new Application({
+      canvas: {
+        element: canvas,
+        width: 320,
+        height: 180,
+      },
+    });
+
+    expect(app.canvas).toBe(canvas);
+    expect(canvas.width).toBe(320);
+    expect(canvas.height).toBe(180);
+    expect(canvas.style.width).toBe('320px');
+    expect(canvas.style.height).toBe('180px');
+    expect(canvas.tabIndex).toBe(-1);
+  });
+
+  test('passes grouped loader options through to Loader constructor', () => {
+    const { Application, LoaderMock } = loadApplicationHarness();
+    const fetchOptions: RequestInit = { credentials: 'include' };
+    const cache = {} as import('@/resources/CacheStore').CacheStore;
+    const cacheStrategy = { resolve: jest.fn() } as unknown as import('@/resources/CacheStrategy').CacheStrategy;
+
+    new Application({
+      loader: {
+        basePath: '/assets/',
+        fetchOptions,
+        cache,
+        cacheStrategy,
+        concurrency: 3,
+      },
+    });
+
+    expect(LoaderMock).toHaveBeenCalledWith({
+      basePath: '/assets/',
+      fetchOptions,
+      cache,
+      cacheStrategy,
+      concurrency: 3,
+    });
+  });
+
+  test('passes grouped input options to InputManager', () => {
+    const { Application, InputManagerMock } = loadApplicationHarness();
+
+    new Application({
+      input: {
+        gamepadDefinitions: [],
+        gamepadSlotStrategy: 'compact',
+        pointerDistanceThreshold: 24,
+      },
+    });
+
+    const appArg = InputManagerMock.mock.calls[0][0] as import('@/core/Application').Application;
+
+    expect(appArg.options.input?.gamepadSlotStrategy).toBe('compact');
+    expect(appArg.options.input?.pointerDistanceThreshold).toBe(24);
+    expect(appArg.options.input?.gamepadDefinitions).toEqual([]);
+  });
+
+  test('passes grouped rendering options to WebGl2Backend path', () => {
+    const { Application, BackendMock } = loadApplicationHarness();
+
+    new Application({
+      backend: { type: 'webgl2' },
+      rendering: {
+        debug: true,
+        webglAttributes: { antialias: true },
+        spriteRendererBatchSize: 128,
+        particleRendererBatchSize: 256,
+      },
+    });
+
+    const appArg = BackendMock.mock.calls[0][0] as import('@/core/Application').Application;
+
+    expect(appArg.options.rendering?.debug).toBe(true);
+    expect(appArg.options.rendering?.webglAttributes).toEqual({ antialias: true });
+    expect(appArg.options.rendering?.spriteRendererBatchSize).toBe(128);
+    expect(appArg.options.rendering?.particleRendererBatchSize).toBe(256);
+  });
+
+  test('applies canvas pixelRatio to backing size and keeps resize logical', () => {
+    const { Application, webglManager } = loadApplicationHarness();
+    const app = new Application({
+      backend: { type: 'webgl2' },
+      canvas: {
+        width: 200,
+        height: 100,
+        pixelRatio: 2,
+      },
+    });
+
+    expect(app.canvas.width).toBe(400);
+    expect(app.canvas.height).toBe(200);
+    expect(app.canvas.style.width).toBe('200px');
+    expect(app.canvas.style.height).toBe('100px');
+
+    app.resize(300, 150);
+
+    expect(app.canvas.width).toBe(600);
+    expect(app.canvas.height).toBe(300);
+    expect(app.canvas.style.width).toBe('300px');
+    expect(app.canvas.style.height).toBe('150px');
+    expect(webglManager.resize).toHaveBeenCalledWith(300, 150);
+  });
+
+  test('applies tabIndex/imageRendering from canvas options', () => {
+    const { Application } = loadApplicationHarness();
+    const canvas = document.createElement('canvas');
+    const app = new Application({
+      canvas: {
+        element: canvas,
+        tabIndex: 0,
+        imageRendering: 'pixelated',
+      },
+    });
+
+    expect(app.canvas.tabIndex).toBe(0);
+    expect(app.canvas.style.imageRendering).toBe('pixelated');
+  });
+
+  test('ignores removed flat options at runtime (no compatibility shim)', () => {
+    const { Application } = loadApplicationHarness();
+    const app = new Application({ width: 123, height: 45 } as unknown as import('@/core/Application').ApplicationOptions);
+
+    expect(app.canvas.width).toBe(800);
+    expect(app.canvas.height).toBe(600);
   });
 
   test('stop() catches async scene teardown failures instead of leaking rejections', async () => {
@@ -347,3 +484,4 @@ describe('Application', () => {
     consoleErrorSpy.mockRestore();
   });
 });
+

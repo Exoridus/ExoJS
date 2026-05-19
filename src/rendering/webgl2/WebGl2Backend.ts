@@ -124,7 +124,15 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _stats: RenderStats = createRenderStats();
 
   public constructor(app: Application) {
-    const { width, height, clearColor, webglAttributes, debug, spriteRendererBatchSize, particleRendererBatchSize } = app.options;
+    const canvasOptions = app.options.canvas ?? {};
+    const renderingOptions = app.options.rendering ?? {};
+    const width = canvasOptions.width ?? 800;
+    const height = canvasOptions.height ?? 600;
+    const clearColor = app.options.clearColor;
+    const webglAttributes = renderingOptions.webglAttributes;
+    const debug = renderingOptions.debug ?? false;
+    const spriteRendererBatchSize = renderingOptions.spriteRendererBatchSize ?? 4096;
+    const particleRendererBatchSize = renderingOptions.particleRendererBatchSize ?? 8192;
 
     this._canvas = app.canvas;
 
@@ -384,18 +392,31 @@ export class WebGl2Backend implements RenderBackend {
 
       switch (blendMode) {
         case BlendModes.Additive:
+          gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE);
           break;
         case BlendModes.Subtract:
+          gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
           break;
         case BlendModes.Multiply:
+          gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
           break;
         case BlendModes.Screen:
+          gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
           break;
+        case BlendModes.Darken:
+          gl.blendEquation(gl.MIN);
+          gl.blendFunc(gl.ONE, gl.ONE);
+          break;
+        case BlendModes.Lighten:
+          gl.blendEquation(gl.MAX);
+          gl.blendFunc(gl.ONE, gl.ONE);
+          break;
         default:
+          gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           break;
       }
@@ -440,9 +461,6 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public resize(width: number, height: number): this {
-    this._canvas.width = width;
-    this._canvas.height = height;
-
     this._rootRenderTarget.resize(width, height);
     this._bindRenderTarget(this._renderTarget);
 
@@ -494,7 +512,7 @@ export class WebGl2Backend implements RenderBackend {
     this._boundFramebuffer = null;
   }
 
-  private _createContext(options: WebGLContextAttributes): WebGL2RenderingContext | null {
+  private _createContext(options?: WebGLContextAttributes): WebGL2RenderingContext | null {
     try {
       return this._canvas.getContext('webgl2', options);
     } catch (_e) {
@@ -696,7 +714,13 @@ export class WebGl2Backend implements RenderBackend {
 
     if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
       const gl = this._context;
-      const { x, y, width, height } = target.getViewport();
+      const viewport = target.getViewport();
+      const scaleX = target.root && target.width > 0 ? this._canvas.width / target.width : 1;
+      const scaleY = target.root && target.height > 0 ? this._canvas.height / target.height : 1;
+      const x = Math.floor(viewport.x * scaleX);
+      const y = Math.floor(viewport.y * scaleY);
+      const width = Math.max(0, Math.round(viewport.width * scaleX));
+      const height = Math.max(0, Math.round(viewport.height * scaleY));
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
       gl.viewport(x, y, width, height);
@@ -860,9 +884,15 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
+    const scaleX = this._renderTarget.root && this._renderTarget.width > 0 ? this._canvas.width / this._renderTarget.width : 1;
+    const scaleY = this._renderTarget.root && this._renderTarget.height > 0 ? this._canvas.height / this._renderTarget.height : 1;
+    const x = Math.floor(clip.x * scaleX);
+    const y = Math.floor(clip.y * scaleY);
+    const width = Math.max(0, Math.round(clip.width * scaleX));
+    const height = Math.max(0, Math.round(clip.height * scaleY));
 
     gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(clip.x, clip.y, clip.width, clip.height);
+    gl.scissor(x, y, width, height);
   }
 }
 

@@ -102,7 +102,7 @@ describe('Application focus / visibility', () => {
 
   test('canvasFocused reflects input.canvasFocused', () => {
     const { Application, inputManagerMock } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     expect(app.canvasFocused).toBe(false);
 
@@ -114,7 +114,7 @@ describe('Application focus / visibility', () => {
 
   test('focusing the canvas dispatches onCanvasFocusChange(true)', () => {
     const { Application, inputManagerMock } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     const handler = jest.fn();
     app.onCanvasFocusChange.add(handler);
@@ -127,7 +127,7 @@ describe('Application focus / visibility', () => {
 
   test('blurring the canvas dispatches onCanvasFocusChange(false)', () => {
     const { Application, inputManagerMock } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     const handler = jest.fn();
     app.onCanvasFocusChange.add(handler);
@@ -140,7 +140,7 @@ describe('Application focus / visibility', () => {
 
   test('documentVisible is true initially', () => {
     const { Application } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     // jsdom visibilityState defaults to 'visible'
     expect(app.documentVisible).toBe(true);
@@ -150,7 +150,7 @@ describe('Application focus / visibility', () => {
 
   test('visibilitychange event flips documentVisible and dispatches signal', () => {
     const { Application } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     const handler = jest.fn();
     app.onVisibilityChange.add(handler);
@@ -181,7 +181,7 @@ describe('Application focus / visibility', () => {
 
   test('pauseOnHidden=true skips frame body but keeps rAF scheduled when hidden', () => {
     const { Application, ApplicationStatus, sceneManagerMock, interactionMock, inputManagerMock } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
     // Simulate hidden document
@@ -232,7 +232,7 @@ describe('Application focus / visibility', () => {
 
   test('pauseOnHidden=false (default) updates normally even when hidden', () => {
     const { Application, ApplicationStatus, sceneManagerMock, inputManagerMock } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
     // Simulate hidden document
@@ -287,7 +287,7 @@ describe('Application focus / visibility', () => {
 
   test('destroy() unsubscribes visibilitychange listener', () => {
     const { Application } = loadHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     const handler = jest.fn();
     app.onVisibilityChange.add(handler);
@@ -312,3 +312,4 @@ describe('Application focus / visibility', () => {
     });
   });
 });
+

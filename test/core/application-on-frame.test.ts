@@ -95,7 +95,7 @@ describe('Application.onFrame', () => {
 
   test('app.onFrame exists and has Signal-shaped API (add / remove / dispatch / bindings)', () => {
     const { Application } = loadOnFrameHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     expect(app.onFrame).toBeDefined();
     expect(typeof app.onFrame.add).toBe('function');
@@ -162,7 +162,7 @@ describe('Application.onFrame', () => {
 
   test('app.destroy() destroys the onFrame signal (bindings cleared)', () => {
     const { Application } = loadOnFrameHarness();
-    const app = new Application({ canvas: document.createElement('canvas') });
+    const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     const handler = jest.fn();
 
@@ -174,3 +174,4 @@ describe('Application.onFrame', () => {
     expect(app.onFrame.bindings.length).toBe(0);
   });
 });
+

@@ -106,7 +106,7 @@ describe('Loader', () => {
 
   test('load(Type, path) returns a single resource', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -116,9 +116,32 @@ describe('Loader', () => {
     expect(result).toBe('resource:fresh-source');
   });
 
+  test('basePath prefixes relative fetch URLs', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/assets/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    mockFetch();
+    await loader.load(TextAsset, 'demo.txt');
+
+    expect(global.fetch).toHaveBeenCalledWith('/assets/demo.txt', expect.anything());
+  });
+
+  test('fetchOptions are forwarded to fetch calls', async () => {
+    const factory = new MockTextFactory();
+    const fetchOptions: RequestInit = { credentials: 'include', mode: 'same-origin' };
+    const loader = new Loader({ basePath: '/', fetchOptions });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    mockFetch();
+    await loader.load(TextAsset, 'demo.txt');
+
+    expect(global.fetch).toHaveBeenCalledWith('/demo.txt', fetchOptions);
+  });
+
   test('load(Type, [paths]) returns an array of resources', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -132,7 +155,7 @@ describe('Loader', () => {
 
   test('load(Type, { alias: path }) returns a record', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -145,7 +168,7 @@ describe('Loader', () => {
 
   test('load() deduplicates concurrent requests for the same alias', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -158,7 +181,7 @@ describe('Loader', () => {
 
   test('throws on non-ok HTTP response', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch404();
@@ -168,7 +191,7 @@ describe('Loader', () => {
 
   test('load() continues independently per item (fail-tolerant via Promise.allSettled pattern)', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -187,7 +210,7 @@ describe('Loader', () => {
 
   test('get() retrieves loaded resource, peek() returns null for missing', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -202,14 +225,14 @@ describe('Loader', () => {
   });
 
   test('get() throws for missing resource', () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     expect(() => loader.get(TextAsset, 'nope')).toThrow('Missing resource');
   });
 
   test('add() registers aliases, load() resolves them', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -223,7 +246,7 @@ describe('Loader', () => {
 
   test('unload() removes a resource, unloadAll() clears type', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -241,7 +264,7 @@ describe('Loader', () => {
 
   test('custom factory via register() with user-defined class', async () => {
     const factory = new DummyFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(DummyAsset, factory);
     mockFetch();
@@ -257,7 +280,7 @@ describe('Loader', () => {
     const cacheStore = createCacheStoreMock({
       load: jest.fn(async (): Promise<string> => 'cached-source'),
     });
-    const loader = new Loader({ resourcePath: '/', cache: cacheStore });
+    const loader = new Loader({ basePath: '/', cache: cacheStore });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     global.fetch = jest.fn(async (): Promise<Response> => {
@@ -276,7 +299,7 @@ describe('Loader', () => {
   test('falls back to network and persists source when cache misses', async () => {
     const factory = new MockTextFactory();
     const cacheStore = createCacheStoreMock();
-    const loader = new Loader({ resourcePath: '/', cache: cacheStore });
+    const loader = new Loader({ basePath: '/', cache: cacheStore });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -294,7 +317,7 @@ describe('Loader', () => {
     const cacheStore = createCacheStoreMock({
       load: jest.fn(async (): Promise<string> => 'corrupt-source'),
     });
-    const loader = new Loader({ resourcePath: '/', cache: cacheStore });
+    const loader = new Loader({ basePath: '/', cache: cacheStore });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
@@ -311,7 +334,7 @@ describe('Loader', () => {
   });
 
   test('load(Json, path) returns unknown by default', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     global.fetch = jest.fn(
       async (): Promise<Response> =>
@@ -330,7 +353,7 @@ describe('Loader', () => {
 
   test('backgroundLoad() + load() priority boost', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/', concurrency: 1 });
+    const loader = new Loader({ basePath: '/', concurrency: 1 });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
 
@@ -351,7 +374,7 @@ describe('Loader', () => {
 
   test('background load dispatches onLoaded exactly once per successful resource', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     const onLoaded = jest.fn();
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
@@ -367,7 +390,7 @@ describe('Loader', () => {
 
   test('boosted background items keep loadAll pending and report full progress', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/', concurrency: 1 });
+    const loader = new Loader({ basePath: '/', concurrency: 1 });
     const firstFetch = createDeferred<Response>();
     const boostedFetch = createDeferred<Response>();
     const progress: [number, number][] = [];
@@ -427,7 +450,7 @@ describe('Loader', () => {
 
   test('does not reinsert a resource when unload() is called during in-flight fetch', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     const deferredFetch = createDeferred<Response>();
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
@@ -458,7 +481,7 @@ describe('Loader', () => {
 
     const firstFactory = new InstanceFactory(new FirstType());
     const secondFactory = new InstanceFactory(new SecondType());
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(FirstType, firstFactory as AssetFactory<FirstType>);
     loader.register(SecondType, secondFactory as AssetFactory<SecondType>);
@@ -473,7 +496,7 @@ describe('Loader', () => {
   });
 
   test('registerManifest() registers one manifest without loading', () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     const manifest = defineAssetManifest({
       bundles: {
         boot: [{ type: TextAsset, alias: 'intro', path: 'intro.txt' }],
@@ -487,7 +510,7 @@ describe('Loader', () => {
   });
 
   test('registerManifest() throws when bundle name is already registered', () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     const firstManifest = defineAssetManifest({
       bundles: {
         boot: [{ type: TextAsset, alias: 'intro', path: 'intro.txt' }],
@@ -505,7 +528,7 @@ describe('Loader', () => {
   });
 
   test('registerManifest() throws on conflicting (type, alias) across bundles', () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerManifest(
       defineAssetManifest({
@@ -527,7 +550,7 @@ describe('Loader', () => {
   });
 
   test('registerManifest() allows equivalent (type, alias) definitions across bundles', () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerManifest(
       defineAssetManifest({
@@ -563,7 +586,7 @@ describe('Loader', () => {
   });
 
   test('registerManifest() throws on conflict with prior manual add()', () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.add(TextAsset, { hero: 'hero-v1.txt' });
 
@@ -580,7 +603,7 @@ describe('Loader', () => {
 
   test('loadBundle() loads a known bundle successfully', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -601,14 +624,14 @@ describe('Loader', () => {
   });
 
   test('loadBundle() rejects clearly for unknown bundle name', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     await expect(loader.loadBundle('missing')).rejects.toThrow('Unknown bundle');
   });
 
   test('repeated loadBundle() calls are safe and do not refetch cached assets', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -628,7 +651,7 @@ describe('Loader', () => {
 
   test('overlapping bundle loads deduplicate shared assets', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -651,7 +674,7 @@ describe('Loader', () => {
 
   test('loadBundle() rejects with BundleLoadError on partial failure', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -704,7 +727,7 @@ describe('Loader', () => {
 
   test('successful assets remain cached after partial bundle failure', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -743,7 +766,7 @@ describe('Loader', () => {
 
   test('bundle progress callback and signal report expected totals and final completion', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     const callbackProgress: [number, number][] = [];
     const signalProgress: [string, number, number][] = [];
 
@@ -778,7 +801,7 @@ describe('Loader', () => {
 
   test('background bundle load works', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/', concurrency: 1 });
+    const loader = new Loader({ basePath: '/', concurrency: 1 });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -800,7 +823,7 @@ describe('Loader', () => {
 
   test('foreground load after background bundle queue uses normal priority boost behavior', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/', concurrency: 1 });
+    const loader = new Loader({ basePath: '/', concurrency: 1 });
     const firstFetch = createDeferred<Response>();
     const boostedFetch = createDeferred<Response>();
 
@@ -860,7 +883,7 @@ describe('Loader', () => {
 
   test('hasBundle() is false for unknown bundle and true after full successful load', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -882,7 +905,7 @@ describe('Loader', () => {
 
   test('hasBundle() stays false after partial bundle failure', async () => {
     const factory = new MockTextFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -954,7 +977,7 @@ describe('LoadingQueue progress tracking', () => {
 
   test('progress counts both successful and failed items in a map load', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1010,7 +1033,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
   test('same Asset under two aliases shares a single network fetch', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1026,7 +1049,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
   test('get() resolves both aliases after multi-alias load', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1040,7 +1063,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
   test('unload(asset) removes asset loaded by source-as-alias (single Asset load)', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1058,7 +1081,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
   test('unload(asset) removes all aliases after keyed-map load', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1078,7 +1101,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
   test('unload(assets) unloads all entries from an Assets container', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1101,7 +1124,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
   test('aliases are cleared from tracking when underlying asset unloads', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1146,7 +1169,7 @@ describe('registerAssetType() handler form — full config forwarding', () => {
   });
 
   test('handler receives config.source and extra config fields', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     const receivedConfigs: unknown[] = [];
 
     loader.registerAssetType('richAsset', {
@@ -1165,7 +1188,7 @@ describe('registerAssetType() handler form — full config forwarding', () => {
   });
 
   test('handler result is stored and retrievable via the alias', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       load: async (config) => `parsed:${config.source}`,
@@ -1197,7 +1220,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
   }
 
   test('context exposes identityKey as a non-empty string', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     let capturedKey = '';
 
     loader.registerAssetType('richAsset', {
@@ -1213,7 +1236,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
 
   test('context.fetchText fetches and returns text', async () => {
     mockFetchText('hello world');
-    const loader = new Loader({ resourcePath: '/assets/' });
+    const loader = new Loader({ basePath: '/assets/' });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => ctx.fetchText(config.source),
@@ -1226,7 +1249,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
 
   test('context.fetchText caches: second call skips network', async () => {
     mockFetchText('cached content');
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => ctx.fetchText(config.source),
@@ -1243,7 +1266,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
 
   test('context.fetchJson fetches and parses JSON', async () => {
     mockFetchText('{"value":42}');
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => {
@@ -1258,7 +1281,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
 
   test('context.fetchArrayBuffer fetches binary data', async () => {
     mockFetchText('binary');
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => {
@@ -1272,7 +1295,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
   });
 
   test('getIdentityKey separates assets with same source but different format', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
     const loadOrder: string[] = [];
 
     loader.registerAssetType('richAsset', {
@@ -1300,7 +1323,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
 
   test('without getIdentityKey, same source deduplicates in-flight calls', async () => {
     let callCount = 0;
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       load: async (config) => {
@@ -1345,7 +1368,7 @@ describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () =
       return `loaded:${source}`;
     });
 
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1363,7 +1386,7 @@ describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () =
 
   test('string values in batch continue to work unchanged', async () => {
     const factory = new MockAssetFactory();
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
     mockFetch();
@@ -1407,7 +1430,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
   test('context.fetchText saves to __ctx_text store with source as key', async () => {
     mockFetch('hello');
     const { store, saves } = makeMockStore();
-    const loader = new Loader({ resourcePath: '/', cache: store });
+    const loader = new Loader({ basePath: '/', cache: store });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => ctx.fetchText(config.source),
@@ -1421,7 +1444,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
   test('context.fetchJson saves to __ctx_json store with source as key', async () => {
     mockFetch('{"n":1}');
     const { store, saves } = makeMockStore();
-    const loader = new Loader({ resourcePath: '/', cache: store });
+    const loader = new Loader({ basePath: '/', cache: store });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => {
@@ -1438,7 +1461,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
   test('context.fetchArrayBuffer saves to __ctx_binary store with source as key', async () => {
     mockFetch('bytes');
     const { store, saves } = makeMockStore();
-    const loader = new Loader({ resourcePath: '/', cache: store });
+    const loader = new Loader({ basePath: '/', cache: store });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => {
@@ -1469,7 +1492,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
       clear:   async () => true,
       destroy: () => {},
     };
-    const loader = new Loader({ resourcePath: '/', cache: store });
+    const loader = new Loader({ basePath: '/', cache: store });
 
     loader.registerAssetType('richAsset', {
       load: async (config, ctx) => ctx.fetchText(config.source),
@@ -1486,7 +1509,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
 describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regression)', () => {
   test('unload(asset) removes only aliases for the matching getIdentityKey identity', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       getIdentityKey: (config) => `${config.source}:${config.format}`,
@@ -1512,7 +1535,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
   });
 
   test('unload(asset) without getIdentityKey still removes all source-based aliases', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       load: async (config) => `result:${config.source}`,
@@ -1534,7 +1557,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
   });
 
   test('unload(asset) with getIdentityKey does not affect a different format identity', async () => {
-    const loader = new Loader({ resourcePath: '/' });
+    const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
       getIdentityKey: (config) => `${config.source}:${config.format}`,

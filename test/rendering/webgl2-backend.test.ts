@@ -165,7 +165,7 @@ describe('Application.setCursor', () => {
 
   test('setCursor(string) updates canvas.style.cursor and cursor getter', () => {
     const canvas = document.createElement('canvas');
-    const app = new Application({ canvas, backend: { type: 'webgl2' } });
+    const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
 
     app.setCursor('pointer');
 
@@ -175,7 +175,7 @@ describe('Application.setCursor', () => {
 
   test('cursor setter updates canvas.style.cursor', () => {
     const canvas = document.createElement('canvas');
-    const app = new Application({ canvas, backend: { type: 'webgl2' } });
+    const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
 
     app.cursor = 'crosshair';
 
@@ -185,7 +185,7 @@ describe('Application.setCursor', () => {
 
   test('setCursor(HTMLImageElement) converts to data-URL cursor', () => {
     const canvas = document.createElement('canvas');
-    const app = new Application({ canvas, backend: { type: 'webgl2' } });
+    const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
 
     // Create a real HTMLImageElement source and mock toDataURL on a temp canvas.
     const img = new Image();
@@ -204,7 +204,7 @@ describe('Application.setCursor', () => {
     // but does not throw — it logs a not-implemented warning and returns an empty
     // string, so we just verify the url() wrapper is applied.
     const canvas = document.createElement('canvas');
-    const app = new Application({ canvas, backend: { type: 'webgl2' } });
+    const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
     const sourceCanvas = document.createElement('canvas');
 
     // setCursor with an HTMLCanvasElement uses the non-Texture branch (source IS
@@ -218,8 +218,9 @@ describe('Application.setCursor', () => {
 
   test('setCursor returns the Application for chaining', () => {
     const canvas = document.createElement('canvas');
-    const app = new Application({ canvas, backend: { type: 'webgl2' } });
+    const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
 
     expect(app.setCursor('default')).toBe(app);
   });
 });
+

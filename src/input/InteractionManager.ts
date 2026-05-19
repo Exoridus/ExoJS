@@ -612,7 +612,10 @@ export class InteractionManager {
   /** Build a fresh Quadtree sized to encompass the canvas + current scene root. */
   private _createQuadtree(): Quadtree<IndexedNode> {
     const canvas = this._app.canvas;
-    const bounds = new Rectangle(0, 0, canvas.width || 800, canvas.height || 600);
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || canvas.width || 800;
+    const height = rect.height || canvas.height || 600;
+    const bounds = new Rectangle(0, 0, width, height);
     const root = this._app.sceneManager.scene?.root;
 
     if (root) {

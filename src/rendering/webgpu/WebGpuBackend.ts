@@ -111,7 +111,10 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _stats: RenderStats = createRenderStats();
 
   public constructor(app: Application) {
-    const { width, height, clearColor } = app.options;
+    const canvasOptions = app.options.canvas ?? {};
+    const width = canvasOptions.width ?? 800;
+    const height = canvasOptions.height ?? 600;
+    const clearColor = app.options.clearColor;
 
     this._canvas = app.canvas;
     this._rootRenderTarget = new RenderTarget(width, height, true);
@@ -324,12 +327,14 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
+    const scaleX = this._renderTarget.root && this._renderTarget.width > 0 ? this._canvas.width / this._renderTarget.width : 1;
+    const scaleY = this._renderTarget.root && this._renderTarget.height > 0 ? this._canvas.height / this._renderTarget.height : 1;
 
     return {
-      x: clip.x,
-      y: clip.y,
-      width: clip.width,
-      height: clip.height,
+      x: Math.floor(clip.x * scaleX),
+      y: Math.floor(clip.y * scaleY),
+      width: Math.max(0, Math.round(clip.width * scaleX)),
+      height: Math.max(0, Math.round(clip.height * scaleY)),
     };
   }
 
@@ -376,8 +381,6 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public resize(width: number, height: number): this {
-    this._canvas.width = width;
-    this._canvas.height = height;
     this._rootRenderTarget.resize(width, height);
     this._hasPresentedFrame = false;
 
@@ -600,7 +603,7 @@ export class WebGpuBackend implements RenderBackend {
     this._hasPresentedFrame = false;
     this._subscribeToDeviceLoss();
     this.rendererRegistry.connect(this);
-    this.resize(this._canvas.width, this._canvas.height);
+    this.resize(this._rootRenderTarget.width, this._rootRenderTarget.height);
 
     // Kick off async pipeline pre-warm for any renderer that supports
     // it. Each renderer creates its full set of (blendMode × format)

@@ -24,9 +24,11 @@ const createInputManager = (slotStrategy: GamepadSlotStrategy = 'sticky'): Input
   const app = {
     canvas,
     options: {
-      gamepadDefinitions: [],
-      pointerDistanceThreshold: 10,
-      gamepadSlotStrategy: slotStrategy,
+      input: {
+        gamepadDefinitions: [],
+        pointerDistanceThreshold: 10,
+        gamepadSlotStrategy: slotStrategy,
+      },
     },
   } as unknown as Application;
 
