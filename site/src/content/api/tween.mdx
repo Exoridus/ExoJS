@@ -5,10 +5,10 @@ symbol: "Tween"
 kind: "class"
 subsystem: "animation"
 importPath: "@codexo/exojs"
-memberCount: 17
+memberCount: 16
 sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/animation/Tween.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L34"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L38"
 ---
 ## Import
 
@@ -37,7 +37,6 @@ properties listed in Tween.to emit a console warning and are skipped.
 
 ## Methods
 
-- `_attachManager(manager: TweenManager): void`
 - `chain(next: Tween): Tween`
 - `delay(seconds: number): this`
 - `easing(easingFunction: EasingFunction): this`
@@ -50,10 +49,10 @@ properties listed in Tween.to emit a console warning and are skipped.
 - `resume(): this`
 - `start(): this`
 - `stop(): this`
-- `to(properties: Partial<Record<keyof T, number>>, duration: number): this`
+- `to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this`
 - `update(deltaSeconds: number): void`
 - `yoyo(enabled: boolean): this`
 
 ## Source
 
-[src/animation/Tween.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L34)
+[src/animation/Tween.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L38)

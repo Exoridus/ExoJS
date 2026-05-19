@@ -309,7 +309,10 @@ describe('Tween', () => {
   });
 
   describe('non-numeric property warning', () => {
-    test('warns and skips non-numeric property', () => {
+    test('warns and skips non-numeric property (JS runtime guard)', () => {
+      // 'as never' simulates a JavaScript caller that bypasses TypeScript's
+      // NumericKeys<T> constraint. The runtime guard in _captureStartValues()
+      // must still warn and skip the non-numeric property.
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const target = { x: 0, label: 'hello' };
@@ -320,6 +323,89 @@ describe('Tween', () => {
       expect(target.label).toBe('hello'); // untouched
 
       warnSpy.mockRestore();
+    });
+  });
+
+  describe('restart after complete or stop (M1)', () => {
+    test('managed tween driven to completion a second time after start() re-call', () => {
+      // After complete(), the tween is evicted from the manager.
+      // start() must re-register it so the manager drives the next run.
+      const manager = new TweenManager();
+      const target = makeSprite();
+      const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+
+      manager.update(1.0); // complete — tween removed from manager
+      expect(tween.state).toBe(TweenState.Complete);
+
+      const secondComplete = jest.fn();
+      tween.onComplete(secondComplete).start();
+      expect(tween.state).toBe(TweenState.Active);
+
+      manager.update(1.0); // manager must drive it — second completion fires
+      expect(secondComplete).toHaveBeenCalledTimes(1);
+      expect(tween.state).toBe(TweenState.Complete);
+    });
+
+    test('managed tween driven to completion after start() following stop()', () => {
+      const manager = new TweenManager();
+      const target = makeSprite();
+      const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+
+      manager.update(0.3);
+      tween.stop();
+      expect(tween.state).toBe(TweenState.Stopped);
+
+      const onComplete = jest.fn();
+      tween.onComplete(onComplete).start();
+      expect(tween.state).toBe(TweenState.Active);
+
+      manager.update(1.0); // manager drives the restarted tween
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(tween.state).toBe(TweenState.Complete);
+    });
+
+    test('start() on already-active managed tween does not cause double advancement', () => {
+      // TweenManager.add() deduplicates; calling start() while active must not
+      // register the tween twice, causing double-speed advancement.
+      const manager = new TweenManager();
+      const target = makeSprite();
+      const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+
+      tween.start(); // re-call while active — resets elapsed, no double-registration
+      manager.update(0.5);
+      expect(target.x).toBeCloseTo(50, 5); // exactly one advancement
+    });
+
+    test('ping-pong pattern cycles multiple times with small-step updates', () => {
+      // Uses 0.1s steps to avoid both tweens completing in the same frame
+      // (which happens with a 1.0s single-step due to the snapshot-update order).
+      // Before M1: forward.start() from backward's onComplete was a no-op because
+      // forward had been evicted from the manager, so the ping-pong stopped after
+      // one round trip. After M1 it should cycle at least twice each.
+      const manager = new TweenManager();
+      const target = makeSprite();
+
+      let forwardCompleteCount = 0;
+      let backwardCompleteCount = 0;
+
+      const forward = manager.create(target).to({ x: 100 }, 1.0);
+      const backward = manager.create(target).to({ x: 0 }, 1.0);
+
+      forward.onComplete(() => {
+        forwardCompleteCount++;
+        backward.start();
+      });
+      backward.onComplete(() => {
+        backwardCompleteCount++;
+        forward.start();
+      });
+      forward.start();
+
+      // 50 × 0.1s = 5 seconds; enough for ≥2 complete cycles of each tween
+      for (let i = 0; i < 50; i++) manager.update(0.1);
+
+      expect(forwardCompleteCount).toBeGreaterThanOrEqual(2);
+      expect(backwardCompleteCount).toBeGreaterThanOrEqual(2);
     });
   });
 });
