@@ -60,6 +60,32 @@ export function getWebGpuBlendState(blendMode: BlendModes): GPUBlendState {
           dstFactor: 'one-minus-src-alpha',
         },
       };
+    case BlendModes.Darken:
+      return {
+        color: {
+          operation: 'min',
+          srcFactor: 'one',
+          dstFactor: 'one',
+        },
+        alpha: {
+          operation: 'min',
+          srcFactor: 'one',
+          dstFactor: 'one',
+        },
+      };
+    case BlendModes.Lighten:
+      return {
+        color: {
+          operation: 'max',
+          srcFactor: 'one',
+          dstFactor: 'one',
+        },
+        alpha: {
+          operation: 'max',
+          srcFactor: 'one',
+          dstFactor: 'one',
+        },
+      };
     default:
       return {
         color: {
