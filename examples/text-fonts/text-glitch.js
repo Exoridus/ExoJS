@@ -1,10 +1,14 @@
 import { Application, Color, RenderBackendType, Scene, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
-    width: 900,
-    height: 520,
+    canvas: {
+        width: 900,
+        height: 520,
+    },
     clearColor: Color.black,
-    resourcePath: 'assets/',
+    loader: {
+        basePath: 'assets/',
+    },
 });
 
 document.body.append(app.canvas);

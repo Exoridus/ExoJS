@@ -66,7 +66,7 @@ init(loader) {
 }
 ```
 
-Keys are aliases — names you choose. The application's `resourcePath` option prepends a base prefix to all relative URLs, so these keys resolve to e.g. `assets/image/hero.png`.
+Keys are aliases — names you choose. The `loader.basePath` option in `ApplicationOptions` prepends a base prefix to all relative URLs, so these keys resolve to e.g. `assets/image/hero.png`.
 
 Calling `loader.get(Texture, 'hero')` returns the loaded `Texture` instance synchronously — the promise from `loader.load(...)` already settled before `init` ran.
 
@@ -315,8 +315,19 @@ By default the loader fetches from the network every session. To persist process
 import { Loader, IndexedDbStore } from '@codexo/exojs';
 
 const loader = new Loader({
-    resourcePath: '/assets/',
+    basePath: '/assets/',
     cache: new IndexedDbStore('my-game'),
+});
+```
+
+When constructing the loader through `Application`, pass `LoaderOptions` under the `loader` key:
+
+```js
+const app = new Application({
+    loader: {
+        basePath: '/assets/',
+        cache: new IndexedDbStore('my-game'),
+    },
 });
 ```
 

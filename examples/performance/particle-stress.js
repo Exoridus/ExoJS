@@ -16,8 +16,10 @@ import {
 } from '@codexo/exojs';
 
 const app = new Application({
-    width: 800,
-    height: 600,
+    canvas: {
+        width: 800,
+        height: 600,
+    },
     clearColor: new Color(0.02 * 255, 0.02 * 255, 0.045 * 255, 1),
     backend: { type: 'webgpu' },
 });

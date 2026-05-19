@@ -131,8 +131,10 @@ class CustomTriangleRenderer {
 }
 
 const app = new Application({
-    width: 800,
-    height: 600,
+    canvas: {
+        width: 800,
+        height: 600,
+    },
     clearColor: Color.black,
     backend: { type: 'webgpu' },
 });

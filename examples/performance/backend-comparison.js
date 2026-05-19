@@ -1,10 +1,14 @@
 import { Application, Color, DebugOverlay, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const options = {
-    width: 800,
-    height: 600,
+    canvas: {
+        width: 800,
+        height: 600,
+    },
     clearColor: Color.black,
-    resourcePath: 'assets/',
+    loader: {
+        basePath: 'assets/',
+    },
 };
 
 let app = null;

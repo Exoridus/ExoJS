@@ -1,10 +1,14 @@
 import { Application, Color, Scene, Sound, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
-    width: 900,
-    height: 620,
+    canvas: {
+        width: 900,
+        height: 620,
+    },
     clearColor: Color.black,
-    resourcePath: 'assets/',
+    loader: {
+        basePath: 'assets/',
+    },
 });
 
 document.body.append(app.canvas);

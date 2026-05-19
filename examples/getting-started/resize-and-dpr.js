@@ -1,23 +1,22 @@
 import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
-    width: 800,
-    height: 600,
+    canvas: {
+        width: 800,
+        height: 600,
+        pixelRatio: window.devicePixelRatio || 1,
+    },
     clearColor: Color.black,
-    resourcePath: 'assets/',
+    loader: {
+        basePath: 'assets/',
+    },
 });
 
 document.body.style.margin = '0';
 document.body.append(app.canvas);
 
 const resize = () => {
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    app.canvas.style.width = `${width}px`;
-    app.canvas.style.height = `${height}px`;
-    app.resize(Math.round(width * dpr), Math.round(height * dpr));
+    app.resize(window.innerWidth, window.innerHeight);
 };
 
 window.addEventListener('resize', resize);

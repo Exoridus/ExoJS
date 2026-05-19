@@ -3,8 +3,10 @@ import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from
 const GRID_COLUMNS = 34;
 const GRID_ROWS = 20;
 const app = new Application({
-    width: 800,
-    height: 600,
+    canvas: {
+        width: 800,
+        height: 600,
+    },
     clearColor: new Color(0.02, 0.03, 0.06, 1),
     backend: { type: 'webgpu' },
 });

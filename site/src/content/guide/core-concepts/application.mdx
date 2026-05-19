@@ -24,44 +24,88 @@ import { Application } from '@codexo/exojs';
 const app = new Application();
 ```
 
-When you need to control the configuration — and most real projects do — pass an options object:
+When you need to control the configuration, pass a grouped options object:
 
 ```js
 import { Application, Color } from '@codexo/exojs';
 
 const app = new Application({
-    width: 1280,
-    height: 720,
+    canvas: {
+        width: 1280,
+        height: 720,
+    },
     clearColor: Color.black,
-    resourcePath: 'assets/',
+    loader: {
+        basePath: 'assets/',
+    },
 });
 ```
 
-The most common options:
+Options are organised into groups:
 
-- `width` / `height` — internal render resolution. Independent of CSS size.
+- `canvas` — canvas element, size, pixel ratio, and rendering hints. See [`CanvasApplicationOptions`](/ExoJS/en/api/canvas-application-options/).
+- `loader` — base path, fetch options, caching. See [`LoaderOptions`](/ExoJS/en/api/loader-options/).
+- `rendering` — WebGL2 debug, context attributes, batch sizes. See [`RenderingApplicationOptions`](/ExoJS/en/api/rendering-application-options/).
+- `input` — gamepad definitions, slot strategy, pointer threshold. See [`InputApplicationOptions`](/ExoJS/en/api/input-application-options/).
 - `clearColor` — what `backend.clear()` paints each frame.
-- `resourcePath` — prefix the [`Loader`](/ExoJS/en/api/loader/) prepends to every asset URL.
 - `backend` — `{ type: 'auto' }` (default), or pin to `'webgl2'` / `'webgpu'`.
-- `canvas` — an existing `HTMLCanvasElement` to render into. See below.
 
 ## Choosing the canvas
 
 By default the application creates its own canvas. Read it from `app.canvas` and place it in your page wherever your layout needs it:
 
 ```js
-const app = new Application({ width: 800, height: 600 });
+const app = new Application({
+    canvas: { width: 800, height: 600 },
+});
 document.body.append(app.canvas);
 ```
 
-If your page already has a canvas — for example because the layout is owned by a framework that renders the element for you — pass it in:
+If your page already has a canvas — for example because the layout is owned by a framework that renders the element for you — pass it in via `canvas.element`:
 
 ```js
 const canvas = document.querySelector('canvas');
-const app = new Application({ canvas });
+const app = new Application({
+    canvas: { element: canvas, width: 800, height: 600 },
+});
 ```
 
 Either way, `app.canvas` is the active `HTMLCanvasElement`. CSS rules, ResizeObserver, event listeners, and `getBoundingClientRect()` all work as expected.
+
+## High-DPI and pixel ratio
+
+Pass `canvas.pixelRatio` to scale the backing buffer relative to logical CSS pixels. A value of `window.devicePixelRatio` produces crisp rendering on high-DPI screens:
+
+```js
+const app = new Application({
+    canvas: {
+        width: 1280,
+        height: 720,
+        pixelRatio: window.devicePixelRatio,
+    },
+});
+```
+
+- `width` / `height` are the **logical canvas dimensions** in CSS pixels.
+- The backing buffer is `width × pixelRatio` by `height × pixelRatio`.
+- `canvas.style.width / height` is always set to the logical dimensions.
+- `app.resize(w, h)` takes logical dimensions and re-applies the stored pixel ratio.
+
+Default `pixelRatio` is `1` — no scaling — which preserves the old behaviour.
+
+For pixel-art games where you want crisp upscaling without browser blurring, combine `pixelRatio` with the `imageRendering` hint:
+
+```js
+const app = new Application({
+    canvas: {
+        width: 320,
+        height: 240,
+        imageRendering: 'pixelated',
+    },
+});
+```
+
+`imageRendering` is a CSS hint on the canvas element that controls how the browser upscales the canvas in the page. It does not change engine texture filtering.
 
 ## Starting the frame loop
 

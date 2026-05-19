@@ -1,10 +1,14 @@
 import { Application, Color, Scene, seconds, Signal, Text, Timer } from '@codexo/exojs';
 
 const app = new Application({
-    width: 820,
-    height: 600,
+    canvas: {
+        width: 820,
+        height: 600,
+    },
     clearColor: Color.black,
-    resourcePath: 'assets/',
+    loader: {
+        basePath: 'assets/',
+    },
 });
 
 document.body.append(app.canvas);
