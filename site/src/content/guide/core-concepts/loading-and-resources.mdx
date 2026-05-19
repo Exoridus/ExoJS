@@ -21,57 +21,22 @@ Every application owns one loader, available as `app.loader`. The same instance 
 
 For most scenes you don't need to think about ownership — just use the `loader` argument in `load` and `init`.
 
-## Loading a texture
+## Choose the form that fits
 
-The standard pattern: declare a name-to-path mapping for the assets you need, await the loader, and read instances back by name:
+The loader offers several overloads. Pick the smallest one that covers your case:
 
-```js
-async load(loader) {
-    await loader.load(Texture, {
-        hero: 'image/hero.png',
-        ground: 'image/ground.png',
-        coin: 'image/coin.png',
-    });
-}
+| Form | Best for |
+|------|----------|
+| `loader.load(Texture, 'hero.png')` | One asset, no alias needed |
+| `loader.load(Texture, { hero: 'hero.png' })` | Several assets of the same type |
+| `loader.load({ hero: { type: 'texture', … }, … })` | Mixed types in one call |
+| `new Asset(…)` / `new Assets(…)` | Reusable, file-level asset references |
 
-init(loader) {
-    this.hero = new Sprite(loader.get(Texture, 'hero'));
-    this.ground = new Sprite(loader.get(Texture, 'ground'));
-}
-```
+When in doubt, start simple. Promote to `Asset`/`Assets` when the same definition is referenced from more than one place.
 
-The keys (`hero`, `ground`, `coin`) are aliases — names you choose. Paths can change later without touching anywhere else in the code, because everything else references the alias. The application's `resourcePath` option (set during construction) prepends a base prefix to every asset URL, so the keys above resolve to e.g. `assets/image/hero.png`.
+## Loading a single asset
 
-Calling `loader.get(Texture, 'hero')` returns the loaded `Texture` instance. It's synchronous — the promise from `loader.load(...)` already settled before `init` ran.
-
-## Multiple resource types
-
-The loader handles many asset types, not just textures. Each type is loaded the same way, with its constructor as the first argument:
-
-```js
-import { Texture, Music, Sound, Json } from '@codexo/exojs';
-
-async load(loader) {
-    await Promise.all([
-        loader.load(Texture, { sky: 'image/sky.png' }),
-        loader.load(Music, { ambient: 'audio/ambient.ogg' }),
-        loader.load(Sound, { coin: 'audio/coin.wav', jump: 'audio/jump.wav' }),
-        loader.load(Json, { levels: 'data/levels.json' }),
-    ]);
-}
-
-init(loader) {
-    this.sky = new Sprite(loader.get(Texture, 'sky'));
-    this.music = loader.get(Music, 'ambient');
-    this.levels = loader.get(Json, 'levels');
-}
-```
-
-Wrapping the calls in `Promise.all` lets unrelated asset categories load in parallel.
-
-## Single-asset shorthand
-
-When a hook only needs one asset, the path-string form is shorter:
+The path-string form resolves directly to the finished asset:
 
 ```js
 async load(loader) {
@@ -80,7 +45,209 @@ async load(loader) {
 }
 ```
 
-The trade-off is no alias — the texture isn't registered for retrieval by name later. Use the object form when you'll need to call `loader.get(...)` after `load` resolves.
+The trade-off is no alias — the texture is not registered for retrieval by name later. Use the record form when you'll call `loader.get(...)` after the promise resolves.
+
+## Homogeneous batch
+
+When you need several assets of the same type, pass a record:
+
+```js
+async load(loader) {
+    await loader.load(Texture, {
+        hero:   'image/hero.png',
+        ground: 'image/ground.png',
+        coin:   'image/coin.png',
+    });
+}
+
+init(loader) {
+    this.hero   = new Sprite(loader.get(Texture, 'hero'));
+    this.ground = new Sprite(loader.get(Texture, 'ground'));
+}
+```
+
+Keys are aliases — names you choose. The application's `resourcePath` option prepends a base prefix to all relative URLs, so these keys resolve to e.g. `assets/image/hero.png`.
+
+Calling `loader.get(Texture, 'hero')` returns the loaded `Texture` instance synchronously — the promise from `loader.load(...)` already settled before `init` ran.
+
+Values can also be config objects when you need type-specific fields alongside the source:
+
+```js
+await loader.load(Texture, {
+    hero:    'image/hero.png',
+    heroAlt: { source: 'image/hero-alt.png', /* type-specific options */ },
+});
+```
+
+## Multiple resource types in parallel
+
+When a scene needs different asset types, load them in parallel with `Promise.all`:
+
+```js
+import { Texture, Music, Sound, Json } from '@codexo/exojs';
+
+async load(loader) {
+    await Promise.all([
+        loader.load(Texture, { sky: 'image/sky.png' }),
+        loader.load(Music,   { ambient: 'audio/ambient.ogg' }),
+        loader.load(Sound,   { coin: 'audio/coin.wav', jump: 'audio/jump.wav' }),
+        loader.load(Json,    { levels: 'data/levels.json' }),
+    ]);
+}
+
+init(loader) {
+    this.sky    = new Sprite(loader.get(Texture, 'sky'));
+    this.music  = loader.get(Music, 'ambient');
+    this.levels = loader.get(Json, 'levels');
+}
+```
+
+Wrapping the calls in `Promise.all` lets unrelated asset categories load in parallel.
+
+## Mixed asset map
+
+To load different types in a single call and receive a single typed result object, pass an inline config map — a plain object whose values each have a `type` string:
+
+```js
+async load(loader) {
+    await loader.load({
+        hero: {
+            type:   'texture',
+            source: 'image/hero.png',
+        },
+        click: {
+            type:   'sound',
+            source: 'audio/click.ogg',
+        },
+    });
+}
+```
+
+The result is an object whose keys match the input and whose values are the resolved resource instances. Both `loader.get(Texture, 'hero')` and `loader.get(Sound, 'click')` work after the promise resolves.
+
+## Reusable asset references
+
+For assets used in multiple scenes, define them as file-level constants with `Asset` and `Assets`:
+
+```ts
+import { Asset, Assets } from '@codexo/exojs';
+
+// A single typed, loadable reference
+export const HeroAsset = new Asset({
+    type:   'texture',
+    source: 'image/hero.png',
+});
+
+// A typed group of related assets
+export const TitleAssets = new Assets({
+    logo:  { type: 'texture', source: '/logo.png' },
+    music: { type: 'music',   source: '/title.ogg' },
+});
+```
+
+Load them directly:
+
+```js
+// Resolves to Texture
+const hero = await loader.load(HeroAsset);
+
+// Resolves to { logo: Texture, music: Music }
+const title = await loader.load(TitleAssets);
+```
+
+Typed properties on `Assets` give autocomplete on the container itself:
+
+```ts
+TitleAssets.logo;   // Asset<Texture>
+TitleAssets.music;  // Asset<Music>
+```
+
+`Assets` also exposes a `.entries` property for spread composition — useful when you want to merge several asset groups into a single load call without nesting them:
+
+```js
+await loader.load({
+    ...CommonAssets.entries,
+    ...TitleAssets.entries,
+});
+```
+
+The key `'entries'` is reserved and will throw if you try to use it as an asset name inside an `Assets` container.
+
+## Progress and parallel loading
+
+Every `loader.load(...)` call returns a `LoadingQueue<T>`. It implements `PromiseLike<T>`, so `await` and `Promise.all` both work. It also exposes per-queue progress via `onProgress`:
+
+```js
+const loading = loader.load(TitleAssets);
+
+loading.onProgress.add((progress) => {
+    bar.value = progress.loaded / progress.total;
+});
+
+const title = await loading;
+```
+
+`LoadingProgress` fields:
+
+| Field | Meaning |
+|-------|---------|
+| `total` | Total assets in this queue |
+| `loaded` | Successfully loaded so far |
+| `failed` | Failed so far |
+| `pending` | Not yet settled (`total − loaded − failed`) |
+
+
+Start two queues simultaneously and wait for both:
+
+```js
+const [title, game] = await Promise.all([
+    loader.load(TitleAssets),
+    loader.load(GameAssets),
+]);
+```
+
+Each queue tracks its own progress independently. The result tuple is typed: `title` has the shape of `TitleAssets`, `game` has the shape of `GameAssets`.
+
+A practical startup pattern — show the title screen as soon as title assets are ready, while game assets continue loading in the background:
+
+```js
+async load(loader) {
+    const titleQueue = loader.load(TitleAssets);
+    const gameQueue  = loader.load(GameAssets);
+
+    titleQueue.onProgress.add((p) => {
+        this._titleProgress = p.loaded / p.total;
+    });
+    gameQueue.onProgress.add((p) => {
+        this._gameProgress = p.loaded / p.total;
+    });
+
+    // Title assets must be ready before init runs
+    await titleQueue;
+
+    // Game assets continue loading — await them later when entering gameplay
+    this._gameReady = gameQueue;
+}
+```
+
+## Aliases and identity
+
+Aliases come from the keys you supply in a record or `Assets` container. The same `Asset<T>` reference can appear under multiple aliases — the loader issues only one network request and stores the result under each alias independently:
+
+```js
+const HeroAsset = new Asset({ type: 'texture', source: 'image/hero.png' });
+
+await loader.load({ heroA: HeroAsset, heroB: HeroAsset });
+
+loader.get(Texture, 'heroA'); // Texture
+loader.get(Texture, 'heroB'); // same Texture instance
+```
+
+`loader.unload(asset)` removes all aliases mapped to that asset's identity at once:
+
+```js
+loader.unload(HeroAsset); // removes heroA and heroB
+```
 
 ## When are resources available?
 
@@ -88,14 +255,14 @@ The lifecycle guarantees that:
 
 - Inside `load`, you can `await loader.load(...)` to register and fetch assets.
 - After `load` resolves, every alias you registered is available via `loader.get(...)`.
-- `init` runs once `load` is complete — it's safe to read assets there.
-- After `init`, the same `loader` is still around. Subsequent calls to `loader.get(...)` from `update`, `draw`, or other places work as long as the asset was loaded.
+- `init` runs once `load` is complete — it is safe to read assets there.
+- After `init`, the same `loader` is still available. Subsequent calls to `loader.get(...)` from `update`, `draw`, or other places work as long as the asset was loaded.
 
-If you call `loader.get(SomeType, 'unknown-alias')`, the loader throws — there's no silent fallback. This is deliberate: a missing asset usually means you forgot to register it in `load`, and you'd rather catch that immediately than render a missing-texture pink square.
+If you call `loader.get(SomeType, 'unknown-alias')`, the loader throws — there is no silent fallback. This is deliberate: a missing asset usually means you forgot to register it in `load`, and you want to catch that immediately.
 
 ## Loading on demand
 
-Sometimes you want to defer loading until well after `init` — a level loaded from a level select screen, an asset that depends on the player's choices. `loader.load(...)` works any time, not just inside the `load` hook:
+`loader.load(...)` works any time, not just inside the `load` hook:
 
 ```js
 async _changeLevel(levelName) {
@@ -103,51 +270,122 @@ async _changeLevel(levelName) {
         [`level-${levelName}`]: `image/levels/${levelName}.png`,
     });
 
-    this.background.setTexture(this.app.loader.get(Texture, `level-${levelName}`));
+    this.background.setTexture(
+        this.app.loader.get(Texture, `level-${levelName}`)
+    );
 }
 ```
 
-The frame loop continues running while the promise is pending. The scene stays interactive; the new texture pops in when it's ready.
+The frame loop continues running while the promise is pending.
 
 ## Manifests and bundles
 
-For larger projects with many assets, declaring everything inline becomes noisy. The loader supports declarative asset manifests — a JSON-like description of every asset in the project, optionally grouped into bundles you can load on demand:
+For larger projects, declare all assets in a manifest and load bundles on demand:
 
 ```js
-init() {
-    this.app.loader.registerManifest({
-        bundles: [
-            {
-                name: 'menu',
-                assets: [
-                    { type: Texture, alias: 'logo', src: 'image/logo.png' },
-                    { type: Music, alias: 'theme', src: 'audio/theme.ogg' },
-                ],
-            },
-            {
-                name: 'level-1',
-                assets: [
-                    { type: Texture, alias: 'tiles', src: 'image/level-1/tiles.png' },
-                    { type: Json, alias: 'map', src: 'data/level-1.json' },
-                ],
-            },
-        ],
-    });
-}
+import { defineAssetManifest } from '@codexo/exojs';
 
-async _enterLevel() {
-    await this.app.loader.loadBundle('level-1');
-    // assets in level-1 are now available via loader.get(...)
+const manifest = defineAssetManifest({
+    bundles: {
+        menu: [
+            { type: Texture, alias: 'logo',  path: 'image/logo.png' },
+            { type: Music,   alias: 'theme', path: 'audio/theme.ogg' },
+        ],
+        'level-1': [
+            { type: Texture, alias: 'tiles', path: 'image/level-1/tiles.png' },
+            { type: Json,    alias: 'map',   path: 'data/level-1.json' },
+        ],
+    },
+});
+
+loader.registerManifest(manifest);
+
+// Later:
+await loader.loadBundle('menu');
+await loader.loadBundle('level-1');
+```
+
+Bundles are useful when scene loads should be granular — load the menu bundle once and keep it resident, then load level bundles as the player progresses. Treat bundle names and aliases as part of your project's asset contract.
+
+## Caching and IndexedDB
+
+By default the loader fetches from the network every session. To persist processed assets across sessions, pass an `IndexedDbStore`:
+
+```js
+import { Loader, IndexedDbStore } from '@codexo/exojs';
+
+const loader = new Loader({
+    resourcePath: '/assets/',
+    cache: new IndexedDbStore('my-game'),
+});
+```
+
+On first load, assets are fetched from the network and written to IndexedDB. On subsequent sessions they load from the database instead. The default store configuration covers all built-in asset types and the `fetch*` context helpers used by custom handlers.
+
+If you supply a custom `storeNames` array, include `'__ctx_text'`, `'__ctx_json'`, and `'__ctx_binary'` if your custom asset handlers call `context.fetchText`, `context.fetchJson`, or `context.fetchArrayBuffer`.
+
+## Custom asset types (advanced)
+
+Register a string type name to teach the loader about domain-specific resources. First, extend `AssetDefinitions` via declaration merging:
+
+```ts
+declare module '@codexo/exojs' {
+    interface AssetDefinitions {
+        tileMap: {
+            resource: TileMapData;
+            config: {
+                source: string;
+                format: 'tmx' | 'tiled-json';
+            };
+        };
+    }
 }
 ```
 
-Bundles are useful when scene loads should be granular — you can load the menu bundle once and keep it resident, then load level bundles as the player progresses. Treat bundle names and aliases as part of your project's asset contract, just like normal loader aliases.
+Then register the handler:
+
+```ts
+loader.registerAssetType('tileMap', {
+    getIdentityKey(config) {
+        // Two configs with the same source but different format are distinct assets
+        return `${config.source}:${config.format}`;
+    },
+
+    async load(config, context) {
+        const text = await context.fetchText(config.source);
+        return parseTileMap(text, config.format);
+    },
+});
+```
+
+The handler context provides:
+
+| Method | Returns |
+|--------|---------|
+| `context.fetchText(source)` | `Promise<string>` |
+| `context.fetchJson<T>(source)` | `Promise<T>` |
+| `context.fetchArrayBuffer(source)` | `Promise<ArrayBuffer>` |
+| `context.identityKey` | `string` — the active in-flight key for diagnostics |
+
+Using `context.fetch*` routes through the loader's cache strategy and IDB stores. `getIdentityKey` controls in-flight deduplication — omit it when `source` alone determines the result; supply it when extra config fields change the output.
+
+Once registered, all `Asset` and `Assets` APIs work for your type:
+
+```ts
+const map = new Asset({
+    type:   'tileMap',
+    source: 'maps/level-1.tmx',
+    format: 'tmx',
+});
+
+const tileMap: TileMapData = await loader.load(map);
+```
 
 ## Examples
 
 <ExamplePreview chapter="sprites-textures" slug="texture-loader" />
 
-The minimum loader workflow — register a texture during `load`, retrieve it during `init`, render the sprite.
+The minimum loader workflow — register textures during `load`, retrieve them during `init`, track per-queue progress with `LoadingQueue.onProgress`.
 
 ## Where to go next
 

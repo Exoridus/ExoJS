@@ -5,10 +5,10 @@ symbol: "Scene"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 17
+memberCount: 14
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/core/Scene.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts#L112"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts#L116"
 ---
 ## Import
 
@@ -41,7 +41,6 @@ For one-off scenes, an anonymous subclass works just as well:
 - `destroy(): void`
 - `draw(_backend: RenderBackend): void`
 - `getParticipationPolicy(): SceneParticipationPolicy`
-- `handleInput(_event: SceneInputEvent): boolean | void`
 - `init(_loader: Loader): void | Promise<void>`
 - `load(_loader: Loader): void | Promise<void>`
 - `removeChild(child: RenderNode): this`
@@ -52,11 +51,9 @@ For one-off scenes, an anonymous subclass works just as well:
 ## Properties
 
 - `_app: Application | null`
-- `_inputMode: SceneInputMode`
-- `_inputs: SceneInputs | null`
 - `_root: Container`
 - `_stackMode: SceneStackMode`
 
 ## Source
 
-[src/core/Scene.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts#L112)
+[src/core/Scene.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts#L116)

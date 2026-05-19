@@ -5,10 +5,10 @@ symbol: "Loader"
 kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
-memberCount: 20
+memberCount: 21
 sections: ["Import", "Constructors", "Methods", "Events", "Source"]
 sourcePath: "src/resources/Loader.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L126"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L177"
 ---
 ## Import
 
@@ -48,19 +48,26 @@ subsequent `load` or get calls without re-fetching.
 - `get(type: T, alias: string): LoadReturn<T>`
 - `has(type: Loadable, alias: string): boolean`
 - `hasBundle(name: string): boolean`
-- `load(type: typeof Json, path: string, options?: unknown): Promise<T>`
-- `load(type: typeof Json, paths: readonly string[], options?: unknown): Promise<T[]>`
-- `load(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): Promise<Record<K, T>>`
-- `load(type: T, path: string, options?: unknown): Promise<LoadReturn<T>>`
-- `load(type: T, paths: readonly string[], options?: unknown): Promise<LoadReturn<T>[]>`
-- `load(type: T, items: Readonly<Record<K, string>>, options?: unknown): Promise<Record<K, LoadReturn<T>>>`
+- `load(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>`
+- `load(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>`
+- `load(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>`
+- `load(asset: Asset<T>): LoadingQueue<T>`
+- `load(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>`
+- `load(config: M): LoadingQueue<InferLoadedMap<M>>`
+- `load(type: T, path: string, options?: unknown): LoadingQueue<LoadReturn<T>>`
+- `load(type: T, paths: readonly string[], options?: unknown): LoadingQueue<LoadReturn<T>[]>`
+- `load(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>`
 - `loadAll(): Promise<void>`
 - `loadBundle(name: string, options: LoadBundleOptions): Promise<void>`
 - `peek(type: typeof Json, alias: string): T | null`
 - `peek(type: T, alias: string): LoadReturn<T> | null`
 - `register(type: AssetConstructor<T>, factory: AssetFactory<T>): this`
+- `registerAssetType(typeName: K, handler: object): this`
+- `registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory<unknown>): this`
 - `registerManifest(manifest: AssetManifest): this`
 - `setConcurrency(n: number): this`
+- `unload(asset: Asset<T>): this`
+- `unload(assets: Assets<M>): this`
 - `unload(type: Loadable, alias: string): this`
 - `unloadAll(type?: Loadable): this`
 
@@ -73,4 +80,4 @@ subsequent `load` or get calls without re-fetching.
 
 ## Source
 
-[src/resources/Loader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L126)
+[src/resources/Loader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L177)

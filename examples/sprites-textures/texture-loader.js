@@ -12,15 +12,17 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            this._progress = 0;
-            loader.onLoaded.add(() => {
-                this._progress += 1;
-            });
-            await loader.load(Texture, {
-                bunny: 'image/bunny.png',
+            const loading = loader.load(Texture, {
+                bunny:   'image/bunny.png',
                 rainbow: 'image/rainbow.png',
-                uv: 'image/uv.png',
+                uv:      'image/uv.png',
             });
+
+            loading.onProgress.add((progress) => {
+                this._progress = progress;
+            });
+
+            await loading;
         }
         init(loader) {
             const { width, height } = this.app.canvas;
@@ -34,18 +36,21 @@ app.start(
             });
 
             this._bar = new Graphics();
-            this._label = new Text('Loaded 3 / 3', { fill: 'white', fontSize: 18 });
+            this._label = new Text('', { fill: 'white', fontSize: 18 });
             this._label.setPosition(300, 190);
             this._width = width;
+            this._progress = { loaded: 0, total: 3 };
         }
         draw(backend) {
             backend.clear();
+            const { loaded, total } = this._progress;
             this._bar.clear();
             this._bar.fillColor = new Color(60, 60, 60);
             this._bar.drawRectangle(200, 150, 400, 24);
             this._bar.fillColor = new Color(90, 220, 120);
-            this._bar.drawRectangle(200, 150, (400 * this._progress) / 3, 24);
+            this._bar.drawRectangle(200, 150, total > 0 ? (400 * loaded) / total : 0, 24);
             this._bar.render(backend);
+            this._label.setText(`Loaded ${loaded} / ${total}`);
             this._label.render(backend);
 
             for (const sprite of this._sprites) {

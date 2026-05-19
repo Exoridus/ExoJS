@@ -1,6 +1,6 @@
 ---
 title: "SceneManager"
-description: "Stack-based scene controller owned by Application. Maintains an ordered stack of Scene instances, each tagged with its participation policy (SceneStackMode + SceneInputMode). Scenes higher on the stack overlay scenes lower; the policy of each scene determines whether scenes below continue to update / render and whether input events propagate down past it. Use SceneManager.setScene to replace the entire stack with one scene, SceneManager.pushScene to overlay a new scene on top, and SceneManager.popScene to remove the topmost. All three accept an optional fade transition. Input from the InputManager is automatically routed through the stack top-to-bottom; each scene's Scene.handleInput return value plus the scene's input policy decide whether the next scene below receives the event."
+description: "Stack-based scene controller owned by Application. Maintains an ordered stack of Scene instances, each tagged with its participation policy (SceneStackMode). Scenes higher on the stack overlay scenes lower; the policy of each scene determines whether scenes below continue to update / render. Use SceneManager.setScene to replace the entire stack with one scene, SceneManager.pushScene to overlay a new scene on top, and SceneManager.popScene to remove the topmost. All three accept an optional fade transition."
 symbol: "SceneManager"
 kind: "class"
 subsystem: "core"
@@ -8,7 +8,7 @@ importPath: "@codexo/exojs"
 memberCount: 10
 sections: ["Import", "Constructors", "Methods", "Events", "Source"]
 sourcePath: "src/core/SceneManager.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L103"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L95"
 ---
 ## Import
 
@@ -16,20 +16,14 @@ sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts
 
 Stack-based scene controller owned by Application. Maintains an
 ordered stack of Scene instances, each tagged with its
-participation policy (SceneStackMode + SceneInputMode).
+participation policy (SceneStackMode).
 Scenes higher on the stack overlay scenes lower; the policy of each
-scene determines whether scenes below continue to update / render and
-whether input events propagate down past it.
+scene determines whether scenes below continue to update / render.
 
 Use SceneManager.setScene to replace the entire stack with one
 scene, SceneManager.pushScene to overlay a new scene on top, and
 SceneManager.popScene to remove the topmost. All three accept an
 optional fade transition.
-
-Input from the InputManager is automatically routed through the
-stack top-to-bottom; each scene's Scene.handleInput return value
-plus the scene's input policy decide whether the next scene below
-receives the event.
 
 ## Constructors
 
@@ -52,4 +46,4 @@ receives the event.
 
 ## Source
 
-[src/core/SceneManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L103)
+[src/core/SceneManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L95)
