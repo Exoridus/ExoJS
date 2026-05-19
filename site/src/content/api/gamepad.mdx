@@ -5,7 +5,7 @@ symbol: "Gamepad"
 kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
-memberCount: 23
+memberCount: 17
 sections: ["Import", "Constructors", "Methods", "Events", "Source"]
 sourcePath: "src/input/Gamepad.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/Gamepad.ts#L48"
@@ -33,11 +33,6 @@ the slot was empty will automatically activate when a pad connects.
 
 ## Methods
 
-- `_bind(gamepad: Gamepad, definition: ResolvedGamepadDefinition): void`
-- `_dispatchDisconnect(): void`
-- `_rebindFrom(other: Gamepad): void`
-- `_silentUnbind(): void`
-- `_unbind(): void`
 - `destroy(): void`
 - `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean`
 - `onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
@@ -46,7 +41,6 @@ the slot was empty will automatically activate when a pad connects.
 - `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
 - `resolveChannelOffset(channel: GamepadButtonChannel | GamepadAxisChannel): number`
 - `stopVibration(): void`
-- `update(): void`
 - `vibrate(options: GamepadVibrationOptions): Promise<void>`
 - `resolveChannelOffset(slot: number, channel: GamepadButtonChannel | GamepadAxisChannel): number`
 

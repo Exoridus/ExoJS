@@ -170,6 +170,7 @@ const build = async (): Promise<void> => {
     const app = await Application.bootstrapWithPlugins({
         entryPoints: [toPosix(path.resolve(repoRoot, 'src/index.ts')), toPosix(path.resolve(repoRoot, 'src/debug/index.ts'))],
         tsconfig: toPosix(path.resolve(repoRoot, 'tsconfig.json')),
+        excludeInternal: true,
     });
 
     const project = await app.convert();
