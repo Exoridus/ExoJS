@@ -112,6 +112,7 @@ export interface SceneParticipationPolicy {
  *       override update(delta) { ... }
  *       override draw(backend) { ... }
  *   });
+ * @stable
  */
 export class Scene {
   protected _app: Application | null = null;

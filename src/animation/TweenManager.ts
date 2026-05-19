@@ -9,6 +9,7 @@ import { Tween } from './Tween';
  * Update iteration uses a snapshot so callbacks may freely add or remove
  * tweens during the same frame without corrupting the loop. Completed and
  * stopped tweens are evicted automatically.
+ * @stable
  */
 export class TweenManager {
   private _tweens: Tween[] = [];

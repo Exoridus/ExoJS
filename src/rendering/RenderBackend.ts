@@ -23,6 +23,7 @@ import type { View } from './View';
  * drawables via the scene graph and reads `app.backend.stats` for
  * per-frame counters. Custom render passes (subclasses of
  * {@link RenderPass}) interact with the interface directly.
+ * @advanced
  */
 export interface RenderBackend {
   readonly backendType: RenderBackendType;

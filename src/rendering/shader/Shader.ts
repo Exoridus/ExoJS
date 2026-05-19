@@ -26,6 +26,7 @@ export interface ShaderProgram {
  * {@link ShaderProgram} with populated {@link attributes} and {@link uniforms} maps.
  * Call {@link bind} before draw calls and {@link sync} after updating uniform values.
  * Both maps are cleared on {@link disconnect} and {@link destroy}.
+ * @advanced
  */
 export class Shader {
   /** Vertex attribute metadata populated by the backend after {@link connect}. */

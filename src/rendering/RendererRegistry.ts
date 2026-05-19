@@ -14,6 +14,7 @@ import type { DrawableConstructor, Renderer } from './Renderer';
  *
  * Used internally by backend managers. Exposed publicly for advanced
  * custom renderer registration.
+ * @advanced
  */
 export class RendererRegistry<Runtime extends RenderBackend> {
   private readonly _renderers = new Map<DrawableConstructor, Renderer<Runtime>>();

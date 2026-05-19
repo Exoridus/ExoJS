@@ -261,6 +261,7 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "lerp",
   "matchesIds",
   "maxPointers",
+  "measureText",
   "milliseconds",
   "minutes",
   "noop",

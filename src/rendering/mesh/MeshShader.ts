@@ -120,6 +120,7 @@ export interface MeshShaderOptions {
  *   for the packed scalar/vector/matrix uniforms.
  * - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform,
  *   in declaration order, alongside its sampler at `@binding(N+1)`.
+ * @advanced
  */
 export class MeshShader {
   /**
