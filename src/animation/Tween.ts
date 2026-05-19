@@ -3,6 +3,10 @@ import type { TweenManager } from './TweenManager';
 import type { EasingFunction, TweenLifecycleCallback, TweenUpdateCallback } from './types';
 import { TweenState } from './types';
 
+type NumericKeys<T> = {
+  [K in keyof T]-?: NonNullable<T[K]> extends number ? K : never;
+}[keyof T];
+
 /**
  * Animates numeric properties of `target` from their current value to a
  * configured end value over a duration in seconds. Supports easing, delay,
@@ -35,7 +39,7 @@ export class Tween<T extends object = object> {
   private readonly _target: T;
   private _state: TweenState = TweenState.Idle;
 
-  private _properties: Partial<Record<keyof T, number>> = {};
+  private _properties: Partial<Record<NumericKeys<T>, number>> = {};
   private _startValues: Record<string, number> | null = null;
   private _duration = 0;
   private _delay = 0;
@@ -81,6 +85,9 @@ export class Tween<T extends object = object> {
   /**
    * Current eased progress in 0..1. Reflects the eased t after applying the
    * easing function, not the raw elapsed/duration ratio.
+   *
+   * Returns `0` while the tween is in the delay phase (state is `Active` but
+   * the configured delay has not yet elapsed).
    */
   public get progress(): number {
     if (this._duration === 0) return 1;
@@ -94,8 +101,12 @@ export class Tween<T extends object = object> {
    * Set target end-values and duration in seconds. Replaces any prior to().
    * The starting values are captured lazily on first update() after start(),
    * so mutating target between to() and start() is safe.
+   *
+   * Only numeric properties of `target` are accepted. Non-numeric keys are
+   * rejected at compile time; the runtime guard in update() remains as a
+   * safety net for untyped callers.
    */
-  public to(properties: Partial<Record<keyof T, number>>, duration: number): this {
+  public to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this {
     this._properties = { ...properties };
     this._duration = duration;
     this._startValues = null;
@@ -193,8 +204,13 @@ export class Tween<T extends object = object> {
   }
 
   /**
-   * Start the tween. If a manager owns this tween it is already tracked;
-   * otherwise this is a stand-alone tween driven by manual update() calls.
+   * Start or restart the tween. Resets all elapsed time, the start-value
+   * snapshot, playback direction, and repeat counter.
+   *
+   * If this tween was previously owned by a manager but was evicted after
+   * natural completion or {@link Tween.stop}, it is automatically
+   * re-registered so it continues to receive frame updates. Stand-alone
+   * tweens (no manager) are unaffected.
    */
   public start(): this {
     this._state = TweenState.Active;
@@ -204,6 +220,7 @@ export class Tween<T extends object = object> {
     this._startFired = false;
     this._direction = 1;
     this._repeatCount = this._repeatTotal;
+    this._manager?.add(this);
 
     return this;
   }
@@ -321,12 +338,6 @@ export class Tween<T extends object = object> {
         // Reset elapsed for next cycle; carry overflow.
         const overflow = this._elapsed - this._duration;
         this._elapsed = overflow > 0 ? Math.min(overflow, this._duration) : 0;
-        this._startFired = false; // allow onStart to re-fire next cycle? No — spec says once.
-        // Actually spec says onStart fires when actual interpolation begins.
-        // For repeats it fires once total at the very first cycle.
-        // Re-reading spec: "onStart fires AFTER the delay (when actual interpolation begins)".
-        // We'll keep it as one-shot across the full lifecycle; don't reset _startFired.
-        this._startFired = true;
 
         // Apply progress for any overflow.
         if (overflow > 0) {
