@@ -247,16 +247,6 @@ export default defineConfig([
           trailingUnderscore: 'forbid',
         },
         {
-          selector: 'interface',
-          format: null,
-          custom: {
-            regex: '^(I)?[A-Z][A-Za-z0-9]*$',
-            match: true,
-          },
-          leadingUnderscore: 'forbid',
-          trailingUnderscore: 'forbid',
-        },
-        {
           selector: 'enumMember',
           format: null,
           custom: {
