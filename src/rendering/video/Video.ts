@@ -52,6 +52,10 @@ export class Video extends Sprite implements Media {
   private readonly _onMetadataHandler: () => void;
   private readonly _onResizeHandler: () => void;
   private readonly _onVideoFrameHandler: (now: number, metadata: unknown) => void;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this.setupWithAudioContext(ctx);
+  };
 
   public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>) {
     super(new Texture(videoElement, samplerOptions));
@@ -80,7 +84,7 @@ export class Video extends Sprite implements Media {
     if (isAudioContextReady()) {
       this.setupWithAudioContext(getAudioContext());
     } else {
-      onAudioContextReady.once(this.setupWithAudioContext, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
 
     // Initialize frame bounds early when metadata is already available.
@@ -383,7 +387,7 @@ export class Video extends Sprite implements Media {
     this._videoElement.removeEventListener('resize', this._onResizeHandler);
     this._cancelVideoFrameCallback();
 
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
 
     if (this._audioSetup) {
       this._audioSetup.sourceNode.disconnect();

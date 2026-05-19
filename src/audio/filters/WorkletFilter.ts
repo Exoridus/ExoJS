@@ -22,6 +22,10 @@ export abstract class WorkletFilter extends AudioFilter {
   protected _outputGain: GainNode | null = null;
   protected _workletNode: AudioWorkletNode | null = null;
   protected _ready: Promise<void> | null = null;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setup(ctx);
+  };
 
   /** The processor name registered via `registerProcessor()` in the worklet source. */
   protected abstract get _workletName(): string;
@@ -37,7 +41,7 @@ export abstract class WorkletFilter extends AudioFilter {
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setup, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -66,7 +70,7 @@ export abstract class WorkletFilter extends AudioFilter {
 
   /** Disconnects all nodes, cancels any pending worklet load, and releases resources. */
   public override destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     this._workletNode?.disconnect();
     this._inputGain?.disconnect();
     this._outputGain?.disconnect();

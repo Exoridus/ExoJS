@@ -145,6 +145,11 @@ export class BeatDetector {
   private _tapSource: AudioNode | null = null;
   private _streamSource: MediaStreamAudioSourceNode | null = null;
   private _ready: Promise<void> | null = null;
+  private _pendingSourceSetup: ((ctx: AudioContext) => void) | null = null;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setup(ctx);
+  };
 
   // ---- Cached state from worklet ----
   private _tempo = 0;
@@ -199,7 +204,7 @@ export class BeatDetector {
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setup, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
 
     if (options?.source !== undefined && options.source !== null) {
@@ -224,13 +229,21 @@ export class BeatDetector {
     if (value === null) return;
 
     if (isAudioContextReady()) {
+      this._pendingSourceSetup = null;
       this._connectSource(value, getAudioContext());
     } else {
-      onAudioContextReady.once((ctx: AudioContext) => {
-        if (this._source === value) {
-          this._connectSource(value, ctx);
-        }
-      }, this);
+      if (this._pendingSourceSetup !== null) {
+        onAudioContextReady.remove(this._pendingSourceSetup);
+      }
+
+      const handler = (ctx: AudioContext): void => {
+        onAudioContextReady.remove(handler);
+        this._pendingSourceSetup = null;
+        this._connectSource(value, ctx);
+      };
+
+      this._pendingSourceSetup = handler;
+      onAudioContextReady.add(handler);
     }
   }
 
@@ -359,7 +372,12 @@ export class BeatDetector {
   // -----------------------------------------------------------------------
 
   public destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
+
+    if (this._pendingSourceSetup !== null) {
+      onAudioContextReady.remove(this._pendingSourceSetup);
+      this._pendingSourceSetup = null;
+    }
     this._disconnectTap();
     this._workletNode?.disconnect();
     this._workletNode = null;
@@ -529,7 +547,7 @@ export class BeatDetector {
       if (this._source === source && this._workletNode && isAudioContextReady()) {
         this._connectSource(source, getAudioContext());
       }
-    }, this);
+    });
   }
 
   private _disconnectTap(): void {

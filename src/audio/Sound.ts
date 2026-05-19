@@ -145,6 +145,10 @@ export class Sound extends AbstractMedia {
   private _refDistance = 50;
   private _maxDistance = 1000;
   private _rolloffFactor = 1;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this.setupWithAudioContext(ctx);
+  };
 
   public get paused(): boolean {
     return this._paused;
@@ -338,7 +342,7 @@ export class Sound extends AbstractMedia {
     if (isAudioContextReady()) {
       this.setupWithAudioContext(getAudioContext());
     } else {
-      onAudioContextReady.once(this.setupWithAudioContext, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -609,7 +613,7 @@ export class Sound extends AbstractMedia {
 
     super.destroy();
 
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
 
     this._audioSetup?.gainNode.disconnect();
     this._stopAllPooled();

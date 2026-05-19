@@ -51,6 +51,11 @@ export class AudioAnalyser {
   private _source: AudioAnalyserSource = null;
   private _tapSource: AudioNode | null = null;
   private _streamSource: MediaStreamAudioSourceNode | null = null;
+  private _pendingSourceSetup: ((ctx: AudioContext) => void) | null = null;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setupAnalyser(ctx);
+  };
 
   // Pre-allocated buffers
   private _byteSpectrum: Uint8Array<ArrayBuffer>;
@@ -86,7 +91,7 @@ export class AudioAnalyser {
     if (isAudioContextReady()) {
       this._setupAnalyser(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setupAnalyser, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
 
     if (options?.source !== undefined && options.source !== null) {
@@ -119,13 +124,21 @@ export class AudioAnalyser {
 
     // 2. Resolve and connect new tap
     if (isAudioContextReady()) {
+      this._pendingSourceSetup = null;
       this._connectSource(value, getAudioContext());
     } else {
-      onAudioContextReady.once((ctx: AudioContext) => {
-        if (this._source === value) {
-          this._connectSource(value, ctx);
-        }
-      }, this);
+      if (this._pendingSourceSetup !== null) {
+        onAudioContextReady.remove(this._pendingSourceSetup);
+      }
+
+      const handler = (ctx: AudioContext): void => {
+        onAudioContextReady.remove(handler);
+        this._pendingSourceSetup = null;
+        this._connectSource(value, ctx);
+      };
+
+      this._pendingSourceSetup = handler;
+      onAudioContextReady.add(handler);
     }
   }
 
@@ -364,7 +377,12 @@ export class AudioAnalyser {
    * needed to avoid memory leaks.
    */
   public destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
+
+    if (this._pendingSourceSetup !== null) {
+      onAudioContextReady.remove(this._pendingSourceSetup);
+      this._pendingSourceSetup = null;
+    }
     this._disconnectTap();
     this._analyser?.disconnect();
     this._analyser = null;
@@ -486,7 +504,7 @@ export class AudioAnalyser {
       if (this._source === source && this._analyser && isAudioContextReady()) {
         this._connectSource(source, getAudioContext());
       }
-    }, this);
+    });
   }
 
   private _disconnectTap(): void {

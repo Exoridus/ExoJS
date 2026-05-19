@@ -84,6 +84,10 @@ export class OscillatorSound extends AbstractMedia {
   private _audioSetup: OscillatorAudioSetup | null = null;
   private _paused = true;
   private readonly _pooledSources: PooledOscillatorSource[] = [];
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setupWithAudioContext(ctx);
+  };
 
   public get paused(): boolean {
     return this._paused;
@@ -125,7 +129,7 @@ export class OscillatorSound extends AbstractMedia {
     if (isAudioContextReady()) {
       this._setupWithAudioContext(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setupWithAudioContext, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -235,7 +239,7 @@ export class OscillatorSound extends AbstractMedia {
   public override destroy(): void {
     super.destroy();
 
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
 
     this._stopAllPooled();
     this._audioSetup?.gainNode.disconnect();

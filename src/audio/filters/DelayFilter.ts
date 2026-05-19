@@ -27,6 +27,10 @@ interface DelayFilterSetup {
 export class DelayFilter extends AudioFilter {
   private _setup: DelayFilterSetup | null = null;
   private _delaySeconds: number;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setupNodes(ctx);
+  };
   private _feedback: number;
   private _wet: number;
 
@@ -38,7 +42,7 @@ export class DelayFilter extends AudioFilter {
     if (isAudioContextReady()) {
       this._setupNodes(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setupNodes, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -91,7 +95,7 @@ export class DelayFilter extends AudioFilter {
   }
 
   public override destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.delayNode.disconnect();

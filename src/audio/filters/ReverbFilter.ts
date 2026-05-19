@@ -27,6 +27,10 @@ interface ReverbFilterSetup {
 export class ReverbFilter extends AudioFilter {
   private _setup: ReverbFilterSetup | null = null;
   private _duration: number;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setupNodes(ctx);
+  };
   private _decay: number;
   private _wet: number;
 
@@ -38,7 +42,7 @@ export class ReverbFilter extends AudioFilter {
     if (isAudioContextReady()) {
       this._setupNodes(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setupNodes, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -91,7 +95,7 @@ export class ReverbFilter extends AudioFilter {
   }
 
   public override destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.convolver.disconnect();

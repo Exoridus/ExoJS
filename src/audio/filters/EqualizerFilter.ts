@@ -27,6 +27,10 @@ interface EqualizerFilterSetup {
 export class EqualizerFilter extends AudioFilter {
   private _setup: EqualizerFilterSetup | null = null;
   private _low: number;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setupNodes(ctx);
+  };
   private _mid: number;
   private _high: number;
   private _lowFrequency: number;
@@ -44,7 +48,7 @@ export class EqualizerFilter extends AudioFilter {
     if (isAudioContextReady()) {
       this._setupNodes(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setupNodes, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -131,7 +135,7 @@ export class EqualizerFilter extends AudioFilter {
   }
 
   public override destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     if (this._setup) {
       this._setup.lowShelf.disconnect();
       this._setup.peaking.disconnect();
