@@ -2,7 +2,17 @@ import type { AssetFactory } from '@/resources/AssetFactory';
 import { BundleLoadError, defineAssetManifest } from '@/resources/AssetManifest';
 import type { CacheStore } from '@/resources/CacheStore';
 import { Loader } from '@/resources/Loader';
+import { Asset } from '@/resources/Asset';
+import { Assets } from '@/resources/Assets';
 import { Json, TextAsset } from '@/resources/tokens';
+
+// Declaration merges for test-only asset types
+declare module '@/resources/AssetDefinitions' {
+  interface AssetDefinitions {
+    mockAsset: { resource: string; config: { source: string } };
+    richAsset: { resource: string; config: { source: string; format: string } };
+  }
+}
 
 class MockTextFactory implements AssetFactory<string> {
   public readonly storageName = 'text';
@@ -906,5 +916,320 @@ describe('Loader', () => {
 
     await expect(loader.loadBundle('boot')).rejects.toBeInstanceOf(BundleLoadError);
     expect(loader.hasBundle('boot')).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New Asset / Assets / LoadingQueue stabilisation tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+class MockAssetFactory implements AssetFactory<string> {
+  public readonly storageName = 'mockAsset';
+  public readonly process = jest.fn(async (_response: Response): Promise<string> => 'raw');
+  public readonly create = jest.fn(async (source: string): Promise<string> => `loaded:${source}`);
+  public destroy(): void {}
+}
+
+class MockAssetType {}
+
+describe('LoadingQueue progress tracking', () => {
+  test('progress is updated to failed when asset type is unknown', async () => {
+    const loader = new Loader();
+    // 'mockAsset' is in AssetDefinitions (via declaration merge above) but we
+    // deliberately do NOT call loader.registerAssetType() so that the runtime
+    // has no constructor registered for it → "no constructor" rejection path.
+    const asset = new Asset({ type: 'mockAsset', source: 'test.dat' });
+
+    const queue = loader.load(asset);
+    let lastProgress = queue.progress;
+
+    queue.onProgress.add(p => { lastProgress = p; });
+
+    await expect(queue).rejects.toThrow('No constructor registered');
+    // Progress must have settled — pending must be 0
+    expect(lastProgress.pending).toBe(0);
+    expect(lastProgress.failed).toBe(1);
+    expect(lastProgress.loaded).toBe(0);
+  });
+
+  test('progress counts both successful and failed items in a map load', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const goodAsset = new Asset({ type: 'mockAsset', source: 'good.dat' });
+    // force the factory to fail on the second call
+    factory.create.mockImplementationOnce(async () => 'ok');
+    factory.create.mockImplementationOnce(async () => { throw new Error('bad'); });
+
+    const badAsset = new Asset({ type: 'mockAsset', source: 'bad.dat' });
+
+    const queue = loader.load({ good: goodAsset, bad: badAsset });
+    let lastProgress = queue.progress;
+
+    queue.onProgress.add(p => { lastProgress = p; });
+
+    await expect(queue).rejects.toThrow();
+    expect(lastProgress.total).toBe(2);
+    expect(lastProgress.pending).toBe(0);
+    expect(lastProgress.loaded + lastProgress.failed).toBe(2);
+  });
+
+  // Shared mockFetch helper (redeclare locally in scope)
+  function mockFetch(): void {
+    global.fetch = jest.fn(async (): Promise<Response> => ({
+      ok: true, status: 200, statusText: 'OK',
+      text: async () => '',
+      json: async () => ({}),
+      arrayBuffer: async () => new ArrayBuffer(0),
+    }) as unknown as Response);
+  }
+
+  afterEach(() => {
+    global.fetch = jest.fn();
+  });
+});
+
+describe('Asset / Assets identity and alias semantics', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = jest.fn(async (): Promise<Response> => ({
+      ok: true, status: 200, statusText: 'OK',
+      text: async () => 'raw',
+      json: async () => ({}),
+      arrayBuffer: async () => new ArrayBuffer(0),
+    }) as unknown as Response);
+  }
+
+  test('same Asset under two aliases shares a single network fetch', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+
+    await loader.load({ heroA: hero, heroB: hero });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(loader.has(MockAssetType, 'heroA')).toBe(true);
+    expect(loader.has(MockAssetType, 'heroB')).toBe(true);
+  });
+
+  test('get() resolves both aliases after multi-alias load', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+
+    await loader.load({ heroA: hero, heroB: hero });
+
+    expect(loader.get(MockAssetType, 'heroA')).toBe(loader.get(MockAssetType, 'heroB'));
+  });
+
+  test('unload(asset) removes asset loaded by source-as-alias (single Asset load)', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+
+    await loader.load(hero);
+
+    expect(loader.has(MockAssetType, 'images/hero.dat')).toBe(true);
+
+    loader.unload(hero);
+
+    expect(loader.has(MockAssetType, 'images/hero.dat')).toBe(false);
+  });
+
+  test('unload(asset) removes all aliases after keyed-map load', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+
+    await loader.load({ heroA: hero, heroB: hero });
+
+    expect(loader.has(MockAssetType, 'heroA')).toBe(true);
+    expect(loader.has(MockAssetType, 'heroB')).toBe(true);
+
+    loader.unload(hero);
+
+    expect(loader.has(MockAssetType, 'heroA')).toBe(false);
+    expect(loader.has(MockAssetType, 'heroB')).toBe(false);
+  });
+
+  test('unload(assets) unloads all entries from an Assets container', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const container = new Assets({
+      hero: { type: 'mockAsset', source: 'hero.dat' },
+      logo: { type: 'mockAsset', source: 'logo.dat' },
+    });
+
+    await loader.load(container);
+
+    expect(loader.has(MockAssetType, 'hero')).toBe(true);
+    expect(loader.has(MockAssetType, 'logo')).toBe(true);
+
+    loader.unload(container);
+
+    expect(loader.has(MockAssetType, 'hero')).toBe(false);
+    expect(loader.has(MockAssetType, 'logo')).toBe(false);
+  });
+
+  test('aliases are cleared from tracking when underlying asset unloads', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const hero = new Asset({ type: 'mockAsset', source: 'hero.dat' });
+
+    await loader.load({ a: hero, b: hero, c: hero });
+
+    loader.unload(hero);
+
+    // Re-load under a single alias — should work cleanly after unload
+    await loader.load({ a: hero });
+
+    expect(loader.has(MockAssetType, 'a')).toBe(true);
+    expect(loader.has(MockAssetType, 'b')).toBe(false);
+  });
+});
+
+describe('Assets reserved "entries" key', () => {
+  test('throws a clear error when an asset is named "entries"', () => {
+    expect(() => {
+      new Assets({
+        entries: { type: 'mockAsset', source: '/entries.dat' },
+      });
+    }).toThrow('"entries"');
+  });
+
+  test('does not throw for a normal asset name', () => {
+    expect(() => {
+      new Assets({
+        logo: { type: 'mockAsset', source: '/logo.dat' },
+      });
+    }).not.toThrow();
+  });
+});
+
+describe('registerAssetType() handler form — full config forwarding', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('handler receives config.source and extra config fields', async () => {
+    const loader = new Loader({ resourcePath: '/' });
+    const receivedConfigs: unknown[] = [];
+
+    loader.registerAssetType('richAsset', {
+      load: async (config) => {
+        receivedConfigs.push(config);
+        return `${config.source}:${config.format}`;
+      },
+    });
+
+    const asset = new Asset({ type: 'richAsset', source: 'level.json', format: 'tiled' });
+    const result = await loader.load(asset);
+
+    expect(receivedConfigs).toHaveLength(1);
+    expect(receivedConfigs[0]).toMatchObject({ source: 'level.json', format: 'tiled' });
+    expect(result).toBe('level.json:tiled');
+  });
+
+  test('handler result is stored and retrievable via the alias', async () => {
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config) => `parsed:${config.source}`,
+    });
+
+    await loader.load({ map: new Asset({ type: 'richAsset', source: 'level.json', format: 'tiled' }) });
+
+    // The asset is stored under the alias 'map', not under 'level.json'
+    const stored = loader.get(loader['_assetTypeMap'].get('richAsset')!, 'map');
+    expect(stored).toBe('parsed:level.json');
+  });
+});
+
+describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = jest.fn(async (): Promise<Response> => ({
+      ok: true, status: 200, statusText: 'OK',
+      text: async () => 'raw',
+      json: async () => ({}),
+      arrayBuffer: async () => new ArrayBuffer(0),
+    }) as unknown as Response);
+  }
+
+  test('accepts a config object value with source and extra fields', async () => {
+    const factory = new MockAssetFactory();
+    const receivedOptions: unknown[] = [];
+
+    factory.create.mockImplementation(async (source: string, options?: unknown) => {
+      receivedOptions.push(options);
+      return `loaded:${source}`;
+    });
+
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const result = await loader.load(MockAssetType, {
+      heroA: 'images/hero.png',
+      heroB: { source: 'images/hero-alt.png', scale: 2, format: 'png' },
+    });
+
+    expect(result.heroA).toBe('loaded:raw');
+    expect(result.heroB).toBe('loaded:raw');
+    // heroB's extra fields must be forwarded to factory.create as options
+    expect(receivedOptions).toContainEqual(expect.objectContaining({ source: 'images/hero-alt.png', scale: 2, format: 'png' }));
+  });
+
+  test('string values in batch continue to work unchanged', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
+    mockFetch();
+
+    const result = await loader.load(MockAssetType, { heroA: 'images/hero.png' });
+
+    expect(result.heroA).toBe('loaded:raw');
+    expect(global.fetch).toHaveBeenCalledWith('/images/hero.png', expect.anything());
   });
 });

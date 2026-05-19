@@ -6,7 +6,7 @@ import { Video } from '@/rendering/video/Video';
 
 import { Asset, AssetImpl } from './Asset';
 import { Assets, AssetsImpl } from './Assets';
-import type { AssetInput, InferAssetResource } from './AssetDefinitions';
+import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import { LoadingQueue } from './LoadingQueue';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
@@ -67,6 +67,22 @@ export type LoadReturn<T> = T extends typeof Json
           T extends abstract new (...args: any[]) => infer R
           ? R
           : never;
+
+/**
+ * Context object passed to custom asset-type load handlers registered via
+ * {@link Loader.registerAssetType}.
+ */
+export interface AssetLoaderContext {
+  readonly loader: Loader;
+}
+
+/**
+ * Accepted value types in the homogeneous batch load API.
+ *
+ * Either a raw source string or a flat config object containing at least
+ * `source` plus any type-specific extra fields.
+ */
+export type BatchValue = string | ({ source: string } & Record<string, unknown>);
 
 /**
  * Construction options for {@link Loader}.
@@ -144,6 +160,16 @@ export class Loader {
   private readonly _stores: readonly CacheStore[];
   private readonly _cacheStrategy: CacheStrategy;
 
+  // ── Identity / alias tracking for the new Asset API ───────────────────────
+  // Maps alias key (`${typeId}:${alias}`) to an identity key (`id:${typeId}:${source}`)
+  private readonly _aliasKeyToIdentityKey = new Map<string, string>();
+  // Maps identity key to the set of aliases registered under that identity (within same type)
+  private readonly _identityKeyToAliases = new Map<string, Set<string>>();
+  // In-flight promises keyed by identity (source-based) for cross-alias dedup
+  private readonly _inFlightByIdentity = new Map<string, Promise<unknown>>();
+  // Simple load handlers registered via the handler-based registerAssetType overload
+  private readonly _handlerFunctions = new Map<AssetConstructor, (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>>();
+
   private _resourcePath: string;
   private _requestOptions: RequestInit;
   private _concurrency: number;
@@ -193,17 +219,56 @@ export class Loader {
   }
 
   /**
+   * Associates a string type name with a simple load handler.
+   *
+   * The handler's `load` method receives the full config object (including
+   * `source` and every extra field declared via `AssetDefinitions` augmentation)
+   * plus a {@link AssetLoaderContext} containing the loader instance.
+   *
+   * This form is intended for custom asset types that manage their own
+   * network access; the persistent cache layer is bypassed.
+   *
+   * @example
+   * ```ts
+   * loader.registerAssetType('tileMap', {
+   *   load(config, { loader }) {
+   *     return loadTileMap({ source: config.source, format: config.format, loader });
+   *   },
+   * });
+   * ```
+   */
+  public registerAssetType<K extends keyof AssetDefinitions>(
+    typeName: K,
+    handler: { load(config: AssetDefinitions[K]['config'], context: AssetLoaderContext): Promise<AssetDefinitions[K]['resource']> },
+  ): this;
+
+  /**
    * Associates a string type name (e.g. `'tileMap'`) with the constructor
    * used as the asset token and, optionally, registers a factory for it.
    *
    * Required for declaration-merge extensions of {@link AssetDefinitions}
    * so that `loader.load({ map: { type: 'tileMap', source: '…' } })` works.
    */
-  public registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory<unknown>): this {
-    this._assetTypeMap.set(typeName, ctor);
+  public registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory<unknown>): this;
 
-    if (factory) {
-      this._registry.register(ctor, factory);
+  public registerAssetType(
+    typeName: string,
+    ctorOrHandler: AssetConstructor | { load(config: unknown, context: AssetLoaderContext): Promise<unknown> },
+    factory?: AssetFactory,
+  ): this {
+    if (typeof ctorOrHandler === 'function') {
+      this._assetTypeMap.set(typeName, ctorOrHandler);
+
+      if (factory) {
+        this._registry.register(ctorOrHandler, factory);
+      }
+    } else {
+      // Handler-based form: create a synthetic constructor for type identity
+      const syntheticCtor = class {} as unknown as AssetConstructor;
+
+      Object.defineProperty(syntheticCtor, 'name', { value: typeName });
+      this._assetTypeMap.set(typeName, syntheticCtor);
+      this._handlerFunctions.set(syntheticCtor, (config, ctx) => ctorOrHandler.load(config, ctx));
     }
 
     return this;
@@ -410,7 +475,7 @@ export class Loader {
 
   public load<T extends Loadable>(type: T, path: string, options?: unknown): LoadingQueue<LoadReturn<T>>;
   public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): LoadingQueue<Array<LoadReturn<T>>>;
-  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
+  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
 
   // -----------------------------------------------------------------------
   // Loading — implementation
@@ -481,16 +546,21 @@ export class Loader {
         return queue;
       }
 
-      // Record<string, string>
-      const entries = Object.entries(source as Record<string, string>);
+      // Record<string, BatchValue>
+      const entries = Object.entries(source as Record<string, BatchValue>);
       const result: Record<string, unknown> = {};
       let queue!: LoadingQueue<Record<string, unknown>>;
-      const promises = entries.map(([alias, path]) =>
-        this._loadSingle(ctor, alias, options, path).then(
+      const promises = entries.map(([alias, pathOrConfig]) => {
+        const path = typeof pathOrConfig === 'string' ? pathOrConfig : pathOrConfig.source;
+        const itemOptions = typeof pathOrConfig === 'string'
+          ? options
+          : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
+
+        return this._loadSingle(ctor, alias, itemOptions, path).then(
           v => { result[alias] = v; queue._notifyItem(true); },
           e => { queue._notifyItem(false); throw e; },
-        ),
-      );
+        );
+      });
 
       const promise = Promise.all(promises).then(() => result);
 
@@ -644,7 +714,19 @@ export class Loader {
       const asset = arg0 as Asset<unknown>;
       const ctor = this._assetTypeMap.get(asset.type);
 
-      if (ctor) {
+      if (!ctor) return this;
+
+      const identityKey = this._identityKey(ctor, asset._config.source);
+      const aliasSet = this._identityKeyToAliases.get(identityKey);
+
+      if (aliasSet && aliasSet.size > 0) {
+        // Snapshot the set because _unloadOne modifies it during iteration
+        for (const alias of [...aliasSet]) {
+          this._unloadOne(ctor, alias);
+        }
+      } else {
+        // Asset was loaded without alias-map tracking (e.g. single-asset load).
+        // Fall back to using the source as the alias.
         this._unloadOne(ctor, asset._config.source);
       }
 
@@ -655,9 +737,20 @@ export class Loader {
       const container = arg0 as Assets<Record<string, AssetInput>>;
 
       for (const [alias, a] of Object.entries(container.entries)) {
-        const ctor = this._assetTypeMap.get((a as Asset<unknown>).type);
+        const assetRef = a as Asset<unknown>;
+        const ctor = this._assetTypeMap.get(assetRef.type);
 
-        if (ctor) {
+        if (!ctor) continue;
+
+        const identityKey = this._identityKey(ctor, assetRef._config.source);
+        const aliasSet = this._identityKeyToAliases.get(identityKey);
+
+        if (aliasSet?.has(alias)) {
+          // Also remove all other aliases that share this resource identity
+          for (const a2 of [...aliasSet]) {
+            this._unloadOne(ctor, a2);
+          }
+        } else {
           this._unloadOne(ctor, alias);
         }
       }
@@ -670,12 +763,27 @@ export class Loader {
 
   private _unloadOne(type: Loadable, alias: string): this {
     const ctor = type;
-    const key = this._key(ctor, alias);
+    const aliasKey = this._key(ctor, alias);
 
     this._resources.get(ctor)?.delete(alias);
 
-    if (this._inFlight.has(key)) {
-      this._preventStoreKeys.add(key);
+    // If a fetch is in flight (via legacy or identity-based map), prevent the
+    // result from being written to _resources once it arrives.
+    const identityKey = this._aliasKeyToIdentityKey.get(aliasKey);
+    if (this._inFlight.has(aliasKey) || (identityKey !== undefined && this._inFlightByIdentity.has(identityKey))) {
+      this._preventStoreKeys.add(aliasKey);
+    }
+
+    // Clean up alias ↔ identity tracking
+    if (identityKey !== undefined) {
+      this._aliasKeyToIdentityKey.delete(aliasKey);
+      const aliasSet = this._identityKeyToAliases.get(identityKey);
+      if (aliasSet) {
+        aliasSet.delete(alias);
+        if (aliasSet.size === 0) {
+          this._identityKeyToAliases.delete(identityKey);
+        }
+      }
     }
 
     return this;
@@ -751,6 +859,10 @@ export class Loader {
     this._bundles.clear();
     this._inFlight.clear();
     this._preventStoreKeys.clear();
+    this._inFlightByIdentity.clear();
+    this._aliasKeyToIdentityKey.clear();
+    this._identityKeyToAliases.clear();
+    this._handlerFunctions.clear();
     this._backgroundQueue.length = 0;
     this.onProgress.destroy();
     this.onBundleProgress.destroy();
@@ -836,12 +948,16 @@ export class Loader {
       const ctor = this._assetTypeMap.get(asset.type);
 
       if (!ctor) {
-        return Promise.reject<void>(
+        // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
+        return Promise.reject<unknown>(
           new Error(`No constructor registered for asset type "${asset.type}". Call registerAssetType() first.`),
+        ).then(
+          () => { queue._notifyItem(true); },
+          error => { queue._notifyItem(false); throw error; },
         );
       }
 
-      return this._loadSingle(ctor, alias, undefined, asset._config.source).then(
+      return this._loadSingleAsset(ctor, alias, asset).then(
         resource => { results.set(alias, resource); queue._notifyItem(true); },
         error    => { queue._notifyItem(false); throw error; },
       );
@@ -854,6 +970,107 @@ export class Loader {
     return queue;
   }
 
+  /**
+   * Loads a single asset from an `Asset<T>` reference using identity-based
+   * in-flight deduplication.
+   *
+   * Multiple aliases that point to the same source share a single network
+   * fetch.  Each alias is stored independently in `_resources` so that
+   * `get(type, alias)` works for all of them.
+   */
+  private async _loadSingleAsset(
+    type: AssetConstructor,
+    alias: string,
+    asset: Asset<unknown>,
+  ): Promise<unknown> {
+    if (this._hasResource(type, alias)) {
+      return this._resources.get(type)?.get(alias);
+    }
+
+    const source = asset.source;
+    const aliasKey = this._key(type, alias);
+    const identityKey = this._identityKey(type, source);
+
+    // Register alias → identity mapping for unload() semantics
+    this._aliasKeyToIdentityKey.set(aliasKey, identityKey);
+    let aliasSet = this._identityKeyToAliases.get(identityKey);
+    if (!aliasSet) {
+      aliasSet = new Set<string>();
+      this._identityKeyToAliases.set(identityKey, aliasSet);
+    }
+    aliasSet.add(alias);
+
+    // Same source already in flight? Attach to the existing promise.
+    const existing = this._inFlightByIdentity.get(identityKey);
+    if (existing) {
+      return existing.then(resource => {
+        this._storeResource(type, alias, resource);
+        return resource;
+      });
+    }
+
+    // Build load promise — handler-based types bypass the factory/cache pipeline.
+    const rawConfig = asset._config as Record<string, unknown>;
+    const { type: _type, source: _src, ...extraOnly } = rawConfig;
+    const handler = this._handlerFunctions.get(type);
+
+    let fetchPromise: Promise<unknown>;
+    if (handler) {
+      const fullConfig = { source, ...extraOnly };
+      fetchPromise = this._fetchWithHandler(type, alias, source, fullConfig, handler);
+    } else {
+      const options = Object.keys(extraOnly).length > 0 ? extraOnly : undefined;
+      fetchPromise = this._fetch(type, alias, source, options);
+    }
+
+    const tracked: Promise<unknown> = fetchPromise
+      .finally(() => {
+        this._inFlightByIdentity.delete(identityKey);
+      })
+      .then(
+        v => v,
+        error => {
+          // On failure, immediately clean up alias ↔ identity tracking so
+          // stale entries don't accumulate for assets that never loaded.
+          const failedAliases = this._identityKeyToAliases.get(identityKey);
+          if (failedAliases) {
+            for (const fa of failedAliases) {
+              const faKey = this._key(type, fa);
+              this._aliasKeyToIdentityKey.delete(faKey);
+              this._preventStoreKeys.delete(faKey);
+            }
+            this._identityKeyToAliases.delete(identityKey);
+          }
+          throw error;
+        },
+      );
+
+    this._inFlightByIdentity.set(identityKey, tracked);
+    return tracked;
+  }
+
+  /**
+   * Calls a handler-based custom asset loader and stores the result.
+   * Bypasses the cache strategy and factory registry entirely.
+   */
+  private async _fetchWithHandler(
+    type: AssetConstructor,
+    alias: string,
+    source: string,
+    fullConfig: unknown,
+    handler: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>,
+  ): Promise<unknown> {
+    const url = this._resolveUrl(source);
+    try {
+      const resource = await handler(fullConfig, { loader: this });
+      this._storeResource(type, alias, resource);
+      return resource;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, { cause: error });
+    }
+  }
+
   private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
     const factory = this._registry.resolve(type);
     const url = this._resolveUrl(path);
@@ -862,7 +1079,7 @@ export class Loader {
       const resource = await this._cacheStrategy.resolve(
         {
           storageName: factory.storageName,
-          key: alias,
+          key: path, // source-path as IDB key so same resource is not cached multiple times under different aliases
           url,
           requestOptions: this._requestOptions,
           factory,
@@ -1147,6 +1364,17 @@ export class Loader {
     }
 
     return `${typeId}:${alias}`;
+  }
+
+  private _identityKey(type: AssetConstructor, source: string): string {
+    let typeId = this._typeIds.get(type);
+
+    if (typeId === undefined) {
+      typeId = this._nextTypeId++;
+      this._typeIds.set(type, typeId);
+    }
+
+    return `id:${typeId}:${source}`;
   }
 
   private _resolveUrl(path: string): string {
