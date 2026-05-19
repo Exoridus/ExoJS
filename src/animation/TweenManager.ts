@@ -56,16 +56,14 @@ export class TweenManager {
    * Application.update(). Uses a snapshot of the list so that callbacks that
    * add or remove tweens do not corrupt mid-iteration.
    */
-  public update(deltaSeconds: number): this {
-    if (this._destroyed) return this;
+  public update(deltaSeconds: number): void {
+    if (this._destroyed) return;
 
     const snapshot = [...this._tweens];
 
     for (const tween of snapshot) {
       tween.update(deltaSeconds);
     }
-
-    return this;
   }
 
   /**

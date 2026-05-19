@@ -161,14 +161,6 @@ export class SceneNode implements Collidable {
     this._parentNode = parent;
   }
 
-  public get parentNode(): Container | null {
-    return this._parentNode;
-  }
-
-  public set parentNode(parentNode: Container | null) {
-    this._parentNode = parentNode;
-  }
-
   public get visible(): boolean {
     return this._visible;
   }
@@ -198,18 +190,6 @@ export class SceneNode implements Collidable {
 
   public set cullable(cullable: boolean) {
     this._cullable = cullable;
-  }
-
-  public get globalTransform(): Matrix {
-    return this.getGlobalTransform();
-  }
-
-  public get localBounds(): Rectangle {
-    return this.getLocalBounds();
-  }
-
-  public get bounds(): Rectangle {
-    return this.getBounds();
   }
 
   public get isAlignedBox(): boolean {
@@ -301,12 +281,6 @@ export class SceneNode implements Collidable {
 
   public setChildOrder(order: number): this {
     this._childOrder = order;
-
-    return this;
-  }
-
-  public setCullable(cullable: boolean): this {
-    this._cullable = cullable;
 
     return this;
   }

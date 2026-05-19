@@ -29,14 +29,14 @@ const label = new Text('Hello', {
 });
 ```
 
-The second argument is a `TextStyleOptions` object — all properties are optional, all have defaults. The `TextStyle` is stored as `text.style`. Replace it with `setStyle()` to rebuild the mesh; mutating style fields alone does not rebuild:
+The second argument is a `TextStyleOptions` object — all properties are optional, all have defaults. The `TextStyle` is stored as `text.style`. Assign a new style to rebuild the mesh; mutating style fields alone does not rebuild:
 
 ```js
-import { Color } from '@codexo/exojs';
+import { Color, TextStyle } from '@codexo/exojs';
 
 label.style.fontSize = 32;
 label.style.fillColor = Color.tomato;
-label.setStyle(label.style); // apply style changes and rebuild
+label.style = label.style; // apply style changes and rebuild
 ```
 
 ## Font loading
@@ -138,10 +138,10 @@ this.ui.addChild(this.scoreLabel);
 this.addChild(this.ui);
 ```
 
-The text node's internal mesh is a `Container` child. `setText()` destroys the previous mesh and builds a new one. This means:
+The text node's internal mesh is a `Container` child. Assigning to `text.text` destroys the previous mesh and builds a new one. This means:
 - Changing text every frame is fine — the old mesh is discarded and a fresh one is built.
 - Mutating `style` fields alone does not rebuild the mesh.
-- To apply style changes, call `setStyle(...)` (or assign `text.style = ...`) so the mesh is rebuilt.
+- To apply style changes, assign `text.style = ...` so the mesh is rebuilt.
 
 ## Text constraints
 

@@ -21,6 +21,10 @@ export class Timer extends Clock {
     }
   }
 
+  public get limit(): Time {
+    return this._limit;
+  }
+
   public set limit(limit: Time) {
     this._limit.copy(limit);
   }

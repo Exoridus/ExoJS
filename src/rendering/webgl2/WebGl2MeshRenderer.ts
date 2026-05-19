@@ -87,10 +87,10 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     if (shader.uniforms.has('u_tint')) {
       const tint = mesh.tint;
-      this._tintScratch[0] = tint.red;
-      this._tintScratch[1] = tint.green;
-      this._tintScratch[2] = tint.blue;
-      this._tintScratch[3] = tint.alpha;
+      this._tintScratch[0] = tint.r;
+      this._tintScratch[1] = tint.g;
+      this._tintScratch[2] = tint.b;
+      this._tintScratch[3] = tint.a;
       shader.getUniform('u_tint').setValue(this._tintScratch);
     }
 

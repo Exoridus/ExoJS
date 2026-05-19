@@ -127,12 +127,14 @@ export abstract class RenderNode extends SceneNode {
   private _cacheDirty = true;
   private _cacheTexture: RenderTexture | null = null;
 
-  public get filters(): Filter[] {
+  public get filters(): readonly Filter[] {
     return this._filters;
   }
 
   public set filters(filters: readonly Filter[]) {
-    this.setFilters(filters);
+    this._filters.length = 0;
+    this._filters.push(...filters);
+    this.invalidateCache();
   }
 
   /**
@@ -165,14 +167,14 @@ export abstract class RenderNode extends SceneNode {
   }
 
   public set cacheAsBitmap(cacheAsBitmap: boolean) {
-    this.setCacheAsBitmap(cacheAsBitmap);
-  }
+    if (this._cacheAsBitmap !== cacheAsBitmap) {
+      this._cacheAsBitmap = cacheAsBitmap;
+      this.invalidateCache();
 
-  public setFilters(filters: readonly Filter[]): this {
-    this._filters.length = 0;
-    this._filters.push(...filters);
-
-    return this.invalidateCache();
+      if (!cacheAsBitmap) {
+        this._destroyCacheTexture();
+      }
+    }
   }
 
   public addFilter(filter: Filter): this {
@@ -200,19 +202,6 @@ export abstract class RenderNode extends SceneNode {
     if (this._filters.length > 0) {
       this._filters.length = 0;
       this.invalidateCache();
-    }
-
-    return this;
-  }
-
-  public setCacheAsBitmap(cacheAsBitmap: boolean): this {
-    if (this._cacheAsBitmap !== cacheAsBitmap) {
-      this._cacheAsBitmap = cacheAsBitmap;
-      this.invalidateCache();
-
-      if (!cacheAsBitmap) {
-        this._destroyCacheTexture();
-      }
     }
 
     return this;

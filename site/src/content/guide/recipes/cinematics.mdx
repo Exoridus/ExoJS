@@ -65,7 +65,7 @@ class CinematicScene extends Scene {
             .to({ count: TITLE.length }, 1.0)
             .delay(1.6)
             .onUpdate(() => {
-                this.titleText.setText(TITLE.slice(0, this.titleState.count | 0));
+                this.titleText.text = TITLE.slice(0, this.titleState.count | 0);
             })
             .start();
 
