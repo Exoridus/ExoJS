@@ -42,6 +42,10 @@ interface ChorusFilterSetup {
 export class ChorusFilter extends AudioFilter {
   private _nodes: ChorusFilterSetup | null = null;
   private _delayMs: number;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setupNodes(ctx);
+  };
   private _depthMs: number;
   private _rateHz: number;
   private _wet: number;
@@ -55,7 +59,7 @@ export class ChorusFilter extends AudioFilter {
     if (isAudioContextReady()) {
       this._setupNodes(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setupNodes, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -124,7 +128,7 @@ export class ChorusFilter extends AudioFilter {
   // -------------------------------------------------------------------------
 
   public override destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     if (this._nodes) {
       this._nodes.lfoOscillator.stop();
       this._nodes.lfoOscillator.disconnect();

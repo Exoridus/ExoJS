@@ -18,6 +18,10 @@ export class LowpassFilter extends AudioFilter {
   private _node: BiquadFilterNode | null = null;
   private _frequency: number;
   private _resonance: number;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setup(ctx);
+  };
 
   public constructor(options: LowpassFilterOptions = {}) {
     super();
@@ -26,7 +30,7 @@ export class LowpassFilter extends AudioFilter {
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setup, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -65,7 +69,7 @@ export class LowpassFilter extends AudioFilter {
   }
 
   public override destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     this._node?.disconnect();
     this._node = null;
   }

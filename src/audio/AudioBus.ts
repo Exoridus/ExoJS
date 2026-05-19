@@ -48,6 +48,10 @@ export class AudioBus {
   private readonly _filters: AudioFilter[] = [];
   private _setup: AudioBusSetup | null = null;
   private _scheduledStopId: ReturnType<typeof setTimeout> | null = null;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setupAudio(ctx);
+  };
 
   public constructor(name: string, options: AudioBusOptions = {}) {
     if (!name || typeof name !== 'string') {
@@ -66,7 +70,7 @@ export class AudioBus {
     if (isAudioContextReady()) {
       this._setupAudio(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setupAudio, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -179,7 +183,7 @@ export class AudioBus {
   }
 
   public destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     this._clearScheduledStop();
     for (const filter of this._filters) {
       filter.destroy();
@@ -244,7 +248,7 @@ export class AudioBus {
     } else {
       onAudioContextReady.once(() => {
         if (this._setup) callback();
-      }, this);
+      });
     }
   }
 

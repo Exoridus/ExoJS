@@ -7,11 +7,6 @@ import { removeArrayItems } from '@/core/utils';
  */
 type SignalHandler<Args extends unknown[]> = (...params: Args) => void | boolean;
 
-interface SignalBinding<Args extends unknown[]> {
-  handler: SignalHandler<Args>;
-  context?: object;
-}
-
 /**
  * Lightweight typed event emitter. Each `Signal` represents one named
  * notification channel (e.g. `onResize`, `onFrame`). Listeners are added with
@@ -22,30 +17,31 @@ interface SignalBinding<Args extends unknown[]> {
  * end so a `new Signal<[number, string]>()` enforces both `dispatch(1, 'x')`
  * and the listener signature `(n: number, s: string) => …`.
  *
- * `dispatch` snapshots the bindings list before iterating, so handlers may
- * freely add or remove listeners during the same dispatch without corrupting
- * the loop. Returning `false` from a handler short-circuits the rest of the
- * dispatch (handy for capturing-style flows).
+ * Handlers are stored as direct function references (no wrapper objects).
+ * `dispatch` uses a guard flag instead of a snapshot copy, so no allocation
+ * occurs per dispatch. Handlers added or removed during dispatch take effect
+ * on the next call; a `remove` mid-dispatch defers the splice until after the
+ * current iteration finishes. Returning `false` from a handler short-circuits
+ * the rest of the dispatch.
  */
 export class Signal<Args extends unknown[] = []> {
-  private readonly _bindings = new Array<SignalBinding<Args>>();
+  private readonly _handlers: SignalHandler<Args>[] = [];
+  private _dispatching = false;
+  private _pendingRemoves: SignalHandler<Args>[] | null = null;
 
-  public get bindings(): ReadonlyArray<SignalBinding<Args>> {
-    return this._bindings;
-  }
-
-  /** `true` when `handler` is registered with the same `context`. */
-  public has(handler: SignalHandler<Args>, context?: object): boolean {
-    return this._bindings.some(binding => binding.handler === handler && binding.context === context);
+  /** `true` when `handler` is currently registered. */
+  public has(handler: SignalHandler<Args>): boolean {
+    return this._handlers.includes(handler);
   }
 
   /**
-   * Register a listener. Idempotent — adding the same `(handler, context)`
-   * pair twice is a no-op. `context` becomes `this` inside the handler.
+   * Register a listener. Idempotent — adding the same handler reference
+   * twice is a no-op. Use arrow functions or pre-bound methods to ensure
+   * correct `this` inside the handler.
    */
-  public add(handler: SignalHandler<Args>, context?: object): this {
-    if (!this.has(handler, context)) {
-      this._bindings.push({ handler, context });
+  public add(handler: SignalHandler<Args>): this {
+    if (!this._handlers.includes(handler)) {
+      this._handlers.push(handler);
     }
 
     return this;
@@ -53,42 +49,31 @@ export class Signal<Args extends unknown[] = []> {
 
   /**
    * Register a listener that auto-removes itself after the first dispatch.
-   * Wraps `handler` in a self-removing closure; calling
+   * The internal wrapper reference differs from `handler`, so calling
    * {@link Signal.remove} with the original `handler` reference does NOT
-   * remove the wrapper — use {@link Signal.clear} or
-   * {@link Signal.clearByContext} to undo a `once` registration.
+   * remove it — use {@link Signal.clear} to undo a `once` registration.
    */
-  public once(handler: SignalHandler<Args>, context?: object): this {
-    const once = (...params: Args): void => {
-      this.remove(once, context);
-      handler.call(context, ...params);
+  public once(handler: SignalHandler<Args>): this {
+    const wrapper = (...params: Args): void => {
+      this.remove(wrapper);
+      handler(...params);
     };
 
-    this.add(once, context);
+    this._handlers.push(wrapper);
 
     return this;
   }
 
-  /** Remove a previously registered `(handler, context)` pair. No-op if absent. */
-  public remove(handler: SignalHandler<Args>, context?: object): this {
-    const index = this._bindings.findIndex(binding => binding.handler === handler && binding.context === context);
+  /** Remove a previously registered handler. No-op if absent. */
+  public remove(handler: SignalHandler<Args>): this {
+    if (this._dispatching) {
+      (this._pendingRemoves ??= []).push(handler);
+    } else {
+      const index = this._handlers.indexOf(handler);
 
-    if (index !== -1) {
-      removeArrayItems(this._bindings, index, 1);
-    }
-
-    return this;
-  }
-
-  /**
-   * Remove every listener bound to `context`. Useful when an object is
-   * being torn down and needs to detach all its subscriptions in one call.
-   */
-  public clearByContext(context?: object): this {
-    const bindings = this._bindings.filter(binding => binding.context === context);
-
-    for (const binding of bindings) {
-      removeArrayItems(this._bindings, this._bindings.indexOf(binding), 1);
+      if (index !== -1) {
+        removeArrayItems(this._handlers, index, 1);
+      }
     }
 
     return this;
@@ -96,7 +81,11 @@ export class Signal<Args extends unknown[] = []> {
 
   /** Remove every listener. */
   public clear(): this {
-    this._bindings.length = 0;
+    if (this._dispatching) {
+      this._pendingRemoves = [...this._handlers];
+    } else {
+      this._handlers.length = 0;
+    }
 
     return this;
   }
@@ -104,27 +93,43 @@ export class Signal<Args extends unknown[] = []> {
   /**
    * Notify every registered listener in registration order. Returning `false`
    * from a handler stops dispatch to the remaining listeners for this call.
-   * Listeners may safely add/remove bindings during dispatch — the iteration
-   * uses a pre-snapshot of the bindings array.
+   * Listeners may safely remove themselves or others during dispatch — removals
+   * are deferred until after the current iteration completes.
    */
   public dispatch(...params: Args): this {
-    if (this._bindings.length) {
-      // Snapshot bindings because handlers may mutate the array mid-dispatch
-      // (notably `once()` wrappers that remove themselves), which would otherwise
-      // cause the iterator to skip the binding shifted into the vacated slot.
-      const bindings = [...this._bindings];
+    const length = this._handlers.length;
 
-      for (const binding of bindings) {
-        if (binding.handler.call(binding.context, ...params) === false) {
-          break;
+    if (!length) {
+      return this;
+    }
+
+    this._dispatching = true;
+
+    for (let i = 0; i < length; i++) {
+      if (this._handlers[i](...params) === false) {
+        break;
+      }
+    }
+
+    this._dispatching = false;
+
+    if (this._pendingRemoves !== null) {
+      for (const handler of this._pendingRemoves) {
+        const index = this._handlers.indexOf(handler);
+
+        if (index !== -1) {
+          removeArrayItems(this._handlers, index, 1);
         }
       }
+
+      this._pendingRemoves = null;
     }
 
     return this;
   }
 
   public destroy(): void {
-    this.clear();
+    this._handlers.length = 0;
+    this._pendingRemoves = null;
   }
 }

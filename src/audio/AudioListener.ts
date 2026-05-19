@@ -36,14 +36,16 @@ export class AudioListener {
 
   private _audioListener: WebAudioListener | null = null;
   private _ctx: AudioContext | null = null;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setup(ctx);
+  };
 
   public constructor() {
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
-      onAudioContextReady.once((readyContext: AudioContext) => {
-        this._setup(readyContext);
-      }, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -71,7 +73,7 @@ export class AudioListener {
   }
 
   public destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     this.position.destroy();
     this.velocity.destroy();
     this.target = null;

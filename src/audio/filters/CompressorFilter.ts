@@ -19,6 +19,10 @@ export interface CompressorFilterOptions {
 export class CompressorFilter extends AudioFilter {
   private _node: DynamicsCompressorNode | null = null;
   private _threshold: number;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._setup(ctx);
+  };
   private _knee: number;
   private _ratio: number;
   private _attack: number;
@@ -34,7 +38,7 @@ export class CompressorFilter extends AudioFilter {
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
-      onAudioContextReady.once(this._setup, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -121,7 +125,7 @@ export class CompressorFilter extends AudioFilter {
   }
 
   public override destroy(): void {
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
     this._node?.disconnect();
     this._node = null;
   }

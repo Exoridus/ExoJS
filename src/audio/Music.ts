@@ -26,6 +26,10 @@ interface MusicAudioSetup {
 export class Music extends AbstractMedia {
   private readonly _audioElement: HTMLMediaElement;
   private _audioSetup: MusicAudioSetup | null = null;
+  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this.setupWithAudioContext(ctx);
+  };
 
   public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
     super(audioElement);
@@ -39,7 +43,7 @@ export class Music extends AbstractMedia {
     if (isAudioContextReady()) {
       this.setupWithAudioContext(getAudioContext());
     } else {
-      onAudioContextReady.once(this.setupWithAudioContext, this);
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -173,7 +177,7 @@ export class Music extends AbstractMedia {
   public override destroy(): void {
     super.destroy();
 
-    onAudioContextReady.clearByContext(this);
+    onAudioContextReady.remove(this._onAudioContextReady);
 
     if (this._audioSetup) {
       this._audioSetup.sourceNode.disconnect();
