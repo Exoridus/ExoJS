@@ -402,7 +402,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       return;
     }
 
-    const blendModes: readonly BlendModes[] = [BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply, BlendModes.Screen];
+    const blendModes: readonly BlendModes[] = [BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply, BlendModes.Screen, BlendModes.Darken, BlendModes.Lighten];
 
     const promises: Array<Promise<void>> = [];
 

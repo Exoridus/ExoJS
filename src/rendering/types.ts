@@ -8,6 +8,8 @@ export enum BlendModes {
   Subtract = 2,
   Multiply = 3,
   Screen = 4,
+  Darken = 5,
+  Lighten = 6,
 }
 
 /**
