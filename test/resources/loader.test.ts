@@ -1179,6 +1179,147 @@ describe('registerAssetType() handler form — full config forwarding', () => {
   });
 });
 
+describe('registerAssetType() handler form — cache-aware context', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  function mockFetchText(body: string): void {
+    global.fetch = jest.fn(async (): Promise<Response> => ({
+      ok: true, status: 200, statusText: 'OK',
+      text: async () => body,
+      json: async () => JSON.parse(body),
+      arrayBuffer: async () => Buffer.from(body).buffer,
+    }) as unknown as Response);
+  }
+
+  test('context exposes identityKey as a non-empty string', async () => {
+    const loader = new Loader({ resourcePath: '/' });
+    let capturedKey = '';
+
+    loader.registerAssetType('richAsset', {
+      load: async (_config, ctx) => {
+        capturedKey = ctx.identityKey;
+        return 'ok';
+      },
+    });
+
+    await loader.load(new Asset({ type: 'richAsset', source: 'a.json', format: 'x' }));
+    expect(capturedKey).toMatch(/^id:\d+:/);
+  });
+
+  test('context.fetchText fetches and returns text', async () => {
+    mockFetchText('hello world');
+    const loader = new Loader({ resourcePath: '/assets/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => ctx.fetchText(config.source),
+    });
+
+    const result = await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    expect(result).toBe('hello world');
+    expect(global.fetch).toHaveBeenCalledWith('/assets/file.txt', expect.anything());
+  });
+
+  test('context.fetchText caches: second call skips network', async () => {
+    mockFetchText('cached content');
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => ctx.fetchText(config.source),
+    });
+
+    // First load — populates in-memory result
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    // Reset the mock so we can check if it was called during the second load
+    (global.fetch as jest.Mock).mockClear();
+    // Second load — same asset, should be served from _resources (no new fetch call)
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('context.fetchJson fetches and parses JSON', async () => {
+    mockFetchText('{"value":42}');
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => {
+        const data = await ctx.fetchJson<{ value: number }>(config.source);
+        return String(data.value);
+      },
+    });
+
+    const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
+    expect(result).toBe('42');
+  });
+
+  test('context.fetchArrayBuffer fetches binary data', async () => {
+    mockFetchText('binary');
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config, ctx) => {
+        const buf = await ctx.fetchArrayBuffer(config.source);
+        return String(buf.byteLength);
+      },
+    });
+
+    const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
+    expect(Number(result)).toBeGreaterThan(0);
+  });
+
+  test('getIdentityKey separates assets with same source but different format', async () => {
+    const loader = new Loader({ resourcePath: '/' });
+    const loadOrder: string[] = [];
+
+    loader.registerAssetType('richAsset', {
+      getIdentityKey: (config) => `${config.source}:${config.format}`,
+      load: async (config) => {
+        loadOrder.push(config.format);
+        return `result:${config.format}`;
+      },
+    });
+
+    const tmx  = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tmx' });
+    const json = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
+
+    const [resTmx, resJson] = await Promise.all([
+      loader.load(tmx),
+      loader.load(json),
+    ]);
+
+    // Both variants loaded independently — no cross-contamination
+    expect(resTmx).toBe('result:tmx');
+    expect(resJson).toBe('result:tiled-json');
+    expect(loadOrder).toContain('tmx');
+    expect(loadOrder).toContain('tiled-json');
+  });
+
+  test('without getIdentityKey, same source deduplicates in-flight calls', async () => {
+    let callCount = 0;
+    const loader = new Loader({ resourcePath: '/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async (config) => {
+        callCount++;
+        return `ok:${config.source}`;
+      },
+    });
+
+    const a1 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+    const a2 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+
+    const [r1, r2] = await Promise.all([loader.load(a1), loader.load(a2)]);
+
+    expect(callCount).toBe(1);
+    expect(r1).toBe('ok:shared.dat');
+    expect(r2).toBe('ok:shared.dat');
+  });
+});
+
 describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () => {
   const originalFetch = global.fetch;
 

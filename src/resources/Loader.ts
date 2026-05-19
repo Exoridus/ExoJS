@@ -71,9 +71,28 @@ export type LoadReturn<T> = T extends typeof Json
 /**
  * Context object passed to custom asset-type load handlers registered via
  * {@link Loader.registerAssetType}.
+ *
+ * The `fetch*` helpers route through the loader's configured cache strategy
+ * and IDB stores, giving custom handlers the same caching behaviour as
+ * built-in asset types.
  */
 export interface AssetLoaderContext {
+  /** The owning {@link Loader} instance. */
   readonly loader: Loader;
+  /**
+   * The identity key for this load — `id:<typeId>:<discriminator>`.
+   * Useful for diagnostics; also equals the key used for in-flight dedup.
+   */
+  readonly identityKey: string;
+  /** Fetches `source` as UTF-8 text, routing through the loader's cache/IDB. */
+  fetchText(source: string): Promise<string>;
+  /** Fetches `source` as an `ArrayBuffer`, routing through the loader's cache/IDB. */
+  fetchArrayBuffer(source: string): Promise<ArrayBuffer>;
+  /**
+   * Fetches `source` as parsed JSON, routing through the loader's cache/IDB.
+   * Supply `T` to narrow the return type at the call site.
+   */
+  fetchJson<T = unknown>(source: string): Promise<T>;
 }
 
 /**
@@ -116,6 +135,13 @@ interface QueueEntry {
   readonly alias: string;
   readonly path: string;
   readonly options?: unknown;
+}
+
+/** Stored entry for handler-based {@link Loader.registerAssetType} registrations. */
+interface HandlerEntry {
+  load: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>;
+  /** Optional discriminator for in-flight identity keying; overrides source-only default. */
+  getIdentityKey?: (config: unknown) => string;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,8 +193,8 @@ export class Loader {
   private readonly _identityKeyToAliases = new Map<string, Set<string>>();
   // In-flight promises keyed by identity (source-based) for cross-alias dedup
   private readonly _inFlightByIdentity = new Map<string, Promise<unknown>>();
-  // Simple load handlers registered via the handler-based registerAssetType overload
-  private readonly _handlerFunctions = new Map<AssetConstructor, (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>>();
+  // Handler entries registered via the handler-based registerAssetType overload
+  private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
 
   private _resourcePath: string;
   private _requestOptions: RequestInit;
@@ -239,7 +265,20 @@ export class Loader {
    */
   public registerAssetType<K extends keyof AssetDefinitions>(
     typeName: K,
-    handler: { load(config: AssetDefinitions[K]['config'], context: AssetLoaderContext): Promise<AssetDefinitions[K]['resource']> },
+    handler: {
+      /**
+       * Optional discriminator for in-flight dedup and identity tracking.
+       *
+       * Return a string that uniquely identifies the conceptual asset given its
+       * full config.  The default (when omitted) is `config.source`, which is
+       * correct for assets where the source URL alone determines the result.
+       * Supply this when extra config fields affect the loaded output — e.g.
+       * `\`${config.source}:${config.format}\`` — so that two assets with the
+       * same source but different format are kept separate in the in-flight map.
+       */
+      getIdentityKey?(config: AssetDefinitions[K]['config']): string;
+      load(config: AssetDefinitions[K]['config'], context: AssetLoaderContext): Promise<AssetDefinitions[K]['resource']>;
+    },
   ): this;
 
   /**
@@ -253,7 +292,10 @@ export class Loader {
 
   public registerAssetType(
     typeName: string,
-    ctorOrHandler: AssetConstructor | { load(config: unknown, context: AssetLoaderContext): Promise<unknown> },
+    ctorOrHandler: AssetConstructor | {
+      getIdentityKey?(config: unknown): string;
+      load(config: unknown, context: AssetLoaderContext): Promise<unknown>;
+    },
     factory?: AssetFactory,
   ): this {
     if (typeof ctorOrHandler === 'function') {
@@ -268,7 +310,10 @@ export class Loader {
 
       Object.defineProperty(syntheticCtor, 'name', { value: typeName });
       this._assetTypeMap.set(typeName, syntheticCtor);
-      this._handlerFunctions.set(syntheticCtor, (config, ctx) => ctorOrHandler.load(config, ctx));
+      this._handlerFunctions.set(syntheticCtor, {
+        load: (config, ctx) => ctorOrHandler.load(config, ctx),
+        getIdentityKey: ctorOrHandler.getIdentityKey?.bind(ctorOrHandler),
+      });
     }
 
     return this;
@@ -992,8 +1037,15 @@ export class Loader {
     }
 
     const source = asset.source;
+    const rawConfig = asset._config as Record<string, unknown>;
+    const { type: _type, source: _src, ...extraOnly } = rawConfig;
+
+    // Identity key: use handler's getIdentityKey if provided (config-sensitive dedup),
+    // otherwise fall back to source-based identity (correct for URL-only assets).
+    const handlerEntry = this._handlerFunctions.get(type);
+    const discriminator = handlerEntry?.getIdentityKey?.(rawConfig) ?? source;
+    const identityKey = `id:${this._getTypeId(type)}:${discriminator}`;
     const aliasKey = this._key(type, alias);
-    const identityKey = this._identityKey(type, source);
 
     // Register alias → identity mapping for unload() semantics
     this._aliasKeyToIdentityKey.set(aliasKey, identityKey);
@@ -1004,7 +1056,7 @@ export class Loader {
     }
     aliasSet.add(alias);
 
-    // Same source already in flight? Attach to the existing promise.
+    // Same identity already in flight? Attach to the existing promise.
     const existing = this._inFlightByIdentity.get(identityKey);
     if (existing) {
       return existing.then(resource => {
@@ -1013,15 +1065,12 @@ export class Loader {
       });
     }
 
-    // Build load promise — handler-based types bypass the factory/cache pipeline.
-    const rawConfig = asset._config as Record<string, unknown>;
-    const { type: _type, source: _src, ...extraOnly } = rawConfig;
-    const handler = this._handlerFunctions.get(type);
-
+    // Build load promise.
     let fetchPromise: Promise<unknown>;
-    if (handler) {
+    if (handlerEntry) {
       const fullConfig = { source, ...extraOnly };
-      fetchPromise = this._fetchWithHandler(type, alias, source, fullConfig, handler);
+      const context = this._buildHandlerContext(identityKey);
+      fetchPromise = this._fetchWithHandler(type, alias, source, fullConfig, handlerEntry.load, context);
     } else {
       const options = Object.keys(extraOnly).length > 0 ? extraOnly : undefined;
       fetchPromise = this._fetch(type, alias, source, options);
@@ -1055,7 +1104,10 @@ export class Loader {
 
   /**
    * Calls a handler-based custom asset loader and stores the result.
-   * Bypasses the cache strategy and factory registry entirely.
+   *
+   * Unlike `_fetch`, this does NOT automatically bypass caching — the handler
+   * controls caching by calling `context.fetchText` / `context.fetchArrayBuffer`
+   * / `context.fetchJson`, which route through the loader's cache strategy.
    */
   private async _fetchWithHandler(
     type: AssetConstructor,
@@ -1063,16 +1115,65 @@ export class Loader {
     source: string,
     fullConfig: unknown,
     handler: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>,
+    context: AssetLoaderContext,
   ): Promise<unknown> {
     const url = this._resolveUrl(source);
     try {
-      const resource = await handler(fullConfig, { loader: this });
+      const resource = await handler(fullConfig, context);
       this._storeResource(type, alias, resource);
       return resource;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, { cause: error });
     }
+  }
+
+  /**
+   * Builds an {@link AssetLoaderContext} for a handler invocation.
+   *
+   * The `fetch*` helpers on the returned context route through the loader's
+   * configured cache strategy and IDB stores, using `source` as the IDB key
+   * (so the same URL is never fetched twice regardless of the asset alias).
+   */
+  private _buildHandlerContext(identityKey: string): AssetLoaderContext {
+    const ctx: AssetLoaderContext = {
+      loader: this,
+      identityKey,
+      fetchText: (source: string) =>
+        this._contextFetch<string>(source, '__ctx_text', (r) => r.text()),
+      fetchArrayBuffer: (source: string) =>
+        this._contextFetch<ArrayBuffer>(source, '__ctx_binary', (r) => r.arrayBuffer()),
+      fetchJson: <T = unknown>(source: string) =>
+        this._contextFetch<T>(source, '__ctx_json', (r) => r.json() as Promise<T>),
+    };
+    return ctx;
+  }
+
+  /**
+   * Fetches `source` through the loader's cache strategy with an inline
+   * pass-through factory, using `source` as the IDB key.
+   *
+   * `process` converts the raw `Response` to the storable intermediate form
+   * (e.g. `r.text()`, `r.arrayBuffer()`, `r.json()`).  `create` is always the
+   * identity function — the cached value is returned unchanged.
+   */
+  private _contextFetch<T>(
+    source: string,
+    storageName: string,
+    process: (response: Response) => Promise<T>,
+  ): Promise<T> {
+    const url = this._resolveUrl(source);
+    const factory: AssetFactory<T> = {
+      storageName,
+      process,
+      create: (data) => Promise.resolve(data as T),
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      destroy() {},
+    };
+    return this._cacheStrategy.resolve(
+      { storageName, key: source, url, requestOptions: this._requestOptions, factory, options: undefined },
+      this._stores,
+    ) as Promise<T>;
   }
 
   private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
@@ -1359,7 +1460,7 @@ export class Loader {
     this.onLoaded.dispatch(type, alias, resource);
   }
 
-  private _key(type: AssetConstructor, alias: string): string {
+  private _getTypeId(type: AssetConstructor): number {
     let typeId = this._typeIds.get(type);
 
     if (typeId === undefined) {
@@ -1367,18 +1468,15 @@ export class Loader {
       this._typeIds.set(type, typeId);
     }
 
-    return `${typeId}:${alias}`;
+    return typeId;
+  }
+
+  private _key(type: AssetConstructor, alias: string): string {
+    return `${this._getTypeId(type)}:${alias}`;
   }
 
   private _identityKey(type: AssetConstructor, source: string): string {
-    let typeId = this._typeIds.get(type);
-
-    if (typeId === undefined) {
-      typeId = this._nextTypeId++;
-      this._typeIds.set(type, typeId);
-    }
-
-    return `id:${typeId}:${source}`;
+    return `id:${this._getTypeId(type)}:${source}`;
   }
 
   private _resolveUrl(path: string): string {
