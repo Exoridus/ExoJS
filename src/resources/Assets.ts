@@ -22,6 +22,13 @@ export class AssetsImpl<M extends Record<string, AssetInput>> {
   public readonly entries: InferAssetsEntries<M>;
 
   public constructor(definition: M) {
+    if (Object.hasOwn(definition, 'entries')) {
+      throw new Error(
+        'An Assets container may not define an asset named "entries": ' +
+        'that name is reserved for the spread-composition helper.',
+      );
+    }
+
     const entries = {} as Record<string, Asset<unknown>>;
 
     for (const key of Object.keys(definition)) {
