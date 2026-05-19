@@ -35,7 +35,8 @@ enum SceneNodeTransformFlags {
   Rotation = 1 << 1,
   Scaling = 1 << 2,
   Origin = 1 << 3,
-  Transform = SceneNodeTransformFlags.Translation | SceneNodeTransformFlags.Rotation | SceneNodeTransformFlags.Scaling | SceneNodeTransformFlags.Origin,
+  Skew = 1 << 5,
+  Transform = SceneNodeTransformFlags.Translation | SceneNodeTransformFlags.Rotation | SceneNodeTransformFlags.Scaling | SceneNodeTransformFlags.Origin | SceneNodeTransformFlags.Skew,
   TransformInverse = 1 << 4,
   GlobalTransform = 1 << 8, // own _globalTransform is stale
   BoundsRect = 1 << 9, // own _bounds is stale
@@ -78,6 +79,8 @@ export class SceneNode implements Collidable {
   protected _scale: ObservableVector = new ObservableVector(this._setScalingDirty.bind(this), 1, 1);
   protected _origin: ObservableVector = new ObservableVector(this._setOriginDirty.bind(this), 0, 0);
   protected _rotation = 0;
+  protected _skewX = 0;
+  protected _skewY = 0;
   protected _sin = 0;
   protected _cos = 1;
 
@@ -192,8 +195,40 @@ export class SceneNode implements Collidable {
     this._cullable = cullable;
   }
 
+  /**
+   * Horizontal skew angle in degrees. Shears the node along the X axis
+   * (positive values lean the top edge right). Combines correctly with
+   * rotation and scale.
+   */
+  public get skewX(): number {
+    return this._skewX;
+  }
+
+  public set skewX(degrees: number) {
+    if (this._skewX !== degrees) {
+      this._skewX = degrees;
+      this._setSkewDirty();
+    }
+  }
+
+  /**
+   * Vertical skew angle in degrees. Shears the node along the Y axis
+   * (positive values lean the left edge downward). Combines correctly with
+   * rotation and scale.
+   */
+  public get skewY(): number {
+    return this._skewY;
+  }
+
+  public set skewY(degrees: number) {
+    if (this._skewY !== degrees) {
+      this._skewY = degrees;
+      this._setSkewDirty();
+    }
+  }
+
   public get isAlignedBox(): boolean {
-    return this.rotation % 90 === 0;
+    return this.rotation % 90 === 0 && this._skewX === 0 && this._skewY === 0;
   }
 
   public setPosition(x: number, y: number = x): this {
@@ -215,6 +250,13 @@ export class SceneNode implements Collidable {
 
   public setScale(x: number, y: number = x): this {
     this._scale.set(x, y);
+
+    return this;
+  }
+
+  public setSkew(x: number, y: number = x): this {
+    this.skewX = x;
+    this.skewY = y;
 
     return this;
   }
@@ -250,17 +292,26 @@ export class SceneNode implements Collidable {
       this._sin = Math.sin(radians);
     }
 
-    if (this.flags.has(SceneNodeTransformFlags.Rotation | SceneNodeTransformFlags.Scaling)) {
+    if (this.flags.has(SceneNodeTransformFlags.Rotation | SceneNodeTransformFlags.Scaling | SceneNodeTransformFlags.Skew)) {
       const { x, y } = this._scale;
 
-      this._transform.a = x * this._cos;
-      this._transform.b = y * this._sin;
+      if (this._skewX !== 0 || this._skewY !== 0) {
+        const shearX = Math.tan(degreesToRadians(this._skewX));
+        const shearY = Math.tan(degreesToRadians(this._skewY));
 
-      this._transform.c = -x * this._sin;
-      this._transform.d = y * this._cos;
+        this._transform.a = x * this._cos + shearX * this._sin;
+        this._transform.b = y * this._sin + shearY * this._cos;
+        this._transform.c = -x * this._sin + shearX * this._cos;
+        this._transform.d = -shearY * this._sin + y * this._cos;
+      } else {
+        this._transform.a = x * this._cos;
+        this._transform.b = y * this._sin;
+        this._transform.c = -x * this._sin;
+        this._transform.d = y * this._cos;
+      }
     }
 
-    if (this._rotation) {
+    if (this._rotation || this._skewX !== 0 || this._skewY !== 0) {
       const { x, y } = this._origin;
 
       this._transform.x = x * -this._transform.a - y * this._transform.b + this._position.x;
@@ -450,6 +501,12 @@ export class SceneNode implements Collidable {
 
   private _setOriginDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Origin);
+    this._invalidateSubtreeTransform();
+    this._invalidateBoundsCascade();
+  }
+
+  private _setSkewDirty(): void {
+    this.flags.push(SceneNodeTransformFlags.Skew);
     this._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
   }
