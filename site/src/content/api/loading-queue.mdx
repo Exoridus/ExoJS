@@ -1,0 +1,41 @@
+---
+title: "LoadingQueue"
+description: "An awaitable, progress-aware load operation. Implements `PromiseLike<T>` so it can be `await`ed directly and composed with `Promise.all([queue1, queue2])` without wrapping. Progress is updated as individual items complete via _notifyItem."
+symbol: "LoadingQueue"
+kind: "class"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Events", "Source"]
+sourcePath: "src/resources/LoadingQueue.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts#L27"
+---
+## Import
+
+`import { LoadingQueue } from '@codexo/exojs'`
+
+An awaitable, progress-aware load operation.
+
+Implements `PromiseLike\<T>` so it can be `await`ed directly and composed
+with `Promise.all([queue1, queue2])` without wrapping.
+
+Progress is updated as individual items complete via _notifyItem.
+
+## Constructors
+
+- `new(promise: Promise<T>, count: number): LoadingQueue<T>`
+
+## Methods
+
+- `_notifyItem(success: boolean): void`
+- `catch(onrejected?: object | null): Promise<T | Caught>`
+- `finally(onfinally?: object | null): Promise<T>`
+- `then(onfulfilled?: object | null, onrejected?: object | null): Promise<Fulfilled | Rejected>`
+
+## Events
+
+- `onProgress: Signal<[LoadingProgress]>`
+
+## Source
+
+[src/resources/LoadingQueue.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts#L27)

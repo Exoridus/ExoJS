@@ -15,7 +15,7 @@ A cinematic (or cutscene) is a choreographed sequence where the camera moves, di
 
 ## Approach
 
-A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Push the cinematic scene with `input: 'capture'` so the player can't interfere, and pop it when the sequence ends.
+A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Push the cinematic scene with `mode: 'opaque'` so it fully covers the game, and pop it when the sequence ends.
 
 The key technique: **tween chains and delays**. Each tween starts at a specific time offset. Together they form a timeline:
 
@@ -109,17 +109,16 @@ Each tween operates independently — they don't need to know about each other. 
 
 ## Gating input
 
-Push the cinematic scene with `input: 'capture'` to prevent the player from interacting during the cutscene:
+Push the cinematic scene with `mode: 'opaque'` to hide and freeze the game while the cutscene plays:
 
 ```js
 // From the game scene:
 this.app.sceneManager.pushScene(new CinematicScene(), {
-    mode: 'opaque',   // hide the game behind the cinematic
-    input: 'capture', // consume scene-level handleInput events
+    mode: 'opaque', // game scene neither renders nor updates
 });
 ```
 
-`mode: 'opaque'` means the underlying game scene neither renders nor updates — a clean separation. When the cinematic ends, pop the scene:
+`mode: 'opaque'` gives clean separation — the underlying game scene is invisible and frozen for the duration. When the cinematic ends, pop the scene:
 
 ```js
 // At the end of the sequence — chain a tween to pop the scene:

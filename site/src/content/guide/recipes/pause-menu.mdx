@@ -11,7 +11,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.3 Pause menu
 
-A pause menu can freeze the game, display a menu overlay, and resume cleanly when dismissed. In ExoJS, this is a scene-stack operation: push a `PauseScene` on top of the game scene with `'overlay'` mode (so the game remains visible) and `'capture'` input mode for scene-level `handleInput` routing.
+A pause menu can freeze the game, display a menu overlay, and resume cleanly when dismissed. In ExoJS, this is a scene-stack operation: push a `PauseScene` on top of the game scene with `'overlay'` mode so the game remains visible.
 
 ## Approach
 
@@ -27,7 +27,6 @@ class GameScene extends Scene {
             if (pauseScene.app !== null) return; // already paused
             await this.app.sceneManager.pushScene(pauseScene, {
                 mode: 'overlay',
-                input: 'capture',
             });
         });
     }
@@ -70,10 +69,11 @@ await app.start(gameScene);
 
 ## Stack semantics
 
-`pushScene(pauseScene, { mode: 'overlay', input: 'capture' })`:
+`pushScene(pauseScene, { mode: 'overlay' })`:
 
 - `mode: 'overlay'` — the game scene below continues to render, so the player sees gameplay behind the pause text. If you prefer the game to stop rendering, use `'opaque'` instead (but then the blur effect on the game root becomes invisible — you'd apply the blur to a captured `RenderTexture` of the last frame instead).
-- `input: 'capture'` — scene-level `handleInput` events stop at the pause scene. (`this.inputs` bindings are registered on `app.input`, so gate gameplay actions explicitly while paused.)
+
+Input bindings created via `this.inputs` on both the game scene and the pause scene are always active — use an explicit flag to gate gameplay logic while paused (shown in the example above with `if (pauseScene.app !== null) return`).
 
 If you want the game to truly freeze (no `update` calls), set the game scene's own `stackMode` or use a flag:
 

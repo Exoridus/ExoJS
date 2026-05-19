@@ -9,7 +9,6 @@ export interface LoadingProgress {
   readonly loaded:  number;
   readonly pending: number;
   readonly failed:  number;
-  readonly count:   number;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,7 +37,6 @@ export class LoadingQueue<T> implements PromiseLike<T> {
       loaded:  0,
       pending: count,
       failed:  0,
-      count,
     };
     this._promise = promise;
   }
@@ -59,7 +57,6 @@ export class LoadingQueue<T> implements PromiseLike<T> {
       loaded,
       pending: Math.max(0, prev.total - settled),
       failed,
-      count:   prev.count,
     };
 
     this.onProgress.dispatch(this._progress);

@@ -27,14 +27,10 @@ Then, every frame while the scene is active:
 3. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
 4. `draw(backend)` — render the current state.
 
-In between frames, when input arrives:
-
-5. `handleInput(event)` — react to keyboard, pointer, or wheel events. Return `true` to consume the event so it doesn't propagate to scenes below.
-
 When the scene is removed from the stack:
 
-6. `async unload(loader)` — release scene-private assets that aren't shared with another active scene.
-7. `destroy()` — drop scene-graph references and cancel input bindings.
+5. `async unload(loader)` — release scene-private assets that aren't shared with another active scene.
+6. `destroy()` — drop scene-graph references and cancel input bindings.
 
 You override the hooks you need. Empty hooks like `update` and `draw` do nothing by default, so there is no setup ceremony for scenes that only need one or two phases. Cleanup hooks are different: if you override `destroy`, keep the built-in cleanup path intact unless the API reference for your version says otherwise.
 
@@ -112,32 +108,23 @@ draw(backend) {
 
 For most scenes, one `this.root.render(backend)` after `clear` is the right pattern. Reach for selective rendering when you have a reason — debug overlays you toggle, layers that sometimes skip a frame, render-to-texture targets.
 
-## handleInput: event-driven input
+## Input
 
-The `handleInput` hook is called between frames whenever an input event reaches the scene. Unlike `update`, it doesn't run every frame and doesn't carry a time delta:
-
-```js
-handleInput(event) {
-    if (event.type === 'keyDown' && event.channel === Keyboard.Escape) {
-        this.app.sceneManager.pushScene(new PauseScene());
-        return true;
-    }
-}
-```
-
-Return `true` to consume the event; any other return value lets it propagate to scenes below in the stack (subject to those scenes' input modes).
-
-For most projects, `this.inputs.onTrigger(...)` from inside `init` is more ergonomic than `handleInput`:
+Scenes receive input through `this.inputs`, which proxies to the application's input manager. Register bindings in `init`:
 
 ```js
 init() {
     this.inputs.onTrigger(Keyboard.Space, () => {
         this.player.jump();
     });
+
+    this.inputs.onTrigger(Keyboard.Escape, async () => {
+        await this.app.sceneManager.pushScene(new PauseScene());
+    });
 }
 ```
 
-Bindings created on `this.inputs` are automatically disposed when the scene is destroyed. The `handleInput` hook is the lower-level escape hatch when the binding API isn't expressive enough.
+Bindings created on `this.inputs` are automatically disposed when the scene is destroyed — no manual cleanup required.
 
 ## unload and destroy
 
