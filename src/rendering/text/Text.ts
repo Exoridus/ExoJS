@@ -110,6 +110,42 @@ export class Text extends Container {
     this._rebuild();
   }
 
+  /**
+   * Resolves when the font family used by this Text node is available to the
+   * browser's font engine. For system fonts (Arial, etc.) this resolves
+   * immediately. For custom web fonts loaded via `@font-face` or the Loader,
+   * it resolves once `document.fonts.load()` reports the face as ready.
+   *
+   * When the promise resolves after a font load, the shared glyph atlas is
+   * cleared and this node is rebuilt so glyph metrics reflect the real font
+   * rather than the fallback face that was used during construction.
+   *
+   * In non-browser environments (SSR / tests) the promise resolves immediately.
+   *
+   * @example
+   * ```ts
+   * const label = new Text('Hello', { fontFamily: 'MyFont', fontSize: 32 });
+   * await label.ready;
+   * scene.addChild(label);
+   * ```
+   */
+  public get ready(): Promise<void> {
+    if (typeof document === 'undefined' || !document.fonts) {
+      return Promise.resolve();
+    }
+
+    const fontSpec = this._style.font;
+
+    if (document.fonts.check(fontSpec)) {
+      return Promise.resolve();
+    }
+
+    return document.fonts.load(fontSpec).then(() => {
+      getDefaultGlyphAtlas().clear();
+      this._rebuild();
+    });
+  }
+
   public override destroy(): void {
     if (this._mesh !== null) {
       this._mesh.destroy();

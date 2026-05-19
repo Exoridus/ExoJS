@@ -28,6 +28,35 @@ export class TweenManager {
   }
 
   /**
+   * Chain `tweens` in sequence: each tween starts automatically when the
+   * previous one completes. Returns the first tween; call `.start()` on it
+   * to kick off the whole sequence. All tweens are registered with this
+   * manager (idempotent — already-added tweens are not double-added).
+   *
+   * @example
+   * ```ts
+   * const move = manager.create(sprite).to({ x: 400 }, 0.5);
+   * const fade = manager.create(sprite).to({ alpha: 0 }, 0.3);
+   * manager.sequence([move, fade]).start();
+   * ```
+   */
+  public sequence(tweens: readonly Tween[]): Tween {
+    if (tweens.length === 0) {
+      throw new Error('[ExoJS] TweenManager.sequence() requires at least one tween.');
+    }
+
+    for (let i = 0; i < tweens.length - 1; i++) {
+      tweens[i].chain(tweens[i + 1]);
+    }
+
+    for (const tween of tweens) {
+      this.add(tween);
+    }
+
+    return tweens[0];
+  }
+
+  /**
    * Explicitly add a stand-alone Tween (created via `new Tween(target)`)
    * to this manager so it participates in the update loop.
    */
