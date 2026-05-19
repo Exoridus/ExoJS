@@ -764,7 +764,7 @@ export class Loader {
 
       if (!ctor) return this;
 
-      const identityKey = this._identityKey(ctor, asset._config.source);
+      const identityKey = this._resolveAssetIdentityKey(ctor, asset);
       const aliasSet = this._identityKeyToAliases.get(identityKey);
 
       if (aliasSet && aliasSet.size > 0) {
@@ -790,7 +790,7 @@ export class Loader {
 
         if (!ctor) continue;
 
-        const identityKey = this._identityKey(ctor, assetRef._config.source);
+        const identityKey = this._resolveAssetIdentityKey(ctor, assetRef);
         const aliasSet = this._identityKeyToAliases.get(identityKey);
 
         if (aliasSet?.has(alias)) {
@@ -1477,6 +1477,20 @@ export class Loader {
 
   private _identityKey(type: AssetConstructor, source: string): string {
     return `id:${this._getTypeId(type)}:${source}`;
+  }
+
+  /**
+   * Resolves the effective identity key for an `Asset<T>` reference, mirroring
+   * the logic used in `_loadSingleAsset`.
+   *
+   * For handler types with `getIdentityKey`, the config-sensitive discriminator
+   * is used; otherwise source is the discriminator (same as `_identityKey`).
+   */
+  private _resolveAssetIdentityKey(type: AssetConstructor, asset: Asset<unknown>): string {
+    const rawConfig = asset._config as Record<string, unknown>;
+    const handlerEntry = this._handlerFunctions.get(type);
+    const discriminator = handlerEntry?.getIdentityKey?.(rawConfig) ?? asset.source;
+    return `id:${this._getTypeId(type)}:${discriminator}`;
   }
 
   private _resolveUrl(path: string): string {
