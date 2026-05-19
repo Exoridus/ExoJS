@@ -5,7 +5,8 @@ import type { AnyAssetConfig, AssetDefinitions } from './AssetDefinitions';
 // ---------------------------------------------------------------------------
 
 /** @internal */
-export class AssetImpl<T> {
+// eslint-disable-next-line unused-imports/no-unused-vars
+export class AssetImpl<Phantom> {
   /** @internal */
   public readonly _config: AnyAssetConfig;
 
@@ -36,10 +37,9 @@ export interface Asset<T> {
   readonly _resource?: T;
 }
 
-interface IAssetConstructor {
-  new <K extends keyof AssetDefinitions>(
-    config: { type: K } & AssetDefinitions[K]['config'],
-  ): Asset<AssetDefinitions[K]['resource']>;
-}
+type AssetConstructorFn = new <K extends keyof AssetDefinitions>(
+  config: { type: K } & AssetDefinitions[K]['config'],
+) => Asset<AssetDefinitions[K]['resource']>;
 
-export const Asset = AssetImpl as unknown as IAssetConstructor;
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const Asset = AssetImpl as unknown as AssetConstructorFn;

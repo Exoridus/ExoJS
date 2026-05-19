@@ -66,20 +66,20 @@ export class LoadingQueue<T> implements PromiseLike<T> {
   }
 
   // PromiseLike<T>
-  public then<TResult1 = T, TResult2 = never>(
-    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null | undefined,
-    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null | undefined,
-  ): Promise<TResult1 | TResult2> {
+  public then<Fulfilled = T, Rejected = never>(
+    onfulfilled?: ((value: T) => Fulfilled | PromiseLike<Fulfilled>) | null,
+    onrejected?: ((reason: unknown) => Rejected | PromiseLike<Rejected>) | null,
+  ): Promise<Fulfilled | Rejected> {
     return this._promise.then(onfulfilled, onrejected);
   }
 
-  public catch<TResult = never>(
-    onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null | undefined,
-  ): Promise<T | TResult> {
+  public catch<Caught = never>(
+    onrejected?: ((reason: unknown) => Caught | PromiseLike<Caught>) | null,
+  ): Promise<T | Caught> {
     return this._promise.catch(onrejected);
   }
 
-  public finally(onfinally?: (() => void) | null | undefined): Promise<T> {
+  public finally(onfinally?: (() => void) | null): Promise<T> {
     return this._promise.finally(onfinally);
   }
 }

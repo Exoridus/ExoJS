@@ -13,7 +13,7 @@ import type { Time } from './Time';
  * when the owning scene is destroyed. Access via {@link Scene.inputs}.
  */
 class SceneInputs {
-  private readonly _bindings: Set<InputBinding> = new Set();
+  private readonly _bindings = new Set<InputBinding>();
 
   public constructor(private readonly _scene: Scene) {}
 
@@ -54,7 +54,7 @@ class SceneInputs {
  * stopped when the owning scene is destroyed. Access via {@link Scene.tweens}.
  */
 class SceneTweens {
-  private readonly _tweens: Set<Tween> = new Set();
+  private readonly _tweens = new Set<Tween>();
 
   public constructor(private readonly _scene: Scene) {}
 

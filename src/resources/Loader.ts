@@ -5,12 +5,11 @@ import { Texture } from '@/rendering/texture/Texture';
 import { Video } from '@/rendering/video/Video';
 
 import { Asset, AssetImpl } from './Asset';
-import { Assets, AssetsImpl } from './Assets';
 import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
-import { LoadingQueue } from './LoadingQueue';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
+import { type Assets, AssetsImpl } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
@@ -28,6 +27,7 @@ import { VttFactory } from './factories/VttFactory';
 import { WasmFactory } from './factories/WasmFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
+import { LoadingQueue } from './LoadingQueue';
 import { Json, SvgAsset, TextAsset, VttAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -249,7 +249,7 @@ export class Loader {
    * Required for declaration-merge extensions of {@link AssetDefinitions}
    * so that `loader.load({ map: { type: 'tileMap', source: '…' } })` works.
    */
-  public registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory<unknown>): this;
+  public registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory): this;
 
   public registerAssetType(
     typeName: string,
@@ -517,31 +517,33 @@ export class Loader {
       const options = arg2;
 
       if (typeof source === 'string') {
-        let queue!: LoadingQueue<unknown>;
+        let notifyFn: ((success: boolean) => void) | null = null;
         const promise = this._loadSingle(ctor, source, options).then(
-          v => { queue._notifyItem(true); return v; },
-          e => { queue._notifyItem(false); throw e; },
+          v => { notifyFn?.(true); return v; },
+          e => { notifyFn?.(false); throw e; },
         );
 
-        queue = new LoadingQueue(promise, 1);
+        const queue = new LoadingQueue(promise, 1);
+        notifyFn = queue._notifyItem.bind(queue);
 
         return queue;
       }
 
       if (Array.isArray(source)) {
         const paths = source as readonly string[];
-        let queue!: LoadingQueue<unknown[]>;
+        let notifyFn: ((success: boolean) => void) | null = null;
         const results: unknown[] = new Array(paths.length);
         const promises = paths.map((path, i) =>
           this._loadSingle(ctor, path, options).then(
-            v => { results[i] = v; queue._notifyItem(true); },
-            e => { queue._notifyItem(false); throw e; },
+            v => { results[i] = v; notifyFn?.(true); },
+            e => { notifyFn?.(false); throw e; },
           ),
         );
 
         const promise = Promise.all(promises).then(() => results);
 
-        queue = new LoadingQueue(promise, paths.length);
+        const queue = new LoadingQueue(promise, paths.length);
+        notifyFn = queue._notifyItem.bind(queue);
 
         return queue;
       }
@@ -549,7 +551,7 @@ export class Loader {
       // Record<string, BatchValue>
       const entries = Object.entries(source as Record<string, BatchValue>);
       const result: Record<string, unknown> = {};
-      let queue!: LoadingQueue<Record<string, unknown>>;
+      let notifyFn: ((success: boolean) => void) | null = null;
       const promises = entries.map(([alias, pathOrConfig]) => {
         const path = typeof pathOrConfig === 'string' ? pathOrConfig : pathOrConfig.source;
         const itemOptions = typeof pathOrConfig === 'string'
@@ -557,14 +559,15 @@ export class Loader {
           : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
 
         return this._loadSingle(ctor, alias, itemOptions, path).then(
-          v => { result[alias] = v; queue._notifyItem(true); },
-          e => { queue._notifyItem(false); throw e; },
+          v => { result[alias] = v; notifyFn?.(true); },
+          e => { notifyFn?.(false); throw e; },
         );
       });
 
       const promise = Promise.all(promises).then(() => result);
 
-      queue = new LoadingQueue(promise, entries.length);
+      const queue = new LoadingQueue(promise, entries.length);
+      notifyFn = queue._notifyItem.bind(queue);
 
       return queue;
     }
@@ -573,7 +576,7 @@ export class Loader {
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
-      asset: (value instanceof AssetImpl ? value : new (Asset as { new(c: AssetInput): Asset<unknown> })(value)) as Asset<unknown>,
+      asset: (value instanceof AssetImpl ? value : new (Asset as new(c: AssetInput) => Asset<unknown>)(value)) as Asset<unknown>,
     }));
 
     return this._createLoadingQueue(items, results => {
@@ -942,7 +945,7 @@ export class Loader {
     buildResult: (results: Map<string, unknown>) => T,
   ): LoadingQueue<T> {
     const results = new Map<string, unknown>();
-    let queue!: LoadingQueue<T>;
+    let notifyFn: ((success: boolean) => void) | null = null;
 
     const itemPromises = items.map(({ alias, asset }) => {
       const ctor = this._assetTypeMap.get(asset.type);
@@ -952,20 +955,21 @@ export class Loader {
         return Promise.reject<unknown>(
           new Error(`No constructor registered for asset type "${asset.type}". Call registerAssetType() first.`),
         ).then(
-          () => { queue._notifyItem(true); },
-          error => { queue._notifyItem(false); throw error; },
+          () => { notifyFn?.(true); },
+          error => { notifyFn?.(false); throw error; },
         );
       }
 
       return this._loadSingleAsset(ctor, alias, asset).then(
-        resource => { results.set(alias, resource); queue._notifyItem(true); },
-        error    => { queue._notifyItem(false); throw error; },
+        resource => { results.set(alias, resource); notifyFn?.(true); },
+        error    => { notifyFn?.(false); throw error; },
       );
     });
 
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
-    queue = new LoadingQueue<T>(promise, items.length);
+    const queue = new LoadingQueue<T>(promise, items.length);
+    notifyFn = queue._notifyItem.bind(queue);
 
     return queue;
   }
