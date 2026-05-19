@@ -155,7 +155,7 @@ describe('render dispatch', () => {
 
     drawable.getLocalBounds().set(0, 0, 16, 16);
     drawable.setPosition(1000, 1000);
-    drawable.setCullable(false);
+    drawable.cullable = false;
     drawable.render(runtime);
 
     expect(draw).toHaveBeenCalledWith(drawable);

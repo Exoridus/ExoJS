@@ -11,7 +11,7 @@ import { RenderNode } from './RenderNode';
  * enabled.
  *
  * Bounds aggregate the local bounds + every visible child's bounds, so
- * `container.bounds` always reflects the smallest axis-aligned rectangle
+ * `container.getBounds()` always returns the smallest axis-aligned rectangle
  * containing the subtree. Width/height accessors derive from the bounds
  * (× `scale`) and writing to them rescales `scale` to fit.
  *
@@ -50,19 +50,19 @@ export class Container extends RenderNode {
   }
 
   public get width(): number {
-    return Math.abs(this.scale.x) * this.bounds.width;
+    return Math.abs(this.scale.x) * this.getBounds().width;
   }
 
   public set width(value: number) {
-    this.scale.x = value / this.bounds.width;
+    this.scale.x = value / this.getBounds().width;
   }
 
   public get height(): number {
-    return Math.abs(this.scale.y) * this.bounds.height;
+    return Math.abs(this.scale.y) * this.getBounds().height;
   }
 
   public set height(value: number) {
-    this.scale.y = value / this.bounds.height;
+    this.scale.y = value / this.getBounds().height;
   }
 
   public get left(): number {
@@ -107,11 +107,11 @@ export class Container extends RenderNode {
       return this;
     }
 
-    if (child.parentNode) {
-      child.parentNode.removeChild(child);
+    if (child.parent) {
+      child.parent.removeChild(child);
     }
 
-    child.parentNode = this;
+    child.parent = this;
     child.setChildOrder(this._nextChildOrder++);
 
     this._children.splice(index, 0, child);
@@ -188,10 +188,10 @@ export class Container extends RenderNode {
 
     removeArrayItems(this._children, index, 1);
 
-    if (child?.parentNode === this) {
+    if (child?.parent === this) {
       // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
       this._invalidateBoundsCascade();
-      child.parentNode = null;
+      child.parent = null;
       child._invalidateSubtreeTransform();
       _getCurrentInteractionManager()?._notifyNodeRemoved(child);
     }
@@ -221,8 +221,8 @@ export class Container extends RenderNode {
     for (let i = begin; i < end; i++) {
       const child = this._children[i];
 
-      if (child?.parentNode === this) {
-        child.parentNode = null;
+      if (child?.parent === this) {
+        child.parent = null;
         child._invalidateSubtreeTransform();
         _getCurrentInteractionManager()?._notifyNodeRemoved(child);
       }

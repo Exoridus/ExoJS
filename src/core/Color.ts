@@ -66,38 +66,6 @@ export class Color implements Cloneable {
     this._rgba = null;
   }
 
-  public get red(): number {
-    return this.r;
-  }
-
-  public set red(red: number) {
-    this.r = red;
-  }
-
-  public get green(): number {
-    return this.g;
-  }
-
-  public set green(green: number) {
-    this.g = green;
-  }
-
-  public get blue(): number {
-    return this.b;
-  }
-
-  public set blue(blue: number) {
-    this.b = blue;
-  }
-
-  public get alpha(): number {
-    return this.a;
-  }
-
-  public set alpha(alpha: number) {
-    this.a = alpha;
-  }
-
   /**
    * Set any subset of channels. Omitted parameters default to the current
    * channel value (use this for "set red, leave the rest"). RGB are masked

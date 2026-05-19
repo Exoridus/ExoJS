@@ -94,7 +94,10 @@ export class Text extends Container {
   }
 
   public set text(value: string) {
-    this.setText(value);
+    if (this._text !== value) {
+      this._text = value;
+      this._rebuild();
+    }
   }
 
   public get style(): TextStyle {
@@ -102,25 +105,8 @@ export class Text extends Container {
   }
 
   public set style(style: TextStyle | TextStyleOptions) {
-    this.setStyle(style);
-  }
-
-  /** Replace the displayed string and rebuild the glyph mesh if the value changed. */
-  public setText(text: string): this {
-    if (this._text !== text) {
-      this._text = text;
-      this._rebuild();
-    }
-
-    return this;
-  }
-
-  /** Replace the active style and rebuild the glyph mesh unconditionally. */
-  public setStyle(style: TextStyle | TextStyleOptions): this {
     this._style = style instanceof TextStyle ? style : new TextStyle(style);
     this._rebuild();
-
-    return this;
   }
 
   public override destroy(): void {

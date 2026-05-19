@@ -1,11 +1,11 @@
 ---
 title: "Container"
-description: "Scene-graph node that owns child RenderNodes. Renders its subtree in document order, optionally re-sorted each frame by `zIndex` + child-add-order when Container.sortableChildren is enabled. Bounds aggregate the local bounds + every visible child's bounds, so `container.bounds` always reflects the smallest axis-aligned rectangle containing the subtree. Width/height accessors derive from the bounds (× `scale`) and writing to them rescales `scale` to fit. Adding a child re-parents it: the previous parent is detached automatically. Removing a child cascades bounds invalidation up the ancestor chain so further-up containers also rebuild on next read. Subclassed by Sprite, Mesh, Graphics, Text, etc. — the base `Container` is a non-drawing grouping node."
+description: "Scene-graph node that owns child RenderNodes. Renders its subtree in document order, optionally re-sorted each frame by `zIndex` + child-add-order when Container.sortableChildren is enabled. Bounds aggregate the local bounds + every visible child's bounds, so `container.getBounds()` always returns the smallest axis-aligned rectangle containing the subtree. Width/height accessors derive from the bounds (× `scale`) and writing to them rescales `scale` to fit. Adding a child re-parents it: the previous parent is detached automatically. Removing a child cascades bounds invalidation up the ancestor chain so further-up containers also rebuild on next read. Subclassed by Sprite, Mesh, Graphics, Text, etc. — the base `Container` is a non-drawing grouping node."
 symbol: "Container"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 68
+memberCount: 65
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Container.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Container.ts#L25"
@@ -20,7 +20,7 @@ subtree in document order, optionally re-sorted each frame by
 enabled.
 
 Bounds aggregate the local bounds + every visible child's bounds, so
-`container.bounds` always reflects the smallest axis-aligned rectangle
+`container.getBounds()` always returns the smallest axis-aligned rectangle
 containing the subtree. Width/height accessors derive from the bounds
 (× `scale`) and writing to them rescales `scale` to fit.
 
@@ -68,11 +68,8 @@ etc. — the base `Container` is a non-drawing grouping node.
 - `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
-- `setCacheAsBitmap(cacheAsBitmap: boolean): this`
 - `setChildIndex(child: RenderNode, index: number): this`
 - `setChildOrder(order: number): this`
-- `setCullable(cullable: boolean): this`
-- `setFilters(filters: readonly Filter[]): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`

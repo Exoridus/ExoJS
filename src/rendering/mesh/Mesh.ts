@@ -150,7 +150,7 @@ export class Mesh extends Drawable {
       if (y > maxY) maxY = y;
     }
 
-    this.localBounds.set(minX, minY, maxX - minX, maxY - minY);
+    this.getLocalBounds().set(minX, minY, maxX - minX, maxY - minY);
     this._invalidateBoundsCascade();
 
     return this;

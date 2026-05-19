@@ -55,7 +55,7 @@ update(delta) {
         this.beep.play({ playbackRate: 1.9, volume: 0.14 });
     }
 
-    this.box.setText(line.slice(0, this.chars));
+    this.box.text = line.slice(0, this.chars);
 
     if (this.chars >= line.length) {
         this.done = true;
@@ -109,7 +109,7 @@ init(loader) {
 
 update() {
     this.filter.uniforms.uProgress = this.progress.v;
-    this.label.setText(`${(this.progress.v * 100) | 0}%`);
+    this.label.text = `${(this.progress.v * 100) | 0}%`;
 }
 ```
 

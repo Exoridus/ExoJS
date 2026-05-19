@@ -309,10 +309,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
           const offsetWords = (defaultUniformIndex * this._uniformAlignment) / Float32Array.BYTES_PER_ELEMENT;
           const tint = dc.mesh.tint;
 
-          defaultUniformF32[offsetWords + 0] = tint.red;
-          defaultUniformF32[offsetWords + 1] = tint.green;
-          defaultUniformF32[offsetWords + 2] = tint.blue;
-          defaultUniformF32[offsetWords + 3] = tint.alpha;
+          defaultUniformF32[offsetWords + 0] = tint.r;
+          defaultUniformF32[offsetWords + 1] = tint.g;
+          defaultUniformF32[offsetWords + 2] = tint.b;
+          defaultUniformF32[offsetWords + 3] = tint.a;
           defaultUniformF32[offsetWords + 4] = dc.premultiplySample ? 1 : 0;
           defaultUniformF32[offsetWords + 5] = 0;
           defaultUniformF32[offsetWords + 6] = 0;
@@ -1005,10 +1005,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     // tint (vec4)
     const tint = mesh.tint;
-    data[off + 0] = tint.red;
-    data[off + 1] = tint.green;
-    data[off + 2] = tint.blue;
-    data[off + 3] = tint.alpha;
+    data[off + 0] = tint.r;
+    data[off + 1] = tint.g;
+    data[off + 2] = tint.b;
+    data[off + 3] = tint.a;
 
     this._device!.queue.writeBuffer(resources.meshUniformBuffer!, drawCursor * slotBytes, data);
   }

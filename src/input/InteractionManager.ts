@@ -660,7 +660,7 @@ export class InteractionManager {
       }
 
       // Walk up to interactive ancestor only (parent must opt in to receive bubble).
-      const parent: Container | null = current.parentNode;
+      const parent: Container | null = current.parent;
 
       current = parent !== null && parent.interactive ? parent : null;
     }
@@ -719,7 +719,7 @@ export class InteractionManager {
           break;
         }
 
-        const p: Container | null = n.parentNode;
+        const p: Container | null = n.parent;
 
         n = p;
       }

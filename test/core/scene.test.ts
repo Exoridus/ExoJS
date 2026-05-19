@@ -90,12 +90,12 @@ describe('Scene', () => {
     scene.addChild(child);
 
     expect(scene.root.children).toContain(child);
-    expect(child.parentNode).toBe(scene.root);
+    expect(child.parent).toBe(scene.root);
 
     scene.removeChild(child);
 
     expect(scene.root.children).not.toContain(child);
-    expect(child.parentNode).toBeNull();
+    expect(child.parent).toBeNull();
   });
 
   // CONTRACT — do not weaken without an explicit identity decision.

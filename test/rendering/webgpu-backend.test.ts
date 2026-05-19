@@ -1196,7 +1196,7 @@ describe('WebGpuBackend', () => {
       manager.flush();
 
       // Changing text rebuilds the internal mesh.
-      text.setText('Bye');
+      text.text = 'Bye';
 
       expect(text.children[0]).not.toBe(firstMesh);
 
@@ -1259,7 +1259,7 @@ describe('WebGpuBackend', () => {
       manager.flush();
 
       // Changing style rebuilds the mesh.
-      text.setStyle(new TextStyle({ fontSize: 32 }));
+      text.style = new TextStyle({ fontSize: 32 });
 
       expect(text.children[0]).not.toBe(firstMesh);
 

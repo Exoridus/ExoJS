@@ -123,27 +123,10 @@ describe('Text', () => {
     expect(text.children[0]).not.toBe(firstMesh);
   });
 
-  test('setText() is chainable and updates text', () => {
-    const text = new Text('Hello');
-    const result = text.setText('World');
-
-    expect(result).toBe(text);
-    expect(text.text).toBe('World');
-  });
-
-  test('setStyle() is chainable and updates style', () => {
-    const newStyle = new TextStyle({ fontSize: 24 });
-    const text = new Text('Hi');
-    const result = text.setStyle(newStyle);
-
-    expect(result).toBe(text);
-    expect(text.style.fontSize).toBe(24);
-  });
-
-  test('setStyle() with plain options object creates a TextStyle', () => {
+  test('style setter with plain options object creates a TextStyle', () => {
     const text = new Text('Hi');
 
-    text.setStyle({ fontSize: 48, align: 'center' });
+    text.style = { fontSize: 48, align: 'center' };
 
     expect(text.style).toBeInstanceOf(TextStyle);
     expect(text.style.fontSize).toBe(48);
