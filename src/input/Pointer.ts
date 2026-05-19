@@ -234,8 +234,9 @@ export class Pointer {
     }
 
     const base = this._channelBase;
-    const w = canvas.width || 1;
-    const h = canvas.height || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || canvas.clientWidth || canvas.width || 1;
+    const h = rect.height || canvas.clientHeight || canvas.height || 1;
 
     if (!active) {
       // Zero the entire slot for a clean release.

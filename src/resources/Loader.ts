@@ -106,7 +106,7 @@ export type BatchValue = string | ({ source: string } & Record<string, unknown>)
 /**
  * Construction options for {@link Loader}.
  *
- * `resourcePath` is prepended to relative asset paths at fetch time.
+ * `basePath` is prepended to relative asset paths at fetch time.
  * `cache` accepts one or more {@link CacheStore} instances. `cacheStrategy`
  * picks the policy used to consult them — defaults to
  * {@link CacheFirstStrategy} (check stores → network → write back).
@@ -114,8 +114,8 @@ export type BatchValue = string | ({ source: string } & Record<string, unknown>)
  * (default `6`).
  */
 export interface LoaderOptions {
-  resourcePath?: string;
-  requestOptions?: RequestInit;
+  basePath?: string;
+  fetchOptions?: RequestInit;
   cache?: CacheStore | readonly CacheStore[];
   cacheStrategy?: CacheStrategy;
   concurrency?: number;
@@ -170,7 +170,7 @@ interface HandlerEntry {
  *
  * @example
  * ```ts
- * const loader = new Loader({ resourcePath: '/assets/', cache: new IndexedDbStore('game') });
+ * const loader = new Loader({ basePath: '/assets/', cache: new IndexedDbStore('game') });
  * const texture = await loader.load(Texture, 'hero.png');
  * ```
  */
@@ -196,8 +196,8 @@ export class Loader {
   // Handler entries registered via the handler-based registerAssetType overload
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
 
-  private _resourcePath: string;
-  private _requestOptions: RequestInit;
+  private _basePath: string;
+  private _fetchOptions: RequestInit;
   private _concurrency: number;
   private _nextTypeId = 1;
 
@@ -217,8 +217,8 @@ export class Loader {
   public readonly onError = new Signal<[type: AssetConstructor, alias: string, error: Error]>();
 
   public constructor(options: LoaderOptions = {}) {
-    this._resourcePath = options.resourcePath ?? '';
-    this._requestOptions = options.requestOptions ?? {};
+    this._basePath = options.basePath ?? '';
+    this._fetchOptions = options.fetchOptions ?? {};
     this._concurrency = options.concurrency ?? 6;
     this._stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
     this._cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
@@ -864,24 +864,24 @@ export class Loader {
    * Absolute URLs (starting with `http://`, `https://`, or `//`) are
    * passed through unchanged.
    */
-  public get resourcePath(): string {
-    return this._resourcePath;
+  public get basePath(): string {
+    return this._basePath;
   }
 
-  public set resourcePath(value: string) {
-    this._resourcePath = value;
+  public set basePath(value: string) {
+    this._basePath = value;
   }
 
   /**
    * Default `RequestInit` options merged into every `fetch` call.
    * Override per-load with the `options` argument of {@link load}.
    */
-  public get requestOptions(): RequestInit {
-    return this._requestOptions;
+  public get fetchOptions(): RequestInit {
+    return this._fetchOptions;
   }
 
-  public set requestOptions(value: RequestInit) {
-    this._requestOptions = value;
+  public set fetchOptions(value: RequestInit) {
+    this._fetchOptions = value;
   }
 
   // -----------------------------------------------------------------------
@@ -1171,7 +1171,7 @@ export class Loader {
       destroy() {},
     };
     return this._cacheStrategy.resolve(
-      { storageName, key: source, url, requestOptions: this._requestOptions, factory, options: undefined },
+      { storageName, key: source, url, requestOptions: this._fetchOptions, factory, options: undefined },
       this._stores,
     ) as Promise<T>;
   }
@@ -1186,7 +1186,7 @@ export class Loader {
           storageName: factory.storageName,
           key: path, // source-path as IDB key so same resource is not cached multiple times under different aliases
           url,
-          requestOptions: this._requestOptions,
+          requestOptions: this._fetchOptions,
           factory,
           options,
         },
@@ -1498,7 +1498,7 @@ export class Loader {
       return path;
     }
 
-    return `${this._resourcePath}${path}`;
+    return `${this._basePath}${path}`;
   }
 
   // -----------------------------------------------------------------------

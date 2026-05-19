@@ -38,8 +38,10 @@ const createInputManager = (canvas?: HTMLCanvasElement): InputManager => {
   const app = {
     canvas: c,
     options: {
-      gamepadDefinitions: [],
-      pointerDistanceThreshold: 10,
+      input: {
+        gamepadDefinitions: [],
+        pointerDistanceThreshold: 10,
+      },
     },
   } as unknown as Application;
 

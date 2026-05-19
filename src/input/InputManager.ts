@@ -136,7 +136,10 @@ export class InputManager {
   public readonly onLongPress = new Signal<[pointer: Pointer]>();
 
   public constructor(app: Application) {
-    const { gamepadDefinitions = [], pointerDistanceThreshold, gamepadSlotStrategy = 'sticky' } = app.options;
+    const inputOptions = app.options.input ?? {};
+    const gamepadDefinitions = inputOptions.gamepadDefinitions ?? [];
+    const pointerDistanceThreshold = inputOptions.pointerDistanceThreshold ?? 10;
+    const gamepadSlotStrategy = inputOptions.gamepadSlotStrategy ?? 'sticky';
 
     this.canvas = app.canvas;
     this.canvasFocusedValue = document.activeElement === this.canvas;
