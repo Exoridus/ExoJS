@@ -63,9 +63,24 @@ export class InputManager {
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
   private readonly bindings: Set<InputBinding> = new Set<InputBinding>();
+  private readonly capturedKeyChannels = new Map<number, number>();
   private readonly bindingDetacher = {
     detach: (binding: InputBinding): void => {
       this.bindings.delete(binding);
+
+      for (const channel of binding.channels) {
+        if (channel < ChannelSize.Category) {
+          const count = this.capturedKeyChannels.get(channel);
+
+          if (count !== undefined) {
+            if (count <= 1) {
+              this.capturedKeyChannels.delete(channel);
+            } else {
+              this.capturedKeyChannels.set(channel, count - 1);
+            }
+          }
+        }
+      }
     },
   };
   private readonly wheelOffset = new Vector();
@@ -338,6 +353,7 @@ export class InputManager {
     }
 
     this.bindings.clear();
+    this.capturedKeyChannels.clear();
     this.gamepadsByBrowserIndex.clear();
     this.channelsPressed.length = 0;
     this.channelsReleased.length = 0;
@@ -375,6 +391,13 @@ export class InputManager {
     const resolved = list.map(c => this.resolveExternalChannel(c, slot));
     const binding = new InputBinding(resolved, options, this.bindingDetacher);
     this.bindings.add(binding);
+
+    for (const ch of resolved) {
+      if (ch < ChannelSize.Category) {
+        this.capturedKeyChannels.set(ch, (this.capturedKeyChannels.get(ch) ?? 0) + 1);
+      }
+    }
+
     return binding;
   }
 
@@ -434,7 +457,9 @@ export class InputManager {
     this.channelsPressed.push(channel);
     this.flags.push(InputManagerFlag.KeyDown);
 
-    stopEvent(event);
+    if (this.capturedKeyChannels.has(channel)) {
+      stopEvent(event);
+    }
   }
 
   private handleKeyUp(event: KeyboardEvent): void {
@@ -448,7 +473,9 @@ export class InputManager {
     this.channelsReleased.push(channel);
     this.flags.push(InputManagerFlag.KeyUp);
 
-    stopEvent(event);
+    if (this.capturedKeyChannels.has(channel)) {
+      stopEvent(event);
+    }
   }
 
   private handlePointerOver(event: PointerEvent): void {
