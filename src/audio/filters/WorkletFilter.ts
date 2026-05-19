@@ -15,6 +15,7 @@ import { registerWorkletProcessor } from '../worklet/registerWorklet';
  *
  * Subclasses can override `_onWorkletReady` to perform additional wiring
  * (e.g., sidechain inputs).
+ * @advanced
  */
 export abstract class WorkletFilter extends AudioFilter {
   protected _inputGain: GainNode | null = null;

@@ -8,6 +8,7 @@ import type { TypedArray } from '@/core/types';
  * clears it via {@link markClean} after uploading the value to the GPU.
  * Array-type uniform names have their index suffix stripped (e.g. `uColors[0]`
  * becomes `uColors`).
+ * @advanced
  */
 export class ShaderUniform {
   /** Zero-based index of this uniform within the shader program. */

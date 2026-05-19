@@ -64,6 +64,7 @@ class ShelfPacker {
  *
  * Use `getDefaultGlyphAtlas()` from `atlas-singleton.ts` rather than
  * constructing directly.
+ * @advanced
  */
 export class DynamicGlyphAtlas {
   public readonly texture: Texture;

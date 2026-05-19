@@ -21,6 +21,7 @@ import { RenderNode } from './RenderNode';
  *
  * Subclassed by {@link Sprite}, {@link Mesh}, {@link Graphics}, {@link Text},
  * etc. — the base `Container` is a non-drawing grouping node.
+ * @stable
  */
 export class Container extends RenderNode {
   private readonly _children: RenderNode[] = [];

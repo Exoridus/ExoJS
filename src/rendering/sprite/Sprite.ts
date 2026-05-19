@@ -40,6 +40,7 @@ export enum SpriteFlags {
  * or frame changes, making repeated read access free after the first evaluation.
  * Collision helpers — `contains`, `getNormals`, `project` — are overridden to
  * operate on the exact rotated quad rather than the AABB.
+ * @stable
  */
 export class Sprite extends Drawable {
   private _texture: Texture | RenderTexture | null = null;

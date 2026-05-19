@@ -4,6 +4,7 @@ import { Flags } from '@/math/Flags';
 import { Matrix } from '@/math/Matrix';
 import { ObservableSize } from '@/math/ObservableSize';
 import { ObservableVector } from '@/math/ObservableVector';
+import type { PointLike } from '@/math/PointLike';
 import { Rectangle } from '@/math/Rectangle';
 import { clamp, degreesToRadians, trimRotation } from '@/math/utils';
 
@@ -53,6 +54,7 @@ export interface ViewShakeOptions {
  * matrices, a follow-target system for tracking scene nodes, and a procedural
  * screen-shake effect. Call {@link update} once per frame to advance follow and
  * shake animations.
+ * @stable
  */
 export class View {
   private readonly _center: ObservableVector;
@@ -391,6 +393,51 @@ export class View {
     }
 
     return this._inverseTransform;
+  }
+
+  /**
+   * Convert a canvas pixel coordinate to a world-space position for this view.
+   * Accounts for the view's viewport rectangle, so it works correctly in
+   * multi-view / split-screen setups.
+   *
+   * @param screenX     - X pixel relative to the canvas top-left corner.
+   * @param screenY     - Y pixel relative to the canvas top-left corner.
+   * @param canvasWidth - Canvas width in pixels (e.g. `app.canvas.width`).
+   * @param canvasHeight - Canvas height in pixels (e.g. `app.canvas.height`).
+   */
+  public screenToWorld(screenX: number, screenY: number, canvasWidth: number, canvasHeight: number): PointLike {
+    const vw = this._viewport.width * canvasWidth;
+    const vh = this._viewport.height * canvasHeight;
+    const clipX = ((screenX - this._viewport.x * canvasWidth) / vw) * 2 - 1;
+    const clipY = 1 - ((screenY - this._viewport.y * canvasHeight) / vh) * 2;
+    const inv = this.getInverseTransform();
+
+    return {
+      x: inv.a * clipX + inv.b * clipY + inv.x,
+      y: inv.c * clipX + inv.d * clipY + inv.y,
+    };
+  }
+
+  /**
+   * Convert a world-space position to canvas pixel coordinates for this view.
+   * Accounts for the view's viewport rectangle.
+   *
+   * @param worldX      - World X coordinate.
+   * @param worldY      - World Y coordinate.
+   * @param canvasWidth - Canvas width in pixels (e.g. `app.canvas.width`).
+   * @param canvasHeight - Canvas height in pixels (e.g. `app.canvas.height`).
+   */
+  public worldToScreen(worldX: number, worldY: number, canvasWidth: number, canvasHeight: number): PointLike {
+    const m = this.getTransform();
+    const clipX = m.a * worldX + m.b * worldY + m.x;
+    const clipY = m.c * worldX + m.d * worldY + m.y;
+    const vx = this._viewport.x * canvasWidth;
+    const vy = this._viewport.y * canvasHeight;
+
+    return {
+      x: vx + ((clipX + 1) / 2) * this._viewport.width * canvasWidth,
+      y: vy + ((1 - clipY) / 2) * this._viewport.height * canvasHeight,
+    };
   }
 
   /**

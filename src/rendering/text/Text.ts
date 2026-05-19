@@ -74,6 +74,7 @@ function buildMesh(placements: readonly GlyphPlacement[], style: TextStyle): Mes
  * The internal {@link Mesh} is the sole child of this {@link Container}.
  * All transform properties (position, rotation, scale, origin) are
  * inherited from {@link Container} → {@link RenderNode}.
+ * @stable
  */
 export class Text extends Container {
   private _text: string;

@@ -33,6 +33,12 @@ export interface GlyphInfo {
   readonly uvBottom: number;
 }
 
+/** Pixel dimensions of a laid-out text string returned by {@link measureText}. */
+export interface TextSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 /**
  * A single glyph's quad placement in local text space.
  * Origin is the top-left of the first line.

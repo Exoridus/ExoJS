@@ -3,7 +3,8 @@ import type { RenderBackend } from '@/rendering/RenderBackend';
 
 import type { Application } from './Application';
 import { Color } from './Color';
-import type { Scene, SceneParticipationPolicy, SceneStackMode } from './Scene';
+import { Scene } from './Scene';
+import type { SceneParticipationPolicy, SceneStackMode } from './Scene';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
@@ -106,6 +107,9 @@ export class SceneManager {
   public readonly onUpdateScene = new Signal<[Scene]>();
   /** Fires just before a scene is unloaded (`unload` then `destroy`). */
   public readonly onStopScene = new Signal<[Scene]>();
+
+  private readonly _asyncUpdateWarned = new WeakSet<Scene>();
+  private readonly _asyncDrawWarned = new WeakSet<Scene>();
 
   public constructor(app: Application) {
     this._app = app;
@@ -226,11 +230,21 @@ export class SceneManager {
     const { updateScenes, drawScenes } = this._resolveParticipants();
 
     for (const scene of updateScenes) {
-      scene.update(delta);
+      const updateResult = scene.update(delta);
+
+      if (!this._asyncUpdateWarned.has(scene) && (updateResult as unknown) instanceof Promise) {
+        this._asyncUpdateWarned.add(scene);
+        console.warn(`[ExoJS] Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.`);
+      }
     }
 
     for (const scene of drawScenes) {
-      scene.draw(this._app.backend);
+      const drawResult = scene.draw(this._app.backend);
+
+      if (!this._asyncDrawWarned.has(scene) && (drawResult as unknown) instanceof Promise) {
+        this._asyncDrawWarned.add(scene);
+        console.warn(`[ExoJS] Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.`);
+      }
     }
 
     const transitionAlpha = this._getTransitionAlpha();
@@ -270,6 +284,10 @@ export class SceneManager {
     try {
       await scene.load(this._app.loader);
       await scene.init(this._app.loader);
+
+      if (scene.root.children.length > 0 && scene.draw === Scene.prototype.draw) {
+        console.warn(`[ExoJS] Scene.root has ${scene.root.children.length} child(ren) after init() but draw() is not overridden. Scene.root is not auto-rendered — call this.root.render(backend) inside draw().`);
+      }
     } catch (error) {
       let cleanupError: unknown = null;
 

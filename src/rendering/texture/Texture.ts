@@ -17,6 +17,7 @@ import type { SamplerOptions } from './Sampler';
  * Static helpers {@link Texture.black}, {@link Texture.white}, and {@link Texture.empty}
  * provide ready-made placeholder textures. Default sampler options are configurable via
  * {@link Texture.defaultSamplerOptions}.
+ * @stable
  */
 export class Texture {
   private static _black: Texture | null = null;

@@ -1,6 +1,7 @@
 /**
  * Per-frame rendering counters collected by the backend each tick.
  * Expose live performance data for debugging and profiling tools.
+ * @advanced
  */
 export interface RenderStats {
   /** Monotonically increasing frame index, incremented by {@link resetRenderStats}. */

@@ -1,6 +1,6 @@
 import type { DynamicGlyphAtlas } from './DynamicGlyphAtlas';
 import type { TextStyle } from './TextStyle';
-import type { GlyphInfo, GlyphPlacement } from './types';
+import type { GlyphInfo, GlyphPlacement, TextSize } from './types';
 
 interface LinePlacement {
   placements: Array<{
@@ -9,6 +9,41 @@ interface LinePlacement {
     y: number;
   }>;
   width: number;
+}
+
+/**
+ * Compute the bounding pixel dimensions of `text` under `style` without
+ * allocating any quad placements. Useful for sizing containers or
+ * centering text before calling {@link layoutText}.
+ *
+ * Returns `{ width: 0, height: 0 }` for empty text.
+ */
+export function measureText(text: string, style: TextStyle, atlas: DynamicGlyphAtlas): TextSize {
+  if (text.length === 0) {
+    return { width: 0, height: 0 };
+  }
+
+  const { fontSize, fontFamily, fontWeight, fontStyle, lineHeight } = style;
+  const computedLineHeight = fontSize * lineHeight;
+  const lines = text.split('\n');
+  let maxLineWidth = 0;
+
+  for (const line of lines) {
+    let lineWidth = 0;
+
+    for (const char of line) {
+      lineWidth += atlas.getGlyph(char, fontFamily, fontSize, fontWeight, fontStyle).advance;
+    }
+
+    if (lineWidth > maxLineWidth) {
+      maxLineWidth = lineWidth;
+    }
+  }
+
+  return {
+    width: maxLineWidth,
+    height: lines.length * computedLineHeight,
+  };
 }
 
 /**

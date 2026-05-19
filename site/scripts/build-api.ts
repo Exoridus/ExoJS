@@ -12,6 +12,7 @@ const toPosix = (value: string): string => value.replaceAll('\\', '/');
 
 type Subsystem = 'animation' | 'audio' | 'core' | 'debug' | 'input' | 'math' | 'particles' | 'rendering' | 'resources';
 type ApiKind = 'class' | 'enum';
+type ApiTier = 'stable' | 'advanced';
 
 const SUBSYSTEMS: ReadonlyArray<Subsystem> = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'];
 
@@ -171,6 +172,9 @@ const build = async (): Promise<void> => {
         entryPoints: [toPosix(path.resolve(repoRoot, 'src/index.ts')), toPosix(path.resolve(repoRoot, 'src/debug/index.ts'))],
         tsconfig: toPosix(path.resolve(repoRoot, 'tsconfig.json')),
         excludeInternal: true,
+        // Register @stable and @advanced as recognized modifier tags so TypeDoc
+        // preserves them on reflections instead of emitting unknown-tag warnings.
+        modifierTags: ['@stable', '@advanced', '@override', '@internal', '@alpha', '@beta', '@experimental', '@virtual', '@readonly', '@sealed', '@abstract', '@public', '@protected', '@private'],
     });
 
     const project = await app.convert();
@@ -192,6 +196,7 @@ const build = async (): Promise<void> => {
             const subsystem = guessSubsystem(sourcePath ?? '');
             const importPath = entryPointTitle(reflection);
             const description = renderComment(reflection.comment);
+            const tier: ApiTier = reflection.comment?.modifierTags?.has('@advanced') ? 'advanced' : 'stable';
             const { body, sections, memberCount } = renderReflectionBody(reflection);
             const kind = toApiKind(reflection.kind);
 
@@ -229,6 +234,7 @@ const build = async (): Promise<void> => {
                 `subsystem: ${toFrontmatterString(subsystem)}`,
                 `importPath: ${toFrontmatterString(importPath)}`,
                 `memberCount: ${memberCount}`,
+                `tier: ${toFrontmatterString(tier)}`,
                 `sections: ${toFrontmatterArray(allSections)}`,
                 sourceRelative ? `sourcePath: ${toFrontmatterString(sourceRelative)}` : '',
                 sourceUrl ? `sourceUrl: ${toFrontmatterString(sourceUrl)}` : '',

@@ -12,6 +12,7 @@ import type { RenderPass } from './RenderPass';
  *     backend.draw(myDrawable);
  * });
  * ```
+ * @advanced
  */
 export class CallbackRenderPass implements RenderPass {
   private readonly _callback: (backend: RenderBackend) => void;

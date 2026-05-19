@@ -34,6 +34,7 @@ type NumericKeys<T> = {
  *     .repeat(-1)
  *     .start();
  * ```
+ * @stable
  */
 export class Tween<T extends object = object> {
   private readonly _target: T;
