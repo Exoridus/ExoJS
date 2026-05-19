@@ -1,8 +1,10 @@
 import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
 
 const app = new Application({
-    width: 800,
-    height: 600,
+    canvas: {
+        width: 800,
+        height: 600,
+    },
     clearColor: Color.midnightBlue,
     backend: { type: 'webgpu' },
 });

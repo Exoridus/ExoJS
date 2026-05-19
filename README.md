@@ -68,9 +68,11 @@ if (!canvas) {
 }
 
 const app = new Application({
-  canvas,
-  width: 800,
-  height: 600,
+  canvas: {
+    element: canvas,
+    width: 800,
+    height: 600,
+  },
   clearColor: Color.cornflowerBlue,
 });
 
