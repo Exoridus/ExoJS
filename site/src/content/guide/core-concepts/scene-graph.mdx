@@ -70,7 +70,32 @@ this.addChild(this.player);
 
 Now moving `this.player` moves the head and body together. Rotating the player rotates them around the player's pivot. The same applies to scale.
 
-Each node carries its own transform — helpers such as `setPosition`, `setRotation`, `setScale`, and `setOrigin` describe where the node lives relative to its parent (positions are pixels, rotations are degrees). Sprites add `setAnchor(...)` on top of that, which controls which point of the texture is placed at the sprite's position. Local transforms are what you set; the global transform is the local one composed with every ancestor up the tree, which is what the renderer uses.
+Each node carries its own transform — helpers such as `setPosition`, `setRotation`, `setScale`, `setSkew`, and `setOrigin` describe where the node lives relative to its parent (positions are pixels, rotations and skew angles are degrees). Sprites add `setAnchor(...)` on top of that, which controls which point of the texture is placed at the sprite's position. Local transforms are what you set; the global transform is the local one composed with every ancestor up the tree, which is what the renderer uses.
+
+## Skew
+
+Skew (shear) slants the local shape along one or both axes without scaling or rotating it. Two properties control it:
+
+- `skewX` — shear along the X axis: positive values lean the top edge to the right.
+- `skewY` — shear along the Y axis: positive values lean the left edge downward.
+
+Both are in degrees, consistent with `rotation`. Use the compound setter when setting both at once:
+
+```js
+hero.skewX = 15;           // lean right 15°
+hero.skewY = -5;           // tilt top-left slightly
+
+hero.setSkew(15, -5);      // same as above
+hero.setSkew(10);          // sets both skewX and skewY to 10
+```
+
+Skew composes with position, rotation, scale, origin, and anchor. It cascades to children and invalidates bounds exactly like any other transform component. Any node with a non-zero skew is no longer axis-aligned — its bounds become the AABB of the skewed shape, and collision/hit-testing uses the exact parallelogram geometry.
+
+Common uses:
+- **Pseudo-3D effects** — slant a floor or wall tile without a shader.
+- **UI slant** — angled buttons or callout boxes.
+- **Squash/stretch animation** — combine with scale for directional deformation.
+- **Impact lean** — have a character sprite lean into movement or absorb a hit.
 
 ## Render order
 

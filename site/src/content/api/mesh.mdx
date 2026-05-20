@@ -5,7 +5,8 @@ symbol: "Mesh"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 62
+memberCount: 65
+tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/mesh/Mesh.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts#L58"
@@ -77,6 +78,7 @@ after in-place mutation is the caller's responsibility (call
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
 - `setTint(color: Color): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
@@ -92,6 +94,8 @@ after in-place mutation is the caller's responsibility (call
 - `_rotation: number`
 - `_scale: ObservableVector`
 - `_sin: number`
+- `_skewX: number`
+- `_skewY: number`
 - `_transform: Matrix`
 - `collisionType: CollisionType`
 - `colors: Uint32Array<ArrayBufferLike> | null`

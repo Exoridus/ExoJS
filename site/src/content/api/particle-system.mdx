@@ -5,7 +5,8 @@ symbol: "ParticleSystem"
 kind: "class"
 subsystem: "particles"
 importPath: "@codexo/exojs"
-memberCount: 83
+memberCount: 86
+tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/particles/ParticleSystem.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/ParticleSystem.ts#L122"
@@ -105,6 +106,7 @@ to `(0, 0)`.
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
 - `setTexture(texture: Texture): this`
 - `setTextureFrame(frame: Rectangle): this`
 - `setTint(color: Color): this`
@@ -124,6 +126,8 @@ to `(0, 0)`.
 - `_rotation: number`
 - `_scale: ObservableVector`
 - `_sin: number`
+- `_skewX: number`
+- `_skewY: number`
 - `_transform: Matrix`
 - `alive: Uint8Array`
 - `capacity: number`
