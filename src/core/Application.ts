@@ -16,7 +16,7 @@ import { Color } from './Color';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
 import { Signal } from './Signal';
-import type { Time } from './Time';
+import { Time } from './Time';
 import { canvasSourceToDataUrl } from './utils';
 
 export enum ApplicationStatus {
@@ -85,6 +85,8 @@ export interface AutoBackendConfig {
  * the explicit values pin the choice and skip the fallback path.
  */
 export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig;
+
+const maxDeltaMs = 100;
 
 const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
 const defaultBackendConfig: AutoBackendConfig = { type: 'auto' };
@@ -341,23 +343,44 @@ export class Application {
 
   /**
    * One iteration of the per-frame loop. Invoked by `requestAnimationFrame`.
-   * Skips the body when the document is hidden and `pauseOnHidden` is
-   * `true`. Order: reset render stats → input + interaction update →
-   * audio update → tween update → optional view runtime update →
-   * scene-graph update → onFrame dispatch → backend flush → reschedule.
+   * When the document is hidden and `pauseOnHidden` is `true`, the frame
+   * clock is reset and the body is skipped — preventing a large delta spike
+   * on the first visible frame after resume.
+   *
+   * Each normal frame runs two distinct phases:
+   *
+   * **Update phase** — input and interaction flush, audio update, tween
+   * advancement, optional view runtime update, then `scene.update(delta)` for
+   * each participating scene in stack order.
+   *
+   * **Render phase** — `scene.draw(backend)` for each participating scene in
+   * stack order, followed by the transition overlay when active.
+   *
+   * **Frame dispatch / flush** — `onFrame` signal, backend GPU flush,
+   * frame-time stat write, RAF reschedule.
+   *
+   * The simulation `delta` forwarded to all update recipients is clamped to
+   * an internal maximum (100 ms) so that debugger pauses, device sleep/resume,
+   * or severe browser scheduling gaps cannot produce runaway animation
+   * advancement. Real wall-clock time and RAF cadence are unaffected; the raw
+   * elapsed delta is recorded separately in `backend.stats.rawFrameDeltaMs`.
    */
   public update(): this {
     if (this._status === ApplicationStatus.Running) {
       if (this.pauseOnHidden && !this._documentVisible) {
+        this._frameClock.restart();
         this._frameRequest = requestAnimationFrame(this._updateHandler);
 
         return this;
       }
 
-      const frameDelta = this._frameClock.elapsedTime;
+      const rawDeltaMs = this._frameClock.elapsedTime.milliseconds;
+      const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
+      const frameDelta = new Time(clampedDeltaMs);
       const frameStart = performance.now();
 
       this.backend.resetStats();
+      this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
       this.input.update();
       this.interaction.update();

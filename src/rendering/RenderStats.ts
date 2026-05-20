@@ -20,6 +20,14 @@ export interface RenderStats {
   renderTargetChanges: number;
   /** Wall-clock duration of the frame in milliseconds. */
   frameTimeMs: number;
+  /**
+   * Raw wall-clock delta between this frame and the previous one, in
+   * milliseconds. May exceed the clamped simulation delta when the engine's
+   * internal `MAX_DELTA_MS` guard activates (e.g. after a debugger pause or
+   * device sleep/resume). Use this for profiling to distinguish actual elapsed
+   * time from the clamped simulation delta passed to update recipients.
+   */
+  rawFrameDeltaMs: number;
 }
 
 /**
@@ -34,6 +42,7 @@ export const createRenderStats = (): RenderStats => ({
   renderPasses: 0,
   renderTargetChanges: 0,
   frameTimeMs: 0,
+  rawFrameDeltaMs: 0,
 });
 
 /**
@@ -49,6 +58,7 @@ export const resetRenderStats = (stats: RenderStats): RenderStats => {
   stats.renderPasses = 0;
   stats.renderTargetChanges = 0;
   stats.frameTimeMs = 0;
+  stats.rawFrameDeltaMs = 0;
 
   return stats;
 };
