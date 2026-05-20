@@ -266,7 +266,7 @@ export class Sprite extends Drawable {
    * exact dot-product test for arbitrary angles.
    */
   public override contains(x: number, y: number): boolean {
-    if (this.rotation % 90 === 0) {
+    if (this.isAlignedBox) {
       return this.getBounds().contains(x, y);
     }
 
