@@ -5,7 +5,8 @@ symbol: "Video"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 70
+memberCount: 73
+tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/video/Video.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/video/Video.ts#L37"
@@ -63,6 +64,7 @@ node and can be directed to any AudioBus.
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
 - `setTexture(texture: RenderTexture | Texture | null): this`
 - `setTextureFrame(frame: Rectangle, resetSize: boolean): this`
 - `setTime(time: number): this`
@@ -85,6 +87,8 @@ node and can be directed to any AudioBus.
 - `_rotation: number`
 - `_scale: ObservableVector`
 - `_sin: number`
+- `_skewX: number`
+- `_skewY: number`
 - `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`

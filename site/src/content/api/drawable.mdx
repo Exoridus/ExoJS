@@ -5,7 +5,8 @@ symbol: "Drawable"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 56
+memberCount: 59
+tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Drawable.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L15"
@@ -56,6 +57,7 @@ and are paired with a matching Renderer via RendererRegistry.
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
 - `setTint(color: Color): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
@@ -71,6 +73,8 @@ and are paired with a matching Renderer via RendererRegistry.
 - `_rotation: number`
 - `_scale: ObservableVector`
 - `_sin: number`
+- `_skewX: number`
+- `_skewY: number`
 - `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`

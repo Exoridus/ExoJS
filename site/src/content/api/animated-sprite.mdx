@@ -5,7 +5,8 @@ symbol: "AnimatedSprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 69
+memberCount: 72
+tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/AnimatedSprite.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/AnimatedSprite.ts#L44"
@@ -66,6 +67,7 @@ from a Spritesheet's named animations.
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
 - `setTexture(texture: RenderTexture | Texture | null): this`
 - `setTextureFrame(frame: Rectangle, resetSize: boolean): this`
 - `setTint(color: Color): this`
@@ -87,6 +89,8 @@ from a Spritesheet's named animations.
 - `_rotation: number`
 - `_scale: ObservableVector`
 - `_sin: number`
+- `_skewX: number`
+- `_skewY: number`
 - `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`

@@ -44,20 +44,21 @@ enum SceneNodeTransformFlags {
 
 /**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
- * rotation, scale, origin, and a 2-component {@link Vector} `anchor` used to
- * derive `origin` from the local bounds. Implements {@link Collidable} so
- * any node can participate directly in the SAT collision pipeline via its
- * AABB or rotated quad.
+ * rotation, scale, skew, origin, and a 2-component {@link Vector} `anchor`
+ * used to derive `origin` from the local bounds. Implements {@link Collidable}
+ * so any node can participate directly in the SAT collision pipeline via its
+ * AABB or rotated/skewed quad.
  *
- * Transform state is dirty-flag-cached: position/rotation/scale/origin
+ * Transform state is dirty-flag-cached: position/rotation/scale/skew/origin
  * mutations invalidate the local transform; either kind of mutation also
  * invalidates the global transform (own + descendants) and the bounds rect
  * for this node and every {@link Container} ancestor up the parent chain.
  * The caches rebuild lazily on the next read.
  *
  * The fast-path `isAlignedBox` getter reports `true` when the rotation is a
- * multiple of 90°; in that case the (cheaper) AABB-based collision test is
- * used instead of the rotated-quad SAT path.
+ * multiple of 90° and both skew components are zero; in that case the
+ * (cheaper) AABB-based collision test is used instead of the rotated/skewed
+ * quad SAT path.
  *
  * `_invalidate*` methods are exported as `public` for friend-class access
  * from {@link Container} and {@link InteractionManager}; treat them as

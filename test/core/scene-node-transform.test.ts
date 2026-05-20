@@ -404,3 +404,318 @@ describe('SceneNode getBounds caching contract', () => {
     source.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Skew — API surface (T1)
+// ---------------------------------------------------------------------------
+
+describe('SceneNode.skewX / skewY / setSkew — API surface', () => {
+  test('skewX setter assigns value; getter reads it back', () => {
+    const node = new SceneNode();
+
+    node.skewX = 15;
+
+    expect(node.skewX).toBe(15);
+
+    node.destroy();
+  });
+
+  test('skewY setter assigns value; getter reads it back', () => {
+    const node = new SceneNode();
+
+    node.skewY = -10;
+
+    expect(node.skewY).toBe(-10);
+
+    node.destroy();
+  });
+
+  test('setSkew(x, y) sets both axes independently', () => {
+    const node = new SceneNode();
+
+    node.setSkew(20, -5);
+
+    expect(node.skewX).toBe(20);
+    expect(node.skewY).toBe(-5);
+
+    node.destroy();
+  });
+
+  test('setSkew(x) with single argument sets both axes (default-y = x convention)', () => {
+    const node = new SceneNode();
+
+    node.setSkew(12);
+
+    expect(node.skewX).toBe(12);
+    expect(node.skewY).toBe(12);
+
+    node.destroy();
+  });
+
+  test('setSkew returns this for chaining', () => {
+    const node = new SceneNode();
+
+    expect(node.setSkew(5, 5)).toBe(node);
+
+    node.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Skew — isAlignedBox gating (T2)
+// ---------------------------------------------------------------------------
+
+describe('SceneNode.isAlignedBox — skew gating', () => {
+  test('true when rotation=0, skewX=0, skewY=0 (default state)', () => {
+    const node = new SceneNode();
+
+    expect(node.isAlignedBox).toBe(true);
+
+    node.destroy();
+  });
+
+  test('true when rotation=90, skewX=0, skewY=0', () => {
+    const node = new SceneNode();
+
+    node.setRotation(90);
+
+    expect(node.isAlignedBox).toBe(true);
+
+    node.destroy();
+  });
+
+  test('false when skewX != 0, rotation=0', () => {
+    const node = new SceneNode();
+
+    node.skewX = 15;
+
+    expect(node.isAlignedBox).toBe(false);
+
+    node.destroy();
+  });
+
+  test('false when skewY != 0, rotation=0', () => {
+    const node = new SceneNode();
+
+    node.skewY = -5;
+
+    expect(node.isAlignedBox).toBe(false);
+
+    node.destroy();
+  });
+
+  test('false when skewX != 0 even when rotation is a multiple of 90°', () => {
+    const node = new SceneNode();
+
+    node.setRotation(90);
+    node.skewX = 10;
+
+    expect(node.isAlignedBox).toBe(false);
+
+    node.destroy();
+  });
+
+  test('restoring skewX to 0 restores isAlignedBox to true', () => {
+    const node = new SceneNode();
+
+    node.skewX = 30;
+
+    expect(node.isAlignedBox).toBe(false);
+
+    node.skewX = 0;
+
+    expect(node.isAlignedBox).toBe(true);
+
+    node.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Skew — local transform matrix (T3)
+// ---------------------------------------------------------------------------
+
+describe('SceneNode.updateTransform() — skew matrix coefficients', () => {
+  test('skewX=45°, rotation=0, scale=1: a=1, b=0, c=tan(45°)=1, d=1', () => {
+    // tan(45°) = 1; with rotation=0: cos=1, sin=0.
+    // a = sx*cos + tanKx*sin = 1*1 + 1*0 = 1
+    // b = sy*sin + tanKy*cos = 1*0 + 0*1 = 0
+    // c = -sx*sin + tanKx*cos = -0 + 1*1 = 1
+    // d = -tanKy*sin + sy*cos = -0 + 1*1 = 1
+    const node = new SceneNode();
+
+    node.setSkew(45, 0);
+
+    const m = node.getTransform();
+
+    expect(m.a).toBeCloseTo(1);
+    expect(m.b).toBeCloseTo(0);
+    expect(m.c).toBeCloseTo(1);
+    expect(m.d).toBeCloseTo(1);
+
+    node.destroy();
+  });
+
+  test('skewY=45°, rotation=0, scale=1: a=1, b=tan(45°)=1, c=0, d=1', () => {
+    // a = sx*cos + 0*sin = 1
+    // b = sy*sin + tanKy*cos = 0 + 1*1 = 1
+    // c = -sx*sin + 0*cos = 0
+    // d = -tanKy*sin + sy*cos = -0 + 1*1 = 1
+    const node = new SceneNode();
+
+    node.setSkew(0, 45);
+
+    const m = node.getTransform();
+
+    expect(m.a).toBeCloseTo(1);
+    expect(m.b).toBeCloseTo(1);
+    expect(m.c).toBeCloseTo(0);
+    expect(m.d).toBeCloseTo(1);
+
+    node.destroy();
+  });
+
+  test('setSkew(0, 0) at rotation=30° produces the same matrix as no skew at rotation=30°', () => {
+    const nodeSkew = new SceneNode();
+    const nodeNoSkew = new SceneNode();
+
+    nodeSkew.setSkew(0, 0);
+    nodeSkew.setRotation(30);
+    nodeNoSkew.setRotation(30);
+
+    const mSkew = nodeSkew.getTransform();
+    const mNoSkew = nodeNoSkew.getTransform();
+
+    expect(mSkew.a).toBeCloseTo(mNoSkew.a);
+    expect(mSkew.b).toBeCloseTo(mNoSkew.b);
+    expect(mSkew.c).toBeCloseTo(mNoSkew.c);
+    expect(mSkew.d).toBeCloseTo(mNoSkew.d);
+    expect(mSkew.x).toBeCloseTo(mNoSkew.x);
+    expect(mSkew.y).toBeCloseTo(mNoSkew.y);
+
+    nodeSkew.destroy();
+    nodeNoSkew.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Skew — dirty-flag / lazy recomputation (T4)
+// ---------------------------------------------------------------------------
+
+describe('SceneNode skew — dirty-flag invalidation', () => {
+  test('setting skewX invalidates cache; getTransform recomputes lazily', () => {
+    const node = new SceneNode();
+
+    node.getTransform(); // settle cache
+
+    const updateSpy = jest.spyOn(node, 'updateTransform');
+
+    node.skewX = 30;
+
+    expect(updateSpy).not.toHaveBeenCalled(); // lazy — no eager recompute
+
+    node.getTransform();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+
+    node.destroy();
+  });
+
+  test('setting skewX to same value is a no-op and does not dirty the cache', () => {
+    const node = new SceneNode();
+
+    node.setSkew(0, 0);
+    node.getTransform(); // settle cache
+
+    const updateSpy = jest.spyOn(node, 'updateTransform');
+
+    node.skewX = 0;
+    node.skewY = 0;
+    node.getTransform();
+
+    expect(updateSpy).not.toHaveBeenCalled();
+
+    node.destroy();
+  });
+
+  test('setting skewX propagates GlobalTransform invalidation to child', () => {
+    const parent = new Container();
+    const child = new TestDrawable();
+
+    parent.addChild(child);
+    parent.setSkew(0, 0);
+    child.setPosition(10, 10);
+
+    // Save the numeric c value before mutation. getGlobalTransform() returns the
+    // same mutable matrix reference each call, so we capture the primitive number.
+    const cBefore = child.getGlobalTransform().c;
+
+    parent.skewX = 45;
+
+    // After invalidation the global transform must recompute.
+    // Parent skewX=45°: local matrix c = tan(45°)·cos(0°) = 1.
+    // Child global c includes parent's contribution → also ≈ 1.
+    const cAfter = child.getGlobalTransform().c;
+
+    expect(cAfter).toBeCloseTo(1);
+    expect(cAfter).not.toBeCloseTo(cBefore);
+
+    parent.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Skew — bounds under shear (T5)
+// ---------------------------------------------------------------------------
+
+describe('SceneNode skew — bounds under shear', () => {
+  test('skewX=45° on a 100×100 box doubles the bounds height', () => {
+    const drawable = new TestDrawable();
+
+    drawable.setPosition(0, 0);
+
+    const unskewedHeight = drawable.getBounds().height;
+
+    drawable.setSkew(45, 0);
+
+    const skewedHeight = drawable.getBounds().height;
+
+    // A 100×100 box with skewX=45° (tanKx=1) transforms to a parallelogram
+    // spanning 200px vertically: AABB height goes from 100 to 200.
+    expect(skewedHeight).toBeCloseTo(unskewedHeight * 2, 0);
+
+    drawable.destroy();
+  });
+
+  test('skewY=45° on a 100×100 box doubles the bounds width', () => {
+    const drawable = new TestDrawable();
+
+    drawable.setPosition(0, 0);
+
+    const unskewedWidth = drawable.getBounds().width;
+
+    drawable.setSkew(0, 45);
+
+    const skewedWidth = drawable.getBounds().width;
+
+    // skewY=45° (tanKy=1) shears horizontally: AABB width goes from 100 to 200.
+    expect(skewedWidth).toBeCloseTo(unskewedWidth * 2, 0);
+
+    drawable.destroy();
+  });
+
+  test('skew invalidation updates bounds on next getBounds call', () => {
+    const drawable = new TestDrawable();
+
+    drawable.setPosition(0, 0);
+
+    const initial = drawable.getBounds().clone();
+
+    drawable.setSkew(45, 0);
+
+    const after = drawable.getBounds();
+
+    expect(after.height).not.toBeCloseTo(initial.height);
+
+    drawable.destroy();
+  });
+});

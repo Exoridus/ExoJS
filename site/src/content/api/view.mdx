@@ -5,10 +5,11 @@ symbol: "View"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 24
+memberCount: 26
+tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/View.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts#L57"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts#L59"
 ---
 ## Import
 
@@ -39,6 +40,7 @@ shake animations.
 - `reset(centerX: number, centerY: number, width: number, height: number): this`
 - `resize(width: number, height: number): this`
 - `rotate(degrees: number): this`
+- `screenToWorld(screenX: number, screenY: number, canvasWidth: number, canvasHeight: number): PointLike`
 - `setBounds(bounds: Rectangle | null): this`
 - `setCenter(x: number, y: number): this`
 - `setRotation(degrees: number): this`
@@ -48,10 +50,11 @@ shake animations.
 - `update(deltaMilliseconds: number): this`
 - `updateBounds(): this`
 - `updateTransform(): this`
+- `worldToScreen(worldX: number, worldY: number, canvasWidth: number, canvasHeight: number): PointLike`
 - `zoom(factor: number): this`
 - `zoomIn(amount: number): this`
 - `zoomOut(amount: number): this`
 
 ## Source
 
-[src/rendering/View.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts#L57)
+[src/rendering/View.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts#L59)

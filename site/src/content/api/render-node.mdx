@@ -5,7 +5,8 @@ symbol: "RenderNode"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 54
+memberCount: 57
+tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/RenderNode.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts#L78"
@@ -65,6 +66,7 @@ ParticleSystem (particles).
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
 - `updateTransform(): this`
@@ -79,6 +81,8 @@ ParticleSystem (particles).
 - `_rotation: number`
 - `_scale: ObservableVector`
 - `_sin: number`
+- `_skewX: number`
+- `_skewY: number`
 - `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`

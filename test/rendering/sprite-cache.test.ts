@@ -151,3 +151,87 @@ describe('Sprite.getNormals() — dirty-flag cache', () => {
     sprite.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprite.contains() — skew regression (T6)
+// ---------------------------------------------------------------------------
+
+describe('Sprite.contains() — skew regression', () => {
+  // With skewX=45° on a 100×100 sprite, the world-space quad is a
+  // parallelogram: TL(0,0), TR(100,100), BR(100,200), BL(0,100).
+  // The AABB is (0,0,100,200). A point at (50, 20) lies inside the AABB
+  // but above the top edge of the parallelogram (top boundary at x=50 is y=50),
+  // so it is outside the actual shape.
+  //
+  // Before the fix (rotation % 90 === 0 guard), skewX was ignored and the AABB
+  // path was taken, returning true (wrong). After the fix (isAlignedBox guard +
+  // cross-product test), the result is false (correct).
+
+  test('point inside AABB but outside skewed parallelogram returns false', () => {
+    const sprite = new Sprite(makeTexture(100, 100));
+
+    sprite.setPosition(0, 0);
+    sprite.setRotation(0);
+    sprite.skewX = 45;
+
+    // (50, 20): inside AABB (x=0..100, y=0..200), but the parallelogram top
+    // edge at x=50 is y=50, so y=20 is outside the actual shape.
+    expect(sprite.contains(50, 20)).toBe(false);
+
+    sprite.destroy();
+  });
+
+  test('point inside the actual skewed parallelogram returns true', () => {
+    const sprite = new Sprite(makeTexture(100, 100));
+
+    sprite.setPosition(0, 0);
+    sprite.setRotation(0);
+    sprite.skewX = 45;
+
+    // (50, 80): x=50 → y range [50, 150] → 80 is well inside the parallelogram.
+    expect(sprite.contains(50, 80)).toBe(true);
+
+    sprite.destroy();
+  });
+
+  test('point near the left edge of the skewed parallelogram returns true', () => {
+    const sprite = new Sprite(makeTexture(100, 100));
+
+    sprite.setPosition(0, 0);
+    sprite.setRotation(0);
+    sprite.skewX = 45;
+
+    // (1, 50): x=1 → y range [1, 101] → 50 is inside.
+    // This point was incorrectly false under the old dot-product test.
+    expect(sprite.contains(1, 50)).toBe(true);
+
+    sprite.destroy();
+  });
+
+  test('non-skewed sprite at rotation=0 still passes AABB fast path (no regression)', () => {
+    const sprite = new Sprite(makeTexture(100, 100));
+
+    sprite.setPosition(0, 0);
+    sprite.setRotation(0);
+
+    expect(sprite.contains(50, 50)).toBe(true);
+    expect(sprite.contains(150, 50)).toBe(false);
+
+    sprite.destroy();
+  });
+
+  test('skewY regression: point inside AABB but outside parallelogram returns false', () => {
+    const sprite = new Sprite(makeTexture(100, 100));
+
+    sprite.setPosition(0, 0);
+    sprite.setRotation(0);
+    sprite.skewY = 45;
+
+    // With skewY=45°: TL(0,0), TR(100,0), BR(200,100), BL(100,100).
+    // AABB is (0,0,200,100). Point (20, 50): x=20 → left boundary is at
+    // x = y * tan(45°) = 50, so x=20 is to the left of the left edge → outside.
+    expect(sprite.contains(20, 50)).toBe(false);
+
+    sprite.destroy();
+  });
+});

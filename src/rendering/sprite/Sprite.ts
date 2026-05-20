@@ -262,24 +262,26 @@ export class Sprite extends Drawable {
 
   /**
    * Return `true` if the world-space point (`x`, `y`) lies inside the quad.
-   * Uses a fast AABB check when the rotation is a multiple of 90°, and the
-   * exact dot-product test for arbitrary angles.
+   * Uses a fast AABB check for axis-aligned quads, and a cross-product sign
+   * test for rotated or skewed quads.
    */
   public override contains(x: number, y: number): boolean {
     if (this.isAlignedBox) {
       return this.getBounds().contains(x, y);
     }
 
-    const [x1, y1, x2, y2, x3, y3] = this.vertices;
-    const temp = Vector.temp;
-    const vecA = temp.set(x2 - x1, y2 - y1);
-    const dotA = vecA.dot(x - x1, y - y1);
-    const lenA = vecA.lengthSq;
-    const vecB = temp.set(x3 - x2, y3 - y2);
-    const dotB = vecB.dot(x - x2, y - y2);
-    const lenB = vecB.lengthSq;
+    const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
 
-    return dotA > 0 && dotA <= lenA && dotB > 0 && dotB <= lenB;
+    // Cross-product sign consistency: all four edge × (P-vertex) cross
+    // products must share the same sign for P to lie inside the convex quad.
+    // This handles rotated rectangles and skewed parallelograms uniformly;
+    // the dual `>=0 || <=0` form also handles mirrored (negative-scale) quads.
+    const s1 = (x2 - x1) * (y - y1) - (y2 - y1) * (x - x1);
+    const s2 = (x3 - x2) * (y - y2) - (y3 - y2) * (x - x2);
+    const s3 = (x4 - x3) * (y - y3) - (y4 - y3) * (x - x3);
+    const s4 = (x1 - x4) * (y - y4) - (y1 - y4) * (x - x4);
+
+    return (s1 >= 0 && s2 >= 0 && s3 >= 0 && s4 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0 && s4 <= 0);
   }
 
   /** @internal */
