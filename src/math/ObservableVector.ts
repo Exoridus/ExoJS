@@ -44,16 +44,16 @@ export class ObservableVector extends AbstractVector {
     }
   }
 
-  public override set direction(angle: number) {
+  public override set angle(angle: number) {
     const length = this.length;
 
     this.set(Math.cos(angle) * length, Math.sin(angle) * length);
   }
 
   public override set length(magnitude: number) {
-    const direction = this.direction;
+    const angle = this.angle;
 
-    this.set(Math.cos(direction) * magnitude, Math.sin(direction) * magnitude);
+    this.set(Math.cos(angle) * magnitude, Math.sin(angle) * magnitude);
   }
 
   public override set(x: number = this._x, y: number = this._y): this {

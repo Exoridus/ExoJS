@@ -18,39 +18,30 @@ export abstract class AbstractVector {
    * (clockwise). Setting this rotates the vector to the new angle while
    * preserving its {@link length}. Mutates in place.
    */
-  public get direction(): number {
+  public get angle(): number {
     return Math.atan2(this.x, this.y);
   }
 
-  public set direction(angle: number) {
+  public set angle(angle: number) {
     const length = this.length;
 
     this.x = Math.cos(angle) * length;
     this.y = Math.sin(angle) * length;
   }
 
-  /** Alias for {@link direction}. */
-  public get angle(): number {
-    return this.direction;
-  }
-
-  public set angle(angle: number) {
-    this.direction = angle;
-  }
-
   /**
    * Euclidean magnitude of this vector. Setting rescales the vector to
-   * `magnitude` while preserving its {@link direction}. Mutates in place.
+   * `magnitude` while preserving its {@link angle}. Mutates in place.
    */
   public get length(): number {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
 
   public set length(magnitude: number) {
-    const direction = this.direction;
+    const angle = this.angle;
 
-    this.x = Math.cos(direction) * magnitude;
-    this.y = Math.sin(direction) * magnitude;
+    this.x = Math.cos(angle) * magnitude;
+    this.y = Math.sin(angle) * magnitude;
   }
 
   /**
@@ -63,15 +54,6 @@ export abstract class AbstractVector {
 
   public set lengthSq(lengthSquared: number) {
     this.length = Math.sqrt(lengthSquared);
-  }
-
-  /** Alias for {@link length}. */
-  public get magnitude(): number {
-    return this.length;
-  }
-
-  public set magnitude(magnitude: number) {
-    this.length = magnitude;
   }
 
   /**
