@@ -18,7 +18,7 @@ describe('Signal', () => {
     signal.dispatch();
 
     expect(calls).toEqual(['a', 'b', 'c']);
-    expect(signal.bindings).toHaveLength(0);
+    expect(signal.count).toBe(0);
   });
 
   it('stops dispatching when a handler returns false', () => {

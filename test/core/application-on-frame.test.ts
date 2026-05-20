@@ -93,7 +93,7 @@ describe('Application.onFrame', () => {
     jest.resetModules();
   });
 
-  test('app.onFrame exists and has Signal-shaped API (add / remove / dispatch / bindings)', () => {
+  test('app.onFrame exists and has Signal-shaped API (add / remove / dispatch / count)', () => {
     const { Application } = loadOnFrameHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
@@ -101,7 +101,7 @@ describe('Application.onFrame', () => {
     expect(typeof app.onFrame.add).toBe('function');
     expect(typeof app.onFrame.remove).toBe('function');
     expect(typeof app.onFrame.dispatch).toBe('function');
-    expect(Array.isArray(app.onFrame.bindings)).toBe(true);
+    expect(typeof app.onFrame.count).toBe('number');
 
     app.destroy();
   });
@@ -167,11 +167,11 @@ describe('Application.onFrame', () => {
     const handler = jest.fn();
 
     app.onFrame.add(handler);
-    expect(app.onFrame.bindings.length).toBeGreaterThan(0);
+    expect(app.onFrame.count).toBeGreaterThan(0);
 
     app.destroy();
 
-    expect(app.onFrame.bindings.length).toBe(0);
+    expect(app.onFrame.count).toBe(0);
   });
 });
 
