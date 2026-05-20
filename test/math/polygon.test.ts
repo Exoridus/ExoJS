@@ -8,7 +8,7 @@ describe('Polygon', () => {
     expect(() => polygon.setPoints([new Vector(0, 0), new Vector(20, 0), new Vector(10, 10)])).not.toThrow();
     expect(polygon.points.length).toBe(3);
     expect(polygon.edges.length).toBe(3);
-    expect(polygon.normals.length).toBe(3);
+    expect(polygon.getNormals().length).toBe(3);
   });
 });
 

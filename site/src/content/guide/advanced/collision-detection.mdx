@@ -48,33 +48,81 @@ All shape-pair combinations are supported for boolean overlap — rectangle-rect
 
 ## Penetration response: collidesWith
 
-`shapeA.collidesWith(shapeB)` returns a `CollisionResponse` or `null` if no overlap:
+`shapeA.collidesWith(shapeB)` returns a `CollisionResponse` or `null`. The `CollisionResponse` contains:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `overlap` | `number` | Penetration depth (positive) |
+| `projectionN` | `Vector` | Unit normal of the minimum-translation axis |
+| `projectionV` | `Vector` | MTV = `projectionN × overlap` — the push-out vector |
+| `shapeAinB` | `boolean` | `true` if A is fully inside B |
+| `shapeBinA` | `boolean` | `true` if B is fully inside A |
+| `shapeA` | `Collidable` | Reference to the first shape |
+| `shapeB` | `Collidable` | Reference to the second shape |
+
+`collidesWith` returns `null` in two distinct cases:
+
+1. **The shapes do not overlap** — the usual no-contact case.
+2. **The pair is not implemented** — e.g. `Line` against any shape, or `Ellipse` against `Ellipse` / `Polygon`. Use `intersectsWith` for boolean overlap when the pair may not support a response.
+
+Supported response pairs in the current implementation:
+- `Rectangle.collidesWith` — SceneNode, Rectangle, Polygon, Circle, Ellipse.
+- `Circle.collidesWith` — SceneNode, Rectangle, Polygon, Circle, Ellipse.
+- `Polygon.collidesWith` — SceneNode, Rectangle, Polygon, Circle.
+- `Ellipse.collidesWith` — SceneNode, Rectangle, Circle.
+- `Line.collidesWith` — always `null`; use `intersectsWith` instead.
+
+## Resolving collisions: using projectionV
+
+`projectionV` is the minimum-translation vector (MTV): the smallest displacement that separates the two shapes. Move the caller by `projectionV` and the shapes no longer overlap.
 
 ```js
-const response = shapeA.collidesWith(shapeB);
+// Top-down wall blocking — push the player out of the wall
+const response = player.collidesWith(wall);
 
 if (response) {
-    console.log(response.overlap);       // penetration depth (positive number)
-    console.log(response.projectionN);   // unit normal of minimum translation axis
-    console.log(response.projectionV);   // MTV = projectionN * overlap (push-out vector)
-    console.log(response.shapeAinB);     // true if A is fully inside B
-    console.log(response.shapeBinA);     // true if B is fully inside A
-
-    // Push shapeA out of shapeB
-    shapeA.position.add(response.projectionV);
+    player.move(response.projectionV.x, response.projectionV.y);
 }
 ```
 
-The minimum translation vector (MTV) is the smallest displacement that separates the two shapes. Adding it to `shapeA.position` pushes A out of B. For one-way collisions (player pushed out of wall), move the player by the MTV. For two-way collisions, split the MTV proportionally.
+`player.move(dx, dy)` is equivalent to `player.setPosition(player.x + dx, player.y + dy)` — both work.
 
-Collision response is not universal across all shape pairs. In the current public implementation:
-- `Rectangle.collidesWith` supports SceneNode/Rectangle/Polygon/Circle/Ellipse.
-- `Circle.collidesWith` supports SceneNode/Rectangle/Polygon/Circle/Ellipse.
-- `Polygon.collidesWith` supports SceneNode/Rectangle/Polygon/Circle.
-- `Ellipse.collidesWith` supports SceneNode/Rectangle/Circle.
-- `Line.collidesWith` and point (`Vector`) `collidesWith` return `null`.
+For two-way separation (two dynamic objects), split the MTV:
 
-Pairs outside these combinations return `null` from `collidesWith` and should use `intersectsWith` for boolean overlap.
+```js
+const response = a.collidesWith(b);
+
+if (response) {
+    const halfX = response.projectionV.x * 0.5;
+    const halfY = response.projectionV.y * 0.5;
+
+    a.move(halfX, halfY);
+    b.move(-halfX, -halfY);
+}
+```
+
+### Using projectionN for directional logic
+
+`projectionN` is the unit normal of the contact surface. Use it to classify which side was hit — without it you cannot distinguish "landed on the floor" from "hit a wall":
+
+```js
+const response = player.collidesWith(surface);
+
+if (response) {
+    // Separate first
+    player.move(response.projectionV.x, response.projectionV.y);
+
+    // Then classify direction
+    if (response.projectionN.y < -0.7) {
+        // Normal points upward — player is on a floor
+        player.isGrounded = true;
+    } else if (Math.abs(response.projectionN.x) > 0.7) {
+        // Normal is mostly horizontal — player hit a wall
+    }
+}
+```
+
+The sign convention: `projectionN` points **from shapeB toward shapeA** (away from the surface the caller is being pushed out of).
 
 ## Point containment: contains
 
@@ -138,6 +186,87 @@ for (const item of nearby) {
 
 The engine's hit-test system uses a quadtree internally. You can visualise the quadtree partitions through the [`HitTestLayer`](/ExoJS/en/api/hit-test-layer/) debug overlay — quadrant boundaries are drawn as faint gray lines.
 
+## Swept (continuous) collision detection
+
+Discrete collision checks test whether two shapes overlap at their **current position**. Fast-moving objects can pass straight through a thin wall between frames — this is the tunneling problem.
+
+ExoJS provides swept collision functions in `swept-collision.ts` for the most common gameplay pairs. A sweep moves a shape by a delta vector `(dx, dy)` and returns the earliest impact along the path as a `SweptHit`:
+
+```ts
+interface SweptHit {
+    t: number;       // fraction of move at first contact (0 = already overlapping, 1 = just touches)
+    x: number;       // hit position X (where the moving shape's origin lands)
+    y: number;       // hit position Y
+    normalX: number; // contact normal pointing away from the target
+    normalY: number;
+}
+```
+
+### Available sweep functions
+
+```js
+import {
+    sweepRectangle,
+    sweepCircleVsRectangle,
+    sweepCircleVsCircle,
+    sweepRectangleAgainst,
+    sweepCircleAgainst,
+    substepSweep,
+} from '@codexo/exojs';
+```
+
+| Function | Moving shape | Target | Notes |
+|----------|-------------|--------|-------|
+| `sweepRectangle` | Rectangle | Rectangle | Slab method, exact |
+| `sweepCircleVsCircle` | Circle | Circle | Quadratic, exact |
+| `sweepCircleVsRectangle` | Circle | Rectangle | Minkowski expansion (V1 — slightly over-collides at corners) |
+| `sweepRectangleAgainst` | Rectangle | Rectangle[] | Batch — returns earliest hit across all targets |
+| `sweepCircleAgainst` | Circle | Circle[] | Batch — returns earliest hit across all targets |
+| `substepSweep` | any | any | Generator of evenly-spaced snapshots for arbitrary pair discrete-step fallback |
+
+### Tunneling-safe movement
+
+```js
+import { sweepRectangle } from '@codexo/exojs';
+
+// In your update loop:
+const playerBounds = player.getBounds();
+const hit = sweepRectangle(playerBounds, velocityX * delta, velocityY * delta, wall.getBounds());
+
+if (hit !== null) {
+    // Move only as far as the impact point
+    player.move(hit.x - playerBounds.x, hit.y - playerBounds.y);
+
+    // Optionally slide along the surface by removing the normal component
+    const remaining = 1 - hit.t;
+    const dot = velocityX * hit.normalX + velocityY * hit.normalY;
+    const slideX = (velocityX - dot * hit.normalX) * remaining * delta;
+    const slideY = (velocityY - dot * hit.normalY) * remaining * delta;
+    player.move(slideX, slideY);
+} else {
+    // No hit — full move
+    player.move(velocityX * delta, velocityY * delta);
+}
+```
+
+`sweepRectangle` handles the already-overlapping case: it returns `t = 0` with the deepest-penetration-axis normal so you can resolve immediately without a separate discrete check.
+
+The batch helpers (`sweepRectangleAgainst`, `sweepCircleAgainst`) include a swept-AABB broadphase skip — they skip targets whose bounds do not overlap the swept path at all before running the precise test. Use them when you have a list of static tiles or obstacles.
+
+`substepSweep` is a fallback generator for shape pairs that lack a closed-form swept test. It yields evenly-spaced snapshots along the move path so you can run your own `intersectsWith` check at each step:
+
+```js
+import { substepSweep } from '@codexo/exojs';
+
+for (const snapshot of substepSweep(fromX, fromY, dx, dy, maxStepSize)) {
+    polygon.setPosition(snapshot.x, snapshot.y);
+    if (polygon.intersectsWith(target)) {
+        // Hit at snapshot.t — resolve here
+        break;
+    }
+}
+```
+
 ## When the built-in system fits
 
 ExoJS collision is the right choice for:
@@ -145,8 +274,9 @@ ExoJS collision is the right choice for:
 - Overlap-based triggers (pickups, zone entries, sensor volumes)
 - Hit testing smarter than simple AABB
 - Tile-grid or quadtree-spatial broad-phase narrowing
+- Fast-moving objects where tunneling is a concern (use the sweep functions)
 
-It is not a replacement for a full physics engine. If you need joints, continuous collision detection, swept volumes, or complex constraint chains, integrate a dedicated physics library and feed ExoJS drawable transforms from the physics step.
+It is not a replacement for a full physics engine. If you need joints, rigid-body simulation, constraint chains, or restitution, integrate a dedicated physics library and feed ExoJS drawable transforms from the physics step.
 
 ## Examples
 

@@ -29,9 +29,15 @@ export interface Collidable {
    */
   intersectsWith(target: Collidable): boolean;
   /**
-   * Compute a full {@link CollisionResponse} between this shape and `target`,
-   * or `null` when they do not overlap. Returns `null` for shape-pair
-   * combinations not yet implemented.
+   * Compute a full {@link CollisionResponse} between this shape and `target`.
+   * Returns `null` in two cases:
+   * - the shapes do not overlap, **or**
+   * - the specific shape-pair combination does not support response generation
+   *   (e.g. `Line` against any shape, `Ellipse` against `Ellipse` or
+   *   `Polygon`).
+   *
+   * Use {@link intersectsWith} for a universal boolean overlap check that works
+   * across all supported shape pairs.
    */
   collidesWith(target: Collidable): CollisionResponse | null;
   /** Returns `true` if the point `(x, y)` is inside this shape. */
