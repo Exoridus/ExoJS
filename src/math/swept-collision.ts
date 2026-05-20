@@ -1,5 +1,5 @@
 import type { CircleLike } from './CircleLike';
-import { Rectangle } from './Rectangle';
+import type { Rectangle } from './Rectangle';
 
 /**
  * Result of a swept-collision query. The moving shape's reference point
@@ -113,34 +113,136 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
 }
 
 // ---------------------------------------------------------------------------
-// sweepCircleVsRectangle — expanded-AABB simple fallback (V1)
+// sweepCircleVsRectangle — full Minkowski rounded-rectangle formulation
 // ---------------------------------------------------------------------------
 
 /**
- * Swept circle vs. axis-aligned box.
+ * Swept circle vs. axis-aligned box using the exact Minkowski rounded-rectangle
+ * boundary.
  *
- * **V1 implementation** uses the simple Minkowski expansion fallback:
- * the target rectangle is expanded by `circle.radius` on all sides, then
- * `sweepRectangle` is run treating the circle centre as a zero-sized moving
- * box.  This over-collides at rectangle corners (the circle collides with the
- * expanded-rect's flat face when geometrically it should curve around the
- * corner), producing slightly early hits in corner-quadrant trajectories —
- * a known and acceptable accuracy trade-off for V1.
+ * The Minkowski sum of a circle (radius `r`) and a rectangle is a rounded
+ * rectangle: four flat faces offset outward by `r`, connected by quarter-circle
+ * arcs of radius `r` at each corner.  The circle centre is tested against each
+ * boundary region separately:
  *
- * TODO (V2): Replace with the full Minkowski rounded-rectangle formulation
- * that handles the four corner quadrants with per-corner circle-vs-circle
- * sub-tests.
+ * - **Flat face** — slab entry time (exact); only valid when the circle centre
+ *   lands within the face's extent at impact (not a corner arc region).
+ * - **Corner arc** — quadratic equation `|centre(t) − corner|² = r²` (exact).
+ *
+ * The earliest valid hit across all eight tests is returned. This eliminates
+ * the corner over-collision produced by the simpler expanded-AABB approach.
+ *
+ * Already-overlapping case: returns `t = 0` with the normal of the
+ * minimum-penetration axis.
  */
 export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, deltaY: number, target: Rectangle): SweptHit | null {
   const r = moving.radius;
+  const cx = moving.x;
+  const cy = moving.y;
 
-  // Expanded target: grow each side by the circle radius
-  const expanded = new Rectangle(target.x - r, target.y - r, target.width + r * 2, target.height + r * 2);
+  const left = target.x;
+  const right = target.x + target.width;
+  const top = target.y;
+  const bottom = target.y + target.height;
 
-  // Treat the circle centre as a zero-sized moving box
-  const centreBox = new Rectangle(moving.x, moving.y, 0, 0);
+  // Already-overlapping: closest point on rect to circle centre
+  const clampX = Math.max(left, Math.min(cx, right));
+  const clampY = Math.max(top, Math.min(cy, bottom));
+  const initDx = cx - clampX;
+  const initDy = cy - clampY;
 
-  return sweepRectangle(centreBox, deltaX, deltaY, expanded);
+  if (initDx * initDx + initDy * initDy <= r * r) {
+    const dist = Math.sqrt(initDx * initDx + initDy * initDy);
+
+    if (dist > 0) {
+      return { t: 0, x: cx, y: cy, normalX: initDx / dist, normalY: initDy / dist };
+    }
+
+    // Centre inside rect — push along axis with least penetration
+    const exitLeft = cx - left;
+    const exitRight = right - cx;
+    const exitTop = cy - top;
+    const exitBottom = bottom - cy;
+
+    if (Math.min(exitLeft, exitRight) <= Math.min(exitTop, exitBottom)) {
+      return { t: 0, x: cx, y: cy, normalX: exitLeft < exitRight ? -1 : 1, normalY: 0 };
+    }
+
+    return { t: 0, x: cx, y: cy, normalX: 0, normalY: exitTop < exitBottom ? -1 : 1 };
+  }
+
+  if (deltaX === 0 && deltaY === 0) return null;
+
+  let bestT = Infinity;
+  let bestNX = 0;
+  let bestNY = 0;
+
+  const tryHit = (t: number, nx: number, ny: number): void => {
+    if (t >= 0 && t <= 1 && t < bestT) {
+      bestT = t;
+      bestNX = nx;
+      bestNY = ny;
+    }
+  };
+
+  // Flat face tests — circle centre must reach the expanded face plane
+  // and land within the face's extent (not a corner arc region).
+  if (deltaX !== 0) {
+    const tL = (left - r - cx) / deltaX;
+    if (tL >= 0 && tL <= 1) {
+      const hy = cy + deltaY * tL;
+      if (hy >= top && hy <= bottom) tryHit(tL, -1, 0);
+    }
+    const tR = (right + r - cx) / deltaX;
+    if (tR >= 0 && tR <= 1) {
+      const hy = cy + deltaY * tR;
+      if (hy >= top && hy <= bottom) tryHit(tR, 1, 0);
+    }
+  }
+
+  if (deltaY !== 0) {
+    const tT = (top - r - cy) / deltaY;
+    if (tT >= 0 && tT <= 1) {
+      const hx = cx + deltaX * tT;
+      if (hx >= left && hx <= right) tryHit(tT, 0, -1);
+    }
+    const tB = (bottom + r - cy) / deltaY;
+    if (tB >= 0 && tB <= 1) {
+      const hx = cx + deltaX * tB;
+      if (hx >= left && hx <= right) tryHit(tB, 0, 1);
+    }
+  }
+
+  // Corner arc tests — solve |(cx + dx·t, cy + dy·t) − corner|² = r²
+  // for each of the four rect corners (quadratic in t).
+  const a = deltaX * deltaX + deltaY * deltaY;
+  const cornerXs = [left, right, left, right];
+  const cornerYs = [top, top, bottom, bottom];
+
+  for (let i = 0; i < 4; i++) {
+    const corX = cornerXs[i];
+    const corY = cornerYs[i];
+    const cdx = cx - corX;
+    const cdy = cy - corY;
+    const b = 2 * (cdx * deltaX + cdy * deltaY);
+    const c = cdx * cdx + cdy * cdy - r * r;
+    const disc = b * b - 4 * a * c;
+
+    if (disc < 0) continue;
+
+    const t = (-b - Math.sqrt(disc)) / (2 * a);
+
+    if (t < 0 || t > 1) continue;
+
+    const hitX = cx + deltaX * t;
+    const hitY = cy + deltaY * t;
+
+    tryHit(t, (hitX - corX) / r, (hitY - corY) / r);
+  }
+
+  if (bestT > 1) return null;
+
+  return { t: bestT, x: cx + deltaX * bestT, y: cy + deltaY * bestT, normalX: bestNX, normalY: bestNY };
 }
 
 // ---------------------------------------------------------------------------

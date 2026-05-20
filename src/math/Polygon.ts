@@ -254,16 +254,12 @@ export class Polygon implements ShapeLike {
   public collidesWith(target: Collidable): CollisionResponse | null {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return getCollisionSat(this, target);
       case CollisionType.Rectangle:
-        return getCollisionSat(this, target);
       case CollisionType.Polygon:
+      case CollisionType.Ellipse:
         return getCollisionSat(this, target);
       case CollisionType.Circle:
         return getCollisionPolygonCircle(this, target as Circle);
-      // case CollisionType.Ellipse: return intersectionEllipsePoly(target as Ellipse, this);
-      // case CollisionType.Line: return intersectionLinePoly(target as Line, this);
-      // case CollisionType.Point: return intersectionPointPoly(target as Vector, this);
       default:
         return null;
     }

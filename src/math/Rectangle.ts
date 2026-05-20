@@ -274,8 +274,6 @@ export class Rectangle implements ShapeLike {
         return getCollisionCircleRectangle(target as Circle, this, true);
       case CollisionType.Ellipse:
         return getCollisionEllipseRectangle(target as Ellipse, this, true);
-      // case CollisionType.Line: return intersectionLineRect(target as Line, this);
-      // case CollisionType.Point: return intersectionPointRect(target as Vector, this);
       default:
         return null;
     }

@@ -302,9 +302,12 @@ const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => 
 
 /**
  * Compute a {@link CollisionResponse} for two overlapping axis-aligned
- * rectangles. Returns `null` when they do not overlap. Note: `projectionN` and
- * `projectionV` are zero vectors in this implementation — only `overlap` and
- * containment flags are meaningful.
+ * rectangles. Returns `null` when they do not overlap.
+ *
+ * `projectionN` is the unit normal of the minimum-penetration axis;
+ * `projectionV` is the minimum-translation vector — moving `rectA` by
+ * `projectionV` separates the two rectangles with the smallest possible
+ * displacement.
  */
 const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): CollisionResponse | null => {
   if (rectB.left > rectA.right || rectB.top > rectA.bottom) {
@@ -697,6 +700,63 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
 };
 
 /**
+ * Compute a {@link CollisionResponse} between two axis-aligned ellipses.
+ * Returns `null` when they do not overlap.
+ *
+ * Uses the centre-to-centre axis as the separation axis and computes each
+ * ellipse's exact boundary distance along that direction via the formula
+ * `sqrt((nx·rx)² + (ny·ry)²)`.  This is exact when the minimum-penetration
+ * axis coincides with the centre axis (e.g. circles, concentric ellipses) and
+ * a good approximation otherwise — equivalent in quality to the axis-projection
+ * approach used for ellipse-vs-circle and ellipse-vs-rectangle.
+ */
+const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): CollisionResponse | null => {
+  if (!intersectionEllipseEllipse(ellipseA, ellipseB)) return null;
+
+  const dx = ellipseA.x - ellipseB.x;
+  const dy = ellipseA.y - ellipseB.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  let normalX: number;
+  let normalY: number;
+  let overlap: number;
+
+  if (distance > 0) {
+    normalX = dx / distance;
+    normalY = dy / distance;
+    const boundaryA = Math.sqrt((normalX * ellipseA.rx) ** 2 + (normalY * ellipseA.ry) ** 2);
+    const boundaryB = Math.sqrt((normalX * ellipseB.rx) ** 2 + (normalY * ellipseB.ry) ** 2);
+    overlap = boundaryA + boundaryB - distance;
+  } else {
+    // Coincident centres — push along the smaller axis of ellipseA
+    if (ellipseA.rx <= ellipseA.ry) {
+      normalX = 1;
+      normalY = 0;
+      overlap = ellipseA.rx + ellipseB.rx;
+    } else {
+      normalX = 0;
+      normalY = 1;
+      overlap = ellipseA.ry + ellipseB.ry;
+    }
+  }
+
+  if (overlap <= 0) return null;
+
+  const projectionN = ellipseA.position.clone().set(normalX, normalY);
+  const projectionV = ellipseA.position.clone().set(normalX * overlap, normalY * overlap);
+
+  return {
+    shapeA: ellipseA,
+    shapeB: ellipseB,
+    overlap,
+    shapeAinB: false,
+    shapeBinA: false,
+    projectionN,
+    projectionV,
+  };
+};
+
+/**
  * Full SAT collision response for any two {@link Collidable} shapes. Tests all
  * edge normals from both shapes and computes the minimum-translation axis.
  * Returns `null` when they do not overlap.
@@ -794,6 +854,7 @@ export {
   getCollisionCircleCircle,
   getCollisionCircleRectangle,
   getCollisionEllipseCircle,
+  getCollisionEllipseEllipse,
   getCollisionEllipseRectangle,
   getCollisionPolygonCircle,
   getCollisionRectangleRectangle,
