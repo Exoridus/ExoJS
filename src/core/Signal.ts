@@ -29,6 +29,11 @@ export class Signal<Args extends unknown[] = []> {
   private _dispatching = false;
   private _pendingRemoves: SignalHandler<Args>[] | null = null;
 
+  /** Number of currently registered listeners. */
+  public get count(): number {
+    return this._handlers.length;
+  }
+
   /** `true` when `handler` is currently registered. */
   public has(handler: SignalHandler<Args>): boolean {
     return this._handlers.includes(handler);

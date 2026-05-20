@@ -612,7 +612,7 @@ describe('BeatDetector', () => {
       d.onBeat.add(handler);
       d.destroy();
       // After destroy, the signal is cleared — no more handlers
-      expect(d.onBeat.bindings.length).toBe(0);
+      expect(d.onBeat.count).toBe(0);
     });
   });
 

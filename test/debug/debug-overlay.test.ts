@@ -130,11 +130,11 @@ describe('DebugOverlay — lifecycle', () => {
     const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
 
-    expect(app.onFrame.bindings.length).toBe(0);
+    expect(app.onFrame.count).toBe(0);
 
     const debug = new DebugOverlay(app);
 
-    expect(app.onFrame.bindings.length).toBe(1);
+    expect(app.onFrame.count).toBe(1);
 
     debug.destroy();
   });
@@ -143,11 +143,11 @@ describe('DebugOverlay — lifecycle', () => {
     const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
 
-    expect(app.input.onKeyDown.bindings.length).toBe(0);
+    expect(app.input.onKeyDown.count).toBe(0);
 
     const debug = new DebugOverlay(app);
 
-    expect(app.input.onKeyDown.bindings.length).toBe(1);
+    expect(app.input.onKeyDown.count).toBe(1);
 
     debug.destroy();
   });
@@ -167,13 +167,13 @@ describe('DebugOverlay — lifecycle', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    expect(app.onFrame.bindings.length).toBe(1);
-    expect(app.input.onKeyDown.bindings.length).toBe(1);
+    expect(app.onFrame.count).toBe(1);
+    expect(app.input.onKeyDown.count).toBe(1);
 
     debug.destroy();
 
-    expect(app.onFrame.bindings.length).toBe(0);
-    expect(app.input.onKeyDown.bindings.length).toBe(0);
+    expect(app.onFrame.count).toBe(0);
+    expect(app.input.onKeyDown.count).toBe(0);
   });
 });
 
