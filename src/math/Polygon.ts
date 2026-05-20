@@ -89,11 +89,6 @@ export class Polygon implements ShapeLike {
     return this._edges;
   }
 
-  /** @deprecated Use {@link getNormals} for a stable cached reference. */
-  public get normals(): Vector[] {
-    return this.getNormals();
-  }
-
   public setPosition(x: number, y: number): this {
     this._position.set(x, y);
     this._normalsDirty = true;
