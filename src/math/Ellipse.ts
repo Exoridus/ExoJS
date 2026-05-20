@@ -4,7 +4,9 @@ import type { Collidable, CollisionResponse } from '@/math/Collision';
 import { CollisionType } from '@/math/Collision';
 import {
   getCollisionEllipseCircle,
+  getCollisionEllipseEllipse,
   getCollisionEllipseRectangle,
+  getCollisionSat,
   intersectionCircleEllipse,
   intersectionEllipseEllipse,
   intersectionEllipsePoly,
@@ -24,11 +26,8 @@ import { Vector } from '@/math/Vector';
  * separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements
  * {@link ShapeLike} for use in the intersection pipeline.
  *
- * `collidesWith` returns a {@link CollisionResponse} for ellipse-vs-rectangle
- * (axis-aligned), ellipse-vs-circle, and ellipse-vs-{@link SceneNode} (which
- * collides against the node's AABB). Other targets — ellipse-vs-ellipse,
- * ellipse-vs-polygon, and ellipse-vs-line — return `null`; use
- * {@link Ellipse.intersectsWith} for boolean tests against those.
+ * `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and
+ * Ellipse. Ellipse-vs-Line always returns `null` — use `intersectsWith`.
  */
 export class Ellipse implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Ellipse;
@@ -128,7 +127,10 @@ export class Ellipse implements ShapeLike {
   }
 
   public project(axis: Vector, result: Interval = new Interval()): Interval {
-    return result;
+    const centerProj = this.x * axis.x + this.y * axis.y;
+    const halfExtent = Math.sqrt((this.rx * axis.x) ** 2 + (this.ry * axis.y) ** 2);
+
+    return result.set(centerProj - halfExtent, centerProj + halfExtent);
   }
 
   public intersectsWith(target: Collidable): boolean {
@@ -160,6 +162,10 @@ export class Ellipse implements ShapeLike {
         return getCollisionEllipseRectangle(this, target as Rectangle);
       case CollisionType.Circle:
         return getCollisionEllipseCircle(this, target as Circle);
+      case CollisionType.Polygon:
+        return getCollisionSat(this, target);
+      case CollisionType.Ellipse:
+        return getCollisionEllipseEllipse(this, target as Ellipse);
       default:
         return null;
     }

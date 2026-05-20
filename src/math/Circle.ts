@@ -246,8 +246,6 @@ export class Circle implements ShapeLike {
         return getCollisionCircleCircle(this, target as Circle);
       case CollisionType.Ellipse:
         return getCollisionEllipseCircle(target as Ellipse, this, true);
-      // case CollisionType.Line: return intersectionLineCircle(target as Line, this);
-      // case CollisionType.Point: return intersectionPointCircle(target as Vector, this);
       default:
         return null;
     }
