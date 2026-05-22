@@ -5,7 +5,7 @@ import { Container } from '@/rendering/Container';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderNode } from '@/rendering/RenderNode';
-import { DynamicText as Text } from '@/rendering/text/DynamicText';
+import { Text as Text } from '@/rendering/text/Text';
 import { TextStyle } from '@/rendering/text/TextStyle';
 
 import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';

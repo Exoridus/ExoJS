@@ -7,7 +7,7 @@ import type { LayoutOptions } from './LayoutOptions';
 import { buildTextPageQuads, layoutText } from './TextLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
-import type { TextPageQuads } from './types';
+import type { TextPageQuads, TextSize } from './types';
 
 export type { TextPageQuads };
 
@@ -16,18 +16,17 @@ export type { TextPageQuads };
  * per-font-variant {@link GlyphAtlas} using the SDF (Signed Distance Field)
  * technique and renders them through the `text-sdf` shader.
  *
- * **Style mutations are deferred:** mutating a property on `text.style`
- * (e.g. `text.style.fontSize = 32`) marks the style dirty. The geometry is
- * rebuilt on the next {@link update} call. Replacing the style object or
- * changing the text string rebuilds immediately.
+ * Style mutations are applied automatically before the next draw — no manual
+ * `update()` call required. Mutating `text.style` any number of times in the
+ * same frame is cheap; the geometry is rebuilt at most once, on demand.
  *
  * ```ts
- * const label = new DynamicText('Hello', { fontSize: 24 });
+ * const label = new Text('Hello', { fontSize: 24 });
  * scene.addChild(label);
  *
  * label.style.fillColor = Color.red;   // cheap — no atlas work
  * label.style.outlineWidth = 0.08;     // cheap — only shader uniforms
- * label.update(dt);                     // apply deferred changes each frame
+ * // changes are picked up automatically on the next render pass
  * ```
  *
  * **FontFace-first:** load fonts via {@link FontFactory} before constructing
@@ -36,7 +35,7 @@ export type { TextPageQuads };
  *
  * ```ts
  * const face = await loader.load(FontFactory, 'roboto.woff2', { family: 'Roboto' });
- * const label = new DynamicText('Score: 0', { font: face, fontSize: 24 });
+ * const label = new Text('Score: 0', { font: face, fontSize: 24 });
  * scene.addChild(label); // renders immediately with Roboto
  * ```
  *
@@ -44,7 +43,7 @@ export type { TextPageQuads };
  * options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
  * @stable
  */
-export class DynamicText extends AbstractText {
+export class Text extends AbstractText {
   private _style: TextStyle;
   private _layout: LayoutOptions;
   private _colorGlyphs: boolean;
@@ -58,6 +57,7 @@ export class DynamicText extends AbstractText {
 
   /** Per-page quad geometry built by `_rebuild()`. */
   private _pageQuads: TextPageQuads[] = [];
+  private _textBounds: TextSize = { width: 0, height: 0 };
 
   public constructor(
     text: string,
@@ -142,22 +142,18 @@ export class DynamicText extends AbstractText {
     return this._pageQuads;
   }
 
+  public override get textBounds(): TextSize {
+    return this._textBounds;
+  }
+
   /** The {@link GlyphAtlas} this node currently draws from. */
   public get atlas(): GlyphAtlas | null {
     return this._atlas;
   }
 
-  /**
-   * Check for pending style mutations and apply them. Call once per frame.
-   *
-   * - `'tint'` hint → updates shader uniforms only (no geometry rebuild)
-   * - `'layout'`/`'font'` hint → rebuilds glyph geometry
-   */
-  public override update(dt: number): void {
-    super.update(dt);
+  public override syncDirty(): void {
     const hint = this._style.consumeDirty();
-    if (hint === null) return;
-    if (hint !== 'tint') {
+    if (hint !== null && hint !== 'tint') {
       this._rebuild(hint);
     }
   }
@@ -212,7 +208,8 @@ export class DynamicText extends AbstractText {
   }
 
   private _rebuild(_hint: StyleChangeHint): void {
-    this._pageQuads = [];
+    this._pageQuads  = [];
+    this._textBounds = { width: 0, height: 0 };
 
     if (this._text.length === 0) {
       this._style.consumeDirty();
@@ -229,6 +226,15 @@ export class DynamicText extends AbstractText {
       this._style.consumeDirty();
       return;
     }
+
+    let maxX = 0, maxY = 0;
+    for (const p of placements) {
+      const px = p.x + p.width;
+      const py = p.y + p.height;
+      if (px > maxX) maxX = px;
+      if (py > maxY) maxY = py;
+    }
+    this._textBounds = { width: maxX, height: maxY };
 
     this._pageQuads = buildTextPageQuads(placements);
     this._style.consumeDirty();

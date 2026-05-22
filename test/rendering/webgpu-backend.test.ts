@@ -9,7 +9,7 @@ import { Graphics } from '@/rendering/primitives/Graphics';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import type { Renderer } from '@/rendering/Renderer';
 import { Sprite } from '@/rendering/sprite/Sprite';
-import { DynamicText } from '@/rendering/text/DynamicText';
+import { Text } from '@/rendering/text/Text';
 import { TextStyle } from '@/rendering/text/TextStyle';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
@@ -1133,7 +1133,7 @@ describe('WebGpuBackend', () => {
       const manager = new WebGpuBackend(app);
 
       // "Hi" → 2 glyphs → 2 quads → 12 indices, batched into 1 drawIndexed
-      const text = new DynamicText('Hi', new TextStyle({ fontSize: 16 }));
+      const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
 
       await manager.initialize();
 
@@ -1189,7 +1189,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
-      const text = new DynamicText('Hi', new TextStyle({ fontSize: 16 }));
+      const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
       const firstQuads = text.pageQuads[0];
 
       await manager.initialize();
@@ -1250,7 +1250,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
-      const text = new DynamicText('Hi', new TextStyle({ fontSize: 16 }));
+      const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
       const firstQuads = text.pageQuads[0];
 
       await manager.initialize();

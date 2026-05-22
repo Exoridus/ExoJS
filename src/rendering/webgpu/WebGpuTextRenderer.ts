@@ -1,8 +1,8 @@
 /// <reference types="@webgpu/types" />
 
 import { BitmapText } from '@/rendering/text/BitmapText';
-import { DynamicText } from '@/rendering/text/DynamicText';
-import type { TextPageQuads } from '@/rendering/text/DynamicText';
+import { Text } from '@/rendering/text/Text';
+import type { TextPageQuads } from '@/rendering/text/Text';
 import type { Texture } from '@/rendering/texture/Texture';
 import { BlendModes } from '@/rendering/types';
 
@@ -65,14 +65,14 @@ interface TextDrawCall {
 }
 
 /**
- * WebGPU renderer for {@link DynamicText} and {@link BitmapText} nodes.
+ * WebGPU renderer for {@link Text} and {@link BitmapText} nodes.
  *
  * Uses a minimal mesh-like pipeline that samples the atlas texture with a
  * tint multiplier. Full SDF effects (outline, shadow, gradient) are handled
  * by the WebGL2 backend's `text-sdf` shader; this backend provides correct
  * visual output using a simplified alpha-from-red-channel approach.
  */
-export class WebGpuTextRenderer extends AbstractWebGpuRenderer<DynamicText | BitmapText> {
+export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText> {
   private _device: GPUDevice | null = null;
   private _pipeline: GPURenderPipeline | null = null;
   private _uniformLayout: GPUBindGroupLayout | null = null;
@@ -93,12 +93,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<DynamicText | Bit
   private _totalVertices = 0;
   private _totalIndices = 0;
 
-  public render(node: DynamicText | BitmapText): void {
+  public render(node: Text | BitmapText): void {
     const backend = this.getBackend();
     const pageQuads = node.pageQuads;
     if (pageQuads.length === 0) return;
 
-    const textures = node instanceof DynamicText
+    const textures = node instanceof Text
       ? (node.atlas?.pages.map(p => p.texture) ?? [])
       : [...node.textures];
 
@@ -108,7 +108,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<DynamicText | Bit
     const localMatrix = node.getGlobalTransform().toArray(false);
     const combined = _multiplyMat3(projMatrix, localMatrix);
 
-    const fillColor = node instanceof DynamicText ? node.style.fillColor : null;
+    const fillColor = node instanceof Text ? node.style.fillColor : null;
     const tint = new Float32Array([
       fillColor ? fillColor.r / 255 : 1,
       fillColor ? fillColor.g / 255 : 1,

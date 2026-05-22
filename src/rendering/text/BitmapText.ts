@@ -7,7 +7,7 @@ import type { LayoutOptions } from './LayoutOptions';
 import { buildTextPageQuads, layoutText } from './TextLayout';
 import { TextStyle } from './TextStyle';
 import type { TextStyleOptions } from './TextStyle';
-import type { GlyphInfo, GlyphProvider, TextLayoutStyle, TextPageQuads } from './types';
+import type { GlyphInfo, GlyphProvider, TextLayoutStyle, TextPageQuads, TextSize } from './types';
 
 export type { BmFontChar, BmFontData } from './BmFont';
 
@@ -135,6 +135,7 @@ export class BitmapText extends AbstractText {
 
   /** Per-page quad geometry consumed by the text renderer. */
   private _pageQuads: TextPageQuads[] = [];
+  private _textBounds: TextSize = { width: 0, height: 0 };
   private _adapter: BmFontAdapter;
 
   public constructor(text: string, font: BmFont, options: BitmapTextOptions = {}) {
@@ -206,6 +207,10 @@ export class BitmapText extends AbstractText {
     return this._pageQuads;
   }
 
+  public override get textBounds(): TextSize {
+    return this._textBounds;
+  }
+
   /** The page textures this node draws from. */
   public get textures(): readonly Texture[] {
     return this._font.textures;
@@ -228,7 +233,8 @@ export class BitmapText extends AbstractText {
   // ── Private ──────────────────────────────────────────────────────────────
 
   private _rebuild(): void {
-    this._pageQuads = [];
+    this._pageQuads  = [];
+    this._textBounds = { width: 0, height: 0 };
     if (this._text.length === 0) return;
 
     // Derive a TextLayoutStyle from the BMFont descriptor + scale.
@@ -242,6 +248,16 @@ export class BitmapText extends AbstractText {
     };
 
     const placements = layoutText(this._text, layoutStyle, this._layout, this._adapter);
+
+    let maxX = 0, maxY = 0;
+    for (const p of placements) {
+      const px = p.x + p.width;
+      const py = p.y + p.height;
+      if (px > maxX) maxX = px;
+      if (py > maxY) maxY = py;
+    }
+    this._textBounds = { width: maxX, height: maxY };
+
     this._pageQuads = buildTextPageQuads(placements);
   }
 }

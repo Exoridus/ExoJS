@@ -10,7 +10,7 @@ import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { Keyboard } from '@/input/types';
 
-// Stub the glyph atlas pool so DynamicText construction never touches a
+// Stub the glyph atlas pool so Text construction never touches a
 // real 2D canvas context (jsdom's canvas does not implement measureText).
 const fakeGlyph = {
   x: 0, y: 0, width: 6, height: 10, advance: 6, ascent: 8, page: 0,

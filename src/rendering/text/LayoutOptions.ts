@@ -1,6 +1,6 @@
 /**
  * Controls text flow and overflow — separate from {@link TextStyle} which
- * describes visual appearance. Pass to {@link DynamicText} or {@link layoutText}.
+ * describes visual appearance. Pass to {@link Text} or {@link layoutText}.
  */
 export interface LayoutOptions {
   /** Word-wrap boundary in pixels. Lines exceeding this width are broken at word boundaries. */

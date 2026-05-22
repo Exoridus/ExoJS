@@ -56,7 +56,7 @@ export interface TextStyleOptions {
   /**
    * A pre-constructed {@link FontFace} to use as the font for this node.
    *
-   * When passed to {@link DynamicText}, the face is automatically registered
+   * When passed to {@link Text}, the face is automatically registered
    * with `document.fonts`. Load the face via {@link FontFactory} before
    * constructing the node so glyphs render immediately.
    *
@@ -64,7 +64,7 @@ export interface TextStyleOptions {
    *
    * ```ts
    * const face = await loader.load(FontFactory, 'roboto.woff2', { family: 'Roboto' });
-   * const label = new DynamicText('Score: 0', { font: face, fontSize: 24 });
+   * const label = new Text('Score: 0', { font: face, fontSize: 24 });
    * ```
    */
   font?: FontFace;
@@ -104,7 +104,7 @@ export interface TextStyleOptions {
 }
 
 /**
- * Describes how a {@link DynamicText} node renders its string.
+ * Describes how a {@link Text} node renders its string.
  *
  * Every setter marks the style dirty with a {@link StyleChangeHint} so that
  * the owning node can batch-rebuild efficiently on the next frame:
