@@ -1,16 +1,16 @@
 /**
- * Tests for DynamicText.
+ * Tests for Text.
  *
- * DynamicText uses GlyphAtlasPool internally. A mock pool is injected via
+ * Text uses GlyphAtlasPool internally. A mock pool is injected via
  * resetDefaultGlyphAtlasPool so the atlas provides deterministic GlyphInfo
  * without a real canvas.
  *
- * DynamicText now extends Drawable (via AbstractText) rather than Container.
+ * Text now extends Drawable (via AbstractText) rather than Container.
  * It stores geometry internally as TextPageQuads instead of Mesh children.
  */
 
 import { Drawable } from '@/rendering/Drawable';
-import { DynamicText } from '@/rendering/text/DynamicText';
+import { Text } from '@/rendering/text/Text';
 import type { GlyphAtlas } from '@/rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
@@ -72,34 +72,34 @@ afterEach(() => { resetDefaultGlyphAtlasPool(); });
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('DynamicText', () => {
+describe('Text', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   test('extends Drawable', () => {
-    const text = new DynamicText('Hello');
+    const text = new Text('Hello');
     expect(text).toBeInstanceOf(Drawable);
   });
 
   test('constructor sets text property correctly', () => {
-    const text = new DynamicText('Hello');
+    const text = new Text('Hello');
     expect(text.text).toBe('Hello');
   });
 
   test('empty string creates no page quads', () => {
-    const text = new DynamicText('');
+    const text = new Text('');
     expect(text.pageQuads).toHaveLength(0);
   });
 
   test('non-empty text creates at least one page quad batch', () => {
-    const text = new DynamicText('Hi');
+    const text = new Text('Hi');
     expect(text.pageQuads.length).toBeGreaterThanOrEqual(1);
     expect(text.pageQuads[0].quadCount).toBeGreaterThanOrEqual(1);
   });
 
   test('text setter with different value triggers geometry rebuild', () => {
-    const text = new DynamicText('Hello');
+    const text = new Text('Hello');
     const firstQuads = text.pageQuads[0];
 
     text.text = 'World';
@@ -109,7 +109,7 @@ describe('DynamicText', () => {
   });
 
   test('text setter with same value does not trigger rebuild', () => {
-    const text = new DynamicText('Hello');
+    const text = new Text('Hello');
     const firstQuads = text.pageQuads[0];
 
     text.text = 'Hello';
@@ -118,7 +118,7 @@ describe('DynamicText', () => {
   });
 
   test('style setter rebuilds geometry', () => {
-    const text = new DynamicText('Hi');
+    const text = new Text('Hi');
     const firstQuads = text.pageQuads[0];
 
     text.style = new TextStyle({ fontSize: 32 });
@@ -128,7 +128,7 @@ describe('DynamicText', () => {
   });
 
   test('style setter with plain options object creates a TextStyle', () => {
-    const text = new DynamicText('Hi');
+    const text = new Text('Hi');
 
     text.style = { fontSize: 48, align: 'center' };
 
@@ -138,7 +138,7 @@ describe('DynamicText', () => {
   });
 
   test('setting text to empty string removes all page quads', () => {
-    const text = new DynamicText('Hello');
+    const text = new Text('Hello');
     expect(text.pageQuads.length).toBeGreaterThanOrEqual(1);
 
     text.text = '';
@@ -147,13 +147,13 @@ describe('DynamicText', () => {
 
   test('style getter returns the current TextStyle', () => {
     const style = new TextStyle({ fontSize: 20 });
-    const text = new DynamicText('Hi', style);
+    const text = new Text('Hi', style);
 
     expect(text.style).toBe(style);
   });
 
   test('constructor with TextStyleOptions creates a TextStyle', () => {
-    const text = new DynamicText('Hi', { fontSize: 24, align: 'right' });
+    const text = new Text('Hi', { fontSize: 24, align: 'right' });
 
     expect(text.style).toBeInstanceOf(TextStyle);
     expect(text.style.fontSize).toBe(24);
@@ -161,7 +161,7 @@ describe('DynamicText', () => {
   });
 
   test('destroy() clears page quads', () => {
-    const text = new DynamicText('Hi');
+    const text = new Text('Hi');
     expect(text.pageQuads.length).toBeGreaterThan(0);
 
     text.destroy();
@@ -170,13 +170,13 @@ describe('DynamicText', () => {
   });
 
   test('destroy() on empty text does not throw', () => {
-    const text = new DynamicText('');
+    const text = new Text('');
     expect(() => text.destroy()).not.toThrow();
   });
 
   test('update() with tint-only hint does not rebuild geometry', () => {
     const style = new TextStyle({ fontSize: 16 });
-    const text = new DynamicText('Hi', style);
+    const text = new Text('Hi', style);
     const quadsBefore = text.pageQuads[0];
 
     // Consume initial dirty from constructor
@@ -191,7 +191,7 @@ describe('DynamicText', () => {
 
   test('update() triggers rebuild for layout hint', () => {
     const style = new TextStyle({ fontSize: 16 });
-    const text = new DynamicText('Hi', style);
+    const text = new Text('Hi', style);
     const quadsBefore = text.pageQuads[0];
 
     style.fontSize = 32; // layout hint
@@ -203,7 +203,7 @@ describe('DynamicText', () => {
 
   test('style property mutations are deferred to update()', () => {
     const style = new TextStyle({ fontSize: 16 });
-    const text = new DynamicText('Hi', style);
+    const text = new Text('Hi', style);
     const quadsBefore = text.pageQuads[0];
 
     style.fontFamily = 'Georgia'; // font hint — must NOT rebuild immediately
@@ -215,8 +215,8 @@ describe('DynamicText', () => {
   });
 
   test('colorGlyphs flag is accessible', () => {
-    const normal = new DynamicText('Hi');
-    const emoji = new DynamicText('👋', undefined, undefined, { colorGlyphs: true });
+    const normal = new Text('Hi');
+    const emoji = new Text('👋', undefined, undefined, { colorGlyphs: true });
 
     expect(normal.colorGlyphs).toBe(false);
     expect(emoji.colorGlyphs).toBe(true);
@@ -229,7 +229,7 @@ describe('DynamicText', () => {
 // FontFace-first tests
 // ---------------------------------------------------------------------------
 
-describe('DynamicText — FontFace-first', () => {
+describe('Text — FontFace-first', () => {
   // Minimal FontFace stand-in so instanceof checks work in jsdom.
   class MockFontFace {
     family: string;
@@ -267,14 +267,14 @@ describe('DynamicText — FontFace-first', () => {
 
   test('font option registers face with document.fonts', async () => {
     const face = makeFace();
-    new DynamicText('Hello', { font: face });
+    new Text('Hello', { font: face });
     await flushMicrotasks();
     expect(mockFontsAdd).toHaveBeenCalledWith(face);
   });
 
   test('font option calls face.load()', async () => {
     const face = makeFace();
-    new DynamicText('Hello', { font: face });
+    new Text('Hello', { font: face });
     await flushMicrotasks();
     expect((face as unknown as MockFontFace).load).toHaveBeenCalled();
   });
@@ -282,7 +282,7 @@ describe('DynamicText — FontFace-first', () => {
   test('skips document.fonts.add when face is already registered', async () => {
     mockFontsHas.mockReturnValue(true);
     const face = makeFace();
-    new DynamicText('Hello', { font: face });
+    new Text('Hello', { font: face });
     await flushMicrotasks();
     expect(mockFontsAdd).not.toHaveBeenCalled();
   });
@@ -294,7 +294,7 @@ describe('DynamicText — FontFace-first', () => {
       () => new Promise<void>(r => { resolve = r; }),
     );
 
-    const text = new DynamicText('Hello', { font: face });
+    const text = new Text('Hello', { font: face });
     const quadsBefore = text.pageQuads[0];
 
     resolve();
@@ -311,7 +311,7 @@ describe('DynamicText — FontFace-first', () => {
       () => new Promise<void>(r => { resolve = r; }),
     );
 
-    const text = new DynamicText('Hello', { font: face });
+    const text = new Text('Hello', { font: face });
     const quadsBefore = text.pageQuads.length;
     text.destroy();
     resolve();
@@ -324,7 +324,7 @@ describe('DynamicText — FontFace-first', () => {
   });
 
   test('style setter with font option also triggers face load', async () => {
-    const text = new DynamicText('Hello');
+    const text = new Text('Hello');
     const face = makeFace('NewFont');
     text.style = { font: face, fontSize: 16 };
     await flushMicrotasks();

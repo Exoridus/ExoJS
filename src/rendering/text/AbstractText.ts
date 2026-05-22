@@ -1,11 +1,12 @@
 import { Drawable } from '@/rendering/Drawable';
+import type { TextSize } from './types';
 
 /**
  * Base class for all text rendering nodes. Provides the common `text`
- * property and the `update(dt)` hook for dirty-driven rebuilds.
+ * property and the on-demand dirty protocol used by the renderer.
  *
  * Subclasses:
- * - {@link DynamicText} — runtime Canvas 2D / SDF rasterization
+ * - {@link Text} — runtime Canvas 2D / SDF rasterization
  * - {@link BitmapText}  — offline pre-built atlas (BMFont / MSDF)
  */
 export abstract class AbstractText extends Drawable {
@@ -22,8 +23,29 @@ export abstract class AbstractText extends Drawable {
   }
 
   /**
-   * Advance the node by `dt` milliseconds. Call once per frame from the game
-   * loop to apply deferred style changes without a full mesh rebuild.
+   * Pixel dimensions of the laid-out text block in local space.
+   * Used by the renderer to compute normalized gradient UVs.
    */
-  public update(_dt: number): void {}
+  public get textBounds(): TextSize {
+    return { width: 0, height: 0 };
+  }
+
+  /**
+   * Consume any pending style mutations and apply them synchronously.
+   *
+   * The renderer calls this automatically before each draw, so manual
+   * calls are only needed when you require up-to-date geometry outside
+   * of a render pass (e.g. to measure bounds right after a style change).
+   */
+  public syncDirty(): void {}
+
+  /**
+   * Advance the node by `dt` milliseconds.
+   *
+   * Delegates to {@link syncDirty} — kept for manual game-loop patterns,
+   * but no longer required; the renderer applies pending changes automatically.
+   */
+  public update(_dt: number): void {
+    this.syncDirty();
+  }
 }

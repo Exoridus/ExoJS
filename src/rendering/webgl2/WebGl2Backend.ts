@@ -5,7 +5,7 @@ import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 import { ParticleSystem } from '@/particles/ParticleSystem';
 import { BitmapText } from '@/rendering/text/BitmapText';
-import { DynamicText } from '@/rendering/text/DynamicText';
+import { Text } from '@/rendering/text/Text';
 import { BlendModes } from '@/rendering/types';
 
 import WebGLDebugUtils from '../../vendor/webgl-debug';
@@ -168,7 +168,7 @@ export class WebGl2Backend implements RenderBackend {
     this.rendererRegistry.registerRenderer(Sprite, new WebGl2SpriteRenderer(spriteRendererBatchSize));
     this.rendererRegistry.registerRenderer(Mesh, new WebGl2MeshRenderer());
     this.rendererRegistry.registerRenderer(ParticleSystem, new WebGl2ParticleRenderer(particleRendererBatchSize));
-    this.rendererRegistry.registerRenderer(DynamicText, new WebGl2TextRenderer());
+    this.rendererRegistry.registerRenderer(Text, new WebGl2TextRenderer());
     this.rendererRegistry.registerRenderer(BitmapText, new WebGl2TextRenderer());
     this.rendererRegistry.connect(this);
 

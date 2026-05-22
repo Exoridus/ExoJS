@@ -7,7 +7,7 @@ import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 import { ParticleSystem } from '@/particles/ParticleSystem';
 import { BitmapText } from '@/rendering/text/BitmapText';
-import { DynamicText } from '@/rendering/text/DynamicText';
+import { Text } from '@/rendering/text/Text';
 import type { BlendModes } from '@/rendering/types';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 
@@ -130,7 +130,7 @@ export class WebGpuBackend implements RenderBackend {
     this.rendererRegistry.registerRenderer(Sprite, new WebGpuSpriteRenderer());
     this.rendererRegistry.registerRenderer(Mesh, new WebGpuMeshRenderer());
     this.rendererRegistry.registerRenderer(ParticleSystem, new WebGpuParticleRenderer());
-    this.rendererRegistry.registerRenderer(DynamicText, new WebGpuTextRenderer());
+    this.rendererRegistry.registerRenderer(Text, new WebGpuTextRenderer());
     this.rendererRegistry.registerRenderer(BitmapText, new WebGpuTextRenderer());
     this.resize(width, height);
   }

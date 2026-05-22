@@ -1,15 +1,17 @@
 #version 300 es
 precision mediump float;
 
-uniform sampler2D u_texture;   // RGBA colour-font / emoji atlas (auto-bound)
-uniform vec4 u_tint;           // fill color multiplier; (1,1,1,1) = no tint
+uniform sampler2D u_texture;   // RGBA colour-font / emoji atlas
+uniform sampler2D u_nodeData;  // RGBA32F per-node data
 
-in vec2 v_texcoord;
-in vec4 v_color;
+flat in int  v_nodeIndex;
+     in vec2 v_texcoord;
 
 layout(location = 0) out vec4 fragColor;
 
 void main(void) {
+  // texel 2: fillColor (tint multiplier; (1,1,1,1) = no tint)
+  vec4 tint   = texelFetch(u_nodeData, ivec2(2, v_nodeIndex), 0);
   vec4 sample = texture(u_texture, v_texcoord);
-  fragColor = sample * u_tint;
+  fragColor   = sample * tint;
 }

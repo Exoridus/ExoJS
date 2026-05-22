@@ -31,7 +31,7 @@ export interface GlyphProvider {
 
 /**
  * Per-page quad geometry for a single text node, consumed by the text
- * renderer for both {@link DynamicText} and {@link BitmapText}.
+ * renderer for both {@link Text} and {@link BitmapText}.
  */
 export interface TextPageQuads {
   /** Atlas page index. */

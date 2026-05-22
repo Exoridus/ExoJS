@@ -58,7 +58,7 @@ let _defaultPool: GlyphAtlasPool | null = null;
 
 /**
  * Returns the shared process-wide {@link GlyphAtlasPool}, creating it lazily
- * on first call. All {@link DynamicText} instances use this pool by default.
+ * on first call. All {@link Text} instances use this pool by default.
  */
 export function getDefaultGlyphAtlasPool(): GlyphAtlasPool {
   if (_defaultPool === null) {
