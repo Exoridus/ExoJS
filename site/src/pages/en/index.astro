@@ -10,25 +10,31 @@ const releaseStage = Number.isFinite(majorVersion) && majorVersion < 1 ? 'Pre-1.
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const demoCount = getAllExamples().length;
 
-const heroSnippet = `import { Application, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+const heroSnippet = `import {
+  Application, Keyboard, Scene,
+  Sprite, Texture,
+} from '@codexo/exojs';
 
 class PlayerScene extends Scene {
   private hero!: Sprite;
 
   async load(loader) {
-    await loader.load(Texture, { hero: 'image/bunny.png' });
+    await loader.load(Texture, { hero: 'images/hero.png' });
   }
 
   init(loader) {
+    const { width, height } = this.app!.canvas;
+
     this.hero = new Sprite(loader.get(Texture, 'hero'));
     this.hero.setAnchor(0.5);
+    this.hero.setPosition(width / 2, height / 2);
 
-    if (this.app) {
-      this.hero.setPosition(this.app.canvas.width / 2, this.app.canvas.height / 2);
-    }
-
-    this.inputs.onActive(Keyboard.Left, () => this.hero.move(-3, 0));
-    this.inputs.onActive(Keyboard.Right, () => this.hero.move(3, 0));
+    this.inputs.onActive(Keyboard.Left, () =>
+      this.hero.move(-3, 0),
+    );
+    this.inputs.onActive(Keyboard.Right, () =>
+      this.hero.move(3, 0),
+    );
   }
 
   draw(backend) {
@@ -37,8 +43,15 @@ class PlayerScene extends Scene {
   }
 }
 
-const app = new Application({ width: 960, height: 540 });
-app.start(new PlayerScene());`;
+const app = new Application({
+  canvas: {
+    width: 960,
+    height: 540,
+    pixelRatio: window.devicePixelRatio,
+  },
+});
+
+await app.start(new PlayerScene());`;
 
 const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
 
@@ -97,7 +110,7 @@ const examples = [
 ];
 ---
 
-<AppShell title="ExoJS" description="TypeScript-first 2D runtime for games and interactive browser apps.">
+<AppShell title="ExoJS" description="A TypeScript-first 2D runtime for games and interactive apps.">
     <div class="home">
         <section class="hero">
             <div class="hero-inner">
@@ -106,9 +119,9 @@ const examples = [
                         <span class="pip"><span class="dot"></span>v{appInfo.version}</span>
                         <span>{releaseStage} / TypeScript / {appInfo.license}</span>
                     </span>
-                    <h1>Build games and<br />interactive apps in<br />the <span class="accent">browser.</span></h1>
+                    <h1><span class="nowrap">A TypeScript-first</span><br />2D runtime for<br /><span class="hero-token-wrap"><span class="hero-token" id="hero-token">browser games</span></span></h1>
                     <p class="lead">
-                        ExoJS is a TypeScript-first, zero-dependency 2D runtime for browser games and interactive apps. It gives you scenes, sprites, graphics, input, audio, effects, render targets, and a frame loop while staying close to regular web development.
+                        ExoJS gives you scenes, sprites, graphics, input, audio, effects, assets, and rendering primitives — without turning your project into a full game-engine workflow.
                     </p>
                     <div class="hero-cta">
                         <a class="btn btn-primary" href={`${import.meta.env.BASE_URL}en/guide/`}>Read the Guide</a>
@@ -120,10 +133,10 @@ const examples = [
                 <div class="hero-snippet">
                     <div class="head">
                         <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
-                        <span class="file">player.ts</span>
+                        <span class="file">game.ts</span>
                         <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">input</span></span>
                     </div>
-                    <Code code={heroSnippet} lang="ts" />
+                    <Code code={heroSnippet} lang="ts" themes={{ light: 'github-light', dark: 'one-dark-pro' }} />
                 </div>
             </div>
         </section>
@@ -200,7 +213,7 @@ const examples = [
                         <span class="copy">COPY</span>
                     </div>
                     <div class="snippet">
-                        <Code code={quickstartSnippet} lang="ts" />
+                        <Code code={quickstartSnippet} lang="ts" themes={{ light: 'github-light', dark: 'github-dark' }} />
                     </div>
                 </div>
             </div>
@@ -251,7 +264,7 @@ const examples = [
         max-width: 1180px;
         margin: 0 auto;
         display: grid;
-        grid-template-columns: 1.1fr 1fr;
+        grid-template-columns: 1fr 1.1fr;
         gap: var(--s-10);
         align-items: center;
     }
@@ -296,13 +309,45 @@ const examples = [
         letter-spacing: -0.025em;
         margin: 0 0 var(--s-5);
         color: var(--fg);
-        text-wrap: balance;
     }
 
-    .hero h1 .accent {
+    .nowrap {
+        white-space: nowrap;
+    }
+
+    .hero-token-wrap {
+        display: block;
+    }
+
+    .hero-token {
+        display: inline-block;
         color: var(--accent);
         font-style: italic;
         font-weight: 500;
+        white-space: nowrap;
+        will-change: transform, opacity;
+    }
+
+    @keyframes token-exit {
+        to {
+            opacity: 0;
+            transform: translateY(-0.28em);
+        }
+    }
+
+    @keyframes token-enter {
+        from {
+            opacity: 0;
+            transform: translateY(0.32em);
+        }
+    }
+
+    .hero-token.is-exiting {
+        animation: token-exit 240ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
+    }
+
+    .hero-token.is-entering {
+        animation: token-enter 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     .hero p.lead {
@@ -799,3 +844,24 @@ const examples = [
         }
     }
 </style>
+
+<script>
+    const TOKENS = ['browser games', 'interactive apps', 'audio visualizers', 'particle effects', 'motion graphics', 'creative tools'];
+    const INTERVAL = 3200;
+    const DURATION = 240;
+
+    const el = document.getElementById('hero-token');
+    if (el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let idx = 0;
+        setInterval(() => {
+            el.classList.add('is-exiting');
+            setTimeout(() => {
+                idx = (idx + 1) % TOKENS.length;
+                el.textContent = TOKENS[idx] ?? '';
+                el.classList.remove('is-exiting');
+                el.classList.add('is-entering');
+                el.addEventListener('animationend', () => el.classList.remove('is-entering'), { once: true });
+            }, DURATION);
+        }, INTERVAL);
+    }
+</script>
