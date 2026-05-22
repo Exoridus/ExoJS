@@ -1,5 +1,5 @@
-import type { AudioSpriteClip } from '@/audio/Sound';
 import type { Music } from '@/audio/Music';
+import type { AudioSpriteClip } from '@/audio/Sound';
 import type { Sound } from '@/audio/Sound';
 import type { PlaybackOptions, StreamingLoadEvent } from '@/core/types';
 import type { BmFont } from '@/rendering/text/BmFont';

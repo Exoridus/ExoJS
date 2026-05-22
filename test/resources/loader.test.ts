@@ -1,9 +1,9 @@
+import { Asset } from '@/resources/Asset';
 import type { AssetFactory } from '@/resources/AssetFactory';
 import { BundleLoadError, defineAssetManifest } from '@/resources/AssetManifest';
+import { Assets } from '@/resources/Assets';
 import type { CacheStore } from '@/resources/CacheStore';
 import { Loader } from '@/resources/Loader';
-import { Asset } from '@/resources/Asset';
-import { Assets } from '@/resources/Assets';
 import { Json, TextAsset } from '@/resources/tokens';
 
 // Declaration merges for test-only asset types
@@ -1406,8 +1406,8 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     jest.restoreAllMocks();
   });
 
-  function makeMockStore(): { store: CacheStore; saves: Array<{ storageName: string; key: string }> } {
-    const saves: Array<{ storageName: string; key: string }> = [];
+  function makeMockStore(): { store: CacheStore; saves: { storageName: string; key: string }[] } {
+    const saves: { storageName: string; key: string }[] = [];
     const store: CacheStore = {
       load:    async () => null,
       save:    async (storageName, key) => { saves.push({ storageName, key }); },

@@ -4,13 +4,14 @@ import { Texture } from '@/rendering/texture/Texture';
 
 export type FontFormat = 'woff2' | 'woff' | 'ttf' | 'otf';
 
-const FONT_MIME: Record<FontFormat, string> = {
+const fontMime: Record<FontFormat, string> = {
   woff2: 'font/woff2',
   woff:  'font/woff',
   ttf:   'font/ttf',
   otf:   'font/otf',
 };
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface HTMLTextOptions {
   /** CSS injected inside a &lt;style&gt; tag within the SVG foreignObject. */
   css?: string;
@@ -56,6 +57,7 @@ export interface HTMLTextOptions {
  * ```
  * @stable
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export class HTMLText extends Container {
   private _html: string;
   private _css: string;
@@ -152,7 +154,7 @@ export class HTMLText extends Container {
    * ```
    */
   public addFont(family: string, data: ArrayBuffer, format: FontFormat = 'woff2'): this {
-    const dataUri = `data:${FONT_MIME[format]};base64,${HTMLText._toBase64(data)}`;
+    const dataUri = `data:${fontMime[format]};base64,${HTMLText._toBase64(data)}`;
     const existing = this._fonts.findIndex(f => f.family === family);
 
     if (existing >= 0) {
@@ -241,13 +243,13 @@ export class HTMLText extends Container {
 
     const fontFaceRules = this._fonts
       .map(({ family, dataUri }) => {
-        const escaped = family.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const escaped = family.replaceAll('\\', '\\\\').replaceAll('\'', "\\'");
         return `@font-face{font-family:'${escaped}';src:url('${dataUri}');}`;
       })
       .join('');
 
     // Guard against the user's CSS accidentally closing the <style> tag early.
-    const userCss = this._css.replace(/<\/style>/gi, '<\\/style>');
+    const userCss = this._css.replaceAll(/<\/style>/gi, '<\\/style>');
 
     const styleBlock = fontFaceRules || userCss
       ? `<style>${fontFaceRules}${userCss}</style>`
@@ -257,10 +259,10 @@ export class HTMLText extends Container {
       `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
         `<foreignObject width="100%" height="100%">` +
           `<div xmlns="http://www.w3.org/1999/xhtml"` +
-               ` style="width:${w}px;height:${h}px;overflow:hidden;box-sizing:border-box;">` +
-            styleBlock +
-            this._html +
-          `</div>` +
+               ` style="width:${w}px;height:${h}px;overflow:hidden;box-sizing:border-box;">${ 
+            styleBlock 
+            }${this._html 
+          }</div>` +
         `</foreignObject>` +
       `</svg>`
     );
@@ -309,7 +311,7 @@ export class HTMLText extends Container {
   ): [HTMLCanvasElement | OffscreenCanvas, CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D] {
     if (typeof OffscreenCanvas !== 'undefined') {
       const canvas = new OffscreenCanvas(width, height);
-      const ctx    = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
+      const ctx    = canvas.getContext('2d')!;
       if (!ctx) throw new Error('HTMLText: could not obtain 2D context.');
       return [canvas, ctx];
     }

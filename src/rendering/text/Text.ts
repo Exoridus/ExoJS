@@ -1,7 +1,7 @@
 import { AbstractText } from './AbstractText';
 import type { AtlasMode } from './GlyphAtlas';
-import { SDF_RADIUS } from './GlyphAtlas';
 import type { GlyphAtlas } from './GlyphAtlas';
+import { SDF_RADIUS } from './GlyphAtlas';
 import { getDefaultGlyphAtlasPool } from './GlyphAtlasPool';
 import type { LayoutOptions } from './LayoutOptions';
 import { buildTextPageQuads, layoutText } from './TextLayout';

@@ -15,8 +15,8 @@ import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import { BinaryFactory } from './factories/BinaryFactory';
-import { CsvFactory } from './factories/CsvFactory';
 import { BmFontLoaderFactory } from './factories/BmFontFactory';
+import { CsvFactory } from './factories/CsvFactory';
 import { FontFactory } from './factories/FontFactory';
 import { ImageFactory } from './factories/ImageFactory';
 import { JsonFactory } from './factories/JsonFactory';
@@ -59,7 +59,7 @@ export type InferLoadedMap<M extends Record<string, AssetInput>> = {
  * their constructor type. All other loadables return the instance type inferred
  * from the constructor.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export type LoadReturn<T> =
   T extends typeof Json           ? unknown :
   T extends typeof TextAsset      ? string :
@@ -628,7 +628,7 @@ export class Loader {
    * ```
    */
   // Generic form — caller narrows R while extension still must be registered.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   public load<R, S extends string>(
     path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never,
   ): LoadingQueue<R>;

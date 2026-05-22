@@ -4,8 +4,8 @@
  *   F2 — internal MAX_DELTA_MS clamp applied to simulation delta
  */
 
-import { Time } from '@/core/Time';
 import { Application, ApplicationStatus } from '@/core/Application';
+import { Time } from '@/core/Time';
 
 // ---------------------------------------------------------------------------
 // Backend stubs — keep WebGL2 / WebGPU out of jsdom.

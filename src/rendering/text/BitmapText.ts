@@ -1,12 +1,12 @@
 import type { Texture } from '@/rendering/texture/Texture';
 
 import { AbstractText } from './AbstractText';
-import { BmFont } from './BmFont';
 import type { BmFontData } from './BmFont';
+import { type BmFont } from './BmFont';
 import type { LayoutOptions } from './LayoutOptions';
 import { buildTextPageQuads, layoutText } from './TextLayout';
-import { TextStyle } from './TextStyle';
 import type { TextStyleOptions } from './TextStyle';
+import { TextStyle } from './TextStyle';
 import type { GlyphInfo, GlyphProvider, TextLayoutStyle, TextPageQuads, TextSize } from './types';
 
 export type { BmFontChar, BmFontData } from './BmFont';

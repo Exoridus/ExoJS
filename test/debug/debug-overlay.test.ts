@@ -6,9 +6,9 @@
  */
 
 import { Signal } from '@/core/Signal';
+import { Keyboard } from '@/input/types';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { Keyboard } from '@/input/types';
 
 // Stub the glyph atlas pool so Text construction never touches a
 // real 2D canvas context (jsdom's canvas does not implement measureText).

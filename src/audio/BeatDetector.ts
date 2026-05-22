@@ -2,8 +2,8 @@ import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/aud
 import type { AudioBus } from '@/audio/AudioBus';
 import type { Music } from '@/audio/Music';
 import type { Sound } from '@/audio/Sound';
-import { beatDetectorWorkletSource } from '@/audio/worklets/beat-detector.worklet';
 import { registerWorkletProcessor } from '@/audio/worklet/registerWorklet';
+import { beatDetectorWorkletSource } from '@/audio/worklets/beat-detector.worklet';
 import { Signal } from '@/core/Signal';
 
 // ---------------------------------------------------------------------------

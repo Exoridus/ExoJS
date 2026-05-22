@@ -1,15 +1,15 @@
-import { BitmapText } from '@/rendering/text/BitmapText';
-import { Text } from '@/rendering/text/Text';
+import { type BitmapText } from '@/rendering/text/BitmapText';
 import type { TextPageQuads } from '@/rendering/text/Text';
+import { Text } from '@/rendering/text/Text';
 import type { Texture } from '@/rendering/texture/Texture';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
 
 import { Shader } from '../shader/Shader';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
+import textVertSource from './glsl/text.vert';
 import textColorFragSource from './glsl/text-color.frag';
 import textMsdfFragSource from './glsl/text-msdf.frag';
 import textSdfFragSource from './glsl/text-sdf.frag';
-import textVertSource from './glsl/text.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
@@ -17,7 +17,7 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 
 // ── Node data texture layout ─────────────────────────────────────────────────
 //
-// RGBA32F texture: width = NODE_TEXELS, height = number of nodes this flush.
+// RGBA32F texture: width = nodeTexels, height = number of nodes this flush.
 //
 // Row index = nodeIndex (one row per node rendered this frame).
 //
@@ -36,8 +36,8 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // The shaders divide shadowOffset by u_pageSize (a per-batch uniform = atlas texture width)
 // to convert px → UV space.
 
-const NODE_TEXELS = 10;
-const NODE_FLOATS = NODE_TEXELS * 4; // 40 floats per node
+const nodeTexels = 10;
+const nodeFloats = nodeTexels * 4; // 40 floats per node
 
 // Per-vertex layout (20 bytes — same stride as WebGl2MeshRenderer):
 //   a_position : vec2  f32  (offset  0,  8 bytes)
@@ -95,13 +95,13 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private _float32View: Float32Array   = new Float32Array(this._vertexData);
   private _indexData: Uint16Array      = new Uint16Array(initialIndexCapacity);
 
-  private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * NODE_FLOATS);
+  private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * nodeFloats);
   private _nodeCapacity = initialNodeCapacity;
   private _nodeCount    = 0;
 
   private readonly _pendingQuads:  PendingQuad[]                          = [];
-  private readonly _nodeIndexMap:  Map<Text | BitmapText, number>  = new Map();
-  private readonly _textureKeyMap: Map<Texture, number>                   = new Map();
+  private readonly _nodeIndexMap  = new Map<Text | BitmapText, number>();
+  private readonly _textureKeyMap                   = new Map<Texture, number>();
   private _textureKeyCounter = 0;
 
   private _connection: TextRendererConnection | null = null;
@@ -234,7 +234,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
     const arr   = this._nodeDataArray;
-    const base  = ni * NODE_FLOATS;
+    const base  = ni * nodeFloats;
     const style = node.style;
 
     // Transform (texels 0-1)
@@ -270,7 +270,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     arr[base + 16] = outlineMin;
     arr[base + 17] = style.shadowAlpha;
     arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
-    arr[base + 19] = style.gradientColors !== null ? 1.0 : 0.0;
+    arr[base + 19] = style.gradientColors !== null ? 1 : 0;
 
     // Shadow color (texel 5)
     const sc = style.shadowColor;
@@ -283,8 +283,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     // Store raw pixel offsets; shaders divide by u_pageSize to get UV offset.
     arr[base + 24] = style.shadowOffsetX;
     arr[base + 25] = style.shadowOffsetY;
-    arr[base + 26] = style.gradientAxis === 'vertical' ? 1.0 : 0.0;
-    arr[base + 27] = 0.0;
+    arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
+    arr[base + 27] = 0;
 
     // Gradient top (texel 7)
     const gc = style.gradientColors;
@@ -299,15 +299,15 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       arr[base + 34] = gc[1].b / 255;
       arr[base + 35] = gc[1].a;
     } else {
-      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0.0;
-      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0.0;
+      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0;
+      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0;
     }
 
     // Text block bounds (texel 9): (minX, minY, width, height)
     // Vertex shader uses these to compute normalized gradient UV.
     const bounds = node.textBounds;
-    arr[base + 36] = 0.0;
-    arr[base + 37] = 0.0;
+    arr[base + 36] = 0;
+    arr[base + 37] = 0;
     arr[base + 38] = bounds.width;
     arr[base + 39] = bounds.height;
   }
@@ -332,9 +332,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     gl.texSubImage2D(
       gl.TEXTURE_2D, 0,
       0, 0,                  // x, y offset
-      NODE_TEXELS, nodeCount,
+      nodeTexels, nodeCount,
       gl.RGBA, gl.FLOAT,
-      this._nodeDataArray.subarray(0, nodeCount * NODE_FLOATS),
+      this._nodeDataArray.subarray(0, nodeCount * nodeFloats),
     );
   }
 
@@ -363,12 +363,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     while (i < quads.length) {
       const first      = quads[i];
-      const firstTKey  = this._textureKeyMap.get(first.atlasTexture);
+      const firstTextureKey  = this._textureKeyMap.get(first.atlasTexture);
 
       let j = i + 1;
       while (j < quads.length) {
         const pq = quads[j];
-        if (pq.shaderType !== first.shaderType || this._textureKeyMap.get(pq.atlasTexture) !== firstTKey) break;
+        if (pq.shaderType !== first.shaderType || this._textureKeyMap.get(pq.atlasTexture) !== firstTextureKey) break;
         j++;
       }
 
@@ -474,7 +474,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private _ensureNodeCapacity(nodeCount: number): void {
     if (nodeCount <= this._nodeCapacity) return;
     while (this._nodeCapacity < nodeCount) this._nodeCapacity *= 2;
-    const next = new Float32Array(this._nodeCapacity * NODE_FLOATS);
+    const next = new Float32Array(this._nodeCapacity * nodeFloats);
     next.set(this._nodeDataArray);
     this._nodeDataArray = next;
   }
@@ -489,7 +489,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NODE_TEXELS, capacity, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nodeTexels, capacity, 0, gl.RGBA, gl.FLOAT, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
     return tex;
   }

@@ -1,18 +1,18 @@
 /// <reference types="@webgpu/types" />
 
-import { BitmapText } from '@/rendering/text/BitmapText';
-import { Text } from '@/rendering/text/Text';
+import { type BitmapText } from '@/rendering/text/BitmapText';
 import type { TextPageQuads } from '@/rendering/text/Text';
+import { Text } from '@/rendering/text/Text';
 import type { Texture } from '@/rendering/texture/Texture';
 import { BlendModes } from '@/rendering/types';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
-import { getWebGpuBlendState } from './WebGpuBlendState';
 import type { WebGpuBackend } from './WebGpuBackend';
+import { getWebGpuBlendState } from './WebGpuBlendState';
 
 // ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
 //
-// Storage buffer: array<vec4<f32>> — NODE_TEXELS = 10 entries per node.
+// Storage buffer: array<vec4<f32>> — 10 entries per node.
 //
 // [ni*10+0]: (a,  c,  0,  tx)   transform col 0+2
 // [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
@@ -25,8 +25,8 @@ import type { WebGpuBackend } from './WebGpuBackend';
 // [ni*10+8]: (r,  g,  b,  a )   gradientBottom
 // [ni*10+9]: (minX, minY, w, h) text block bounds
 
-const NODE_TEXELS = 10;
-const NODE_FLOATS = NODE_TEXELS * 4;
+const nodeTexels = 10;
+const nodeFloats = nodeTexels * 4;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + nodeIndex f32
 const vertexStrideBytes = 20;
@@ -266,13 +266,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _indexData:    Uint16Array  = new Uint16Array(initialIndexCapacity);
   private _projData:     Float32Array = new Float32Array(projectionBytes / 4);
 
-  private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * NODE_FLOATS);
+  private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * nodeFloats);
   private _nodeCapacity = initialNodeCapacity;
   private _nodeCount    = 0;
 
   private readonly _pendingQuads:  PendingQuad[]                   = [];
-  private readonly _nodeIndexMap:  Map<Text | BitmapText, number>  = new Map();
-  private readonly _textureKeyMap: Map<Texture, number>            = new Map();
+  private readonly _nodeIndexMap  = new Map<Text | BitmapText, number>();
+  private readonly _textureKeyMap            = new Map<Texture, number>();
   private _textureKeyCounter = 0;
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -337,13 +337,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     while (qi < quads.length) {
       const first     = quads[qi];
-      const firstTKey = this._textureKeyMap.get(first.atlasTexture);
+      const firstTextureKey = this._textureKeyMap.get(first.atlasTexture);
 
       let qj = qi + 1;
       while (qj < quads.length) {
         const pq = quads[qj];
         if (pq.shaderType !== first.shaderType ||
-            this._textureKeyMap.get(pq.atlasTexture) !== firstTKey) break;
+            this._textureKeyMap.get(pq.atlasTexture) !== firstTextureKey) break;
         qj++;
       }
 
@@ -405,7 +405,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
     }
 
-    pass.setVertexBuffer(0, this._vertexBuffer!);
+    pass.setVertexBuffer(0, this._vertexBuffer);
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
 
     let lastShaderType: ShaderType | null = null;
@@ -447,7 +447,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (typeof device.createRenderPipelineAsync !== 'function') return;
 
     const shaderTypes: ShaderType[] = ['sdf', 'msdf', 'color'];
-    const promises: Promise<void>[] = [];
+    const promises: Array<Promise<void>> = [];
 
     for (const shaderType of shaderTypes) {
       for (const format of formats) {
@@ -518,7 +518,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const nodeBytes = initialNodeCapacity * NODE_FLOATS * 4;
+    const nodeBytes = initialNodeCapacity * nodeFloats * 4;
     this._nodeBuffer = device.createBuffer({
       label: 'WebGpuTextRenderer/nodes',
       size: nodeBytes,
@@ -621,7 +621,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
     const arr  = this._nodeDataArray;
-    const base = ni * NODE_FLOATS;
+    const base = ni * nodeFloats;
     const style = node.style;
 
     const m = node.getGlobalTransform().toArray(false);
@@ -638,15 +638,15 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     arr[base + 16] = outlineMin;
     arr[base + 17] = style.shadowAlpha;
     arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
-    arr[base + 19] = style.gradientColors !== null ? 1.0 : 0.0;
+    arr[base + 19] = style.gradientColors !== null ? 1 : 0;
 
     const sc = style.shadowColor;
     arr[base + 20] = sc.r / 255; arr[base + 21] = sc.g / 255; arr[base + 22] = sc.b / 255; arr[base + 23] = sc.a;
 
     arr[base + 24] = style.shadowOffsetX;
     arr[base + 25] = style.shadowOffsetY;
-    arr[base + 26] = style.gradientAxis === 'vertical' ? 1.0 : 0.0;
-    arr[base + 27] = 0.0;
+    arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
+    arr[base + 27] = 0;
 
     const gc = style.gradientColors;
     if (gc !== null) {
@@ -655,13 +655,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       arr[base + 32] = gc[1].r / 255; arr[base + 33] = gc[1].g / 255;
       arr[base + 34] = gc[1].b / 255; arr[base + 35] = gc[1].a;
     } else {
-      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0.0;
-      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0.0;
+      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0;
+      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0;
     }
 
     const bounds = node.textBounds;
-    arr[base + 36] = 0.0;
-    arr[base + 37] = 0.0;
+    arr[base + 36] = 0;
+    arr[base + 37] = 0;
     arr[base + 38] = bounds.width;
     arr[base + 39] = bounds.height;
   }
@@ -669,7 +669,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   // ── GPU resource helpers ─────────────────────────────────────────────────
 
   private _uploadNodeBuffer(device: GPUDevice): void {
-    const requiredBytes = this._nodeCount * NODE_FLOATS * 4;
+    const requiredBytes = this._nodeCount * nodeFloats * 4;
 
     if (requiredBytes > this._nodeBufferCapacity) {
       let newCap = this._nodeBufferCapacity;
@@ -812,7 +812,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _ensureNodeCapacity(nodeCount: number): void {
     if (nodeCount <= this._nodeCapacity) return;
     while (this._nodeCapacity < nodeCount) this._nodeCapacity *= 2;
-    const next = new Float32Array(this._nodeCapacity * NODE_FLOATS);
+    const next = new Float32Array(this._nodeCapacity * nodeFloats);
     next.set(this._nodeDataArray);
     this._nodeDataArray = next;
   }

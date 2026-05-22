@@ -1,4 +1,5 @@
 import { Drawable } from '@/rendering/Drawable';
+
 import type { TextSize } from './types';
 
 /**

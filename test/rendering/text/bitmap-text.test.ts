@@ -3,9 +3,9 @@
  * (alignment, word-wrap, kerning, leading) and builds correct page quads.
  */
 
-import { BmFont } from '@/rendering/text/BmFont';
 import type { BmFontData } from '@/rendering/text/BitmapText';
 import { BitmapText, BmFontAdapter } from '@/rendering/text/BitmapText';
+import { BmFont } from '@/rendering/text/BmFont';
 import type { Texture } from '@/rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------

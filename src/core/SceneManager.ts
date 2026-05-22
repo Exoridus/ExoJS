@@ -3,8 +3,8 @@ import type { RenderBackend } from '@/rendering/RenderBackend';
 
 import type { Application } from './Application';
 import { Color } from './Color';
-import { Scene } from './Scene';
 import type { SceneParticipationPolicy, SceneStackMode } from './Scene';
+import { Scene } from './Scene';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
@@ -230,6 +230,7 @@ export class SceneManager {
     const { updateScenes, drawScenes } = this._resolveParticipants();
 
     for (const scene of updateScenes) {
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const updateResult = scene.update(delta);
 
       if (!this._asyncUpdateWarned.has(scene) && (updateResult as unknown) instanceof Promise) {
@@ -239,6 +240,7 @@ export class SceneManager {
     }
 
     for (const scene of drawScenes) {
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const drawResult = scene.draw(this._app.backend);
 
       if (!this._asyncDrawWarned.has(scene) && (drawResult as unknown) instanceof Promise) {

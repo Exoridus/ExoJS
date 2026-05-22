@@ -18,6 +18,7 @@ export type AtlasMode = 'sdf' | 'color';
  * SDF field encodes. Determines the maximum usable outline/shadow reach.
  * Exported so applications can import this constant when computing shader uniforms.
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const SDF_RADIUS = 8;
 
 const glyphPadding = 2;
@@ -72,7 +73,7 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 function makeCtx(width: number, height: number): { canvas: HTMLCanvasElement | OffscreenCanvas; ctx: Ctx2D } {
   if (typeof OffscreenCanvas !== 'undefined') {
     const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
+    const ctx = canvas.getContext('2d')!;
     if (!ctx) throw new Error('GlyphAtlas: could not obtain OffscreenCanvas 2D context.');
     return { canvas, ctx };
   }
