@@ -52,9 +52,9 @@ export class SvgFactory extends AbstractAssetFactory<HTMLImageElement> {
       svgSource = source.replace(
         /<svg(\s[^>]*)?>/,
         (_match: string, attrs = '') => {
-          const cleaned = attrs
-            .replace(/\s+width=(?:"[^"]*"|'[^']*')/g, '')
-            .replace(/\s+height=(?:"[^"]*"|'[^']*')/g, '');
+          const cleaned = String(attrs)
+            .replaceAll(/\s+width=(?:"[^"]*"|'[^']*')/g, '')
+            .replaceAll(/\s+height=(?:"[^"]*"|'[^']*')/g, '');
           const additions = (width !== undefined ? ` width="${width}"` : '')
             + (height !== undefined ? ` height="${height}"` : '');
           return `<svg${cleaned}${additions}>`;

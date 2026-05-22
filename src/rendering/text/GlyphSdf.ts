@@ -12,7 +12,7 @@
  * Compatible with `cutoff = 0.5` in the shader's `smoothstep(0.5 − soft, 0.5 + soft, sd)`.
  */
 
-const INF = 1e20;
+const inf = 1e20;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ export class GlyphSdf {
     if (typeof OffscreenCanvas !== 'undefined') {
       const c = new OffscreenCanvas(1, 1);
       this._canvas = c;
-      this._ctx = c.getContext('2d') as OffscreenCanvasRenderingContext2D;
+      this._ctx = c.getContext('2d')!;
     } else {
       const c = document.createElement('canvas');
       this._canvas = c;
@@ -185,13 +185,13 @@ export class GlyphSdf {
     // ── Initialise EDT grids from the alpha channel ───────────────────────
     //
     // gridOuter[i]: squared distance to the nearest fully-outside pixel
-    //               (0 for inside pixels, INF for outside pixels, blended for edges)
+    //               (0 for inside pixels, inf for outside pixels, blended for edges)
     // gridInner[i]: squared distance to the nearest fully-inside pixel
-    //               (INF for inside pixels, 0 for outside pixels)
+    //               (inf for inside pixels, 0 for outside pixels)
     for (let i = 0; i < n; i++) {
       const a = rgba[i * 4 + 3] / 255; // alpha 0..1 from the R channel (white glyph)
-      this._gridOuter[i] = a === 1 ? 0 : a === 0 ? INF : Math.max(0, 0.5 - a) ** 2;
-      this._gridInner[i] = a === 1 ? INF : a === 0 ? 0 : Math.max(0, a - 0.5) ** 2;
+      this._gridOuter[i] = a === 1 ? 0 : a === 0 ? inf : Math.max(0, 0.5 - a) ** 2;
+      this._gridInner[i] = a === 1 ? inf : a === 0 ? 0 : Math.max(0, a - 0.5) ** 2;
     }
 
     // ── Apply 2D EDT ──────────────────────────────────────────────────────
@@ -260,8 +260,8 @@ function _edt2d(
 function _edt1d(f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array, n: number): void {
   let k = 0;
   v[0] = 0;
-  z[0] = -INF;
-  z[1] = INF;
+  z[0] = -inf;
+  z[1] = inf;
 
   for (let q = 1; q < n; q++) {
     // Find the parabola intersection s (break-point) for site q.
@@ -276,7 +276,7 @@ function _edt1d(f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
     k++;
     v[k] = q;
     z[k] = s;
-    z[k + 1] = INF;
+    z[k + 1] = inf;
   }
 
   k = 0;

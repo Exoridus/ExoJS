@@ -1,5 +1,5 @@
-import { BmFont } from '@/rendering/text/BmFont';
 import type { BmFontChar, BmFontData } from '@/rendering/text/BmFont';
+import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 import type { Loader } from '@/resources/Loader';

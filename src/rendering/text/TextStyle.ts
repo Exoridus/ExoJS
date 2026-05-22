@@ -36,6 +36,7 @@ export type FontWeight = 'normal' | 'bold' | '100' | '200' | '300' | '400' | '50
  * }
  * ```
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FontRegistry {}
 
 /**
@@ -120,7 +121,7 @@ export class TextStyle {
   private _pendingHint: StyleChangeHint = 'tint';
 
   /** Fires once per dirty cycle when any property changes. */
-  public readonly onChange = new Signal<[]>();
+  public readonly onChange = new Signal();
 
   private _fontFamily: FontFamily;
   private _fontWeight: FontWeight;

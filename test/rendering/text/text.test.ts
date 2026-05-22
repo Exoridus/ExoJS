@@ -10,10 +10,10 @@
  */
 
 import { Drawable } from '@/rendering/Drawable';
-import { Text } from '@/rendering/text/Text';
 import type { GlyphAtlas } from '@/rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
+import { Text } from '@/rendering/text/Text';
 import { TextStyle } from '@/rendering/text/TextStyle';
 import type { GlyphInfo } from '@/rendering/text/types';
 
@@ -180,8 +180,9 @@ describe('Text', () => {
     const quadsBefore = text.pageQuads[0];
 
     // Consume initial dirty from constructor
-    // Mutate only fillColor → 'tint' hint
-    style.fillColor = style.fillColor;
+    // Mutate only fillColor → 'tint' hint (self-assign triggers the setter)
+    const currentFillColor = style.fillColor;
+    style.fillColor = currentFillColor;
 
     text.update(16);
 

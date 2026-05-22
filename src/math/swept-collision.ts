@@ -174,14 +174,14 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
   if (deltaX === 0 && deltaY === 0) return null;
 
   let bestT = Infinity;
-  let bestNX = 0;
-  let bestNY = 0;
+  let bestNx = 0;
+  let bestNy = 0;
 
   const tryHit = (t: number, nx: number, ny: number): void => {
     if (t >= 0 && t <= 1 && t < bestT) {
       bestT = t;
-      bestNX = nx;
-      bestNY = ny;
+      bestNx = nx;
+      bestNy = ny;
     }
   };
 
@@ -242,7 +242,7 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
 
   if (bestT > 1) return null;
 
-  return { t: bestT, x: cx + deltaX * bestT, y: cy + deltaY * bestT, normalX: bestNX, normalY: bestNY };
+  return { t: bestT, x: cx + deltaX * bestT, y: cy + deltaY * bestT, normalX: bestNx, normalY: bestNy };
 }
 
 // ---------------------------------------------------------------------------

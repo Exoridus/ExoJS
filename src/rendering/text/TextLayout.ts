@@ -1,5 +1,5 @@
-import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutStyle, TextPageQuads, TextSize } from './types';
 import type { LayoutOptions } from './LayoutOptions';
+import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutStyle, TextPageQuads, TextSize } from './types';
 
 interface LinePlacement {
   placements: Array<{ info: GlyphInfo; x: number; y: number; char: string }>;
@@ -227,7 +227,7 @@ export function buildTextPageQuads(placements: readonly GlyphPlacement[]): TextP
 function _applyWhiteSpace(text: string, mode: 'normal' | 'pre' | 'pre-line'): string {
   if (mode === 'pre') return text;
   if (mode === 'normal') {
-    return text.replaceAll(/\n/g, ' ').replaceAll(/[ \t]+/g, ' ');
+    return text.replaceAll('\n', ' ').replaceAll(/[ \t]+/g, ' ');
   }
   // 'pre-line': collapse spaces per line, preserve newlines (default)
   return text
@@ -277,7 +277,7 @@ function _wrapLine(
     } else {
       const withSpace = currentWidth + spaceAdv + wordWidth;
       if (withSpace <= maxWidth) {
-        current += ' ' + word; currentWidth = withSpace;
+        current += ` ${  word}`; currentWidth = withSpace;
       } else {
         lines.push(current); current = word; currentWidth = wordWidth;
       }

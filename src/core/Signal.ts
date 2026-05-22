@@ -25,9 +25,9 @@ type SignalHandler<Args extends unknown[]> = (...params: Args) => void | boolean
  * the rest of the dispatch.
  */
 export class Signal<Args extends unknown[] = []> {
-  private readonly _handlers: SignalHandler<Args>[] = [];
+  private readonly _handlers: Array<SignalHandler<Args>> = [];
   private _dispatching = false;
-  private _pendingRemoves: SignalHandler<Args>[] | null = null;
+  private _pendingRemoves: Array<SignalHandler<Args>> | null = null;
 
   /** Number of currently registered listeners. */
   public get count(): number {

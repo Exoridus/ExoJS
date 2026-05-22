@@ -7,7 +7,7 @@
  */
 
 import type { GlyphAtlas } from '@/rendering/text/GlyphAtlas';
-import { layoutText, measureText } from '@/rendering/text/TextLayout';
+import { layoutText } from '@/rendering/text/TextLayout';
 import { TextStyle } from '@/rendering/text/TextStyle';
 import type { GlyphInfo } from '@/rendering/text/types';
 

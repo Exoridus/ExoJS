@@ -1,4 +1,4 @@
-import { GlyphAtlas, SDF_RADIUS, type AtlasMode } from './GlyphAtlas';
+import { type AtlasMode,GlyphAtlas, SDF_RADIUS } from './GlyphAtlas';
 
 /**
  * Manages one {@link GlyphAtlas} per font variant + mode combination.
