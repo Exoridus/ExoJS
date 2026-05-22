@@ -69,7 +69,7 @@ app.start(
                 this._gfx.drawRectangle(260, def.y - 6, 420, 12);
                 this._gfx.fillColor = new Color(120, 200, 255);
                 this._gfx.drawRectangle(260, def.y - 6, 420 * t, 12);
-                this._labels[i].setText(`${def.key}: ${val.toFixed(def.key === 'ratio' ? 2 : 3)}`);
+                this._labels[i].text = `${def.key}: ${val.toFixed(def.key === 'ratio' ? 2 : 3)}`;
                 this._labels[i].setPosition(120, def.y - 12);
                 this._labels[i].render(backend);
             }
@@ -81,7 +81,7 @@ app.start(
             this._gfx.drawRectangle(260, 484, 420, 12);
             this._gfx.fillColor = new Color(255, 140, 140);
             this._gfx.drawRectangle(260, 484, 420 * meterT, 12);
-            this._meterLabel.setText(`gain reduction: ${reduction.toFixed(1)} dB`);
+            this._meterLabel.text = `gain reduction: ${reduction.toFixed(1)} dB`;
             this._meterLabel.render(backend);
 
             this._gfx.render(backend);

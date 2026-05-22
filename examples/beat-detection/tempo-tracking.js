@@ -29,7 +29,7 @@ app.start(
         draw(backend) {
             const bpm = this._detector.tempo;
             const confidence = this._detector.confidence;
-            this._text.setText(`BPM ${bpm.toFixed(1)}\nconfidence ${confidence.toFixed(2)}`);
+            this._text.text = `BPM ${bpm.toFixed(1)}\nconfidence ${confidence.toFixed(2)}`;
             backend.clear();
             this._bar.clear();
             this._bar.fillColor = new Color(70, 70, 70);

@@ -26,12 +26,12 @@ app.start(
             this._backward = this.app.tweens.create(this._sprite.position).to({ x: 120 }, 1.2);
             this._forward
                 .onComplete(() => {
-                    this._text.setText('Completed -> reverse');
+                    this._text.text = 'Completed -> reverse';
                     this._backward.start();
                 })
                 .start();
             this._backward.onComplete(() => {
-                this._text.setText('Completed -> forward');
+                this._text.text = 'Completed -> forward';
                 this._forward.start();
             });
         }

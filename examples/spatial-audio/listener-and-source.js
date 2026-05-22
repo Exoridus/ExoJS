@@ -47,7 +47,7 @@ app.start(
             const dx = this._sound.position.x - this._listener.x;
             const dy = this._sound.position.y - this._listener.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            this._label.setText(`Drag source circle  distance: ${dist.toFixed(0)}`);
+            this._label.text = `Drag source circle  distance: ${dist.toFixed(0)}`;
 
             backend.clear();
             this._graphics.clear();

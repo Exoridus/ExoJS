@@ -30,7 +30,7 @@ app.start(
             this._label.setPosition(width / 2, 16);
             this.inputs.onTrigger(Keyboard.Space, () => {
                 this._paused = !this._paused;
-                this._label.setText(this._paused ? 'Paused (draw running)' : 'Running');
+                this._label.text = this._paused ? 'Paused (draw running)' : 'Running';
             });
         }
         update(delta) {

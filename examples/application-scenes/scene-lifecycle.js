@@ -39,7 +39,7 @@ app.start(
         draw(backend) {
             this._drawCount++;
             backend.clear();
-            this._text.setText([...this._events.slice(-8), `draw ${this._drawCount}`].join('\n'));
+            this._text.text = [...this._events.slice(-8), `draw ${this._drawCount}`].join('\n');
             this._text.render(backend);
         }
         destroy() {

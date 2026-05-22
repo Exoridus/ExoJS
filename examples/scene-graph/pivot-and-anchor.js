@@ -37,7 +37,7 @@ app.start(
             const mode = modes[this._mode];
             this._sprite.setAnchor(mode.anchor[0], mode.anchor[1]);
             if (mode.origin) this._sprite.setOrigin(mode.origin[0], mode.origin[1]);
-            this._label.setText(`mode: ${mode.name}`);
+            this._label.text = `mode: ${mode.name}`;
         }
         update(delta) {
             this._timer += delta.seconds;

@@ -44,7 +44,7 @@ app.start(
                 .to({ count: title.length }, 1.0)
                 .delay(1.6)
                 .onUpdate(() => {
-                    this._title.setText(title.slice(0, this._titleState.count | 0));
+                    this._title.text = title.slice(0, this._titleState.count | 0);
                 })
                 .start();
             this.app.tweens.create(this._music).to({ volume: 0.85 }, 2.0).start();

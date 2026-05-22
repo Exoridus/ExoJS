@@ -69,7 +69,7 @@ app.start(
             this._leftBunny.setBlendMode(this._blendModes[this._blendModeIndex]);
             this._rightBunny.setBlendMode(this._blendModes[this._blendModeIndex]);
 
-            this._info.setText([`Click to switch between blend modes`, `Current blend mode: ${this._blendModeNames[this._blendModeIndex]}`].join('\n'));
+            this._info.text = [`Click to switch between blend modes`, `Current blend mode: ${this._blendModeNames[this._blendModeIndex]}`].join('\n');
         }
         update(delta) {
             const canvas = this.app.canvas,

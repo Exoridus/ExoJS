@@ -54,7 +54,7 @@ app.start(
             this._bar.fillColor = new Color(90, 220, 120);
             this._bar.drawRectangle(200, 150, total > 0 ? (400 * loaded) / total : 0, 24);
             this._bar.render(backend);
-            this._label.setText(`Loaded ${loaded} / ${total}`);
+            this._label.text = `Loaded ${loaded} / ${total}`;
             this._label.render(backend);
 
             for (const sprite of this._sprites) {

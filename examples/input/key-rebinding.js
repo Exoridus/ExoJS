@@ -51,7 +51,7 @@ app.start(
             this._sprite.move(0, this._jumpVelocity * delta.seconds);
             this._jumpVelocity = Math.min(0, this._jumpVelocity + 760 * delta.seconds);
             if (this._sprite.position.y > 300) this._sprite.position.y = 300;
-            this._text.setText(`Press J to rebind jump\nCurrent jump channel: ${this._jumpChannel}`);
+            this._text.text = `Press J to rebind jump\nCurrent jump channel: ${this._jumpChannel}`;
         }
         draw(backend) {
             backend.clear();

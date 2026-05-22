@@ -36,7 +36,8 @@ app.start(
             this._text.setAnchor(0.5, 0.5);
         }
         update(delta) {
-            this._text.setText(`Hello World! ${this._time.addTime(delta).seconds | 0}`).rotate(delta.seconds * 36);
+            this._text.text = `Hello World! ${this._time.addTime(delta).seconds | 0}`;
+            this._text.rotate(delta.seconds * 36);
         }
         draw(backend) {
             backend.clear();

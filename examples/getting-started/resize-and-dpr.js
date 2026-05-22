@@ -41,7 +41,7 @@ app.start(
 
             this._sprite.setPosition(width / 2, height / 2);
             this._info.setPosition(width / 2, 12);
-            this._info.setText(`${width}x${height} @ DPR ${dpr.toFixed(2)}`);
+            this._info.text = `${width}x${height} @ DPR ${dpr.toFixed(2)}`;
         }
         update() {
             this._layout();

@@ -1,51 +1,65 @@
 ---
 title: "Text"
-description: "GPU-accelerated text node that rasterizes individual glyphs into a shared atlas (DynamicGlyphAtlas) and renders them as a single quad-per- glyph Mesh (one draw call per Text instance). Glyphs are always rasterized in white and tinted at runtime via `Mesh.tint`; changing `style.fillColor` only updates the mesh tint — no atlas re-rasterization is needed. The internal Mesh is the sole child of this Container. All transform properties (position, rotation, scale, origin) are inherited from Container → RenderNode."
+description: "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw — no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap — no atlas work label.style.outlineWidth = 0.08; // cheap — only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs — no async waiting needed. ```ts const face = await loader.load(FontFactory, 'roboto.woff2', { family: 'Roboto' }); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`."
 symbol: "Text"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 88
+memberCount: 81
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/Text.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/Text.ts#L79"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/Text.ts#L46"
 ---
 ## Import
 
 `import { Text } from '@codexo/exojs'`
 
 GPU-accelerated text node that rasterizes individual glyphs into a shared
-atlas (DynamicGlyphAtlas) and renders them as a single quad-per-
-glyph Mesh (one draw call per Text instance).
+per-font-variant GlyphAtlas using the SDF (Signed Distance Field)
+technique and renders them through the `text-sdf` shader.
 
-Glyphs are always rasterized in white and tinted at runtime via
-`Mesh.tint`; changing `style.fillColor` only updates the mesh tint —
-no atlas re-rasterization is needed.
+Style mutations are applied automatically before the next draw — no manual
+`update()` call required. Mutating `text.style` any number of times in the
+same frame is cheap; the geometry is rebuilt at most once, on demand.
 
-The internal Mesh is the sole child of this Container.
-All transform properties (position, rotation, scale, origin) are
-inherited from Container → RenderNode.
+```ts
+const label = new Text('Hello', \{ fontSize: 24 \});
+scene.addChild(label);
+
+label.style.fillColor = new Color(255, 0, 0);   // cheap — no atlas work
+label.style.outlineWidth = 0.08;     // cheap — only shader uniforms
+// changes are picked up automatically on the next render pass
+```
+
+**FontFace-first:** load fonts via FontFactory before constructing
+the node, then pass the loaded `FontFace` via the `font` style option. The
+label renders immediately with the correct glyphs — no async waiting needed.
+
+```ts
+const face = await loader.load(FontFactory, 'roboto.woff2', \{ family: 'Roboto' \});
+const label = new Text('Score: 0', \{ font: face, fontSize: 24 \});
+scene.addChild(label); // renders immediately with Roboto
+```
+
+Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor
+options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
 
 ## Constructors
 
-- `new(text: string, style?: TextStyleOptions | TextStyle): Text`
+- `new(text: string, style?: TextStyleOptions | TextStyle, layout?: LayoutOptions, options: object): Text`
 
 ## Methods
 
 - `_invalidateBoundsCascade(): void`
 - `_invalidateChildrenTransform(): void`
 - `_invalidateSubtreeTransform(): void`
-- `addChild(children: RenderNode[]): this`
-- `addChildAt(child: RenderNode, index: number): this`
 - `addFilter(filter: Filter): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
 - `getBounds(): Rectangle`
-- `getChildAt(index: number): RenderNode`
-- `getChildIndex(child: RenderNode): number`
 - `getGlobalTransform(): Matrix`
 - `getLocalBounds(): Rectangle`
 - `getNormals(): Vector[]`
@@ -53,26 +67,23 @@ inherited from Container → RenderNode.
 - `intersectsWith(target: Collidable): boolean`
 - `invalidateCache(): this`
 - `inView(view: View): boolean`
-- `markSortDirty(): this`
 - `move(x: number, y: number): this`
 - `project(axis: Vector, result: Interval): Interval`
-- `removeChild(child: RenderNode): this`
-- `removeChildAt(index: number): this`
-- `removeChildren(begin: number, end: number): this`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
 - `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
-- `setChildIndex(child: RenderNode, index: number): this`
+- `setBlendMode(blendMode: BlendModes): this`
 - `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `sortChildren(): this`
-- `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
+- `setTint(color: Color): this`
+- `syncDirty(): void`
+- `update(_dt: number): void`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
 - `updateTransform(): this`
@@ -85,32 +96,32 @@ inherited from Container → RenderNode.
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
 - `anchor: ObservableVector`
-- `bottom: number`
+- `atlas: GlyphAtlas | null`
+- `atlasMode: AtlasMode`
+- `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
 - `childOrder: number`
-- `children: RenderNode[]`
+- `colorGlyphs: boolean`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
-- `height: number`
 - `interactive: boolean`
 - `isAlignedBox: boolean`
-- `left: number`
+- `layout: LayoutOptions`
 - `mask: MaskSource`
 - `origin: ObservableVector`
+- `pageQuads: readonly TextPageQuads[]`
 - `parent: Container | null`
 - `position: ObservableVector`
-- `ready: Promise<void>`
-- `right: number`
 - `rotation: number`
 - `scale: ObservableVector`
+- `sdfRadius: number`
 - `skewX: number`
 - `skewY: number`
-- `sortableChildren: boolean`
 - `style: TextStyle`
 - `text: string`
-- `top: number`
+- `textBounds: TextSize`
+- `tint: Color`
 - `visible: boolean`
-- `width: number`
 - `x: number`
 - `y: number`
 - `zIndex: number`
@@ -129,4 +140,4 @@ inherited from Container → RenderNode.
 
 ## Source
 
-[src/rendering/text/Text.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/Text.ts#L79)
+[src/rendering/text/Text.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/Text.ts#L46)

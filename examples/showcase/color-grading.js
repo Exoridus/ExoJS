@@ -94,7 +94,7 @@ app.start(
             this.inputs.onTrigger(Keyboard.Space, () => {
                 this._index = (this._index + 1) % LOOKS.length;
                 this._filter.setLut(this._luts[this._index]);
-                this._label.setText(LOOKS[this._index].name);
+                this._label.text = LOOKS[this._index].name;
             });
         }
         draw(backend) {

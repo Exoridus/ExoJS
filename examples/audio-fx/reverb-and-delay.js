@@ -72,7 +72,7 @@ app.start(
                 this._gfx.drawRectangle(260, sliders[i].y - 6, 420, 12);
                 this._gfx.fillColor = new Color(255, 190, 120);
                 this._gfx.drawRectangle(260, sliders[i].y - 6, 420 * values[i], 12);
-                this._labels[i].setText(names[i]);
+                this._labels[i].text = names[i];
                 this._labels[i].setPosition(110, sliders[i].y - 12);
                 this._labels[i].render(backend);
             }

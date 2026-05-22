@@ -24,7 +24,7 @@ export type { TextPageQuads };
  * const label = new Text('Hello', { fontSize: 24 });
  * scene.addChild(label);
  *
- * label.style.fillColor = Color.red;   // cheap — no atlas work
+ * label.style.fillColor = new Color(255, 0, 0);   // cheap — no atlas work
  * label.style.outlineWidth = 0.08;     // cheap — only shader uniforms
  * // changes are picked up automatically on the next render pass
  * ```

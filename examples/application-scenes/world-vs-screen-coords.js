@@ -51,7 +51,7 @@ app.start(
         }
         draw(backend) {
             const world = this._toWorld(this._pointer.x, this._pointer.y);
-            this._text.setText(`screen: ${this._pointer.x | 0}, ${this._pointer.y | 0}\nworld: ${world.x | 0}, ${world.y | 0}`);
+            this._text.text = `screen: ${this._pointer.x | 0}, ${this._pointer.y | 0}\nworld: ${world.x | 0}, ${world.y | 0}`;
             this._text.setPosition(12, 12);
             backend.clear();
             backend.setView(this._view);
