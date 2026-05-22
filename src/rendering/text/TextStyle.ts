@@ -44,10 +44,12 @@ export interface FontRegistry {}
  * narrows to registered names ∪ arbitrary strings (for unregistered fonts);
  * without registry entries it falls back to plain `string`.
  */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents -- FontRegistry is empty today (keyof → never), but consumers augment it via declaration merging */
 export type FontFamily =
-  keyof FontRegistry extends never
+  [keyof FontRegistry] extends [never]
     ? string
     : keyof FontRegistry | (string & {});
+/* eslint-enable @typescript-eslint/no-redundant-type-constituents */
 
 /**
  * Construction-time options for a {@link TextStyle}.

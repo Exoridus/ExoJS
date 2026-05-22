@@ -38,6 +38,7 @@ export abstract class AbstractText extends Drawable {
    * calls are only needed when you require up-to-date geometry outside
    * of a render pass (e.g. to measure bounds right after a style change).
    */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op; subclasses override
   public syncDirty(): void {}
 
   /**

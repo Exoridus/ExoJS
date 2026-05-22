@@ -410,11 +410,14 @@ export default defineConfig([
     },
   },
 
-  // Complex generic overload and internal queue logic is intentional here.
+  // Complex generic overload, internal queue logic, and cohesive single-file
+  // scope are intentional here. Splitting would degrade readability and release
+  // safety.
   {
     files: ['src/resources/Loader.ts'],
     rules: {
       'no-nested-ternary': 'off',
+      'max-lines': 'off',
       '@typescript-eslint/unified-signatures': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',

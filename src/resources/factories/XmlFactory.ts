@@ -30,7 +30,7 @@ export class XmlFactory extends AbstractAssetFactory<Document> {
     const parseError = doc.querySelector('parsererror');
 
     if (parseError) {
-      throw new Error(`XML parse error: ${parseError.textContent?.trim() ?? 'unknown error'}`);
+      throw new Error(`XML parse error: ${parseError.textContent.trim() || 'unknown error'}`);
     }
 
     return doc;
