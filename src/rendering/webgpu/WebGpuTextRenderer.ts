@@ -10,198 +10,418 @@ import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import type { WebGpuBackend } from './WebGpuBackend';
 
-// Per-vertex layout: position f32x2 + texcoord f32x2 + color u8x4 (20 bytes).
-const vertexStrideBytes = 20;
-const initialVertexCapacity = 256;
-const initialIndexCapacity = 384;
+// ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
+//
+// Storage buffer: array<vec4<f32>> — NODE_TEXELS = 10 entries per node.
+//
+// [ni*10+0]: (a,  c,  0,  tx)   transform col 0+2
+// [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
+// [ni*10+2]: (r,  g,  b,  a )   fillColor
+// [ni*10+3]: (r,  g,  b,  a )   outlineColor
+// [ni*10+4]: (outlineMin, shadowAlpha, softness, gradientEnabled)
+// [ni*10+5]: (r,  g,  b,  a )   shadowColor
+// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, 0)
+// [ni*10+7]: (r,  g,  b,  a )   gradientTop
+// [ni*10+8]: (r,  g,  b,  a )   gradientBottom
+// [ni*10+9]: (minX, minY, w, h) text block bounds
 
-// WGSL shader: samples the atlas and applies tint. Works for both SDF
-// (reads red channel as alpha) and RGBA colour atlases.
+const NODE_TEXELS = 10;
+const NODE_FLOATS = NODE_TEXELS * 4;
+
+// Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + nodeIndex f32
+const vertexStrideBytes = 20;
+const vertexStrideWords = vertexStrideBytes / 4;
+
+const initialVertexCapacity = 256;
+const initialIndexCapacity  = 384;
+const initialNodeCapacity   = 32;
+
+// FrameUniforms: 3 × vec4<f32> = 48 bytes (projection mat3x3 column-major)
+const projectionBytes = 48;
+
+type ShaderType = 'sdf' | 'msdf' | 'color';
+
+interface PendingQuad {
+  readonly quads:        TextPageQuads;
+  readonly nodeIndex:    number;
+  readonly shaderType:   ShaderType;
+  readonly atlasTexture: Texture;
+}
+
+interface BatchDraw {
+  readonly shaderType:   ShaderType;
+  readonly atlasTexture: Texture;
+  readonly firstIndex:   number;
+  readonly indexCount:   number;
+}
+
+// ── WGSL: shared vertex + three fragment entry points ────────────────────────
 const textShaderSource = `
-struct Uniforms {
-    tint: vec4<f32>,
+struct FrameUniforms {
+    projCol0 : vec4<f32>,
+    projCol1 : vec4<f32>,
+    projCol2 : vec4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
-@group(1) @binding(0) var atlasTexture: texture_2d<f32>;
-@group(1) @binding(1) var atlasSampler: sampler;
+@group(0) @binding(0) var<uniform>       frame : FrameUniforms;
+@group(0) @binding(1) var<storage, read> nodes : array<vec4<f32>>;
+
+@group(1) @binding(0) var atlasTexture : texture_2d<f32>;
+@group(1) @binding(1) var atlasSampler : sampler;
 
 struct VertexInput {
-    @location(0) position: vec2<f32>,
-    @location(1) texcoord: vec2<f32>,
-    @location(2) color:    vec4<f32>,
+    @location(0) position  : vec2<f32>,
+    @location(1) texcoord  : vec2<f32>,
+    @location(2) nodeIndex : f32,
 };
 
 struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) texcoord: vec2<f32>,
+    @builtin(position)              clipPos  : vec4<f32>,
+    @location(0)                    texcoord : vec2<f32>,
+    @location(1)                    gradUV   : vec2<f32>,
+    @location(2) @interpolate(flat) nodeIdx  : u32,
 };
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
+    let ni   = u32(input.nodeIndex);
+    let base = ni * 10u;
+
+    let t0 = nodes[base + 0u];
+    let t1 = nodes[base + 1u];
+    let t9 = nodes[base + 9u];
+
+    let proj = mat3x3<f32>(
+        frame.projCol0.xyz,
+        frame.projCol1.xyz,
+        frame.projCol2.xyz,
+    );
+    let xf = mat3x3<f32>(
+        vec3<f32>(t0.x, t0.y, 0.0),
+        vec3<f32>(t1.x, t1.y, 0.0),
+        vec3<f32>(t0.w, t1.w, 1.0),
+    );
+
+    let worldPos = proj * xf * vec3<f32>(input.position, 1.0);
+
+    let bSize  = t9.zw;
+    var gradUV = vec2<f32>(0.0);
+    if (bSize.x > 0.0 && bSize.y > 0.0) {
+        gradUV = clamp((input.position - t9.xy) / bSize, vec2<f32>(0.0), vec2<f32>(1.0));
+    }
+
     var out: VertexOutput;
-    out.position = vec4<f32>(input.position, 0.0, 1.0);
+    out.clipPos  = vec4<f32>(worldPos.xy, 0.0, 1.0);
     out.texcoord = input.texcoord;
+    out.gradUV   = gradUV;
+    out.nodeIdx  = ni;
     return out;
 }
 
+// ── SDF (R8 atlas) ────────────────────────────────────────────────────────────
+
 @fragment
-fn fragmentMain(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
+    let ni   = in.nodeIdx;
+    let base = ni * 10u;
+
+    let tFill    = nodes[base + 2u];
+    let tOutline = nodes[base + 3u];
+    let tParams  = nodes[base + 4u];
+    let tShadow  = nodes[base + 5u];
+    let tShadow2 = nodes[base + 6u];
+    let tGradTop = nodes[base + 7u];
+    let tGradBot = nodes[base + 8u];
+
+    let outlineMin   = tParams.x;
+    let shadowAlpha  = tParams.y;
+    let soft         = max(tParams.z, 0.001);
+    let gradEnabled  = tParams.w;
+    let pageSize     = f32(textureDimensions(atlasTexture, 0).x);
+    let shadowOffset = tShadow2.xy / pageSize;
+    let gradVertical = tShadow2.z;
+
+    let sd   = textureSample(atlasTexture, atlasSampler, in.texcoord).r;
+    let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
+
+    let shadowSd = textureSample(atlasTexture, atlasSampler, in.texcoord - shadowOffset).r;
+
+    let outline = select(0.0,
+        smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill),
+        outlineMin < 0.5);
+
+    let shadow = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
+                 * shadowAlpha * (1.0 - fill) * (1.0 - outline);
+
+    var fillColor : vec4<f32>;
+    if (gradEnabled > 0.5) {
+        let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
+        fillColor = mix(tGradBot, tGradTop, t);
+    } else {
+        fillColor = tFill;
+    }
+
+    return fillColor * fill + tOutline * outline + tShadow * shadow;
+}
+
+// ── MSDF (RGB atlas) ──────────────────────────────────────────────────────────
+
+fn median3(r: f32, g: f32, b: f32) -> f32 {
+    return max(min(r, g), min(max(r, g), b));
+}
+
+@fragment
+fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
+    let ni   = in.nodeIdx;
+    let base = ni * 10u;
+
+    let tFill    = nodes[base + 2u];
+    let tOutline = nodes[base + 3u];
+    let tParams  = nodes[base + 4u];
+    let tShadow  = nodes[base + 5u];
+    let tShadow2 = nodes[base + 6u];
+    let tGradTop = nodes[base + 7u];
+    let tGradBot = nodes[base + 8u];
+
+    let outlineMin   = tParams.x;
+    let shadowAlpha  = tParams.y;
+    let soft         = max(tParams.z, 0.001);
+    let gradEnabled  = tParams.w;
+    let pageSize     = f32(textureDimensions(atlasTexture, 0).x);
+    let shadowOffset = tShadow2.xy / pageSize;
+    let gradVertical = tShadow2.z;
+
+    let msd  = textureSample(atlasTexture, atlasSampler, in.texcoord).rgb;
+    let sd   = median3(msd.r, msd.g, msd.b);
+    let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
+
+    let shadowMsd = textureSample(atlasTexture, atlasSampler, in.texcoord - shadowOffset).rgb;
+    let shadowSd  = median3(shadowMsd.r, shadowMsd.g, shadowMsd.b);
+
+    let outline = select(0.0,
+        smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill),
+        outlineMin < 0.5);
+
+    let shadow = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
+                 * shadowAlpha * (1.0 - fill) * (1.0 - outline);
+
+    var fillColor : vec4<f32>;
+    if (gradEnabled > 0.5) {
+        let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
+        fillColor = mix(tGradBot, tGradTop, t);
+    } else {
+        fillColor = tFill;
+    }
+
+    return fillColor * fill + tOutline * outline + tShadow * shadow;
+}
+
+// ── Color (RGBA atlas) ────────────────────────────────────────────────────────
+
+@fragment
+fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
+    let ni     = in.nodeIdx;
+    let base   = ni * 10u;
+    let tint   = nodes[base + 2u];
     let sample = textureSample(atlasTexture, atlasSampler, in.texcoord);
-    // SDF atlases store the distance in the red channel; RGBA atlases use all
-    // four. Combine both so the shader works for either format.
-    let alpha = max(sample.r, sample.a);
-    let base  = select(sample, uniforms.tint * vec4<f32>(1.0, 1.0, 1.0, alpha), alpha == sample.r);
-    return vec4<f32>(base.rgb * base.a, base.a);
+    return sample * tint;
 }
 `;
-
-interface TextDrawCall {
-  readonly batch: TextPageQuads;
-  readonly texture: Texture;
-  readonly tint: Float32Array;
-  readonly vertexByteOffset: number;
-  readonly indexByteOffset: number;
-}
 
 /**
  * WebGPU renderer for {@link Text} and {@link BitmapText} nodes.
  *
- * Uses a minimal mesh-like pipeline that samples the atlas texture with a
- * tint multiplier. Full SDF effects (outline, shadow, gradient) are handled
- * by the WebGL2 backend's `text-sdf` shader; this backend provides correct
- * visual output using a simplified alpha-from-red-channel approach.
+ * Mirrors {@link WebGl2TextRenderer}: per-node style data is packed once per
+ * flush into a `var<storage, read>` buffer, three specialised WGSL fragment
+ * variants handle SDF / MSDF / colour-atlas glyphs, and quads are sorted and
+ * batched by (shaderType, atlasPage) to minimise draw calls within a single
+ * render pass.
  */
 export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText> {
   private _device: GPUDevice | null = null;
-  private _pipeline: GPURenderPipeline | null = null;
-  private _uniformLayout: GPUBindGroupLayout | null = null;
-  private _textureLayout: GPUBindGroupLayout | null = null;
+  private _shaderModule: GPUShaderModule | null = null;
+  private _frameBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _pipelineLayout: GPUPipelineLayout | null = null;
 
+  private readonly _pipelines     = new Map<string, GPURenderPipeline>();
+  private readonly _texBindGroups = new Map<Texture, GPUBindGroup>();
+
+  private _projBuffer:          GPUBuffer | null = null;
+  private _nodeBuffer:          GPUBuffer | null = null;
+  private _vertexBuffer:        GPUBuffer | null = null;
+  private _indexBuffer:         GPUBuffer | null = null;
+  private _nodeBufferCapacity   = 0;
+  private _vertexBufferCapacity = 0;
+  private _indexBufferCapacity  = 0;
+
+  private _frameBindGroup:     GPUBindGroup | null = null;
+  private _frameBindGroupDirty = true;
+
+  // CPU-side working arrays
   private _vertexCapacity = initialVertexCapacity;
-  private _indexCapacity = initialIndexCapacity;
-  private _vertexData: ArrayBuffer = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
-  private _float32View: Float32Array = new Float32Array(this._vertexData);
-  private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
-  private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
+  private _indexCapacity  = initialIndexCapacity;
+  private _vertexData:   ArrayBuffer  = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
+  private _float32View:  Float32Array = new Float32Array(this._vertexData);
+  private _indexData:    Uint16Array  = new Uint16Array(initialIndexCapacity);
+  private _projData:     Float32Array = new Float32Array(projectionBytes / 4);
 
-  private _vertexBuffer: GPUBuffer | null = null;
-  private _indexBuffer: GPUBuffer | null = null;
-  private _uniformBuffer: GPUBuffer | null = null;
+  private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * NODE_FLOATS);
+  private _nodeCapacity = initialNodeCapacity;
+  private _nodeCount    = 0;
 
-  private _drawCalls: TextDrawCall[] = [];
-  private _totalVertices = 0;
-  private _totalIndices = 0;
+  private readonly _pendingQuads:  PendingQuad[]                   = [];
+  private readonly _nodeIndexMap:  Map<Text | BitmapText, number>  = new Map();
+  private readonly _textureKeyMap: Map<Texture, number>            = new Map();
+  private _textureKeyCounter = 0;
+
+  // ── Public API ──────────────────────────────────────────────────────────────
 
   public render(node: Text | BitmapText): void {
-    const backend = this.getBackend();
-    const pageQuads = node.pageQuads;
-    if (pageQuads.length === 0) return;
+    if (!this._device) throw new Error('WebGpuTextRenderer is not connected to a backend.');
 
-    const textures = node instanceof Text
-      ? (node.atlas?.pages.map(p => p.texture) ?? [])
-      : [...node.textures];
-
-    // Bake the view + local transform into vertex positions (CPU-side).
-    const view = backend.view;
-    const projMatrix = view.getTransform().toArray(false);
-    const localMatrix = node.getGlobalTransform().toArray(false);
-    const combined = _multiplyMat3(projMatrix, localMatrix);
-
-    const fillColor = node instanceof Text ? node.style.fillColor : null;
-    const tint = new Float32Array([
-      fillColor ? fillColor.r / 255 : 1,
-      fillColor ? fillColor.g / 255 : 1,
-      fillColor ? fillColor.b / 255 : 1,
-      fillColor ? fillColor.a : 1,
-    ]);
-
-    for (const batch of pageQuads) {
-      const tex = textures[batch.pageIndex] as Texture | undefined;
-      if (tex === undefined) continue;
-
-      const vertexCount = batch.quadCount * 4;
-
-      this._ensureVertexCapacity(this._totalVertices + vertexCount);
-      this._ensureIndexCapacity(this._totalIndices + batch.indices.length);
-
-      this._writeBatchVertices(batch, combined, this._totalVertices);
-
-      const adjustedIndices = new Uint16Array(batch.indices.length);
-      const baseV = this._totalVertices;
-      for (let j = 0; j < batch.indices.length; j++) {
-        adjustedIndices[j] = batch.indices[j] + baseV;
-      }
-      this._indexData.set(adjustedIndices, this._totalIndices);
-
-      this._drawCalls.push({
-        batch,
-        texture: tex,
-        tint,
-        vertexByteOffset: this._totalVertices * vertexStrideBytes,
-        indexByteOffset: this._totalIndices * 2,
-      });
-
-      this._totalVertices += vertexCount;
-      this._totalIndices += batch.indices.length;
+    if (node instanceof Text) {
+      this._collectText(node);
+    } else {
+      this._collectBitmapText(node);
     }
   }
 
   public flush(): void {
-    if (this._drawCalls.length === 0) return;
+    if (this._pendingQuads.length === 0) {
+      this._resetFrameState();
+      return;
+    }
 
     const backend = this.getBackend();
-    const device = this._device!;
-    const scissor = backend.getScissorRect();
+    const device  = this._device!;
 
-    // Upload all vertex/index data in one pass.
-    const usedVertBytes = this._totalVertices * vertexStrideBytes;
-    const usedIdxBytes = this._totalIndices * 2;
+    // Assign stable sort keys to atlas textures seen this flush
+    for (const pq of this._pendingQuads) {
+      if (!this._textureKeyMap.has(pq.atlasTexture)) {
+        this._textureKeyMap.set(pq.atlasTexture, this._textureKeyCounter++);
+      }
+    }
 
-    this._ensureGpuBuffers(device, usedVertBytes, usedIdxBytes);
+    // Sort by (shaderType, atlasTexture) so equal-key quads are contiguous
+    this._pendingQuads.sort((a, b) => {
+      const sc = a.shaderType.localeCompare(b.shaderType);
+      if (sc !== 0) return sc;
+      return (this._textureKeyMap.get(a.atlasTexture) ?? 0)
+           - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
+    });
 
-    device.queue.writeBuffer(this._vertexBuffer!, 0, this._float32View.buffer, 0, usedVertBytes);
-    device.queue.writeBuffer(this._indexBuffer!, 0, this._indexData.buffer, 0, usedIdxBytes);
+    // Upload projection (3 × vec4<f32> = column-major mat3x3)
+    const m = backend.view.getTransform().toArray(false);
+    this._projData[0]  = m[0]; this._projData[1]  = m[1]; this._projData[2]  = m[2]; this._projData[3]  = 0;
+    this._projData[4]  = m[3]; this._projData[5]  = m[4]; this._projData[6]  = m[5]; this._projData[7]  = 0;
+    this._projData[8]  = m[6]; this._projData[9]  = m[7]; this._projData[10] = m[8]; this._projData[11] = 0;
+    device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
+
+    // Upload per-node style data (may reallocate the storage buffer)
+    this._uploadNodeBuffer(device);
+
+    // Build interleaved vertex/index data for all batches in one pass
+    const quads = this._pendingQuads;
+    const batches: BatchDraw[] = [];
+
+    let totalV = 0, totalI = 0;
+    for (const pq of quads) {
+      totalV += pq.quads.quadCount * 4;
+      totalI += pq.quads.indices.length;
+    }
+    this._ensureVertexCapacity(totalV);
+    this._ensureIndexCapacity(totalI);
+
+    let packedV = 0, packedI = 0, qi = 0;
+
+    while (qi < quads.length) {
+      const first     = quads[qi];
+      const firstTKey = this._textureKeyMap.get(first.atlasTexture);
+
+      let qj = qi + 1;
+      while (qj < quads.length) {
+        const pq = quads[qj];
+        if (pq.shaderType !== first.shaderType ||
+            this._textureKeyMap.get(pq.atlasTexture) !== firstTKey) break;
+        qj++;
+      }
+
+      const batchFirstIndex = packedI;
+      let batchIndexCount   = 0;
+
+      for (let k = qi; k < qj; k++) {
+        const { quads: batch, nodeIndex } = quads[k];
+        const qVerts = batch.quadCount * 4;
+        const { vertices, uvs, indices } = batch;
+
+        for (let v = 0; v < qVerts; v++) {
+          const w  = (packedV + v) * vertexStrideWords;
+          const vp = v * 2;
+          this._float32View[w + 0] = vertices[vp];
+          this._float32View[w + 1] = vertices[vp + 1];
+          this._float32View[w + 2] = uvs[vp];
+          this._float32View[w + 3] = uvs[vp + 1];
+          this._float32View[w + 4] = nodeIndex;
+        }
+
+        for (let x = 0; x < indices.length; x++) {
+          this._indexData[packedI + x] = indices[x] + packedV;
+        }
+
+        packedV         += qVerts;
+        packedI         += indices.length;
+        batchIndexCount += indices.length;
+      }
+
+      batches.push({
+        shaderType:   first.shaderType,
+        atlasTexture: first.atlasTexture,
+        firstIndex:   batchFirstIndex,
+        indexCount:   batchIndexCount,
+      });
+
+      qi = qj;
+    }
+
+    // Upload vertex/index buffers (reallocate GPU side when needed)
+    this._ensureGpuVertexBuffer(device, packedV);
+    this._ensureGpuIndexBuffer(device, packedI);
+    device.queue.writeBuffer(this._vertexBuffer!, 0, this._vertexData, 0, packedV * vertexStrideBytes);
+    device.queue.writeBuffer(this._indexBuffer!,  0, this._indexData.buffer, 0, packedI * 2);
+
+    const scissor        = backend.getScissorRect();
+    const format         = backend.renderTargetFormat;
+    const frameBindGroup = this._getFrameBindGroup(device);
 
     const encoder = device.createCommandEncoder({ label: 'WebGpuTextRenderer' });
-    const pass = encoder.beginRenderPass({
+    const pass    = encoder.beginRenderPass({
       colorAttachments: [backend.createColorAttachment()],
       label: 'WebGpuTextRenderer pass',
     });
-
     backend.stats.renderPasses++;
 
     if (scissor !== null) {
       pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
     }
 
-    const pipeline = this._getPipeline(backend);
-    pass.setPipeline(pipeline);
+    pass.setVertexBuffer(0, this._vertexBuffer!);
+    pass.setIndexBuffer(this._indexBuffer!, 'uint16');
 
-    for (const dc of this._drawCalls) {
-      const { view: texView, sampler } = backend.getTextureBinding(dc.texture);
+    let lastShaderType: ShaderType | null = null;
+    let lastTexture:    Texture    | null = null;
 
-      // Write tint uniform
-      device.queue.writeBuffer(this._uniformBuffer!, 0, dc.tint);
-
-      const uniformBindGroup = device.createBindGroup({
-        layout: this._uniformLayout!,
-        entries: [{ binding: 0, resource: { buffer: this._uniformBuffer! } }],
-      });
-      const textureBindGroup = device.createBindGroup({
-        layout: this._textureLayout!,
-        entries: [
-          { binding: 0, resource: texView },
-          { binding: 1, resource: sampler },
-        ],
-      });
-
-      pass.setBindGroup(0, uniformBindGroup);
-      pass.setBindGroup(1, textureBindGroup);
-      pass.setVertexBuffer(0, this._vertexBuffer!);
-      pass.setIndexBuffer(this._indexBuffer!, 'uint16');
-      pass.drawIndexed(dc.batch.indices.length);
-
+    for (const batch of batches) {
+      if (batch.shaderType !== lastShaderType) {
+        pass.setPipeline(this._getPipeline(batch.shaderType, format));
+        pass.setBindGroup(0, frameBindGroup);
+        lastShaderType = batch.shaderType;
+      }
+      if (batch.atlasTexture !== lastTexture) {
+        pass.setBindGroup(1, this._getTexBindGroup(device, backend, batch.atlasTexture));
+        lastTexture = batch.atlasTexture;
+      }
+      pass.drawIndexed(batch.indexCount, 1, batch.firstIndex, 0, 0);
       backend.stats.batches++;
       backend.stats.drawCalls++;
     }
@@ -209,183 +429,399 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     pass.end();
     backend.submit(encoder.finish());
 
-    this._drawCalls.length = 0;
-    this._totalVertices = 0;
-    this._totalIndices = 0;
+    this._resetFrameState();
   }
 
   public destroy(): void {
     this.disconnect();
-    this._destroyGpuResources();
   }
+
+  /**
+   * Pre-create render pipelines for every (shaderType × targetFormat) pair
+   * asynchronously. Called from the backend init path so first-frame draws
+   * do not block on synchronous pipeline compilation.
+   */
+  public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
+    const device = this._device;
+    if (!device || !this._shaderModule || !this._pipelineLayout) return;
+    if (typeof device.createRenderPipelineAsync !== 'function') return;
+
+    const shaderTypes: ShaderType[] = ['sdf', 'msdf', 'color'];
+    const promises: Promise<void>[] = [];
+
+    for (const shaderType of shaderTypes) {
+      for (const format of formats) {
+        const key = `${shaderType}:${format}`;
+        if (this._pipelines.has(key)) continue;
+
+        promises.push(
+          device.createRenderPipelineAsync(this._buildPipelineDescriptor(shaderType, format))
+            .then(pipeline => { this._pipelines.set(key, pipeline); }),
+        );
+      }
+    }
+
+    await Promise.all(promises);
+  }
+
+  // ── Connection lifecycle ─────────────────────────────────────────────────
 
   protected onConnect(backend: WebGpuBackend): void {
     const device = backend.device;
     this._device = device;
 
-    this._uniformLayout = device.createBindGroupLayout({
-      entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
+    this._shaderModule = device.createShaderModule({
+      label: 'WebGpuTextRenderer',
+      code: textShaderSource,
     });
 
-    this._textureLayout = device.createBindGroupLayout({
+    this._frameBindGroupLayout = device.createBindGroupLayout({
+      label: 'WebGpuTextRenderer/frame',
       entries: [
-        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: { type: 'uniform' },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'read-only-storage' },
+        },
       ],
     });
 
-    this._uniformBuffer = device.createBuffer({
-      size: 16, // vec4<f32> tint
+    this._textureBindGroupLayout = device.createBindGroupLayout({
+      label: 'WebGpuTextRenderer/texture',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType: 'float' },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: { type: 'filtering' },
+        },
+      ],
+    });
+
+    this._pipelineLayout = device.createPipelineLayout({
+      label: 'WebGpuTextRenderer',
+      bindGroupLayouts: [this._frameBindGroupLayout, this._textureBindGroupLayout],
+    });
+
+    this._projBuffer = device.createBuffer({
+      label: 'WebGpuTextRenderer/proj',
+      size: projectionBytes,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    const nodeBytes = initialNodeCapacity * NODE_FLOATS * 4;
+    this._nodeBuffer = device.createBuffer({
+      label: 'WebGpuTextRenderer/nodes',
+      size: nodeBytes,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this._nodeBufferCapacity = nodeBytes;
+
+    const vertexBytes = initialVertexCapacity * vertexStrideBytes;
     this._vertexBuffer = device.createBuffer({
-      size: this._vertexCapacity * vertexStrideBytes,
+      label: 'WebGpuTextRenderer/vertices',
+      size: vertexBytes,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
+    this._vertexBufferCapacity = vertexBytes;
 
+    const indexBytes = initialIndexCapacity * 2;
     this._indexBuffer = device.createBuffer({
-      size: this._indexCapacity * 2,
+      label: 'WebGpuTextRenderer/indices',
+      size: indexBytes,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
+    this._indexBufferCapacity = indexBytes;
+
+    this._frameBindGroupDirty = true;
   }
 
   protected onDisconnect(): void {
-    this._destroyGpuResources();
-  }
-
-  // ── Private ──────────────────────────────────────────────────────────────
-
-  private _getPipeline(backend: WebGpuBackend): GPURenderPipeline {
-    if (this._pipeline !== null) return this._pipeline;
-
-    const device = this._device!;
-    const module = device.createShaderModule({ code: textShaderSource });
-    const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [this._uniformLayout!, this._textureLayout!],
-    });
-
-    this._pipeline = device.createRenderPipeline({
-      layout: pipelineLayout,
-      vertex: {
-        module,
-        entryPoint: 'vertexMain',
-        buffers: [
-          {
-            arrayStride: vertexStrideBytes,
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: 'float32x2' },
-              { shaderLocation: 1, offset: 8, format: 'float32x2' },
-              { shaderLocation: 2, offset: 16, format: 'unorm8x4' },
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module,
-        entryPoint: 'fragmentMain',
-        targets: [{ format: backend.renderTargetFormat, blend: getWebGpuBlendState(BlendModes.Normal) }],
-      },
-      primitive: { topology: 'triangle-list' },
-    });
-
-    return this._pipeline;
-  }
-
-  private _writeBatchVertices(batch: TextPageQuads, combined: Float32Array, dstVertexOffset: number): void {
-    const { vertices, uvs } = batch;
-    const n = batch.quadCount * 4;
-
-    const [m00, m01, m02, m10, m11, m12, m20, m21, m22] = combined;
-
-    for (let i = 0; i < n; i++) {
-      const w = (dstVertexOffset + i) * 5; // 5 float32 words per vertex
-      const p = i * 2;
-      const lx = vertices[p];
-      const ly = vertices[p + 1];
-
-      const cx = m00 * lx + m10 * ly + m20;
-      const cy = m01 * lx + m11 * ly + m21;
-      const cw = m02 * lx + m12 * ly + m22;
-      const invW = cw !== 0 ? 1 / cw : 1;
-
-      this._float32View[w + 0] = cx * invW;
-      this._float32View[w + 1] = cy * invW;
-      this._float32View[w + 2] = uvs[p];
-      this._float32View[w + 3] = uvs[p + 1];
-      this._uint32View[w + 4] = 0xffffffff;
-    }
-  }
-
-  private _ensureVertexCapacity(needed: number): void {
-    if (needed <= this._vertexCapacity) return;
-    while (this._vertexCapacity < needed) this._vertexCapacity *= 2;
-    const newBuf = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
-    const newF32 = new Float32Array(newBuf);
-    newF32.set(this._float32View);
-    this._vertexData = newBuf;
-    this._float32View = newF32;
-    this._uint32View = new Uint32Array(this._vertexData);
-  }
-
-  private _ensureIndexCapacity(needed: number): void {
-    if (needed <= this._indexCapacity) return;
-    while (this._indexCapacity < needed) this._indexCapacity *= 2;
-    const newIdx = new Uint16Array(this._indexCapacity);
-    newIdx.set(this._indexData);
-    this._indexData = newIdx;
-  }
-
-  private _ensureGpuBuffers(device: GPUDevice, vertexBytes: number, indexBytes: number): void {
-    if (this._vertexBuffer === null || (this._vertexBuffer as unknown as { size?: number }).size === undefined) return;
-
-    const needsNewVertex = vertexBytes > this._vertexCapacity * vertexStrideBytes;
-    const needsNewIndex = indexBytes > this._indexCapacity * 2;
-
-    if (needsNewVertex) {
-      this._vertexBuffer.destroy();
-      this._vertexBuffer = device.createBuffer({
-        size: this._vertexCapacity * vertexStrideBytes,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      });
-    }
-
-    if (needsNewIndex) {
-      this._indexBuffer?.destroy();
-      this._indexBuffer = device.createBuffer({
-        size: this._indexCapacity * 2,
-        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-      });
-    }
-  }
-
-  private _destroyGpuResources(): void {
+    this._projBuffer?.destroy();
+    this._nodeBuffer?.destroy();
     this._vertexBuffer?.destroy();
     this._indexBuffer?.destroy();
-    this._uniformBuffer?.destroy();
-    this._vertexBuffer = null;
-    this._indexBuffer = null;
-    this._uniformBuffer = null;
-    this._device = null;
-    this._pipeline = null;
-    this._uniformLayout = null;
-    this._textureLayout = null;
-    this._drawCalls.length = 0;
-    this._totalVertices = 0;
-    this._totalIndices = 0;
-  }
-}
 
-function _multiplyMat3(a: number[] | Float32Array, b: number[] | Float32Array): Float32Array {
-  const out = new Float32Array(9);
-  for (let col = 0; col < 3; col++) {
-    for (let row = 0; row < 3; row++) {
-      let sum = 0;
-      for (let k = 0; k < 3; k++) {
-        sum += a[row + k * 3] * b[k + col * 3];
-      }
-      out[row + col * 3] = sum;
+    this._projBuffer  = null;
+    this._nodeBuffer  = null;
+    this._vertexBuffer = null;
+    this._indexBuffer  = null;
+    this._nodeBufferCapacity   = 0;
+    this._vertexBufferCapacity = 0;
+    this._indexBufferCapacity  = 0;
+
+    this._frameBindGroup      = null;
+    this._frameBindGroupDirty = true;
+
+    this._pipelines.clear();
+    this._texBindGroups.clear();
+
+    this._pipelineLayout         = null;
+    this._textureBindGroupLayout = null;
+    this._frameBindGroupLayout   = null;
+    this._shaderModule           = null;
+    this._device                 = null;
+
+    this._resetFrameState();
+  }
+
+  // ── Collection ───────────────────────────────────────────────────────────
+
+  private _collectText(node: Text): void {
+    node.syncDirty();
+    const { pageQuads, atlas } = node;
+    if (pageQuads.length === 0 || atlas === null) return;
+
+    const nodeIndex  = this._assignNodeIndex(node);
+    const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
+    const pages      = atlas.pages;
+
+    for (const batch of pageQuads) {
+      const page = pages[batch.pageIndex];
+      if (page === undefined) continue;
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture });
     }
   }
-  return out;
+
+  private _collectBitmapText(node: BitmapText): void {
+    const { pageQuads, textures, msdf } = node;
+    if (pageQuads.length === 0) return;
+
+    const nodeIndex  = this._assignNodeIndex(node);
+    const shaderType: ShaderType = msdf ? 'msdf' : 'color';
+
+    for (const batch of pageQuads) {
+      const tex = textures[batch.pageIndex];
+      if (tex === undefined) continue;
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex });
+    }
+  }
+
+  private _assignNodeIndex(node: Text | BitmapText): number {
+    const existing = this._nodeIndexMap.get(node);
+    if (existing !== undefined) return existing;
+
+    const idx = this._nodeCount++;
+    this._nodeIndexMap.set(node, idx);
+    this._ensureNodeCapacity(idx + 1);
+    this._packNodeData(idx, node);
+    return idx;
+  }
+
+  // ── Node data packing (identical to WebGl2TextRenderer) ──────────────────
+
+  private _packNodeData(ni: number, node: Text | BitmapText): void {
+    const arr  = this._nodeDataArray;
+    const base = ni * NODE_FLOATS;
+    const style = node.style;
+
+    const m = node.getGlobalTransform().toArray(false);
+    arr[base +  0] = m[0]; arr[base +  1] = m[1]; arr[base +  2] = m[2]; arr[base +  3] = m[6];
+    arr[base +  4] = m[3]; arr[base +  5] = m[4]; arr[base +  6] = m[5]; arr[base +  7] = m[7];
+
+    const fc = style.fillColor;
+    arr[base +  8] = fc.r / 255; arr[base +  9] = fc.g / 255; arr[base + 10] = fc.b / 255; arr[base + 11] = fc.a;
+
+    const oc = style.outlineColor;
+    arr[base + 12] = oc.r / 255; arr[base + 13] = oc.g / 255; arr[base + 14] = oc.b / 255; arr[base + 15] = oc.a;
+
+    const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
+    arr[base + 16] = outlineMin;
+    arr[base + 17] = style.shadowAlpha;
+    arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
+    arr[base + 19] = style.gradientColors !== null ? 1.0 : 0.0;
+
+    const sc = style.shadowColor;
+    arr[base + 20] = sc.r / 255; arr[base + 21] = sc.g / 255; arr[base + 22] = sc.b / 255; arr[base + 23] = sc.a;
+
+    arr[base + 24] = style.shadowOffsetX;
+    arr[base + 25] = style.shadowOffsetY;
+    arr[base + 26] = style.gradientAxis === 'vertical' ? 1.0 : 0.0;
+    arr[base + 27] = 0.0;
+
+    const gc = style.gradientColors;
+    if (gc !== null) {
+      arr[base + 28] = gc[0].r / 255; arr[base + 29] = gc[0].g / 255;
+      arr[base + 30] = gc[0].b / 255; arr[base + 31] = gc[0].a;
+      arr[base + 32] = gc[1].r / 255; arr[base + 33] = gc[1].g / 255;
+      arr[base + 34] = gc[1].b / 255; arr[base + 35] = gc[1].a;
+    } else {
+      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0.0;
+      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0.0;
+    }
+
+    const bounds = node.textBounds;
+    arr[base + 36] = 0.0;
+    arr[base + 37] = 0.0;
+    arr[base + 38] = bounds.width;
+    arr[base + 39] = bounds.height;
+  }
+
+  // ── GPU resource helpers ─────────────────────────────────────────────────
+
+  private _uploadNodeBuffer(device: GPUDevice): void {
+    const requiredBytes = this._nodeCount * NODE_FLOATS * 4;
+
+    if (requiredBytes > this._nodeBufferCapacity) {
+      let newCap = this._nodeBufferCapacity;
+      while (newCap < requiredBytes) newCap *= 2;
+      this._nodeBuffer?.destroy();
+      this._nodeBuffer = device.createBuffer({
+        label: 'WebGpuTextRenderer/nodes',
+        size: newCap,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      this._nodeBufferCapacity  = newCap;
+      this._frameBindGroupDirty = true;
+    }
+
+    device.queue.writeBuffer(this._nodeBuffer!, 0, this._nodeDataArray.buffer, 0, requiredBytes);
+  }
+
+  private _ensureGpuVertexBuffer(device: GPUDevice, vertexCount: number): void {
+    const required = vertexCount * vertexStrideBytes;
+    if (required <= this._vertexBufferCapacity) return;
+
+    let newCap = this._vertexBufferCapacity;
+    while (newCap < required) newCap *= 2;
+    this._vertexBuffer?.destroy();
+    this._vertexBuffer = device.createBuffer({
+      label: 'WebGpuTextRenderer/vertices',
+      size: newCap,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this._vertexBufferCapacity = newCap;
+  }
+
+  private _ensureGpuIndexBuffer(device: GPUDevice, indexCount: number): void {
+    const required = indexCount * 2;
+    if (required <= this._indexBufferCapacity) return;
+
+    let newCap = this._indexBufferCapacity;
+    while (newCap < required) newCap *= 2;
+    this._indexBuffer?.destroy();
+    this._indexBuffer = device.createBuffer({
+      label: 'WebGpuTextRenderer/indices',
+      size: newCap,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    this._indexBufferCapacity = newCap;
+  }
+
+  private _getFrameBindGroup(device: GPUDevice): GPUBindGroup {
+    if (!this._frameBindGroupDirty && this._frameBindGroup !== null) {
+      return this._frameBindGroup;
+    }
+    this._frameBindGroup = device.createBindGroup({
+      layout: this._frameBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: { buffer: this._projBuffer! } },
+        { binding: 1, resource: { buffer: this._nodeBuffer! } },
+      ],
+    });
+    this._frameBindGroupDirty = false;
+    return this._frameBindGroup;
+  }
+
+  private _getTexBindGroup(device: GPUDevice, backend: WebGpuBackend, texture: Texture): GPUBindGroup {
+    const existing = this._texBindGroups.get(texture);
+    if (existing !== undefined) return existing;
+
+    const { view, sampler } = backend.getTextureBinding(texture);
+    const group = device.createBindGroup({
+      layout: this._textureBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: view },
+        { binding: 1, resource: sampler },
+      ],
+    });
+    this._texBindGroups.set(texture, group);
+    return group;
+  }
+
+  // ── Pipeline helpers ─────────────────────────────────────────────────────
+
+  private _getPipeline(shaderType: ShaderType, format: GPUTextureFormat): GPURenderPipeline {
+    const key      = `${shaderType}:${format}`;
+    const existing = this._pipelines.get(key);
+    if (existing) return existing;
+
+    const pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(shaderType, format));
+    this._pipelines.set(key, pipeline);
+    return pipeline;
+  }
+
+  private _buildPipelineDescriptor(shaderType: ShaderType, format: GPUTextureFormat): GPURenderPipelineDescriptor {
+    const fragEntry = shaderType === 'sdf'  ? 'fragmentSdf'
+                    : shaderType === 'msdf' ? 'fragmentMsdf'
+                    : 'fragmentColor';
+
+    return {
+      label: `WebGpuTextRenderer/${shaderType}`,
+      layout: this._pipelineLayout!,
+      vertex: {
+        module: this._shaderModule!,
+        entryPoint: 'vertexMain',
+        buffers: [{
+          arrayStride: vertexStrideBytes,
+          stepMode: 'vertex',
+          attributes: [
+            { shaderLocation: 0, offset: 0,  format: 'float32x2' },
+            { shaderLocation: 1, offset: 8,  format: 'float32x2' },
+            { shaderLocation: 2, offset: 16, format: 'float32'   },
+          ],
+        }],
+      },
+      fragment: {
+        module: this._shaderModule!,
+        entryPoint: fragEntry,
+        targets: [{
+          format,
+          blend: getWebGpuBlendState(BlendModes.Normal),
+          writeMask: GPUColorWrite.ALL,
+        }],
+      },
+      primitive: { topology: 'triangle-list' },
+    };
+  }
+
+  // ── Capacity helpers ─────────────────────────────────────────────────────
+
+  private _ensureVertexCapacity(vertexCount: number): void {
+    if (vertexCount <= this._vertexCapacity) return;
+    while (this._vertexCapacity < vertexCount) this._vertexCapacity *= 2;
+    this._vertexData  = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
+    this._float32View = new Float32Array(this._vertexData);
+  }
+
+  private _ensureIndexCapacity(indexCount: number): void {
+    if (indexCount <= this._indexCapacity) return;
+    while (this._indexCapacity < indexCount) this._indexCapacity *= 2;
+    this._indexData = new Uint16Array(this._indexCapacity);
+  }
+
+  private _ensureNodeCapacity(nodeCount: number): void {
+    if (nodeCount <= this._nodeCapacity) return;
+    while (this._nodeCapacity < nodeCount) this._nodeCapacity *= 2;
+    const next = new Float32Array(this._nodeCapacity * NODE_FLOATS);
+    next.set(this._nodeDataArray);
+    this._nodeDataArray = next;
+  }
+
+  private _resetFrameState(): void {
+    this._pendingQuads.length = 0;
+    this._nodeIndexMap.clear();
+    this._textureKeyMap.clear();
+    this._textureKeyCounter = 0;
+    this._nodeCount = 0;
+  }
 }
