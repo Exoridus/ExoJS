@@ -55,7 +55,7 @@ app.start(
                 }
                 this._done = this._chars >= lines[this._lineIndex].length;
             }
-            this._box.setText(lines[this._lineIndex].slice(0, this._chars));
+            this._box.text = lines[this._lineIndex].slice(0, this._chars);
         }
         draw(backend) {
             backend.clear(new Color(20, 24, 34));

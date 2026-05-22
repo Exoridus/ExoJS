@@ -63,7 +63,7 @@ app.start(
             rows.forEach((row, index) => {
                 const value = row.bus().volume;
                 const db = 20 * Math.log10(Math.max(0.0001, value));
-                this._labels[index].setText(`${row.name}: ${db.toFixed(1)} dB`);
+                this._labels[index].text = `${row.name}: ${db.toFixed(1)} dB`;
                 this._graphics.fillColor = new Color(55, 55, 55);
                 this._graphics.drawRectangle(200, row.y - 8, 420, 16);
                 this._graphics.fillColor = row.color;

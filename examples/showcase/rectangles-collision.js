@@ -13,6 +13,8 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const collisionRed = new Color(255, 0, 0);
+
 app.start(
     new (class extends Scene {
         async load(loader) {
@@ -56,8 +58,8 @@ app.start(
 
                 const { shapeAinB, shapeBinA } = collision;
 
-                this._boxA.setTint(shapeAinB ? Color.cyan : Color.red);
-                this._boxB.setTint(shapeBinA ? Color.cyan : Color.red);
+                this._boxA.setTint(shapeAinB ? Color.cyan : collisionRed);
+                this._boxB.setTint(shapeBinA ? Color.cyan : collisionRed);
                 this._boxB.tint.a = 0.5;
             }
         }

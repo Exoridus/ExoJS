@@ -33,7 +33,7 @@ app.start(
                     const n = this._state.count | 0;
                     if (n > this._last) this._sound.play({ playbackRate: 1.6 });
                     this._last = n;
-                    this._text.setText(message.slice(0, n));
+                    this._text.text = message.slice(0, n);
                 })
                 .start();
         }

@@ -106,7 +106,7 @@ app.start(
                 this._graphics.fillColor = new Color(255, 255, 255, Math.floor(v * 255));
                 this._graphics.drawCircle(x, y, 6);
 
-                this._labels[i].setText(`${model}\nvol ${v.toFixed(2)}`);
+                this._labels[i].text = `${model}\nvol ${v.toFixed(2)}`;
             }
 
             this._graphics.render(backend);

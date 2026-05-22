@@ -47,7 +47,7 @@ app.start(
         }
         update() {
             this._filter.uniforms.uProgress = this._progress.v;
-            this._label.setText(`${(this._progress.v * 100) | 0}%`);
+            this._label.text = `${(this._progress.v * 100) | 0}%`;
         }
         draw(backend) {
             backend.clear(new Color(14, 18, 28));

@@ -47,11 +47,10 @@ app.start(
             }
         }
         draw(backend) {
-            this._text.setText(
+            this._text.text =
                 `Manual Signal Inspector\n\nspawn listeners: ${this._signals.spawn.bindings.length}\n` +
                     `damage listeners: ${this._signals.damage.bindings.length}\n` +
-                    `score listeners: ${this._signals.score.bindings.length}`
-            );
+                    `score listeners: ${this._signals.score.bindings.length}`;
             backend.clear();
             this._text.render(backend);
         }

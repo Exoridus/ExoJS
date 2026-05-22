@@ -50,7 +50,7 @@ app.start(
         }
         update(delta) {
             this._system.update(delta);
-            this._label.setText(`alive: ${this._system.aliveCount}  gpuMode: ${this._system.gpuMode}`);
+            this._label.text = `alive: ${this._system.aliveCount}  gpuMode: ${this._system.gpuMode}`;
         }
         draw(backend) {
             backend.clear();
