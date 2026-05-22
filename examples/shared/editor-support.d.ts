@@ -43,8 +43,8 @@ declare module '@codexo/exojs' {
     export abstract class SvgAsset {
         private readonly __exoSvgToken: never;
     }
-    export abstract class VttAsset {
-        private readonly __exoVttToken: never;
+    export abstract class SubtitleAsset {
+        private readonly __exoSubtitleToken: never;
     }
 
     export interface Loader {
@@ -57,9 +57,9 @@ declare module '@codexo/exojs' {
         load(type: typeof SvgAsset, path: string, options?: unknown): Promise<HTMLImageElement>;
         load(type: typeof SvgAsset, paths: ReadonlyArray<string>, options?: unknown): Promise<Array<HTMLImageElement>>;
         load<K extends string = string>(type: typeof SvgAsset, items: Readonly<Record<K, string>>, options?: unknown): Promise<Record<K, HTMLImageElement>>;
-        load(type: typeof VttAsset, path: string, options?: unknown): Promise<Array<VTTCue>>;
-        load(type: typeof VttAsset, paths: ReadonlyArray<string>, options?: unknown): Promise<Array<Array<VTTCue>>>;
-        load<K extends string = string>(type: typeof VttAsset, items: Readonly<Record<K, string>>, options?: unknown): Promise<Record<K, Array<VTTCue>>>;
+        load(type: typeof SubtitleAsset, path: string, options?: unknown): Promise<Array<VTTCue>>;
+        load(type: typeof SubtitleAsset, paths: ReadonlyArray<string>, options?: unknown): Promise<Array<Array<VTTCue>>>;
+        load<K extends string = string>(type: typeof SubtitleAsset, items: Readonly<Record<K, string>>, options?: unknown): Promise<Record<K, Array<VTTCue>>>;
         load<T extends _ExoLoadable>(type: T, path: string, options?: unknown): Promise<InstanceType<T>>;
         load<T extends _ExoLoadable>(type: T, paths: ReadonlyArray<string>, options?: unknown): Promise<Array<InstanceType<T>>>;
         load<T extends _ExoLoadable, K extends string = string>(
@@ -70,7 +70,7 @@ declare module '@codexo/exojs' {
         get<T = unknown>(type: typeof Json, alias: string): T;
         get(type: typeof TextAsset, alias: string): string;
         get(type: typeof SvgAsset, alias: string): HTMLImageElement;
-        get(type: typeof VttAsset, alias: string): Array<VTTCue>;
+        get(type: typeof SubtitleAsset, alias: string): Array<VTTCue>;
         get<T extends _ExoLoadable>(type: T, alias: string): InstanceType<T>;
     }
 }
@@ -98,10 +98,10 @@ declare module 'resources/Loader' {
             items: Readonly<Record<K, string>>,
             options?: unknown
         ): Promise<Record<K, HTMLImageElement>>;
-        load(type: typeof import('@codexo/exojs').VttAsset, path: string, options?: unknown): Promise<Array<VTTCue>>;
-        load(type: typeof import('@codexo/exojs').VttAsset, paths: ReadonlyArray<string>, options?: unknown): Promise<Array<Array<VTTCue>>>;
+        load(type: typeof import('@codexo/exojs').SubtitleAsset, path: string, options?: unknown): Promise<Array<VTTCue>>;
+        load(type: typeof import('@codexo/exojs').SubtitleAsset, paths: ReadonlyArray<string>, options?: unknown): Promise<Array<Array<VTTCue>>>;
         load<K extends string = string>(
-            type: typeof import('@codexo/exojs').VttAsset,
+            type: typeof import('@codexo/exojs').SubtitleAsset,
             items: Readonly<Record<K, string>>,
             options?: unknown
         ): Promise<Record<K, Array<VTTCue>>>;
@@ -115,7 +115,7 @@ declare module 'resources/Loader' {
         get<T = unknown>(type: typeof import('@codexo/exojs').Json, alias: string): T;
         get(type: typeof import('@codexo/exojs').TextAsset, alias: string): string;
         get(type: typeof import('@codexo/exojs').SvgAsset, alias: string): HTMLImageElement;
-        get(type: typeof import('@codexo/exojs').VttAsset, alias: string): Array<VTTCue>;
+        get(type: typeof import('@codexo/exojs').SubtitleAsset, alias: string): Array<VTTCue>;
         get<T extends _ExoLoadable>(type: T, alias: string): InstanceType<T>;
     }
 }

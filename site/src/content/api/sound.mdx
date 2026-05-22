@@ -5,7 +5,7 @@ symbol: "Sound"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 34
+memberCount: 49
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/audio/Sound.ts"
@@ -66,12 +66,27 @@ lazily) — `Sound` is best for short, frequently-triggered clips.
 
 ## Properties
 
-- `_bus: AudioBus | null`
-- `_duration: number`
-- `_loop: boolean`
-- `_muted: boolean`
-- `_playbackRate: number`
-- `_volume: number`
+- `analyserTarget: GainNode | null`
+- `audioBuffer: AudioBuffer`
+- `bus: AudioBus`
+- `currentTime: number`
+- `distanceModel: DistanceModel`
+- `duration: number`
+- `loop: boolean`
+- `maxDistance: number`
+- `muted: boolean`
+- `paused: boolean`
+- `playbackRate: number`
+- `playing: boolean`
+- `poolSize: number`
+- `poolStrategy: SoundPoolStrategy`
+- `position: Vector | null`
+- `priority: number`
+- `progress: number`
+- `refDistance: number`
+- `rolloffFactor: number`
+- `velocity: Vector | null`
+- `volume: number`
 
 ## Events
 

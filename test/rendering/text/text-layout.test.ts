@@ -1,13 +1,13 @@
 /**
  * Tests for the layoutText() function.
  *
- * We use a minimal mock DynamicGlyphAtlas that returns predictable GlyphInfo
- * values so we can assert exact placement coordinates without depending on
- * real canvas measurement.
+ * We use a minimal mock GlyphAtlas that returns predictable GlyphInfo values
+ * so we can assert exact placement coordinates without depending on a real
+ * canvas 2D context.
  */
 
-import type { DynamicGlyphAtlas } from '@/rendering/text/DynamicGlyphAtlas';
-import { layoutText } from '@/rendering/text/TextLayout';
+import type { GlyphAtlas } from '@/rendering/text/GlyphAtlas';
+import { layoutText, measureText } from '@/rendering/text/TextLayout';
 import { TextStyle } from '@/rendering/text/TextStyle';
 import type { GlyphInfo } from '@/rendering/text/types';
 
@@ -15,8 +15,7 @@ import type { GlyphInfo } from '@/rendering/text/types';
 // Mock atlas
 // ---------------------------------------------------------------------------
 
-/** Returns a predictable GlyphInfo for any char. Width = charCode % 10 + 6. */
-function makeAtlas(advance = 10, width = 8, height = 16): DynamicGlyphAtlas {
+function makeAtlas(advance = 10, width = 8, height = 16): GlyphAtlas {
   const infoBase: GlyphInfo = {
     x: 0,
     y: 0,
@@ -24,6 +23,7 @@ function makeAtlas(advance = 10, width = 8, height = 16): DynamicGlyphAtlas {
     height,
     advance,
     ascent: 13,
+    page: 0,
     uvLeft: 0,
     uvTop: 0,
     uvRight: 0.1,
@@ -32,8 +32,8 @@ function makeAtlas(advance = 10, width = 8, height = 16): DynamicGlyphAtlas {
 
   return {
     getGlyph: jest.fn(() => infoBase),
-    texture: { width: 1024, height: 1024 },
-  } as unknown as DynamicGlyphAtlas;
+    pages: [{ texture: { width: 1024, height: 1024 } }],
+  } as unknown as GlyphAtlas;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,7 +45,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas();
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    expect(layoutText('', style, atlas)).toEqual([]);
+    expect(layoutText('', style, {}, atlas)).toEqual([]);
   });
 
   test('single line "Hello" — 5 placements with increasing x', () => {
@@ -53,7 +53,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('Hello', style, atlas);
+    const placements = layoutText('Hello', style, {}, atlas);
 
     expect(placements).toHaveLength(5);
 
@@ -70,18 +70,14 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize, lineHeight, align: 'left' });
 
-    const placements = layoutText('Hi\nThere', style, atlas);
+    const placements = layoutText('Hi\nThere', style, {}, atlas);
 
-    // "Hi" = 2 chars, "There" = 5 chars, '\n' skipped
     expect(placements).toHaveLength(7);
 
-    // First line y = 0
     expect(placements[0].y).toBe(0);
     expect(placements[1].y).toBe(0);
 
-    // Second line y = fontSize * lineHeight
     const expectedY = fontSize * lineHeight;
-
     for (let i = 2; i < 7; i++) {
       expect(placements[i].y).toBeCloseTo(expectedY);
     }
@@ -92,12 +88,10 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('AB\nC', style, atlas);
+    const placements = layoutText('AB\nC', style, {}, atlas);
 
-    // Line 0: A at x=0, B at x=10
     expect(placements[0].x).toBe(0);
     expect(placements[1].x).toBe(10);
-    // Line 1: C at x=0 (left-aligned)
     expect(placements[2].x).toBe(0);
   });
 
@@ -106,17 +100,11 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'right' });
 
-    // Line 0: "AB"  → width = 20 (maxLineWidth)
-    // Line 1: "C"   → width = 10, shift = 20-10=10
-    const placements = layoutText('AB\nC', style, atlas);
+    const placements = layoutText('AB\nC', style, {}, atlas);
 
     expect(placements).toHaveLength(3);
-
-    // "AB" is the widest; no shift
-    expect(placements[0].x).toBe(0); // A (already at max)
-    expect(placements[1].x).toBe(10); // B
-
-    // "C" is shifted by 10
+    expect(placements[0].x).toBe(0);
+    expect(placements[1].x).toBe(10);
     expect(placements[2].x).toBe(10);
   });
 
@@ -125,21 +113,17 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'center' });
 
-    // Line 0: "AB" → width = 20 (maxLineWidth)
-    // Line 1: "C"  → width = 10, shift = (20-10)/2 = 5
-    const placements = layoutText('AB\nC', style, atlas);
+    const placements = layoutText('AB\nC', style, {}, atlas);
 
     expect(placements).toHaveLength(3);
-
-    // "C" is shifted by 5
     expect(placements[2].x).toBeCloseTo(5);
   });
 
-  test('single space character returns a placement (advance > 0, no visible pixels required)', () => {
-    const atlas = makeAtlas(5); // space has advance
+  test('single space character returns a placement (advance > 0)', () => {
+    const atlas = makeAtlas(5);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText(' ', style, atlas);
+    const placements = layoutText(' ', style, {}, atlas);
 
     expect(placements).toHaveLength(1);
     expect(placements[0].x).toBe(0);
@@ -153,6 +137,7 @@ describe('layoutText', () => {
       height: 20,
       advance: 12,
       ascent: 16,
+      page: 0,
       uvLeft: 0.05,
       uvTop: 0.1,
       uvRight: 0.15,
@@ -161,11 +146,11 @@ describe('layoutText', () => {
 
     const atlas = {
       getGlyph: () => glyphInfo,
-      texture: { width: 1024, height: 1024 },
-    } as unknown as DynamicGlyphAtlas;
+      pages: [{ texture: { width: 1024, height: 1024 } }],
+    } as unknown as GlyphAtlas;
 
     const style = new TextStyle({ fontSize: 16, align: 'left' });
-    const placements = layoutText('X', style, atlas);
+    const placements = layoutText('X', style, {}, atlas);
 
     expect(placements[0].uvLeft).toBe(glyphInfo.uvLeft);
     expect(placements[0].uvTop).toBe(glyphInfo.uvTop);
@@ -173,5 +158,36 @@ describe('layoutText', () => {
     expect(placements[0].uvBottom).toBe(glyphInfo.uvBottom);
     expect(placements[0].width).toBe(glyphInfo.width);
     expect(placements[0].height).toBe(glyphInfo.height);
+    expect(placements[0].page).toBe(0);
+  });
+
+  test('letterSpacing adds extra gap between glyphs', () => {
+    const advance = 10;
+    const atlas = makeAtlas(advance);
+    const style = new TextStyle({ fontSize: 16 });
+
+    const placements = layoutText('ABC', style, { letterSpacing: 5 }, atlas);
+
+    expect(placements).toHaveLength(3);
+    expect(placements[0].x).toBe(0);
+    expect(placements[1].x).toBe(15); // advance(10) + spacing(5)
+    expect(placements[2].x).toBe(30);
+  });
+
+  test('maxWidth wraps long words at word boundaries', () => {
+    const advance = 10;
+    const atlas = makeAtlas(advance);
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    // "Hello World" with advance=10 per char, space width=10
+    // "Hello" = 50px, "World" = 50px, with space = 110px total
+    // maxWidth = 60 → wrap before "World"
+    const placements = layoutText('Hello World', style, { maxWidth: 60 }, atlas);
+
+    // "Hello" on line 0 at y=0, "World" on line 1 at y=lineHeight
+    expect(placements.length).toBe(10); // 5 + 5 chars
+    expect(placements[0].y).toBe(0);
+    expect(placements[5].y).toBeGreaterThan(0); // second line
+    expect(placements[5].x).toBe(0); // starts at left
   });
 });

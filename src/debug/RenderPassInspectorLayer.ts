@@ -6,7 +6,7 @@ import type { Filter } from '@/rendering/filters/Filter';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderNode } from '@/rendering/RenderNode';
-import { Text } from '@/rendering/text/Text';
+import { DynamicText as Text } from '@/rendering/text/DynamicText';
 import { TextStyle } from '@/rendering/text/TextStyle';
 
 import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
@@ -88,7 +88,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
 
     this._entries.length = 0;
 
-    const root = this._app.sceneManager.scene?.root;
+    const root = this._app.scene.currentScene?.root;
     if (root) {
       this._collect(root);
     }
@@ -163,7 +163,6 @@ export class RenderPassInspectorLayer extends DebugLayer {
       fontFamily: 'Arial',
       fontWeight: 'normal',
       fillColor: textColor,
-      strokeThickness: 0,
     });
 
     this._bg = new Graphics();

@@ -115,11 +115,11 @@ export class SceneManager {
     this._app = app;
   }
 
-  public get scene(): Scene | null {
+  public get currentScene(): Scene | null {
     return this._stack.at(-1)?.scene ?? null;
   }
 
-  public set scene(scene: Scene | null) {
+  public set currentScene(scene: Scene | null) {
     void this.setScene(scene);
   }
 
@@ -144,7 +144,7 @@ export class SceneManager {
         return;
       }
 
-      if (this.scene === scene) {
+      if (this.currentScene === scene) {
         if (this._stack.length > 1) {
           await this._unloadCoveredScenes();
         }
@@ -211,7 +211,7 @@ export class SceneManager {
 
       await this._disposeScene(removed.scene);
       this._stack.pop();
-      this.onChangeScene.dispatch(this.scene);
+      this.onChangeScene.dispatch(this.currentScene);
     }, options.transition);
 
     return this;
@@ -253,8 +253,8 @@ export class SceneManager {
       this._renderTransitionOverlay(transitionAlpha);
     }
 
-    if (this.scene !== null) {
-      this.onUpdateScene.dispatch(this.scene);
+    if (this.currentScene !== null) {
+      this.onUpdateScene.dispatch(this.currentScene);
     }
 
     return this;
@@ -365,8 +365,7 @@ export class SceneManager {
   }
 
   private _resolveParticipationPolicy(scene: Scene, overrides: SceneParticipationPolicy = {}): ResolvedSceneParticipationPolicy {
-    const scenePolicy = scene.getParticipationPolicy();
-    const mode = overrides.mode ?? scenePolicy.mode ?? 'overlay';
+    const mode = overrides.mode ?? scene.stackMode ?? 'overlay';
 
     return { mode };
   }

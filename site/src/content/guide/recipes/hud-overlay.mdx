@@ -58,7 +58,7 @@ const game = new GameScene();
 const hud = new HudScene();
 
 await app.start(game);
-await app.sceneManager.pushScene(hud, { mode: 'overlay' });
+await app.scene.pushScene(hud, { mode: 'overlay' });
 ```
 
 ## Why two scenes, not draw-order

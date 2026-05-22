@@ -170,7 +170,7 @@ describe('Application', () => {
     rawApp['input'] = inputManager;
     rawApp['interaction'] = interaction;
     rawApp['tweens'] = tweens;
-    rawApp['sceneManager'] = sceneManager;
+    rawApp['scene'] = sceneManager;
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
     rawApp['_updateHandler'] = jest.fn();
@@ -466,7 +466,7 @@ describe('Application', () => {
 
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['_frameRequest'] = 99;
-    rawApp['sceneManager'] = sceneManager;
+    rawApp['scene'] = sceneManager;
     rawApp['_activeClock'] = activeClock;
     rawApp['_frameClock'] = frameClock;
 

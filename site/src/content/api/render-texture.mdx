@@ -5,7 +5,7 @@ symbol: "RenderTexture"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 22
+memberCount: 32
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/texture/RenderTexture.ts"
@@ -50,11 +50,21 @@ updated every frame and mip generation is expensive.
 
 ## Properties
 
-- `_defaultView: View`
-- `_size: Size`
-- `_view: View`
-- `_viewport: Rectangle`
 - `defaultSamplerOptions: SamplerOptions`
+- `flipY: boolean`
+- `generateMipMap: boolean`
+- `height: number`
+- `powerOfTwo: boolean`
+- `premultiplyAlpha: boolean`
+- `root: boolean`
+- `scaleMode: ScaleModes`
+- `size: Size`
+- `source: DataView<ArrayBufferLike> | null`
+- `textureVersion: number`
+- `version: number`
+- `view: View`
+- `width: number`
+- `wrapMode: WrapModes`
 
 ## Source
 

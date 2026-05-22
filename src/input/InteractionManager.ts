@@ -450,7 +450,7 @@ export class InteractionManager {
       return this._hitTestIndexed(x, y);
     }
 
-    const root = this._app.sceneManager.scene?.root;
+    const root = this._app.scene.currentScene?.root;
 
     if (!root) {
       return null;
@@ -616,7 +616,7 @@ export class InteractionManager {
     const width = rect.width || canvas.width || 800;
     const height = rect.height || canvas.height || 600;
     const bounds = new Rectangle(0, 0, width, height);
-    const root = this._app.sceneManager.scene?.root;
+    const root = this._app.scene.currentScene?.root;
 
     if (root) {
       const rootBounds = root.getBounds();

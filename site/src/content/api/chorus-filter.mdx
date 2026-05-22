@@ -5,9 +5,9 @@ symbol: "ChorusFilter"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 2
+memberCount: 9
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/ChorusFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/ChorusFilter.ts#L42"
 ---
@@ -37,6 +37,16 @@ lfoOscillator ── lfoGain (depth) ── delayNode.delayTime
 ## Methods
 
 - `destroy(): void`
+
+## Properties
+
+- `delayMs: number`
+- `depthMs: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `rateHz: number`
+- `ready: Promise<void>`
+- `wet: number`
 
 ## Source
 

@@ -3,7 +3,8 @@ import { type AudioSpriteClip, Sound } from '@/audio/Sound';
 import type { PlaybackOptions } from '@/core/types';
 import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 
-interface SoundFactoryOptions {
+/** Construction options for {@link SoundFactory.create}. */
+export interface SoundFactoryOptions {
   /** Initial playback settings forwarded to the {@link Sound} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
   /**

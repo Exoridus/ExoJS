@@ -51,4 +51,4 @@ class HudScene extends Scene {
 const gameScene = new GameScene();
 const hudScene = new HudScene();
 
-void app.start(gameScene).then(() => app.sceneManager.pushScene(hudScene, { mode: 'overlay', input: 'transparent' }));
+void app.start(gameScene).then(() => app.scene.pushScene(hudScene, { mode: 'overlay', input: 'transparent' }));

@@ -23,7 +23,7 @@ class GameScene extends Scene {
         this._time = 0;
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             if (pauseScene.app !== null) return;
-            await this.app.sceneManager.pushScene(pauseScene, { mode: 'overlay', input: 'capture' });
+            await this.app.scene.pushScene(pauseScene, { mode: 'overlay', input: 'capture' });
         });
     }
     update(delta) {
@@ -43,7 +43,7 @@ class PauseScene extends Scene {
         this._text = new Text('PAUSED', { fill: 'white', fontSize: 64 });
         this._text.setPosition(280, 250);
         this.inputs.onTrigger(Keyboard.Escape, async () => {
-            await this.app.sceneManager.popScene();
+            await this.app.scene.popScene();
         });
     }
     draw(backend) {

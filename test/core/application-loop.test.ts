@@ -239,7 +239,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('a very large raw delta is clamped before sceneManager.update receives it', () => {
       mockFrameElapsed(app, 30_000);
 
-      const sceneUpdateSpy = jest.spyOn(app.sceneManager, 'update');
+      const sceneUpdateSpy = jest.spyOn(app.scene, 'update');
 
       app.update();
 

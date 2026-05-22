@@ -5,7 +5,7 @@ symbol: "OscillatorSound"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 36
+memberCount: 41
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/audio/OscillatorSound.ts"
@@ -72,12 +72,6 @@ With an envelope for smooth attack/release:
 
 ## Properties
 
-- `_bus: AudioBus | null`
-- `_duration: number`
-- `_loop: boolean`
-- `_muted: boolean`
-- `_playbackRate: number`
-- `_volume: number`
 - `detune: number`
 - `envelope: Envelope | null`
 - `frequency: number`
@@ -85,6 +79,17 @@ With an envelope for smooth attack/release:
 - `poolStrategy: SoundPoolStrategy`
 - `priority: number`
 - `type: OscillatorType`
+- `analyserTarget: GainNode | null`
+- `bus: AudioBus`
+- `currentTime: number`
+- `duration: number`
+- `loop: boolean`
+- `muted: boolean`
+- `paused: boolean`
+- `playbackRate: number`
+- `playing: boolean`
+- `progress: number`
+- `volume: number`
 
 ## Events
 

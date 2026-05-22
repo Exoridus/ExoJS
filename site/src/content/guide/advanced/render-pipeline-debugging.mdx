@@ -26,7 +26,7 @@ The panel does not show drawables with zero filters — they are invisible to th
 
 ## Enabling the layer
 
-`RenderPassInspectorLayer` extends `DebugLayer` and is designed to be driven via `app.onFrame` — the same pattern used by `DebugOverlay` for the other debug layers. It is not pushed onto the scene stack. The inspector walks `sceneManager.scene?.root` each frame, so it sees whichever scene is currently active.
+`RenderPassInspectorLayer` extends `DebugLayer` and is designed to be driven via `app.onFrame` — the same pattern used by `DebugOverlay` for the other debug layers. It is not pushed onto the scene stack. The inspector walks `scene.currentScene?.root` each frame, so it sees whichever scene is currently active.
 
 Import from the debug subpath, construct against the application, subscribe to `app.onFrame`, and toggle visibility:
 

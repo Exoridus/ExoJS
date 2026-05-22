@@ -5,9 +5,9 @@ symbol: "Loader"
 kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
-memberCount: 21
+memberCount: 23
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Events", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/resources/Loader.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L177"
 ---
@@ -71,6 +71,11 @@ subsequent `load` or get calls without re-fetching.
 - `unload(assets: Assets<M>): this`
 - `unload(type: Loadable, alias: string): this`
 - `unloadAll(type?: Loadable): this`
+
+## Properties
+
+- `basePath: string`
+- `fetchOptions: RequestInit`
 
 ## Events
 

@@ -3,26 +3,23 @@
  */
 
 import { Signal } from '@/core/Signal';
+import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 
-// Stub glyph atlas so Text construction never touches a real 2D canvas context.
-jest.mock('@/rendering/text/atlas-singleton', () => {
-  const fakeGlyph = {
-    x: 0,
-    y: 0,
-    width: 6,
-    height: 10,
-    uvLeft: 0,
-    uvRight: 0.01,
-    uvTop: 0,
-    uvBottom: 0.02,
-  };
-  const fakeAtlas = {
-    texture: { updateSource: jest.fn() },
-    getGlyph: jest.fn(() => fakeGlyph),
-  };
-
-  return { getDefaultGlyphAtlas: () => fakeAtlas };
-});
+// Stub the glyph atlas pool so DynamicText construction never touches a real 2D canvas context.
+const fakeGlyph = {
+  x: 0, y: 0, width: 6, height: 10, advance: 6, ascent: 8, page: 0,
+  uvLeft: 0, uvRight: 0.01, uvTop: 0, uvBottom: 0.02,
+};
+const fakePage = { texture: { updateSource: jest.fn() }, index: 0 };
+const fakeAtlas = {
+  getGlyph: jest.fn(() => fakeGlyph),
+  pages: [fakePage],
+  clear: jest.fn(),
+};
+const fakePool = { getAtlas: jest.fn(() => fakeAtlas) };
+beforeEach(() => { resetDefaultGlyphAtlasPool(fakePool as unknown as GlyphAtlasPool); });
+afterEach(() => { resetDefaultGlyphAtlasPool(); });
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,7 +91,7 @@ const makeApp = (
   ({
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
-    sceneManager: { scene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
+    scene: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
     input: {
       onKeyDown: new Signal<[number]>(),
       getPrimaryPointerPosition: jest.fn(() => (opts.pointerPos !== undefined ? opts.pointerPos : null)),

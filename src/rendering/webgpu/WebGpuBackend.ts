@@ -6,6 +6,8 @@ import { Signal } from '@/core/Signal';
 import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 import { ParticleSystem } from '@/particles/ParticleSystem';
+import { BitmapText } from '@/rendering/text/BitmapText';
+import { DynamicText } from '@/rendering/text/DynamicText';
 import type { BlendModes } from '@/rendering/types';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 
@@ -28,6 +30,7 @@ import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuParticleRenderer } from './WebGpuParticleRenderer';
 import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
+import { WebGpuTextRenderer } from './WebGpuTextRenderer';
 
 interface ManagedWebGpuTextureState {
   texture: GPUTexture;
@@ -127,6 +130,8 @@ export class WebGpuBackend implements RenderBackend {
     this.rendererRegistry.registerRenderer(Sprite, new WebGpuSpriteRenderer());
     this.rendererRegistry.registerRenderer(Mesh, new WebGpuMeshRenderer());
     this.rendererRegistry.registerRenderer(ParticleSystem, new WebGpuParticleRenderer());
+    this.rendererRegistry.registerRenderer(DynamicText, new WebGpuTextRenderer());
+    this.rendererRegistry.registerRenderer(BitmapText, new WebGpuTextRenderer());
     this.resize(width, height);
   }
 

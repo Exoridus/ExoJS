@@ -5,9 +5,9 @@ symbol: "Tween"
 kind: "class"
 subsystem: "animation"
 importPath: "@codexo/exojs"
-memberCount: 16
+memberCount: 19
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/animation/Tween.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L39"
 ---
@@ -53,6 +53,12 @@ properties listed in Tween.to emit a console warning and are skipped.
 - `to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this`
 - `update(deltaSeconds: number): void`
 - `yoyo(enabled: boolean): this`
+
+## Properties
+
+- `progress: number`
+- `state: TweenState`
+- `target: T`
 
 ## Source
 

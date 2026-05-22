@@ -55,17 +55,17 @@ From this point on, the application runs the scene's `update` and `draw` once pe
 
 ## Switching scenes
 
-Most non-trivial projects have more than one scene. The application owns a scene manager (`app.sceneManager`) that drives the active stack. Three operations cover the common cases:
+Most non-trivial projects have more than one scene. The application owns a scene manager (`app.scene`) that drives the active stack. Three operations cover the common cases:
 
 ```js
 // Replace the active scene with a new one
-await app.sceneManager.setScene(new GameScene());
+await app.scene.setScene(new GameScene());
 
 // Stack a new scene on top (pause menu, dialog, modal)
-await app.sceneManager.pushScene(new PauseScene());
+await app.scene.pushScene(new PauseScene());
 
 // Remove the top scene and return to the one below
-await app.sceneManager.popScene();
+await app.scene.popScene();
 ```
 
 Calling `setScene` ends the current scene and starts the new one. `pushScene` keeps the underlying scene loaded and overlays the new one. `popScene` removes the top scene and resumes the one below.
@@ -85,7 +85,7 @@ Set the policy when you push a scene, or change it later via `scene.stackMode`:
 ```js
 const pause = new PauseScene();
 pause.stackMode = 'modal';
-await app.sceneManager.pushScene(pause);
+await app.scene.pushScene(pause);
 ```
 
 ## Examples

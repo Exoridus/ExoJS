@@ -5,7 +5,7 @@ symbol: "Scene"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 14
+memberCount: 15
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/core/Scene.ts"
@@ -41,7 +41,6 @@ For one-off scenes, an anonymous subclass works just as well:
 - `addChild(child: RenderNode): this`
 - `destroy(): void`
 - `draw(_backend: RenderBackend): void`
-- `getParticipationPolicy(): SceneParticipationPolicy`
 - `init(_loader: Loader): void | Promise<void>`
 - `load(_loader: Loader): void | Promise<void>`
 - `removeChild(child: RenderNode): this`
@@ -51,9 +50,11 @@ For one-off scenes, an anonymous subclass works just as well:
 
 ## Properties
 
-- `_app: Application | null`
-- `_root: Container`
-- `_stackMode: SceneStackMode`
+- `app: Application | null`
+- `inputs: SceneInputs`
+- `root: Container`
+- `stackMode: SceneStackMode`
+- `tweens: SceneTweens`
 
 ## Source
 

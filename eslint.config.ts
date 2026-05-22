@@ -424,7 +424,7 @@ export default defineConfig([
   },
 
   {
-    files: ['src/resources/factories/VttFactory.ts'],
+    files: ['src/resources/factories/SubtitleFactory.ts'],
     rules: {
       '@typescript-eslint/no-unnecessary-condition': 'off',
     },

@@ -5,7 +5,7 @@ symbol: "WorkletFilter"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 7
+memberCount: 6
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/WorkletFilter.ts"
@@ -39,10 +39,9 @@ Subclasses can override `_onWorkletReady` to perform additional wiring
 
 ## Properties
 
-- `_inputGain: GainNode | null`
-- `_outputGain: GainNode | null`
-- `_ready: Promise<void> | null`
-- `_workletNode: AudioWorkletNode | null`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
 
 ## Source
 

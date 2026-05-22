@@ -159,7 +159,7 @@ describe('AudioManager.update()', () => {
       },
     };
     rawApp['tweens'] = tweens;
-    rawApp['sceneManager'] = { update: jest.fn() };
+    rawApp['scene'] = { update: jest.fn() };
     rawApp['_backend'] = {
       flush: jest.fn(),
       resetStats: jest.fn().mockReturnThis(),

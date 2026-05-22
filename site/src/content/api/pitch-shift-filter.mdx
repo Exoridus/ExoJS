@@ -5,7 +5,7 @@ symbol: "PitchShiftFilter"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 7
+memberCount: 8
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/PitchShiftFilter.ts"
@@ -41,10 +41,11 @@ Use cases:
 
 ## Properties
 
-- `_inputGain: GainNode | null`
-- `_outputGain: GainNode | null`
-- `_ready: Promise<void> | null`
-- `_workletNode: AudioWorkletNode | null`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `pitch: number`
+- `ready: Promise<void>`
+- `wet: number`
 
 ## Source
 

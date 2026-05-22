@@ -5,7 +5,8 @@ import { determineMimeType } from '@/resources/utils';
 
 const onceListenerOption = { once: true };
 
-interface MusicFactoryOptions {
+/** Construction options for {@link MusicFactory.create}. */
+export interface MusicFactoryOptions {
   /**
    * MIME type for the audio blob. Inferred from magic bytes when omitted.
    */
@@ -18,6 +19,12 @@ interface MusicFactoryOptions {
   loadEvent?: StreamingLoadEvent;
   /** Initial playback settings forwarded to the {@link Music} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
+  /**
+   * Milliseconds to wait after a `stalled` event before rejecting the load
+   * promise. When omitted no timeout is applied and a stalled load will wait
+   * indefinitely. Each subsequent `stalled` event resets the timer.
+   */
+  stallTimeout?: number;
 }
 
 /**
@@ -52,7 +59,7 @@ export class MusicFactory extends AbstractAssetFactory<Music> {
    * load event is received.
    */
   public async create(source: ArrayBuffer, options: MusicFactoryOptions = {}): Promise<Music> {
-    const { mimeType, loadEvent, playbackOptions } = options;
+    const { mimeType, loadEvent, playbackOptions, stallTimeout } = options;
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
     const objectUrl = this.createObjectUrl(blob);
 
@@ -60,34 +67,32 @@ export class MusicFactory extends AbstractAssetFactory<Music> {
       const audio = document.createElement('audio');
       this._audioElements.push(audio);
 
-      const finalize = (): void => {
+      let stallTimer: ReturnType<typeof setTimeout> | undefined;
+      let settled = false;
+
+      const settle = (fn: () => void): void => {
+        if (settled) return;
+        settled = true;
+        if (stallTimer !== undefined) {
+          clearTimeout(stallTimer);
+          stallTimer = undefined;
+        }
         this.revokeObjectUrl(objectUrl);
+        fn();
       };
 
-      audio.addEventListener(
-        'error',
-        () => {
-          finalize();
-          reject(new Error('Error loading audio source.'));
-        },
-        onceListenerOption,
-      );
-      audio.addEventListener(
-        'abort',
-        () => {
-          finalize();
-          reject(new Error('Audio loading was canceled.'));
-        },
-        onceListenerOption,
-      );
-      audio.addEventListener(
-        loadEvent ?? 'canplaythrough',
-        () => {
-          finalize();
-          resolve(new Music(audio, playbackOptions));
-        },
-        onceListenerOption,
-      );
+      audio.addEventListener('error',   () => settle(() => reject(new Error('Error loading audio source.'))),    onceListenerOption);
+      audio.addEventListener('abort',   () => settle(() => reject(new Error('Audio loading was canceled.'))),    onceListenerOption);
+      audio.addEventListener('emptied', () => settle(() => reject(new Error('Audio loading was emptied.'))),     onceListenerOption);
+      audio.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Music(audio, playbackOptions))), onceListenerOption);
+
+      if (stallTimeout !== undefined) {
+        audio.addEventListener('stalled', () => {
+          if (settled) return;
+          if (stallTimer !== undefined) clearTimeout(stallTimer);
+          stallTimer = setTimeout(() => settle(() => reject(new Error('Audio loading stalled.'))), stallTimeout);
+        });
+      }
 
       audio.preload = 'auto';
       audio.src = objectUrl;

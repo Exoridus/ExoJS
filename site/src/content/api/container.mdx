@@ -5,7 +5,7 @@ symbol: "Container"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 68
+memberCount: 85
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Container.ts"
@@ -85,20 +85,37 @@ etc. — the base `Container` is a non-drawing grouping node.
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `anchor: ObservableVector`
+- `bottom: number`
+- `cacheAsBitmap: boolean`
+- `childOrder: number`
+- `children: RenderNode[]`
+- `cullable: boolean`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `left: number`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `right: number`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `sortableChildren: boolean`
+- `top: number`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Events
 

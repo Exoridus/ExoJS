@@ -5,9 +5,9 @@ symbol: "Gamepad"
 kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
-memberCount: 17
+memberCount: 25
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Events", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/input/Gamepad.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/Gamepad.ts#L48"
 ---
@@ -44,6 +44,17 @@ the slot was empty will automatically activate when a pad connects.
 - `stopVibration(): void`
 - `vibrate(options: GamepadVibrationOptions): Promise<void>`
 - `resolveChannelOffset(slot: number, channel: GamepadButtonChannel | GamepadAxisChannel): number`
+
+## Properties
+
+- `browserGamepad: Gamepad | null`
+- `canVibrate: boolean`
+- `connected: boolean`
+- `info: GamepadInfo | null`
+- `internalIndex: number | null`
+- `mapping: GamepadMapping | null`
+- `mappingFamily: GamepadMappingFamily | null`
+- `slot: 0 | 1 | 2 | 3`
 
 ## Events
 

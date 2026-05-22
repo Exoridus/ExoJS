@@ -25,7 +25,7 @@ class GameScene extends Scene {
 
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             if (pauseScene.app !== null) return; // already paused
-            await this.app.sceneManager.pushScene(pauseScene, {
+            await this.app.scene.pushScene(pauseScene, {
                 mode: 'overlay',
             });
         });
@@ -52,7 +52,7 @@ class PauseScene extends Scene {
         this._text.setPosition(280, 250);
 
         this.inputs.onTrigger(Keyboard.Escape, async () => {
-            await this.app.sceneManager.popScene();
+            await this.app.scene.popScene();
         });
     }
 

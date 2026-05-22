@@ -6,7 +6,8 @@ import { determineMimeType } from '@/resources/utils';
 
 const onceListenerOption = { once: true };
 
-interface VideoFactoryOptions {
+/** Construction options for {@link VideoFactory.create}. */
+export interface VideoFactoryOptions {
   /**
    * MIME type for the video blob. Inferred from magic bytes when omitted.
    */
@@ -21,6 +22,12 @@ interface VideoFactoryOptions {
   playbackOptions?: Partial<PlaybackOptions>;
   /** Sampler parameters forwarded to the {@link Video} instance's texture. */
   samplerOptions?: Partial<SamplerOptions>;
+  /**
+   * Milliseconds to wait after a `stalled` event before rejecting the load
+   * promise. When omitted no timeout is applied and a stalled load will wait
+   * indefinitely. Each subsequent `stalled` event resets the timer.
+   */
+  stallTimeout?: number;
 }
 
 /**
@@ -55,7 +62,7 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
    * load event is received.
    */
   public async create(source: ArrayBuffer, options: VideoFactoryOptions = {}): Promise<Video> {
-    const { mimeType, loadEvent, playbackOptions, samplerOptions } = options;
+    const { mimeType, loadEvent, playbackOptions, samplerOptions, stallTimeout } = options;
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
     const objectUrl = this.createObjectUrl(blob);
 
@@ -63,44 +70,34 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
       const video = document.createElement('video');
       this._videoElements.push(video);
 
-      const finalize = (): void => {
+      let stallTimer: ReturnType<typeof setTimeout> | undefined;
+      let settled = false;
+
+      const settle = (fn: () => void): void => {
+        if (settled) return;
+        settled = true;
+        if (stallTimer !== undefined) {
+          clearTimeout(stallTimer);
+          stallTimer = undefined;
+        }
         this.revokeObjectUrl(objectUrl);
+        fn();
       };
 
-      video.addEventListener(
-        'error',
-        () => {
-          finalize();
-          reject(new Error('Video loading error.'));
-        },
-        onceListenerOption,
-      );
-      video.addEventListener(
-        'abort',
-        () => {
-          finalize();
-          reject(new Error('Video loading error: cancelled.'));
-        },
-        onceListenerOption,
-      );
-      video.addEventListener(
-        'emptied',
-        () => {
-          finalize();
-          reject(new Error('Video loading error: emptied.'));
-        },
-        onceListenerOption,
-      );
-      // 'stalled' is intentionally omitted: it fires transiently during normal buffering
-      // and would cause spurious rejections for large files on slow connections.
-      video.addEventListener(
-        loadEvent ?? 'canplaythrough',
-        () => {
-          finalize();
-          resolve(new Video(video, playbackOptions, samplerOptions));
-        },
-        onceListenerOption,
-      );
+      video.addEventListener('error',   () => settle(() => reject(new Error('Video loading error.'))),            onceListenerOption);
+      video.addEventListener('abort',   () => settle(() => reject(new Error('Video loading error: cancelled.'))), onceListenerOption);
+      video.addEventListener('emptied', () => settle(() => reject(new Error('Video loading error: emptied.'))),   onceListenerOption);
+      video.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Video(video, playbackOptions, samplerOptions))), onceListenerOption);
+
+      // 'stalled' fires transiently during normal buffering on slow connections and is not
+      // treated as an error by default. Supply stallTimeout to reject after a stall persists.
+      if (stallTimeout !== undefined) {
+        video.addEventListener('stalled', () => {
+          if (settled) return;
+          if (stallTimer !== undefined) clearTimeout(stallTimer);
+          stallTimer = setTimeout(() => settle(() => reject(new Error('Video loading stalled.'))), stallTimeout);
+        });
+      }
 
       video.preload = 'auto';
       video.src = objectUrl;

@@ -5,9 +5,9 @@ symbol: "LutFilter"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 7
+memberCount: 10
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/filters/LutFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts#L148"
 ---
@@ -50,6 +50,12 @@ apply, depending on the active backend.
 - `fromImage(image: HTMLImageElement | HTMLCanvasElement): Texture`
 - `identityLut1D(size: number): Texture`
 - `identityLut3D(size: number): Texture`
+
+## Properties
+
+- `lut: Texture`
+- `mode: LutMode`
+- `size: number`
 
 ## Source
 

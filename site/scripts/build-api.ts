@@ -95,12 +95,22 @@ const renderSignature = (name: string, signature: any): string => {
     return `${name}(${params}): ${returns}`;
 };
 
+const resolvePropertyType = (member: any): any =>
+    member.type ?? member.getSignature?.type;
+
 const renderClassMembers = (reflection: any): { body: string; sections: string[]; memberCount: number } => {
     const children = reflection.children ?? [];
     const constructors = children.filter((child: any) => (child.kind & ReflectionKind.Constructor) > 0);
     const methods = children.filter((child: any) => (child.kind & ReflectionKind.Method) > 0);
-    const properties = children.filter((child: any) => (child.kind & ReflectionKind.Property) > 0);
-    const events = properties.filter((property: any) => property.name.startsWith('on') && renderType(property.type).startsWith('Signal<'));
+    // Include both Property (1024) and Accessor (262144 — getter/setter) kinds so
+    // TypeScript getters like currentScene, scenes, angle, length appear in docs.
+    const properties = children.filter((child: any) =>
+        !child.name.startsWith('_') &&
+        ((child.kind & ReflectionKind.Property) > 0 || (child.kind & 262144) > 0)
+    );
+    const events = properties.filter((property: any) =>
+        property.name.startsWith('on') && renderType(resolvePropertyType(property)).startsWith('Signal<')
+    );
     const plainProperties = properties.filter((property: any) => !events.includes(property));
 
     const blocks: Array<string> = [];
@@ -121,13 +131,13 @@ const renderClassMembers = (reflection: any): { body: string; sections: string[]
     }
 
     if (plainProperties.length > 0) {
-        const lines = plainProperties.map((property: any) => `- \`${property.name}: ${renderType(property.type)}\``);
+        const lines = plainProperties.map((property: any) => `- \`${property.name}: ${renderType(resolvePropertyType(property))}\``);
         blocks.push(`## Properties\n\n${lines.join('\n')}`);
         sections.push('Properties');
     }
 
     if (events.length > 0) {
-        const lines = events.map((event: any) => `- \`${event.name}: ${renderType(event.type)}\``);
+        const lines = events.map((event: any) => `- \`${event.name}: ${renderType(resolvePropertyType(event))}\``);
         blocks.push(`## Events\n\n${lines.join('\n')}`);
         sections.push('Events');
     }

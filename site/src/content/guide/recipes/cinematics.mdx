@@ -113,7 +113,7 @@ Push the cinematic scene with `mode: 'opaque'` to hide and freeze the game while
 
 ```js
 // From the game scene:
-this.app.sceneManager.pushScene(new CinematicScene(), {
+this.app.scene.pushScene(new CinematicScene(), {
     mode: 'opaque', // game scene neither renders nor updates
 });
 ```
@@ -126,7 +126,7 @@ this.app.tweens.create(this.barSize)
     .to({ v: 70 }, 0.6)
     .delay(3.5) // start closing bars after the sequence plays
     .onComplete(() => {
-        this.app.sceneManager.popScene();
+        this.app.scene.popScene();
     })
     .start();
 ```
@@ -142,12 +142,12 @@ init(loader) {
     // ... cinematic setup ...
 
     this.inputs.onTrigger(Keyboard.Space, () => {
-        this.app.sceneManager.popScene();
+        this.app.scene.popScene();
     });
 
     const pad = this.app.input.getGamepad(0);
     pad.onTrigger(GamepadButton.Start, () => {
-        this.app.sceneManager.popScene();
+        this.app.scene.popScene();
     });
 }
 ```
@@ -161,7 +161,7 @@ this.inputs.onTrigger(Keyboard.Space, () => {
     this.music.setVolume(0.85);
     this.boss.setScale(2.1, 2.1);
     // ... snap other properties ...
-    this.app.sceneManager.popScene();
+    this.app.scene.popScene();
 });
 ```
 

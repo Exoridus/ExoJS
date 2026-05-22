@@ -5,7 +5,7 @@ symbol: "ParticleSystem"
 kind: "class"
 subsystem: "particles"
 importPath: "@codexo/exojs"
-memberCount: 86
+memberCount: 109
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/particles/ParticleSystem.ts"
@@ -119,16 +119,6 @@ to `(0, 0)`.
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `alive: Uint8Array`
 - `capacity: number`
 - `collisionType: CollisionType`
@@ -148,6 +138,39 @@ to `(0, 0)`.
 - `textureIndex: Uint16Array`
 - `velX: Float32Array`
 - `velY: Float32Array`
+- `aliveCount: number`
+- `anchor: ObservableVector`
+- `blendMode: BlendModes`
+- `cacheAsBitmap: boolean`
+- `childOrder: number`
+- `cullable: boolean`
+- `deathModules: readonly DeathModule[]`
+- `filters: readonly Filter[]`
+- `frames: readonly Rectangle[]`
+- `gpuMode: boolean`
+- `gpuState: ParticleGpuState | null`
+- `hasAtlas: boolean`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `spawnModules: readonly SpawnModule[]`
+- `texCoords: Uint32Array`
+- `texture: Texture`
+- `textureFrame: Rectangle`
+- `tint: Color`
+- `updateModules: readonly UpdateModule[]`
+- `vertices: Float32Array`
+- `visible: boolean`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Events
 

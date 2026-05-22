@@ -47,7 +47,7 @@ export class HitTestLayer extends DebugLayer {
    * active, helping diagnose partitioning behavior.
    */
   public override render(backend: RenderBackend): void {
-    const root = this._app.sceneManager.scene?.root;
+    const root = this._app.scene.currentScene?.root;
 
     if (!root) {
       return;

@@ -135,7 +135,7 @@ Once an application exists, its subsystems are accessible as properties:
 - `app.canvas` — the render target.
 - `app.loader` — the [`Loader`](/ExoJS/en/api/loader/) used by every scene to register and resolve assets.
 - `app.input` — the `InputManager` for keyboard, pointer, and gamepad routing.
-- `app.sceneManager` — the scene stack controller (push/pop/replace).
+- `app.scene` — the scene stack controller (push/pop/replace).
 - `app.tweens` — the global `TweenManager`.
 
 Most code reaches these through the active scene (`this.app.input`, `this.app.tweens`) rather than holding a top-level reference, but both work.
