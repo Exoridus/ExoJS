@@ -761,9 +761,14 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   }
 
   private _buildPipelineDescriptor(shaderType: ShaderType, format: GPUTextureFormat): GPURenderPipelineDescriptor {
-    const fragEntry = shaderType === 'sdf'  ? 'fragmentSdf'
-                    : shaderType === 'msdf' ? 'fragmentMsdf'
-                    : 'fragmentColor';
+    let fragEntry: string;
+    if (shaderType === 'sdf') {
+      fragEntry = 'fragmentSdf';
+    } else if (shaderType === 'msdf') {
+      fragEntry = 'fragmentMsdf';
+    } else {
+      fragEntry = 'fragmentColor';
+    }
 
     return {
       label: `WebGpuTextRenderer/${shaderType}`,

@@ -206,7 +206,10 @@ export class HTMLText extends Container {
 
   private _schedule(): void {
     const version      = ++this._renderVersion;
-    this._activeRender = this._render(version).catch(() => {});
+    this._activeRender = this._render(version).catch(error => {
+      // eslint-disable-next-line no-console -- SVG/HTML render failures are meaningful dev-time diagnostics
+      console.warn('[ExoJS] HTMLText render failed.', error);
+    });
   }
 
   private async _render(version: number): Promise<void> {

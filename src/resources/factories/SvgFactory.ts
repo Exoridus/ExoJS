@@ -49,17 +49,22 @@ export class SvgFactory extends AbstractAssetFactory<HTMLImageElement> {
     let svgSource = source;
 
     if (width !== undefined || height !== undefined) {
-      svgSource = source.replace(
-        /<svg(\s[^>]*)?>/,
-        (_match: string, attrs = '') => {
-          const cleaned = String(attrs)
-            .replaceAll(/\s+width=(?:"[^"]*"|'[^']*')/g, '')
-            .replaceAll(/\s+height=(?:"[^"]*"|'[^']*')/g, '');
-          const additions = (width !== undefined ? ` width="${width}"` : '')
-            + (height !== undefined ? ` height="${height}"` : '');
-          return `<svg${cleaned}${additions}>`;
-        },
-      );
+      const svgStart = svgSource.indexOf('<svg');
+      const tagClose = svgSource.indexOf('>', svgStart);
+
+      if (svgStart !== -1 && tagClose !== -1) {
+        const before = svgSource.slice(0, svgStart);
+        const attrs = svgSource.slice(svgStart + 4, tagClose); // after '<svg', before '>'
+        const after = svgSource.slice(tagClose + 1);
+
+        const cleaned = String(attrs)
+          .replaceAll(/\s+width=(?:"[^"]*"|'[^']*')/g, '')
+          .replaceAll(/\s+height=(?:"[^"]*"|'[^']*')/g, '');
+        const additions = (width !== undefined ? ` width="${width}"` : '')
+          + (height !== undefined ? ` height="${height}"` : '');
+
+        svgSource = `${before}<svg${cleaned}${additions}>${after}`;
+      }
     }
 
     const blob = new Blob([svgSource], { type: 'image/svg+xml' });

@@ -190,8 +190,16 @@ export class GlyphSdf {
     //               (inf for inside pixels, 0 for outside pixels)
     for (let i = 0; i < n; i++) {
       const a = rgba[i * 4 + 3] / 255; // alpha 0..1 from the R channel (white glyph)
-      this._gridOuter[i] = a === 1 ? 0 : a === 0 ? inf : Math.max(0, 0.5 - a) ** 2;
-      this._gridInner[i] = a === 1 ? inf : a === 0 ? 0 : Math.max(0, a - 0.5) ** 2;
+      if (a === 1) {
+        this._gridOuter[i] = 0;
+        this._gridInner[i] = inf;
+      } else if (a === 0) {
+        this._gridOuter[i] = inf;
+        this._gridInner[i] = 0;
+      } else {
+        this._gridOuter[i] = Math.max(0, 0.5 - a) ** 2;
+        this._gridInner[i] = Math.max(0, a - 0.5) ** 2;
+      }
     }
 
     // ── Apply 2D EDT ──────────────────────────────────────────────────────
