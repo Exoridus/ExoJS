@@ -149,7 +149,7 @@ export class Application {
   public readonly loader: Loader;
   public readonly input: InputManager;
   public readonly interaction: InteractionManager;
-  public readonly sceneManager: SceneManager;
+  public readonly scene: SceneManager;
   public readonly tweens: TweenManager = new TweenManager();
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
@@ -234,7 +234,7 @@ export class Application {
     this._backend = this.createBackend(this._backendType);
     this.input = new InputManager(this);
     this.interaction = new InteractionManager(this);
-    this.sceneManager = new SceneManager(this);
+    this.scene = new SceneManager(this);
     this._updateHandler = this.update.bind(this);
 
     this._startupClock.start();
@@ -327,7 +327,7 @@ export class Application {
       try {
         await this.initializeRenderManager();
         this._capabilities = await capabilitiesPromise;
-        await this.sceneManager.setScene(scene);
+        await this.scene.setScene(scene);
         this._frameRequest = requestAnimationFrame(this._updateHandler);
         this._frameClock.restart();
         this._activeClock.start();
@@ -396,7 +396,7 @@ export class Application {
         runtimeView.update(frameDelta.milliseconds);
       }
 
-      this.sceneManager.update(frameDelta);
+      this.scene.update(frameDelta);
       this.onFrame.dispatch(frameDelta);
       this.backend.flush();
       this.backend.stats.frameTimeMs = performance.now() - frameStart;
@@ -417,7 +417,7 @@ export class Application {
     if (this._status === ApplicationStatus.Running) {
       this._status = ApplicationStatus.Halting;
       cancelAnimationFrame(this._frameRequest);
-      void this.sceneManager.setScene(null).catch((error: unknown) => {
+      void this.scene.setScene(null).catch((error: unknown) => {
         console.error('Application.stop() failed to unload the active scene.', error);
       });
       this._activeClock.stop();
@@ -483,7 +483,7 @@ export class Application {
     this.input.destroy();
     this.tweens.destroy();
     this._backend.destroy();
-    this.sceneManager.destroy();
+    this.scene.destroy();
     this._startupClock.destroy();
     this._activeClock.destroy();
     this._frameClock.destroy();

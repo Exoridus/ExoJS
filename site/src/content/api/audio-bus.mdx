@@ -5,7 +5,7 @@ symbol: "AudioBus"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 10
+memberCount: 15
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/AudioBus.ts"
@@ -52,6 +52,11 @@ until that happens.
 ## Properties
 
 - `name: string`
+- `inputNode: GainNode | null`
+- `muted: boolean`
+- `pan: number`
+- `parent: AudioBus | null`
+- `volume: number`
 
 ## Source
 

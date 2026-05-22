@@ -5,7 +5,7 @@ symbol: "Sprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 61
+memberCount: 78
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/Sprite.ts"
@@ -75,20 +75,37 @@ operate on the exact rotated quad rather than the AABB.
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `anchor: ObservableVector`
+- `blendMode: BlendModes`
+- `cacheAsBitmap: boolean`
+- `childOrder: number`
+- `cullable: boolean`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `texCoords: Uint32Array`
+- `texture: RenderTexture | Texture | null`
+- `textureFrame: Rectangle`
+- `tint: Color`
+- `vertices: Float32Array`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Events
 

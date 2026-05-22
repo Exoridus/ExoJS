@@ -5,9 +5,9 @@ symbol: "AudioFilter"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 2
+memberCount: 5
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/AudioFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioFilter.ts#L7"
 ---
@@ -27,6 +27,12 @@ a ready promise that resolves once the filter is fully initialized.
 ## Methods
 
 - `destroy(): void`
+
+## Properties
+
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
 
 ## Source
 

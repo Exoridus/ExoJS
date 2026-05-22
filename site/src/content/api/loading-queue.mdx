@@ -5,9 +5,9 @@ symbol: "LoadingQueue"
 kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
-memberCount: 4
+memberCount: 5
 tier: "stable"
-sections: ["Import", "Methods", "Events", "Source"]
+sections: ["Import", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/resources/LoadingQueue.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts#L26"
 ---
@@ -27,6 +27,10 @@ Progress is updated as individual items complete via _notifyItem.
 - `catch(onrejected?: object | null): Promise<T | Caught>`
 - `finally(onfinally?: object | null): Promise<T>`
 - `then(onfulfilled?: object | null, onrejected?: object | null): Promise<Fulfilled | Rejected>`
+
+## Properties
+
+- `progress: LoadingProgress`
 
 ## Events
 

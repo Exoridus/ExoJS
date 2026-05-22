@@ -5,7 +5,7 @@ symbol: "RenderNode"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 57
+memberCount: 66
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/RenderNode.ts"
@@ -74,20 +74,29 @@ ParticleSystem (particles).
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `anchor: ObservableVector`
+- `cacheAsBitmap: boolean`
+- `childOrder: number`
+- `cullable: boolean`
+- `filters: readonly Filter[]`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `visible: boolean`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Events
 

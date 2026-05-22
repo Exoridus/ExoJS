@@ -5,9 +5,9 @@ symbol: "DelayFilter"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 2
+memberCount: 8
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/DelayFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DelayFilter.ts#L27"
 ---
@@ -28,6 +28,15 @@ a single slap-back echo.
 ## Methods
 
 - `destroy(): void`
+
+## Properties
+
+- `delaySeconds: number`
+- `feedback: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+- `wet: number`
 
 ## Source
 

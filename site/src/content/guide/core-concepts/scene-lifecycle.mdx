@@ -119,7 +119,7 @@ init() {
     });
 
     this.inputs.onTrigger(Keyboard.Escape, async () => {
-        await this.app.sceneManager.pushScene(new PauseScene());
+        await this.app.scene.pushScene(new PauseScene());
     });
 }
 ```

@@ -1,5 +1,20 @@
 import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 
+/** Construction options for {@link SvgFactory.create}. */
+export interface SvgFactoryOptions {
+  /**
+   * Target render width in pixels. When provided, the value is injected into
+   * the root `<svg>` element's `width` attribute before the browser rasterises
+   * the image, overriding any intrinsic width declared in the file.
+   *
+   * SVGs that carry only a `viewBox` (no `width`/`height` attributes) render
+   * as a 0×0 image by default; supplying `width` and `height` here fixes that.
+   */
+  width?: number;
+  /** Target render height in pixels. See {@link width}. */
+  height?: number;
+}
+
 /**
  * {@link AssetFactory} implementation that loads SVG markup and produces a
  * rasterised {@link HTMLImageElement}.
@@ -22,12 +37,32 @@ export class SvgFactory extends AbstractAssetFactory<HTMLImageElement> {
   /**
    * Renders the SVG markup into a fully loaded {@link HTMLImageElement}.
    *
+   * When `options.width` or `options.height` are provided, the values are
+   * injected into the root `<svg>` element before rasterisation so the browser
+   * renders at the requested pixel dimensions rather than the intrinsic size.
    * Creates a temporary `image/svg+xml` object URL, assigns it to an `<img>`
    * element, and revokes the URL once loading settles. Rejects on load error
    * or abort.
    */
-  public async create(source: string): Promise<HTMLImageElement> {
-    const blob = new Blob([source], { type: 'image/svg+xml' });
+  public async create(source: string, options: SvgFactoryOptions = {}): Promise<HTMLImageElement> {
+    const { width, height } = options;
+    let svgSource = source;
+
+    if (width !== undefined || height !== undefined) {
+      svgSource = source.replace(
+        /<svg(\s[^>]*)?>/,
+        (_match: string, attrs = '') => {
+          const cleaned = attrs
+            .replace(/\s+width=(?:"[^"]*"|'[^']*')/g, '')
+            .replace(/\s+height=(?:"[^"]*"|'[^']*')/g, '');
+          const additions = (width !== undefined ? ` width="${width}"` : '')
+            + (height !== undefined ? ` height="${height}"` : '');
+          return `<svg${cleaned}${additions}>`;
+        },
+      );
+    }
+
+    const blob = new Blob([svgSource], { type: 'image/svg+xml' });
     const objectUrl = this.createObjectUrl(blob);
 
     return new Promise((resolve, reject) => {

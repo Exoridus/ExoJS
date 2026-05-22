@@ -5,7 +5,7 @@ symbol: "SceneNode"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 39
+memberCount: 44
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/core/SceneNode.ts"
@@ -74,18 +74,23 @@ Subclasses: Container (carries children), RenderNode
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `anchor: ObservableVector`
+- `childOrder: number`
+- `cullable: boolean`
+- `isAlignedBox: boolean`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `visible: boolean`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Source
 

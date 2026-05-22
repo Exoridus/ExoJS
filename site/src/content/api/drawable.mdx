@@ -5,7 +5,7 @@ symbol: "Drawable"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 59
+memberCount: 70
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Drawable.ts"
@@ -66,20 +66,31 @@ and are paired with a matching Renderer via RendererRegistry.
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `anchor: ObservableVector`
+- `blendMode: BlendModes`
+- `cacheAsBitmap: boolean`
+- `childOrder: number`
+- `cullable: boolean`
+- `filters: readonly Filter[]`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `tint: Color`
+- `visible: boolean`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Events
 

@@ -1,0 +1,238 @@
+import { AbstractText } from './AbstractText';
+import type { AtlasMode } from './GlyphAtlas';
+import { SDF_RADIUS } from './GlyphAtlas';
+import type { GlyphAtlas } from './GlyphAtlas';
+import { getDefaultGlyphAtlasPool } from './GlyphAtlasPool';
+import type { LayoutOptions } from './LayoutOptions';
+import { buildTextPageQuads, layoutText } from './TextLayout';
+import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
+import { TextStyle } from './TextStyle';
+import type { TextPageQuads } from './types';
+
+export type { TextPageQuads };
+
+/**
+ * GPU-accelerated text node that rasterizes individual glyphs into a shared
+ * per-font-variant {@link GlyphAtlas} using the SDF (Signed Distance Field)
+ * technique and renders them through the `text-sdf` shader.
+ *
+ * **Style mutations are deferred:** mutating a property on `text.style`
+ * (e.g. `text.style.fontSize = 32`) marks the style dirty. The geometry is
+ * rebuilt on the next {@link update} call. Replacing the style object or
+ * changing the text string rebuilds immediately.
+ *
+ * ```ts
+ * const label = new DynamicText('Hello', { fontSize: 24 });
+ * scene.addChild(label);
+ *
+ * label.style.fillColor = Color.red;   // cheap — no atlas work
+ * label.style.outlineWidth = 0.08;     // cheap — only shader uniforms
+ * label.update(dt);                     // apply deferred changes each frame
+ * ```
+ *
+ * **FontFace-first:** load fonts via {@link FontFactory} before constructing
+ * the node, then pass the loaded `FontFace` via the `font` style option. The
+ * label renders immediately with the correct glyphs — no async waiting needed.
+ *
+ * ```ts
+ * const face = await loader.load(FontFactory, 'roboto.woff2', { family: 'Roboto' });
+ * const label = new DynamicText('Score: 0', { font: face, fontSize: 24 });
+ * scene.addChild(label); // renders immediately with Roboto
+ * ```
+ *
+ * Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor
+ * options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
+ * @stable
+ */
+export class DynamicText extends AbstractText {
+  private _style: TextStyle;
+  private _layout: LayoutOptions;
+  private _colorGlyphs: boolean;
+  private _sdfRadius: number;
+  private _atlas: GlyphAtlas | null = null;
+  private _destroyed = false;
+  private _faceLoadVersion = 0;
+
+  /** Resolves when an in-flight FontFace load finishes. Null when no face load is pending. */
+  private _faceLoadPromise: Promise<void> | null = null;
+
+  /** Per-page quad geometry built by `_rebuild()`. */
+  private _pageQuads: TextPageQuads[] = [];
+
+  public constructor(
+    text: string,
+    style?: TextStyle | TextStyleOptions,
+    layout?: LayoutOptions,
+    options: { colorGlyphs?: boolean; sdfRadius?: number } = {},
+  ) {
+    super(text);
+    this._style = style instanceof TextStyle ? style : new TextStyle(style);
+    this._layout = layout ?? {};
+    this._colorGlyphs = options.colorGlyphs ?? false;
+    this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
+
+    if (!(style instanceof TextStyle) && style !== undefined) {
+      const face = this._extractFace(style);
+      if (face !== null) this._faceLoadPromise = this._loadFace(face);
+    }
+
+    this._rebuild('font');
+  }
+
+  public get style(): TextStyle {
+    return this._style;
+  }
+
+  public set style(v: TextStyle | TextStyleOptions) {
+    this._style = v instanceof TextStyle ? v : new TextStyle(v);
+    if (!(v instanceof TextStyle)) {
+      const face = this._extractFace(v);
+      if (face !== null) this._faceLoadPromise = this._loadFace(face);
+    }
+    this._rebuild('font');
+  }
+
+  public override get text(): string {
+    return this._text;
+  }
+
+  public override set text(v: string) {
+    if (this._text === v) return;
+    this._text = v;
+    this._rebuild('layout');
+  }
+
+  public get layout(): LayoutOptions {
+    return this._layout;
+  }
+
+  public set layout(v: LayoutOptions) {
+    this._layout = v;
+    this._rebuild('layout');
+  }
+
+  /**
+   * `true` if this node was constructed with `colorGlyphs: true`.
+   * Colour-glyph nodes use a RGBA atlas (emoji / colour fonts) and
+   * the `text-color` shader instead of `text-sdf`.
+   */
+  public get colorGlyphs(): boolean {
+    return this._colorGlyphs;
+  }
+
+  /**
+   * SDF buffer radius (pixels) used when rasterizing glyphs for this node.
+   * Determines the maximum usable outline/shadow reach.
+   * Nodes with different radii use separate atlas instances.
+   */
+  public get sdfRadius(): number {
+    return this._sdfRadius;
+  }
+
+  /**
+   * The atlas mode used by this node: `'color'` for colour glyphs,
+   * `'sdf'` for standard text.
+   */
+  public get atlasMode(): AtlasMode {
+    return this._colorGlyphs ? 'color' : 'sdf';
+  }
+
+  /** Per-page quad data consumed by the text renderer. */
+  public get pageQuads(): readonly TextPageQuads[] {
+    return this._pageQuads;
+  }
+
+  /** The {@link GlyphAtlas} this node currently draws from. */
+  public get atlas(): GlyphAtlas | null {
+    return this._atlas;
+  }
+
+  /**
+   * Check for pending style mutations and apply them. Call once per frame.
+   *
+   * - `'tint'` hint → updates shader uniforms only (no geometry rebuild)
+   * - `'layout'`/`'font'` hint → rebuilds glyph geometry
+   */
+  public override update(dt: number): void {
+    super.update(dt);
+    const hint = this._style.consumeDirty();
+    if (hint === null) return;
+    if (hint !== 'tint') {
+      this._rebuild(hint);
+    }
+  }
+
+  public override destroy(): void {
+    this._destroyed = true;
+    this._faceLoadVersion++;
+    this._faceLoadPromise = null;
+    this._pageQuads = [];
+    this._atlas = null;
+    super.destroy();
+  }
+
+  // ── Private ──────────────────────────────────────────────────────────────
+
+  /** Extract a {@link FontFace} from raw style options, or return null. */
+  private _extractFace(opts: TextStyleOptions): FontFace | null {
+    if (typeof FontFace === 'undefined') return null;
+    if (opts.font instanceof FontFace) return opts.font;
+    return null;
+  }
+
+  /**
+   * Register `face` with `document.fonts` if needed, await its load, then
+   * clear the relevant atlas slice and rebuild geometry.
+   *
+   * Uses a version counter to discard stale loads when the style is replaced
+   * before the previous face finishes loading.
+   */
+  private async _loadFace(face: FontFace): Promise<void> {
+    if (typeof document === 'undefined' || !document.fonts) return;
+
+    const version = ++this._faceLoadVersion;
+
+    if (!document.fonts.has(face)) {
+      document.fonts.add(face);
+    }
+
+    try {
+      await face.load();
+    } catch {
+      return;
+    }
+
+    if (this._destroyed || version !== this._faceLoadVersion) return;
+
+    const pool = getDefaultGlyphAtlasPool();
+    pool
+      .getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius)
+      .clear();
+    this._rebuild('font');
+  }
+
+  private _rebuild(_hint: StyleChangeHint): void {
+    this._pageQuads = [];
+
+    if (this._text.length === 0) {
+      this._style.consumeDirty();
+      return;
+    }
+
+    const pool = getDefaultGlyphAtlasPool();
+    const atlas = pool.getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius);
+    this._atlas = atlas;
+
+    const placements = layoutText(this._text, this._style, this._layout, atlas);
+
+    if (placements.length === 0) {
+      this._style.consumeDirty();
+      return;
+    }
+
+    this._pageQuads = buildTextPageQuads(placements);
+    this._style.consumeDirty();
+  }
+}
+
+export { SDF_RADIUS };

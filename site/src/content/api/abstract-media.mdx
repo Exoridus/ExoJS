@@ -5,7 +5,7 @@ symbol: "AbstractMedia"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 27
+memberCount: 32
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/audio/AbstractMedia.ts"
@@ -51,12 +51,17 @@ Subclasses implement the abstract members to bind to either an
 
 ## Properties
 
-- `_bus: AudioBus | null`
-- `_duration: number`
-- `_loop: boolean`
-- `_muted: boolean`
-- `_playbackRate: number`
-- `_volume: number`
+- `analyserTarget: AudioNode | null`
+- `bus: AudioBus`
+- `currentTime: number`
+- `duration: number`
+- `loop: boolean`
+- `muted: boolean`
+- `paused: boolean`
+- `playbackRate: number`
+- `playing: boolean`
+- `progress: number`
+- `volume: number`
 
 ## Events
 

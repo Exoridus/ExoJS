@@ -5,7 +5,7 @@ symbol: "Mesh"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 65
+memberCount: 79
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/mesh/Mesh.ts"
@@ -87,16 +87,6 @@ after in-place mutation is the caller's responsibility (call
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `colors: Uint32Array<ArrayBufferLike> | null`
 - `cursor: string | null`
@@ -106,6 +96,30 @@ after in-place mutation is the caller's responsibility (call
 - `shader: MeshShader | null`
 - `uvs: Float32Array<ArrayBufferLike> | null`
 - `vertices: Float32Array`
+- `anchor: ObservableVector`
+- `blendMode: BlendModes`
+- `cacheAsBitmap: boolean`
+- `childOrder: number`
+- `cullable: boolean`
+- `filters: readonly Filter[]`
+- `indexCount: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `texture: RenderTexture | Texture | null`
+- `tint: Color`
+- `vertexCount: number`
+- `visible: boolean`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Events
 

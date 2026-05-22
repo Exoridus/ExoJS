@@ -5,7 +5,7 @@ import { Container } from '@/rendering/Container';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderNode } from '@/rendering/RenderNode';
-import { Text } from '@/rendering/text/Text';
+import { DynamicText as Text } from '@/rendering/text/DynamicText';
 import { TextStyle } from '@/rendering/text/TextStyle';
 
 import type { DebugLayerViewMode } from './DebugLayer';
@@ -108,7 +108,6 @@ export class PointerStackLayer extends DebugLayer {
       fontFamily: 'Arial',
       fontWeight: 'normal',
       fillColor: textColor,
-      strokeThickness: 0,
     });
 
     this._bg = new Graphics();
@@ -153,7 +152,7 @@ export class PointerStackLayer extends DebugLayer {
     lines.push('Stack (top→bottom):');
 
     // Collect all visible RenderNodes whose contains() returns true.
-    const root = this._app.sceneManager.scene?.root;
+    const root = this._app.scene.currentScene?.root;
     const stack: RenderNode[] = [];
 
     if (root) {

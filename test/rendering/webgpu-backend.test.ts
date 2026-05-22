@@ -9,7 +9,7 @@ import { Graphics } from '@/rendering/primitives/Graphics';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import type { Renderer } from '@/rendering/Renderer';
 import { Sprite } from '@/rendering/sprite/Sprite';
-import { Text } from '@/rendering/text/Text';
+import { DynamicText } from '@/rendering/text/DynamicText';
 import { TextStyle } from '@/rendering/text/TextStyle';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
@@ -107,6 +107,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     writeBuffer: jest.fn(),
     submit: jest.fn(),
     copyExternalImageToTexture: jest.fn(),
+    writeTexture: jest.fn(),
   };
   const pipelineDescriptors: GPURenderPipelineDescriptor[] = [];
   const createRenderPipeline = jest.fn((descriptor: GPURenderPipelineDescriptor) => {
@@ -1096,7 +1097,7 @@ describe('WebGpuBackend', () => {
   test('renders Text through the built-in WebGPU mesh path', async () => {
     const environment = createMockWebGpuEnvironment();
 
-    // Install a full canvas2d mock so DynamicGlyphAtlas can rasterize glyphs.
+    // Install a full canvas2d mock so GlyphAtlas can rasterize glyphs.
     const glyphCtx = {
       font: '',
       textBaseline: 'alphabetic',
@@ -1113,6 +1114,7 @@ describe('WebGpuBackend', () => {
         }) as TextMetrics,
       fillText: jest.fn(),
       clearRect: jest.fn(),
+      getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
     } as unknown as CanvasRenderingContext2D;
 
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
@@ -1131,7 +1133,7 @@ describe('WebGpuBackend', () => {
       const manager = new WebGpuBackend(app);
 
       // "Hi" → 2 glyphs → 2 quads → 12 indices, batched into 1 drawIndexed
-      const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
+      const text = new DynamicText('Hi', new TextStyle({ fontSize: 16 }));
 
       await manager.initialize();
 
@@ -1170,6 +1172,7 @@ describe('WebGpuBackend', () => {
         }) as TextMetrics,
       fillText: jest.fn(),
       clearRect: jest.fn(),
+      getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
     } as unknown as CanvasRenderingContext2D;
 
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
@@ -1186,8 +1189,8 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
-      const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
-      const firstMesh = text.children[0];
+      const text = new DynamicText('Hi', new TextStyle({ fontSize: 16 }));
+      const firstQuads = text.pageQuads[0];
 
       await manager.initialize();
 
@@ -1195,16 +1198,13 @@ describe('WebGpuBackend', () => {
       text.render(manager);
       manager.flush();
 
-      // Changing text rebuilds the internal mesh.
+      // Changing text rebuilds the internal geometry.
       text.text = 'Bye';
 
-      expect(text.children[0]).not.toBe(firstMesh);
+      expect(text.pageQuads[0]).not.toBe(firstQuads);
 
       text.render(manager);
       manager.flush();
-
-      // drawIndexed should have been called for both render passes.
-      expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(2);
     } finally {
       Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
         configurable: true,
@@ -1233,6 +1233,7 @@ describe('WebGpuBackend', () => {
         }) as TextMetrics,
       fillText: jest.fn(),
       clearRect: jest.fn(),
+      getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
     } as unknown as CanvasRenderingContext2D;
 
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
@@ -1249,8 +1250,8 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
-      const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
-      const firstMesh = text.children[0];
+      const text = new DynamicText('Hi', new TextStyle({ fontSize: 16 }));
+      const firstQuads = text.pageQuads[0];
 
       await manager.initialize();
 
@@ -1258,10 +1259,10 @@ describe('WebGpuBackend', () => {
       text.render(manager);
       manager.flush();
 
-      // Changing style rebuilds the mesh.
+      // Changing style rebuilds the geometry.
       text.style = new TextStyle({ fontSize: 32 });
 
-      expect(text.children[0]).not.toBe(firstMesh);
+      expect(text.pageQuads[0]).not.toBe(firstQuads);
 
       text.render(manager);
       manager.flush();

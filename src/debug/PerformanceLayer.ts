@@ -5,7 +5,7 @@ import { Container } from '@/rendering/Container';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderNode } from '@/rendering/RenderNode';
-import { Text } from '@/rendering/text/Text';
+import { DynamicText as Text } from '@/rendering/text/DynamicText';
 import { TextStyle } from '@/rendering/text/TextStyle';
 
 import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
@@ -126,7 +126,7 @@ export class PerformanceLayer extends DebugLayer {
 
     // --- Stats ---
     const stats = this._app.backend.stats;
-    const scene = this._app.sceneManager.scene;
+    const scene = this._app.scene.currentScene;
     const nodeCount = scene ? countNodes(scene.root) : 0;
 
     // --- Update text ---
@@ -201,7 +201,6 @@ export class PerformanceLayer extends DebugLayer {
       fontFamily: 'Arial',
       fontWeight: 'normal',
       fillColor: textColor,
-      strokeThickness: 0,
     });
 
     const bg = new Graphics();

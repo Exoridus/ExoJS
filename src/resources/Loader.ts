@@ -1,6 +1,7 @@
 import { Music } from '@/audio/Music';
 import { Sound } from '@/audio/Sound';
 import { Signal } from '@/core/Signal';
+import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { Video } from '@/rendering/video/Video';
 
@@ -14,21 +15,24 @@ import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import { BinaryFactory } from './factories/BinaryFactory';
+import { CsvFactory } from './factories/CsvFactory';
+import { BmFontLoaderFactory } from './factories/BmFontFactory';
 import { FontFactory } from './factories/FontFactory';
 import { ImageFactory } from './factories/ImageFactory';
 import { JsonFactory } from './factories/JsonFactory';
 import { MusicFactory } from './factories/MusicFactory';
 import { SoundFactory } from './factories/SoundFactory';
+import { SubtitleFactory } from './factories/SubtitleFactory';
 import { SvgFactory } from './factories/SvgFactory';
 import { TextFactory } from './factories/TextFactory';
 import { TextureFactory } from './factories/TextureFactory';
 import { VideoFactory } from './factories/VideoFactory';
-import { VttFactory } from './factories/VttFactory';
 import { WasmFactory } from './factories/WasmFactory';
+import { XmlFactory } from './factories/XmlFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
-import { Json, SvgAsset, TextAsset, VttAsset } from './tokens';
+import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -55,18 +59,78 @@ export type InferLoadedMap<M extends Record<string, AssetInput>> = {
  * their constructor type. All other loadables return the instance type inferred
  * from the constructor.
  */
-export type LoadReturn<T> = T extends typeof Json
-  ? unknown
-  : T extends typeof TextAsset
-    ? string
-    : T extends typeof SvgAsset
-      ? HTMLImageElement
-      : T extends typeof VttAsset
-        ? VTTCue[]
-        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          T extends abstract new (...args: any[]) => infer R
-          ? R
-          : never;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type LoadReturn<T> =
+  T extends typeof Json           ? unknown :
+  T extends typeof TextAsset      ? string :
+  T extends typeof SvgAsset       ? HTMLImageElement :
+  T extends typeof SubtitleAsset  ? VTTCue[] :
+  T extends typeof XmlAsset       ? Document :
+  T extends typeof CsvAsset       ? string[][] :
+  T extends typeof ImageAsset     ? HTMLImageElement :
+  T extends typeof FontAsset      ? FontFace :
+  T extends typeof BinaryAsset    ? ArrayBuffer :
+  T extends typeof WasmAsset      ? WebAssembly.Module :
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends abstract new (...args: any[]) => infer R ? R :
+  never;
+
+/**
+ * Maps file extensions (without leading dot, lower-case) to the asset type
+ * returned by {@link Loader.load} when called with a plain path string.
+ *
+ * Extend via declaration merging to register custom extension → type mappings:
+ * ```ts
+ * declare module 'exojs' {
+ *   interface ExtensionTypeMap { tmj: TiledMap; }
+ * }
+ * ```
+ */
+export interface ExtensionTypeMap {
+  fnt: BmFont;
+  woff: FontFace;
+  woff2: FontFace;
+  ttf: FontFace;
+  otf: FontFace;
+}
+
+type PathExtension<S extends string> =
+  S extends `${string}.${infer E}?${string}` ? Lowercase<E> :
+  S extends `${string}.${infer E}` ? Lowercase<E> :
+  never;
+
+/**
+ * Resolves the return type for {@link Loader.load} when called with a plain
+ * path string. Returns `unknown` when the extension is not in
+ * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
+ * compile time; use the token form (`load(MyType, path)`) instead.
+ */
+export type LoadByPath<S extends string> =
+  PathExtension<S> extends keyof ExtensionTypeMap ? ExtensionTypeMap[PathExtension<S>] : unknown;
+
+/**
+ * Constrains a {@link Loadable} token against the types registered for a
+ * given path's extension. When the extension is in {@link ExtensionTypeMap},
+ * `T` must produce a value assignable to the registered union — otherwise
+ * resolves to `never`, triggering a compile-time error.
+ *
+ * For paths with an unregistered extension the constraint is skipped and any
+ * `T` is accepted (runtime behaviour is unchanged).
+ *
+ * ```ts
+ * // ExtensionTypeMap: { ogg: Sound | Video }
+ * loader.load(Sound, 'effect.ogg')      // ✓ Sound ∈ Sound | Video
+ * loader.load(BitmapText, 'effect.ogg') // ✗ BitmapText ∉ Sound | Video
+ * loader.load(Sound, 'theme.custom')    // ✓ .custom not in map → unconstrained
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ConstrainedLoadable<T extends abstract new (...args: any[]) => any, S extends string> =
+  PathExtension<S> extends keyof ExtensionTypeMap
+    ? LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>]
+      ? T
+      : never
+    : T;
 
 /**
  * Context object passed to custom asset-type load handlers registered via
@@ -195,6 +259,8 @@ export class Loader {
   private readonly _inFlightByIdentity = new Map<string, Promise<unknown>>();
   // Handler entries registered via the handler-based registerAssetType overload
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
+  // Maps lower-case file extensions (without dot) to the constructor to use
+  private readonly _extensionMap = new Map<string, AssetConstructor>();
 
   private _basePath: string;
   private _fetchOptions: RequestInit;
@@ -316,6 +382,29 @@ export class Loader {
       });
     }
 
+    return this;
+  }
+
+  // -----------------------------------------------------------------------
+  // Extension registration
+  // -----------------------------------------------------------------------
+
+  /**
+   * Associates a file extension with an asset type so that
+   * `loader.load('path.ext')` (the single-string overload) can infer the
+   * type automatically.
+   *
+   * `ext` is matched case-insensitively and the leading dot is optional.
+   * The type must already have a registered factory (via {@link register} or
+   * {@link registerAssetType}).
+   *
+   * ```ts
+   * loader.registerExtension('tmj', TiledMap);
+   * const map = await loader.load('world.tmj'); // TiledMap
+   * ```
+   */
+  public registerExtension(ext: string, type: AssetConstructor): this {
+    this._extensionMap.set(ext.replace(/^\./, '').toLowerCase(), type);
     return this;
   }
 
@@ -515,10 +604,44 @@ export class Loader {
   public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
 
   // -----------------------------------------------------------------------
+  // Loading — extension-based (type inferred from file extension)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Fetches an asset by path, inferring the type from the file extension.
+   *
+   * Built-in extension mappings:
+   * - `.fnt` → {@link BmFont}
+   * - `.woff`, `.woff2`, `.ttf`, `.otf` → `FontFace` (family inferred from filename)
+   *
+   * Register additional mappings via {@link registerExtension}.
+   * Extend the return type by augmenting {@link ExtensionTypeMap}.
+   *
+   * Paths whose extension is **not** in {@link ExtensionTypeMap} are rejected at
+   * compile time — use the token form (`load(MyType, path)`) for unregistered
+   * extensions.
+   *
+   * ```ts
+   * const font = await loader.load('fonts/ui.fnt');           // BmFont
+   * const face = await loader.load('fonts/Roboto.woff2');     // FontFace, family='Roboto'
+   * const bm   = await loader.load<BmFont>('fonts/ui.fnt');   // validated cast
+   * ```
+   */
+  // Generic form — caller narrows R while extension still must be registered.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public load<R, S extends string>(
+    path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never,
+  ): LoadingQueue<R>;
+  // Inferred form — R comes from ExtensionTypeMap.
+  public load<S extends string>(
+    path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never,
+  ): LoadingQueue<LoadByPath<S>>;
+
+  // -----------------------------------------------------------------------
   // Loading — generic overloads (return type inferred from class)
   // -----------------------------------------------------------------------
 
-  public load<T extends Loadable>(type: T, path: string, options?: unknown): LoadingQueue<LoadReturn<T>>;
+  public load<T extends Loadable, S extends string>(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>;
   public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): LoadingQueue<Array<LoadReturn<T>>>;
   public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
 
@@ -553,6 +676,34 @@ export class Loader {
 
         return out;
       });
+    }
+
+    // 2b. Extension-based: single path string with no type token
+    if (typeof arg0 === 'string' && arg1 === undefined) {
+      const path = arg0;
+      const ext = path.match(/\.([^./?#]+)(?:[?#]|$)/)?.[1]?.toLowerCase();
+      const ctor = ext ? this._extensionMap.get(ext) : undefined;
+
+      if (ctor === undefined) {
+        throw new Error(
+          `Loader: no type registered for extension ".${ext ?? '?'}" in "${path}". ` +
+          'Register one via loader.registerExtension().',
+        );
+      }
+
+      // FontAsset requires a family option — infer it from the filename when not provided
+      const options: unknown = ctor === FontAsset
+        ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') }
+        : undefined;
+
+      let notifyFn: ((success: boolean) => void) | null = null;
+      const promise = this._loadSingle(ctor, path, options).then(
+        v => { notifyFn?.(true); return v; },
+        e => { notifyFn?.(false); throw e; },
+      );
+      const queue = new LoadingQueue(promise, 1);
+      notifyFn = queue._notifyItem.bind(queue);
+      return queue;
     }
 
     // 3. Old path: first arg is a Loadable constructor
@@ -1513,24 +1664,45 @@ export class Loader {
     this._registry.register(Json, new JsonFactory() as AssetFactory<Json>);
     this._registry.register(TextAsset, new TextFactory());
     this._registry.register(SvgAsset, new SvgFactory());
-    this._registry.register(VttAsset, new VttFactory());
-    this._registry.register(ArrayBuffer, new BinaryFactory());
+    this._registry.register(SubtitleAsset, new SubtitleFactory());
+    this._registry.register(XmlAsset, new XmlFactory());
+    this._registry.register(CsvAsset, new CsvFactory());
+    this._registry.register(BinaryAsset, new BinaryFactory());
 
     this._assetTypeMap.set('texture', Texture);
     this._assetTypeMap.set('sound', Sound);
     this._assetTypeMap.set('music', Music);
     this._assetTypeMap.set('json', Json);
+    this._assetTypeMap.set('video', Video);
+    this._assetTypeMap.set('text', TextAsset);
+    this._assetTypeMap.set('svg', SvgAsset);
+    this._assetTypeMap.set('vtt', SubtitleAsset);
+    this._assetTypeMap.set('srt', SubtitleAsset);
+    this._assetTypeMap.set('xml', XmlAsset);
+    this._assetTypeMap.set('csv', CsvAsset);
+    this._assetTypeMap.set('binary', BinaryAsset);
+
+    this._registry.register(BmFont, new BmFontLoaderFactory(this));
+    this._assetTypeMap.set('bmFont', BmFont);
+    this._extensionMap.set('fnt', BmFont);
 
     if (typeof FontFace !== 'undefined') {
-      this._registry.register(FontFace, new FontFactory());
+      this._registry.register(FontAsset, new FontFactory());
+      this._assetTypeMap.set('font', FontAsset);
+      this._extensionMap.set('woff', FontAsset);
+      this._extensionMap.set('woff2', FontAsset);
+      this._extensionMap.set('ttf', FontAsset);
+      this._extensionMap.set('otf', FontAsset);
     }
 
     if (typeof HTMLImageElement !== 'undefined') {
-      this._registry.register(HTMLImageElement, new ImageFactory());
+      this._registry.register(ImageAsset, new ImageFactory());
+      this._assetTypeMap.set('image', ImageAsset);
     }
 
     if (typeof WebAssembly !== 'undefined') {
-      this._registry.register(WebAssembly.Module, new WasmFactory());
+      this._registry.register(WasmAsset, new WasmFactory());
+      this._assetTypeMap.set('wasm', WasmAsset);
     }
   }
 }

@@ -5,7 +5,7 @@ symbol: "VocoderFilter"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 7
+memberCount: 8
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/VocoderFilter.ts"
@@ -34,10 +34,11 @@ runtime.
 
 ## Properties
 
-- `_inputGain: GainNode | null`
-- `_outputGain: GainNode | null`
-- `_ready: Promise<void> | null`
-- `_workletNode: AudioWorkletNode | null`
+- `envelopeSmoothing: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+- `wet: number`
 
 ## Source
 

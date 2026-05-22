@@ -20,12 +20,12 @@ class MenuScene extends Scene {
         this._label.setAnchor(0.5);
         this._label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Space, () => {
-            void this.app.sceneManager.setScene(gameScene);
+            void this.app.scene.setScene(gameScene);
         });
         this.app.input.onPointerTap.add(this._onTap, this);
     }
     _onTap() {
-        void this.app.sceneManager.setScene(gameScene);
+        void this.app.scene.setScene(gameScene);
     }
     draw(backend) {
         backend.clear(new Color(18, 38, 72, 1));
@@ -44,7 +44,7 @@ class GameScene extends Scene {
         this._label.setAnchor(0.5);
         this._label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Escape, () => {
-            void this.app.sceneManager.setScene(menuScene);
+            void this.app.scene.setScene(menuScene);
         });
     }
     draw(backend) {

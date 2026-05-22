@@ -37,7 +37,7 @@ class GameScene extends Scene {
         });
 
         this.inputs.onTrigger(Keyboard.Escape, () => {
-            this.app.sceneManager.pushScene(new PauseScene());
+            this.app.scene.pushScene(new PauseScene());
         }, { threshold: 200 });
     }
 }

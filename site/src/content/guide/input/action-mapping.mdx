@@ -147,7 +147,7 @@ init(loader) {
 
 update(delta) {
     if (this.actions.pause) {
-        this.app.sceneManager.pushScene(new PauseScene());
+        this.app.scene.pushScene(new PauseScene());
         this.actions.pause = 0;
     }
 

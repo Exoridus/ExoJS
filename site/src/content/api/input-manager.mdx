@@ -5,9 +5,9 @@ symbol: "InputManager"
 kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
-memberCount: 30
+memberCount: 38
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Events", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/input/InputManager.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts#L59"
 ---
@@ -45,6 +45,17 @@ automatically — you do not instantiate this class yourself.
 - `onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
 - `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
 - `update(): this`
+
+## Properties
+
+- `canvasFocused: boolean`
+- `connectedGamepadCount: number`
+- `connectedGamepads: readonly Gamepad[]`
+- `firstConnectedGamepad: Gamepad | null`
+- `gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad]`
+- `gamepadSlotStrategy: GamepadSlotStrategy`
+- `hasGamepad: boolean`
+- `pointersInCanvas: boolean`
 
 ## Events
 

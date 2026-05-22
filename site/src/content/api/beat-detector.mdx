@@ -5,7 +5,7 @@ symbol: "BeatDetector"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 11
+memberCount: 31
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/audio/BeatDetector.ts"
@@ -49,6 +49,26 @@ to 4/4 by setting `enableTimeSignatureDetection: false`.
 - `barPulseHalfLife: number`
 - `justBeatWindow: number`
 - `pulseHalfLife: number`
+- `bandEnergy: BandEnergy`
+- `barLength: number`
+- `barPosition: number`
+- `barPulse: number`
+- `beatPhase: number`
+- `confidence: number`
+- `gridStability: number`
+- `justBeat: boolean`
+- `lookahead: readonly UpcomingBeat[]`
+- `nextBeatTime: number`
+- `nextDownbeatTime: number`
+- `onsetStrength: number`
+- `pulse: number`
+- `ready: Promise<void>`
+- `rms: number`
+- `secondsSinceLastBeat: number`
+- `source: BeatDetectorSource`
+- `tempo: number`
+- `tempoCandidates: readonly TempoCandidate[]`
+- `timeSignature: TimeSignature`
 
 ## Events
 

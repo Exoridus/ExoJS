@@ -5,7 +5,7 @@ symbol: "RenderPassInspectorLayer"
 kind: "class"
 subsystem: "debug"
 importPath: "@codexo/exojs/debug"
-memberCount: 6
+memberCount: 8
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/debug/RenderPassInspectorLayer.ts"
@@ -42,8 +42,10 @@ passes so those tools show meaningful pass names.
 
 ## Properties
 
-- `_app: Application`
 - `visible: boolean`
+- `entries: readonly RenderPassInspectorEntry[]`
+- `totalPasses: number`
+- `viewMode: DebugLayerViewMode`
 
 ## Source
 

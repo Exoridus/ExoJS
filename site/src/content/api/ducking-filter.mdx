@@ -5,7 +5,7 @@ symbol: "DuckingFilter"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 7
+memberCount: 10
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/DuckingFilter.ts"
@@ -33,10 +33,13 @@ filter coefficients.
 
 ## Properties
 
-- `_inputGain: GainNode | null`
-- `_outputGain: GainNode | null`
-- `_ready: Promise<void> | null`
-- `_workletNode: AudioWorkletNode | null`
+- `attackMs: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ratio: number`
+- `ready: Promise<void>`
+- `releaseMs: number`
+- `threshold: number`
 
 ## Source
 

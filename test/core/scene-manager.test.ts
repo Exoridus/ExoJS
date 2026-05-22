@@ -92,7 +92,7 @@ describe('SceneManager', () => {
     manager.onChangeScene.add(changeSpy);
 
     await expect(manager.setScene(scene)).rejects.toThrow('load failed');
-    expect(manager.scene).toBeNull();
+    expect(manager.currentScene).toBeNull();
     expect(unload).toHaveBeenCalledTimes(1);
     expect(destroySpy).toHaveBeenCalledTimes(1);
     expect(scene.app).toBeNull();
@@ -116,7 +116,7 @@ describe('SceneManager', () => {
     manager.onChangeScene.add(changeSpy);
 
     await expect(manager.setScene(scene)).rejects.toThrow('init failed');
-    expect(manager.scene).toBeNull();
+    expect(manager.currentScene).toBeNull();
     expect(load).toHaveBeenCalledTimes(1);
     expect(unload).toHaveBeenCalledTimes(1);
     expect(destroySpy).toHaveBeenCalledTimes(1);
@@ -137,7 +137,7 @@ describe('SceneManager', () => {
     const destroySpy = jest.spyOn(scene, 'destroy');
 
     await expect(manager.setScene(scene)).rejects.toThrow('Failed to initialize scene: init failed. Cleanup also failed: cleanup failed.');
-    expect(manager.scene).toBeNull();
+    expect(manager.currentScene).toBeNull();
     expect(destroySpy).toHaveBeenCalledTimes(1);
     expect(scene.app).toBeNull();
   });
@@ -280,7 +280,7 @@ describe('SceneManager', () => {
     await manager.setScene(base);
 
     await expect(manager.pushScene(failingOverlay)).rejects.toThrow('overlay init failed');
-    expect(manager.scene).toBe(base);
+    expect(manager.currentScene).toBe(base);
     expect(manager.scenes).toEqual([base]);
     expect(baseUnload).toHaveBeenCalledTimes(0);
     expect(failedUnload).toHaveBeenCalledTimes(1);
@@ -296,7 +296,7 @@ describe('SceneManager', () => {
     await manager.setScene(second);
 
     expect(firstUnload).toHaveBeenCalledTimes(1);
-    expect(manager.scene).toBe(second);
+    expect(manager.currentScene).toBe(second);
     expect(manager.scenes).toEqual([second]);
   });
 
@@ -321,7 +321,7 @@ describe('SceneManager', () => {
     });
 
     tick(manager, 50);
-    expect(manager.scene).toBe(first);
+    expect(manager.currentScene).toBe(first);
 
     tick(manager, 60);
     for (let i = 0; i < 64 && !transitionSettled; i++) {
@@ -331,7 +331,7 @@ describe('SceneManager', () => {
 
     expect(transitionSettled).toBe(true);
     await expect(transitionPromise).resolves.toBe(manager);
-    expect(manager.scene).toBe(second);
+    expect(manager.currentScene).toBe(second);
     expect(app.backend.draw).toHaveBeenCalled();
   });
 
@@ -358,9 +358,9 @@ describe('SceneManager', () => {
     await Promise.resolve();
 
     await expect(transitionPromise).rejects.toThrow('transition target failed');
-    expect(manager.scene).toBe(first);
+    expect(manager.currentScene).toBe(first);
 
     await expect(manager.setScene(fallback)).resolves.toBe(manager);
-    expect(manager.scene).toBe(fallback);
+    expect(manager.currentScene).toBe(fallback);
   });
 });

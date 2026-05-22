@@ -83,7 +83,7 @@ export class BoundingBoxesLayer extends DebugLayer {
    * so overlapping nodes are visually distinguishable.
    */
   public override render(backend: RenderBackend): void {
-    const root = this._app.sceneManager.scene?.root;
+    const root = this._app.scene.currentScene?.root;
 
     if (!root) {
       return;

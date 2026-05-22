@@ -212,12 +212,6 @@ export class Scene {
     return this;
   }
 
-  public getParticipationPolicy(): SceneParticipationPolicy {
-    return {
-      mode: this._stackMode,
-    };
-  }
-
   /**
    * Async asset preload hook. Called once before {@link Scene.init} the
    * first time the scene is pushed. Use the loader to register and

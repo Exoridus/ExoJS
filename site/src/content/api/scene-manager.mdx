@@ -5,9 +5,9 @@ symbol: "SceneManager"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 10
+memberCount: 12
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Events", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/core/SceneManager.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L96"
 ---
@@ -37,6 +37,11 @@ optional fade transition.
 - `pushScene(scene: Scene, options: PushSceneOptions): Promise<SceneManager>`
 - `setScene(scene: Scene | null, options: SetSceneOptions): Promise<SceneManager>`
 - `update(delta: Time): this`
+
+## Properties
+
+- `currentScene: Scene | null`
+- `scenes: readonly Scene[]`
 
 ## Events
 

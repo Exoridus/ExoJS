@@ -5,7 +5,7 @@ symbol: "Capabilities"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 16
+memberCount: 17
 tier: "stable"
 sections: ["Import", "Properties", "Source"]
 sourcePath: "src/core/capabilities.ts"
@@ -44,6 +44,7 @@ the same instance once `app.start()` has resolved.
 - `webgpuArchitecture: string | null`
 - `webgpuVendor: string | null`
 - `webWorkers: boolean`
+- `ready: Promise<Capabilities>`
 
 ## Source
 

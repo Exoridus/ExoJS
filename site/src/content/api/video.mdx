@@ -5,7 +5,7 @@ symbol: "Video"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 73
+memberCount: 102
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/video/Video.ts"
@@ -80,20 +80,49 @@ node and can be directed to any AudioBus.
 
 ## Properties
 
-- `_bounds: Bounds`
-- `_cos: number`
-- `_origin: ObservableVector`
-- `_position: ObservableVector`
-- `_rotation: number`
-- `_scale: ObservableVector`
-- `_sin: number`
-- `_skewX: number`
-- `_skewY: number`
-- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `analyserTarget: AudioNode | null`
+- `anchor: ObservableVector`
+- `blendMode: BlendModes`
+- `bus: AudioBus`
+- `cacheAsBitmap: boolean`
+- `childOrder: number`
+- `cullable: boolean`
+- `currentTime: number`
+- `duration: number`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `loop: boolean`
+- `mask: MaskSource`
+- `muted: boolean`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `paused: boolean`
+- `playbackRate: number`
+- `playing: boolean`
+- `position: ObservableVector`
+- `progress: number`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `texCoords: Uint32Array`
+- `texture: RenderTexture | Texture | null`
+- `textureFrame: Rectangle`
+- `tint: Color`
+- `vertices: Float32Array`
+- `videoElement: HTMLVideoElement`
+- `visible: boolean`
+- `volume: number`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
 
 ## Events
 

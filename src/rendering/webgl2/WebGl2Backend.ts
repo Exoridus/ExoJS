@@ -4,6 +4,8 @@ import { Signal } from '@/core/Signal';
 import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 import { ParticleSystem } from '@/particles/ParticleSystem';
+import { BitmapText } from '@/rendering/text/BitmapText';
+import { DynamicText } from '@/rendering/text/DynamicText';
 import { BlendModes } from '@/rendering/types';
 
 import WebGLDebugUtils from '../../vendor/webgl-debug';
@@ -27,6 +29,7 @@ import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
 import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
+import { WebGl2TextRenderer } from './WebGl2TextRenderer';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
 const throwOnGlError = (err: number, funcName: string): void => {
@@ -165,6 +168,8 @@ export class WebGl2Backend implements RenderBackend {
     this.rendererRegistry.registerRenderer(Sprite, new WebGl2SpriteRenderer(spriteRendererBatchSize));
     this.rendererRegistry.registerRenderer(Mesh, new WebGl2MeshRenderer());
     this.rendererRegistry.registerRenderer(ParticleSystem, new WebGl2ParticleRenderer(particleRendererBatchSize));
+    this.rendererRegistry.registerRenderer(DynamicText, new WebGl2TextRenderer());
+    this.rendererRegistry.registerRenderer(BitmapText, new WebGl2TextRenderer());
     this.rendererRegistry.connect(this);
 
     this._bindRenderTarget(this._renderTarget);
