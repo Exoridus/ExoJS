@@ -245,7 +245,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _pipelineLayout: GPUPipelineLayout | null = null;
 
   private readonly _pipelines     = new Map<string, GPURenderPipeline>();
-  private readonly _texBindGroups = new Map<Texture, GPUBindGroup>();
+  // Weak cache: avoids retaining transient atlas textures via strong keys.
+  private _texBindGroups = new WeakMap<Texture, GPUBindGroup>();
 
   private _projBuffer:          GPUBuffer | null = null;
   private _nodeBuffer:          GPUBuffer | null = null;
@@ -563,7 +564,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._frameBindGroupDirty = true;
 
     this._pipelines.clear();
-    this._texBindGroups.clear();
+    this._texBindGroups = new WeakMap<Texture, GPUBindGroup>();
 
     this._pipelineLayout         = null;
     this._textureBindGroupLayout = null;

@@ -1,5 +1,5 @@
 import { AudioBus } from '@/audio/AudioBus';
-import { _resetAudioManagerForTesting, AudioManager, getAudioManager } from '@/audio/AudioManager';
+import { disposeAudioManager, AudioManager, getAudioManager } from '@/audio/AudioManager';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -7,11 +7,11 @@ import { _resetAudioManagerForTesting, AudioManager, getAudioManager } from '@/a
 
 describe('AudioManager', () => {
   beforeEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
   });
 
   afterEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
     jest.restoreAllMocks();
   });
 

@@ -688,6 +688,26 @@ const PARTS: ReadonlyArray<GuidePartMeta> = [
                 ]
             }
         ]
+    },
+    {
+        part: 9,
+        slug: "migration",
+        title: "09 Migration",
+        description: "Upgrade guidance for pre-1.0 API changes between ExoJS minor versions.",
+        chapters: [
+            {
+                part: 9,
+                chapter: 1,
+                partSlug: "migration",
+                partTitle: "09 Migration",
+                partDescription: "Upgrade guidance for pre-1.0 API changes between ExoJS minor versions.",
+                slug: "v0-8-x-to-v0-9-0",
+                title: "9.1 v0.8.x to v0.9.0",
+                description: "Mechanical migration steps for the v0.9.0 API consolidation release.",
+                path: "migration/v0-8-x-to-v0-9-0",
+                examples: []
+            }
+        ]
     }
 ];
 
@@ -696,3 +716,4 @@ export const GUIDE_PARTS: ReadonlyArray<GuidePartMeta> = PARTS;
 export const GUIDE_CHAPTERS: ReadonlyArray<GuideChapterMeta> = PARTS.flatMap(part => part.chapters);
 
 export const GUIDE_CHAPTER_BY_PATH = new Map(GUIDE_CHAPTERS.map(chapter => [chapter.path, chapter]));
+

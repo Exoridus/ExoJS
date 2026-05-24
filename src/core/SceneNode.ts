@@ -1,4 +1,4 @@
-import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
+import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 import type { Circle } from '@/math/Circle';
 import type { Collidable, CollisionResponse } from '@/math/Collision';
 import { CollisionType } from '@/math/Collision';
@@ -475,7 +475,7 @@ export class SceneNode implements Collidable {
     // Notify the InteractionManager so it can mark the quadtree entry stale.
     // The manager filters to only tracked interactive nodes so this call is
     // O(1) for the common case (non-interactive node — fast Set.has miss).
-    _getCurrentInteractionManager()?._notifyBoundsInvalidated(this as unknown as RenderNode);
+    getActiveInteractionManager()?._notifyBoundsInvalidated(this as unknown as RenderNode);
 
     if (this._parentNode) {
       this._parentNode._invalidateBoundsCascade();

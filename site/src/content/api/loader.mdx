@@ -5,11 +5,11 @@ symbol: "Loader"
 kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
-memberCount: 23
+memberCount: 24
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/resources/Loader.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L177"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L241"
 ---
 ## Import
 
@@ -55,7 +55,9 @@ subsequent `load` or get calls without re-fetching.
 - `load(asset: Asset<T>): LoadingQueue<T>`
 - `load(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>`
 - `load(config: M): LoadingQueue<InferLoadedMap<M>>`
-- `load(type: T, path: string, options?: unknown): LoadingQueue<LoadReturn<T>>`
+- `load(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<R>`
+- `load(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<LoadByPath<S>>`
+- `load(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>`
 - `load(type: T, paths: readonly string[], options?: unknown): LoadingQueue<LoadReturn<T>[]>`
 - `load(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>`
 - `loadAll(): Promise<void>`
@@ -65,6 +67,7 @@ subsequent `load` or get calls without re-fetching.
 - `register(type: AssetConstructor<T>, factory: AssetFactory<T>): this`
 - `registerAssetType(typeName: K, handler: object): this`
 - `registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory<unknown>): this`
+- `registerExtension(ext: string, type: AssetConstructor): this`
 - `registerManifest(manifest: AssetManifest): this`
 - `setConcurrency(n: number): this`
 - `unload(asset: Asset<T>): this`
@@ -86,4 +89,4 @@ subsequent `load` or get calls without re-fetching.
 
 ## Source
 
-[src/resources/Loader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L177)
+[src/resources/Loader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L241)

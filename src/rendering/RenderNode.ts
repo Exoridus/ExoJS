@@ -1,8 +1,8 @@
 import { Color } from '@/core/Color';
 import { SceneNode } from '@/core/SceneNode';
 import { Signal } from '@/core/Signal';
-import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
 import type { InteractionEvent } from '@/input/InteractionEvent';
+import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 import { Rectangle } from '@/math/Rectangle';
 import type { Filter } from '@/rendering/filters/Filter';
 import type { RenderBackend } from '@/rendering/RenderBackend';
@@ -91,7 +91,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     this._interactive = value;
-    _getCurrentInteractionManager()?._notifyInteractiveChanged(this, value);
+    getActiveInteractionManager()?._notifyInteractiveChanged(this, value);
   }
 
   /**

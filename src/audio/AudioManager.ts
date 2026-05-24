@@ -152,8 +152,14 @@ export function getAudioManager(): AudioManager {
   return _manager;
 }
 
-/** For tests: reset the singleton so fresh instances can be created. */
-export function _resetAudioManagerForTesting(): void {
+/**
+ * Dispose and clear the module-level audio singleton.
+ *
+ * Useful for deterministic teardown between independent engine lifecycles
+ * (for example hot-reload flows, embedded runtimes, or test harnesses that
+ * spin up multiple isolated apps in one process).
+ */
+export function disposeAudioManager(): void {
   if (_manager) {
     _manager.destroy();
     _manager = null;

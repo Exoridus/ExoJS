@@ -1,18 +1,45 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
+const requireFromSite = createRequire(import.meta.url);
 
-const scopedPackageRoot = path.resolve(projectRoot, 'node_modules', '@codexo', 'exojs');
-const legacyPackageRoot = path.resolve(projectRoot, 'node_modules', 'exojs');
-const packageRoot = process.env.EXOJS_PACKAGE_PATH
-    ? path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH)
-    : fs.existsSync(scopedPackageRoot)
-      ? scopedPackageRoot
-      : legacyPackageRoot;
+const resolvePackageRoot = (): string => {
+    if (process.env.EXOJS_PACKAGE_PATH) {
+        return path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH);
+    }
+
+    // Prefer Node's module resolver so both classic installs and npm workspace
+    // hoisting layouts are handled without hard-coded node_modules assumptions.
+    try {
+        const packageJsonPath = requireFromSite.resolve('@codexo/exojs/package.json');
+        return path.dirname(packageJsonPath);
+    } catch {
+        // Fall through to explicit path candidates.
+    }
+
+    const candidates = [
+        path.resolve(projectRoot, 'node_modules', '@codexo', 'exojs'),
+        path.resolve(projectRoot, 'node_modules', 'exojs'),
+        path.resolve(projectRoot, '..', 'node_modules', '@codexo', 'exojs'),
+        // Workspace fallback: root package folder itself.
+        path.resolve(projectRoot, '..'),
+    ];
+
+    for (const candidate of candidates) {
+        if (fs.existsSync(path.resolve(candidate, 'package.json'))) {
+            return candidate;
+        }
+    }
+
+    return candidates[0];
+};
+
+const packageRoot = resolvePackageRoot();
 const sourceDistDir = path.resolve(packageRoot, 'dist');
 
 const flatTargetDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs');

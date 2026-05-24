@@ -1,0 +1,40 @@
+---
+title: "BmFont"
+description: "A loaded BMFont asset: the parsed descriptor plus all page textures. Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText. ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont, 'fonts/ui.fnt'); // explicit token const label = new BitmapText('Score: 0', font); ```"
+symbol: "BmFont"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 3
+tier: "stable"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "src/rendering/text/BmFont.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts#L49"
+---
+## Import
+
+`import { BmFont } from '@codexo/exojs'`
+
+A loaded BMFont asset: the parsed descriptor plus all page textures.
+
+Loaded by the built-in BMFont factory — no extra setup required.
+Pass directly to BitmapText.
+
+```ts
+const font = await loader.load('fonts/ui.fnt');       // BmFont via extension
+const font = await loader.load(BmFont, 'fonts/ui.fnt'); // explicit token
+const label = new BitmapText('Score: 0', font);
+```
+
+## Constructors
+
+- `new(fontData: BmFontData, textures: readonly Texture[]): BmFont`
+
+## Properties
+
+- `fontData: BmFontData`
+- `textures: readonly Texture[]`
+
+## Source
+
+[src/rendering/text/BmFont.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts#L49)

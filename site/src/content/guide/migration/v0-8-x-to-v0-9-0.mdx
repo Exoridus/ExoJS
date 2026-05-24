@@ -1,0 +1,201 @@
+---
+title: '9.1 v0.8.x to v0.9.0'
+description: 'Migrate ExoJS projects from v0.8.x to v0.9.0 with mechanical API rename and cleanup steps.'
+part: 9
+chapter: 1
+examples: []
+---
+
+# v0.8.x to v0.9.0
+
+ExoJS `v0.9.0` is the API-consolidation release. Most changes are mechanical renames or removal of duplicate aliases. Runtime behavior remains the same in normal scene/render workflows.
+
+## Breaking changes at a glance
+
+| Area | Change |
+|---|---|
+| `ApplicationOptions` | flat shape replaced by grouped `canvas` / `loader` / `rendering` / `input` |
+| Loader option names | `resourcePath` → `basePath`, `requestOptions` → `fetchOptions` |
+| Application scene access | `app.sceneManager` → `app.scene` |
+| SceneManager current scene | `app.scene.scene` → `app.scene.currentScene` |
+| Scene | `getParticipationPolicy()` removed |
+| SceneNode aliases | `parentNode`, `bounds`, `globalTransform`, `localBounds`, `setCullable()` removed |
+| RenderNode duplicate setters | `setCacheAsBitmap()`, `setFilters()` removed |
+| Text duplicate setters | `setText()`, `setStyle()` removed |
+| Color long aliases | `.red/.green/.blue/.alpha` removed; use `.r/.g/.b/.a` |
+| Tween type safety | `Tween.to()` now constrained to numeric keys in TypeScript |
+
+## 1) Application options became grouped
+
+```ts
+// BEFORE
+const app = new Application({
+  canvas,
+  width: 1280,
+  height: 720,
+  clearColor: Color.black,
+  resourcePath: 'assets/',
+  requestOptions: { mode: 'same-origin' },
+  debug: true,
+  gamepadDefinitions: [myPad],
+});
+
+// AFTER
+const app = new Application({
+  clearColor: Color.black,
+  canvas: {
+    element: canvas,
+    width: 1280,
+    height: 720,
+  },
+  loader: {
+    basePath: 'assets/',
+    fetchOptions: { mode: 'same-origin' },
+  },
+  rendering: {
+    debug: true,
+  },
+  input: {
+    gamepadDefinitions: [myPad],
+  },
+});
+```
+
+Top-level keys that remain top-level: `clearColor`, `backend`.
+
+## 2) Scene manager naming
+
+```ts
+// BEFORE
+app.sceneManager.setScene(new TitleScene());
+const active = app.sceneManager.scene;
+
+// AFTER
+app.scene.setScene(new TitleScene());
+const active = app.scene.currentScene;
+```
+
+`SceneManager.scenes` remains unchanged.
+
+## 3) Removed object API aliases
+
+```ts
+// SceneNode
+node.parentNode            // -> node.parent
+node.bounds                // -> node.getBounds()
+node.globalTransform       // -> node.getGlobalTransform()
+node.localBounds           // -> node.getLocalBounds()
+node.setCullable(v)        // -> node.cullable = v
+
+// RenderNode
+node.setCacheAsBitmap(v)   // -> node.cacheAsBitmap = v
+node.setFilters(filters)   // -> node.filters = filters
+
+// Text
+text.setText(value)        // -> text.text = value
+text.setStyle(style)       // -> text.style = style
+
+// Color channels
+color.red                  // -> color.r
+color.green                // -> color.g
+color.blue                 // -> color.b
+color.alpha                // -> color.a
+```
+
+## 4) Loader and typed assets
+
+`v0.9.0` keeps low-level loading (`loader.load(Type, path)`) and adds typed asset references (`Asset<T>`, `Assets<M>`, `LoadingQueue`).
+
+```ts
+import { Asset, Assets } from '@codexo/exojs';
+
+const heroTexture = new Asset({
+  type: 'texture',
+  source: 'images/hero.png',
+});
+
+const titleAssets = new Assets({
+  logo: { type: 'texture', source: 'images/logo.png' },
+  music: { type: 'music', source: 'audio/title.ogg' },
+  levels: { type: 'json', source: 'data/levels.json' },
+});
+```
+
+```ts
+const tex = await loader.load(heroTexture);
+
+const queue = loader.load(titleAssets);
+queue.onProgress.add(({ loaded, total }) => {
+  progressBar.width = (loaded / total) * 300;
+});
+
+const results = await queue;
+const logo = results.logo;
+const music = results.music;
+```
+
+Use loaded resources from the resolved `results` object; `Assets` entries are definitions, not loaded resource holders.
+
+Built-in cache strategies are:
+
+- `CacheFirstStrategy` (default)
+- `NetworkOnlyStrategy`
+
+## 5) Tweens
+
+### Restart behavior fix
+
+Managed tweens now re-register with `TweenManager` on `start()` after eviction (`complete()`/`stop()`), so ping-pong restart patterns run correctly across rounds.
+
+### `sequence()` helper
+
+```ts
+// BEFORE
+const a = app.tweens.create(node).to({ x: 100 }, 0.5);
+const b = app.tweens.create(node).to({ y: 200 }, 0.5);
+a.chain(b);
+a.start();
+
+// AFTER
+app.tweens.sequence([
+  app.tweens.create(node).to({ x: 100 }, 0.5),
+  app.tweens.create(node).to({ y: 200 }, 0.5),
+]).start();
+
+// Scene-scoped equivalent
+scene.tweens.sequence([
+  scene.tweens.create(node).to({ x: 100 }, 0.5),
+  scene.tweens.create(node).to({ y: 200 }, 0.5),
+]).start();
+```
+
+`scene.tweens` remains scene-scoped and auto-disposes tracked tweens on scene destroy.
+
+## 6) Loop stability updates
+
+- `pauseOnHidden = true` no longer accumulates a hidden-tab delta spike on resume.
+- Internal `maxDeltaMs` clamp protects update paths from giant single-frame deltas.
+- `backend.stats.rawFrameDeltaMs` exposes unclamped frame time for diagnostics.
+
+## 7) Migration sweep command
+
+Run a final stale-API sweep in your project:
+
+```bash
+rg -n "setText\\(|Color\\.red|Color\\.green|Color\\.blue|Color\\.alpha|sceneManager\\b|getParticipationPolicy|parentNode\\b|setCullable\\(|setCacheAsBitmap\\(|setFilters\\("
+```
+
+For ExoJS source/examples/site content specifically:
+
+```bash
+rg -n "setText\\(|Color\\.red|Color\\.green|Color\\.blue|Color\\.alpha|sceneManager\\b|getParticipationPolicy|parentNode\\b|setCullable\\(|setCacheAsBitmap\\(|setFilters\\(" src examples site/src
+```
+
+## 8) Quick checklist
+
+- Update `ApplicationOptions` to grouped shape.
+- Replace loader key names: `resourcePath`/`requestOptions`.
+- Rename `app.sceneManager` usages.
+- Replace removed alias APIs (`setText`, `Color.red`, etc.).
+- Re-run typecheck and tests.
+

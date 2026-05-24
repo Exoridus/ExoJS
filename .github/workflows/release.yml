@@ -89,13 +89,8 @@ jobs:
 
       # Mirror CI's site-build job so a release that would break the
       # site cannot ship even if the library tests/typecheck pass.
-      - name: Install site dependencies
-        working-directory: site
-        run: npm ci --ignore-scripts --no-audit --fund=false
-
       - name: Build site
-        working-directory: site
-        run: npm run build
+        run: npm run site:build
 
       - name: Assemble release bundle
         run: |

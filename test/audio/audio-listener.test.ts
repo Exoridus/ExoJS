@@ -1,6 +1,6 @@
 import { getAudioContext } from '@/audio/audio-context';
 import { AudioListener } from '@/audio/AudioListener';
-import { _resetAudioManagerForTesting } from '@/audio/AudioManager';
+import { disposeAudioManager } from '@/audio/AudioManager';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,7 +35,7 @@ const makeViewStub = (x: number, y: number) => ({
 
 describe('AudioListener', () => {
   beforeEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
     // Reset mock call history on listener AudioParams
     const l = getListenerMock();
     (l.positionX.setValueAtTime as jest.Mock).mockClear();
@@ -50,7 +50,7 @@ describe('AudioListener', () => {
   });
 
   afterEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
     jest.restoreAllMocks();
   });
 

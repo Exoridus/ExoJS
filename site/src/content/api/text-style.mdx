@@ -1,28 +1,30 @@
 ---
 title: "TextStyle"
-description: "Immutable-style value bag that describes how a Text node should render its string. Every property setter marks the style as `dirty` so that the owning Text can detect changes and rebuild its glyph mesh. Glyphs are always rasterized in white; `fillColor` is applied as a `Mesh.tint` multiplier at draw time, so changing it never triggers atlas re-rasterization. The canvas `fill` / `stroke` properties are used only during glyph rasterization itself."
+description: "Describes how a Text node renders its string. Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` — only updates `Mesh.tint`, no atlas work - `'layout'` — rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` — atlas lookup + full mesh rebuild Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag."
 symbol: "TextStyle"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 22
+memberCount: 23
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/TextStyle.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts#L41"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts#L121"
 ---
 ## Import
 
 `import { TextStyle } from '@codexo/exojs'`
 
-Immutable-style value bag that describes how a Text node should
-render its string. Every property setter marks the style as `dirty` so
-that the owning Text can detect changes and rebuild its glyph mesh.
+Describes how a Text node renders its string.
 
-Glyphs are always rasterized in white; `fillColor` is applied as a
-`Mesh.tint` multiplier at draw time, so changing it never triggers
-atlas re-rasterization. The canvas `fill` / `stroke` properties are
-used only during glyph rasterization itself.
+Every setter marks the style dirty with a StyleChangeHint so that
+the owning node can batch-rebuild efficiently on the next frame:
+- `'tint'`  — only updates `Mesh.tint`, no atlas work
+- `'layout'` — rebuilds the glyph mesh, reuses cached atlas glyphs
+- `'font'`  — atlas lookup + full mesh rebuild
+
+Call consumeDirty at the start of each frame to get the accumulated
+hint and clear the flag.
 
 ## Constructors
 
@@ -30,31 +32,35 @@ used only during glyph rasterization itself.
 
 ## Methods
 
-- `apply(context: CanvasRenderingContext2D): this`
 - `clone(): TextStyle`
+- `consumeDirty(): StyleChangeHint | null`
 - `copy(style: TextStyle): this`
 
 ## Properties
 
 - `align: TextAlignment`
-- `baseline: CanvasTextBaseline`
-- `dirty: boolean`
-- `fill: TextStyleColor`
 - `fillColor: Color`
 - `font: string`
 - `fontFamily: string`
 - `fontSize: number`
 - `fontStyle: "normal" | "italic"`
-- `fontWeight: string`
+- `fontWeight: FontWeight`
+- `gradientAxis: GradientAxis`
+- `gradientColors: [Color, Color] | null`
+- `leading: number`
 - `lineHeight: number`
-- `lineJoin: CanvasLineJoin`
-- `miterLimit: number`
-- `padding: number`
-- `stroke: TextStyleColor`
-- `strokeThickness: number`
-- `wordWrap: boolean`
-- `wordWrapWidth: number`
+- `outlineColor: Color`
+- `outlineWidth: number`
+- `shadowAlpha: number`
+- `shadowBlur: number`
+- `shadowColor: Color`
+- `shadowOffsetX: number`
+- `shadowOffsetY: number`
+
+## Events
+
+- `onChange: Signal<[]>`
 
 ## Source
 
-[src/rendering/text/TextStyle.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts#L41)
+[src/rendering/text/TextStyle.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts#L121)

@@ -2,7 +2,7 @@ import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/aud
 import type { AudioBus } from '@/audio/AudioBus';
 import type { Music } from '@/audio/Music';
 import type { Sound } from '@/audio/Sound';
-import { registerWorkletProcessor } from '@/audio/worklet/registerWorklet';
+import { registerAudioWorkletProcessor } from '@/audio/worklet/registerWorklet';
 import { beatDetectorWorkletSource } from '@/audio/worklets/beat-detector.worklet';
 import { Signal } from '@/core/Signal';
 
@@ -395,7 +395,7 @@ export class BeatDetector {
 
   private _setup(audioContext: AudioContext): void {
     const opts = this._options;
-    this._ready = registerWorkletProcessor(audioContext, workletName, beatDetectorWorkletSource).then(() => {
+    this._ready = registerAudioWorkletProcessor(audioContext, workletName, beatDetectorWorkletSource).then(() => {
       const node = new AudioWorkletNode(audioContext, workletName, {
         numberOfInputs: 1,
         numberOfOutputs: 0,

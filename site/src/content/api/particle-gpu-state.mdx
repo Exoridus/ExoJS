@@ -1,0 +1,36 @@
+---
+title: "ParticleGpuState"
+description: ""
+symbol: "ParticleGpuState"
+kind: "class"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+memberCount: 7
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/particles/gpu/ParticleGpuState.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/gpu/ParticleGpuState.ts#L44"
+---
+## Import
+
+`import { ParticleGpuState } from '@codexo/exojs'`
+
+## Constructors
+
+- `new(device: GPUDevice, capacity: number, modules: readonly UpdateModule[], frames: readonly Rectangle[], texture: Texture): ParticleGpuState`
+
+## Methods
+
+- `destroy(): void`
+- `dispatch(system: ParticleSystem, dt: number): void`
+- `uploadDirty(system: ParticleSystem, slots: Iterable<number>): void`
+
+## Properties
+
+- `capacity: number`
+- `device: GPUDevice`
+- `instanceBuffer: GPUBuffer`
+
+## Source
+
+[src/particles/gpu/ParticleGpuState.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/gpu/ParticleGpuState.ts#L44)

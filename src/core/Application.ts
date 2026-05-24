@@ -325,7 +325,7 @@ export class Application {
       const capabilitiesPromise = Capabilities.ready;
 
       try {
-        await this.initializeRenderManager();
+        await this.initializeBackend();
         this._capabilities = await capabilitiesPromise;
         await this.scene.setScene(scene);
         this._frameRequest = requestAnimationFrame(this._updateHandler);
@@ -544,7 +544,7 @@ export class Application {
     return backend;
   }
 
-  private async initializeRenderManager(): Promise<void> {
+  private async initializeBackend(): Promise<void> {
     try {
       await this._backend.initialize();
     } catch (error) {

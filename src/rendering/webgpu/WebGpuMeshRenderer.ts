@@ -117,8 +117,9 @@ interface CustomShaderResources {
   // User-uniform UBO (re-uploaded per frame).
   userUniformBuffer: GPUBuffer | null;
   userUniformBufferCapacity: number;
-  // Mesh texture bind group cache, keyed by texture instance.
-  meshTextureBindGroups: Map<Texture | RenderTexture, GPUBindGroup>;
+  // Mesh texture bind group cache keyed by texture identity.
+  // WeakMap avoids retaining short-lived textures across long sessions.
+  meshTextureBindGroups: WeakMap<Texture | RenderTexture, GPUBindGroup>;
   sampler: GPUSampler;
   // Per-frame state, reset in flush().
   drawCount: number;
@@ -133,7 +134,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   private readonly _combinedTransform: Matrix = new Matrix();
   private readonly _drawCalls: MeshDrawCall[] = [];
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
-  private readonly _textureBindGroups = new Map<Texture | RenderTexture, GPUBindGroup>();
+  private _textureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
   private readonly _customShaders = new Map<MeshShader, CustomShaderResources>();
 
   private _device: GPUDevice | null = null;
@@ -464,7 +465,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
         if (dc.texture !== lastTexture) {
           lastTexture = dc.texture;
-          pass.setBindGroup(1, this._getOrCreateCustomMeshTextureBindGroup(resources, backend, dc.texture));
+          pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, dc.texture));
         }
 
         pass.setVertexBuffer(0, resources.vertexBuffer, dc.vertexByteOffset);
@@ -565,7 +566,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
     this._pipelines.clear();
-    this._textureBindGroups.clear();
+    this._textureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
     this._vertexBuffer = null;
     this._indexBuffer = null;
     this._uniformBuffer = null;
@@ -860,7 +861,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       meshUniformBindGroup: null,
       userUniformBuffer: null,
       userUniformBufferCapacity: 0,
-      meshTextureBindGroups: new Map(),
+      meshTextureBindGroups: new WeakMap(),
       sampler,
       drawCount: 0,
       totalVertices: 0,
@@ -1058,7 +1059,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     return pipeline;
   }
 
-  private _getOrCreateCustomMeshTextureBindGroup(resources: CustomShaderResources, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
+  private _getOrCreateMeshTextureBindGroup(resources: CustomShaderResources, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
     let group = resources.meshTextureBindGroups.get(texture);
 
     if (group === undefined) {
@@ -1200,7 +1201,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     resources.meshUniformBuffer?.destroy();
     resources.userUniformBuffer?.destroy();
     resources.pipelines.clear();
-    resources.meshTextureBindGroups.clear();
+    resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
     resources.vertexBuffer = null;
     resources.indexBuffer = null;
     resources.meshUniformBuffer = null;

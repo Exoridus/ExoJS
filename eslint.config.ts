@@ -480,6 +480,14 @@ export default defineConfig([
     },
   },
 
+  // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
+  {
+    files: ['src/build-constants.d.ts'],
+    rules: {
+      '@typescript-eslint/naming-convention': 'off',
+    },
+  },
+
   {
     files: ['src/core/Application.ts', 'src/core/SceneManager.ts', 'src/animation/Tween.ts', 'src/rendering/webgl2/WebGl2Backend.ts'],
     rules: {

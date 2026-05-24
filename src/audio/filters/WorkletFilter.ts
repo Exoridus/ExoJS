@@ -1,6 +1,6 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '../audio-context';
 import { AudioFilter } from '../AudioFilter';
-import { registerWorkletProcessor } from '../worklet/registerWorklet';
+import { registerAudioWorkletProcessor } from '../worklet/registerWorklet';
 
 /**
  * Base class for filters implemented as AudioWorkletProcessors. Subclasses
@@ -111,7 +111,7 @@ export abstract class WorkletFilter extends AudioFilter {
     this._outputGain = outputGain;
 
     // Async-load the worklet, then re-route through it.
-    this._ready = registerWorkletProcessor(audioContext, this._workletName, this._workletSource).then(() => {
+    this._ready = registerAudioWorkletProcessor(audioContext, this._workletName, this._workletSource).then(() => {
       if (!this._inputGain || !this._outputGain) return; // destroyed during load
 
       const node = new AudioWorkletNode(audioContext, this._workletName, this._workletOptions);

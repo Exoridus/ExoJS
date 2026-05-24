@@ -1,0 +1,74 @@
+---
+title: "WebGl2Backend"
+description: "WebGL 2.0 implementation of RenderBackend. Manages the GL context, texture and framebuffer caches keyed by user-side Texture/RenderTexture identity, the active VAO, shader program, blend mode, and scissor stack. Dispatches to per-drawable renderers (WebGl2SpriteRenderer, WebGl2MeshRenderer, WebGl2ParticleRenderer) registered in the RendererRegistry. Emits WebGl2Backend.onContextLost / WebGl2Backend.onContextRestored Signals when the browser loses or regains the GL context. The browser recreates the context automatically; renderers reconnect their GPU-side state as needed on the next draw."
+symbol: "WebGl2Backend"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 30
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
+sourcePath: "src/rendering/webgl2/WebGl2Backend.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L94"
+---
+## Import
+
+`import { WebGl2Backend } from '@codexo/exojs'`
+
+WebGL 2.0 implementation of RenderBackend. Manages the GL
+context, texture and framebuffer caches keyed by user-side
+Texture/RenderTexture identity, the active VAO, shader
+program, blend mode, and scissor stack. Dispatches to per-drawable
+renderers (WebGl2SpriteRenderer, WebGl2MeshRenderer,
+WebGl2ParticleRenderer) registered in the RendererRegistry.
+
+Emits WebGl2Backend.onContextLost / WebGl2Backend.onContextRestored
+Signals when the browser loses or regains the GL context. The browser
+recreates the context automatically; renderers reconnect their
+GPU-side state as needed on the next draw.
+
+## Constructors
+
+- `new(app: Application): WebGl2Backend`
+
+## Methods
+
+- `acquireRenderTexture(width: number, height: number): RenderTexture`
+- `bindShader(shader: Shader | null): this`
+- `bindTexture(texture: RenderTexture | Texture | null, unit?: number): this`
+- `bindVertexArrayObject(vao: WebGl2VertexArrayObject | null): this`
+- `clear(color?: Color): this`
+- `composeWithAlphaMask(content: RenderTexture | Texture, mask: RenderTexture | Texture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this`
+- `destroy(): void`
+- `draw(drawable: Drawable): this`
+- `execute(pass: RenderPass): this`
+- `flush(): this`
+- `initialize(): Promise<WebGl2Backend>`
+- `popScissorRect(): this`
+- `pushScissorRect(bounds: Rectangle): this`
+- `releaseRenderTexture(texture: RenderTexture): this`
+- `resetStats(): this`
+- `resize(width: number, height: number): this`
+- `setBlendMode(blendMode: BlendModes | null): this`
+- `setClearColor(color: Color): this`
+- `setRenderTarget(target: RenderTarget | null): this`
+- `setView(view: View | null): this`
+
+## Properties
+
+- `backendType: WebGl2`
+- `rendererRegistry: RendererRegistry<WebGl2Backend>`
+- `clearColor: Color`
+- `context: WebGL2RenderingContext`
+- `renderTarget: RenderTarget`
+- `stats: RenderStats`
+- `view: View`
+
+## Events
+
+- `onContextLost: Signal<[]>`
+- `onContextRestored: Signal<[]>`
+
+## Source
+
+[src/rendering/webgl2/WebGl2Backend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L94)

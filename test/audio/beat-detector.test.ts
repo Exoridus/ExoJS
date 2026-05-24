@@ -1,6 +1,6 @@
 import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
-import { _resetAudioManagerForTesting } from '@/audio/AudioManager';
+import { disposeAudioManager } from '@/audio/AudioManager';
 import { BeatDetector } from '@/audio/BeatDetector';
 
 // ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ describe('BeatDetector', () => {
   });
 
   afterEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
     jest.restoreAllMocks();
   });
 

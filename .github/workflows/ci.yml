@@ -66,7 +66,6 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            site/package-lock.json
 
       # Root install + build are required because site/package.json
       # depends on the library via "file:.." and the vendor:sync script
@@ -77,11 +76,6 @@ jobs:
       - name: Build library
         run: npm run build
 
-      - name: Install site dependencies
-        working-directory: site
-        run: npm ci --ignore-scripts --no-audit --fund=false
-
       # Site build = vendor:sync + examples:sync + astro build.
       - name: Build site
-        working-directory: site
-        run: npm run build
+        run: npm run site:build

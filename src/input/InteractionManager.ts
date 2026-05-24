@@ -1,12 +1,12 @@
 import type { Application } from '@/core/Application';
 import type { Signal } from '@/core/Signal';
+import { setActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 import type { QuadtreeItem } from '@/math/Quadtree';
 import { Quadtree } from '@/math/Quadtree';
 import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import type { RenderNode } from '@/rendering/RenderNode';
 
-import { _setCurrentInteractionManager } from './interaction-hooks';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import type { Pointer } from './Pointer';
@@ -112,7 +112,7 @@ export class InteractionManager {
 
     // Register as the active singleton so RenderNode / Container / SceneNode hooks
     // can reach the manager without holding an explicit reference.
-    _setCurrentInteractionManager(this);
+    setActiveInteractionManager(this);
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -196,7 +196,7 @@ export class InteractionManager {
       this._quadtree = null;
     }
 
-    _setCurrentInteractionManager(null);
+    setActiveInteractionManager(null);
   }
 
   /**
@@ -236,11 +236,11 @@ export class InteractionManager {
    * @internal
    */
   public _notifyNodeAdded(node: RenderNode): void {
-    this._walkSubtree(node, n => {
+    for (const n of this._iterateSubtree(node)) {
       if (n.interactive) {
         this._registerNode(n);
       }
-    });
+    }
   }
 
   /**
@@ -250,11 +250,11 @@ export class InteractionManager {
    * @internal
    */
   public _notifyNodeRemoved(node: RenderNode): void {
-    this._walkSubtree(node, n => {
+    for (const n of this._iterateSubtree(node)) {
       if (this._interactiveNodes.has(n)) {
         this._unregisterNode(n);
       }
-    });
+    }
   }
 
   /**
@@ -631,13 +631,23 @@ export class InteractionManager {
     return new Quadtree<IndexedNode>(bounds);
   }
 
-  /** Walk a subtree, calling `callback` for every RenderNode (including root). */
-  private _walkSubtree(node: RenderNode, callback: (n: RenderNode) => void): void {
-    callback(node);
+  /**
+   * Iterative pre-order subtree traversal (root first). Generator form keeps
+   * callers simple and avoids recursive stack growth on deep hierarchies.
+   */
+  private *_iterateSubtree(root: RenderNode): Generator<RenderNode> {
+    const stack: RenderNode[] = [root];
 
-    if (node instanceof Container) {
-      for (const child of node.children) {
-        this._walkSubtree(child, callback);
+    while (stack.length > 0) {
+      const node = stack.pop()!;
+
+      yield node;
+
+      if (node instanceof Container) {
+        // Push in reverse so iteration preserves child insertion order.
+        for (let index = node.children.length - 1; index >= 0; index--) {
+          stack.push(node.children[index]);
+        }
       }
     }
   }

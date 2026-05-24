@@ -1,5 +1,5 @@
 import { removeArrayItems } from '@/core/utils';
-import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
+import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 
 import type { RenderBackend } from './RenderBackend';
 import { RenderNode } from './RenderNode';
@@ -122,7 +122,7 @@ export class Container extends RenderNode {
     child._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
 
-    _getCurrentInteractionManager()?._notifyNodeAdded(child);
+    getActiveInteractionManager()?._notifyNodeAdded(child);
 
     return this;
   }
@@ -194,7 +194,7 @@ export class Container extends RenderNode {
       this._invalidateBoundsCascade();
       child.parent = null;
       child._invalidateSubtreeTransform();
-      _getCurrentInteractionManager()?._notifyNodeRemoved(child);
+      getActiveInteractionManager()?._notifyNodeRemoved(child);
     }
 
     this.markSortDirty();
@@ -225,7 +225,7 @@ export class Container extends RenderNode {
       if (child?.parent === this) {
         child.parent = null;
         child._invalidateSubtreeTransform();
-        _getCurrentInteractionManager()?._notifyNodeRemoved(child);
+        getActiveInteractionManager()?._notifyNodeRemoved(child);
       }
     }
 

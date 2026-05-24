@@ -4,6 +4,61 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - Unreleased
+
+### Migration guide
+
+- ExoJS `v0.9.0` includes pre-1.0 API consolidation changes. Migration steps and before/after examples:
+  <https://exoridus.github.io/ExoJS/en/guide/migration/v0-8-x-to-v0-9-0/>
+
+### Breaking — Public API consolidation
+
+- `ApplicationOptions` moved from flat top-level fields to grouped `canvas`, `loader`, `rendering`, and `input` sections.
+- Loader option renames: `resourcePath` → `basePath`, `requestOptions` → `fetchOptions`.
+- Application scene accessor rename: `app.sceneManager` → `app.scene`.
+- Active scene getter rename: `SceneManager.scene` → `SceneManager.currentScene`.
+- Removed `Scene.getParticipationPolicy()` in favor of direct `scene.stackMode` access.
+- Removed duplicate/alias APIs on scene objects:
+  - `SceneNode`: `parentNode`, `bounds`, `globalTransform`, `localBounds`, `setCullable()`
+  - `RenderNode`: `setCacheAsBitmap()`, `setFilters()`
+  - `Text`: `setText()`, `setStyle()`
+  - `Color`: `.red/.green/.blue/.alpha` (use `.r/.g/.b/.a`)
+- `Tween.to()` now enforces numeric target keys at the TypeScript type level (`NumericKeys<T>`).
+
+### Added / Improved
+
+- Added skew transforms on scene nodes (`skewX`, `skewY`, `setSkew`), including bounds/hit-test correctness updates for skewed nodes.
+- Added typed asset loading primitives and flows (`Asset<T>`, `Assets<M>`, `LoadingQueue`) while keeping low-level loader usage available.
+- Improved tween ergonomics and lifecycle:
+  - managed tweens correctly re-register on restart after eviction (`stop`/`complete`)
+  - `TweenManager.sequence()` helper for chain creation
+  - scene-scoped tween proxy lifecycle behavior aligned with scene disposal
+- Loop/timing hardening:
+  - `pauseOnHidden` resume delta-spike fix
+  - internal max-delta clamp for safer simulation updates
+  - `backend.stats.rawFrameDeltaMs` for profiling unclamped frame delta
+- Collision/sweep documentation and response semantics were clarified and aligned to source behavior.
+
+### Docs / API reference
+
+- Published the v0.8.x → v0.9.0 migration guide in the docs guide tree.
+- Regenerated API reference pages from the current source surface (215 API pages).
+- API docs now hide internal-only methods marked for internal engine wiring.
+
+### Build / Workspace / CI
+
+- Workspace preparation completed for the `site` package under root npm workspaces with root-driven install/build flow.
+- Consolidated root scripts for site orchestration (`site:build`, `site:build:api`) and bootstrap install.
+- Removed separate `site/package-lock.json` in favor of a root lockfile workflow.
+- Vendor sync scripts were hardened for both hoisted and non-hoisted dependency layouts (resolver-based Monaco and Exo vendor path discovery).
+- Rollup build constants and environment-aware build modes were introduced (`production`/`development`, `__DEV__`, `__VERSION__`, `__COMMIT_SHA__`, `__BUILD_ENV__`).
+- CI/release/pages workflows were aligned to root workspace installation and root-script site builds.
+
+### Verification
+
+- Engine checks pass at HEAD: typecheck clean, strict lint clean, tests passing (`106` suites / `1452` tests), exports verification clean.
+- Site API generation and site build pass on the workspace-oriented pipeline.
+
 ## [0.8.4] - 2026-05-14
 
 ### Site / Guide
@@ -3414,3 +3469,4 @@ No code changes are required for typical applications. Review the behaviour-chan
 ## [2.0.0] - previous major
 
 Baseline for the modernized architecture wave (renderer runtime, scene runtime, class-token loader v2, math and rendering contract renames).
+

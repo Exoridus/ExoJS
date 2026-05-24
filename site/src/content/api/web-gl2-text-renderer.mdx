@@ -1,0 +1,51 @@
+---
+title: "WebGl2TextRenderer"
+description: "WebGL2 renderer for Text and BitmapText nodes. Uses three specialised fragment shaders: - `text-sdf` — R8 SDF atlas (Text, standard text) - `text-msdf` — RGB MSDF atlas (BitmapText) - `text-color` — RGBA atlas (emoji / colour fonts) All per-node data (world transform + style) is packed into a single `RGBA32F` data texture uploaded once per flush. Nodes sharing the same shader type and atlas page are drawn in a single `drawElements` call."
+symbol: "WebGl2TextRenderer"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 11
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/webgl2/WebGl2TextRenderer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2TextRenderer.ts#L83"
+---
+## Import
+
+`import { WebGl2TextRenderer } from '@codexo/exojs'`
+
+WebGL2 renderer for Text and BitmapText nodes.
+
+Uses three specialised fragment shaders:
+- `text-sdf`   — R8 SDF atlas (Text, standard text)
+- `text-msdf`  — RGB MSDF atlas (BitmapText)
+- `text-color` — RGBA atlas (emoji / colour fonts)
+
+All per-node data (world transform + style) is packed into a single
+`RGBA32F` data texture uploaded once per flush.  Nodes sharing the
+same shader type and atlas page are drawn in a single `drawElements` call.
+
+## Constructors
+
+- `new(): WebGl2TextRenderer`
+
+## Methods
+
+- `connect(backend: WebGl2Backend): void`
+- `destroy(): void`
+- `disconnect(): void`
+- `flush(): void`
+- `getBackend(): WebGl2Backend`
+- `getBackendOrNull(): WebGl2Backend | null`
+- `onConnect(backend: WebGl2Backend): void`
+- `onDisconnect(): void`
+- `render(node: BitmapText | Text): void`
+
+## Properties
+
+- `backendType: WebGl2`
+
+## Source
+
+[src/rendering/webgl2/WebGl2TextRenderer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2TextRenderer.ts#L83)

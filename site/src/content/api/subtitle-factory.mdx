@@ -1,0 +1,44 @@
+---
+title: "SubtitleFactory"
+description: "AssetFactory implementation that parses WebVTT (`.vtt`) and SubRip (`.srt`) subtitle files and produces an array of VTTCue instances. Format is detected from the file extension of the response URL; unknown extensions default to VTT parsing. VTT cue settings (`align`, `line`, `position`, `size`, `vertical`) are applied; SRT cues retain default positional properties."
+symbol: "SubtitleFactory"
+kind: "class"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+memberCount: 7
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/resources/factories/SubtitleFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SubtitleFactory.ts#L225"
+---
+## Import
+
+`import { SubtitleFactory } from '@codexo/exojs'`
+
+AssetFactory implementation that parses WebVTT (`.vtt`) and SubRip
+(`.srt`) subtitle files and produces an array of VTTCue instances.
+
+Format is detected from the file extension of the response URL; unknown
+extensions default to VTT parsing. VTT cue settings (`align`, `line`,
+`position`, `size`, `vertical`) are applied; SRT cues retain default
+positional properties.
+
+## Constructors
+
+- `new(): SubtitleFactory`
+
+## Methods
+
+- `create(source: SubtitleIntermediate): Promise<VTTCue[]>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<SubtitleIntermediate>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `storageName: "subtitle"`
+
+## Source
+
+[src/resources/factories/SubtitleFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SubtitleFactory.ts#L225)

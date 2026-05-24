@@ -339,7 +339,7 @@ export class Video extends Sprite implements Media {
    */
   public override render(backend: RenderBackend): this {
     if (this.visible) {
-      this._markTextureDirtyIfPlaybackAdvanced();
+      this._markTextureDirtyOnPlaybackAdvance();
       this.updateTexture();
       super.render(backend);
     }
@@ -410,7 +410,7 @@ export class Video extends Sprite implements Media {
     this._requestVideoFrameCallback();
   }
 
-  private _markTextureDirtyIfPlaybackAdvanced(): void {
+  private _markTextureDirtyOnPlaybackAdvance(): void {
     const currentTime = this._videoElement.currentTime;
 
     if (this._lastVideoTime !== currentTime) {

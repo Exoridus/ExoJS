@@ -1,0 +1,39 @@
+---
+title: "GlyphAtlasPool"
+description: "Manages one GlyphAtlas per font variant + mode combination. The pool key is `\"${family}:${fontStyle}:${fontWeight}:${mode}\"`. All text nodes sharing the same font variant and mode draw from the same atlas pages, so identical glyphs are rasterized only once regardless of which node first requests them. Use getDefaultGlyphAtlasPool to obtain the shared process-wide instance. Tests can mock that function to inject a fake pool."
+symbol: "GlyphAtlasPool"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 3
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Source"]
+sourcePath: "src/rendering/text/GlyphAtlasPool.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlasPool.ts#L15"
+---
+## Import
+
+`import { GlyphAtlasPool } from '@codexo/exojs'`
+
+Manages one GlyphAtlas per font variant + mode combination.
+
+The pool key is `"$\{family\}:$\{fontStyle\}:$\{fontWeight\}:$\{mode\}"`. All text
+nodes sharing the same font variant and mode draw from the same atlas pages,
+so identical glyphs are rasterized only once regardless of which node first
+requests them.
+
+Use getDefaultGlyphAtlasPool to obtain the shared process-wide
+instance. Tests can mock that function to inject a fake pool.
+
+## Constructors
+
+- `new(pageSize: number): GlyphAtlasPool`
+
+## Methods
+
+- `clearAll(): void`
+- `getAtlas(family: string, fontStyle: "normal" | "italic", fontWeight: string, mode: AtlasMode, sdfRadius: number): GlyphAtlas`
+
+## Source
+
+[src/rendering/text/GlyphAtlasPool.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlasPool.ts#L15)

@@ -1,0 +1,48 @@
+---
+title: "GlyphAtlas"
+description: "A per-font-variant glyph atlas with automatic multi-page growth. In `'sdf'` mode (default) each atlas page is a single-channel R8 `DataTexture` populated by GlyphSdf. One `GlyphSdf` instance is kept per font size so the atlas can mix sizes efficiently. In `'color'` mode pages are RGBA canvas textures that preserve full glyph colour data for emoji and colour fonts."
+symbol: "GlyphAtlas"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 7
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
+sourcePath: "src/rendering/text/GlyphAtlas.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts#L218"
+---
+## Import
+
+`import { GlyphAtlas } from '@codexo/exojs'`
+
+A per-font-variant glyph atlas with automatic multi-page growth.
+
+In `'sdf'` mode (default) each atlas page is a single-channel R8
+`DataTexture` populated by GlyphSdf. One `GlyphSdf` instance is kept per
+font size so the atlas can mix sizes efficiently.
+
+In `'color'` mode pages are RGBA canvas textures that preserve full glyph
+colour data for emoji and colour fonts.
+
+## Constructors
+
+- `new(family: string, fontStyle: "normal" | "italic", fontWeight: string, pageSize: number, mode: AtlasMode, sdfRadius: number): GlyphAtlas`
+
+## Methods
+
+- `clear(): void`
+- `getGlyph(char: string, size: number): GlyphInfo`
+- `getKerning(prev: string, next: string, fontSize: number): number`
+
+## Properties
+
+- `mode: AtlasMode`
+- `pages: readonly AtlasPage[]`
+
+## Events
+
+- `onPageAdded: Signal<[pageIndex]>`
+
+## Source
+
+[src/rendering/text/GlyphAtlas.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts#L218)

@@ -1,7 +1,7 @@
 import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
 import { AudioAnalyser } from '@/audio/AudioAnalyser';
 import { AudioBus } from '@/audio/AudioBus';
-import { _resetAudioManagerForTesting } from '@/audio/AudioManager';
+import { disposeAudioManager } from '@/audio/AudioManager';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -29,7 +29,7 @@ describe('AudioAnalyser', () => {
   });
 
   afterEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
     jest.restoreAllMocks();
   });
 

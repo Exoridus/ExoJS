@@ -1,5 +1,5 @@
 import { getAudioContext } from '@/audio/audio-context';
-import { _resetAudioManagerForTesting, getAudioManager } from '@/audio/AudioManager';
+import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 import { Sound } from '@/audio/Sound';
 
 // ---------------------------------------------------------------------------
@@ -38,11 +38,11 @@ const setupPannerSpy = () => {
 
 describe('AudioManager.update()', () => {
   beforeEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
   });
 
   afterEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
     jest.restoreAllMocks();
   });
 

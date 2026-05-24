@@ -1,6 +1,6 @@
 import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
-import { _resetAudioManagerForTesting, getAudioManager } from '@/audio/AudioManager';
+import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 import { Envelope } from '@/audio/Envelope';
 import { OscillatorSound } from '@/audio/OscillatorSound';
 import { SoundPoolStrategy } from '@/audio/Sound';
@@ -93,7 +93,7 @@ const setupOscillatorSpy = (): {
 describe('OscillatorSound', () => {
   afterEach(() => {
     jest.restoreAllMocks();
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
   });
 
   test('default options: frequency=440, type=sine, detune=0, envelope=null, poolSize=8', () => {

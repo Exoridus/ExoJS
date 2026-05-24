@@ -1,6 +1,6 @@
 import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
-import { _resetAudioManagerForTesting, getAudioManager } from '@/audio/AudioManager';
+import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 import { Music } from '@/audio/Music';
 import { Sound } from '@/audio/Sound';
 import { Video } from '@/rendering/video/Video';
@@ -72,11 +72,11 @@ const spyOnGainConnect = (): ConnectSpy => {
 
 describe('Bus routing (Sound / Music / Video)', () => {
   beforeEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
   });
 
   afterEach(() => {
-    _resetAudioManagerForTesting();
+    disposeAudioManager();
     jest.restoreAllMocks();
   });
 
