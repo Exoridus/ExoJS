@@ -24,25 +24,21 @@ app.start(
             this._text = new Text('', { fill: 'white', fontSize: 19, lineHeight: 28 });
             this._text.setPosition(40, 70);
             this._tick = new Timer(seconds(1), true);
-            this._listenerA = () => {};
-            this._listenerB = () => {};
+            this._listenerA = () => undefined;
+            this._listenerB = () => undefined;
             this._signals.spawn.add(this._listenerA);
             this._signals.damage.add(this._listenerA);
             this._signals.damage.add(this._listenerB);
             this._signals.score.add(this._listenerA);
         }
-        update(_delta) {
+        update(delta) {
+            void delta;
             if (this._tick.expired) {
                 if (Math.random() > 0.5) this._signals.spawn.add(this._listenerB);
                 else this._signals.spawn.remove(this._listenerB);
                 this._signals.spawn.dispatch();
                 this._signals.damage.dispatch();
                 this._signals.score.dispatch();
-                console.log('signal snapshot', {
-                    spawn: this._signals.spawn.bindings.length,
-                    damage: this._signals.damage.bindings.length,
-                    score: this._signals.score.bindings.length,
-                });
                 this._tick.restart();
             }
         }

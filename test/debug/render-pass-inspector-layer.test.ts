@@ -31,7 +31,6 @@ const makeFilter = (name: string): FakeFilter => {
       return name;
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { constructor: NamedFilter as any };
 };
 
@@ -70,7 +69,6 @@ function makeNode(
     cacheAsBitmap,
     getBounds: jest.fn(() => ({ width, height, left: 0, top: 0, right: width, bottom: height })),
     children,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor: NamedClass as any,
   };
 }
