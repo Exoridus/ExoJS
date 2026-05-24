@@ -45,10 +45,7 @@ export interface FontRegistry {}
  * without registry entries it falls back to plain `string`.
  */
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents -- FontRegistry is empty today (keyof → never), but consumers augment it via declaration merging */
-export type FontFamily =
-  [keyof FontRegistry] extends [never]
-    ? string
-    : keyof FontRegistry | (string & {});
+export type FontFamily = [keyof FontRegistry] extends [never] ? string : keyof FontRegistry | (string & {});
 /* eslint-enable @typescript-eslint/no-redundant-type-constituents */
 
 /**
@@ -148,14 +145,9 @@ export class TextStyle {
   private _gradientAxis: GradientAxis;
 
   public constructor(options: TextStyleOptions = {}) {
-    const explicitFace =
-      typeof FontFace !== 'undefined' && options.font instanceof FontFace
-        ? options.font
-        : null;
+    const explicitFace = typeof FontFace !== 'undefined' && options.font instanceof FontFace ? options.font : null;
 
-    this._fontFamily = explicitFace
-      ? explicitFace.family
-      : (options.fontFamily ?? 'Arial');
+    this._fontFamily = explicitFace ? explicitFace.family : (options.fontFamily ?? 'Arial');
 
     this._fontWeight = options.fontWeight ?? 'bold';
     this._fontStyle = options.fontStyle ?? 'normal';
@@ -173,9 +165,7 @@ export class TextStyle {
     this._shadowAlpha = options.shadowAlpha ?? 0;
     this._shadowBlur = options.shadowBlur ?? 0;
 
-    this._gradientColors = options.gradientColors
-      ? [options.gradientColors[0].clone(), options.gradientColors[1].clone()]
-      : null;
+    this._gradientColors = options.gradientColors ? [options.gradientColors[0].clone(), options.gradientColors[1].clone()] : null;
     this._gradientAxis = options.gradientAxis ?? 'vertical';
 
     // Mark dirty immediately so the first update() triggers a full rebuild.
@@ -425,9 +415,7 @@ export class TextStyle {
       this._shadowOffsetY = style._shadowOffsetY;
       this._shadowAlpha = style._shadowAlpha;
       this._shadowBlur = style._shadowBlur;
-      this._gradientColors = style._gradientColors
-        ? [style._gradientColors[0].clone(), style._gradientColors[1].clone()]
-        : null;
+      this._gradientColors = style._gradientColors ? [style._gradientColors[0].clone(), style._gradientColors[1].clone()] : null;
       this._gradientAxis = style._gradientAxis;
       this._markDirty('font');
     }
@@ -452,9 +440,7 @@ export class TextStyle {
     s._shadowOffsetY = this._shadowOffsetY;
     s._shadowAlpha = this._shadowAlpha;
     s._shadowBlur = this._shadowBlur;
-    s._gradientColors = this._gradientColors
-      ? [this._gradientColors[0].clone(), this._gradientColors[1].clone()]
-      : null;
+    s._gradientColors = this._gradientColors ? [this._gradientColors[0].clone(), this._gradientColors[1].clone()] : null;
     s._gradientAxis = this._gradientAxis;
     s._dirty = true;
     s._pendingHint = 'font';

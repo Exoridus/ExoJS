@@ -113,9 +113,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    rafSpy = jest
-      .spyOn(globalThis, 'requestAnimationFrame')
-      .mockReturnValue(1 as unknown as ReturnType<typeof requestAnimationFrame>);
+    rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1 as unknown as ReturnType<typeof requestAnimationFrame>);
 
     app = new Application({ backend: { type: 'webgl2' } });
     forceRunning(app);

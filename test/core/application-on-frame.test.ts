@@ -174,4 +174,3 @@ describe('Application.onFrame', () => {
     expect(app.onFrame.count).toBe(0);
   });
 });
-

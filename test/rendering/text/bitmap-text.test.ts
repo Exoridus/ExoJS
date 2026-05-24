@@ -14,9 +14,9 @@ import type { Texture } from '@/rendering/texture/Texture';
 
 function makeFontData(overrides: Partial<BmFontData> = {}): BmFontData {
   const chars = new Map([
-    [65, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }],  // A
-    [66, { x: 8, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }],  // B
-    [32, { x: 0, y: 0, width: 0, height: 0, xOffset: 0, yOffset: 0, xAdvance: 5, page: 0 }],   // space
+    [65, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // A
+    [66, { x: 8, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // B
+    [32, { x: 0, y: 0, width: 0, height: 0, xOffset: 0, yOffset: 0, xAdvance: 5, page: 0 }], // space
   ]);
   return {
     pages: ['font_0.png'],
@@ -46,9 +46,9 @@ describe('BmFontAdapter', () => {
     const adapter = new BmFontAdapter(data, [makeTex()], 2);
     const info = adapter.getGlyph('A', 0);
 
-    expect(info.advance).toBe(20);      // 10 * 2
-    expect(info.width).toBe(16);       // 8 * 2
-    expect(info.height).toBe(24);      // 12 * 2
+    expect(info.advance).toBe(20); // 10 * 2
+    expect(info.width).toBe(16); // 8 * 2
+    expect(info.height).toBe(24); // 12 * 2
     // xBearing = xOffset * scale = 0 * 2 = 0
     expect(info.xBearing).toBe(0);
     // yBearing = (yOffset - base) * scale + lineHeight * scale
@@ -70,8 +70,8 @@ describe('BmFontAdapter', () => {
     const data = makeFontData();
     const adapter = new BmFontAdapter(data, [makeTex()], 2);
 
-    expect(adapter.getKerning('A', 'B', 0)).toBe(-2);  // -1 * 2
-    expect(adapter.getKerning('B', 'A', 0)).toBe(0);   // no pair
+    expect(adapter.getKerning('A', 'B', 0)).toBe(-2); // -1 * 2
+    expect(adapter.getKerning('B', 'A', 0)).toBe(0); // no pair
   });
 
   test('UV coordinates are computed from texture dimensions', () => {

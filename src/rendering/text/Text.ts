@@ -59,12 +59,7 @@ export class Text extends AbstractText {
   private _pageQuads: TextPageQuads[] = [];
   private _textBounds: TextSize = { width: 0, height: 0 };
 
-  public constructor(
-    text: string,
-    style?: TextStyle | TextStyleOptions,
-    layout?: LayoutOptions,
-    options: { colorGlyphs?: boolean; sdfRadius?: number } = {},
-  ) {
+  public constructor(text: string, style?: TextStyle | TextStyleOptions, layout?: LayoutOptions, options: { colorGlyphs?: boolean; sdfRadius?: number } = {}) {
     super(text);
     this._style = style instanceof TextStyle ? style : new TextStyle(style);
     this._layout = layout ?? {};
@@ -201,14 +196,12 @@ export class Text extends AbstractText {
     if (this._destroyed || version !== this._faceLoadVersion) return;
 
     const pool = getDefaultGlyphAtlasPool();
-    pool
-      .getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius)
-      .clear();
+    pool.getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius).clear();
     this._rebuild('font');
   }
 
   private _rebuild(_hint: StyleChangeHint): void {
-    this._pageQuads  = [];
+    this._pageQuads = [];
     this._textBounds = { width: 0, height: 0 };
 
     if (this._text.length === 0) {
@@ -227,7 +220,8 @@ export class Text extends AbstractText {
       return;
     }
 
-    let maxX = 0, maxY = 0;
+    let maxX = 0,
+      maxY = 0;
     for (const p of placements) {
       const px = p.x + p.width;
       const py = p.y + p.height;

@@ -223,4 +223,3 @@ describe('Application.setCursor', () => {
     expect(app.setCursor('default')).toBe(app);
   });
 });
-

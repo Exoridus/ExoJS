@@ -966,7 +966,9 @@ describe('LoadingQueue progress tracking', () => {
     const queue = loader.load(asset);
     let lastProgress = queue.progress;
 
-    queue.onProgress.add(p => { lastProgress = p; });
+    queue.onProgress.add(p => {
+      lastProgress = p;
+    });
 
     await expect(queue).rejects.toThrow('No constructor registered');
     // Progress must have settled — pending must be 0
@@ -985,14 +987,18 @@ describe('LoadingQueue progress tracking', () => {
     const goodAsset = new Asset({ type: 'mockAsset', source: 'good.dat' });
     // force the factory to fail on the second call
     factory.create.mockImplementationOnce(async () => 'ok');
-    factory.create.mockImplementationOnce(async () => { throw new Error('bad'); });
+    factory.create.mockImplementationOnce(async () => {
+      throw new Error('bad');
+    });
 
     const badAsset = new Asset({ type: 'mockAsset', source: 'bad.dat' });
 
     const queue = loader.load({ good: goodAsset, bad: badAsset });
     let lastProgress = queue.progress;
 
-    queue.onProgress.add(p => { lastProgress = p; });
+    queue.onProgress.add(p => {
+      lastProgress = p;
+    });
 
     await expect(queue).rejects.toThrow();
     expect(lastProgress.total).toBe(2);
@@ -1002,12 +1008,17 @@ describe('LoadingQueue progress tracking', () => {
 
   // Shared mockFetch helper (redeclare locally in scope)
   function mockFetch(): void {
-    global.fetch = jest.fn(async (): Promise<Response> => ({
-      ok: true, status: 200, statusText: 'OK',
-      text: async () => '',
-      json: async () => ({}),
-      arrayBuffer: async () => new ArrayBuffer(0),
-    }) as unknown as Response);
+    global.fetch = jest.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => '',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
   }
 
   afterEach(() => {
@@ -1023,12 +1034,17 @@ describe('Asset / Assets identity and alias semantics', () => {
   });
 
   function mockFetch(): void {
-    global.fetch = jest.fn(async (): Promise<Response> => ({
-      ok: true, status: 200, statusText: 'OK',
-      text: async () => 'raw',
-      json: async () => ({}),
-      arrayBuffer: async () => new ArrayBuffer(0),
-    }) as unknown as Response);
+    global.fetch = jest.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'raw',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
   }
 
   test('same Asset under two aliases shares a single network fetch', async () => {
@@ -1173,7 +1189,7 @@ describe('registerAssetType() handler form — full config forwarding', () => {
     const receivedConfigs: unknown[] = [];
 
     loader.registerAssetType('richAsset', {
-      load: async (config) => {
+      load: async config => {
         receivedConfigs.push(config);
         return `${config.source}:${config.format}`;
       },
@@ -1191,7 +1207,7 @@ describe('registerAssetType() handler form — full config forwarding', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
-      load: async (config) => `parsed:${config.source}`,
+      load: async config => `parsed:${config.source}`,
     });
 
     await loader.load({ map: new Asset({ type: 'richAsset', source: 'level.json', format: 'tiled' }) });
@@ -1211,12 +1227,17 @@ describe('registerAssetType() handler form — cache-aware context', () => {
   });
 
   function mockFetchText(body: string): void {
-    global.fetch = jest.fn(async (): Promise<Response> => ({
-      ok: true, status: 200, statusText: 'OK',
-      text: async () => body,
-      json: async () => JSON.parse(body),
-      arrayBuffer: async () => Buffer.from(body).buffer,
-    }) as unknown as Response);
+    global.fetch = jest.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => body,
+          json: async () => JSON.parse(body),
+          arrayBuffer: async () => Buffer.from(body).buffer,
+        }) as unknown as Response,
+    );
   }
 
   test('context exposes identityKey as a non-empty string', async () => {
@@ -1299,20 +1320,17 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     const loadOrder: string[] = [];
 
     loader.registerAssetType('richAsset', {
-      getIdentityKey: (config) => `${config.source}:${config.format}`,
-      load: async (config) => {
+      getIdentityKey: config => `${config.source}:${config.format}`,
+      load: async config => {
         loadOrder.push(config.format);
         return `result:${config.format}`;
       },
     });
 
-    const tmx  = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tmx' });
+    const tmx = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tmx' });
     const json = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
 
-    const [resTmx, resJson] = await Promise.all([
-      loader.load(tmx),
-      loader.load(json),
-    ]);
+    const [resTmx, resJson] = await Promise.all([loader.load(tmx), loader.load(json)]);
 
     // Both variants loaded independently — no cross-contamination
     expect(resTmx).toBe('result:tmx');
@@ -1326,7 +1344,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
-      load: async (config) => {
+      load: async config => {
         callCount++;
         return `ok:${config.source}`;
       },
@@ -1351,12 +1369,17 @@ describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () =
   });
 
   function mockFetch(): void {
-    global.fetch = jest.fn(async (): Promise<Response> => ({
-      ok: true, status: 200, statusText: 'OK',
-      text: async () => 'raw',
-      json: async () => ({}),
-      arrayBuffer: async () => new ArrayBuffer(0),
-    }) as unknown as Response);
+    global.fetch = jest.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'raw',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
   }
 
   test('accepts a config object value with source and extra fields', async () => {
@@ -1409,22 +1432,29 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
   function makeMockStore(): { store: CacheStore; saves: { storageName: string; key: string }[] } {
     const saves: { storageName: string; key: string }[] = [];
     const store: CacheStore = {
-      load:    async () => null,
-      save:    async (storageName, key) => { saves.push({ storageName, key }); },
-      delete:  async () => true,
-      clear:   async () => true,
+      load: async () => null,
+      save: async (storageName, key) => {
+        saves.push({ storageName, key });
+      },
+      delete: async () => true,
+      clear: async () => true,
       destroy: () => {},
     };
     return { store, saves };
   }
 
   function mockFetch(body: string): void {
-    global.fetch = jest.fn(async (): Promise<Response> => ({
-      ok: true, status: 200, statusText: 'OK',
-      text: async () => body,
-      json: async () => JSON.parse(body),
-      arrayBuffer: async () => Buffer.from(body).buffer,
-    }) as unknown as Response);
+    global.fetch = jest.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => body,
+          json: async () => JSON.parse(body),
+          arrayBuffer: async () => Buffer.from(body).buffer,
+        }) as unknown as Response,
+    );
   }
 
   test('context.fetchText saves to __ctx_text store with source as key', async () => {
@@ -1480,16 +1510,16 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     const cachedText = 'cached-text';
     let loadCallCount = 0;
     const store: CacheStore = {
-      load:    async (storageName, key) => {
+      load: async (storageName, key) => {
         if (storageName === '__ctx_text' && key === 'file.txt') {
           loadCallCount++;
           return cachedText;
         }
         return null;
       },
-      save:    async () => {},
-      delete:  async () => true,
-      clear:   async () => true,
+      save: async () => {},
+      delete: async () => true,
+      clear: async () => true,
       destroy: () => {},
     };
     const loader = new Loader({ basePath: '/', cache: store });
@@ -1512,8 +1542,8 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
     const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
-      getIdentityKey: (config) => `${config.source}:${config.format}`,
-      load: async (config) => `result:${config.format}`,
+      getIdentityKey: config => `${config.source}:${config.format}`,
+      load: async config => `result:${config.format}`,
     });
 
     const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
@@ -1538,7 +1568,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
     const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
-      load: async (config) => `result:${config.source}`,
+      load: async config => `result:${config.source}`,
     });
 
     const asset = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
@@ -1560,8 +1590,8 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
     const loader = new Loader({ basePath: '/' });
 
     loader.registerAssetType('richAsset', {
-      getIdentityKey: (config) => `${config.source}:${config.format}`,
-      load: async (config) => `result:${config.format}`,
+      getIdentityKey: config => `${config.source}:${config.format}`,
+      load: async config => `result:${config.format}`,
     });
 
     const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
@@ -1573,7 +1603,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     loader.unload(rpgMap);
 
-    expect(loader.has(ctor, 'tmxA')).toBe(true);  // untouched
+    expect(loader.has(ctor, 'tmxA')).toBe(true); // untouched
     expect(loader.has(ctor, 'rpgA')).toBe(false);
   });
 });

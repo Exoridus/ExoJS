@@ -1,4 +1,4 @@
-import { type AtlasMode,GlyphAtlas, SDF_RADIUS } from './GlyphAtlas';
+import { type AtlasMode, GlyphAtlas, SDF_RADIUS } from './GlyphAtlas';
 
 /**
  * Manages one {@link GlyphAtlas} per font variant + mode combination.
@@ -27,13 +27,7 @@ export class GlyphAtlasPool {
    * Nodes with different `sdfRadius` values get separate atlas instances so
    * each can encode a different outline/shadow reach without conflict.
    */
-  public getAtlas(
-    family: string,
-    fontStyle: 'normal' | 'italic',
-    fontWeight: string,
-    mode: AtlasMode = 'sdf',
-    sdfRadius = SDF_RADIUS,
-  ): GlyphAtlas {
+  public getAtlas(family: string, fontStyle: 'normal' | 'italic', fontWeight: string, mode: AtlasMode = 'sdf', sdfRadius = SDF_RADIUS): GlyphAtlas {
     const key = `${family}:${fontStyle}:${fontWeight}:${mode}:${sdfRadius}`;
     let atlas = this._atlases.get(key);
 

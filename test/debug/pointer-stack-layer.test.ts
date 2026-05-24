@@ -8,8 +8,17 @@ import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 
 // Stub the glyph atlas pool so Text construction never touches a real 2D canvas context.
 const fakeGlyph = {
-  x: 0, y: 0, width: 6, height: 10, advance: 6, ascent: 8, page: 0,
-  uvLeft: 0, uvRight: 0.01, uvTop: 0, uvBottom: 0.02,
+  x: 0,
+  y: 0,
+  width: 6,
+  height: 10,
+  advance: 6,
+  ascent: 8,
+  page: 0,
+  uvLeft: 0,
+  uvRight: 0.01,
+  uvTop: 0,
+  uvBottom: 0.02,
 };
 const fakePage = { texture: { updateSource: jest.fn() }, index: 0 };
 const fakeAtlas = {
@@ -18,8 +27,12 @@ const fakeAtlas = {
   clear: jest.fn(),
 };
 const fakePool = { getAtlas: jest.fn(() => fakeAtlas) };
-beforeEach(() => { resetDefaultGlyphAtlasPool(fakePool as unknown as GlyphAtlasPool); });
-afterEach(() => { resetDefaultGlyphAtlasPool(); });
+beforeEach(() => {
+  resetDefaultGlyphAtlasPool(fakePool as unknown as GlyphAtlasPool);
+});
+afterEach(() => {
+  resetDefaultGlyphAtlasPool();
+});
 
 // ---------------------------------------------------------------------------
 // Helpers

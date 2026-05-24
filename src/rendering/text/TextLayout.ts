@@ -41,12 +41,7 @@ export function measureText(text: string, style: TextLayoutStyle, provider: Glyp
  *
  * Returns an empty array for empty text.
  */
-export function layoutText(
-  text: string,
-  style: TextLayoutStyle,
-  layout: LayoutOptions,
-  provider: GlyphProvider,
-): readonly GlyphPlacement[] {
+export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider): readonly GlyphPlacement[] {
   if (text.length === 0) return [];
 
   const { fontSize, lineHeight, leading, align } = style;
@@ -198,15 +193,23 @@ export function buildTextPageQuads(placements: readonly GlyphPlacement[]): TextP
       const baseV = i * 4;
       const idxBase = i * 6;
 
-      vertices[v + 0] = p.x;          vertices[v + 1] = p.y;
-      vertices[v + 2] = p.x + p.width; vertices[v + 3] = p.y;
-      vertices[v + 4] = p.x + p.width; vertices[v + 5] = p.y + p.height;
-      vertices[v + 6] = p.x;          vertices[v + 7] = p.y + p.height;
+      vertices[v + 0] = p.x;
+      vertices[v + 1] = p.y;
+      vertices[v + 2] = p.x + p.width;
+      vertices[v + 3] = p.y;
+      vertices[v + 4] = p.x + p.width;
+      vertices[v + 5] = p.y + p.height;
+      vertices[v + 6] = p.x;
+      vertices[v + 7] = p.y + p.height;
 
-      uvs[v + 0] = p.uvLeft;  uvs[v + 1] = p.uvTop;
-      uvs[v + 2] = p.uvRight; uvs[v + 3] = p.uvTop;
-      uvs[v + 4] = p.uvRight; uvs[v + 5] = p.uvBottom;
-      uvs[v + 6] = p.uvLeft;  uvs[v + 7] = p.uvBottom;
+      uvs[v + 0] = p.uvLeft;
+      uvs[v + 1] = p.uvTop;
+      uvs[v + 2] = p.uvRight;
+      uvs[v + 3] = p.uvTop;
+      uvs[v + 4] = p.uvRight;
+      uvs[v + 5] = p.uvBottom;
+      uvs[v + 6] = p.uvLeft;
+      uvs[v + 7] = p.uvBottom;
 
       indices[idxBase + 0] = baseV;
       indices[idxBase + 1] = baseV + 1;
@@ -236,14 +239,7 @@ function _applyWhiteSpace(text: string, mode: 'normal' | 'pre' | 'pre-line'): st
     .join('\n');
 }
 
-function _wrapLine(
-  line: string,
-  fontSize: number,
-  provider: GlyphProvider,
-  maxWidth: number,
-  letterSpacing: number,
-  breakWords: boolean,
-): string[] {
+function _wrapLine(line: string, fontSize: number, provider: GlyphProvider, maxWidth: number, letterSpacing: number, breakWords: boolean): string[] {
   if (line.length === 0) return [''];
 
   const words = line.split(' ');
@@ -260,26 +256,40 @@ function _wrapLine(
     wordWidth = Math.max(0, wordWidth - letterSpacing);
 
     if (breakWords && wordWidth > maxWidth) {
-      if (current.length > 0) { lines.push(current); current = ''; currentWidth = 0; }
+      if (current.length > 0) {
+        lines.push(current);
+        current = '';
+        currentWidth = 0;
+      }
       let charLine = '';
       let charLineWidth = 0;
       for (const char of word) {
         const cw = provider.getGlyph(char, fontSize).advance + letterSpacing;
         if (charLine.length > 0 && charLineWidth + cw > maxWidth) {
-          lines.push(charLine); charLine = char; charLineWidth = cw;
+          lines.push(charLine);
+          charLine = char;
+          charLineWidth = cw;
         } else {
-          charLine += char; charLineWidth += cw;
+          charLine += char;
+          charLineWidth += cw;
         }
       }
-      if (charLine.length > 0) { current = charLine; currentWidth = charLineWidth; }
+      if (charLine.length > 0) {
+        current = charLine;
+        currentWidth = charLineWidth;
+      }
     } else if (current.length === 0) {
-      current = word; currentWidth = wordWidth;
+      current = word;
+      currentWidth = wordWidth;
     } else {
       const withSpace = currentWidth + spaceAdv + wordWidth;
       if (withSpace <= maxWidth) {
-        current += ` ${  word}`; currentWidth = withSpace;
+        current += ` ${word}`;
+        currentWidth = withSpace;
       } else {
-        lines.push(current); current = word; currentWidth = wordWidth;
+        lines.push(current);
+        current = word;
+        currentWidth = wordWidth;
       }
     }
   }

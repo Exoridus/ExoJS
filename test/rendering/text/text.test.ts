@@ -65,8 +65,12 @@ const mockPool = {
   getAtlas: jest.fn(() => mockAtlas),
 };
 
-beforeEach(() => { resetDefaultGlyphAtlasPool(mockPool as unknown as GlyphAtlasPool); });
-afterEach(() => { resetDefaultGlyphAtlasPool(); });
+beforeEach(() => {
+  resetDefaultGlyphAtlasPool(mockPool as unknown as GlyphAtlasPool);
+});
+afterEach(() => {
+  resetDefaultGlyphAtlasPool();
+});
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -235,7 +239,9 @@ describe('Text — FontFace-first', () => {
   class MockFontFace {
     family: string;
     load = jest.fn().mockResolvedValue(undefined);
-    constructor(family: string) { this.family = family; }
+    constructor(family: string) {
+      this.family = family;
+    }
   }
 
   /** Drain the microtask queue so async _loadFace() completes. */
@@ -292,7 +298,10 @@ describe('Text — FontFace-first', () => {
     let resolve!: () => void;
     const face = makeFace();
     (face as unknown as MockFontFace).load = jest.fn(
-      () => new Promise<void>(r => { resolve = r; }),
+      () =>
+        new Promise<void>(r => {
+          resolve = r;
+        }),
     );
 
     const text = new Text('Hello', { font: face });
@@ -309,7 +318,10 @@ describe('Text — FontFace-first', () => {
     let resolve!: () => void;
     const face = makeFace();
     (face as unknown as MockFontFace).load = jest.fn(
-      () => new Promise<void>(r => { resolve = r; }),
+      () =>
+        new Promise<void>(r => {
+          resolve = r;
+        }),
     );
 
     const text = new Text('Hello', { font: face });

@@ -59,21 +59,31 @@ export type InferLoadedMap<M extends Record<string, AssetInput>> = {
  * their constructor type. All other loadables return the instance type inferred
  * from the constructor.
  */
- 
-export type LoadReturn<T> =
-  T extends typeof Json           ? unknown :
-  T extends typeof TextAsset      ? string :
-  T extends typeof SvgAsset       ? HTMLImageElement :
-  T extends typeof SubtitleAsset  ? VTTCue[] :
-  T extends typeof XmlAsset       ? Document :
-  T extends typeof CsvAsset       ? string[][] :
-  T extends typeof ImageAsset     ? HTMLImageElement :
-  T extends typeof FontAsset      ? FontFace :
-  T extends typeof BinaryAsset    ? ArrayBuffer :
-  T extends typeof WasmAsset      ? WebAssembly.Module :
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends abstract new (...args: any[]) => infer R ? R :
-  never;
+
+export type LoadReturn<T> = T extends typeof Json
+  ? unknown
+  : T extends typeof TextAsset
+    ? string
+    : T extends typeof SvgAsset
+      ? HTMLImageElement
+      : T extends typeof SubtitleAsset
+        ? VTTCue[]
+        : T extends typeof XmlAsset
+          ? Document
+          : T extends typeof CsvAsset
+            ? string[][]
+            : T extends typeof ImageAsset
+              ? HTMLImageElement
+              : T extends typeof FontAsset
+                ? FontFace
+                : T extends typeof BinaryAsset
+                  ? ArrayBuffer
+                  : T extends typeof WasmAsset
+                    ? WebAssembly.Module
+                    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      T extends abstract new (...args: any[]) => infer R
+                      ? R
+                      : never;
 
 /**
  * Maps file extensions (without leading dot, lower-case) to the asset type
@@ -94,10 +104,7 @@ export interface ExtensionTypeMap {
   otf: FontFace;
 }
 
-type PathExtension<S extends string> =
-  S extends `${string}.${infer E}?${string}` ? Lowercase<E> :
-  S extends `${string}.${infer E}` ? Lowercase<E> :
-  never;
+type PathExtension<S extends string> = S extends `${string}.${infer E}?${string}` ? Lowercase<E> : S extends `${string}.${infer E}` ? Lowercase<E> : never;
 
 /**
  * Resolves the return type for {@link Loader.load} when called with a plain
@@ -105,8 +112,7 @@ type PathExtension<S extends string> =
  * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
  * compile time; use the token form (`load(MyType, path)`) instead.
  */
-export type LoadByPath<S extends string> =
-  PathExtension<S> extends keyof ExtensionTypeMap ? ExtensionTypeMap[PathExtension<S>] : unknown;
+export type LoadByPath<S extends string> = PathExtension<S> extends keyof ExtensionTypeMap ? ExtensionTypeMap[PathExtension<S>] : unknown;
 
 /**
  * Constrains a {@link Loadable} token against the types registered for a
@@ -126,11 +132,7 @@ export type LoadByPath<S extends string> =
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ConstrainedLoadable<T extends abstract new (...args: any[]) => any, S extends string> =
-  PathExtension<S> extends keyof ExtensionTypeMap
-    ? LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>]
-      ? T
-      : never
-    : T;
+  PathExtension<S> extends keyof ExtensionTypeMap ? (LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>] ? T : never) : T;
 
 /**
  * Context object passed to custom asset-type load handlers registered via
@@ -358,10 +360,12 @@ export class Loader {
 
   public registerAssetType(
     typeName: string,
-    ctorOrHandler: AssetConstructor | {
-      getIdentityKey?(config: unknown): string;
-      load(config: unknown, context: AssetLoaderContext): Promise<unknown>;
-    },
+    ctorOrHandler:
+      | AssetConstructor
+      | {
+          getIdentityKey?(config: unknown): string;
+          load(config: unknown, context: AssetLoaderContext): Promise<unknown>;
+        },
     factory?: AssetFactory,
   ): this {
     if (typeof ctorOrHandler === 'function') {
@@ -628,14 +632,10 @@ export class Loader {
    * ```
    */
   // Generic form — caller narrows R while extension still must be registered.
-   
-  public load<R, S extends string>(
-    path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never,
-  ): LoadingQueue<R>;
+
+  public load<R, S extends string>(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<R>;
   // Inferred form — R comes from ExtensionTypeMap.
-  public load<S extends string>(
-    path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never,
-  ): LoadingQueue<LoadByPath<S>>;
+  public load<S extends string>(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<LoadByPath<S>>;
 
   // -----------------------------------------------------------------------
   // Loading — generic overloads (return type inferred from class)
@@ -685,21 +685,22 @@ export class Loader {
       const ctor = ext ? this._extensionMap.get(ext) : undefined;
 
       if (ctor === undefined) {
-        throw new Error(
-          `Loader: no type registered for extension ".${ext ?? '?'}" in "${path}". ` +
-          'Register one via loader.registerExtension().',
-        );
+        throw new Error(`Loader: no type registered for extension ".${ext ?? '?'}" in "${path}". ` + 'Register one via loader.registerExtension().');
       }
 
       // FontAsset requires a family option — infer it from the filename when not provided
-      const options: unknown = ctor === FontAsset
-        ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') }
-        : undefined;
+      const options: unknown = ctor === FontAsset ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
       let notifyFn: ((success: boolean) => void) | null = null;
       const promise = this._loadSingle(ctor, path, options).then(
-        v => { notifyFn?.(true); return v; },
-        e => { notifyFn?.(false); throw e; },
+        v => {
+          notifyFn?.(true);
+          return v;
+        },
+        e => {
+          notifyFn?.(false);
+          throw e;
+        },
       );
       const queue = new LoadingQueue(promise, 1);
       notifyFn = queue._notifyItem.bind(queue);
@@ -715,8 +716,14 @@ export class Loader {
       if (typeof source === 'string') {
         let notifyFn: ((success: boolean) => void) | null = null;
         const promise = this._loadSingle(ctor, source, options).then(
-          v => { notifyFn?.(true); return v; },
-          e => { notifyFn?.(false); throw e; },
+          v => {
+            notifyFn?.(true);
+            return v;
+          },
+          e => {
+            notifyFn?.(false);
+            throw e;
+          },
         );
 
         const queue = new LoadingQueue(promise, 1);
@@ -731,8 +738,14 @@ export class Loader {
         const results: unknown[] = new Array(paths.length);
         const promises = paths.map((path, i) =>
           this._loadSingle(ctor, path, options).then(
-            v => { results[i] = v; notifyFn?.(true); },
-            e => { notifyFn?.(false); throw e; },
+            v => {
+              results[i] = v;
+              notifyFn?.(true);
+            },
+            e => {
+              notifyFn?.(false);
+              throw e;
+            },
           ),
         );
 
@@ -750,13 +763,20 @@ export class Loader {
       let notifyFn: ((success: boolean) => void) | null = null;
       const promises = entries.map(([alias, pathOrConfig]) => {
         const path = typeof pathOrConfig === 'string' ? pathOrConfig : pathOrConfig.source;
-        const itemOptions = typeof pathOrConfig === 'string'
-          ? options
-          : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
+        const itemOptions =
+          typeof pathOrConfig === 'string'
+            ? options
+            : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
 
         return this._loadSingle(ctor, alias, itemOptions, path).then(
-          v => { result[alias] = v; notifyFn?.(true); },
-          e => { notifyFn?.(false); throw e; },
+          v => {
+            result[alias] = v;
+            notifyFn?.(true);
+          },
+          e => {
+            notifyFn?.(false);
+            throw e;
+          },
         );
       });
 
@@ -772,7 +792,7 @@ export class Loader {
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
-      asset: (value instanceof AssetImpl ? value : new (Asset as new(c: AssetInput) => Asset<unknown>)(value)) as Asset<unknown>,
+      asset: (value instanceof AssetImpl ? value : new (Asset as new (c: AssetInput) => Asset<unknown>)(value)) as Asset<unknown>,
     }));
 
     return this._createLoadingQueue(items, results => {
@@ -1136,10 +1156,7 @@ export class Loader {
     return this._waitForBackgroundEntry(type, alias);
   }
 
-  private _createLoadingQueue<T>(
-    items: Array<{ alias: string; asset: Asset<unknown> }>,
-    buildResult: (results: Map<string, unknown>) => T,
-  ): LoadingQueue<T> {
+  private _createLoadingQueue<T>(items: Array<{ alias: string; asset: Asset<unknown> }>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
     const results = new Map<string, unknown>();
     let notifyFn: ((success: boolean) => void) | null = null;
 
@@ -1148,17 +1165,26 @@ export class Loader {
 
       if (!ctor) {
         // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
-        return Promise.reject<unknown>(
-          new Error(`No constructor registered for asset type "${asset.type}". Call registerAssetType() first.`),
-        ).then(
-          () => { notifyFn?.(true); },
-          error => { notifyFn?.(false); throw error; },
+        return Promise.reject<unknown>(new Error(`No constructor registered for asset type "${asset.type}". Call registerAssetType() first.`)).then(
+          () => {
+            notifyFn?.(true);
+          },
+          error => {
+            notifyFn?.(false);
+            throw error;
+          },
         );
       }
 
       return this._loadSingleAsset(ctor, alias, asset).then(
-        resource => { results.set(alias, resource); notifyFn?.(true); },
-        error    => { notifyFn?.(false); throw error; },
+        resource => {
+          results.set(alias, resource);
+          notifyFn?.(true);
+        },
+        error => {
+          notifyFn?.(false);
+          throw error;
+        },
       );
     });
 
@@ -1178,11 +1204,7 @@ export class Loader {
    * fetch.  Each alias is stored independently in `_resources` so that
    * `get(type, alias)` works for all of them.
    */
-  private async _loadSingleAsset(
-    type: AssetConstructor,
-    alias: string,
-    asset: Asset<unknown>,
-  ): Promise<unknown> {
+  private async _loadSingleAsset(type: AssetConstructor, alias: string, asset: Asset<unknown>): Promise<unknown> {
     if (this._hasResource(type, alias)) {
       return this._resources.get(type)?.get(alias);
     }
@@ -1290,12 +1312,9 @@ export class Loader {
     const ctx: AssetLoaderContext = {
       loader: this,
       identityKey,
-      fetchText: (source: string) =>
-        this._contextFetch<string>(source, '__ctx_text', (r) => r.text()),
-      fetchArrayBuffer: (source: string) =>
-        this._contextFetch<ArrayBuffer>(source, '__ctx_binary', (r) => r.arrayBuffer()),
-      fetchJson: <T = unknown>(source: string) =>
-        this._contextFetch<T>(source, '__ctx_json', (r) => r.json() as Promise<T>),
+      fetchText: (source: string) => this._contextFetch<string>(source, '__ctx_text', r => r.text()),
+      fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, '__ctx_binary', r => r.arrayBuffer()),
+      fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, '__ctx_json', r => r.json() as Promise<T>),
     };
     return ctx;
   }
@@ -1308,16 +1327,12 @@ export class Loader {
    * (e.g. `r.text()`, `r.arrayBuffer()`, `r.json()`).  `create` is always the
    * identity function — the cached value is returned unchanged.
    */
-  private _contextFetch<T>(
-    source: string,
-    storageName: string,
-    process: (response: Response) => Promise<T>,
-  ): Promise<T> {
+  private _contextFetch<T>(source: string, storageName: string, process: (response: Response) => Promise<T>): Promise<T> {
     const url = this._resolveUrl(source);
     const factory: AssetFactory<T> = {
       storageName,
       process,
-      create: (data) => Promise.resolve(data as T),
+      create: data => Promise.resolve(data as T),
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       destroy() {},
     };

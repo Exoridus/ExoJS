@@ -1,7 +1,23 @@
 import { supportsIndexedDb } from '@/core/utils';
 import type { Database } from '@/resources/Database';
 
-const defaultStoreNames: readonly string[] = ['font', 'video', 'music', 'sound', 'image', 'texture', 'text', 'svg', 'json', 'binary', 'wasm', 'vtt', '__ctx_text', '__ctx_json', '__ctx_binary'];
+const defaultStoreNames: readonly string[] = [
+  'font',
+  'video',
+  'music',
+  'sound',
+  'image',
+  'texture',
+  'text',
+  'svg',
+  'json',
+  'binary',
+  'wasm',
+  'vtt',
+  '__ctx_text',
+  '__ctx_json',
+  '__ctx_binary',
+];
 
 /**
  * {@link Database} implementation backed by the browser's IndexedDB API.

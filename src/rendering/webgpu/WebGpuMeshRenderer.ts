@@ -503,7 +503,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       return;
     }
 
-    const blendModes: readonly BlendModes[] = [BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply, BlendModes.Screen, BlendModes.Darken, BlendModes.Lighten];
+    const blendModes: readonly BlendModes[] = [
+      BlendModes.Normal,
+      BlendModes.Additive,
+      BlendModes.Subtract,
+      BlendModes.Multiply,
+      BlendModes.Screen,
+      BlendModes.Darken,
+      BlendModes.Lighten,
+    ];
 
     const promises: Array<Promise<void>> = [];
 

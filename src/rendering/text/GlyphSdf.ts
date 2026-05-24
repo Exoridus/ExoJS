@@ -137,16 +137,26 @@ export class GlyphSdf {
     // left-alignment point going LEFT to the left edge of the glyph bounding
     // box. For most LTR characters this is 0; italic fonts may have a small
     // positive value (left overhang).
-    const bbLeft    = Math.max(0, Math.ceil((m as TextMetrics & { actualBoundingBoxLeft?: number }).actualBoundingBoxLeft ?? 0));
-    const bbRight   = Math.max(0, Math.ceil((m as TextMetrics & { actualBoundingBoxRight?: number }).actualBoundingBoxRight ?? advance));
-    const bbAscent  = Math.max(0, Math.ceil(
-      (m as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
-      (m as TextMetrics & { actualBoundingBoxAscent?: number }).actualBoundingBoxAscent ?? 0));
-    const bbDescent = Math.max(0, Math.ceil(
-      (m as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
-      (m as TextMetrics & { actualBoundingBoxDescent?: number }).actualBoundingBoxDescent ?? 0));
+    const bbLeft = Math.max(0, Math.ceil((m as TextMetrics & { actualBoundingBoxLeft?: number }).actualBoundingBoxLeft ?? 0));
+    const bbRight = Math.max(0, Math.ceil((m as TextMetrics & { actualBoundingBoxRight?: number }).actualBoundingBoxRight ?? advance));
+    const bbAscent = Math.max(
+      0,
+      Math.ceil(
+        (m as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
+          (m as TextMetrics & { actualBoundingBoxAscent?: number }).actualBoundingBoxAscent ??
+          0,
+      ),
+    );
+    const bbDescent = Math.max(
+      0,
+      Math.ceil(
+        (m as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
+          (m as TextMetrics & { actualBoundingBoxDescent?: number }).actualBoundingBoxDescent ??
+          0,
+      ),
+    );
 
-    const glyphWidth  = Math.max(1, bbLeft + bbRight);
+    const glyphWidth = Math.max(1, bbLeft + bbRight);
     const glyphHeight = Math.max(1, bbAscent + bbDescent);
     const tileW = glyphWidth + 2 * buf;
     const tileH = glyphHeight + 2 * buf;
@@ -226,8 +236,8 @@ export class GlyphSdf {
       height: tileH,
       glyphWidth,
       glyphHeight,
-      glyphTop: buf,   // glyph content starts buf px from tile top
-      glyphLeft: buf,  // glyph content starts buf px from tile left
+      glyphTop: buf, // glyph content starts buf px from tile top
+      glyphLeft: buf, // glyph content starts buf px from tile left
       glyphAdvance: advance,
     };
   }
@@ -237,15 +247,7 @@ export class GlyphSdf {
 // 2D Euclidean Distance Transform (Felzenszwalb & Huttenlocher, TPAMI 2012).
 // Applied separably: one pass per column, then one pass per row + sqrt.
 
-function _edt2d(
-  data: Float64Array,
-  width: number,
-  height: number,
-  f: Float64Array,
-  d: Float64Array,
-  v: Int16Array,
-  z: Float64Array,
-): void {
+function _edt2d(data: Float64Array, width: number, height: number, f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array): void {
   // Vertical pass: transform along each column
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) f[y] = data[y * width + x];

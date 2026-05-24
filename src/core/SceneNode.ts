@@ -36,7 +36,11 @@ enum SceneNodeTransformFlags {
   Scaling = 1 << 2,
   Origin = 1 << 3,
   Skew = 1 << 5,
-  Transform = SceneNodeTransformFlags.Translation | SceneNodeTransformFlags.Rotation | SceneNodeTransformFlags.Scaling | SceneNodeTransformFlags.Origin | SceneNodeTransformFlags.Skew,
+  Transform = SceneNodeTransformFlags.Translation |
+    SceneNodeTransformFlags.Rotation |
+    SceneNodeTransformFlags.Scaling |
+    SceneNodeTransformFlags.Origin |
+    SceneNodeTransformFlags.Skew,
   TransformInverse = 1 << 4,
   GlobalTransform = 1 << 8, // own _globalTransform is stale
   BoundsRect = 1 << 9, // own _bounds is stale

@@ -37,7 +37,23 @@ export class IndexedDbStore implements CacheStore {
     this._db = new IndexedDbDatabase(
       options.name,
       options.version ?? 1,
-      options.storeNames ?? ['font', 'video', 'music', 'sound', 'image', 'texture', 'text', 'svg', 'json', 'binary', 'wasm', 'vtt', '__ctx_text', '__ctx_json', '__ctx_binary'],
+      options.storeNames ?? [
+        'font',
+        'video',
+        'music',
+        'sound',
+        'image',
+        'texture',
+        'text',
+        'svg',
+        'json',
+        'binary',
+        'wasm',
+        'vtt',
+        '__ctx_text',
+        '__ctx_json',
+        '__ctx_binary',
+      ],
       options.migrations,
     );
   }

@@ -24,19 +24,14 @@ export class AssetsImpl<M extends Record<string, AssetInput>> {
 
   public constructor(definition: M) {
     if (Object.hasOwn(definition, 'entries')) {
-      throw new Error(
-        'An Assets container may not define an asset named "entries": ' +
-        'that name is reserved for the spread-composition helper.',
-      );
+      throw new Error('An Assets container may not define an asset named "entries": ' + 'that name is reserved for the spread-composition helper.');
     }
 
     const entries: Record<string, Asset<unknown>> = {};
 
     for (const key of Object.keys(definition)) {
       const value = definition[key];
-      const assetRef: Asset<unknown> = value instanceof AssetImpl
-        ? value
-        : new AssetImpl(value as AnyAssetConfig);
+      const assetRef: Asset<unknown> = value instanceof AssetImpl ? value : new AssetImpl(value as AnyAssetConfig);
 
       entries[key] = assetRef;
 
@@ -74,8 +69,7 @@ export class AssetsImpl<M extends Record<string, AssetInput>> {
  * loader.load({ ...TitleAssets.entries });
  * ```
  */
-export type Assets<M extends Record<string, AssetInput>> =
-  AssetsImpl<M> & InferAssetsProperties<M>;
+export type Assets<M extends Record<string, AssetInput>> = AssetsImpl<M> & InferAssetsProperties<M>;
 
 type AssetsConstructorFn = new <M extends Record<string, AssetInput>>(definition: M) => Assets<M>;
 

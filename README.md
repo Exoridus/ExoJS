@@ -1,6 +1,6 @@
 # ExoJS
 
-ExoJS is a TypeScript-first 2D runtime for browser games and interactive apps. It is designed around explicit scene flow, practical rendering features, and predictable runtime behavior.
+ExoJS is a TypeScript-first 2D runtime for games and interactive apps, built around explicit scenes, practical rendering features, and predictable runtime behavior.
 
 ## Project status
 
@@ -139,4 +139,3 @@ Avoid running `npm install`/`npm ci` inside `site/` directly to prevent lockfile
 - Repository: <https://github.com/Exoridus/ExoJS>
 - Issues: <https://github.com/Exoridus/ExoJS/issues>
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
-

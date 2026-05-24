@@ -84,9 +84,9 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
         fn();
       };
 
-      video.addEventListener('error',   () => settle(() => reject(new Error('Video loading error.'))),            onceListenerOption);
-      video.addEventListener('abort',   () => settle(() => reject(new Error('Video loading error: cancelled.'))), onceListenerOption);
-      video.addEventListener('emptied', () => settle(() => reject(new Error('Video loading error: emptied.'))),   onceListenerOption);
+      video.addEventListener('error', () => settle(() => reject(new Error('Video loading error.'))), onceListenerOption);
+      video.addEventListener('abort', () => settle(() => reject(new Error('Video loading error: cancelled.'))), onceListenerOption);
+      video.addEventListener('emptied', () => settle(() => reject(new Error('Video loading error: emptied.'))), onceListenerOption);
       video.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Video(video, playbackOptions, samplerOptions))), onceListenerOption);
 
       // 'stalled' fires transiently during normal buffering on slow connections and is not

@@ -173,10 +173,9 @@ describe('GlyphAtlas', () => {
 
   test('getKerning returns pair width minus individual widths', () => {
     // Mock measureText to return predictable widths per input string.
-    const widths: Record<string, number> = { 'A': 10, 'V': 10, 'AV': 18 };
+    const widths: Record<string, number> = { A: 10, V: 10, AV: 18 };
     const kerningCtx = makeMockCtx({
-      measureText: (text: string) =>
-        ({ width: widths[text] ?? 10 }) as TextMetrics,
+      measureText: (text: string) => ({ width: widths[text] ?? 10 }) as TextMetrics,
     });
     installMockCtx(kerningCtx);
 

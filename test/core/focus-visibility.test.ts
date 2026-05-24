@@ -312,4 +312,3 @@ describe('Application focus / visibility', () => {
     });
   });
 });
-

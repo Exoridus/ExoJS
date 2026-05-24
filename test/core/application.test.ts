@@ -484,4 +484,3 @@ describe('Application', () => {
     consoleErrorSpy.mockRestore();
   });
 });
-

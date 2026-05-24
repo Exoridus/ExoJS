@@ -81,27 +81,27 @@ interface TextRendererConnection {
  * same shader type and atlas page are drawn in a single `drawElements` call.
  */
 export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText> {
-  private readonly _sdfShader:   Shader = new Shader(textVertSource, textSdfFragSource);
-  private readonly _msdfShader:  Shader = new Shader(textVertSource, textMsdfFragSource);
+  private readonly _sdfShader: Shader = new Shader(textVertSource, textSdfFragSource);
+  private readonly _msdfShader: Shader = new Shader(textVertSource, textMsdfFragSource);
   private readonly _colorShader: Shader = new Shader(textVertSource, textColorFragSource);
 
-  private readonly _textureUnitScratch  = new Int32Array([0]);
+  private readonly _textureUnitScratch = new Int32Array([0]);
   private readonly _nodeDataUnitScratch = new Int32Array([1]);
-  private readonly _floatScratch        = new Float32Array(1);
+  private readonly _floatScratch = new Float32Array(1);
 
   private _vertexCapacity = initialVertexCapacity;
-  private _indexCapacity  = initialIndexCapacity;
-  private _vertexData: ArrayBuffer     = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
-  private _float32View: Float32Array   = new Float32Array(this._vertexData);
-  private _indexData: Uint16Array      = new Uint16Array(initialIndexCapacity);
+  private _indexCapacity = initialIndexCapacity;
+  private _vertexData: ArrayBuffer = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
+  private _float32View: Float32Array = new Float32Array(this._vertexData);
+  private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
 
   private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * nodeFloats);
   private _nodeCapacity = initialNodeCapacity;
-  private _nodeCount    = 0;
+  private _nodeCount = 0;
 
-  private readonly _pendingQuads:  PendingQuad[]                          = [];
-  private readonly _nodeIndexMap  = new Map<Text | BitmapText, number>();
-  private readonly _textureKeyMap                   = new Map<Texture, number>();
+  private readonly _pendingQuads: PendingQuad[] = [];
+  private readonly _nodeIndexMap = new Map<Text | BitmapText, number>();
+  private readonly _textureKeyMap = new Map<Texture, number>();
   private _textureKeyCounter = 0;
 
   private _connection: TextRendererConnection | null = null;
@@ -162,8 +162,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     const vao = new WebGl2VertexArrayObject()
       .addIndex(indexBuffer)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'),  gl.FLOAT, false, vertexStrideBytes,  0)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'),  gl.FLOAT, false, vertexStrideBytes,  8)
+      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, 16)
       .connect(this._createVaoRuntime(gl, vaoHandle));
 
@@ -194,9 +194,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const { pageQuads, atlas } = node;
     if (pageQuads.length === 0 || atlas === null) return;
 
-    const nodeIndex  = this._assignNodeIndex(node);
+    const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
-    const pages      = atlas.pages;
+    const pages = atlas.pages;
 
     for (const batch of pageQuads) {
       const page = pages[batch.pageIndex];
@@ -209,7 +209,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const { pageQuads, textures, msdf } = node;
     if (pageQuads.length === 0) return;
 
-    const nodeIndex  = this._assignNodeIndex(node);
+    const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = msdf ? 'msdf' : 'color';
 
     for (const batch of pageQuads) {
@@ -233,8 +233,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // ── Node data packing ────────────────────────────────────────────────────
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
-    const arr   = this._nodeDataArray;
-    const base  = ni * nodeFloats;
+    const arr = this._nodeDataArray;
+    const base = ni * nodeFloats;
     const style = node.style;
 
     // Transform (texels 0-1)
@@ -250,8 +250,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     // Fill color (texel 2)
     const fc = style.fillColor;
-    arr[base +  8] = fc.r / 255;
-    arr[base +  9] = fc.g / 255;
+    arr[base + 8] = fc.r / 255;
+    arr[base + 9] = fc.g / 255;
     arr[base + 10] = fc.b / 255;
     arr[base + 11] = fc.a;
 
@@ -264,9 +264,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     // Params (texel 4): outlineMin, shadowAlpha, softness, gradientEnabled
     // outlineMin = 0.5 → disabled; 0.5 - outlineWidth when enabled
-    const outlineMin = style.outlineWidth > 0
-      ? Math.max(0, 0.5 - style.outlineWidth)
-      : 0.5;
+    const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
     arr[base + 16] = outlineMin;
     arr[base + 17] = style.shadowAlpha;
     arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
@@ -315,7 +313,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // ── Flush ────────────────────────────────────────────────────────────────
 
   private _uploadNodeData(c: TextRendererConnection): void {
-    const gl        = c.gl;
+    const gl = c.gl;
     const nodeCount = this._nodeCount;
 
     if (nodeCount > c.nodeDataCapacity) {
@@ -323,24 +321,28 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       let cap = c.nodeDataCapacity;
       while (cap < nodeCount) cap *= 2;
       gl.deleteTexture(c.nodeDataTexture);
-      c.nodeDataTexture  = this._createNodeDataTexture(gl, cap);
+      c.nodeDataTexture = this._createNodeDataTexture(gl, cap);
       c.nodeDataCapacity = cap;
     }
 
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, c.nodeDataTexture);
     gl.texSubImage2D(
-      gl.TEXTURE_2D, 0,
-      0, 0,                  // x, y offset
-      nodeTexels, nodeCount,
-      gl.RGBA, gl.FLOAT,
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0, // x, y offset
+      nodeTexels,
+      nodeCount,
+      gl.RGBA,
+      gl.FLOAT,
       this._nodeDataArray.subarray(0, nodeCount * nodeFloats),
     );
   }
 
   private _drawBatches(c: TextRendererConnection): void {
     const backend = this.getBackend();
-    const view    = backend.view;
+    const view = backend.view;
 
     // Assign stable sort keys to atlas textures encountered this flush
     for (const pq of this._pendingQuads) {
@@ -353,8 +355,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     this._pendingQuads.sort((a, b) => {
       const sc = a.shaderType.localeCompare(b.shaderType);
       if (sc !== 0) return sc;
-      return (this._textureKeyMap.get(a.atlasTexture) ?? 0)
-           - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
+      return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
     // Iterate contiguous groups and draw each as one call
@@ -362,8 +363,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     let i = 0;
 
     while (i < quads.length) {
-      const first      = quads[i];
-      const firstTextureKey  = this._textureKeyMap.get(first.atlasTexture);
+      const first = quads[i];
+      const firstTextureKey = this._textureKeyMap.get(first.atlasTexture);
 
       let j = i + 1;
       while (j < quads.length) {
@@ -375,10 +376,10 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       const shader = this._shaderFor(first.shaderType);
 
       // Build vertex + index data for quads[i..j)
-      let totalVerts   = 0;
+      let totalVerts = 0;
       let totalIndices = 0;
       for (let k = i; k < j; k++) {
-        totalVerts   += quads[k].quads.quadCount * 4;
+        totalVerts += quads[k].quads.quadCount * 4;
         totalIndices += quads[k].quads.indices.length;
       }
 
@@ -387,7 +388,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       let vOffset = 0; // next vertex slot in _float32View
       let iOffset = 0; // next index slot in _indexData
-      let baseV   = 0; // vertex base for current quad group (for index rewriting)
+      let baseV = 0; // vertex base for current quad group (for index rewriting)
 
       for (let k = i; k < j; k++) {
         const { quads: batch, nodeIndex } = quads[k];
@@ -395,7 +396,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         const { vertices, uvs, indices } = batch;
 
         for (let v = 0; v < qVerts; v++) {
-          const w  = (vOffset + v) * vertexStrideWords;
+          const w = (vOffset + v) * vertexStrideWords;
           const vp = v * 2;
           this._float32View[w + 0] = vertices[vp];
           this._float32View[w + 1] = vertices[vp + 1];
@@ -410,7 +411,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
         vOffset += qVerts;
         iOffset += indices.length;
-        baseV   += qVerts;
+        baseV += qVerts;
       }
 
       c.vertexBuffer.upload(this._float32View.subarray(0, totalVerts * vertexStrideWords));
@@ -443,7 +444,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   }
 
   private _shaderFor(type: ShaderType): Shader {
-    if (type === 'sdf')  return this._sdfShader;
+    if (type === 'sdf') return this._sdfShader;
     if (type === 'msdf') return this._msdfShader;
     return this._colorShader;
   }
@@ -461,7 +462,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private _ensureVertexCapacity(vertexCount: number): void {
     if (vertexCount <= this._vertexCapacity) return;
     while (this._vertexCapacity < vertexCount) this._vertexCapacity *= 2;
-    this._vertexData  = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
+    this._vertexData = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
     this._float32View = new Float32Array(this._vertexData);
   }
 
@@ -494,18 +495,17 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     return tex;
   }
 
-  private _createBufferRuntime(
-    gl: WebGL2RenderingContext,
-    buffers: TextRendererConnection['buffers'],
-  ): WebGl2RenderBufferRuntime {
+  private _createBufferRuntime(gl: WebGL2RenderingContext, buffers: TextRendererConnection['buffers']): WebGl2RenderBufferRuntime {
     const handle = gl.createBuffer();
     if (handle === null) throw new Error('WebGl2TextRenderer: could not create buffer.');
 
     return {
-      bind: (buf): void => { gl.bindBuffer(buf.type, handle); },
+      bind: (buf): void => {
+        gl.bindBuffer(buf.type, handle);
+      },
       upload: (buf, offset): void => {
         const state = buffers.get(buf);
-        const data  = buf.data;
+        const data = buf.data;
         gl.bindBuffer(buf.type, handle);
         if (state && state.dataByteLength >= data.byteLength) {
           gl.bufferSubData(buf.type, offset, data);
@@ -543,7 +543,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
           appliedVersion = vao.version;
         }
       },
-      unbind: (): void => { gl.bindVertexArray(null); },
+      unbind: (): void => {
+        gl.bindVertexArray(null);
+      },
       draw: (vao, size, start, type): void => {
         if (vao.indexBuffer) {
           gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);

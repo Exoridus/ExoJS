@@ -5,10 +5,10 @@ import { Signal } from '@/core/Signal';
 // ---------------------------------------------------------------------------
 
 export interface LoadingProgress {
-  readonly total:   number;
-  readonly loaded:  number;
+  readonly total: number;
+  readonly loaded: number;
   readonly pending: number;
-  readonly failed:  number;
+  readonly failed: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -33,10 +33,10 @@ export class LoadingQueue<T> implements PromiseLike<T> {
   public constructor(promise: Promise<T>, count: number) {
     this.onProgress = new Signal<[LoadingProgress]>();
     this._progress = {
-      total:   count,
-      loaded:  0,
+      total: count,
+      loaded: 0,
       pending: count,
-      failed:  0,
+      failed: 0,
     };
     this._promise = promise;
   }
@@ -53,7 +53,7 @@ export class LoadingQueue<T> implements PromiseLike<T> {
     const settled = loaded + failed;
 
     this._progress = {
-      total:   prev.total,
+      total: prev.total,
       loaded,
       pending: Math.max(0, prev.total - settled),
       failed,
@@ -70,9 +70,7 @@ export class LoadingQueue<T> implements PromiseLike<T> {
     return this._promise.then(onfulfilled, onrejected);
   }
 
-  public catch<Caught = never>(
-    onrejected?: ((reason: unknown) => Caught | PromiseLike<Caught>) | null,
-  ): Promise<T | Caught> {
+  public catch<Caught = never>(onrejected?: ((reason: unknown) => Caught | PromiseLike<Caught>) | null): Promise<T | Caught> {
     return this._promise.catch(onrejected);
   }
 

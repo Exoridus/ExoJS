@@ -81,9 +81,9 @@ export class MusicFactory extends AbstractAssetFactory<Music> {
         fn();
       };
 
-      audio.addEventListener('error',   () => settle(() => reject(new Error('Error loading audio source.'))),    onceListenerOption);
-      audio.addEventListener('abort',   () => settle(() => reject(new Error('Audio loading was canceled.'))),    onceListenerOption);
-      audio.addEventListener('emptied', () => settle(() => reject(new Error('Audio loading was emptied.'))),     onceListenerOption);
+      audio.addEventListener('error', () => settle(() => reject(new Error('Error loading audio source.'))), onceListenerOption);
+      audio.addEventListener('abort', () => settle(() => reject(new Error('Audio loading was canceled.'))), onceListenerOption);
+      audio.addEventListener('emptied', () => settle(() => reject(new Error('Audio loading was emptied.'))), onceListenerOption);
       audio.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Music(audio, playbackOptions))), onceListenerOption);
 
       if (stallTimeout !== undefined) {

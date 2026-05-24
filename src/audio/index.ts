@@ -14,8 +14,33 @@ export type { CrossFadeOptions } from './crossFade';
 export { crossFade } from './crossFade';
 export type { EnvelopeOptions } from './Envelope';
 export { Envelope } from './Envelope';
-export type { ChorusFilterOptions, CompressorFilterOptions, DelayFilterOptions, DuckingFilterOptions, EqualizerFilterOptions, GranularFilterOptions, HighpassFilterOptions, LowpassFilterOptions, PitchShiftFilterOptions, ReverbFilterOptions, VocoderFilterOptions } from './filters';
-export { ChorusFilter, CompressorFilter, DelayFilter, DuckingFilter, EqualizerFilter, GranularFilter, HighpassFilter, LowpassFilter, PitchShiftFilter, ReverbFilter, VocoderFilter, WorkletFilter } from './filters';
+export type {
+  ChorusFilterOptions,
+  CompressorFilterOptions,
+  DelayFilterOptions,
+  DuckingFilterOptions,
+  EqualizerFilterOptions,
+  GranularFilterOptions,
+  HighpassFilterOptions,
+  LowpassFilterOptions,
+  PitchShiftFilterOptions,
+  ReverbFilterOptions,
+  VocoderFilterOptions,
+} from './filters';
+export {
+  ChorusFilter,
+  CompressorFilter,
+  DelayFilter,
+  DuckingFilter,
+  EqualizerFilter,
+  GranularFilter,
+  HighpassFilter,
+  LowpassFilter,
+  PitchShiftFilter,
+  ReverbFilter,
+  VocoderFilter,
+  WorkletFilter,
+} from './filters';
 export type { Media } from './Media';
 export { Music } from './Music';
 export type { OscillatorPlayOptions, OscillatorSoundOptions, OscillatorType } from './OscillatorSound';

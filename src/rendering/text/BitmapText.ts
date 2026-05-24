@@ -62,10 +62,17 @@ export class BmFontAdapter implements GlyphProvider {
     if (g === undefined) {
       // Unknown glyph — return an invisible placeholder with a cursor advance.
       return {
-        x: 0, y: 0, width: 0, height: 0,
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
         advance: this._fallbackAdvance,
-        ascent: 0, page: 0,
-        uvLeft: 0, uvTop: 0, uvRight: 0, uvBottom: 0,
+        ascent: 0,
+        page: 0,
+        uvLeft: 0,
+        uvTop: 0,
+        uvRight: 0,
+        uvBottom: 0,
       };
     }
 
@@ -233,7 +240,7 @@ export class BitmapText extends AbstractText {
   // ── Private ──────────────────────────────────────────────────────────────
 
   private _rebuild(): void {
-    this._pageQuads  = [];
+    this._pageQuads = [];
     this._textBounds = { width: 0, height: 0 };
     if (this._text.length === 0) return;
 
@@ -249,7 +256,8 @@ export class BitmapText extends AbstractText {
 
     const placements = layoutText(this._text, layoutStyle, this._layout, this._adapter);
 
-    let maxX = 0, maxY = 0;
+    let maxX = 0,
+      maxY = 0;
     for (const p of placements) {
       const px = p.x + p.width;
       const py = p.y + p.height;

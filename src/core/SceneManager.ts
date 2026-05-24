@@ -235,7 +235,9 @@ export class SceneManager {
 
       if (!this._asyncUpdateWarned.has(scene) && (updateResult as unknown) instanceof Promise) {
         this._asyncUpdateWarned.add(scene);
-        console.warn(`[ExoJS] Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.`);
+        console.warn(
+          `[ExoJS] Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.`,
+        );
       }
     }
 
@@ -245,7 +247,9 @@ export class SceneManager {
 
       if (!this._asyncDrawWarned.has(scene) && (drawResult as unknown) instanceof Promise) {
         this._asyncDrawWarned.add(scene);
-        console.warn(`[ExoJS] Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.`);
+        console.warn(
+          `[ExoJS] Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.`,
+        );
       }
     }
 
@@ -288,7 +292,9 @@ export class SceneManager {
       await scene.init(this._app.loader);
 
       if (scene.root.children.length > 0 && scene.draw === Scene.prototype.draw) {
-        console.warn(`[ExoJS] Scene.root has ${scene.root.children.length} child(ren) after init() but draw() is not overridden. Scene.root is not auto-rendered — call this.root.render(backend) inside draw().`);
+        console.warn(
+          `[ExoJS] Scene.root has ${scene.root.children.length} child(ren) after init() but draw() is not overridden. Scene.root is not auto-rendered — call this.root.render(backend) inside draw().`,
+        );
       }
     } catch (error) {
       let cleanupError: unknown = null;

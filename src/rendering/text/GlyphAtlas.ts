@@ -243,14 +243,7 @@ export class GlyphAtlas implements GlyphProvider {
   /** {@link GlyphSdf} instances keyed by font size — only used in SDF mode. */
   private readonly _sdfInstances = new Map<number, GlyphSdf>();
 
-  public constructor(
-    family: string,
-    fontStyle: 'normal' | 'italic',
-    fontWeight: string,
-    pageSize = 1024,
-    mode: AtlasMode = 'sdf',
-    sdfRadius = SDF_RADIUS,
-  ) {
+  public constructor(family: string, fontStyle: 'normal' | 'italic', fontWeight: string, pageSize = 1024, mode: AtlasMode = 'sdf', sdfRadius = SDF_RADIUS) {
     this._family = family;
     this._fontStyle = fontStyle;
     this._fontWeight = fontWeight;
@@ -369,14 +362,10 @@ export class GlyphAtlas implements GlyphProvider {
     const metrics = this._pages[0].measureGlyph(char, font);
 
     const ascent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
-        metrics.actualBoundingBoxAscent ??
-        size * 0.8,
+      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? size * 0.8,
     );
     const descent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
-        metrics.actualBoundingBoxDescent ??
-        size * 0.2,
+      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? size * 0.2,
     );
     const advance = metrics.width;
     const bbLeft = metrics.actualBoundingBoxLeft ?? 0;

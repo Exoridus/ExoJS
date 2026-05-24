@@ -3469,4 +3469,3 @@ No code changes are required for typical applications. Review the behaviour-chan
 ## [2.0.0] - previous major
 
 Baseline for the modernized architecture wave (renderer runtime, scene runtime, class-token loader v2, math and rendering contract renames).
-
