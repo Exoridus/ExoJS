@@ -30,7 +30,7 @@ export type Mutable<T> = {
  * image, an offscreen canvas, a playing video, or `null` when no source has
  * been assigned yet.
  */
-export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | null;
+export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | ImageBitmap | null;
 
 /** Common playback configuration for both {@link Sound} and {@link Music}. */
 export interface PlaybackOptions {

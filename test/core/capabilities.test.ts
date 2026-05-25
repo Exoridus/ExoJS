@@ -27,6 +27,8 @@ describe('Capabilities', () => {
     expect(typeof caps.audio).toBe('boolean');
     expect(typeof caps.fullscreen).toBe('boolean');
     expect(typeof caps.vibration).toBe('boolean');
+    expect(typeof caps.imageBitmap).toBe('boolean');
+    expect(typeof caps.deviceMemory).toBe('number');
     expect(typeof caps.offscreenCanvas).toBe('boolean');
     expect(typeof caps.webWorkers).toBe('boolean');
     expect(typeof caps.maxTouchPoints).toBe('number');

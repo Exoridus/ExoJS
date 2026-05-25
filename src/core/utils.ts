@@ -142,6 +142,24 @@ export const minutes = (value: number): Time => new Time(value, Time.minutes);
 /** Construct a {@link Time} value from an hour count. */
 export const hours = (value: number): Time => new Time(value, Time.hours);
 
+/**
+ * Trigger a device vibration pattern via the
+ * [Vibration API](https://developer.mozilla.org/en-US/docs/Web/API/Vibration_API).
+ *
+ * Returns `true` if the vibration was accepted, `false` when the API is
+ * unavailable or the browser suppressed the call. Guard with
+ * `Capabilities.vibration` if you need to distinguish the two cases before
+ * calling.
+ *
+ * @param pattern - Duration in milliseconds, or alternating on/off array.
+ */
+export const vibrate = (pattern: VibratePattern): boolean => {
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') {
+    return false;
+  }
+  return navigator.vibrate(pattern);
+};
+
 /** Shared zero-length `ArrayBuffer` for use as a sentinel / default. */
 export const emptyArrayBuffer = new ArrayBuffer(0);
 

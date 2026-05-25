@@ -28,6 +28,8 @@ interface CapabilityValues {
   readonly audio: boolean;
   readonly fullscreen: boolean;
   readonly vibration: boolean;
+  readonly imageBitmap: boolean;
+  readonly deviceMemory: number;
   readonly offscreenCanvas: boolean;
   readonly webWorkers: boolean;
   readonly devicePixelRatio: number;
@@ -85,6 +87,8 @@ export class Capabilities {
   public readonly audio: boolean;
   public readonly fullscreen: boolean;
   public readonly vibration: boolean;
+  public readonly imageBitmap: boolean;
+  public readonly deviceMemory: number;
   public readonly offscreenCanvas: boolean;
   public readonly webWorkers: boolean;
   public readonly devicePixelRatio: number;
@@ -103,6 +107,8 @@ export class Capabilities {
     this.audio = values.audio;
     this.fullscreen = values.fullscreen;
     this.vibration = values.vibration;
+    this.imageBitmap = values.imageBitmap;
+    this.deviceMemory = values.deviceMemory;
     this.offscreenCanvas = values.offscreenCanvas;
     this.webWorkers = values.webWorkers;
     this.devicePixelRatio = values.devicePixelRatio;
@@ -127,6 +133,8 @@ export class Capabilities {
       audio: probeAudio(),
       fullscreen: probeFullscreen(),
       vibration: probeVibration(),
+      imageBitmap: probeImageBitmap(),
+      deviceMemory: probeDeviceMemory(),
       offscreenCanvas: probeOffscreenCanvas(),
       webWorkers: probeWebWorkers(),
       devicePixelRatio: hasWindow ? window.devicePixelRatio : 1,
@@ -230,6 +238,16 @@ function probeFullscreen(): boolean {
 
 function probeVibration(): boolean {
   return hasNavigator && typeof navigator.vibrate === 'function';
+}
+
+function probeImageBitmap(): boolean {
+  return typeof createImageBitmap === 'function';
+}
+
+function probeDeviceMemory(): number {
+  if (!hasNavigator) return 0;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  return typeof mem === 'number' ? mem : 0;
 }
 
 function probeOffscreenCanvas(): boolean {

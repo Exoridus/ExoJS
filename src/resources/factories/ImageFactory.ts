@@ -1,6 +1,9 @@
 import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 import { determineMimeType } from '@/resources/utils';
 
+/** Decoded image result from {@link ImageFactory.create}. */
+export type DecodedImage = HTMLImageElement | ImageBitmap;
+
 /** Construction options for {@link ImageFactory.create}. */
 export interface ImageFactoryOptions {
   /**
@@ -13,13 +16,17 @@ export interface ImageFactoryOptions {
 
 /**
  * {@link AssetFactory} implementation that loads PNG, JPG, WebP, AVIF, and
- * other browser-supported raster image formats and produces a decoded
- * {@link HTMLImageElement}.
+ * other browser-supported raster image formats and produces a decoded image.
+ *
+ * When `createImageBitmap` is available (all modern browsers) the factory
+ * returns an {@link ImageBitmap} — a zero-copy GPU-upload path that avoids
+ * the HTMLImageElement render-pipeline overhead. On older environments it
+ * falls back to an {@link HTMLImageElement}.
  *
  * MIME type detection is performed automatically from the buffer's magic bytes;
  * pass an explicit `mimeType` in options to override.
  */
-export class ImageFactory extends AbstractAssetFactory<HTMLImageElement> {
+export class ImageFactory extends AbstractAssetFactory<DecodedImage> {
   public readonly storageName = 'image';
 
   /**
@@ -31,14 +38,19 @@ export class ImageFactory extends AbstractAssetFactory<HTMLImageElement> {
   }
 
   /**
-   * Decodes image bytes into a fully loaded {@link HTMLImageElement}.
+   * Decodes image bytes into a {@link DecodedImage}.
    *
-   * Creates a temporary object URL from the buffer, assigns it to an
-   * `<img>` element, and revokes the URL once loading completes or fails.
-   * Rejects if the browser reports a load error or the load is aborted.
+   * Prefers `createImageBitmap` for a zero-copy GPU-upload path. Falls back
+   * to a temporary object URL + `<img>` element on environments that do not
+   * support `createImageBitmap`.
    */
-  public async create(source: ArrayBuffer, options: ImageFactoryOptions = {}): Promise<HTMLImageElement> {
+  public async create(source: ArrayBuffer, options: ImageFactoryOptions = {}): Promise<DecodedImage> {
     const blob = new Blob([source], { type: options.mimeType ?? determineMimeType(source) });
+
+    if (typeof createImageBitmap === 'function') {
+      return createImageBitmap(blob);
+    }
+
     const objectUrl = this.createObjectUrl(blob);
 
     return new Promise((resolve, reject) => {

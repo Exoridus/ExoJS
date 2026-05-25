@@ -35,15 +35,21 @@ export class TextureFactory extends AbstractAssetFactory<Texture> {
   }
 
   /**
-   * Decodes image bytes into a fully loaded {@link HTMLImageElement} and
-   * wraps it in a {@link Texture} with the given sampler options.
+   * Decodes image bytes and wraps the result in a {@link Texture}.
    *
-   * Creates a temporary object URL, resolves when the image's `load` event
-   * fires, and revokes the URL regardless of outcome.
+   * Prefers `createImageBitmap` for a zero-copy GPU-upload path. Falls back
+   * to a temporary object URL + `<img>` element on environments that do not
+   * support `createImageBitmap`.
    */
   public async create(source: ArrayBuffer, options: TextureFactoryOptions = {}): Promise<Texture> {
     const { mimeType, samplerOptions } = options;
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
+
+    if (typeof createImageBitmap === 'function') {
+      const bitmap = await createImageBitmap(blob);
+      return new Texture(bitmap, samplerOptions);
+    }
+
     const objectUrl = this.createObjectUrl(blob);
 
     return new Promise((resolve, reject) => {
