@@ -24,19 +24,28 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Node 24 ships with npm 11+ which is required for Trusted Publisher
-  # OIDC authentication. We previously used Node 22 + `npm install -g
-  # npm@^11`, but the in-place upgrade has a known MODULE_NOT_FOUND bug
-  # on `promise-retry`. Bumping Node is the cleaner fix.
-  NODE_VERSION: '24'
-  # `github.ref_name` is `main` for workflow_dispatch and the tag name
-  # (e.g. `v0.6.3`) for tag-push. The dispatch input takes priority so
-  # an explicitly-passed tag wins.
+  # `github.ref_name` is the tag name (e.g. `v0.9.0`) for tag-push triggers
+  # and `main` for workflow_dispatch. The dispatch input takes priority so
+  # an explicitly-passed tag always wins.
   TARGET_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
+  # Run the full CI gate (typecheck → lint → test → build → site-build) at
+  # the exact tagged commit before any publish attempt. Uses Node 22 — the
+  # declared LTS target — so the library is verified against the version
+  # consumers are most likely running.
+  checks:
+    name: Verify at tag
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_ci-checks.yml
+    with:
+      node-version: '22'
+      ref: ${{ github.event.inputs.tag || github.ref_name }}
+
   publish:
     name: Publish to npm
+    needs: checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -45,10 +54,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ env.TARGET_TAG }}
 
+      # Node 24 ships with npm 11+ which is required for Trusted Publisher
+      # OIDC authentication. We use Node 22 in the checks job above (library
+      # compat) and Node 24 here (npm toolchain requirement).
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           cache: npm
 
@@ -67,28 +79,13 @@ jobs:
           fi
           echo "Tag and package.json agree on $PKG_VERSION."
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test
-
       # `prepack` rebuilds dist/ via rollup; we run it explicitly here so
       # any build failure surfaces before the publish attempt rather than
       # mid-publish.
-      - name: Build
+      - name: Build library
         run: npm run build
 
-      - name: Verify package shape
-        run: |
-          npm run verify:exports
-          npm pack --dry-run --ignore-scripts
-
-      # Mirror CI's site-build job so a release that would break the
-      # site cannot ship even if the library tests/typecheck pass.
+      # Site build produces site/dist/ needed for the release bundle below.
       - name: Build site
         run: npm run site:build
 

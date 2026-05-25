@@ -14,68 +14,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  NODE_VERSION: '22'
-
 jobs:
-  verify:
-    name: Lint and Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts --no-audit --fund=false
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test
-
-      - name: Build bundles and declarations
-        run: npm run build
-
-      - name: Verify package entry exports
-        run: npm run verify:exports
-
-      - name: Package dry run
-        run: npm pack --dry-run
-
-  site-build:
-    name: Site build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-
-      # Root install + build are required because site/package.json
-      # depends on the library via "file:.." and the vendor:sync script
-      # reads from the local dist/ tree.
-      - name: Install root dependencies
-        run: npm ci --ignore-scripts --no-audit --fund=false
-
-      - name: Build library
-        run: npm run build
-
-      # Site build = vendor:sync + examples:sync + astro build.
-      - name: Build site
-        run: npm run site:build
+  checks:
+    uses: ./.github/workflows/_ci-checks.yml
+    with:
+      node-version: '22'
