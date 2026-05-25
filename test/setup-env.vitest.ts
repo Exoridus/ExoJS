@@ -1,4 +1,4 @@
-import { vi, type MockInstance } from 'vitest';
+import { type MockInstance, vi } from 'vitest';
 
 // Allow existing test files that reference jest.fn() / jest.spyOn() to run
 // under Vitest without modification by aliasing jest → vi at runtime.
