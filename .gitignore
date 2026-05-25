@@ -24,6 +24,7 @@ test/perf/results/*.md
 !.gitignore
 !.gitkeep
 !.gitmojirc.json
+!.npmrc
 !.prettierignore
 !.prettierrc
 

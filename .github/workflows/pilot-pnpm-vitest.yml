@@ -1,0 +1,66 @@
+name: Pilot — pnpm + Vitest
+
+# Experimenteller Workflow: läuft nur auf dem Pilot-Branch oder manuell.
+# Misst Installzeit, Laufzeit und Cache-Verhalten mit pnpm + Vitest.
+# Ergebnis fließt in Go/No-Go-Entscheidung für 0.10.0 ein.
+
+on:
+  push:
+    branches: [chore/pilot-pnpm-vitest]
+  pull_request:
+    branches: [chore/pilot-pnpm-vitest]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pnpm-vitest:
+    name: pnpm install + Vitest pilot suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install (pnpm) — measure time
+        run: |
+          START=$(date +%s%N)
+          pnpm install --ignore-scripts --frozen-lockfile
+          END=$(date +%s%N)
+          echo "pnpm install time: $(( (END - START) / 1000000 ))ms" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run Vitest pilot suite — measure time
+        run: |
+          START=$(date +%s%N)
+          pnpm run test:vitest
+          END=$(date +%s%N)
+          echo "Vitest pilot time: $(( (END - START) / 1000000 ))ms" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run Jest (baseline) — measure time
+        run: |
+          START=$(date +%s%N)
+          pnpm run test
+          END=$(date +%s%N)
+          echo "Jest full suite time: $(( (END - START) / 1000000 ))ms" >> "$GITHUB_STEP_SUMMARY"
