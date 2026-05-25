@@ -111,6 +111,9 @@ export class SceneManager {
   private readonly _asyncUpdateWarned = new WeakSet<Scene>();
   private readonly _asyncDrawWarned = new WeakSet<Scene>();
 
+  private readonly _updateScratch: Scene[] = [];
+  private readonly _drawScratch: Scene[] = [];
+
   public constructor(app: Application) {
     this._app = app;
   }
@@ -227,9 +230,9 @@ export class SceneManager {
   public update(delta: Time): this {
     this._advanceTransition(delta.milliseconds);
 
-    const { updateScenes, drawScenes } = this._resolveParticipants();
+    this._resolveParticipants();
 
-    for (const scene of updateScenes) {
+    for (const scene of this._updateScratch) {
       // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const updateResult = scene.update(delta);
 
@@ -241,7 +244,7 @@ export class SceneManager {
       }
     }
 
-    for (const scene of drawScenes) {
+    for (const scene of this._drawScratch) {
       // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const drawResult = scene.draw(this._app.backend);
 
@@ -378,9 +381,11 @@ export class SceneManager {
     return { mode };
   }
 
-  private _resolveParticipants(): { updateScenes: Scene[]; drawScenes: Scene[] } {
-    const updateScenes = new Array<Scene>();
-    const drawScenes = new Array<Scene>();
+  private _resolveParticipants(): void {
+    const updateScenes = this._updateScratch;
+    const drawScenes = this._drawScratch;
+    updateScenes.length = 0;
+    drawScenes.length = 0;
     let allowBelowUpdate = true;
     let allowBelowDraw = true;
 
@@ -405,8 +410,6 @@ export class SceneManager {
 
     updateScenes.reverse();
     drawScenes.reverse();
-
-    return { updateScenes, drawScenes };
   }
 
   private async _runWithTransition(action: () => Promise<void>, transition?: SceneTransition): Promise<void> {

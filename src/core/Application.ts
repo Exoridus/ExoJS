@@ -376,7 +376,7 @@ export class Application {
 
       const rawDeltaMs = this._frameClock.elapsedTime.milliseconds;
       const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
-      const frameDelta = new Time(clampedDeltaMs);
+      const frameDelta = Time.temp.set(clampedDeltaMs);
       const frameStart = performance.now();
 
       this.backend.resetStats();
