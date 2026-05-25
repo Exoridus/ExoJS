@@ -18,6 +18,7 @@ test/perf/results/*.md
 
 # Allowlist tracked dotfile configs (matched at any depth — a single rule
 # covers `.prettierrc`, `examples/.prettierrc`, `site/.prettierrc`, etc.).
+!.codecov.yml
 !.editorconfig
 !.eslintignore
 !.eslintrc.json

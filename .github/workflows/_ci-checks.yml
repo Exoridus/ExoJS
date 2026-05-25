@@ -19,6 +19,8 @@ on:
 
 permissions:
   contents: read
+  # Codecov action posts a coverage comment on PRs.
+  pull-requests: write
 
 jobs:
   verify:
@@ -45,8 +47,16 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test
-        run: npm test
+      - name: Test (with coverage)
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          flags: unit
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build
         run: npm run build

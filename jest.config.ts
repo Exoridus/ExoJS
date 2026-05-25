@@ -23,6 +23,11 @@ const config: Config = {
   // that lands here) alongside our own sources. Scope this list narrowly
   // so the overwhelming majority of node_modules stays un-transformed.
   transformIgnorePatterns: ['/node_modules/(?!(earcut)/)'],
+
+  // Coverage — only active with --coverage flag (npm run test:coverage).
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['lcov', 'clover', 'text-summary'],
 };
 
 export default config;

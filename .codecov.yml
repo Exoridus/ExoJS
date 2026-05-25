@@ -1,0 +1,31 @@
+coverage:
+  # Minimum project-wide coverage before Codecov reports a failure.
+  # Start permissive; tighten once coverage grows above these floors.
+  status:
+    project:
+      default:
+        target: 50%
+        threshold: 2% # allow up to 2 pp drop before failing
+    patch:
+      default:
+        target: 60% # new code in a PR should be ≥ 60% covered
+
+  # Files / paths excluded from coverage accounting.
+ignore:
+  - 'src/**/*.d.ts'
+  - 'src/**/index.ts' # barrel re-exports add noise, not signal
+  - 'scripts/**'
+  - 'test/**'
+  - 'site/**'
+
+comment:
+  layout: 'reach,diff,flags,files'
+  behavior: default
+  require_changes: true # only comment when coverage actually changes
+
+# Separate flags can be added later for, e.g., rendering vs. audio suites.
+flags:
+  unit:
+    paths:
+      - src/
+    carryforward: true
