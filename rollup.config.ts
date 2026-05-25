@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
@@ -55,7 +54,6 @@ const bundled: RollupOptions = {
     constantReplacementPlugin,
     resolve({ mainFields: ['browser', 'module', 'main'] }),
     glslPlugin,
-    commonjs(),
     typescript({
       compilerOptions: { incremental: false },
       outputToFilesystem: false,
@@ -76,7 +74,6 @@ const modules: RollupOptions = {
     constantReplacementPlugin,
     resolve({ mainFields: ['module', 'browser', 'main'] }),
     glslPlugin,
-    commonjs(),
     typescript({
       compilerOptions: {
         incremental: false,

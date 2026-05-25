@@ -8,7 +8,6 @@ import { BitmapText } from '@/rendering/text/BitmapText';
 import { Text } from '@/rendering/text/Text';
 import { BlendModes } from '@/rendering/types';
 
-import WebGLDebugUtils from '../../vendor/webgl-debug';
 import type { Drawable } from '../Drawable';
 import { Mesh } from '../mesh/Mesh';
 import type { RenderBackend } from '../RenderBackend';
@@ -32,26 +31,43 @@ import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import { WebGl2TextRenderer } from './WebGl2TextRenderer';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
-const throwOnGlError = (err: number, funcName: string): void => {
-  throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
-};
-
-const logGlCall = (functionName: string, args: unknown[]): void => {
-  console.log(`gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
-};
-
-const validateNoneOfTheArgsAreUndefined = (functionName: string, args: unknown[]): void => {
-  for (const argument of args) {
-    if (argument === undefined) {
-      console.error(`undefined passed to gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
-    }
+// Inline GL debug helpers — replaces the webgl-debug vendor lib.
+// Used only when renderingOptions.debug = true.
+const glEnumToString = (gl: WebGL2RenderingContext, value: number): string => {
+  const ctor = gl.constructor as unknown as Record<string, unknown>;
+  for (const key of Object.getOwnPropertyNames(ctor)) {
+    if (ctor[key] === value) return key;
   }
+  return `0x${value.toString(16).padStart(4, '0').toUpperCase()}`;
 };
 
-const logAndValidate = (functionName: string, args: unknown[]): void => {
-  logGlCall(functionName, args);
-  validateNoneOfTheArgsAreUndefined(functionName, args);
-};
+const glArgsToString = (gl: WebGL2RenderingContext, args: unknown[]): string =>
+  args.map((a) => (typeof a === 'number' ? glEnumToString(gl, a) : String(a))).join(', ');
+
+const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingContext =>
+  new Proxy(gl, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value !== 'function') return value;
+      const name = String(prop);
+      return (...args: unknown[]) => {
+        console.log(`gl.${name}(${glArgsToString(target, args)})`);
+        for (const arg of args) {
+          if (arg === undefined) {
+            console.error(`undefined passed to gl.${name}(${glArgsToString(target, args)})`);
+          }
+        }
+        const result = Reflect.apply(value as (...a: unknown[]) => unknown, target, args);
+        if (name !== 'getError') {
+          const err = target.getError();
+          if (err !== target.NO_ERROR) {
+            throw new Error(`${glEnumToString(target, err)} was caused by call to: ${name}`);
+          }
+        }
+        return result;
+      };
+    },
+  });
 
 interface ManagedTextureState {
   readonly handle: WebGLTexture;
@@ -145,7 +161,7 @@ export class WebGl2Backend implements RenderBackend {
       throw new Error('This browser or hardware does not support WebGL.');
     }
 
-    this._context = debug ? WebGLDebugUtils.makeDebugContext(gl, throwOnGlError, logAndValidate, gl) : gl;
+    this._context = debug ? makeWebGl2DebugContext(gl) : gl;
     this._contextLost = this._context.isContextLost();
 
     if (this._contextLost) {
