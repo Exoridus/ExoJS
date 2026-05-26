@@ -1,4 +1,4 @@
-import { bench, beforeAll, describe } from 'vitest';
+import { beforeAll, bench, describe } from 'vitest';
 
 // AudioContext mock must be in place before any ExoJS audio import.
 // Placed in beforeAll (module scope) so it runs before bench setup.
