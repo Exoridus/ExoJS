@@ -14,6 +14,8 @@ const shaderPlugin = {
   },
 };
 
+const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
+
 export default defineConfig({
   test: {
     projects: [
@@ -45,12 +47,40 @@ export default defineConfig({
         test: {
           name: 'browser',
           globals: true,
-          include: ['test/rendering/browser/**/*.test.ts'],
+          include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: {
             enabled: true,
+            headless: !headed,
             provider: playwright({
               launchOptions: {
                 args: ['--enable-webgl', '--use-angle=swiftshader'],
+              },
+            }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── Project 3: browser-webgpu — opt-in WebGPU via Playwright/Chromium ──
+      // Not part of verify:release. Run with: npm run test:browser:webgpu
+      // Tests skip gracefully when WebGPU is unavailable.
+      // For local headed debugging: EXOJS_BROWSER_HEADED=1 npm run test:browser:webgpu
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        test: {
+          name: 'browser-webgpu',
+          globals: true,
+          include: ['test/rendering/browser/webgpu-*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: !headed,
+            provider: playwright({
+              launchOptions: {
+                // --enable-unsafe-webgpu: enable Dawn/WebGPU in Chromium
+                // --ignore-gpu-blocklist: allow software/virtual GPU adapters
+                // On Linux CI, add --use-vulkan=swiftshader if no hardware GPU
+                args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
               },
             }),
             instances: [{ browser: 'chromium' }],

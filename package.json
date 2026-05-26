@@ -69,6 +69,7 @@
     "test:coverage": "vitest run --coverage --project=exojs",
     "test:watch": "vitest --project=exojs",
     "test:browser": "vitest run --project=browser",
+    "test:browser:webgpu": "vitest run --project=browser-webgpu",
     "bench": "vitest bench",
     "bench:run": "vitest bench --run",
     "site:install": "npm run bootstrap",
