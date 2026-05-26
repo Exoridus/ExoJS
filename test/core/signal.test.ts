@@ -1,5 +1,35 @@
 import { Signal } from '@/core/Signal';
 
+describe('Signal type-level assertions', () => {
+  it('dispatch parameters match the Args tuple', () => {
+    expectTypeOf(new Signal<[number, string]>().dispatch).parameter(0).toBeNumber();
+    expectTypeOf(new Signal<[number, string]>().dispatch).parameter(1).toBeString();
+  });
+
+  it('Signal<[]> dispatch takes no parameters', () => {
+    expectTypeOf(new Signal<[]>().dispatch).parameters.toEqualTypeOf<[]>();
+  });
+
+  it('dispatch is a function', () => {
+    expectTypeOf(new Signal<[number]>().dispatch).toBeFunction();
+  });
+
+  it('count is a number', () => {
+    expectTypeOf(new Signal<[boolean]>().count).toBeNumber();
+  });
+
+  it('has returns boolean', () => {
+    expectTypeOf(new Signal<[number]>().has).returns.toBeBoolean();
+  });
+
+  it('add, remove, clear return this for chaining', () => {
+    const sig = new Signal<[]>();
+    expectTypeOf(sig.add).returns.toEqualTypeOf(sig);
+    expectTypeOf(sig.remove).returns.toEqualTypeOf(sig);
+    expectTypeOf(sig.clear).returns.toEqualTypeOf(sig);
+  });
+});
+
 describe('Signal', () => {
   it('dispatches to every binding even when handlers mutate _bindings mid-iteration', () => {
     const signal = new Signal();

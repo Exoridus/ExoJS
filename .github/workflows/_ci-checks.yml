@@ -58,6 +58,12 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests (WebGL2 / Chromium)
+        run: npm run test:browser
+
       - name: Build
         run: npm run build
 

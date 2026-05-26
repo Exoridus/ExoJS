@@ -38,6 +38,7 @@ jobs:
     name: Verify at tag
     permissions:
       contents: read
+      pull-requests: write
     uses: ./.github/workflows/_ci-checks.yml
     with:
       node-version: '22'
