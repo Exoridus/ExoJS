@@ -2,9 +2,9 @@
  * HitTestLayer tests (0.7.5).
  */
 
-import { Graphics } from '@/rendering/primitives/Graphics';
-import { HitTestLayer } from '@/debug/HitTestLayer';
 import { Signal } from '@/core/Signal';
+import { HitTestLayer } from '@/debug/HitTestLayer';
+import { Graphics } from '@/rendering/primitives/Graphics';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 

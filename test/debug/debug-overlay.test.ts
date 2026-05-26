@@ -5,10 +5,10 @@
  * lifecycle, visibility toggling, F1 keybinding, and render path.
  */
 
-import * as debugExports from '@/debug/index';
-import { DebugOverlay } from '@/debug/DebugOverlay';
-import * as rootExports from '@/index';
 import { Signal } from '@/core/Signal';
+import { DebugOverlay } from '@/debug/DebugOverlay';
+import * as debugExports from '@/debug/index';
+import * as rootExports from '@/index';
 import { Keyboard } from '@/input/types';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';

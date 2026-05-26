@@ -2,8 +2,8 @@
  * PointerStackLayer tests (0.7.5).
  */
 
-import { PointerStackLayer } from '@/debug/PointerStackLayer';
 import { Signal } from '@/core/Signal';
+import { PointerStackLayer } from '@/debug/PointerStackLayer';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 

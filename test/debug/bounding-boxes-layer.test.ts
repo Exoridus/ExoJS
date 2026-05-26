@@ -2,8 +2,8 @@
  * BoundingBoxesLayer tests (0.7.5).
  */
 
-import { BoundingBoxesLayer } from '@/debug/BoundingBoxesLayer';
 import { Signal } from '@/core/Signal';
+import { BoundingBoxesLayer } from '@/debug/BoundingBoxesLayer';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 

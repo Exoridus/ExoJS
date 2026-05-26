@@ -1,5 +1,5 @@
-﻿import { RenderPassInspectorLayer } from '@/debug/RenderPassInspectorLayer';
-import { Signal } from '@/core/Signal';
+﻿import { Signal } from '@/core/Signal';
+import { RenderPassInspectorLayer } from '@/debug/RenderPassInspectorLayer';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 
