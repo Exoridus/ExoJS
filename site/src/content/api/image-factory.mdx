@@ -1,6 +1,6 @@
 ---
 title: "ImageFactory"
-description: "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a decoded HTMLImageElement. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` in options to override."
+description: "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a decoded image. When `createImageBitmap` is available (all modern browsers) the factory returns an ImageBitmap — a zero-copy GPU-upload path that avoids the HTMLImageElement render-pipeline overhead. On older environments it falls back to an HTMLImageElement. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` in options to override."
 symbol: "ImageFactory"
 kind: "class"
 subsystem: "resources"
@@ -9,15 +9,19 @@ memberCount: 7
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/resources/factories/ImageFactory.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts#L22"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts#L29"
 ---
 ## Import
 
 `import { ImageFactory } from '@codexo/exojs'`
 
 AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and
-other browser-supported raster image formats and produces a decoded
-HTMLImageElement.
+other browser-supported raster image formats and produces a decoded image.
+
+When `createImageBitmap` is available (all modern browsers) the factory
+returns an ImageBitmap — a zero-copy GPU-upload path that avoids
+the HTMLImageElement render-pipeline overhead. On older environments it
+falls back to an HTMLImageElement.
 
 MIME type detection is performed automatically from the buffer's magic bytes;
 pass an explicit `mimeType` in options to override.
@@ -28,7 +32,7 @@ pass an explicit `mimeType` in options to override.
 
 ## Methods
 
-- `create(source: ArrayBuffer, options: ImageFactoryOptions): Promise<HTMLImageElement>`
+- `create(source: ArrayBuffer, options: ImageFactoryOptions): Promise<DecodedImage>`
 - `createObjectUrl(blob: Blob): string`
 - `destroy(): void`
 - `process(response: Response): Promise<ArrayBuffer>`
@@ -40,4 +44,4 @@ pass an explicit `mimeType` in options to override.
 
 ## Source
 
-[src/resources/factories/ImageFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts#L22)
+[src/resources/factories/ImageFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts#L29)
