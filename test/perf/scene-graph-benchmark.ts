@@ -2,7 +2,7 @@
  * Scene-graph benchmark — Container / SceneNode operation cost.
  *
  * Measures the CPU cost of transform invalidation cascades, bounds cache
- * reads, addChild/removeChild churn, and z-index sort.
+ * reads, addChild/removeChild churn, and z-index update churn.
  *
  * Output: test/perf/results/scene-graph.{json,md}
  */
@@ -170,7 +170,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 4 — Sort-by-zIndex (1 000 children, random z, sorted every frame)
+// Scenario 4 — zIndex churn (1 000 children, random z updates every frame)
 // ---------------------------------------------------------------------------
 
 {
@@ -178,10 +178,9 @@ const results: BenchmarkResult[] = [];
 
   results.push(
     runScenario({
-      name: 'sort-by-zindex-1k',
+      name: 'zindex-churn-1k',
       setup() {
         root = new Container();
-        root.sortableChildren = true;
 
         for (let i = 0; i < 1000; i++) {
           const d = makeDrawable(i * 2, 0);
@@ -190,16 +189,10 @@ const results: BenchmarkResult[] = [];
         }
       },
       tick() {
-        // Shuffle zIndex values to force a re-sort each frame
+        // Shuffle zIndex values each frame.
         for (const child of root!.children) {
           child.zIndex = Math.floor(Math.random() * 1000);
         }
-        // markSortDirty is called internally by the zIndex setter;
-        // trigger the sort by accessing children (render would do this).
-        // We access the internal sort via a render-less path: calling
-        // markSortDirty + reading children triggers the sort on the next render.
-        // We simulate this by calling the Container's own sort path:
-        (root as unknown as { _sortChildrenIfNeeded(): void })._sortChildrenIfNeeded?.();
       },
       teardown() {
         root!.destroy();

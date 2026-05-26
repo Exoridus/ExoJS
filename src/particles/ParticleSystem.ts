@@ -3,6 +3,7 @@
 import type { Time } from '@/core/Time';
 import { Rectangle } from '@/math/Rectangle';
 import { Drawable } from '@/rendering/Drawable';
+import type { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Spritesheet } from '@/rendering/sprite/Spritesheet';
 import { Texture } from '@/rendering/texture/Texture';
@@ -459,12 +460,17 @@ export class ParticleSystem extends Drawable {
   }
 
   /**
-   * Engine-side render hook. Captures the active backend on each call so
-   * the next `update()` can compile a GPU pipeline if the backend turned
-   * out to be `WebGpuBackend`. Re-captures and rebuilds when the backend
+   * @internal
+   *
+   * Collect-hook: captures the active backend before this node is emitted so
+   * the next `update()` can compile a GPU pipeline if the backend turned out
+   * to be `WebGpuBackend`. Re-captures and rebuilds when the backend
    * reference changes (e.g. after device-loss recovery).
    */
-  public override render(backend: RenderBackend): this {
+  /** @internal */
+  public override _collect(builder: RenderPlanBuilder, seq?: number): void {
+    const backend = builder.backend;
+
     if (this._backend !== backend) {
       this._backend = backend;
 
@@ -477,7 +483,7 @@ export class ParticleSystem extends Drawable {
       this._compiled = false;
     }
 
-    return super.render(backend);
+    super._collect(builder, seq);
   }
 
   /** Per-frame entry point. Routes to CPU or GPU pipeline based on auto-detection at first call. */

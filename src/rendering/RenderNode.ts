@@ -5,6 +5,9 @@ import type { InteractionEvent } from '@/input/InteractionEvent';
 import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 import { Rectangle } from '@/math/Rectangle';
 import type { Filter } from '@/rendering/filters/Filter';
+import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
+import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
+import { RenderPlanPlayer } from '@/rendering/plan/RenderPlanPlayer';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
@@ -65,10 +68,9 @@ export type MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null
  * (`cacheAsBitmap`), and the interaction surface
  * (`interactive`, `draggable`, all the pointer Signals).
  *
- * `RenderNode.render(backend)` is the per-frame visual entry point each
- * subclass implements. The base provides `renderVisualContent()` — a
- * helper that wraps the subclass's draw work with cache / mask / filter /
- * tint orchestration so subclasses focus on their own geometry.
+ * `RenderNode.render(backend)` is the per-frame visual entry point. The
+ * base implementation collects a render plan, optimizes local ordering,
+ * and plays it through the active backend.
  *
  * Subclasses of note: {@link Container} (children), {@link Sprite} (textured
  * quad), {@link Mesh} (custom geometry), {@link Graphics} (immediate-mode
@@ -160,7 +162,50 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
-  public abstract render(backend: RenderBackend): this;
+  public render(backend: RenderBackend): this {
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      const plan = builder.build(this, backend);
+
+      RenderPlanOptimizer.optimize(plan);
+      RenderPlanPlayer.play(plan, backend);
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+
+    return this;
+  }
+
+  /** @internal */
+  public _collect(builder: RenderPlanBuilder, seq?: number): void {
+    if (!this.visible) {
+      return;
+    }
+
+    if (!this.inView(builder.view)) {
+      builder.backend.stats.culledNodes++;
+
+      return;
+    }
+
+    builder.emitNode(this, seq);
+  }
+
+  /** @internal */
+  public _collectForRenderPlan(builder: RenderPlanBuilder): void {
+    this._collectContent(builder);
+  }
+
+  /** @internal */
+  public _isDrawableForRenderPlan(): boolean {
+    return false;
+  }
+
+  /** @internal */
+  protected _collectContent(_builder: RenderPlanBuilder): void {
+    // Overridden by Drawable/Container.
+  }
 
   public get cacheAsBitmap(): boolean {
     return this._cacheAsBitmap;
@@ -213,101 +258,72 @@ export abstract class RenderNode extends SceneNode {
     return this;
   }
 
-  protected renderVisualContent(backend: RenderBackend, renderContent: () => void, blendMode: BlendModes = BlendModes.Normal): void {
-    const hasFilters = this._filters.length > 0;
-    const needsBitmapCache = this._cacheAsBitmap;
+  /** @internal */
+  public _renderPlanHasBarrierEffects(): boolean {
+    return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap;
+  }
 
-    if (!hasFilters && !needsBitmapCache) {
-      this._withMask(backend, renderContent, blendMode);
+  /** @internal */
+  public _renderPlanGetMaskSource(): MaskSource {
+    return this._mask;
+  }
 
-      return;
-    }
+  /** @internal */
+  public _renderPlanGetFilters(): readonly Filter[] {
+    return this._filters;
+  }
 
-    const rawBounds = this.getBounds();
+  /** @internal */
+  public _renderPlanGetBlendMode(): BlendModes {
+    return BlendModes.Normal;
+  }
 
-    if (rawBounds.width <= 0 || rawBounds.height <= 0) {
-      return;
-    }
+  /** @internal */
+  public _renderPlanCanReuseBitmapCache(left: number, top: number, width: number, height: number): boolean {
+    return this._cacheAsBitmap && !this._cacheDirty && this._cacheTexture !== null && this._cacheBounds.equals({ x: left, y: top, width, height });
+  }
 
-    const left = Math.floor(rawBounds.left);
-    const top = Math.floor(rawBounds.top);
-    const width = Math.max(1, Math.ceil(rawBounds.width));
-    const height = Math.max(1, Math.ceil(rawBounds.height));
-    const cacheBoundsChanged = !this._cacheBounds.equals({ x: left, y: top, width, height });
-    const shouldRefreshCache = needsBitmapCache && (this._cacheDirty || this._cacheTexture === null || cacheBoundsChanged);
+  /** @internal */
+  public _renderPlanGetCacheTexture(): RenderTexture | null {
+    return this._cacheTexture;
+  }
 
-    if (needsBitmapCache && !shouldRefreshCache && this._cacheTexture !== null) {
-      this._withMask(
-        backend,
-        () => {
-          this._drawTexture(backend, this._cacheTexture!, left, top, width, height, blendMode);
-        },
-        blendMode,
-      );
+  /** @internal */
+  public _renderPlanEnsureCacheTexture(width: number, height: number): RenderTexture {
+    return this._ensureCacheTexture(width, height);
+  }
 
-      return;
-    }
+  /** @internal */
+  public _renderPlanStoreCacheTexture(texture: RenderTexture, left: number, top: number, width: number, height: number): void {
+    this._cacheTexture = texture;
+    this._cacheBounds.set(left, top, width, height);
+    this._cacheDirty = false;
+  }
 
-    // Ping-pong filter chain: at most one pool-owned RT is held at any time
-    // outside the brief `filter.apply()` call (where input + output coexist).
-    // Previously we accumulated every step's RT and released them all in
-    // `finally`, which kept N+1 RTs alive for an N-filter chain. Now we
-    // release the previous step's RT immediately after each `filter.apply()`
-    // and let the pool hand the same memory back for the next step.
-    const cacheTexture = needsBitmapCache ? this._ensureCacheTexture(width, height) : null;
-    let pooledTexture: RenderTexture | null = null;
+  /** @internal */
+  public _renderPlanRenderToTexture(
+    backend: RenderBackend,
+    target: RenderTexture,
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    renderContent: () => void,
+  ): void {
+    this._renderContentToTexture(backend, target, left, top, width, height, renderContent);
+  }
 
-    try {
-      const sourceTexture = needsBitmapCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(width, height);
-
-      if (sourceTexture !== cacheTexture) {
-        pooledTexture = sourceTexture;
-      }
-
-      this._renderContentToTexture(backend, sourceTexture, left, top, width, height, renderContent);
-
-      let finalTexture = sourceTexture;
-
-      if (hasFilters) {
-        for (let index = 0; index < this._filters.length; index++) {
-          const isLast = index === this._filters.length - 1;
-          const output = isLast && needsBitmapCache ? cacheTexture! : backend.acquireRenderTexture(width, height);
-
-          this._filters[index].apply(backend, finalTexture, output);
-
-          // Release the previous step's RT now that `apply` has consumed it.
-          // The cache texture is owned by the node, never pool-owned.
-          if (pooledTexture !== null) {
-            backend.releaseRenderTexture(pooledTexture);
-            pooledTexture = null;
-          }
-
-          finalTexture = output;
-
-          if (output !== cacheTexture) {
-            pooledTexture = output;
-          }
-        }
-      }
-
-      if (needsBitmapCache) {
-        this._cacheTexture = cacheTexture;
-        this._cacheBounds.set(left, top, width, height);
-        this._cacheDirty = false;
-      }
-
-      this._withMask(
-        backend,
-        () => {
-          this._drawTexture(backend, finalTexture, left, top, width, height, blendMode);
-        },
-        blendMode,
-      );
-    } finally {
-      if (pooledTexture !== null) {
-        backend.releaseRenderTexture(pooledTexture);
-      }
-    }
+  /** @internal */
+  public _renderPlanDrawTexture(
+    backend: RenderBackend,
+    texture: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): void {
+    this._drawTexture(backend, texture, x, y, width, height, blendMode);
   }
 
   public override destroy(): void {
@@ -338,101 +354,6 @@ export abstract class RenderNode extends SceneNode {
     this.onDragStart.destroy();
     this.onDrag.destroy();
     this.onDragEnd.destroy();
-  }
-
-  private _withMask(backend: RenderBackend, callback: () => void, blendMode: BlendModes = BlendModes.Normal): void {
-    const mask = this._mask;
-
-    if (mask === null) {
-      callback();
-
-      return;
-    }
-
-    // Fast path: rectangle mask uses GPU scissor.
-    if (mask instanceof Rectangle) {
-      if (mask.width <= 0 || mask.height <= 0) {
-        return;
-      }
-
-      backend.pushScissorRect(mask);
-
-      try {
-        callback();
-      } finally {
-        backend.popScissorRect();
-      }
-
-      return;
-    }
-
-    // Alpha-mask paths: Texture, RenderTexture, or RenderNode source.
-    // Strategy:
-    //   1. Render `callback` (the masked content) into an intermediate
-    //      contentTexture.
-    //   2. Resolve the mask into a texture: Texture/RenderTexture used
-    //      directly; RenderNode rendered into a maskTexture first.
-    //   3. Compose contentTexture * mask.alpha into the active target at the
-    //      content's world-space position.
-    //   4. Release intermediates.
-    const contentBounds = this.getBounds();
-
-    if (contentBounds.width <= 0 || contentBounds.height <= 0) {
-      return;
-    }
-
-    const left = Math.floor(contentBounds.left);
-    const top = Math.floor(contentBounds.top);
-    const width = Math.max(1, Math.ceil(contentBounds.width));
-    const height = Math.max(1, Math.ceil(contentBounds.height));
-
-    const contentTexture = backend.acquireRenderTexture(width, height);
-    const releasePool: RenderTexture[] = [contentTexture];
-
-    try {
-      this._renderContentToTexture(backend, contentTexture, left, top, width, height, callback);
-
-      const maskTexture = this._resolveMaskTexture(backend, mask, width, height, releasePool);
-
-      backend.composeWithAlphaMask(contentTexture, maskTexture, left, top, width, height, blendMode);
-    } finally {
-      for (const texture of releasePool) {
-        backend.releaseRenderTexture(texture);
-      }
-    }
-  }
-
-  private _resolveMaskTexture(
-    backend: RenderBackend,
-    mask: Texture | RenderTexture | RenderNode,
-    width: number,
-    height: number,
-    releasePool: RenderTexture[],
-  ): Texture | RenderTexture {
-    if (mask instanceof RenderNode) {
-      // Render the mask node's full visual output into an
-      // intermediate render texture sized to match the masked
-      // content. The mask node renders with its own transform; the
-      // intermediate is positioned over the masked content's
-      // world-space bounds so the resulting texture uses the
-      // masked content's local UV space.
-      const maskTexture = backend.acquireRenderTexture(width, height);
-
-      releasePool.push(maskTexture);
-
-      const contentBounds = this.getBounds();
-      const left = Math.floor(contentBounds.left);
-      const top = Math.floor(contentBounds.top);
-
-      this._renderContentToTexture(backend, maskTexture, left, top, width, height, () => {
-        mask.render(backend);
-      });
-
-      return maskTexture;
-    }
-
-    // mask is Texture or RenderTexture — use directly.
-    return mask;
   }
 
   private _renderContentToTexture(

@@ -1,14 +1,13 @@
 import { removeArrayItems } from '@/core/utils';
 import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 
-import type { RenderBackend } from './RenderBackend';
+import type { RenderPlanBuilder } from './plan/RenderPlanBuilder';
 import { RenderNode } from './RenderNode';
 
 /**
  * Scene-graph node that owns child {@link RenderNode}s. Renders its
- * subtree in document order, optionally re-sorted each frame by
- * `zIndex` + child-add-order when {@link Container.sortableChildren} is
- * enabled.
+ * subtree in document order with local `zIndex` ordering resolved inside
+ * the internal render plan at playback time.
  *
  * Bounds aggregate the local bounds + every visible child's bounds, so
  * `container.getBounds()` always returns the smallest axis-aligned rectangle
@@ -25,29 +24,9 @@ import { RenderNode } from './RenderNode';
  */
 export class Container extends RenderNode {
   private readonly _children: RenderNode[] = [];
-  private _sortableChildren = false;
-  private _sortDirty = false;
-  private _nextChildOrder = 0;
 
   public get children(): RenderNode[] {
     return this._children;
-  }
-
-  /**
-   * When `true`, children are re-sorted by `zIndex` (ascending; ties
-   * broken by add-order) before each render. Disabled by default to
-   * avoid the per-frame sort cost; enable on the few containers where
-   * z-ordering matters.
-   */
-  public get sortableChildren(): boolean {
-    return this._sortableChildren;
-  }
-
-  public set sortableChildren(sortableChildren: boolean) {
-    if (this._sortableChildren !== sortableChildren) {
-      this._sortableChildren = sortableChildren;
-      this._sortDirty = sortableChildren;
-    }
   }
 
   public get width(): number {
@@ -113,10 +92,7 @@ export class Container extends RenderNode {
     }
 
     child.parent = this;
-    child.setChildOrder(this._nextChildOrder++);
-
     this._children.splice(index, 0, child);
-    this.markSortDirty();
     this.invalidateCache();
 
     child._invalidateSubtreeTransform();
@@ -134,7 +110,6 @@ export class Container extends RenderNode {
 
       this._children[firstIndex] = secondChild;
       this._children[secondIndex] = firstChild;
-      this.markSortDirty();
       this.invalidateCache();
     }
 
@@ -159,7 +134,6 @@ export class Container extends RenderNode {
     removeArrayItems(this._children, this.getChildIndex(child), 1);
 
     this._children.splice(index, 0, child);
-    this.markSortDirty();
     this.invalidateCache();
 
     return this;
@@ -197,7 +171,6 @@ export class Container extends RenderNode {
       getActiveInteractionManager()?._notifyNodeRemoved(child);
     }
 
-    this.markSortDirty();
     this.invalidateCache();
 
     return this;
@@ -230,32 +203,20 @@ export class Container extends RenderNode {
     }
 
     removeArrayItems(this._children, begin, range);
-    this.markSortDirty();
     this.invalidateCache();
 
     return this;
   }
 
-  public override render(backend: RenderBackend): this {
-    if (!this.visible || this._children.length === 0) {
-      return this;
+  /** @internal */
+  protected override _collectContent(builder: RenderPlanBuilder): void {
+    if (this._children.length === 0) {
+      return;
     }
 
-    if (!this.inView(backend.view)) {
-      backend.stats.culledNodes++;
-
-      return this;
+    for (let index = 0; index < this._children.length; index++) {
+      this._children[index]._collect(builder, index);
     }
-
-    this.renderVisualContent(backend, () => {
-      this._sortChildrenIfNeeded();
-
-      for (const child of this._children) {
-        child.render(backend);
-      }
-    });
-
-    return this;
   }
 
   public override contains(x: number, y: number): boolean {
@@ -284,44 +245,5 @@ export class Container extends RenderNode {
     this.removeChildren();
 
     super.destroy();
-  }
-
-  /**
-   * Flag the child list as needing a re-sort before next render. Called
-   * automatically by `addChild*`, `removeChild*`, `swapChildren`, and
-   * `setChildIndex`; expose for callers that mutate `zIndex` directly.
-   */
-  public markSortDirty(): this {
-    if (this._sortableChildren) {
-      this._sortDirty = true;
-    }
-
-    return this;
-  }
-
-  public sortChildren(): this {
-    if (!this._sortableChildren || !this._sortDirty || this._children.length <= 1) {
-      this._sortDirty = false;
-
-      return this;
-    }
-
-    this._children.sort((left, right) => {
-      if (left.zIndex === right.zIndex) {
-        return left.childOrder - right.childOrder;
-      }
-
-      return left.zIndex - right.zIndex;
-    });
-    this._sortDirty = false;
-    this.invalidateCache();
-
-    return this;
-  }
-
-  private _sortChildrenIfNeeded(): void {
-    if (this._sortableChildren && this._sortDirty) {
-      this.sortChildren();
-    }
   }
 }

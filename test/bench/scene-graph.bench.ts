@@ -85,9 +85,8 @@ describe('scene-graph', () => {
     parentB.destroy();
   });
 
-  bench('sort-by-zIndex (1k children)', () => {
+  bench('zIndex-churn (1k children)', () => {
     const root = new Container();
-    root.sortableChildren = true;
 
     for (let i = 0; i < 1000; i++) {
       const d = makeDrawable(i * 2, 0);
@@ -98,7 +97,6 @@ describe('scene-graph', () => {
     for (const child of root.children) {
       child.zIndex = Math.floor(Math.random() * 1000);
     }
-    (root as unknown as { _sortChildrenIfNeeded(): void })._sortChildrenIfNeeded?.();
 
     root.destroy();
   });

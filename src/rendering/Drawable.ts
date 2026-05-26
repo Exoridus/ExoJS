@@ -1,14 +1,13 @@
 import { Color } from '@/core/Color';
 import { BlendModes } from '@/rendering/types';
 
-import type { RenderBackend } from './RenderBackend';
+import type { RenderPlanBuilder } from './plan/RenderPlanBuilder';
 import { RenderNode } from './RenderNode';
 
 /**
  * Base class for every renderable scene object.
  *
- * Extends {@link RenderNode} with a per-object tint colour and blend mode,
- * and implements the default view-frustum culling logic in {@link render}.
+ * Extends {@link RenderNode} with a per-object tint colour and blend mode.
  * Concrete drawable types (sprites, meshes, text, etc.) extend this class
  * and are paired with a matching {@link Renderer} via {@link RendererRegistry}.
  */
@@ -58,32 +57,19 @@ export class Drawable extends RenderNode {
     return this;
   }
 
-  /**
-   * Submit this drawable for rendering.
-   * Skips invisible nodes and increments the cull counter for nodes that fall
-   * outside the current view. Visible, in-view nodes are drawn via the backend
-   * using the current blend mode.
-   */
-  public override render(backend: RenderBackend): this {
-    if (!this.visible) {
-      return this;
-    }
+  /** @internal */
+  protected override _collectContent(builder: RenderPlanBuilder): void {
+    builder.emitDraw(this);
+  }
 
-    if (!this.inView(backend.view)) {
-      backend.stats.culledNodes++;
+  /** @internal */
+  public override _isDrawableForRenderPlan(): boolean {
+    return true;
+  }
 
-      return this;
-    }
-
-    this.renderVisualContent(
-      backend,
-      () => {
-        backend.draw(this);
-      },
-      this._blendMode,
-    );
-
-    return this;
+  /** @internal */
+  public override _renderPlanGetBlendMode(): BlendModes {
+    return this._blendMode;
   }
 
   public override destroy(): void {

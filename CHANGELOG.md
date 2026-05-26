@@ -4,6 +4,21 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - Unreleased
+
+### Breaking — Rendering order semantics
+
+- Removed `Container.sortableChildren`.
+- `SceneNode.zIndex` is now always applied locally among siblings during render-plan playback.
+- Sorting is now non-destructive to `Container.children`; render ordering no longer mutates the child array.
+- Removed `SceneNode.childOrder` / `SceneNode.setChildOrder()` from the public scene-node surface.
+
+### Migration notes
+
+- Remove `container.sortableChildren = true` from user code.
+- Keep using `render(backend): this`; no signature change.
+- For custom drawables, use `Drawable` + `RendererRegistry` so rendering remains on the backend dispatch path (`backend.draw(drawable)`).
+
 ## [0.9.0] - 2026-05-24
 
 ### Migration guide

@@ -6,8 +6,8 @@ import { Signal } from '@/core/Signal';
 import type { PlaybackOptions } from '@/core/types';
 import { Rectangle } from '@/math/Rectangle';
 import { clamp } from '@/math/utils';
+import type { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 
-import type { RenderBackend } from '../RenderBackend';
 import { Sprite } from '../sprite/Sprite';
 import type { SamplerOptions } from '../texture/Sampler';
 import { Texture } from '../texture/Texture';
@@ -332,19 +332,14 @@ export class Video extends Sprite implements Media {
     return this;
   }
 
-  /**
-   * Mark the texture dirty when the video frame has advanced, then upload
-   * the latest video frame and delegate rendering to {@link Sprite.render}.
-   * @internal
-   */
-  public override render(backend: RenderBackend): this {
+  /** @internal */
+  public override _collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.visible) {
       this._markTextureDirtyOnPlaybackAdvance();
       this.updateTexture();
-      super.render(backend);
     }
 
-    return this;
+    super._collect(builder, seq);
   }
 
   /**

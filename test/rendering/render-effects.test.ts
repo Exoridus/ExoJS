@@ -381,11 +381,10 @@ describe('render effects', () => {
   });
 
   test('cache-as-bitmap bypasses subtree redraw until invalidated', () => {
-    const { runtime } = createRuntime();
+    const { runtime, draw } = createRuntime();
     const container = new Container();
     const texture = createTexture();
     const child = new Sprite(texture);
-    const childRender = vi.spyOn(child, 'render');
 
     container.addChild(child);
     container.cacheAsBitmap = true;
@@ -393,12 +392,17 @@ describe('render effects', () => {
     container.render(runtime);
     container.render(runtime);
 
-    expect(childRender).toHaveBeenCalledTimes(1);
+    const drawCallsAfterTwoRenders = draw.mock.calls.map(call => call[0]);
+    const childDrawsAfterTwoRenders = drawCallsAfterTwoRenders.filter(arg => arg === child);
+
+    expect(childDrawsAfterTwoRenders).toHaveLength(1);
 
     container.invalidateCache();
     container.render(runtime);
 
-    expect(childRender).toHaveBeenCalledTimes(2);
+    const childDrawsAfterInvalidate = draw.mock.calls.map(call => call[0]).filter(arg => arg === child);
+
+    expect(childDrawsAfterInvalidate).toHaveLength(2);
 
     texture.destroy();
   });

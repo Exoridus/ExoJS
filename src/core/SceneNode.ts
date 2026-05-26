@@ -95,7 +95,6 @@ export class SceneNode implements Collidable {
   private _anchor = new ObservableVector(this._updateOrigin.bind(this), 0, 0);
   private _parentNode: Container | null = null;
   private _zIndex = 0;
-  private _childOrder = 0;
   private _cullable = true;
 
   public get position(): ObservableVector {
@@ -184,12 +183,7 @@ export class SceneNode implements Collidable {
   public set zIndex(zIndex: number) {
     if (this._zIndex !== zIndex) {
       this._zIndex = zIndex;
-      this._parentNode?.markSortDirty();
     }
-  }
-
-  public get childOrder(): number {
-    return this._childOrder;
   }
 
   public get cullable(): boolean {
@@ -331,12 +325,6 @@ export class SceneNode implements Collidable {
 
   public setAnchor(x: number, y: number = x): this {
     this._anchor.set(x, y);
-
-    return this;
-  }
-
-  public setChildOrder(order: number): this {
-    this._childOrder = order;
 
     return this;
   }

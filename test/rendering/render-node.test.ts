@@ -90,18 +90,17 @@ describe('RenderNode and SceneNode contract', () => {
   });
 
   test('RenderNode is abstract — direct instantiation is not possible', () => {
-    // RenderNode is declared `abstract` and `render` is `abstract`.
-    // TypeScript prevents `new RenderNode()` at compile time. At runtime,
-    // a forced-cast construction would produce an object that fails the
-    // first time render() is called, because there is no concrete impl.
+    // RenderNode is declared `abstract`, so TypeScript prevents
+    // `new RenderNode()` at compile time. A forced runtime construction is
+    // still possible; the base implementation should remain callable.
     const RenderNodeCtor = RenderNode as unknown as new () => RenderNode;
     const instance = new RenderNodeCtor();
+    const runtime = createRuntime();
 
-    // The instance has no render implementation — it's typed as a method
-    // but the abstract declaration provides no body.
-    expect(instance.render).toBeUndefined();
+    expect(instance.render(runtime)).toBe(instance);
 
     instance.destroy();
+    runtime.destroy();
   });
 
   test('Drawable is a concrete RenderNode and renders by submitting to runtime.draw', () => {
@@ -121,12 +120,12 @@ describe('RenderNode and SceneNode contract', () => {
     const runtime = createRuntime();
     const container = new Container();
     const child = new TestDrawable();
-    const childRender = vi.spyOn(child, 'render');
+    const draw = vi.spyOn(runtime, 'draw');
 
     container.addChild(child);
     container.render(runtime);
 
-    expect(childRender).toHaveBeenCalledWith(runtime);
+    expect(draw).toHaveBeenCalledWith(child);
 
     container.destroy();
     runtime.destroy();
