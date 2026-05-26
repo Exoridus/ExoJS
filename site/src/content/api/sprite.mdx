@@ -5,7 +5,7 @@ symbol: "Sprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 78
+memberCount: 75
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/Sprite.ts"
@@ -53,12 +53,10 @@ operate on the exact rotated quad rather than the AABB.
 - `project(axis: Vector, result: Interval): Interval`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `resetTextureFrame(): this`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
@@ -82,7 +80,6 @@ operate on the exact rotated quad rather than the AABB.
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
 - `height: number`

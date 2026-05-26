@@ -1,15 +1,15 @@
 ---
 title: "RenderNode"
-description: "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point each subclass implements. The base provides `renderVisualContent()` — a helper that wraps the subclass's draw work with cache / mask / filter / tint orchestration so subclasses focus on their own geometry. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles)."
+description: "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles)."
 symbol: "RenderNode"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 66
+memberCount: 63
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/RenderNode.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts#L78"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts#L80"
 ---
 ## Import
 
@@ -22,10 +22,9 @@ optional `mask` (via MaskSource), bitmap caching
 (`cacheAsBitmap`), and the interaction surface
 (`interactive`, `draggable`, all the pointer Signals).
 
-`RenderNode.render(backend)` is the per-frame visual entry point each
-subclass implements. The base provides `renderVisualContent()` — a
-helper that wraps the subclass's draw work with cache / mask / filter /
-tint orchestration so subclasses focus on their own geometry.
+`RenderNode.render(backend)` is the per-frame visual entry point. The
+base implementation collects a render plan, optimizes local ordering,
+and plays it through the active backend.
 
 Subclasses of note: Container (children), Sprite (textured
 quad), Mesh (custom geometry), Graphics (immediate-mode
@@ -58,10 +57,8 @@ ParticleSystem (particles).
 - `project(axis: Vector, result: Interval): Interval`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
@@ -80,7 +77,6 @@ ParticleSystem (particles).
 - `flags: Flags<SceneNodeTransformFlags>`
 - `anchor: ObservableVector`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
 - `interactive: boolean`
@@ -112,4 +108,4 @@ ParticleSystem (particles).
 
 ## Source
 
-[src/rendering/RenderNode.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts#L78)
+[src/rendering/RenderNode.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts#L80)

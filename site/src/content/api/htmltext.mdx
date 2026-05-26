@@ -5,7 +5,7 @@ symbol: "HTMLText"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 92
+memberCount: 86
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/HTMLText.ts"
@@ -60,7 +60,6 @@ because it is embedded inside an XML document.
 - `intersectsWith(target: Collidable): boolean`
 - `invalidateCache(): this`
 - `inView(view: View): boolean`
-- `markSortDirty(): this`
 - `move(x: number, y: number): this`
 - `project(axis: Vector, result: Interval): Interval`
 - `removeChild(child: RenderNode): this`
@@ -69,18 +68,15 @@ because it is embedded inside an XML document.
 - `removeFilter(filter: Filter): this`
 - `removeFont(family: string): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `resize(width: number, height: number): this`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setChildIndex(child: RenderNode, index: number): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `sortChildren(): this`
 - `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
@@ -96,7 +92,6 @@ because it is embedded inside an XML document.
 - `anchor: ObservableVector`
 - `bottom: number`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `children: RenderNode[]`
 - `css: string`
 - `cullable: boolean`
@@ -117,7 +112,6 @@ because it is embedded inside an XML document.
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
-- `sortableChildren: boolean`
 - `top: number`
 - `visible: boolean`
 - `width: number`

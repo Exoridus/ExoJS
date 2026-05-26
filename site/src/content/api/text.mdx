@@ -5,7 +5,7 @@ symbol: "Text"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 81
+memberCount: 78
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/Text.ts"
@@ -71,11 +71,9 @@ options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
 - `project(axis: Vector, result: Interval): Interval`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
@@ -100,7 +98,6 @@ options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
 - `atlasMode: AtlasMode`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `colorGlyphs: boolean`
 - `cullable: boolean`
 - `filters: readonly Filter[]`

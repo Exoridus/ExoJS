@@ -1,24 +1,23 @@
 ---
 title: "Container"
-description: "Scene-graph node that owns child RenderNodes. Renders its subtree in document order, optionally re-sorted each frame by `zIndex` + child-add-order when Container.sortableChildren is enabled. Bounds aggregate the local bounds + every visible child's bounds, so `container.getBounds()` always returns the smallest axis-aligned rectangle containing the subtree. Width/height accessors derive from the bounds (× `scale`) and writing to them rescales `scale` to fit. Adding a child re-parents it: the previous parent is detached automatically. Removing a child cascades bounds invalidation up the ancestor chain so further-up containers also rebuild on next read. Subclassed by Sprite, Mesh, Graphics, Text, etc. — the base `Container` is a non-drawing grouping node."
+description: "Scene-graph node that owns child RenderNodes. Renders its subtree in document order with local `zIndex` ordering resolved inside the internal render plan at playback time. Bounds aggregate the local bounds + every visible child's bounds, so `container.getBounds()` always returns the smallest axis-aligned rectangle containing the subtree. Width/height accessors derive from the bounds (× `scale`) and writing to them rescales `scale` to fit. Adding a child re-parents it: the previous parent is detached automatically. Removing a child cascades bounds invalidation up the ancestor chain so further-up containers also rebuild on next read. Subclassed by Sprite, Mesh, Graphics, Text, etc. — the base `Container` is a non-drawing grouping node."
 symbol: "Container"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 85
+memberCount: 79
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Container.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Container.ts#L26"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Container.ts#L25"
 ---
 ## Import
 
 `import { Container } from '@codexo/exojs'`
 
 Scene-graph node that owns child RenderNodes. Renders its
-subtree in document order, optionally re-sorted each frame by
-`zIndex` + child-add-order when Container.sortableChildren is
-enabled.
+subtree in document order with local `zIndex` ordering resolved inside
+the internal render plan at playback time.
 
 Bounds aggregate the local bounds + every visible child's bounds, so
 `container.getBounds()` always returns the smallest axis-aligned rectangle
@@ -58,7 +57,6 @@ etc. — the base `Container` is a non-drawing grouping node.
 - `intersectsWith(target: Collidable): boolean`
 - `invalidateCache(): this`
 - `inView(view: View): boolean`
-- `markSortDirty(): this`
 - `move(x: number, y: number): this`
 - `project(axis: Vector, result: Interval): Interval`
 - `removeChild(child: RenderNode): this`
@@ -66,17 +64,14 @@ etc. — the base `Container` is a non-drawing grouping node.
 - `removeChildren(begin: number, end: number): this`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setChildIndex(child: RenderNode, index: number): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `sortChildren(): this`
 - `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
@@ -92,7 +87,6 @@ etc. — the base `Container` is a non-drawing grouping node.
 - `anchor: ObservableVector`
 - `bottom: number`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `children: RenderNode[]`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
@@ -109,7 +103,6 @@ etc. — the base `Container` is a non-drawing grouping node.
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
-- `sortableChildren: boolean`
 - `top: number`
 - `visible: boolean`
 - `width: number`
@@ -131,4 +124,4 @@ etc. — the base `Container` is a non-drawing grouping node.
 
 ## Source
 
-[src/rendering/Container.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Container.ts#L26)
+[src/rendering/Container.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Container.ts#L25)

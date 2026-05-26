@@ -1,15 +1,15 @@
 ---
 title: "Drawable"
-description: "Base class for every renderable scene object. Extends RenderNode with a per-object tint colour and blend mode, and implements the default view-frustum culling logic in render. Concrete drawable types (sprites, meshes, text, etc.) extend this class and are paired with a matching Renderer via RendererRegistry."
+description: "Base class for every renderable scene object. Extends RenderNode with a per-object tint colour and blend mode. Concrete drawable types (sprites, meshes, text, etc.) extend this class and are paired with a matching Renderer via RendererRegistry."
 symbol: "Drawable"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 70
+memberCount: 67
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Drawable.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L15"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L14"
 ---
 ## Import
 
@@ -17,8 +17,7 @@ sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.t
 
 Base class for every renderable scene object.
 
-Extends RenderNode with a per-object tint colour and blend mode,
-and implements the default view-frustum culling logic in render.
+Extends RenderNode with a per-object tint colour and blend mode.
 Concrete drawable types (sprites, meshes, text, etc.) extend this class
 and are paired with a matching Renderer via RendererRegistry.
 
@@ -48,11 +47,9 @@ and are paired with a matching Renderer via RendererRegistry.
 - `project(axis: Vector, result: Interval): Interval`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
@@ -73,7 +70,6 @@ and are paired with a matching Renderer via RendererRegistry.
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
 - `interactive: boolean`
@@ -106,4 +102,4 @@ and are paired with a matching Renderer via RendererRegistry.
 
 ## Source
 
-[src/rendering/Drawable.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L15)
+[src/rendering/Drawable.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L14)

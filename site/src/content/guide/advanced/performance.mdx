@@ -63,7 +63,7 @@ Adding and removing many children from a container each frame triggers transform
 
 - `sprite.visible = false` over `container.removeChild(sprite)` — keeps the node in the tree, skips rendering.
 - Pre-allocate a pool of sprites and recycle them by toggling visibility rather than constructing/destroying.
-- Use `Container.sortableChildren` only when you actually need z-ordering — the sort step runs before every render.
+- Use `zIndex` only where layering is required. Mixed `zIndex` values add per-group sorting work during render-plan optimization.
 
 ## Texture updates
 

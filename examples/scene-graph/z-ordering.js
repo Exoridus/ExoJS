@@ -20,7 +20,6 @@ app.start(
         }
         init(loader) {
             this._root = new Container();
-            this._root.sortableChildren = true;
             this._label = new Text('Press 1, 2, 3', { fill: 'white', fontSize: 18 });
             this._label.setPosition(18, 18);
 
@@ -43,7 +42,6 @@ app.start(
             this._sprites.forEach((sprite, i) => {
                 sprite.zIndex = i === index ? 3 : i;
             });
-            this._root.sortChildren();
         }
         draw(backend) {
             backend.clear();

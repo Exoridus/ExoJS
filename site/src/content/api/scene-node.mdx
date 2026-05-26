@@ -5,7 +5,7 @@ symbol: "SceneNode"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 44
+memberCount: 42
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/core/SceneNode.ts"
@@ -62,7 +62,6 @@ Subclasses: Container (carries children), RenderNode
 - `project(axis: Vector, result: Interval): Interval`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
@@ -77,7 +76,6 @@ Subclasses: Container (carries children), RenderNode
 - `collisionType: CollisionType`
 - `flags: Flags<SceneNodeTransformFlags>`
 - `anchor: ObservableVector`
-- `childOrder: number`
 - `cullable: boolean`
 - `isAlignedBox: boolean`
 - `origin: ObservableVector`

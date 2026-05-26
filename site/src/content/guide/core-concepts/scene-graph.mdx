@@ -107,7 +107,7 @@ this.world.addChild(this.player);    // drawn over background
 this.world.addChild(this.foreground); // drawn over player
 ```
 
-For dynamic z-order — characters that need to layer correctly based on their y position — set `container.sortableChildren = true` and assign a `zIndex` to each child; the container then sorts before drawing.
+For dynamic z-order — characters that need to layer correctly based on their y position — assign `zIndex` to each child. ExoJS resolves sibling order from `zIndex` during render-plan playback (tie-breaker: child list order), without mutating `container.children`.
 
 ## Adding, removing, and rearranging
 
@@ -167,7 +167,7 @@ How `setOrigin` and `setAnchor` change where a node rotates and where its positi
 
 <ExamplePreview chapter="scene-graph" slug="z-ordering" />
 
-Using `sortableChildren` and `zIndex` for dynamic depth ordering.
+Using `zIndex` for dynamic depth ordering.
 
 <ExamplePreview chapter="scene-graph" slug="masks" />
 

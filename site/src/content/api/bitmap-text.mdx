@@ -5,7 +5,7 @@ symbol: "BitmapText"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 81
+memberCount: 78
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/BitmapText.ts"
@@ -61,11 +61,9 @@ label.style.align  = 'center';     // immediate rebuild
 - `project(axis: Vector, result: Interval): Interval`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setChildOrder(order: number): this`
 - `setFont(font: BmFont): void`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
@@ -89,7 +87,6 @@ label.style.align  = 'center';     // immediate rebuild
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
 - `fontScale: number`

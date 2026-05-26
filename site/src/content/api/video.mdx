@@ -5,7 +5,7 @@ symbol: "Video"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 102
+memberCount: 100
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/video/Video.ts"
@@ -51,12 +51,11 @@ node and can be directed to any AudioBus.
 - `play(options?: Partial<PlaybackOptions>): this`
 - `project(axis: Vector, result: Interval): Interval`
 - `removeFilter(filter: Filter): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
+- `render(backend: RenderBackend): this`
 - `resetTextureFrame(): this`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setChildOrder(order: number): this`
 - `setLoop(loop: boolean): this`
 - `setMuted(muted: boolean): this`
 - `setOrigin(x: number, y: number): this`
@@ -89,7 +88,6 @@ node and can be directed to any AudioBus.
 - `blendMode: BlendModes`
 - `bus: AudioBus`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `cullable: boolean`
 - `currentTime: number`
 - `duration: number`

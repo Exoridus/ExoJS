@@ -5,7 +5,7 @@ symbol: "Graphics"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 103
+memberCount: 97
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/primitives/Graphics.ts"
@@ -65,7 +65,6 @@ tint, and mask support from Container.
 - `invalidateCache(): this`
 - `inView(view: View): boolean`
 - `lineTo(toX: number, toY: number): this`
-- `markSortDirty(): this`
 - `move(x: number, y: number): this`
 - `moveTo(x: number, y: number): this`
 - `project(axis: Vector, result: Interval): Interval`
@@ -75,17 +74,14 @@ tint, and mask support from Container.
 - `removeChildren(begin: number, end: number): this`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setChildIndex(child: RenderNode, index: number): this`
-- `setChildOrder(order: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `sortChildren(): this`
 - `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
@@ -101,7 +97,6 @@ tint, and mask support from Container.
 - `anchor: ObservableVector`
 - `bottom: number`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `children: RenderNode[]`
 - `cullable: boolean`
 - `currentPoint: Vector`
@@ -122,7 +117,6 @@ tint, and mask support from Container.
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
-- `sortableChildren: boolean`
 - `top: number`
 - `visible: boolean`
 - `width: number`

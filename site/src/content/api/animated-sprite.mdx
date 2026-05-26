@@ -5,7 +5,7 @@ symbol: "AnimatedSprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 93
+memberCount: 90
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/AnimatedSprite.ts"
@@ -55,13 +55,11 @@ from a Spritesheet's named animations.
 - `removeClip(name: string): this`
 - `removeFilter(filter: Filter): this`
 - `render(backend: RenderBackend): this`
-- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `resetTextureFrame(): this`
 - `resume(): this`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setChildOrder(order: number): this`
 - `setClips(clips: Readonly<Record<string, AnimatedSpriteClipDefinition>>): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
@@ -89,7 +87,6 @@ from a Spritesheet's named animations.
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
-- `childOrder: number`
 - `cullable: boolean`
 - `currentClip: string | null`
 - `currentFrame: number`
