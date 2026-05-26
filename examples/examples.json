@@ -518,6 +518,17 @@
             ]
         },
         {
+            "slug": "gradient-drawable",
+            "path": "geometry-graphics/gradient-drawable.js",
+            "title": "Gradient Drawable",
+            "description": "Example: Gradient Drawable.",
+            "backend": "core",
+            "tags": [
+                "gradient",
+                "drawable"
+            ]
+        },
+        {
             "slug": "infinite-grid",
             "path": "geometry-graphics/infinite-grid.js",
             "title": "Infinite Grid",

@@ -4,6 +4,7 @@ import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import { ColorFilter } from '@/rendering/filters/ColorFilter';
 import { Mesh } from '@/rendering/mesh/Mesh';
+import { GradientDrawable } from '@/rendering/primitives/Gradient';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
@@ -396,6 +397,40 @@ describe('RenderPlan WebGL2 browser regressions', () => {
     } finally {
       root.destroy();
       texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('gradient drawable renders a linear red-blue ramp', async () => {
+    const { backend } = await createBackend();
+    const root = new Container();
+    const gradient = new GradientDrawable({
+      width: 24,
+      height: 24,
+      mode: 'linear',
+      linearStart: [0, 0],
+      linearEnd: [1, 0],
+      stops: [
+        { offset: 0, color: Color.red },
+        { offset: 1, color: Color.blue },
+      ],
+    });
+
+    try {
+      gradient.setPosition(20, 20);
+      root.addChild(gradient);
+
+      render(backend, root);
+
+      const left = readPixel(backend, 22, 30);
+      const right = readPixel(backend, 40, 30);
+
+      expect(left[0] + left[1] + left[2]).toBeGreaterThan(0);
+      expect(right[0] + right[1] + right[2]).toBeGreaterThan(0);
+      expect(left[3]).toBeGreaterThanOrEqual(250);
+      expect(right[3]).toBeGreaterThanOrEqual(250);
+    } finally {
+      root.destroy();
       backend.destroy();
     }
   });

@@ -29,5 +29,6 @@ export * from './IndexedDbStore';
 export * from './Loader';
 export * from './LoadingQueue';
 export * from './NetworkOnlyStrategy';
+export * from './SaveStore';
 export * from './tokens';
 export * from './utils';

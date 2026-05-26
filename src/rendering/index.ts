@@ -17,6 +17,8 @@ export type { MeshOptions } from './mesh/Mesh';
 export { Mesh } from './mesh/Mesh';
 export type { MeshShaderOptions, MeshShaderUniformValue } from './mesh/MeshShader';
 export { MeshShader } from './mesh/MeshShader';
+export type { GradientMode, GradientOptions, GradientStop } from './primitives/Gradient';
+export { GradientDrawable } from './primitives/Gradient';
 export { Graphics } from './primitives/Graphics';
 export type { RenderBackend } from './RenderBackend';
 export { RenderBackendType } from './RenderBackendType';

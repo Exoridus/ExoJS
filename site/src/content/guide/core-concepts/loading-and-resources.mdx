@@ -335,6 +335,27 @@ On first load, assets are fetched from the network and written to IndexedDB. On 
 
 If you supply a custom `storeNames` array, include `'__ctx_text'`, `'__ctx_json'`, and `'__ctx_binary'` if your custom asset handlers call `context.fetchText`, `context.fetchJson`, or `context.fetchArrayBuffer`.
 
+## Save data with SaveStore
+
+For user save data (settings, profiles, checkpoints), use [`SaveStore`](/ExoJS/en/api/save-store/). It is a thin JSON-first layer on IndexedDB:
+
+```js
+import { SaveStore } from '@codexo/exojs';
+
+const saves = new SaveStore('my-game-saves');
+
+await saves.save('slot-1', {
+    level: 4,
+    score: 12800,
+    options: { music: true, sfx: false },
+});
+
+const slot = await saves.load('slot-1'); // object | null
+await saves.delete('slot-1');
+```
+
+`SaveStore` stores one JSON payload per key. Non-serializable values throw at save time.
+
 ## Custom asset types (advanced)
 
 Register a string type name to teach the loader about domain-specific resources. First, extend `AssetDefinitions` via declaration merging:
