@@ -1,9 +1,5 @@
 import { type MockInstance, vi } from 'vitest';
 
-// Allow existing test files that reference jest.fn() / jest.spyOn() to run
-// under Vitest without modification by aliasing jest → vi at runtime.
-Object.assign(globalThis, { jest: vi });
-
 // jsdom does not implement PointerEvent. Provide a minimal polyfill that
 // extends MouseEvent so pointer-event listeners receive the right properties.
 if (typeof globalThis.PointerEvent === 'undefined') {
