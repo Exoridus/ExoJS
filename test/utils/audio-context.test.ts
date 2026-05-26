@@ -2,6 +2,10 @@ describe('utils/audio-context', () => {
   const originalAudioContext = globalThis.AudioContext;
   const originalOfflineAudioContext = globalThis.OfflineAudioContext;
 
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
   afterEach(() => {
     Object.defineProperty(globalThis, 'AudioContext', {
       configurable: true,
@@ -13,11 +17,11 @@ describe('utils/audio-context', () => {
       value: originalOfflineAudioContext,
     });
 
-    jest.restoreAllMocks();
-    jest.resetModules();
+    vi.restoreAllMocks();
+    vi.resetModules();
   });
 
-  it('does not create audio contexts or register interaction listeners on import', () => {
+  it('does not create audio contexts or register interaction listeners on import', async () => {
     let audioContextCreations = 0;
     let offlineAudioContextCreations = 0;
 
@@ -54,18 +58,16 @@ describe('utils/audio-context', () => {
       value: TestOfflineAudioContext,
     });
 
-    const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
-    jest.isolateModules(() => {
-      require('@/audio/audio-context');
-    });
+    await import('@/audio/audio-context');
 
     expect(audioContextCreations).toBe(0);
     expect(offlineAudioContextCreations).toBe(0);
     expect(addEventListenerSpy).not.toHaveBeenCalled();
   });
 
-  it('creates the audio context lazily when a ready subscriber is added', () => {
+  it('creates the audio context lazily when a ready subscriber is added', async () => {
     let audioContextCreations = 0;
 
     class TestAudioContext {
@@ -97,13 +99,11 @@ describe('utils/audio-context', () => {
       value: TestOfflineAudioContext,
     });
 
-    const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
-    jest.isolateModules(() => {
-      const { onAudioContextReady } = require('@/audio/audio-context');
+    const { onAudioContextReady } = await import('@/audio/audio-context');
 
-      onAudioContextReady.once(() => undefined);
-    });
+    onAudioContextReady.once(() => undefined);
 
     expect(audioContextCreations).toBe(1);
     expect(addEventListenerSpy).toHaveBeenCalled();

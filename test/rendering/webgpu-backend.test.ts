@@ -1,4 +1,4 @@
-import type { Application } from '@/core/Application';
+﻿import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { ParticleSystem } from '@/particles/ParticleSystem';
@@ -21,31 +21,31 @@ interface MockWebGpuEnvironment {
   readonly canvas: HTMLCanvasElement;
   readonly context: GPUCanvasContext;
   readonly encoder: {
-    beginRenderPass: jest.Mock;
-    finish: jest.Mock;
+    beginRenderPass: MockInstance;
+    finish: MockInstance;
   };
   readonly pass: {
-    setPipeline: jest.Mock;
-    setBindGroup: jest.Mock;
-    setVertexBuffer: jest.Mock;
-    setIndexBuffer: jest.Mock;
-    setScissorRect: jest.Mock;
-    draw: jest.Mock;
-    drawIndexed: jest.Mock;
-    end: jest.Mock;
+    setPipeline: MockInstance;
+    setBindGroup: MockInstance;
+    setVertexBuffer: MockInstance;
+    setIndexBuffer: MockInstance;
+    setScissorRect: MockInstance;
+    draw: MockInstance;
+    drawIndexed: MockInstance;
+    end: MockInstance;
   };
   readonly queue: {
-    writeBuffer: jest.Mock;
-    submit: jest.Mock;
-    copyExternalImageToTexture: jest.Mock;
+    writeBuffer: MockInstance;
+    submit: MockInstance;
+    copyExternalImageToTexture: MockInstance;
   };
-  readonly createBindGroupLayout: jest.Mock;
-  readonly createTexture: jest.Mock;
-  readonly createSampler: jest.Mock;
-  readonly createRenderPipeline: jest.Mock;
+  readonly createBindGroupLayout: MockInstance;
+  readonly createTexture: MockInstance;
+  readonly createSampler: MockInstance;
+  readonly createRenderPipeline: MockInstance;
   readonly pipelineDescriptors: GPURenderPipelineDescriptor[];
-  readonly buffers: { destroy: jest.Mock<void, []> }[];
-  readonly textures: { destroy: jest.Mock<void, []>; createView: jest.Mock<GPUTextureView, []> }[];
+  readonly buffers: { destroy: MockInstance }[];
+  readonly textures: { destroy: MockInstance; createView: MockInstance }[];
   /** Resolve this to simulate the GPU device being lost. */
   simulateDeviceLost(info?: Partial<GPUDeviceLostInfo>): void;
   restore(): void;
@@ -54,10 +54,10 @@ interface MockWebGpuEnvironment {
 interface MockTextCanvas {
   readonly canvas: HTMLCanvasElement;
   readonly context: CanvasRenderingContext2D & {
-    clearRect: jest.Mock;
-    fillText: jest.Mock;
-    strokeText: jest.Mock;
-    measureText: jest.Mock;
+    clearRect: MockInstance;
+    fillText: MockInstance;
+    strokeText: MockInstance;
+    measureText: MockInstance;
   };
 }
 
@@ -90,45 +90,45 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const previousColorWrite = Object.getOwnPropertyDescriptor(globalThis, 'GPUColorWrite');
   const previousTextureUsage = Object.getOwnPropertyDescriptor(globalThis, 'GPUTextureUsage');
   const pass = {
-    setPipeline: jest.fn(),
-    setBindGroup: jest.fn(),
-    setVertexBuffer: jest.fn(),
-    setIndexBuffer: jest.fn(),
-    setScissorRect: jest.fn(),
-    draw: jest.fn(),
-    drawIndexed: jest.fn(),
-    end: jest.fn(),
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    setVertexBuffer: vi.fn(),
+    setIndexBuffer: vi.fn(),
+    setScissorRect: vi.fn(),
+    draw: vi.fn(),
+    drawIndexed: vi.fn(),
+    end: vi.fn(),
   };
   const encoder = {
-    beginRenderPass: jest.fn(() => pass),
-    finish: jest.fn(() => ({ label: 'command-buffer' }) as unknown as GPUCommandBuffer),
+    beginRenderPass: vi.fn(() => pass),
+    finish: vi.fn(() => ({ label: 'command-buffer' }) as unknown as GPUCommandBuffer),
   };
   const queue = {
-    writeBuffer: jest.fn(),
-    submit: jest.fn(),
-    copyExternalImageToTexture: jest.fn(),
-    writeTexture: jest.fn(),
+    writeBuffer: vi.fn(),
+    submit: vi.fn(),
+    copyExternalImageToTexture: vi.fn(),
+    writeTexture: vi.fn(),
   };
   const pipelineDescriptors: GPURenderPipelineDescriptor[] = [];
-  const createRenderPipeline = jest.fn((descriptor: GPURenderPipelineDescriptor) => {
+  const createRenderPipeline = vi.fn((descriptor: GPURenderPipelineDescriptor) => {
     pipelineDescriptors.push(descriptor);
 
     return {} as GPURenderPipeline;
   });
-  const createBindGroupLayout = jest.fn(() => ({}) as GPUBindGroupLayout);
-  const createTexture = jest.fn(() => {
+  const createBindGroupLayout = vi.fn(() => ({}) as GPUBindGroupLayout);
+  const createTexture = vi.fn(() => {
     const texture = {
-      destroy: jest.fn(),
-      createView: jest.fn(() => ({}) as GPUTextureView),
+      destroy: vi.fn(),
+      createView: vi.fn(() => ({}) as GPUTextureView),
     };
 
     textures.push(texture);
 
     return texture as unknown as GPUTexture;
   });
-  const createSampler = jest.fn(() => ({}) as GPUSampler);
-  const buffers: { destroy: jest.Mock<void, []> }[] = [];
-  const textures: { destroy: jest.Mock<void, []>; createView: jest.Mock<GPUTextureView, []> }[] = [];
+  const createSampler = vi.fn(() => ({}) as GPUSampler);
+  const buffers: { destroy: MockInstance }[] = [];
+  const textures: { destroy: MockInstance; createView: MockInstance }[] = [];
   let _resolveLost: ((info: GPUDeviceLostInfo) => void) | null = null;
   const lostPromise = new Promise<GPUDeviceLostInfo>(resolve => {
     _resolveLost = resolve;
@@ -141,15 +141,15 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     } as GPUDeviceLostInfo);
   };
   const device = {
-    createShaderModule: jest.fn(() => ({}) as GPUShaderModule),
+    createShaderModule: vi.fn(() => ({}) as GPUShaderModule),
     createBindGroupLayout,
-    createPipelineLayout: jest.fn(() => ({}) as GPUPipelineLayout),
-    createBindGroup: jest.fn(() => ({}) as GPUBindGroup),
+    createPipelineLayout: vi.fn(() => ({}) as GPUPipelineLayout),
+    createBindGroup: vi.fn(() => ({}) as GPUBindGroup),
     createRenderPipeline,
-    createCommandEncoder: jest.fn(() => encoder as unknown as GPUCommandEncoder),
-    createBuffer: jest.fn(() => {
+    createCommandEncoder: vi.fn(() => encoder as unknown as GPUCommandEncoder),
+    createBuffer: vi.fn(() => {
       const buffer = {
-        destroy: jest.fn(),
+        destroy: vi.fn(),
       };
 
       buffers.push(buffer);
@@ -162,23 +162,23 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     queue,
   } as unknown as GPUDevice;
   const context = {
-    configure: jest.fn(),
-    unconfigure: jest.fn(),
-    getCurrentTexture: jest.fn(
+    configure: vi.fn(),
+    unconfigure: vi.fn(),
+    getCurrentTexture: vi.fn(
       () =>
         ({
-          createView: jest.fn(() => ({}) as GPUTextureView),
+          createView: vi.fn(() => ({}) as GPUTextureView),
         }) as unknown as GPUTexture,
     ),
   } as unknown as GPUCanvasContext;
   const gpu = {
-    requestAdapter: jest.fn(
+    requestAdapter: vi.fn(
       async () =>
         ({
-          requestDevice: jest.fn(async () => device),
+          requestDevice: vi.fn(async () => device),
         }) as unknown as GPUAdapter,
     ),
-    getPreferredCanvasFormat: jest.fn(() => 'bgra8unorm' as GPUTextureFormat),
+    getPreferredCanvasFormat: vi.fn(() => 'bgra8unorm' as GPUTextureFormat),
   } as unknown as GPU;
   const canvas = document.createElement('canvas');
 
@@ -218,7 +218,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   });
   Object.defineProperty(canvas, 'getContext', {
     configurable: true,
-    value: jest.fn((contextType: string) => (contextType === 'webgpu' ? context : null)),
+    value: vi.fn((contextType: string) => (contextType === 'webgpu' ? context : null)),
   });
 
   return {
@@ -294,19 +294,19 @@ const createMockTextCanvas = (width = 0, height = 0): MockTextCanvas => {
     textBaseline: 'alphabetic',
     lineJoin: 'miter',
     miterLimit: 10,
-    clearRect: jest.fn(),
-    fillText: jest.fn(),
-    strokeText: jest.fn(),
-    measureText: jest.fn((text: string) => ({
+    clearRect: vi.fn(),
+    fillText: vi.fn(),
+    strokeText: vi.fn(),
+    measureText: vi.fn((text: string) => ({
       width: text.length * 10,
       actualBoundingBoxLeft: 0,
       actualBoundingBoxAscent: 10,
     })),
   } as unknown as CanvasRenderingContext2D & {
-    clearRect: jest.Mock;
-    fillText: jest.Mock;
-    strokeText: jest.Mock;
-    measureText: jest.Mock;
+    clearRect: MockInstance;
+    fillText: MockInstance;
+    strokeText: MockInstance;
+    measureText: MockInstance;
   };
 
   canvas.width = width;
@@ -314,7 +314,7 @@ const createMockTextCanvas = (width = 0, height = 0): MockTextCanvas => {
 
   Object.defineProperty(canvas, 'getContext', {
     configurable: true,
-    value: jest.fn((contextType: string) => (contextType === '2d' ? context : null)),
+    value: vi.fn((contextType: string) => (contextType === '2d' ? context : null)),
   });
 
   return {
@@ -383,10 +383,10 @@ const createMockVideoElement = (): MockVideoElement => {
 
 const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuBackend, Target> => ({
   backendType: RenderBackendType.WebGpu,
-  connect: jest.fn(),
-  disconnect: jest.fn(),
-  render: jest.fn(),
-  flush: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  render: vi.fn(),
+  flush: vi.fn(),
 });
 
 describe('WebGpuBackend', () => {
@@ -435,7 +435,7 @@ describe('WebGpuBackend', () => {
       const manager = new WebGpuBackend(app);
       const renderer = createCustomRenderer<CustomDrawableA>();
       const pass = {
-        execute: jest.fn(),
+        execute: vi.fn(),
       };
 
       await manager.initialize();
@@ -1112,8 +1112,8 @@ describe('WebGpuBackend', () => {
           fontBoundingBoxAscent: 14,
           fontBoundingBoxDescent: 4,
         }) as TextMetrics,
-      fillText: jest.fn(),
-      clearRect: jest.fn(),
+      fillText: vi.fn(),
+      clearRect: vi.fn(),
       getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
     } as unknown as CanvasRenderingContext2D;
 
@@ -1170,8 +1170,8 @@ describe('WebGpuBackend', () => {
           fontBoundingBoxAscent: 14,
           fontBoundingBoxDescent: 4,
         }) as TextMetrics,
-      fillText: jest.fn(),
-      clearRect: jest.fn(),
+      fillText: vi.fn(),
+      clearRect: vi.fn(),
       getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
     } as unknown as CanvasRenderingContext2D;
 
@@ -1231,8 +1231,8 @@ describe('WebGpuBackend', () => {
           fontBoundingBoxAscent: 14,
           fontBoundingBoxDescent: 4,
         }) as TextMetrics,
-      fillText: jest.fn(),
-      clearRect: jest.fn(),
+      fillText: vi.fn(),
+      clearRect: vi.fn(),
       getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
     } as unknown as CanvasRenderingContext2D;
 
@@ -1999,10 +1999,10 @@ describe('WebGpuBackend', () => {
 
       if (gpuNavigator.gpu) {
         Object.assign(gpuNavigator.gpu, {
-          requestAdapter: jest.fn(
+          requestAdapter: vi.fn(
             async () =>
               ({
-                requestDevice: jest.fn(async () => {
+                requestDevice: vi.fn(async () => {
                   throw new Error('device request denied');
                 }),
               }) as unknown as GPUAdapter,
@@ -2035,7 +2035,7 @@ describe('WebGpuBackend', () => {
 
       if (gpuNavigator.gpu && originalRequestAdapter) {
         Object.assign(gpuNavigator.gpu, {
-          requestAdapter: jest.fn(async () => {
+          requestAdapter: vi.fn(async () => {
             if (shouldFail) {
               shouldFail = false;
 
@@ -2128,7 +2128,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
-      const lostHandler = jest.fn();
+      const lostHandler = vi.fn();
 
       await manager.initialize();
 

@@ -1,4 +1,4 @@
-import { ObservableVector } from '@/math/ObservableVector';
+﻿import { ObservableVector } from '@/math/ObservableVector';
 
 describe('ObservableVector.destroy()', () => {
   // destroy() should not throw
@@ -20,7 +20,7 @@ describe('ObservableVector.destroy()', () => {
 
   // Callback is no longer invoked after destroy()
   test('callback is no longer invoked after destroy()', () => {
-    const spy = jest.fn();
+    const spy = vi.fn();
     const v = new ObservableVector(spy, 0, 0);
 
     // Confirm callback fires before destroy

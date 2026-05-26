@@ -1,20 +1,20 @@
-import { Envelope } from '@/audio/Envelope';
+﻿import { Envelope } from '@/audio/Envelope';
 
-const makeMockAudioParam = (): jest.Mocked<AudioParam> =>
+const makeMockAudioParam = (): Mocked<AudioParam> =>
   ({
-    cancelScheduledValues: jest.fn(),
-    setValueAtTime: jest.fn(),
-    linearRampToValueAtTime: jest.fn(),
-    setTargetAtTime: jest.fn(),
-    exponentialRampToValueAtTime: jest.fn(),
-    setValueCurveAtTime: jest.fn(),
-    cancelAndHoldAtTime: jest.fn(),
+    cancelScheduledValues: vi.fn(),
+    setValueAtTime: vi.fn(),
+    linearRampToValueAtTime: vi.fn(),
+    setTargetAtTime: vi.fn(),
+    exponentialRampToValueAtTime: vi.fn(),
+    setValueCurveAtTime: vi.fn(),
+    cancelAndHoldAtTime: vi.fn(),
     value: 0,
     automationRate: 'a-rate',
     defaultValue: 0,
     maxValue: 3.4028234663852886e38,
     minValue: -3.4028234663852886e38,
-  }) as unknown as jest.Mocked<AudioParam>;
+  }) as unknown as Mocked<AudioParam>;
 
 describe('Envelope', () => {
   test('default values match spec', () => {

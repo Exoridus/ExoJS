@@ -1,15 +1,17 @@
 describe('@/core/Application import behavior', () => {
-  afterEach(() => {
-    jest.restoreAllMocks();
-    jest.resetModules();
+  beforeEach(() => {
+    vi.resetModules();
   });
 
-  it('does not create a canvas on import', () => {
-    const createElementSpy = jest.spyOn(document, 'createElement');
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
 
-    jest.isolateModules(() => {
-      require('@/core/Application');
-    });
+  it('does not create a canvas on import', async () => {
+    const createElementSpy = vi.spyOn(document, 'createElement');
+
+    await import('@/core/Application');
 
     expect(createElementSpy).not.toHaveBeenCalled();
   });

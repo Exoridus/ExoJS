@@ -1,35 +1,35 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { Sound } from '@/audio/Sound';
 
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 5 }) as AudioBuffer;
 
 interface MockGainNode {
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  connect: MockInstance;
+  disconnect: MockInstance;
   gain: {
-    setTargetAtTime: jest.Mock;
-    cancelScheduledValues: jest.Mock;
-    setValueAtTime: jest.Mock;
-    linearRampToValueAtTime: jest.Mock;
+    setTargetAtTime: MockInstance;
+    cancelScheduledValues: MockInstance;
+    setValueAtTime: MockInstance;
+    linearRampToValueAtTime: MockInstance;
     value: number;
   };
 }
 
 const setupGainSpy = (): { gainNode: MockGainNode; restore: () => void } => {
   const gainNode: MockGainNode = {
-    connect: jest.fn(),
-    disconnect: jest.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
     gain: {
-      setTargetAtTime: jest.fn(),
-      cancelScheduledValues: jest.fn(),
-      setValueAtTime: jest.fn(),
-      linearRampToValueAtTime: jest.fn(),
+      setTargetAtTime: vi.fn(),
+      cancelScheduledValues: vi.fn(),
+      setValueAtTime: vi.fn(),
+      linearRampToValueAtTime: vi.fn(),
       value: 1,
     },
   };
 
   const ctx = getAudioContext() as AudioContext & { createGain: () => GainNode };
-  const spy = jest.spyOn(ctx, 'createGain').mockReturnValue(gainNode as unknown as GainNode);
+  const spy = vi.spyOn(ctx, 'createGain').mockReturnValue(gainNode as unknown as GainNode);
 
   return {
     gainNode,
@@ -39,8 +39,8 @@ const setupGainSpy = (): { gainNode: MockGainNode; restore: () => void } => {
 
 describe('Audio fade helpers', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.useRealTimers();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   test('fadeIn(0) plays immediately if paused', () => {
@@ -88,7 +88,7 @@ describe('Audio fade helpers', () => {
   });
 
   test('fadeOut(500) schedules ramp and pauses after durationMs', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { gainNode, restore } = setupGainSpy();
     const ctx = getAudioContext();
     const sound = new Sound(createAudioBufferStub());
@@ -100,7 +100,7 @@ describe('Audio fade helpers', () => {
     expect(gainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime + 0.5);
 
     expect(sound.paused).toBe(false);
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
     expect(sound.paused).toBe(true);
 
     restore();
@@ -108,14 +108,14 @@ describe('Audio fade helpers', () => {
   });
 
   test('fadeOut(500, { stopAfter: false }) does not pause', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
 
     sound.play();
     sound.fadeOut(500, { stopAfter: false });
 
-    jest.advanceTimersByTime(600);
+    vi.advanceTimersByTime(600);
     expect(sound.paused).toBe(false);
 
     restore();
@@ -123,7 +123,7 @@ describe('Audio fade helpers', () => {
   });
 
   test('fadeIn(500) cancels a previous fadeOut scheduled pause', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
 
@@ -131,11 +131,11 @@ describe('Audio fade helpers', () => {
     sound.fadeOut(500);
 
     // Before the fade out timer fires, call fadeIn — should cancel the stop
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
     sound.fadeIn(500);
 
     // Now advance past the original fadeOut duration
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
     expect(sound.paused).toBe(false);
 
     restore();
@@ -143,7 +143,7 @@ describe('Audio fade helpers', () => {
   });
 
   test('destroy() clears scheduled stops without leaking timers', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
 

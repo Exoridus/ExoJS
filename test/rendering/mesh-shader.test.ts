@@ -1,4 +1,4 @@
-import { MeshShader } from '@/rendering/mesh/MeshShader';
+﻿import { MeshShader } from '@/rendering/mesh/MeshShader';
 
 const minimalGlsl = {
   vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
@@ -186,7 +186,7 @@ describe('MeshShader', () => {
   describe('lifecycle', () => {
     test('destroy fires registered dispose callbacks', () => {
       const shader = new MeshShader({ glsl: minimalGlsl });
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       shader._onDispose(callback);
       shader.destroy();
@@ -196,7 +196,7 @@ describe('MeshShader', () => {
 
     test('destroy can be called multiple times safely', () => {
       const shader = new MeshShader({ glsl: minimalGlsl });
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       shader._onDispose(callback);
       shader.destroy();
@@ -207,8 +207,8 @@ describe('MeshShader', () => {
 
     test('multiple dispose callbacks all fire on destroy', () => {
       const shader = new MeshShader({ glsl: minimalGlsl });
-      const a = jest.fn();
-      const b = jest.fn();
+      const a = vi.fn();
+      const b = vi.fn();
 
       shader._onDispose(a);
       shader._onDispose(b);

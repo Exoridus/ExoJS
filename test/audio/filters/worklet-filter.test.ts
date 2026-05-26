@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { WorkletFilter } from '@/audio/filters/WorkletFilter';
 
 // ---------------------------------------------------------------------------
@@ -19,24 +19,24 @@ class TestWorkletFilter extends WorkletFilter {
 // ---------------------------------------------------------------------------
 
 describe('WorkletFilter', () => {
-  let addModuleMock: jest.Mock;
+  let addModuleMock: MockInstance;
 
   beforeEach(() => {
     const ctx = getAudioContext();
-    addModuleMock = jest.fn().mockResolvedValue(undefined);
-    (ctx as unknown as { audioWorklet: { addModule: jest.Mock } }).audioWorklet.addModule = addModuleMock;
+    addModuleMock = vi.fn().mockResolvedValue(undefined);
+    (ctx as unknown as { audioWorklet: { addModule: MockInstance } }).audioWorklet.addModule = addModuleMock;
 
-    jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-url');
-    jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('construction creates input/output gains immediately (sync)', () => {
     const ctx = getAudioContext();
-    const gainSpy = jest.spyOn(ctx, 'createGain');
+    const gainSpy = vi.spyOn(ctx, 'createGain');
     const filter = new TestWorkletFilter();
     // At least 2 gains: input and output
     expect(gainSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
@@ -64,13 +64,13 @@ describe('WorkletFilter', () => {
 
   it('initial passthrough: inputGain connects to outputGain before worklet loads', () => {
     const ctx = getAudioContext();
-    let capturedInputGain: { connect: jest.Mock } | null = null;
+    let capturedInputGain: { connect: MockInstance } | null = null;
     const originalCreateGain = ctx.createGain.bind(ctx);
     let callCount = 0;
-    jest.spyOn(ctx, 'createGain').mockImplementation(() => {
-      const node = originalCreateGain() as unknown as { connect: jest.Mock; disconnect: jest.Mock; gain: unknown };
-      node.connect = jest.fn();
-      node.disconnect = jest.fn();
+    vi.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const node = originalCreateGain() as unknown as { connect: MockInstance; disconnect: MockInstance; gain: unknown };
+      node.connect = vi.fn();
+      node.disconnect = vi.fn();
       callCount++;
       if (callCount === 1) capturedInputGain = node;
       return node as unknown as GainNode;
@@ -92,12 +92,12 @@ describe('WorkletFilter', () => {
 
   it('destroy disconnects all nodes', () => {
     const ctx = getAudioContext();
-    const nodes: { disconnect: jest.Mock }[] = [];
+    const nodes: { disconnect: MockInstance }[] = [];
     const originalCreateGain = ctx.createGain.bind(ctx);
-    jest.spyOn(ctx, 'createGain').mockImplementation(() => {
-      const node = originalCreateGain() as unknown as { connect: jest.Mock; disconnect: jest.Mock; gain: unknown };
-      node.connect = jest.fn();
-      node.disconnect = jest.fn();
+    vi.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const node = originalCreateGain() as unknown as { connect: MockInstance; disconnect: MockInstance; gain: unknown };
+      node.connect = vi.fn();
+      node.disconnect = vi.fn();
       nodes.push(node);
       return node as unknown as GainNode;
     });

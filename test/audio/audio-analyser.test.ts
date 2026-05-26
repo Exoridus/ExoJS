@@ -1,4 +1,4 @@
-import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
+﻿import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
 import { AudioAnalyser } from '@/audio/AudioAnalyser';
 import { AudioBus } from '@/audio/AudioBus';
 import { disposeAudioManager } from '@/audio/AudioManager';
@@ -30,7 +30,7 @@ describe('AudioAnalyser', () => {
 
   afterEach(() => {
     disposeAudioManager();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // ---- Construction ----
@@ -115,7 +115,7 @@ describe('AudioAnalyser', () => {
       const bus = new AudioBus('tap-bus');
       const outputNode = bus._getOutputNode();
       if (outputNode) {
-        const connectSpy = jest.spyOn(outputNode, 'connect');
+        const connectSpy = vi.spyOn(outputNode, 'connect');
         const a = new AudioAnalyser();
         a.source = bus;
         expect(connectSpy).toHaveBeenCalled();
@@ -130,7 +130,7 @@ describe('AudioAnalyser', () => {
       const ctx = getAudioContext();
       const gainNode = ctx.createGain();
       const soundLike = { analyserTarget: gainNode };
-      const connectSpy = jest.spyOn(gainNode, 'connect');
+      const connectSpy = vi.spyOn(gainNode, 'connect');
       const a = new AudioAnalyser();
       a.source = soundLike as unknown as import('@/audio/Sound').Sound;
       expect(connectSpy).toHaveBeenCalled();
@@ -143,7 +143,7 @@ describe('AudioAnalyser', () => {
       const ctx = getAudioContext();
       const gainNode = ctx.createGain();
       const musicLike = { analyserTarget: gainNode };
-      const connectSpy = jest.spyOn(gainNode, 'connect');
+      const connectSpy = vi.spyOn(gainNode, 'connect');
       const a = new AudioAnalyser();
       a.source = musicLike as unknown as import('@/audio/Music').Music;
       expect(connectSpy).toHaveBeenCalled();
@@ -155,7 +155,7 @@ describe('AudioAnalyser', () => {
     it('accepts a MediaStream (creates MediaStreamAudioSourceNode)', () => {
       const stream = makeMediaStream();
       const ctx = getAudioContext();
-      const createMSSpy = jest.spyOn(ctx, 'createMediaStreamSource');
+      const createMSSpy = vi.spyOn(ctx, 'createMediaStreamSource');
       const a = new AudioAnalyser();
       a.source = stream;
       expect(createMSSpy).toHaveBeenCalledWith(stream);
@@ -166,7 +166,7 @@ describe('AudioAnalyser', () => {
   describe('source setter — AudioNode', () => {
     it('accepts a raw AudioNode', () => {
       const node = makeAudioNode();
-      const connectSpy = jest.spyOn(node, 'connect');
+      const connectSpy = vi.spyOn(node, 'connect');
       const a = new AudioAnalyser();
       a.source = node;
       expect(connectSpy).toHaveBeenCalled();

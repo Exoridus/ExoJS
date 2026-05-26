@@ -1,3 +1,4 @@
+﻿import { RenderPassInspectorLayer } from '@/debug/RenderPassInspectorLayer';
 import { Signal } from '@/core/Signal';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
@@ -16,13 +17,13 @@ const fakeGlyph = {
   uvTop: 0,
   uvBottom: 0.02,
 };
-const fakePage = { texture: { updateSource: jest.fn() }, index: 0 };
+const fakePage = { texture: { updateSource: vi.fn() }, index: 0 };
 const fakeAtlas = {
-  getGlyph: jest.fn(() => fakeGlyph),
+  getGlyph: vi.fn(() => fakeGlyph),
   pages: [fakePage],
-  clear: jest.fn(),
+  clear: vi.fn(),
 };
-const fakePool = { getAtlas: jest.fn(() => fakeAtlas) };
+const fakePool = { getAtlas: vi.fn(() => fakeAtlas) };
 beforeEach(() => {
   resetDefaultGlyphAtlasPool(fakePool as unknown as GlyphAtlasPool);
 });
@@ -52,7 +53,7 @@ interface FakeNode {
   filters: FakeFilter[];
   mask: object | null;
   cacheAsBitmap: boolean;
-  getBounds: jest.Mock;
+  getBounds: MockInstance;
   children: FakeNode[];
   constructor: { name: string };
 }
@@ -80,7 +81,7 @@ function makeNode(
     filters,
     mask,
     cacheAsBitmap,
-    getBounds: jest.fn(() => ({ width, height, left: 0, top: 0, right: width, bottom: height })),
+    getBounds: vi.fn(() => ({ width, height, left: 0, top: 0, right: width, bottom: height })),
     children,
     constructor: NamedClass as any,
   };
@@ -102,19 +103,16 @@ const makeTime = () => ({ milliseconds: 16, seconds: 0.016 }) as unknown as impo
 
 describe('RenderPassInspectorLayer', () => {
   test('visible defaults to false', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const layer = new RenderPassInspectorLayer(makeApp());
     expect(layer.visible).toBe(false);
   });
 
   test('viewMode is "screen"', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const layer = new RenderPassInspectorLayer(makeApp());
     expect(layer.viewMode).toBe('screen');
   });
 
   test('update with no active scene yields empty entries', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const layer = new RenderPassInspectorLayer(makeApp(null));
     layer.update(makeTime());
     expect(layer.entries).toEqual([]);
@@ -122,7 +120,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('update with no filters yields empty entries', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const root = makeNode({ filters: [], children: [makeNode({ filters: [] }), makeNode({ filters: [] })] });
     const layer = new RenderPassInspectorLayer(makeApp(root));
     layer.update(makeTime());
@@ -130,7 +127,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('update collects entries for nodes with active filter chains', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const blur = makeFilter('BlurFilter');
     const color = makeFilter('ColorFilter');
     const root = makeNode({
@@ -153,7 +149,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('totalPasses counts filters across all entries plus masks', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const filterA = makeFilter('A');
     const filterB = makeFilter('B');
     const filterC = makeFilter('C');
@@ -172,7 +167,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('skips invisible nodes', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const invisible = makeNode({ visible: false, filters: [makeFilter('BlurFilter')] });
     const layer = new RenderPassInspectorLayer(makeApp(invisible));
     layer.update(makeTime());
@@ -180,7 +174,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('mask flag is reflected in entry', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const root = makeNode({ filters: [makeFilter('BlurFilter')], mask: { something: true } });
     const layer = new RenderPassInspectorLayer(makeApp(root));
     layer.update(makeTime());
@@ -188,7 +181,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('cacheAsBitmap flag is reflected in entry', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const root = makeNode({ filters: [makeFilter('BlurFilter')], cacheAsBitmap: true });
     const layer = new RenderPassInspectorLayer(makeApp(root));
     layer.update(makeTime());
@@ -196,7 +188,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('recurses into Container children', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const child1 = makeNode({ filters: [makeFilter('A')] });
     const child2 = makeNode({ filters: [makeFilter('B')] });
     const root = makeNode({ children: [child1, child2] });
@@ -206,7 +197,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('destroy releases panel state and clears entries', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const root = makeNode({ filters: [makeFilter('A')] });
     const layer = new RenderPassInspectorLayer(makeApp(root));
     layer.update(makeTime());
@@ -217,7 +207,6 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('subsequent update replaces previous entries (no accumulation)', () => {
-    const { RenderPassInspectorLayer } = require('../../src/debug/RenderPassInspectorLayer') as typeof import('../../src/debug/RenderPassInspectorLayer');
     const root = makeNode({ filters: [makeFilter('A')] });
     const layer = new RenderPassInspectorLayer(makeApp(root));
     layer.update(makeTime());

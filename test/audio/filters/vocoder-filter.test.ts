@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
 import { VocoderFilter } from '@/audio/filters/VocoderFilter';
 
@@ -15,18 +15,18 @@ function makeModulatorBus(): AudioBus {
 // ---------------------------------------------------------------------------
 
 describe('VocoderFilter', () => {
-  let addModuleMock: jest.Mock;
+  let addModuleMock: MockInstance;
 
   beforeEach(() => {
     const ctx = getAudioContext();
-    addModuleMock = jest.fn().mockResolvedValue(undefined);
-    (ctx as unknown as { audioWorklet: { addModule: jest.Mock } }).audioWorklet.addModule = addModuleMock;
-    jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:vocoder-url');
-    jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    addModuleMock = vi.fn().mockResolvedValue(undefined);
+    (ctx as unknown as { audioWorklet: { addModule: MockInstance } }).audioWorklet.addModule = addModuleMock;
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:vocoder-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // -------------------------------------------------------------------------
@@ -113,7 +113,7 @@ describe('VocoderFilter', () => {
     it('after await filter.ready: workletNode has 2 inputs (carrier + modulator)', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -130,8 +130,8 @@ describe('VocoderFilter', () => {
       const filter = new VocoderFilter({ modulator, wet: 0.7, envelopeSmoothing: 0.01 });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const wetParam = node.parameters.get('wet') as unknown as { setTargetAtTime: jest.Mock };
-      const esParam = node.parameters.get('envelopeSmoothing') as unknown as { setTargetAtTime: jest.Mock };
+      const wetParam = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
+      const esParam = node.parameters.get('envelopeSmoothing') as unknown as { setTargetAtTime: MockInstance };
       expect(wetParam.setTargetAtTime).toHaveBeenCalledWith(0.7, expect.anything(), expect.anything());
       expect(esParam.setTargetAtTime).toHaveBeenCalledWith(0.01, expect.anything(), expect.anything());
       filter.destroy();
@@ -140,7 +140,7 @@ describe('VocoderFilter', () => {
     it('processorOptions numBands is forwarded to AudioWorkletNode', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -155,7 +155,7 @@ describe('VocoderFilter', () => {
     it('processorOptions minHz and maxHz are forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -171,7 +171,7 @@ describe('VocoderFilter', () => {
     it('processorOptions bandQ is forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -187,10 +187,10 @@ describe('VocoderFilter', () => {
       const modulator = makeModulatorBus();
 
       // Give modulator time to set up
-      const modOutputConnectSpy = jest.fn();
-      jest.spyOn(modulator, '_getOutputNode').mockReturnValue({
+      const modOutputConnectSpy = vi.fn();
+      vi.spyOn(modulator, '_getOutputNode').mockReturnValue({
         connect: modOutputConnectSpy,
-        disconnect: jest.fn(),
+        disconnect: vi.fn(),
       } as unknown as GainNode);
 
       const filter = new VocoderFilter({ modulator });
@@ -211,7 +211,7 @@ describe('VocoderFilter', () => {
       const filter = new VocoderFilter({ modulator });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.wet = 0.4;
       expect(filter.wet).toBe(0.4);
@@ -224,7 +224,7 @@ describe('VocoderFilter', () => {
       const filter = new VocoderFilter({ modulator });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('envelopeSmoothing') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('envelopeSmoothing') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.envelopeSmoothing = 0.02;
       expect(filter.envelopeSmoothing).toBe(0.02);

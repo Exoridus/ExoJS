@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
 import { DuckingFilter } from '@/audio/filters/DuckingFilter';
 
@@ -14,20 +14,20 @@ const makeSidechain = (): AudioBus => new AudioBus('sidechain-test');
 
 describe('DuckingFilter', () => {
   let sidechain: AudioBus;
-  let addModuleMock: jest.Mock;
+  let addModuleMock: MockInstance;
 
   beforeEach(() => {
     sidechain = makeSidechain();
     const ctx = getAudioContext();
-    addModuleMock = jest.fn().mockResolvedValue(undefined);
-    (ctx as unknown as { audioWorklet: { addModule: jest.Mock } }).audioWorklet.addModule = addModuleMock;
-    jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:ducking-url');
-    jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    addModuleMock = vi.fn().mockResolvedValue(undefined);
+    (ctx as unknown as { audioWorklet: { addModule: MockInstance } }).audioWorklet.addModule = addModuleMock;
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:ducking-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     sidechain.destroy();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('construction', () => {
@@ -94,7 +94,7 @@ describe('DuckingFilter', () => {
     it('after await filter.ready: workletNode has 2 inputs configured', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -109,8 +109,8 @@ describe('DuckingFilter', () => {
       const filter = new DuckingFilter({ sidechain, threshold: -15, ratio: 6 });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const thresholdParam = node.parameters.get('threshold') as unknown as { setTargetAtTime: jest.Mock };
-      const ratioParam = node.parameters.get('ratio') as unknown as { setTargetAtTime: jest.Mock };
+      const thresholdParam = node.parameters.get('threshold') as unknown as { setTargetAtTime: MockInstance };
+      const ratioParam = node.parameters.get('ratio') as unknown as { setTargetAtTime: MockInstance };
       expect(thresholdParam.setTargetAtTime).toHaveBeenCalledWith(-15, expect.anything(), expect.anything());
       expect(ratioParam.setTargetAtTime).toHaveBeenCalledWith(6, expect.anything(), expect.anything());
       filter.destroy();
@@ -120,8 +120,8 @@ describe('DuckingFilter', () => {
       const filter = new DuckingFilter({ sidechain, attackMs: 30, releaseMs: 300 });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const attackParam = node.parameters.get('attack') as unknown as { setTargetAtTime: jest.Mock };
-      const releaseParam = node.parameters.get('release') as unknown as { setTargetAtTime: jest.Mock };
+      const attackParam = node.parameters.get('attack') as unknown as { setTargetAtTime: MockInstance };
+      const releaseParam = node.parameters.get('release') as unknown as { setTargetAtTime: MockInstance };
       // attack coefficient should be in (0, 1)
       expect(attackParam.setTargetAtTime).toHaveBeenCalled();
       const attackCoeff = attackParam.setTargetAtTime.mock.calls[0][0];
@@ -138,7 +138,7 @@ describe('DuckingFilter', () => {
       // Ensure sidechain output node exists
       const sidechainOutputNode = sidechain._getOutputNode();
       if (sidechainOutputNode) {
-        const connectSpy = jest.spyOn(sidechainOutputNode, 'connect');
+        const connectSpy = vi.spyOn(sidechainOutputNode, 'connect');
         const filter = new DuckingFilter({ sidechain });
         await filter.ready;
         // Should have been called with (workletNode, 0, 1)
@@ -154,7 +154,7 @@ describe('DuckingFilter', () => {
       const filter = new DuckingFilter({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('threshold') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('threshold') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.threshold = -30;
       expect(filter.threshold).toBe(-30);
@@ -166,7 +166,7 @@ describe('DuckingFilter', () => {
       const filter = new DuckingFilter({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('ratio') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('ratio') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.ratio = 8;
       expect(filter.ratio).toBe(8);
@@ -178,7 +178,7 @@ describe('DuckingFilter', () => {
       const filter = new DuckingFilter({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('attack') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('attack') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.attackMs = 100;
       expect(filter.attackMs).toBe(100);
@@ -190,7 +190,7 @@ describe('DuckingFilter', () => {
       const filter = new DuckingFilter({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('release') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('release') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.releaseMs = 500;
       expect(filter.releaseMs).toBe(500);

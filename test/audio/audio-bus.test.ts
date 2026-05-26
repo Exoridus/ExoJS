@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
 import type { AudioFilter } from '@/audio/AudioFilter';
 
@@ -7,43 +7,43 @@ import type { AudioFilter } from '@/audio/AudioFilter';
 // ---------------------------------------------------------------------------
 
 interface MockGainNode {
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  connect: MockInstance;
+  disconnect: MockInstance;
   gain: {
-    setTargetAtTime: jest.Mock;
-    cancelScheduledValues: jest.Mock;
-    setValueAtTime: jest.Mock;
-    linearRampToValueAtTime: jest.Mock;
+    setTargetAtTime: MockInstance;
+    cancelScheduledValues: MockInstance;
+    setValueAtTime: MockInstance;
+    linearRampToValueAtTime: MockInstance;
     value: number;
   };
 }
 
 interface MockPannerNode {
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  connect: MockInstance;
+  disconnect: MockInstance;
   pan: {
-    setTargetAtTime: jest.Mock;
+    setTargetAtTime: MockInstance;
     value: number;
   };
 }
 
 const createMockGainNode = (): MockGainNode => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   gain: {
-    setTargetAtTime: jest.fn(),
-    cancelScheduledValues: jest.fn(),
-    setValueAtTime: jest.fn(),
-    linearRampToValueAtTime: jest.fn(),
+    setTargetAtTime: vi.fn(),
+    cancelScheduledValues: vi.fn(),
+    setValueAtTime: vi.fn(),
+    linearRampToValueAtTime: vi.fn(),
     value: 1,
   },
 });
 
 const createMockPannerNode = (): MockPannerNode => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   pan: {
-    setTargetAtTime: jest.fn(),
+    setTargetAtTime: vi.fn(),
     value: 0,
   },
 });
@@ -66,11 +66,11 @@ const spyOnBusCreation = (): BusSpy => {
   };
 
   let gainCallCount = 0;
-  const gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+  const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     gainCallCount++;
     return (gainCallCount % 2 === 1 ? inputNode : outputNode) as unknown as GainNode;
   });
-  const pannerSpy = jest.spyOn(ctx, 'createStereoPanner').mockReturnValue(panNode as unknown as StereoPannerNode);
+  const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockReturnValue(panNode as unknown as StereoPannerNode);
 
   return {
     inputNode,
@@ -107,8 +107,8 @@ class StubFilter implements AudioFilter {
 
 describe('AudioBus', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.useRealTimers();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   // 1. Basic construction
@@ -219,7 +219,7 @@ describe('AudioBus', () => {
   });
 
   test('fadeOut(500) schedules ramp to 0 and then mutes', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const spy = spyOnBusCreation();
     const ctx = getAudioContext();
     const bus = new AudioBus('fade-out-test', { volume: 1 });
@@ -230,7 +230,7 @@ describe('AudioBus', () => {
     expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime + 0.5);
 
     expect(bus.muted).toBe(false);
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
     expect(bus.muted).toBe(true);
 
     spy.restore();
@@ -238,12 +238,12 @@ describe('AudioBus', () => {
   });
 
   test('fadeOut(500, { stopAfter: false }) does NOT mute after duration', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const spy = spyOnBusCreation();
     const bus = new AudioBus('fade-out-no-stop');
 
     bus.fadeOut(500, { stopAfter: false });
-    jest.advanceTimersByTime(600);
+    vi.advanceTimersByTime(600);
     expect(bus.muted).toBe(false);
 
     spy.restore();
@@ -251,14 +251,14 @@ describe('AudioBus', () => {
   });
 
   test('fadeIn cancels a previously scheduled fadeOut mute', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const spy = spyOnBusCreation();
     const bus = new AudioBus('cancel-fade');
 
     bus.fadeOut(500);
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
     bus.fadeIn(500);
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
 
     expect(bus.muted).toBe(false);
 

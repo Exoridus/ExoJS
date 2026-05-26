@@ -1,4 +1,4 @@
-import { SceneNode } from '@/core/SceneNode';
+﻿import { SceneNode } from '@/core/SceneNode';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { Graphics } from '@/rendering/primitives/Graphics';
@@ -114,7 +114,7 @@ describe('Container', () => {
     container.addChild(first);
     container.addChild(second);
 
-    const sortSpy = jest.spyOn(container.children, 'sort');
+    const sortSpy = vi.spyOn(container.children, 'sort');
 
     container.sortChildren();
     container.sortChildren();

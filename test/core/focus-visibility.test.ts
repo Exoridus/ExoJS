@@ -8,86 +8,85 @@ interface FocusVisibilityHarness {
   readonly Application: typeof import('@/core/Application').Application;
   readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
   readonly inputManagerMock: {
-    update: jest.Mock;
-    destroy: jest.Mock;
+    update: MockInstance;
+    destroy: MockInstance;
     canvasFocused: boolean;
     onCanvasFocusChange: Signal<[focused: boolean]>;
   };
   readonly sceneManagerMock: {
-    update: jest.Mock;
-    setScene: jest.Mock;
-    destroy: jest.Mock;
+    update: MockInstance;
+    setScene: MockInstance;
+    destroy: MockInstance;
   };
   readonly interactionMock: {
-    update: jest.Mock;
-    destroy: jest.Mock;
+    update: MockInstance;
+    destroy: MockInstance;
   };
 }
 
-const loadHarness = (): FocusVisibilityHarness => {
+const loadHarness = async (): Promise<FocusVisibilityHarness> => {
   const onCanvasFocusChange = new Signal<[focused: boolean]>();
 
   const inputManagerMock = {
-    update: jest.fn(),
-    destroy: jest.fn(),
+    update: vi.fn(),
+    destroy: vi.fn(),
     canvasFocused: false,
     onCanvasFocusChange,
   };
 
   const sceneManagerMock = {
-    update: jest.fn(),
-    setScene: jest.fn().mockResolvedValue(undefined),
-    destroy: jest.fn(),
+    update: vi.fn(),
+    setScene: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn(),
   };
 
   const interactionMock = {
-    update: jest.fn(),
-    destroy: jest.fn(),
+    update: vi.fn(),
+    destroy: vi.fn(),
   };
 
   const backendMock = {
-    initialize: jest.fn().mockResolvedValue(undefined),
-    flush: jest.fn(),
-    resize: jest.fn(),
-    destroy: jest.fn(),
-    resetStats: jest.fn().mockReturnThis(),
+    initialize: vi.fn().mockResolvedValue(undefined),
+    flush: vi.fn(),
+    resize: vi.fn(),
+    destroy: vi.fn(),
+    resetStats: vi.fn().mockReturnThis(),
     stats: { frameTimeMs: 0 },
-    onContextLost: { add: jest.fn(), destroy: jest.fn() },
-    onContextRestored: { add: jest.fn(), destroy: jest.fn() },
-    onDeviceLost: { add: jest.fn(), destroy: jest.fn() },
-    onDeviceRestored: { add: jest.fn(), destroy: jest.fn() },
+    onContextLost: { add: vi.fn(), destroy: vi.fn() },
+    onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+    onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
+    onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
   };
 
-  let Application!: typeof import('@/core/Application').Application;
-  let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
-
-  jest.resetModules();
-  jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-    WebGl2Backend: jest.fn(() => backendMock),
+  vi.resetModules();
+  vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+    WebGl2Backend: vi.fn(function () { return backendMock; }),
   }));
-  jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-    WebGpuBackend: jest.fn(() => backendMock),
+  vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+    WebGpuBackend: vi.fn(function () { return backendMock; }),
   }));
-  jest.doMock('@/resources/Loader', () => ({
-    Loader: jest.fn(() => ({ destroy: jest.fn() })),
+  vi.doMock('@/resources/Loader', () => ({
+    Loader: vi.fn(function () { return { destroy: vi.fn() }; }),
   }));
-  jest.doMock('@/input/InputManager', () => ({
-    InputManager: jest.fn(() => inputManagerMock),
+  vi.doMock('@/input/InputManager', () => ({
+    InputManager: vi.fn(function () { return inputManagerMock; }),
   }));
-  jest.doMock('@/input/InteractionManager', () => ({
-    InteractionManager: jest.fn(() => interactionMock),
+  vi.doMock('@/input/InteractionManager', () => ({
+    InteractionManager: vi.fn(function () { return interactionMock; }),
   }));
-  jest.doMock('@/core/SceneManager', () => ({
-    SceneManager: jest.fn(() => sceneManagerMock),
+  vi.doMock('@/core/SceneManager', () => ({
+    SceneManager: vi.fn(function () { return sceneManagerMock; }),
   }));
 
-  jest.isolateModules(() => {
-    const mod = require('@/core/Application') as typeof import('@/core/Application');
-    Application = mod.Application;
-    ApplicationStatus = mod.ApplicationStatus;
-  });
+  const mod = await import('@/core/Application');
 
-  return { Application, ApplicationStatus, inputManagerMock, sceneManagerMock, interactionMock };
+  return {
+    Application: mod.Application,
+    ApplicationStatus: mod.ApplicationStatus,
+    inputManagerMock,
+    sceneManagerMock,
+    interactionMock,
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -96,12 +95,12 @@ const loadHarness = (): FocusVisibilityHarness => {
 
 describe('Application focus / visibility', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.resetModules();
+    vi.restoreAllMocks();
+    vi.resetModules();
   });
 
-  test('canvasFocused reflects input.canvasFocused', () => {
-    const { Application, inputManagerMock } = loadHarness();
+  test('canvasFocused reflects input.canvasFocused', async () => {
+    const { Application, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     expect(app.canvasFocused).toBe(false);
@@ -112,11 +111,11 @@ describe('Application focus / visibility', () => {
     app.destroy();
   });
 
-  test('focusing the canvas dispatches onCanvasFocusChange(true)', () => {
-    const { Application, inputManagerMock } = loadHarness();
+  test('focusing the canvas dispatches onCanvasFocusChange(true)', async () => {
+    const { Application, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
-    const handler = jest.fn();
+    const handler = vi.fn();
     app.onCanvasFocusChange.add(handler);
 
     inputManagerMock.onCanvasFocusChange.dispatch(true);
@@ -125,11 +124,11 @@ describe('Application focus / visibility', () => {
     app.destroy();
   });
 
-  test('blurring the canvas dispatches onCanvasFocusChange(false)', () => {
-    const { Application, inputManagerMock } = loadHarness();
+  test('blurring the canvas dispatches onCanvasFocusChange(false)', async () => {
+    const { Application, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
-    const handler = jest.fn();
+    const handler = vi.fn();
     app.onCanvasFocusChange.add(handler);
 
     inputManagerMock.onCanvasFocusChange.dispatch(false);
@@ -138,8 +137,8 @@ describe('Application focus / visibility', () => {
     app.destroy();
   });
 
-  test('documentVisible is true initially', () => {
-    const { Application } = loadHarness();
+  test('documentVisible is true initially', async () => {
+    const { Application } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
     // jsdom visibilityState defaults to 'visible'
@@ -148,11 +147,11 @@ describe('Application focus / visibility', () => {
     app.destroy();
   });
 
-  test('visibilitychange event flips documentVisible and dispatches signal', () => {
-    const { Application } = loadHarness();
+  test('visibilitychange event flips documentVisible and dispatches signal', async () => {
+    const { Application } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
-    const handler = jest.fn();
+    const handler = vi.fn();
     app.onVisibilityChange.add(handler);
 
     // Simulate hidden
@@ -179,8 +178,8 @@ describe('Application focus / visibility', () => {
     app.destroy();
   });
 
-  test('pauseOnHidden=true skips frame body but keeps rAF scheduled when hidden', () => {
-    const { Application, ApplicationStatus, sceneManagerMock, interactionMock, inputManagerMock } = loadHarness();
+  test('pauseOnHidden=true skips frame body but keeps rAF scheduled when hidden', async () => {
+    const { Application, ApplicationStatus, sceneManagerMock, interactionMock, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -194,21 +193,21 @@ describe('Application focus / visibility', () => {
 
     // Set up raw state for update()
     rawApp['_status'] = ApplicationStatus.Running;
-    rawApp['_updateHandler'] = jest.fn();
+    rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameClock'] = {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: jest.fn(),
-      stop: jest.fn(),
-      destroy: jest.fn(),
+      restart: vi.fn(),
+      stop: vi.fn(),
+      destroy: vi.fn(),
     };
-    rawApp['_activeClock'] = { stop: jest.fn(), start: jest.fn(), destroy: jest.fn() };
-    rawApp['_startupClock'] = { start: jest.fn(), destroy: jest.fn() };
-    rawApp['onFrame'] = { dispatch: jest.fn(), destroy: jest.fn() };
-    rawApp['onResize'] = { dispatch: jest.fn(), destroy: jest.fn() };
+    rawApp['_activeClock'] = { stop: vi.fn(), start: vi.fn(), destroy: vi.fn() };
+    rawApp['_startupClock'] = { start: vi.fn(), destroy: vi.fn() };
+    rawApp['onFrame'] = { dispatch: vi.fn(), destroy: vi.fn() };
+    rawApp['onResize'] = { dispatch: vi.fn(), destroy: vi.fn() };
 
     app.pauseOnHidden = true;
 
-    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 42);
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 42);
 
     app.update();
 
@@ -230,8 +229,8 @@ describe('Application focus / visibility', () => {
     app.destroy();
   });
 
-  test('pauseOnHidden=false (default) updates normally even when hidden', () => {
-    const { Application, ApplicationStatus, sceneManagerMock, inputManagerMock } = loadHarness();
+  test('pauseOnHidden=false (default) updates normally even when hidden', async () => {
+    const { Application, ApplicationStatus, sceneManagerMock, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -243,31 +242,31 @@ describe('Application focus / visibility', () => {
     document.dispatchEvent(new Event('visibilitychange'));
 
     rawApp['_status'] = ApplicationStatus.Running;
-    rawApp['_updateHandler'] = jest.fn();
+    rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameClock'] = {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: jest.fn(),
-      stop: jest.fn(),
-      destroy: jest.fn(),
+      restart: vi.fn(),
+      stop: vi.fn(),
+      destroy: vi.fn(),
     };
-    rawApp['_activeClock'] = { stop: jest.fn(), start: jest.fn(), destroy: jest.fn() };
-    rawApp['_startupClock'] = { start: jest.fn(), destroy: jest.fn() };
-    rawApp['onFrame'] = { dispatch: jest.fn(), destroy: jest.fn() };
-    rawApp['onResize'] = { dispatch: jest.fn(), destroy: jest.fn() };
+    rawApp['_activeClock'] = { stop: vi.fn(), start: vi.fn(), destroy: vi.fn() };
+    rawApp['_startupClock'] = { start: vi.fn(), destroy: vi.fn() };
+    rawApp['onFrame'] = { dispatch: vi.fn(), destroy: vi.fn() };
+    rawApp['onResize'] = { dispatch: vi.fn(), destroy: vi.fn() };
     rawApp['_backend'] = {
-      flush: jest.fn(),
-      resetStats: jest.fn().mockReturnThis(),
+      flush: vi.fn(),
+      resetStats: vi.fn().mockReturnThis(),
       stats: { frameTimeMs: 0 },
-      destroy: jest.fn(),
+      destroy: vi.fn(),
     };
-    rawApp['interaction'] = { update: jest.fn(), destroy: jest.fn() };
-    rawApp['tweens'] = { update: jest.fn(), destroy: jest.fn() };
+    rawApp['interaction'] = { update: vi.fn(), destroy: vi.fn() };
+    rawApp['tweens'] = { update: vi.fn(), destroy: vi.fn() };
     rawApp['_frameCount'] = 0;
 
     // pauseOnHidden defaults to false
     expect(app.pauseOnHidden).toBe(false);
 
-    jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     app.update();
 
@@ -285,11 +284,11 @@ describe('Application focus / visibility', () => {
     app.destroy();
   });
 
-  test('destroy() unsubscribes visibilitychange listener', () => {
-    const { Application } = loadHarness();
+  test('destroy() unsubscribes visibilitychange listener', async () => {
+    const { Application } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
-    const handler = jest.fn();
+    const handler = vi.fn();
     app.onVisibilityChange.add(handler);
 
     app.destroy();

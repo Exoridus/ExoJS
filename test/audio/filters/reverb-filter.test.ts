@@ -1,22 +1,22 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { ReverbFilter } from '@/audio/filters/ReverbFilter';
 
 const makeAudioParam = (initial: number) => ({
-  setValueAtTime: jest.fn(),
-  setTargetAtTime: jest.fn(),
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
   value: initial,
 });
 
 const makeGainNode = (ctx: AudioContext) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   gain: makeAudioParam(1),
 });
 
 const makeConvolverNode = () => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   buffer: null as AudioBuffer | null,
   normalize: true,
   context: null as AudioContext | null,
@@ -54,7 +54,7 @@ describe('ReverbFilter', () => {
   describe('impulse response generation', () => {
     it('generates an impulse response buffer on construction', () => {
       const ctx = getAudioContext();
-      const bufferSpy = jest.spyOn(ctx, 'createBuffer');
+      const bufferSpy = vi.spyOn(ctx, 'createBuffer');
       const filter = new ReverbFilter({ durationSeconds: 1 });
       // Should have been called with 2 channels, correct length, correct sample rate
       expect(bufferSpy).toHaveBeenCalledWith(2, ctx.sampleRate * 1, ctx.sampleRate);
@@ -69,11 +69,11 @@ describe('ReverbFilter', () => {
 
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
-      const convolverSpy = jest.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
-      const bufferSpy = jest.spyOn(ctx, 'createBuffer');
+      const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
+      const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
       const filter = new ReverbFilter({ durationSeconds: 2 });
       expect(bufferSpy).toHaveBeenCalledWith(2, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
@@ -91,11 +91,11 @@ describe('ReverbFilter', () => {
 
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
-      const convolverSpy = jest.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
-      const bufferSpy = jest.spyOn(ctx, 'createBuffer');
+      const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
+      const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
       const filter = new ReverbFilter({ durationSeconds: 1 });
       const callsAfterConstruction = bufferSpy.mock.calls.length;
@@ -119,11 +119,11 @@ describe('ReverbFilter', () => {
 
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
-      const convolverSpy = jest.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
-      const bufferSpy = jest.spyOn(ctx, 'createBuffer');
+      const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
+      const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
       const filter = new ReverbFilter();
       const callsAfterConstruction = bufferSpy.mock.calls.length;
@@ -191,10 +191,10 @@ describe('ReverbFilter', () => {
       convolver.context = ctx as unknown as AudioContext;
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
-      const convolverSpy = jest.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
+      const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const filter = new ReverbFilter();
       filter.destroy();
       expect(convolver.disconnect).toHaveBeenCalled();

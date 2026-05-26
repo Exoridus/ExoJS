@@ -1,15 +1,15 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { EqualizerFilter } from '@/audio/filters/EqualizerFilter';
 
 const makeAudioParam = (initial: number) => ({
-  setValueAtTime: jest.fn(),
-  setTargetAtTime: jest.fn(),
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
   value: initial,
 });
 
 const makeBiquadFilterNode = (ctx: AudioContext, filterType: BiquadFilterType) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   type: filterType,
   frequency: makeAudioParam(350),
@@ -21,7 +21,7 @@ describe('EqualizerFilter', () => {
   describe('construction', () => {
     it('creates three BiquadFilterNodes', () => {
       const ctx = getAudioContext();
-      const spy = jest.spyOn(ctx, 'createBiquadFilter');
+      const spy = vi.spyOn(ctx, 'createBiquadFilter');
       const filter = new EqualizerFilter();
       expect(spy).toHaveBeenCalledTimes(3);
       filter.destroy();
@@ -51,7 +51,7 @@ describe('EqualizerFilter', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = jest.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
@@ -72,7 +72,7 @@ describe('EqualizerFilter', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = jest.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
@@ -90,7 +90,7 @@ describe('EqualizerFilter', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = jest.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
@@ -107,7 +107,7 @@ describe('EqualizerFilter', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = jest.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
@@ -123,7 +123,7 @@ describe('EqualizerFilter', () => {
     let lowShelf: ReturnType<typeof makeBiquadFilterNode>;
     let peaking: ReturnType<typeof makeBiquadFilterNode>;
     let highShelf: ReturnType<typeof makeBiquadFilterNode>;
-    let spy: jest.SpyInstance;
+    let spy: MockInstance;
 
     beforeEach(() => {
       ctx = getAudioContext();
@@ -132,7 +132,7 @@ describe('EqualizerFilter', () => {
       highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      spy = jest.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+      spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
     });
@@ -194,7 +194,7 @@ describe('EqualizerFilter', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = jest.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 

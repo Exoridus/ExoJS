@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { PitchShiftFilter } from '@/audio/filters/PitchShiftFilter';
 
 // ---------------------------------------------------------------------------
@@ -6,18 +6,18 @@ import { PitchShiftFilter } from '@/audio/filters/PitchShiftFilter';
 // ---------------------------------------------------------------------------
 
 describe('PitchShiftFilter', () => {
-  let addModuleMock: jest.Mock;
+  let addModuleMock: MockInstance;
 
   beforeEach(() => {
     const ctx = getAudioContext();
-    addModuleMock = jest.fn().mockResolvedValue(undefined);
-    (ctx as unknown as { audioWorklet: { addModule: jest.Mock } }).audioWorklet.addModule = addModuleMock;
-    jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:pitch-shift-url');
-    jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    addModuleMock = vi.fn().mockResolvedValue(undefined);
+    (ctx as unknown as { audioWorklet: { addModule: MockInstance } }).audioWorklet.addModule = addModuleMock;
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:pitch-shift-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('construction with defaults', () => {
@@ -125,8 +125,8 @@ describe('PitchShiftFilter', () => {
       const filter = new PitchShiftFilter({ pitch: 1.5, wet: 0.8 });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const pitchParam = node.parameters.get('pitch') as unknown as { setTargetAtTime: jest.Mock };
-      const wetParam = node.parameters.get('wet') as unknown as { setTargetAtTime: jest.Mock };
+      const pitchParam = node.parameters.get('pitch') as unknown as { setTargetAtTime: MockInstance };
+      const wetParam = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
       expect(pitchParam.setTargetAtTime).toHaveBeenCalledWith(1.5, expect.anything(), expect.anything());
       expect(wetParam.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.anything(), expect.anything());
       filter.destroy();
@@ -135,7 +135,7 @@ describe('PitchShiftFilter', () => {
     it('processorOptions.grainSize is forwarded to AudioWorkletNode', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -149,7 +149,7 @@ describe('PitchShiftFilter', () => {
     it('default grainSize of 1024 is forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -166,7 +166,7 @@ describe('PitchShiftFilter', () => {
       const filter = new PitchShiftFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('pitch') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('pitch') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.pitch = 2.0;
       expect(filter.pitch).toBe(2.0);
@@ -178,7 +178,7 @@ describe('PitchShiftFilter', () => {
       const filter = new PitchShiftFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.wet = 0.5;
       expect(filter.wet).toBe(0.5);

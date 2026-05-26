@@ -1,4 +1,4 @@
-import type { Application } from '@/core/Application';
+﻿import type { Application } from '@/core/Application';
 import { Scene } from '@/core/Scene';
 import { SceneManager } from '@/core/SceneManager';
 import { Signal } from '@/core/Signal';
@@ -39,9 +39,9 @@ const createApplicationStub = (): Application & {
   input: InputManagerStub;
   backend: {
     view: { getBounds: () => Rectangle };
-    draw: jest.Mock;
+    draw: MockInstance;
     stats: { culledNodes: number };
-    resetStats: jest.Mock;
+    resetStats: MockInstance;
   };
 } => {
   const bounds = new Rectangle(0, 0, 320, 180);
@@ -53,17 +53,17 @@ const createApplicationStub = (): Application & {
       view: {
         getBounds: () => bounds,
       },
-      draw: jest.fn().mockReturnThis(),
+      draw: vi.fn().mockReturnThis(),
       stats: { culledNodes: 0 },
-      resetStats: jest.fn().mockReturnThis(),
+      resetStats: vi.fn().mockReturnThis(),
     },
   } as unknown as Application & {
     input: InputManagerStub;
     backend: {
       view: { getBounds: () => Rectangle };
-      draw: jest.Mock;
+      draw: MockInstance;
       stats: { culledNodes: number };
-      resetStats: jest.Mock;
+      resetStats: MockInstance;
     };
   };
 };
@@ -79,15 +79,15 @@ const makeScene = (hooks: SceneHooks = {}): Scene => Object.assign(new Scene(), 
 describe('SceneManager', () => {
   test('keeps scene unset and cleans up when load() fails', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const unload = jest.fn(async () => undefined);
+    const unload = vi.fn(async () => undefined);
     const scene = makeScene({
       async load() {
         throw new Error('load failed');
       },
       unload,
     });
-    const destroySpy = jest.spyOn(scene, 'destroy');
-    const changeSpy = jest.fn();
+    const destroySpy = vi.spyOn(scene, 'destroy');
+    const changeSpy = vi.fn();
 
     manager.onChangeScene.add(changeSpy);
 
@@ -101,8 +101,8 @@ describe('SceneManager', () => {
 
   test('keeps scene unset and cleans up when init() fails', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const load = jest.fn(async () => undefined);
-    const unload = jest.fn(async () => undefined);
+    const load = vi.fn(async () => undefined);
+    const unload = vi.fn(async () => undefined);
     const scene = makeScene({
       load,
       async init() {
@@ -110,8 +110,8 @@ describe('SceneManager', () => {
       },
       unload,
     });
-    const destroySpy = jest.spyOn(scene, 'destroy');
-    const changeSpy = jest.fn();
+    const destroySpy = vi.spyOn(scene, 'destroy');
+    const changeSpy = vi.fn();
 
     manager.onChangeScene.add(changeSpy);
 
@@ -134,7 +134,7 @@ describe('SceneManager', () => {
         throw new Error('cleanup failed');
       },
     });
-    const destroySpy = jest.spyOn(scene, 'destroy');
+    const destroySpy = vi.spyOn(scene, 'destroy');
 
     await expect(manager.setScene(scene)).rejects.toThrow('Failed to initialize scene: init failed. Cleanup also failed: cleanup failed.');
     expect(manager.currentScene).toBeNull();
@@ -144,7 +144,7 @@ describe('SceneManager', () => {
 
   test('does not leak unhandled rejections when destroy() unload fails', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const unload = jest.fn(async () => {
+    const unload = vi.fn(async () => {
       throw new Error('unload failed');
     });
     const scene = makeScene({
@@ -156,7 +156,7 @@ describe('SceneManager', () => {
       },
       unload,
     });
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await manager.setScene(scene);
     manager.destroy();
@@ -170,13 +170,13 @@ describe('SceneManager', () => {
 
   test('push/pop preserves underlying scene state without reload', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const baseLoad = jest.fn(async () => undefined);
-    const baseInit = jest.fn(async () => undefined);
-    const baseUpdate = jest.fn();
-    const baseDraw = jest.fn();
-    const baseUnload = jest.fn(async () => undefined);
-    const overlayUpdate = jest.fn();
-    const overlayUnload = jest.fn(async () => undefined);
+    const baseLoad = vi.fn(async () => undefined);
+    const baseInit = vi.fn(async () => undefined);
+    const baseUpdate = vi.fn();
+    const baseDraw = vi.fn();
+    const baseUnload = vi.fn(async () => undefined);
+    const overlayUpdate = vi.fn();
+    const overlayUnload = vi.fn(async () => undefined);
     const base = makeScene({
       load: baseLoad,
       init: baseInit,
@@ -210,10 +210,10 @@ describe('SceneManager', () => {
 
   test('overlay mode keeps lower scene updating and drawing', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const baseUpdate = jest.fn();
-    const baseDraw = jest.fn();
-    const overlayUpdate = jest.fn();
-    const overlayDraw = jest.fn();
+    const baseUpdate = vi.fn();
+    const baseDraw = vi.fn();
+    const overlayUpdate = vi.fn();
+    const overlayDraw = vi.fn();
     const base = makeScene({ update: baseUpdate, draw: baseDraw });
     const overlay = makeScene({ update: overlayUpdate, draw: overlayDraw });
 
@@ -229,10 +229,10 @@ describe('SceneManager', () => {
 
   test('modal mode blocks lower updates but keeps lower drawing', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const baseUpdate = jest.fn();
-    const baseDraw = jest.fn();
-    const modalUpdate = jest.fn();
-    const modalDraw = jest.fn();
+    const baseUpdate = vi.fn();
+    const baseDraw = vi.fn();
+    const modalUpdate = vi.fn();
+    const modalDraw = vi.fn();
     const base = makeScene({ update: baseUpdate, draw: baseDraw });
     const modal = makeScene({ update: modalUpdate, draw: modalDraw });
 
@@ -248,10 +248,10 @@ describe('SceneManager', () => {
 
   test('opaque mode blocks both lower updates and lower drawing', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const baseUpdate = jest.fn();
-    const baseDraw = jest.fn();
-    const opaqueUpdate = jest.fn();
-    const opaqueDraw = jest.fn();
+    const baseUpdate = vi.fn();
+    const baseDraw = vi.fn();
+    const opaqueUpdate = vi.fn();
+    const opaqueDraw = vi.fn();
     const base = makeScene({ update: baseUpdate, draw: baseDraw });
     const opaque = makeScene({ update: opaqueUpdate, draw: opaqueDraw });
 
@@ -267,8 +267,8 @@ describe('SceneManager', () => {
 
   test('failed push keeps active scene stack intact', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const baseUnload = jest.fn(async () => undefined);
-    const failedUnload = jest.fn(async () => undefined);
+    const baseUnload = vi.fn(async () => undefined);
+    const failedUnload = vi.fn(async () => undefined);
     const base = makeScene({ unload: baseUnload });
     const failingOverlay = makeScene({
       async init() {
@@ -288,7 +288,7 @@ describe('SceneManager', () => {
 
   test('single-scene setScene flow still works with stack-enabled manager', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const firstUnload = jest.fn(async () => undefined);
+    const firstUnload = vi.fn(async () => undefined);
     const first = makeScene({ unload: firstUnload });
     const second = makeScene({});
 

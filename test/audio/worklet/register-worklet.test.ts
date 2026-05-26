@@ -1,11 +1,11 @@
-import { registerAudioWorkletProcessor } from '@/audio/worklet/registerWorklet';
+﻿import { registerAudioWorkletProcessor } from '@/audio/worklet/registerWorklet';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const makeContext = () => {
-  const addModule = jest.fn().mockResolvedValue(undefined);
+  const addModule = vi.fn().mockResolvedValue(undefined);
   const ctx = {
     audioWorklet: { addModule },
   } as unknown as BaseAudioContext;
@@ -17,19 +17,19 @@ const makeContext = () => {
 // ---------------------------------------------------------------------------
 
 describe('registerAudioWorkletProcessor', () => {
-  let createObjectURL: jest.Mock;
-  let revokeObjectURL: jest.Mock;
+  let createObjectURL: MockInstance;
+  let revokeObjectURL: MockInstance;
 
   beforeEach(() => {
     // Ensure fresh URL mocks per test
-    createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
-    revokeObjectURL = jest.fn();
-    jest.spyOn(URL, 'createObjectURL').mockImplementation(createObjectURL);
-    jest.spyOn(URL, 'revokeObjectURL').mockImplementation(revokeObjectURL);
+    createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
+    revokeObjectURL = vi.fn();
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(createObjectURL);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(revokeObjectURL);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('first call resolves and calls addModule once', async () => {

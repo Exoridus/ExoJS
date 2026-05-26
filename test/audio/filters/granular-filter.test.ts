@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { GranularFilter } from '@/audio/filters/GranularFilter';
 
 // ---------------------------------------------------------------------------
@@ -6,18 +6,18 @@ import { GranularFilter } from '@/audio/filters/GranularFilter';
 // ---------------------------------------------------------------------------
 
 describe('GranularFilter', () => {
-  let addModuleMock: jest.Mock;
+  let addModuleMock: MockInstance;
 
   beforeEach(() => {
     const ctx = getAudioContext();
-    addModuleMock = jest.fn().mockResolvedValue(undefined);
-    (ctx as unknown as { audioWorklet: { addModule: jest.Mock } }).audioWorklet.addModule = addModuleMock;
-    jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:granular-url');
-    jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    addModuleMock = vi.fn().mockResolvedValue(undefined);
+    (ctx as unknown as { audioWorklet: { addModule: MockInstance } }).audioWorklet.addModule = addModuleMock;
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:granular-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // -------------------------------------------------------------------------
@@ -88,7 +88,7 @@ describe('GranularFilter', () => {
     it('after await filter.ready: workletNode has 1 input', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -112,7 +112,7 @@ describe('GranularFilter', () => {
       const node = filter['_workletNode']!;
 
       const check = (name: string, expected: number) => {
-        const param = node.parameters.get(name) as unknown as { setTargetAtTime: jest.Mock };
+        const param = node.parameters.get(name) as unknown as { setTargetAtTime: MockInstance };
         expect(param.setTargetAtTime).toHaveBeenCalledWith(expected, expect.anything(), expect.anything());
       };
 
@@ -128,7 +128,7 @@ describe('GranularFilter', () => {
     it('processorOptions.bufferSeconds is forwarded to AudioWorkletNode', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -142,7 +142,7 @@ describe('GranularFilter', () => {
     it('default bufferSeconds of 2 is forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
         capturedOptions = options;
         return new OrigAWN(c, name, options);
       });
@@ -227,7 +227,7 @@ describe('GranularFilter', () => {
       const filter = new GranularFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('grainSize') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('grainSize') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.grainSize = 0.2;
       expect(filter.grainSize).toBe(0.2);
@@ -239,7 +239,7 @@ describe('GranularFilter', () => {
       const filter = new GranularFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('density') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('density') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.density = 100;
       expect(filter.density).toBe(100);
@@ -251,7 +251,7 @@ describe('GranularFilter', () => {
       const filter = new GranularFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('spread') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('spread') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.spread = 0.3;
       expect(filter.spread).toBe(0.3);
@@ -263,7 +263,7 @@ describe('GranularFilter', () => {
       const filter = new GranularFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('pitchMin') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('pitchMin') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.pitchMin = 0.75;
       expect(filter.pitchMin).toBe(0.75);
@@ -275,7 +275,7 @@ describe('GranularFilter', () => {
       const filter = new GranularFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('pitchMax') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('pitchMax') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.pitchMax = 2.0;
       expect(filter.pitchMax).toBe(2.0);
@@ -287,7 +287,7 @@ describe('GranularFilter', () => {
       const filter = new GranularFilter();
       await filter.ready;
       const node = filter['_workletNode']!;
-      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: jest.Mock };
+      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
       filter.wet = 0.6;
       expect(filter.wet).toBe(0.6);

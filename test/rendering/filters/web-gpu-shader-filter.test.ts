@@ -1,4 +1,4 @@
-/// <reference types="@webgpu/types" />
+﻿/// <reference types="@webgpu/types" />
 
 /**
  * WebGpuShaderFilter unit tests.
@@ -26,28 +26,28 @@ import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 interface MockWebGpuEnv {
   readonly device: GPUDevice;
   readonly pass: {
-    setPipeline: jest.Mock;
-    setVertexBuffer: jest.Mock;
-    setBindGroup: jest.Mock;
-    draw: jest.Mock;
-    end: jest.Mock;
+    setPipeline: MockInstance;
+    setVertexBuffer: MockInstance;
+    setBindGroup: MockInstance;
+    draw: MockInstance;
+    end: MockInstance;
   };
   readonly encoder: {
-    beginRenderPass: jest.Mock;
-    finish: jest.Mock;
+    beginRenderPass: MockInstance;
+    finish: MockInstance;
   };
   readonly queue: {
-    writeBuffer: jest.Mock;
-    submit: jest.Mock;
+    writeBuffer: MockInstance;
+    submit: MockInstance;
   };
-  readonly createShaderModule: jest.Mock;
-  readonly createBindGroupLayout: jest.Mock;
-  readonly createPipelineLayout: jest.Mock;
-  readonly createBindGroup: jest.Mock;
-  readonly createRenderPipeline: jest.Mock;
-  readonly createBuffer: jest.Mock;
-  readonly createSampler: jest.Mock;
-  readonly buffers: { destroy: jest.Mock; size: number }[];
+  readonly createShaderModule: MockInstance;
+  readonly createBindGroupLayout: MockInstance;
+  readonly createPipelineLayout: MockInstance;
+  readonly createBindGroup: MockInstance;
+  readonly createRenderPipeline: MockInstance;
+  readonly createBuffer: MockInstance;
+  readonly createSampler: MockInstance;
+  readonly buffers: { destroy: MockInstance; size: number }[];
   restore(): void;
 }
 
@@ -56,32 +56,32 @@ function createMockWebGpuEnv(): MockWebGpuEnv {
   const previousShaderStage = Object.getOwnPropertyDescriptor(globalThis, 'GPUShaderStage');
 
   const pass = {
-    setPipeline: jest.fn(),
-    setVertexBuffer: jest.fn(),
-    setBindGroup: jest.fn(),
-    draw: jest.fn(),
-    end: jest.fn(),
+    setPipeline: vi.fn(),
+    setVertexBuffer: vi.fn(),
+    setBindGroup: vi.fn(),
+    draw: vi.fn(),
+    end: vi.fn(),
   };
 
   const encoder = {
-    beginRenderPass: jest.fn(() => pass),
-    finish: jest.fn(() => ({}) as GPUCommandBuffer),
+    beginRenderPass: vi.fn(() => pass),
+    finish: vi.fn(() => ({}) as GPUCommandBuffer),
   };
 
   const queue = {
-    writeBuffer: jest.fn(),
-    submit: jest.fn(),
+    writeBuffer: vi.fn(),
+    submit: vi.fn(),
   };
 
-  const createShaderModule = jest.fn(() => ({}) as GPUShaderModule);
-  const createBindGroupLayout = jest.fn(() => ({}) as GPUBindGroupLayout);
-  const createPipelineLayout = jest.fn(() => ({}) as GPUPipelineLayout);
-  const createBindGroup = jest.fn(() => ({}) as GPUBindGroup);
-  const createRenderPipeline = jest.fn(() => ({}) as GPURenderPipeline);
-  const createSampler = jest.fn(() => ({}) as GPUSampler);
-  const buffers: { destroy: jest.Mock; size: number }[] = [];
-  const createBuffer = jest.fn((desc: { size: number; usage: number }) => {
-    const buf = { destroy: jest.fn(), size: desc.size };
+  const createShaderModule = vi.fn(() => ({}) as GPUShaderModule);
+  const createBindGroupLayout = vi.fn(() => ({}) as GPUBindGroupLayout);
+  const createPipelineLayout = vi.fn(() => ({}) as GPUPipelineLayout);
+  const createBindGroup = vi.fn(() => ({}) as GPUBindGroup);
+  const createRenderPipeline = vi.fn(() => ({}) as GPURenderPipeline);
+  const createSampler = vi.fn(() => ({}) as GPUSampler);
+  const buffers: { destroy: MockInstance; size: number }[] = [];
+  const createBuffer = vi.fn((desc: { size: number; usage: number }) => {
+    const buf = { destroy: vi.fn(), size: desc.size };
 
     buffers.push(buf);
 
@@ -96,7 +96,7 @@ function createMockWebGpuEnv(): MockWebGpuEnv {
     createRenderPipeline,
     createBuffer,
     createSampler,
-    createCommandEncoder: jest.fn(() => encoder),
+    createCommandEncoder: vi.fn(() => encoder),
     queue,
   } as unknown as GPUDevice;
 
@@ -144,12 +144,12 @@ function createMockWebGpuEnv(): MockWebGpuEnv {
 // ---------------------------------------------------------------------------
 
 interface MockWebGpuBackendExtras {
-  execute: jest.Mock;
-  getTextureBinding: jest.Mock;
+  execute: MockInstance;
+  getTextureBinding: MockInstance;
   device: GPUDevice;
   renderTargetFormat: GPUTextureFormat;
-  createColorAttachment: jest.Mock;
-  submit: jest.Mock;
+  createColorAttachment: MockInstance;
+  submit: MockInstance;
   stats: ReturnType<typeof createRenderStats>;
 }
 
@@ -158,21 +158,21 @@ function makeWebGpuBackend(env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
 
-  const execute = jest.fn(pass => {
+  const execute = vi.fn(pass => {
     pass.execute(backend);
     return backend;
   });
-  const getTextureBinding = jest.fn(() => ({
+  const getTextureBinding = vi.fn(() => ({
     view: {} as GPUTextureView,
     sampler: {} as GPUSampler,
   }));
-  const createColorAttachment = jest.fn(() => ({
+  const createColorAttachment = vi.fn(() => ({
     view: {} as GPUTextureView,
     clearValue: { r: 0, g: 0, b: 0, a: 0 },
     loadOp: 'clear' as GPULoadOp,
     storeOp: 'store' as GPUStoreOp,
   }));
-  const submit = jest.fn();
+  const submit = vi.fn();
 
   const backend = {
     backendType: RenderBackendType.WebGpu,

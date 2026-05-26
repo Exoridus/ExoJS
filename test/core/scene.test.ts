@@ -1,4 +1,4 @@
-import { Scene } from '@/core/Scene';
+﻿import { Scene } from '@/core/Scene';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import type { RenderBackend } from '@/rendering/RenderBackend';
@@ -114,8 +114,8 @@ describe('Scene', () => {
     const ui = new Container();
     const worldSprite = new DummyDrawable();
     const uiSprite = new DummyDrawable();
-    const worldRender = jest.spyOn(world, 'render');
-    const uiRender = jest.spyOn(ui, 'render');
+    const worldRender = vi.spyOn(world, 'render');
+    const uiRender = vi.spyOn(ui, 'render');
 
     world.addChild(worldSprite);
     ui.addChild(uiSprite);

@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { ChorusFilter } from '@/audio/filters/ChorusFilter';
 
 // ---------------------------------------------------------------------------
@@ -6,33 +6,33 @@ import { ChorusFilter } from '@/audio/filters/ChorusFilter';
 // ---------------------------------------------------------------------------
 
 const makeAudioParam = (initial: number) => ({
-  setValueAtTime: jest.fn(),
-  setTargetAtTime: jest.fn(),
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
   value: initial,
 });
 
 const makeGainNode = (ctx: AudioContext) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   gain: makeAudioParam(1),
 });
 
 const makeDelayNode = (ctx: AudioContext) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   delayTime: makeAudioParam(0),
 });
 
 const makeOscillatorNode = (ctx: AudioContext) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   type: 'sine' as OscillatorType,
   frequency: makeAudioParam(0),
-  start: jest.fn(),
-  stop: jest.fn(),
+  start: vi.fn(),
+  stop: vi.fn(),
 });
 
 // ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ const makeOscillatorNode = (ctx: AudioContext) => ({
 describe('ChorusFilter', () => {
   // Ensure all spies are cleaned up after every test, even after failures.
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('construction with defaults', () => {
@@ -118,11 +118,11 @@ describe('ChorusFilter', () => {
       // ChorusFilter._setupNodes order: inputGain, outputGain, dryGain, wetGain, lfoGain
       let gainCallCount = 0;
       const gains = [inputGain, outputGain, dryGain, wetGain, lfoGain];
-      jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
-      jest.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
-      jest.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
+      vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
+      vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
     });
 
     it('connects dry path: inputGain → dryGain → outputGain', () => {
@@ -171,7 +171,7 @@ describe('ChorusFilter', () => {
     it('updates delayNode.delayTime via setTargetAtTime', () => {
       const ctx = getAudioContext();
       const delayNode = makeDelayNode(ctx);
-      jest.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
+      vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
 
       const filter = new ChorusFilter({ delayMs: 25 });
       filter.delayMs = 20;
@@ -192,7 +192,7 @@ describe('ChorusFilter', () => {
     it('updates lfoOscillator.frequency via setTargetAtTime', () => {
       const ctx = getAudioContext();
       const lfoOscillator = makeOscillatorNode(ctx);
-      jest.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
+      vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
       const filter = new ChorusFilter({ rateHz: 1.5 });
       filter.rateHz = 3;
@@ -205,7 +205,7 @@ describe('ChorusFilter', () => {
       const ctx = getAudioContext();
       // Must mock oscillator so frequency has setTargetAtTime.
       const lfoOscillator = makeOscillatorNode(ctx);
-      jest.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
+      vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
       const filter = new ChorusFilter();
       filter.rateHz = -1;
       expect(filter.rateHz).toBe(0);
@@ -218,7 +218,7 @@ describe('ChorusFilter', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
-      jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
 
@@ -249,7 +249,7 @@ describe('ChorusFilter', () => {
     it('stops the LFO oscillator on destroy', () => {
       const ctx = getAudioContext();
       const lfoOscillator = makeOscillatorNode(ctx);
-      jest.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
+      vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
       const filter = new ChorusFilter();
       filter.destroy();
@@ -263,11 +263,11 @@ describe('ChorusFilter', () => {
       const lfoOscillator = makeOscillatorNode(ctx);
 
       let gainCallCount = 0;
-      jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
-      jest.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
-      jest.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
+      vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
+      vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
       const filter = new ChorusFilter();
       filter.destroy();

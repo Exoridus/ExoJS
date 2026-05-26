@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for Sound pool behaviour introduced in 0.7.0:
  *  - Default poolSize = 8, poolStrategy = FirstInFirstOut, priority = 0
  *  - play() is multi-instance (pooled) by default
@@ -19,10 +19,10 @@ import { Sound, SoundPoolStrategy } from '@/audio/Sound';
 const createAudioBufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
 
 interface MockBufferSourceNode {
-  start: jest.Mock;
-  stop: jest.Mock;
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  start: MockInstance;
+  stop: MockInstance;
+  connect: MockInstance;
+  disconnect: MockInstance;
   playbackRate: { value: number };
   loop: boolean;
   loopStart: number;
@@ -32,10 +32,10 @@ interface MockBufferSourceNode {
 }
 
 const createSourceMock = (): MockBufferSourceNode => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
-  start: jest.fn(),
-  stop: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  start: vi.fn(),
+  stop: vi.fn(),
   playbackRate: { value: 1 },
   loop: false,
   loopStart: 0,
@@ -54,7 +54,7 @@ const setupSourceFactory = (): SourceFactory => {
     createBufferSource: () => AudioBufferSourceNode;
   };
   const sources: MockBufferSourceNode[] = [];
-  const spy = jest.spyOn(ctx, 'createBufferSource').mockImplementation(() => {
+  const spy = vi.spyOn(ctx, 'createBufferSource').mockImplementation(() => {
     const mock = createSourceMock();
     sources.push(mock);
     return mock as unknown as AudioBufferSourceNode;
@@ -93,7 +93,7 @@ const mockCurrentTime = (initial = 0): { setTime: (t: number) => void; restore: 
 // ---------------------------------------------------------------------------
 
 describe('Sound — pool defaults', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // 1. Default poolSize
   test('default poolSize is 8', () => {
@@ -148,7 +148,7 @@ describe('Sound — pool defaults', () => {
 });
 
 describe('Sound — multi-instance play() (pooled default)', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // 4. play() below pool limit creates new source, no eviction
   test('play() below pool limit creates a new source without stopping others', () => {
@@ -189,7 +189,7 @@ describe('Sound — multi-instance play() (pooled default)', () => {
 });
 
 describe('Sound — LeastRecentlyUsed eviction', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // 6. LRU evicts source closest to its natural end
   test('LRU strategy evicts the source with least remaining time', () => {
@@ -225,7 +225,7 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
 });
 
 describe('Sound — LowestPriority eviction', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // 7. LowestPriority degenerates to FIFO within a single Sound (all instances share priority)
   test('LowestPriority strategy degenerates to FIFO within a single Sound', () => {
@@ -249,7 +249,7 @@ describe('Sound — LowestPriority eviction', () => {
 });
 
 describe('Sound — play({ replace: true })', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // 8. replace: true stops all prior pooled sources before new play
   test('play({ replace: true }) stops all prior pooled sources before starting', () => {
@@ -311,7 +311,7 @@ describe('Sound — play({ replace: true })', () => {
 });
 
 describe('Sound — natural pool cleanup', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // 10. Sources are removed from pool when they end naturally
   test('sources are removed from the pool when they end naturally', () => {

@@ -1,4 +1,4 @@
-/// <reference types="@webgpu/types" />
+﻿/// <reference types="@webgpu/types" />
 
 import { Color } from '@/core/Color';
 import { Time } from '@/core/Time';
@@ -13,6 +13,7 @@ import { ScaleOverLifetime } from '@/particles/modules/ScaleOverLifetime';
 import { UpdateModule } from '@/particles/modules/UpdateModule';
 import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Texture } from '@/rendering/texture/Texture';
+import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
 const makeTexture = (): Texture => {
   const canvas = document.createElement('canvas');
@@ -24,15 +25,15 @@ const makeTexture = (): Texture => {
 const tick = (s: number): Time => Time.zero.clone().set(s * 1000);
 
 interface MockComputePass {
-  setPipeline: jest.Mock;
-  setBindGroup: jest.Mock;
-  dispatchWorkgroups: jest.Mock;
-  end: jest.Mock;
+  setPipeline: MockInstance;
+  setBindGroup: MockInstance;
+  dispatchWorkgroups: MockInstance;
+  end: MockInstance;
 }
 
 interface MockEncoder {
-  beginComputePass: jest.Mock<MockComputePass, []>;
-  finish: jest.Mock;
+  beginComputePass: MockInstance;
+  finish: MockInstance;
 }
 
 const installGlobals = (): (() => void) => {
@@ -75,54 +76,54 @@ const installGlobals = (): (() => void) => {
 };
 
 const makeMockDevice = () => {
-  const buffers: { destroy: jest.Mock }[] = [];
-  const textures: { destroy: jest.Mock; createView: jest.Mock }[] = [];
+  const buffers: { destroy: MockInstance }[] = [];
+  const textures: { destroy: MockInstance; createView: MockInstance }[] = [];
   const pass: MockComputePass = {
-    setPipeline: jest.fn(),
-    setBindGroup: jest.fn(),
-    dispatchWorkgroups: jest.fn(),
-    end: jest.fn(),
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    dispatchWorkgroups: vi.fn(),
+    end: vi.fn(),
   };
   const encoder: MockEncoder = {
-    beginComputePass: jest.fn(() => pass),
-    finish: jest.fn(() => ({ label: 'cb' }) as unknown as GPUCommandBuffer),
+    beginComputePass: vi.fn(() => pass),
+    finish: vi.fn(() => ({ label: 'cb' }) as unknown as GPUCommandBuffer),
   };
   const queue = {
-    writeBuffer: jest.fn(),
-    writeTexture: jest.fn(),
-    submit: jest.fn(),
+    writeBuffer: vi.fn(),
+    writeTexture: vi.fn(),
+    submit: vi.fn(),
   };
   const computePipelineDescriptors: GPUComputePipelineDescriptor[] = [];
   const shaderSources: string[] = [];
-  const createShaderModule = jest.fn((descriptor: GPUShaderModuleDescriptor) => {
+  const createShaderModule = vi.fn((descriptor: GPUShaderModuleDescriptor) => {
     shaderSources.push(descriptor.code);
     return {} as GPUShaderModule;
   });
-  const createComputePipeline = jest.fn((descriptor: GPUComputePipelineDescriptor) => {
+  const createComputePipeline = vi.fn((descriptor: GPUComputePipelineDescriptor) => {
     computePipelineDescriptors.push(descriptor);
     return {} as GPUComputePipeline;
   });
   const device = {
     createShaderModule,
-    createBindGroupLayout: jest.fn(() => ({}) as GPUBindGroupLayout),
-    createPipelineLayout: jest.fn(() => ({}) as GPUPipelineLayout),
-    createBindGroup: jest.fn(() => ({}) as GPUBindGroup),
+    createBindGroupLayout: vi.fn(() => ({}) as GPUBindGroupLayout),
+    createPipelineLayout: vi.fn(() => ({}) as GPUPipelineLayout),
+    createBindGroup: vi.fn(() => ({}) as GPUBindGroup),
     createComputePipeline,
-    createCommandEncoder: jest.fn(() => encoder as unknown as GPUCommandEncoder),
-    createBuffer: jest.fn(() => {
-      const buffer = { destroy: jest.fn() };
+    createCommandEncoder: vi.fn(() => encoder as unknown as GPUCommandEncoder),
+    createBuffer: vi.fn(() => {
+      const buffer = { destroy: vi.fn() };
       buffers.push(buffer);
       return buffer as unknown as GPUBuffer;
     }),
-    createTexture: jest.fn(() => {
+    createTexture: vi.fn(() => {
       const texture = {
-        destroy: jest.fn(),
-        createView: jest.fn(() => ({}) as GPUTextureView),
+        destroy: vi.fn(),
+        createView: vi.fn(() => ({}) as GPUTextureView),
       };
       textures.push(texture);
       return texture as unknown as GPUTexture;
     }),
-    createSampler: jest.fn(() => ({}) as GPUSampler),
+    createSampler: vi.fn(() => ({}) as GPUSampler),
     queue,
   } as unknown as GPUDevice;
 
@@ -398,8 +399,6 @@ describe('ParticleSystem render-inject backend detection', () => {
 
   test('render(backend) captures the backend; next update compiles GPU when backend is WebGpuBackend', () => {
     const env = makeMockDevice();
-    const { WebGpuBackend } = jest.requireActual<typeof import('@/rendering/webgpu/WebGpuBackend')>('@/rendering/webgpu/WebGpuBackend');
-
     // Fake WebGpuBackend via Object.create so `instanceof` passes; override
     // the `device` getter with an own property so we can set it.
     const fakeBackend = Object.create(WebGpuBackend.prototype) as object;

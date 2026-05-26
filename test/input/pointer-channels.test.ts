@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for unified Pointer channel-buffer integration:
  * slot allocation, normalization, multi-touch, gestures, and long-press.
  */
@@ -18,7 +18,7 @@ const createCanvas = (width = 800, height = 600): HTMLCanvasElement => {
   canvas.height = height;
 
   // getBoundingClientRect must match logical pixel position for normalisation.
-  jest.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
     left: 0,
     top: 0,
     right: width,
@@ -287,7 +287,7 @@ describe('Gesture — pinch', () => {
     const canvas = createCanvas(800, 600);
     const im = createInputManager(canvas);
 
-    const pinchSpy = jest.fn();
+    const pinchSpy = vi.fn();
 
     im.onPinch.add(pinchSpy);
 
@@ -316,7 +316,7 @@ describe('Gesture — pinch', () => {
     const canvas = createCanvas(800, 600);
     const im = createInputManager(canvas);
 
-    const pinchSpy = jest.fn();
+    const pinchSpy = vi.fn();
 
     im.onPinch.add(pinchSpy);
 
@@ -340,18 +340,18 @@ describe('Gesture — pinch', () => {
 
 describe('Gesture — long press', () => {
   beforeAll(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test('pointer held 600ms without moving fires onLongPress', () => {
     const canvas = createCanvas();
     const im = createInputManager(canvas);
 
-    const longPressSpy = jest.fn();
+    const longPressSpy = vi.fn();
 
     im.onLongPress.add(longPressSpy);
 
@@ -360,7 +360,7 @@ describe('Gesture — long press', () => {
 
     expect(longPressSpy).not.toHaveBeenCalled();
 
-    jest.advanceTimersByTime(600);
+    vi.advanceTimersByTime(600);
 
     expect(longPressSpy).toHaveBeenCalledTimes(1);
 
@@ -370,7 +370,7 @@ describe('Gesture — long press', () => {
   test('pointer that moves beyond threshold cancels long-press', () => {
     const canvas = createCanvas();
     const im = createInputManager(canvas);
-    const longPressSpy = jest.fn();
+    const longPressSpy = vi.fn();
 
     im.onLongPress.add(longPressSpy);
 
@@ -380,7 +380,7 @@ describe('Gesture — long press', () => {
     // Move well beyond the 10px threshold.
     pointerMove(canvas, { pointerId: 1, pointerType: 'touch', clientX: 200, clientY: 100, isPrimary: true });
 
-    jest.advanceTimersByTime(600);
+    vi.advanceTimersByTime(600);
 
     expect(longPressSpy).not.toHaveBeenCalled();
 

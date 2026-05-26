@@ -1,14 +1,14 @@
-import { perfClearMarks, perfClearMeasures, perfMark, perfMeasure } from '@/core/Perf';
+﻿import { perfClearMarks, perfClearMeasures, perfMark, perfMeasure } from '@/core/Perf';
 
 // jsdom does not implement the User Timing API (mark/measure/clearMarks/
 // clearMeasures). Tests therefore inject a minimal mock on `performance`
 // and verify that the Perf wrappers delegate correctly.
 
 const makeMockPerf = () => ({
-  mark: jest.fn(),
-  measure: jest.fn().mockReturnValue({ name: '', duration: 0 } as unknown as PerformanceMeasure),
-  clearMarks: jest.fn(),
-  clearMeasures: jest.fn(),
+  mark: vi.fn(),
+  measure: vi.fn().mockReturnValue({ name: '', duration: 0 } as unknown as PerformanceMeasure),
+  clearMarks: vi.fn(),
+  clearMeasures: vi.fn(),
 });
 
 describe('Perf utilities', () => {
@@ -47,7 +47,7 @@ describe('Perf utilities', () => {
   });
 
   test('perfMeasure returns undefined when performance.measure throws', () => {
-    (performance.measure as jest.Mock).mockImplementation(() => {
+    (performance.measure as MockInstance).mockImplementation(() => {
       throw new DOMException('Mark not found', 'InvalidAccessError');
     });
     const result = perfMeasure('exo:bad', 'exo:nonexistent');

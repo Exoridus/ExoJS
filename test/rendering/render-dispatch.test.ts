@@ -1,4 +1,4 @@
-import { ParticleSystem } from '@/particles/ParticleSystem';
+﻿import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { Mesh } from '@/rendering/mesh/Mesh';
@@ -13,7 +13,7 @@ import { Texture } from '@/rendering/texture/Texture';
 const createRuntime = () => {
   const renderTarget = new RenderTarget(200, 200, true);
   const stats = createRenderStats();
-  const draw = jest.fn(function (this: RenderBackend) {
+  const draw = vi.fn(function (this: RenderBackend) {
     return this;
   });
   const runtime: RenderBackend = {

@@ -1,11 +1,11 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { Sound } from '@/audio/Sound';
 
 interface MockBufferSourceNode {
-  start: jest.Mock;
-  stop: jest.Mock;
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  start: MockInstance;
+  stop: MockInstance;
+  connect: MockInstance;
+  disconnect: MockInstance;
   playbackRate: AudioParam & { value: number };
   loop: boolean;
   loopStart: number;
@@ -21,10 +21,10 @@ const createAudioBufferStub = (): AudioBuffer =>
 
 const createBufferSourceNodeMock = (): MockBufferSourceNode =>
   ({
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    start: jest.fn(),
-    stop: jest.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
     playbackRate: { value: 1 } as AudioParam & { value: number },
     loop: false,
     loopStart: 0,
@@ -41,7 +41,7 @@ const setupSourceFactorySpy = (): {
     createBufferSource: () => AudioBufferSourceNode;
   };
   const sources: MockBufferSourceNode[] = [];
-  const sourceSpy = jest.spyOn(audioContext, 'createBufferSource').mockImplementation(() => {
+  const sourceSpy = vi.spyOn(audioContext, 'createBufferSource').mockImplementation(() => {
     const source = createBufferSourceNodeMock();
     sources.push(source);
 
@@ -56,7 +56,7 @@ const setupSourceFactorySpy = (): {
 
 describe('Sound', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // Previously: play() kept single-instance semantics (singleton-replace default).

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * WebGl2ShaderFilter unit tests.
  *
  * These tests use a minimal WebGL2 mock (no real GPU) to verify the
@@ -45,45 +45,45 @@ function makeGlMock(): WebGL2RenderingContext {
     TEXTURE0: 33984,
     TRIANGLE_STRIP: 5,
 
-    createProgram: jest.fn(() => ({ _id: programId++ })),
-    createShader: jest.fn(() => ({ _id: shaderId++ })),
-    createBuffer: jest.fn(() => ({ _id: bufferId++ })),
-    createVertexArray: jest.fn(() => ({ _id: vaoId++ })),
+    createProgram: vi.fn(() => ({ _id: programId++ })),
+    createShader: vi.fn(() => ({ _id: shaderId++ })),
+    createBuffer: vi.fn(() => ({ _id: bufferId++ })),
+    createVertexArray: vi.fn(() => ({ _id: vaoId++ })),
 
-    shaderSource: jest.fn(),
-    compileShader: jest.fn(),
-    attachShader: jest.fn(),
-    linkProgram: jest.fn(),
-    useProgram: jest.fn(),
-    deleteShader: jest.fn(),
-    deleteProgram: jest.fn(),
-    deleteBuffer: jest.fn(),
-    deleteVertexArray: jest.fn(),
-    bindBuffer: jest.fn(),
-    bufferData: jest.fn(),
-    bindVertexArray: jest.fn(),
-    vertexAttribPointer: jest.fn(),
-    enableVertexAttribArray: jest.fn(),
-    bindTexture: jest.fn(),
-    activeTexture: jest.fn(),
-    drawArrays: jest.fn(),
+    shaderSource: vi.fn(),
+    compileShader: vi.fn(),
+    attachShader: vi.fn(),
+    linkProgram: vi.fn(),
+    useProgram: vi.fn(),
+    deleteShader: vi.fn(),
+    deleteProgram: vi.fn(),
+    deleteBuffer: vi.fn(),
+    deleteVertexArray: vi.fn(),
+    bindBuffer: vi.fn(),
+    bufferData: vi.fn(),
+    bindVertexArray: vi.fn(),
+    vertexAttribPointer: vi.fn(),
+    enableVertexAttribArray: vi.fn(),
+    bindTexture: vi.fn(),
+    activeTexture: vi.fn(),
+    drawArrays: vi.fn(),
 
-    uniform1f: jest.fn(),
-    uniform2fv: jest.fn(),
-    uniform3fv: jest.fn(),
-    uniform4fv: jest.fn(),
-    uniform1i: jest.fn(),
-    uniform2iv: jest.fn(),
-    uniform3iv: jest.fn(),
-    uniform4iv: jest.fn(),
-    uniformMatrix2fv: jest.fn(),
-    uniformMatrix3fv: jest.fn(),
-    uniformMatrix4fv: jest.fn(),
+    uniform1f: vi.fn(),
+    uniform2fv: vi.fn(),
+    uniform3fv: vi.fn(),
+    uniform4fv: vi.fn(),
+    uniform1i: vi.fn(),
+    uniform2iv: vi.fn(),
+    uniform3iv: vi.fn(),
+    uniform4iv: vi.fn(),
+    uniformMatrix2fv: vi.fn(),
+    uniformMatrix3fv: vi.fn(),
+    uniformMatrix4fv: vi.fn(),
 
-    getExtension: jest.fn(() => null),
+    getExtension: vi.fn(() => null),
 
-    getShaderParameter: jest.fn(() => true),
-    getProgramParameter: jest.fn((_, pname) => {
+    getShaderParameter: vi.fn(() => true),
+    getProgramParameter: vi.fn((_, pname) => {
       if (pname === 35714) return true; // LINK_STATUS
       if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
       if (pname === 35718) return 0; // ACTIVE_UNIFORMS
@@ -91,7 +91,7 @@ function makeGlMock(): WebGL2RenderingContext {
 
       return true;
     }),
-    getActiveAttrib: jest.fn((_, i) => {
+    getActiveAttrib: vi.fn((_, i) => {
       const attribs = [
         { name: 'aPosition', type: ShaderPrimitives.FloatVec2, size: 1 },
         { name: 'aUv', type: ShaderPrimitives.FloatVec2, size: 1 },
@@ -99,19 +99,19 @@ function makeGlMock(): WebGL2RenderingContext {
 
       return attribs[i] ?? null;
     }),
-    getActiveUniform: jest.fn(() => null),
-    getActiveUniforms: jest.fn(() => []),
-    getActiveUniformBlockName: jest.fn(() => null),
-    getUniformBlockIndex: jest.fn(() => 0),
-    getShaderInfoLog: jest.fn(() => ''),
-    getProgramInfoLog: jest.fn(() => ''),
-    getAttribLocation: jest.fn((_prog, name) => {
+    getActiveUniform: vi.fn(() => null),
+    getActiveUniforms: vi.fn(() => []),
+    getActiveUniformBlockName: vi.fn(() => null),
+    getUniformBlockIndex: vi.fn(() => 0),
+    getShaderInfoLog: vi.fn(() => ''),
+    getProgramInfoLog: vi.fn(() => ''),
+    getAttribLocation: vi.fn((_prog, name) => {
       if (name === 'aPosition') return 0;
       if (name === 'aUv') return 1;
 
       return -1;
     }),
-    getUniformLocation: jest.fn(() => ({ _id: uniformLocation++ })),
+    getUniformLocation: vi.fn(() => ({ _id: uniformLocation++ })),
   } as unknown as WebGL2RenderingContext;
 }
 
@@ -120,10 +120,10 @@ function makeGlMock(): WebGL2RenderingContext {
 // ---------------------------------------------------------------------------
 
 interface MockBackendExtras {
-  bindShader: jest.Mock;
-  bindTexture: jest.Mock;
-  bindVertexArrayObject: jest.Mock;
-  execute: jest.Mock;
+  bindShader: MockInstance;
+  bindTexture: MockInstance;
+  bindVertexArrayObject: MockInstance;
+  execute: MockInstance;
   gl: WebGL2RenderingContext;
 }
 
@@ -133,10 +133,10 @@ function makeWebGl2Backend(glOverride?: WebGL2RenderingContext): RenderBackend &
   const stats = createRenderStats();
   const gl = glOverride ?? makeGlMock();
 
-  const bindShader = jest.fn();
-  const bindTexture = jest.fn();
-  const bindVertexArrayObject = jest.fn();
-  const execute = jest.fn(pass => {
+  const bindShader = vi.fn();
+  const bindTexture = vi.fn();
+  const bindVertexArrayObject = vi.fn();
+  const execute = vi.fn(pass => {
     pass.execute(backend);
     return backend;
   });
@@ -415,7 +415,7 @@ describe('WebGl2ShaderFilter', () => {
     const gl = makeGlMock();
     const samplerUniform = { name: 'uExtraTex', type: ShaderPrimitives.Sampler2D, size: 1 };
 
-    (gl.getProgramParameter as jest.Mock).mockImplementation((_prog: unknown, pname: number) => {
+    (gl.getProgramParameter as MockInstance).mockImplementation((_prog: unknown, pname: number) => {
       if (pname === 35714) return true; // LINK_STATUS
       if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
       if (pname === 35718) return 1; // ACTIVE_UNIFORMS (1 sampler)
@@ -423,8 +423,8 @@ describe('WebGl2ShaderFilter', () => {
 
       return true;
     });
-    (gl.getActiveUniform as jest.Mock).mockReturnValue(samplerUniform);
-    (gl.getActiveUniforms as jest.Mock).mockReturnValue([-1]);
+    (gl.getActiveUniform as MockInstance).mockReturnValue(samplerUniform);
+    (gl.getActiveUniforms as MockInstance).mockReturnValue([-1]);
 
     const backend = makeWebGl2Backend(gl);
 
@@ -613,7 +613,7 @@ describe('WebGl2ShaderFilter', () => {
     const capturedTargets: (RenderTarget | null)[] = [];
 
     backend.execute.mockImplementation(pass => {
-      const spy = jest.spyOn(backend as unknown as RenderBackend, 'setRenderTarget').mockImplementation(target => {
+      const spy = vi.spyOn(backend as unknown as RenderBackend, 'setRenderTarget').mockImplementation(target => {
         capturedTargets.push(target);
 
         return backend as unknown as RenderBackend;

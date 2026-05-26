@@ -1,11 +1,11 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { HighpassFilter } from '@/audio/filters/HighpassFilter';
 
 describe('HighpassFilter', () => {
   describe('construction', () => {
     it('creates a filter node on construction when AudioContext is running', () => {
       const ctx = getAudioContext();
-      const spy = jest.spyOn(ctx, 'createBiquadFilter');
+      const spy = vi.spyOn(ctx, 'createBiquadFilter');
       const filter = new HighpassFilter();
       expect(spy).toHaveBeenCalledTimes(1);
       filter.destroy();
@@ -15,15 +15,15 @@ describe('HighpassFilter', () => {
     it('sets node type to highpass', () => {
       const ctx = getAudioContext();
       const mockNode = {
-        connect: jest.fn(),
-        disconnect: jest.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
         type: 'highpass' as BiquadFilterType,
         context: ctx,
-        frequency: { setValueAtTime: jest.fn(), setTargetAtTime: jest.fn(), value: 350 },
-        Q: { setValueAtTime: jest.fn(), setTargetAtTime: jest.fn(), value: 1 },
-        gain: { setValueAtTime: jest.fn(), setTargetAtTime: jest.fn(), value: 0 },
+        frequency: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), value: 350 },
+        Q: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), value: 1 },
+        gain: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), value: 0 },
       };
-      const spy = jest.spyOn(ctx, 'createBiquadFilter').mockReturnValue(mockNode as unknown as BiquadFilterNode);
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockReturnValue(mockNode as unknown as BiquadFilterNode);
       const filter = new HighpassFilter();
       expect(mockNode.type).toBe('highpass');
       filter.destroy();
@@ -108,15 +108,15 @@ describe('HighpassFilter', () => {
     it('disconnects the node', () => {
       const ctx = getAudioContext();
       const mockNode = {
-        connect: jest.fn(),
-        disconnect: jest.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
         type: 'highpass' as BiquadFilterType,
         context: ctx,
-        frequency: { setValueAtTime: jest.fn(), setTargetAtTime: jest.fn(), value: 350 },
-        Q: { setValueAtTime: jest.fn(), setTargetAtTime: jest.fn(), value: 1 },
-        gain: { setValueAtTime: jest.fn(), setTargetAtTime: jest.fn(), value: 0 },
+        frequency: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), value: 350 },
+        Q: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), value: 1 },
+        gain: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), value: 0 },
       };
-      const spy = jest.spyOn(ctx, 'createBiquadFilter').mockReturnValue(mockNode as unknown as BiquadFilterNode);
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockReturnValue(mockNode as unknown as BiquadFilterNode);
       const filter = new HighpassFilter();
       filter.destroy();
       expect(mockNode.disconnect).toHaveBeenCalledTimes(1);

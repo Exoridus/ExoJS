@@ -1,7 +1,8 @@
-/**
+﻿/**
  * BoundingBoxesLayer tests (0.7.5).
  */
 
+import { BoundingBoxesLayer } from '@/debug/BoundingBoxesLayer';
 import { Signal } from '@/core/Signal';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
@@ -20,13 +21,13 @@ const fakeGlyph = {
   uvTop: 0,
   uvBottom: 0.02,
 };
-const fakePage = { texture: { updateSource: jest.fn() }, index: 0 };
+const fakePage = { texture: { updateSource: vi.fn() }, index: 0 };
 const fakeAtlas = {
-  getGlyph: jest.fn(() => fakeGlyph),
+  getGlyph: vi.fn(() => fakeGlyph),
   pages: [fakePage],
-  clear: jest.fn(),
+  clear: vi.fn(),
 };
-const fakePool = { getAtlas: jest.fn(() => fakeAtlas) };
+const fakePool = { getAtlas: vi.fn(() => fakeAtlas) };
 beforeEach(() => {
   resetDefaultGlyphAtlasPool(fakePool as unknown as GlyphAtlasPool);
 });
@@ -56,17 +57,17 @@ const makeBackend = () => ({
     frame: 0,
   },
   view: makeFakeView(),
-  setView: jest.fn().mockReturnThis(),
-  draw: jest.fn().mockReturnThis(),
-  flush: jest.fn().mockReturnThis(),
+  setView: vi.fn().mockReturnThis(),
+  draw: vi.fn().mockReturnThis(),
+  flush: vi.fn().mockReturnThis(),
 });
 
 interface FakeNode {
   visible: boolean;
   zIndex: number;
   interactive: boolean;
-  contains: jest.Mock;
-  getBounds: jest.Mock;
+  contains: MockInstance;
+  getBounds: MockInstance;
   children: FakeNode[];
 }
 
@@ -86,8 +87,8 @@ function makeNode(
     visible,
     zIndex,
     interactive: false,
-    contains: jest.fn(() => false),
-    getBounds: jest.fn(() => ({
+    contains: vi.fn(() => false),
+    getBounds: vi.fn(() => ({
       width: boundsW,
       height: boundsH,
       left: 0,
@@ -104,12 +105,12 @@ const makeApp = (root: FakeNode | null = null) =>
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
     scene: { currentScene: root ? { root } : null },
-    input: { onKeyDown: new Signal<[number]>(), getPrimaryPointerPosition: jest.fn(() => null) },
+    input: { onKeyDown: new Signal<[number]>(), getPrimaryPointerPosition: vi.fn(() => null) },
     interaction: {
-      getHoveredNode: jest.fn(() => null),
-      getCapturedNodes: jest.fn(() => []),
+      getHoveredNode: vi.fn(() => null),
+      getCapturedNodes: vi.fn(() => []),
       useSpatialIndex: false,
-      _getDebugQuadtree: jest.fn(() => null),
+      _getDebugQuadtree: vi.fn(() => null),
     },
     onFrame: new Signal(),
     onResize: new Signal(),
@@ -121,21 +122,18 @@ const makeApp = (root: FakeNode | null = null) =>
 
 describe('BoundingBoxesLayer', () => {
   test('visible defaults to false', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const layer = new BoundingBoxesLayer(makeApp());
 
     expect(layer.visible).toBe(false);
   });
 
   test('viewMode is "world"', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const layer = new BoundingBoxesLayer(makeApp());
 
     expect(layer.viewMode).toBe('world');
   });
 
   test('render() is a no-op when scene has no root', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const app = makeApp(null);
     const layer = new BoundingBoxesLayer(app);
     const backend = makeBackend();
@@ -144,7 +142,6 @@ describe('BoundingBoxesLayer', () => {
   });
 
   test('render() calls getBounds() for visible nodes', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const node = makeNode({ visible: true, zIndex: 0, boundsW: 100, boundsH: 50 });
     const app = makeApp(node);
     const layer = new BoundingBoxesLayer(app);
@@ -156,7 +153,6 @@ describe('BoundingBoxesLayer', () => {
   });
 
   test('render() skips nodes with zero-area bounds', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const zeroNode = makeNode({ visible: true, boundsW: 0, boundsH: 0 });
     const normalNode = makeNode({ visible: true, boundsW: 50, boundsH: 50 });
 
@@ -165,8 +161,8 @@ describe('BoundingBoxesLayer', () => {
       visible: true,
       zIndex: 0,
       interactive: false,
-      getBounds: jest.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
-      contains: jest.fn(() => false),
+      getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
+      contains: vi.fn(() => false),
       children: [zeroNode, normalNode],
     };
 
@@ -179,7 +175,6 @@ describe('BoundingBoxesLayer', () => {
   });
 
   test('render() skips invisible nodes', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const invisibleNode = makeNode({ visible: false, boundsW: 100, boundsH: 50 });
     const app = makeApp(invisibleNode);
     const layer = new BoundingBoxesLayer(app);
@@ -194,7 +189,6 @@ describe('BoundingBoxesLayer', () => {
   test('two nodes with different zIndex each trigger a getBounds call', () => {
     // Verify that each node with nonzero bounds is processed; color variation
     // is implicitly tested by the fact that both nodes are visited.
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
 
     const node0 = makeNode({ visible: true, zIndex: 0, boundsW: 10, boundsH: 10 });
     const node1 = makeNode({ visible: true, zIndex: 12, boundsW: 10, boundsH: 10 });
@@ -203,8 +197,8 @@ describe('BoundingBoxesLayer', () => {
       visible: true,
       zIndex: 0,
       interactive: false,
-      getBounds: jest.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
-      contains: jest.fn(() => false),
+      getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
+      contains: vi.fn(() => false),
       children: [node0, node1],
     };
 
@@ -222,8 +216,6 @@ describe('BoundingBoxesLayer', () => {
   test('hue mapping: zIndex=0 and zIndex=12 produce different lineColors', () => {
     // zIndex 0 → hue 0 (red), zIndex 12 → hue 360%360=0... use zIndex 1 and 2 instead.
     // zIndex 1 → hue 30, zIndex 2 → hue 60. These have clearly distinct rgb values.
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
-    const { Color } = require('../../src/core/Color') as typeof import('../../src/core/Color');
 
     const lineColors: { r: number; g: number; b: number }[] = [];
     const node1 = makeNode({ visible: true, zIndex: 1, boundsW: 10, boundsH: 10 });
@@ -232,8 +224,8 @@ describe('BoundingBoxesLayer', () => {
       visible: true,
       zIndex: 0,
       interactive: false,
-      getBounds: jest.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
-      contains: jest.fn(() => false),
+      getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
+      contains: vi.fn(() => false),
       children: [node1, node2],
     };
 
@@ -257,7 +249,6 @@ describe('BoundingBoxesLayer', () => {
   });
 
   test('update() does not throw', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const layer = new BoundingBoxesLayer(makeApp());
     const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
 
@@ -265,7 +256,6 @@ describe('BoundingBoxesLayer', () => {
   });
 
   test('destroy() releases the Graphics primitive', () => {
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
     const node = makeNode({ visible: true, boundsW: 10, boundsH: 10 });
     const app = makeApp(node);
     const layer = new BoundingBoxesLayer(app);

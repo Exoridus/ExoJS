@@ -1,4 +1,4 @@
-import type { Application } from '@/core/Application';
+﻿import type { Application } from '@/core/Application';
 import { Gamepad } from '@/input/Gamepad';
 import { GamepadButton } from '@/input/GamepadButton';
 import { GamepadMappingFamily } from '@/input/GamepadMapping';
@@ -69,8 +69,8 @@ describe('InputManager gamepad lifecycle', () => {
 
   test('binds connecting browser gamepad into the lowest empty slot (sticky)', () => {
     const inputManager = createInputManager();
-    const onConnected = jest.fn();
-    const onDisconnected = jest.fn();
+    const onConnected = vi.fn();
+    const onDisconnected = vi.fn();
 
     withMockedGetGamepads(setSnapshot => {
       inputManager.onGamepadConnected.add(onConnected);

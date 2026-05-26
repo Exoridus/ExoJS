@@ -1,6 +1,6 @@
-import type { Application } from '@/core/Application';
+﻿import type { Application } from '@/core/Application';
 import { Scene } from '@/core/Scene';
-import type { Signal } from '@/core/Signal';
+import { Signal } from '@/core/Signal';
 import type { InputManager } from '@/input/InputManager';
 import type { InteractionEvent } from '@/input/InteractionEvent';
 import { InteractionManager } from '@/input/InteractionManager';
@@ -75,15 +75,13 @@ const createApp = (): {
   signals: MockSignals;
   canvas: HTMLCanvasElement;
 } => {
-  const { Signal: SIG } = jest.requireActual<{ Signal: typeof import('@/core/Signal').Signal }>('@/core/Signal');
-
   const signals: MockSignals = {
-    onPointerDown: new SIG<[Pointer]>(),
-    onPointerMove: new SIG<[Pointer]>(),
-    onPointerUp: new SIG<[Pointer]>(),
-    onPointerTap: new SIG<[Pointer]>(),
-    onPointerCancel: new SIG<[Pointer]>(),
-    onPointerLeave: new SIG<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer]>(),
+    onPointerMove: new Signal<[Pointer]>(),
+    onPointerUp: new Signal<[Pointer]>(),
+    onPointerTap: new Signal<[Pointer]>(),
+    onPointerCancel: new Signal<[Pointer]>(),
+    onPointerLeave: new Signal<[Pointer]>(),
   };
 
   const canvas = document.createElement('canvas');
@@ -127,7 +125,7 @@ describe('InteractionManager — hit-test basics', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
@@ -148,7 +146,7 @@ describe('InteractionManager — hit-test basics', () => {
     sprite.interactive = false;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
@@ -168,7 +166,7 @@ describe('InteractionManager — hit-test basics', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
     signals.onPointerDown.dispatch(makePointer({ x: 200, y: 200 }));
@@ -197,8 +195,8 @@ describe('InteractionManager — z-order', () => {
     scene.addChild(bottom);
     scene.addChild(top);
 
-    const bottomHandler = jest.fn();
-    const topHandler = jest.fn();
+    const bottomHandler = vi.fn();
+    const topHandler = vi.fn();
 
     bottom.onPointerDown.add(bottomHandler);
     top.onPointerDown.add(topHandler);
@@ -275,7 +273,7 @@ describe('InteractionManager — stopPropagation', () => {
     scene.root.addChild(parent);
     parent.addChild(child);
 
-    const parentHandler = jest.fn();
+    const parentHandler = vi.fn();
 
     child.onPointerDown.add(e => {
       e.stopPropagation();
@@ -311,8 +309,8 @@ describe('InteractionManager — bubble stops at non-interactive parent', () => 
     grandparent.addChild(parent);
     parent.addChild(child);
 
-    const grandparentHandler = jest.fn();
-    const childHandler = jest.fn();
+    const grandparentHandler = vi.fn();
+    const childHandler = vi.fn();
 
     child.onPointerDown.add(childHandler);
     grandparent.onPointerDown.add(grandparentHandler);
@@ -469,7 +467,7 @@ describe('InteractionManager — tap', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerTap.add(handler);
     signals.onPointerTap.dispatch(makePointer({ x: 50, y: 50 }));
@@ -499,7 +497,7 @@ describe('InteractionManager — destroy cleanup', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
     im.destroy();
@@ -544,10 +542,10 @@ describe('InteractionManager — drag and drop', () => {
       });
     }
 
-    jest.spyOn(canvas, 'setPointerCapture').mockImplementation(() => {
+    vi.spyOn(canvas, 'setPointerCapture').mockImplementation(() => {
       /* no-op */
     });
-    jest.spyOn(canvas, 'releasePointerCapture').mockImplementation(() => {
+    vi.spyOn(canvas, 'releasePointerCapture').mockImplementation(() => {
       /* no-op */
     });
   };
@@ -562,9 +560,9 @@ describe('InteractionManager — drag and drop', () => {
     sprite.draggable = true;
     scene.addChild(sprite);
 
-    const dragStartHandler = jest.fn();
-    const dragHandler = jest.fn();
-    const dragEndHandler = jest.fn();
+    const dragStartHandler = vi.fn();
+    const dragHandler = vi.fn();
+    const dragEndHandler = vi.fn();
 
     sprite.onDragStart.add(dragStartHandler);
     sprite.onDrag.add(dragHandler);
@@ -636,7 +634,7 @@ describe('InteractionManager — drag and drop', () => {
     scene.addChild(dragged);
     scene.addChild(other);
 
-    const otherOverHandler = jest.fn();
+    const otherOverHandler = vi.fn();
 
     other.onPointerOver.add(otherOverHandler);
 
@@ -665,7 +663,7 @@ describe('InteractionManager — drag and drop', () => {
     sprite.draggable = false;
     scene.addChild(sprite);
 
-    const dragStartHandler = jest.fn();
+    const dragStartHandler = vi.fn();
 
     sprite.onDragStart.add(dragStartHandler);
 
@@ -688,8 +686,8 @@ describe('InteractionManager — drag and drop', () => {
     sprite.draggable = true;
     scene.addChild(sprite);
 
-    const dragStartHandler = jest.fn();
-    const downHandler = jest.fn();
+    const dragStartHandler = vi.fn();
+    const downHandler = vi.fn();
 
     sprite.onDragStart.add(dragStartHandler);
     sprite.onPointerDown.add(downHandler);
@@ -714,8 +712,8 @@ describe('InteractionManager — drag and drop', () => {
     sprite.draggable = true;
     scene.addChild(sprite);
 
-    const dragEndHandler = jest.fn();
-    const dragHandler = jest.fn();
+    const dragEndHandler = vi.fn();
+    const dragHandler = vi.fn();
 
     sprite.onDragEnd.add(dragEndHandler);
     sprite.onDrag.add(dragHandler);
@@ -783,9 +781,9 @@ describe('InteractionManager — drag and drop', () => {
     scene.root.addChild(parent);
     parent.addChild(child);
 
-    const parentDragStart = jest.fn();
-    const parentDrag = jest.fn();
-    const parentDragEnd = jest.fn();
+    const parentDragStart = vi.fn();
+    const parentDrag = vi.fn();
+    const parentDragEnd = vi.fn();
 
     parent.onDragStart.add(parentDragStart);
     parent.onDrag.add(parentDrag);
@@ -822,8 +820,8 @@ describe('InteractionManager — drag and drop', () => {
     scene.addChild(spriteA);
     scene.addChild(spriteB);
 
-    const aDrag = jest.fn();
-    const bDown = jest.fn();
+    const aDrag = vi.fn();
+    const bDown = vi.fn();
 
     spriteA.onDrag.add(aDrag);
     spriteB.onPointerDown.add(bDown);

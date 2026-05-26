@@ -19,112 +19,108 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
 interface ApplicationTestHarness {
   readonly Application: typeof import('@/core/Application').Application;
   readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
-  readonly LoaderMock: jest.Mock;
-  readonly InputManagerMock: jest.Mock;
+  readonly LoaderMock: MockInstance;
+  readonly InputManagerMock: MockInstance;
   readonly webglManager: {
-    initialize: jest.Mock;
-    flush: jest.Mock;
-    resize: jest.Mock;
-    destroy: jest.Mock;
-    resetStats: jest.Mock;
+    initialize: MockInstance;
+    flush: MockInstance;
+    resize: MockInstance;
+    destroy: MockInstance;
+    resetStats: MockInstance;
     stats: { frameTimeMs: number };
-    renderTarget: { setView: jest.Mock };
+    renderTarget: { setView: MockInstance };
   };
   readonly webgpuManager: {
-    initialize: jest.Mock;
-    flush: jest.Mock;
-    resize: jest.Mock;
-    destroy: jest.Mock;
-    resetStats: jest.Mock;
+    initialize: MockInstance;
+    flush: MockInstance;
+    resize: MockInstance;
+    destroy: MockInstance;
+    resetStats: MockInstance;
     stats: { frameTimeMs: number };
-    renderTarget: { setView: jest.Mock };
+    renderTarget: { setView: MockInstance };
   };
-  readonly BackendMock: jest.Mock;
-  readonly WebGpuBackendMock: jest.Mock;
+  readonly BackendMock: MockInstance;
+  readonly WebGpuBackendMock: MockInstance;
   readonly sceneManager: {
-    update: jest.Mock;
-    setScene: jest.Mock;
-    destroy: jest.Mock;
+    update: MockInstance;
+    setScene: MockInstance;
+    destroy: MockInstance;
   };
 }
 
-const loadApplicationHarness = (
+const loadApplicationHarness = async (
   options: {
-    webgpuInitialize?: jest.Mock;
-    webglInitialize?: jest.Mock;
+    webgpuInitialize?: MockInstance;
+    webglInitialize?: MockInstance;
   } = {},
-): ApplicationTestHarness => {
+): Promise<ApplicationTestHarness> => {
   const webglManager = {
-    initialize: options.webglInitialize ?? jest.fn().mockResolvedValue(undefined),
-    flush: jest.fn(),
-    resize: jest.fn(),
-    destroy: jest.fn(),
-    resetStats: jest.fn().mockReturnThis(),
+    initialize: options.webglInitialize ?? vi.fn().mockResolvedValue(undefined),
+    flush: vi.fn(),
+    resize: vi.fn(),
+    destroy: vi.fn(),
+    resetStats: vi.fn().mockReturnThis(),
     stats: { frameTimeMs: 0 },
-    renderTarget: { setView: jest.fn() },
-    onContextLost: { add: jest.fn(), destroy: jest.fn() },
-    onContextRestored: { add: jest.fn(), destroy: jest.fn() },
+    renderTarget: { setView: vi.fn() },
+    onContextLost: { add: vi.fn(), destroy: vi.fn() },
+    onContextRestored: { add: vi.fn(), destroy: vi.fn() },
   };
   const webgpuManager = {
-    initialize: options.webgpuInitialize ?? jest.fn().mockResolvedValue(undefined),
-    flush: jest.fn(),
-    resize: jest.fn(),
-    destroy: jest.fn(),
-    resetStats: jest.fn().mockReturnThis(),
+    initialize: options.webgpuInitialize ?? vi.fn().mockResolvedValue(undefined),
+    flush: vi.fn(),
+    resize: vi.fn(),
+    destroy: vi.fn(),
+    resetStats: vi.fn().mockReturnThis(),
     stats: { frameTimeMs: 0 },
-    renderTarget: { setView: jest.fn() },
-    onDeviceLost: { add: jest.fn(), destroy: jest.fn() },
-    onDeviceRestored: { add: jest.fn(), destroy: jest.fn() },
+    renderTarget: { setView: vi.fn() },
+    onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
+    onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
   };
   const sceneManager = {
-    update: jest.fn(),
-    setScene: jest.fn().mockResolvedValue(undefined),
-    destroy: jest.fn(),
+    update: vi.fn(),
+    setScene: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn(),
   };
   const inputManager = {
-    update: jest.fn(),
-    destroy: jest.fn(),
-    onCanvasFocusChange: { add: jest.fn(), remove: jest.fn(), dispatch: jest.fn(), destroy: jest.fn() },
+    update: vi.fn(),
+    destroy: vi.fn(),
+    onCanvasFocusChange: { add: vi.fn(), remove: vi.fn(), dispatch: vi.fn(), destroy: vi.fn() },
   };
   const loader = {
-    destroy: jest.fn(),
+    destroy: vi.fn(),
   };
-  const BackendMock = jest.fn(() => webglManager);
-  const WebGpuBackendMock = jest.fn(() => webgpuManager);
-  const LoaderMock = jest.fn(() => loader);
-  const InputManagerMock = jest.fn(() => inputManager);
-  let Application!: typeof import('@/core/Application').Application;
-  let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
+  const BackendMock = vi.fn(function () { return webglManager; });
+  const WebGpuBackendMock = vi.fn(function () { return webgpuManager; });
+  const LoaderMock = vi.fn(function () { return loader; });
+  const InputManagerMock = vi.fn(function () { return inputManager; });
 
-  jest.resetModules();
-  jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+  vi.resetModules();
+  vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
     WebGl2Backend: BackendMock,
   }));
-  jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+  vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
     WebGpuBackend: WebGpuBackendMock,
   }));
-  jest.doMock('@/resources/Loader', () => ({
+  vi.doMock('@/resources/Loader', () => ({
     Loader: LoaderMock,
   }));
-  jest.doMock('@/input/InputManager', () => ({
+  vi.doMock('@/input/InputManager', () => ({
     InputManager: InputManagerMock,
   }));
-  jest.doMock('@/input/InteractionManager', () => ({
-    InteractionManager: jest.fn(() => ({
-      update: jest.fn(),
-      destroy: jest.fn(),
-      getHoveredNode: jest.fn().mockReturnValue(null),
-    })),
+  vi.doMock('@/input/InteractionManager', () => ({
+    InteractionManager: vi.fn(function () {
+      return {
+        update: vi.fn(),
+        destroy: vi.fn(),
+        getHoveredNode: vi.fn().mockReturnValue(null),
+      };
+    }),
   }));
-  jest.doMock('@/core/SceneManager', () => ({
-    SceneManager: jest.fn(() => sceneManager),
+  vi.doMock('@/core/SceneManager', () => ({
+    SceneManager: vi.fn(function () { return sceneManager; }),
   }));
 
-  jest.isolateModules(() => {
-    const module = require('@/core/Application') as typeof import('@/core/Application');
-    Application = module.Application;
-    ApplicationStatus = module.ApplicationStatus;
-  });
+  const { Application, ApplicationStatus } = await import('@/core/Application');
 
   return {
     Application,
@@ -141,30 +137,30 @@ const loadApplicationHarness = (
 
 describe('Application', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.resetModules();
+    vi.restoreAllMocks();
+    vi.resetModules();
   });
 
-  test('update flushes renderer once per frame while running', () => {
-    const { Application, ApplicationStatus } = loadApplicationHarness();
+  test('update flushes renderer once per frame while running', async () => {
+    const { Application, ApplicationStatus } = await loadApplicationHarness();
     const app = Object.create(Application.prototype) as import('@/core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
-    const inputManager = { update: jest.fn() };
-    const tweens = { update: jest.fn() };
-    const sceneManager = { update: jest.fn() };
-    const viewUpdate = jest.fn();
+    const inputManager = { update: vi.fn() };
+    const tweens = { update: vi.fn() };
+    const sceneManager = { update: vi.fn() };
+    const viewUpdate = vi.fn();
     const backend = {
-      flush: jest.fn(),
-      resetStats: jest.fn().mockReturnThis(),
+      flush: vi.fn(),
+      resetStats: vi.fn().mockReturnThis(),
       stats: { frameTimeMs: 0 },
       view: { update: viewUpdate },
     };
     const frameClock = {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: jest.fn(),
+      restart: vi.fn(),
     };
 
-    const interaction = { update: jest.fn() };
+    const interaction = { update: vi.fn() };
 
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['input'] = inputManager;
@@ -173,11 +169,11 @@ describe('Application', () => {
     rawApp['scene'] = sceneManager;
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
-    rawApp['_updateHandler'] = jest.fn();
+    rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
-    rawApp['onFrame'] = { dispatch: jest.fn() };
+    rawApp['onFrame'] = { dispatch: vi.fn() };
 
-    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     app.update();
 
@@ -191,11 +187,11 @@ describe('Application', () => {
     expect(rafSpy).toHaveBeenCalledTimes(1);
   });
 
-  test('defaults to WebGPU when available', () => {
+  test('defaults to WebGPU when available', async () => {
     const restoreGpu = setNavigatorGpu({});
 
     try {
-      const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
+      const { Application, BackendMock, WebGpuBackendMock } = await loadApplicationHarness();
 
       new Application({
         canvas: { element: document.createElement('canvas') },
@@ -208,11 +204,11 @@ describe('Application', () => {
     }
   });
 
-  test('defaults to WebGL2 when WebGPU is unavailable', () => {
+  test('defaults to WebGL2 when WebGPU is unavailable', async () => {
     const restoreGpu = setNavigatorGpu(undefined);
 
     try {
-      const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
+      const { Application, BackendMock, WebGpuBackendMock } = await loadApplicationHarness();
 
       new Application({
         canvas: { element: document.createElement('canvas') },
@@ -225,11 +221,11 @@ describe('Application', () => {
     }
   });
 
-  test('explicit webgl2 selection still bypasses WebGPU', () => {
+  test('explicit webgl2 selection still bypasses WebGPU', async () => {
     const restoreGpu = setNavigatorGpu({});
 
     try {
-      const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
+      const { Application, BackendMock, WebGpuBackendMock } = await loadApplicationHarness();
 
       new Application({
         canvas: { element: document.createElement('canvas') },
@@ -246,12 +242,12 @@ describe('Application', () => {
   test('auto backend falls back to WebGL2 when WebGPU initialization fails', async () => {
     const restoreGpu = setNavigatorGpu({});
     const webgpuError = new Error('webgpu failed');
-    const webgpuInitialize = jest.fn().mockRejectedValue(webgpuError);
-    const webglInitialize = jest.fn().mockResolvedValue(undefined);
-    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    const webgpuInitialize = vi.fn().mockRejectedValue(webgpuError);
+    const webglInitialize = vi.fn().mockResolvedValue(undefined);
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     try {
-      const { Application, webglManager, webgpuManager, BackendMock, WebGpuBackendMock, sceneManager } = loadApplicationHarness({
+      const { Application, webglManager, webgpuManager, BackendMock, WebGpuBackendMock, sceneManager } = await loadApplicationHarness({
         webgpuInitialize,
         webglInitialize,
       });
@@ -277,11 +273,11 @@ describe('Application', () => {
   test('explicit webgpu selection still fails instead of falling back', async () => {
     const restoreGpu = setNavigatorGpu({});
     const webgpuError = new Error('webgpu failed');
-    const webgpuInitialize = jest.fn().mockRejectedValue(webgpuError);
-    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    const webgpuInitialize = vi.fn().mockRejectedValue(webgpuError);
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     try {
-      const { Application, webgpuManager, BackendMock } = loadApplicationHarness({ webgpuInitialize });
+      const { Application, webgpuManager, BackendMock } = await loadApplicationHarness({ webgpuInitialize });
       const app = new Application({
         canvas: { element: document.createElement('canvas') },
         backend: { type: 'webgpu' },
@@ -297,11 +293,11 @@ describe('Application', () => {
     }
   });
 
-  test('backend exposes a renderTarget on both backend paths', () => {
+  test('backend exposes a renderTarget on both backend paths', async () => {
     const restoreGpu = setNavigatorGpu({});
 
     try {
-      const { Application } = loadApplicationHarness();
+      const { Application } = await loadApplicationHarness();
       const webgpuApp = new Application({
         canvas: { element: document.createElement('canvas') },
         backend: { type: 'webgpu' },
@@ -320,8 +316,8 @@ describe('Application', () => {
     }
   });
 
-  test('constructs canvas from grouped canvas options (width/height + element)', () => {
-    const { Application } = loadApplicationHarness();
+  test('constructs canvas from grouped canvas options (width/height + element)', async () => {
+    const { Application } = await loadApplicationHarness();
     const canvas = document.createElement('canvas');
     const app = new Application({
       canvas: {
@@ -339,11 +335,11 @@ describe('Application', () => {
     expect(canvas.tabIndex).toBe(-1);
   });
 
-  test('passes grouped loader options through to Loader constructor', () => {
-    const { Application, LoaderMock } = loadApplicationHarness();
+  test('passes grouped loader options through to Loader constructor', async () => {
+    const { Application, LoaderMock } = await loadApplicationHarness();
     const fetchOptions: RequestInit = { credentials: 'include' };
     const cache = {} as import('@/resources/CacheStore').CacheStore;
-    const cacheStrategy = { resolve: jest.fn() } as unknown as import('@/resources/CacheStrategy').CacheStrategy;
+    const cacheStrategy = { resolve: vi.fn() } as unknown as import('@/resources/CacheStrategy').CacheStrategy;
 
     new Application({
       loader: {
@@ -364,8 +360,8 @@ describe('Application', () => {
     });
   });
 
-  test('passes grouped input options to InputManager', () => {
-    const { Application, InputManagerMock } = loadApplicationHarness();
+  test('passes grouped input options to InputManager', async () => {
+    const { Application, InputManagerMock } = await loadApplicationHarness();
 
     new Application({
       input: {
@@ -382,8 +378,8 @@ describe('Application', () => {
     expect(appArg.options.input?.gamepadDefinitions).toEqual([]);
   });
 
-  test('passes grouped rendering options to WebGl2Backend path', () => {
-    const { Application, BackendMock } = loadApplicationHarness();
+  test('passes grouped rendering options to WebGl2Backend path', async () => {
+    const { Application, BackendMock } = await loadApplicationHarness();
 
     new Application({
       backend: { type: 'webgl2' },
@@ -403,8 +399,8 @@ describe('Application', () => {
     expect(appArg.options.rendering?.particleRendererBatchSize).toBe(256);
   });
 
-  test('applies canvas pixelRatio to backing size and keeps resize logical', () => {
-    const { Application, webglManager } = loadApplicationHarness();
+  test('applies canvas pixelRatio to backing size and keeps resize logical', async () => {
+    const { Application, webglManager } = await loadApplicationHarness();
     const app = new Application({
       backend: { type: 'webgl2' },
       canvas: {
@@ -428,8 +424,8 @@ describe('Application', () => {
     expect(webglManager.resize).toHaveBeenCalledWith(300, 150);
   });
 
-  test('applies tabIndex/imageRendering from canvas options', () => {
-    const { Application } = loadApplicationHarness();
+  test('applies tabIndex/imageRendering from canvas options', async () => {
+    const { Application } = await loadApplicationHarness();
     const canvas = document.createElement('canvas');
     const app = new Application({
       canvas: {
@@ -443,8 +439,8 @@ describe('Application', () => {
     expect(app.canvas.style.imageRendering).toBe('pixelated');
   });
 
-  test('ignores removed flat options at runtime (no compatibility shim)', () => {
-    const { Application } = loadApplicationHarness();
+  test('ignores removed flat options at runtime (no compatibility shim)', async () => {
+    const { Application } = await loadApplicationHarness();
     const app = new Application({ width: 123, height: 45 } as unknown as import('@/core/Application').ApplicationOptions);
 
     expect(app.canvas.width).toBe(800);
@@ -452,17 +448,17 @@ describe('Application', () => {
   });
 
   test('stop() catches async scene teardown failures instead of leaking rejections', async () => {
-    const { Application, ApplicationStatus } = loadApplicationHarness();
+    const { Application, ApplicationStatus } = await loadApplicationHarness();
     const app = Object.create(Application.prototype) as import('@/core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
     const sceneTeardownError = new Error('scene teardown failed');
     const sceneManager = {
-      setScene: jest.fn().mockRejectedValue(sceneTeardownError),
+      setScene: vi.fn().mockRejectedValue(sceneTeardownError),
     };
-    const activeClock = { stop: jest.fn() };
-    const frameClock = { stop: jest.fn() };
-    const cancelSpy = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const activeClock = { stop: vi.fn() };
+    const frameClock = { stop: vi.fn() };
+    const cancelSpy = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['_frameRequest'] = 99;

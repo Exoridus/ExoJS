@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { AudioListener } from '@/audio/AudioListener';
 import { disposeAudioManager } from '@/audio/AudioManager';
 
@@ -9,20 +9,20 @@ import { disposeAudioManager } from '@/audio/AudioManager';
 const getCtx = (): AudioContext => getAudioContext();
 
 const getListenerMock = (): {
-  positionX: { setValueAtTime: jest.Mock };
-  positionY: { setValueAtTime: jest.Mock };
-  positionZ: { setValueAtTime: jest.Mock };
-  forwardX: { setValueAtTime: jest.Mock };
-  forwardY: { setValueAtTime: jest.Mock };
-  forwardZ: { setValueAtTime: jest.Mock };
-  upX: { setValueAtTime: jest.Mock };
-  upY: { setValueAtTime: jest.Mock };
-  upZ: { setValueAtTime: jest.Mock };
+  positionX: { setValueAtTime: MockInstance };
+  positionY: { setValueAtTime: MockInstance };
+  positionZ: { setValueAtTime: MockInstance };
+  forwardX: { setValueAtTime: MockInstance };
+  forwardY: { setValueAtTime: MockInstance };
+  forwardZ: { setValueAtTime: MockInstance };
+  upX: { setValueAtTime: MockInstance };
+  upY: { setValueAtTime: MockInstance };
+  upZ: { setValueAtTime: MockInstance };
   // NO context property — matches real WebAudio spec
 } => (getCtx() as unknown as { listener: ReturnType<typeof getListenerMock> }).listener;
 
 const makeSceneNodeStub = (x: number, y: number) => ({
-  getGlobalTransform: jest.fn().mockReturnValue({ x, y }),
+  getGlobalTransform: vi.fn().mockReturnValue({ x, y }),
 });
 
 const makeViewStub = (x: number, y: number) => ({
@@ -38,20 +38,20 @@ describe('AudioListener', () => {
     disposeAudioManager();
     // Reset mock call history on listener AudioParams
     const l = getListenerMock();
-    (l.positionX.setValueAtTime as jest.Mock).mockClear();
-    (l.positionY.setValueAtTime as jest.Mock).mockClear();
-    (l.positionZ.setValueAtTime as jest.Mock).mockClear();
-    (l.forwardX.setValueAtTime as jest.Mock).mockClear();
-    (l.forwardY.setValueAtTime as jest.Mock).mockClear();
-    (l.forwardZ.setValueAtTime as jest.Mock).mockClear();
-    (l.upX.setValueAtTime as jest.Mock).mockClear();
-    (l.upY.setValueAtTime as jest.Mock).mockClear();
-    (l.upZ.setValueAtTime as jest.Mock).mockClear();
+    (l.positionX.setValueAtTime as MockInstance).mockClear();
+    (l.positionY.setValueAtTime as MockInstance).mockClear();
+    (l.positionZ.setValueAtTime as MockInstance).mockClear();
+    (l.forwardX.setValueAtTime as MockInstance).mockClear();
+    (l.forwardY.setValueAtTime as MockInstance).mockClear();
+    (l.forwardZ.setValueAtTime as MockInstance).mockClear();
+    (l.upX.setValueAtTime as MockInstance).mockClear();
+    (l.upY.setValueAtTime as MockInstance).mockClear();
+    (l.upZ.setValueAtTime as MockInstance).mockClear();
   });
 
   afterEach(() => {
     disposeAudioManager();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // 1. Construction — listener exists, default position 0,0.

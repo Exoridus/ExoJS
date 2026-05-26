@@ -1,22 +1,22 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { DelayFilter } from '@/audio/filters/DelayFilter';
 
 const makeAudioParam = (initial: number) => ({
-  setValueAtTime: jest.fn(),
-  setTargetAtTime: jest.fn(),
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
   value: initial,
 });
 
 const makeGainNode = (ctx: AudioContext) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   gain: makeAudioParam(1),
 });
 
 const makeDelayNode = (ctx: AudioContext) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   delayTime: makeAudioParam(0),
 });
@@ -58,8 +58,8 @@ describe('DelayFilter', () => {
     let wetGain: ReturnType<typeof makeGainNode>;
     let feedbackGain: ReturnType<typeof makeGainNode>;
     let delayNode: ReturnType<typeof makeDelayNode>;
-    let gainSpy: jest.SpyInstance;
-    let delaySpy: jest.SpyInstance;
+    let gainSpy: MockInstance;
+    let delaySpy: MockInstance;
 
     beforeEach(() => {
       ctx = getAudioContext();
@@ -73,10 +73,10 @@ describe('DelayFilter', () => {
       let gainCallCount = 0;
       // DelayFilter._setupNodes order: inputGain, outputGain, feedbackGain, dryGain, wetGain
       const gains = [inputGain, outputGain, feedbackGain, dryGain, wetGain];
-      gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
-      delaySpy = jest.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
+      delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
     });
 
     afterEach(() => {
@@ -171,10 +171,10 @@ describe('DelayFilter', () => {
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       const delay = makeDelayNode(ctx);
       let gainCallCount = 0;
-      const gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
-      const delaySpy = jest.spyOn(ctx, 'createDelay').mockReturnValue(delay as unknown as DelayNode);
+      const delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(delay as unknown as DelayNode);
       const filter = new DelayFilter();
       filter.destroy();
       for (const node of gainNodes) {

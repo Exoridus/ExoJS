@@ -1,4 +1,4 @@
-import { Ease } from '@/animation/Easing';
+﻿import { Ease } from '@/animation/Easing';
 import { Tween } from '@/animation/Tween';
 import { TweenManager } from '@/animation/TweenManager';
 import { TweenState } from '@/animation/types';
@@ -40,7 +40,7 @@ describe('Tween', () => {
 
     test('onComplete fires when tween finishes naturally', () => {
       const sprite = makeSprite();
-      const onComplete = jest.fn();
+      const onComplete = vi.fn();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).onComplete(onComplete).start();
 
       tween.update(1.0);
@@ -71,7 +71,7 @@ describe('Tween', () => {
 
     test('onStart fires after delay, not before', () => {
       const sprite = makeSprite();
-      const onStart = jest.fn();
+      const onStart = vi.fn();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).delay(0.5).onStart(onStart).start();
 
       tween.update(0.4);
@@ -109,8 +109,8 @@ describe('Tween', () => {
   describe('repeat', () => {
     test('repeat(2): runs 3 cycles total; onRepeat fires twice; onComplete once', () => {
       const sprite = makeSprite();
-      const onRepeat = jest.fn();
-      const onComplete = jest.fn();
+      const onRepeat = vi.fn();
+      const onComplete = vi.fn();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(2).onRepeat(onRepeat).onComplete(onComplete).start();
 
       // Cycle 1
@@ -205,7 +205,7 @@ describe('Tween', () => {
 
     test('stop() does not fire onComplete', () => {
       const sprite = makeSprite();
-      const onComplete = jest.fn();
+      const onComplete = vi.fn();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).onComplete(onComplete).start();
 
       tween.stop();
@@ -274,7 +274,7 @@ describe('Tween', () => {
   describe('callbacks', () => {
     test('onStart fires once per lifecycle (not per repeat)', () => {
       const sprite = makeSprite();
-      const onStart = jest.fn();
+      const onStart = vi.fn();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(2).onStart(onStart).start();
 
       tween.update(1.0); // cycle 1 end
@@ -285,7 +285,7 @@ describe('Tween', () => {
 
     test('onUpdate fires each update while active', () => {
       const sprite = makeSprite();
-      const onUpdate = jest.fn();
+      const onUpdate = vi.fn();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).onUpdate(onUpdate).start();
 
       tween.update(0.3);
@@ -313,7 +313,7 @@ describe('Tween', () => {
       // 'as never' simulates a JavaScript caller that bypasses TypeScript's
       // NumericKeys<T> constraint. The runtime guard in _captureStartValues()
       // must still warn and skip the non-numeric property.
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const target = { x: 0, label: 'hello' };
       const tween = new Tween(target).to({ x: 100, label: 999 } as never, 1.0).start();
@@ -337,7 +337,7 @@ describe('Tween', () => {
       manager.update(1.0); // complete — tween removed from manager
       expect(tween.state).toBe(TweenState.Complete);
 
-      const secondComplete = jest.fn();
+      const secondComplete = vi.fn();
       tween.onComplete(secondComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
@@ -355,7 +355,7 @@ describe('Tween', () => {
       tween.stop();
       expect(tween.state).toBe(TweenState.Stopped);
 
-      const onComplete = jest.fn();
+      const onComplete = vi.fn();
       tween.onComplete(onComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 

@@ -1,4 +1,4 @@
-import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
+﻿import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
 import { disposeAudioManager } from '@/audio/AudioManager';
 import { BeatDetector } from '@/audio/BeatDetector';
@@ -8,13 +8,13 @@ import { BeatDetector } from '@/audio/BeatDetector';
 // ---------------------------------------------------------------------------
 
 interface MockPort {
-  postMessage: jest.Mock;
+  postMessage: MockInstance;
   onmessage: ((event: { data: unknown }) => void) | null;
 }
 
 interface MockWorkletNode {
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  connect: MockInstance;
+  disconnect: MockInstance;
   port: MockPort;
 }
 
@@ -53,20 +53,20 @@ function makeMusicLike(): import('@/audio/Music').Music {
 // ---------------------------------------------------------------------------
 
 describe('BeatDetector', () => {
-  let addModuleMock: jest.Mock;
+  let addModuleMock: MockInstance;
 
   beforeEach(() => {
     const ctx = getAudioContext();
     expect(isAudioContextReady()).toBe(true);
-    addModuleMock = jest.fn().mockResolvedValue(undefined);
-    (ctx as unknown as { audioWorklet: { addModule: jest.Mock } }).audioWorklet.addModule = addModuleMock;
-    jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:beat-url');
-    jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    addModuleMock = vi.fn().mockResolvedValue(undefined);
+    (ctx as unknown as { audioWorklet: { addModule: MockInstance } }).audioWorklet.addModule = addModuleMock;
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:beat-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     disposeAudioManager();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // ---- Construction ----
@@ -102,7 +102,7 @@ describe('BeatDetector', () => {
     it('worklet node has numberOfInputs:1 numberOfOutputs:0', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, opts: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
         capturedOptions = opts;
         return new OrigAWN(c, name, opts);
       });
@@ -134,7 +134,7 @@ describe('BeatDetector', () => {
       await d.ready;
       const outputNode = bus._getOutputNode();
       if (outputNode) {
-        const connectSpy = jest.spyOn(outputNode, 'connect');
+        const connectSpy = vi.spyOn(outputNode, 'connect');
         d.source = bus;
         expect(connectSpy).toHaveBeenCalled();
       }
@@ -171,7 +171,7 @@ describe('BeatDetector', () => {
     it('accepts a MediaStream', async () => {
       const stream = makeMediaStream();
       const ctx = getAudioContext();
-      const spy = jest.spyOn(ctx, 'createMediaStreamSource');
+      const spy = vi.spyOn(ctx, 'createMediaStreamSource');
       const d = new BeatDetector();
       await d.ready;
       d.source = stream;
@@ -184,7 +184,7 @@ describe('BeatDetector', () => {
     it('accepts a raw AudioNode', async () => {
       const ctx = getAudioContext();
       const node = ctx.createGain() as unknown as AudioNode;
-      const connectSpy = jest.spyOn(node, 'connect');
+      const connectSpy = vi.spyOn(node, 'connect');
       const d = new BeatDetector();
       await d.ready;
       d.source = node;
@@ -290,7 +290,7 @@ describe('BeatDetector', () => {
     it('fires onBeat signal on beat message', async () => {
       const d = new BeatDetector();
       await d.ready;
-      const handler = jest.fn();
+      const handler = vi.fn();
       d.onBeat.add(handler);
       simulateMessage(d, {
         type: 'beat',
@@ -310,8 +310,8 @@ describe('BeatDetector', () => {
     it('fires onDownbeat for downbeat beats', async () => {
       const d = new BeatDetector();
       await d.ready;
-      const beatHandler = jest.fn();
-      const downbeatHandler = jest.fn();
+      const beatHandler = vi.fn();
+      const downbeatHandler = vi.fn();
       d.onBeat.add(beatHandler);
       d.onDownbeat.add(downbeatHandler);
       simulateMessage(d, {
@@ -332,7 +332,7 @@ describe('BeatDetector', () => {
     it('does NOT fire onDownbeat for non-downbeat beats', async () => {
       const d = new BeatDetector();
       await d.ready;
-      const downbeatHandler = jest.fn();
+      const downbeatHandler = vi.fn();
       d.onDownbeat.add(downbeatHandler);
       simulateMessage(d, {
         type: 'beat',
@@ -353,7 +353,7 @@ describe('BeatDetector', () => {
     it('fires onTempoChange signal', async () => {
       const d = new BeatDetector();
       await d.ready;
-      const handler = jest.fn();
+      const handler = vi.fn();
       d.onTempoChange.add(handler);
       simulateMessage(d, { type: 'tempoChange', newTempo: 128, oldTempo: 120 });
       expect(handler).toHaveBeenCalledWith(128, 120);
@@ -365,7 +365,7 @@ describe('BeatDetector', () => {
     it('fires onBarStart signal', async () => {
       const d = new BeatDetector();
       await d.ready;
-      const handler = jest.fn();
+      const handler = vi.fn();
       d.onBarStart.add(handler);
       simulateMessage(d, {
         type: 'barStart',
@@ -389,7 +389,7 @@ describe('BeatDetector', () => {
       // confirm the option is correctly passed to the worklet via processorOptions
       let capturedProcessorOptions: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, opts: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
         capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
         return new OrigAWN(c, name, opts);
       });
@@ -502,7 +502,7 @@ describe('BeatDetector', () => {
       // forwarded correctly so the worklet can apply it.
       let capturedProcessorOptions: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, opts: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
         capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
         return new OrigAWN(c, name, opts);
       });
@@ -516,7 +516,7 @@ describe('BeatDetector', () => {
     it('forwards enableTimeSignatureDetection=false to worklet processorOptions', async () => {
       let capturedProcessorOptions: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn((c: AudioContext, name: string, opts: AudioWorkletNodeOptions) => {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
         capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
         return new OrigAWN(c, name, opts);
       });
@@ -608,7 +608,7 @@ describe('BeatDetector', () => {
     it('signals are cleared on destroy', async () => {
       const d = new BeatDetector();
       await d.ready;
-      const handler = jest.fn();
+      const handler = vi.fn();
       d.onBeat.add(handler);
       d.destroy();
       // After destroy, the signal is cleared — no more handlers

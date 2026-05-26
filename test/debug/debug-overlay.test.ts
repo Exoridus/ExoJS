@@ -1,10 +1,13 @@
-/**
+﻿/**
  * Canvas-native DebugOverlay tests (0.6.17+).
  *
  * Exercises tree-shake architecture (debug not in root), subscription
  * lifecycle, visibility toggling, F1 keybinding, and render path.
  */
 
+import * as debugExports from '@/debug/index';
+import { DebugOverlay } from '@/debug/DebugOverlay';
+import * as rootExports from '@/index';
 import { Signal } from '@/core/Signal';
 import { Keyboard } from '@/input/types';
 import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
@@ -25,13 +28,13 @@ const fakeGlyph = {
   uvTop: 0,
   uvBottom: 0.02,
 };
-const fakePage = { texture: { updateSource: jest.fn() }, index: 0 };
+const fakePage = { texture: { updateSource: vi.fn() }, index: 0 };
 const fakeAtlas = {
-  getGlyph: jest.fn(() => fakeGlyph),
+  getGlyph: vi.fn(() => fakeGlyph),
   pages: [fakePage],
-  clear: jest.fn(),
+  clear: vi.fn(),
 };
-const fakePool = { getAtlas: jest.fn(() => fakeAtlas) };
+const fakePool = { getAtlas: vi.fn(() => fakeAtlas) };
 beforeEach(() => {
   resetDefaultGlyphAtlasPool(fakePool as unknown as GlyphAtlasPool);
 });
@@ -69,9 +72,9 @@ const makeBackend = () => {
       frame: 1,
     },
     view,
-    setView: jest.fn().mockReturnThis(),
-    draw: jest.fn().mockReturnThis(),
-    flush: jest.fn().mockReturnThis(),
+    setView: vi.fn().mockReturnThis(),
+    draw: vi.fn().mockReturnThis(),
+    flush: vi.fn().mockReturnThis(),
   };
 };
 
@@ -104,40 +107,34 @@ const makeApp = () => {
 
 describe('DebugOverlay — tree-shake architecture', () => {
   test('DebugOverlay is NOT exported from the root barrel', () => {
-    const rootExports = require('../../src/index') as Record<string, unknown>;
 
-    expect(rootExports['DebugOverlay']).toBeUndefined();
+    expect((rootExports as Record<string, unknown>)['DebugOverlay']).toBeUndefined();
   });
 
   test('DebugOverlay IS exported from the debug subpath', () => {
-    const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-    expect(typeof debugExports['DebugOverlay']).toBe('function');
+    expect(typeof (debugExports as Record<string, unknown>)['DebugOverlay']).toBe('function');
   });
 
   test('DebugLayer IS exported from the debug subpath', () => {
-    const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-    expect(typeof debugExports['DebugLayer']).toBe('function');
+    expect(typeof (debugExports as Record<string, unknown>)['DebugLayer']).toBe('function');
   });
 
   test('PerformanceLayer IS exported from the debug subpath', () => {
-    const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-    expect(typeof debugExports['PerformanceLayer']).toBe('function');
+    expect(typeof (debugExports as Record<string, unknown>)['PerformanceLayer']).toBe('function');
   });
 });
 
 describe('DebugOverlay — lifecycle', () => {
   test('new DebugOverlay(app) does not throw', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
 
     expect(() => new DebugOverlay(app)).not.toThrow();
   });
 
   test('constructor subscribes to app.onFrame', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
 
     expect(app.onFrame.count).toBe(0);
@@ -150,7 +147,6 @@ describe('DebugOverlay — lifecycle', () => {
   });
 
   test('constructor subscribes to input.onKeyDown', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
 
     expect(app.input.onKeyDown.count).toBe(0);
@@ -163,7 +159,6 @@ describe('DebugOverlay — lifecycle', () => {
   });
 
   test('layers.performance.visible defaults to false', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -173,7 +168,6 @@ describe('DebugOverlay — lifecycle', () => {
   });
 
   test('destroy() removes onFrame and onKeyDown subscriptions', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -189,7 +183,6 @@ describe('DebugOverlay — lifecycle', () => {
 
 describe('DebugOverlay — render path', () => {
   test('with visible=false, dispatching onFrame does NOT call backend.setView', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -204,7 +197,6 @@ describe('DebugOverlay — render path', () => {
   });
 
   test('with visible=true, dispatching onFrame calls backend.setView', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -220,7 +212,6 @@ describe('DebugOverlay — render path', () => {
   });
 
   test('with visible=true, backend.setView is called twice (save + restore)', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -239,7 +230,6 @@ describe('DebugOverlay — render path', () => {
 
 describe('DebugOverlay — F1 keybinding', () => {
   test('dispatching F1 toggles performance.visible from false to true', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -253,7 +243,6 @@ describe('DebugOverlay — F1 keybinding', () => {
   });
 
   test('dispatching F1 twice toggles back to false', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -267,7 +256,6 @@ describe('DebugOverlay — F1 keybinding', () => {
   });
 
   test('other keys do not affect performance.visible', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -283,7 +271,6 @@ describe('DebugOverlay — F1 keybinding', () => {
 
 describe('DebugOverlay — F2/F3/F4 keybindings', () => {
   test('F2 toggles boundingBoxes layer', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -299,7 +286,6 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
   });
 
   test('F3 toggles hitTest layer', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -315,7 +301,6 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
   });
 
   test('F4 toggles pointerStack layer', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -331,7 +316,6 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
   });
 
   test('F1 does not affect boundingBoxes/hitTest/pointerStack', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -347,7 +331,6 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
 
 describe('DebugOverlay — master visible switch', () => {
   test('visible defaults to true', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -357,7 +340,6 @@ describe('DebugOverlay — master visible switch', () => {
   });
 
   test('visible=false suppresses rendering even when layers are visible', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -376,7 +358,6 @@ describe('DebugOverlay — master visible switch', () => {
   });
 
   test('visible=true (default) lets layers render', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -393,7 +374,6 @@ describe('DebugOverlay — master visible switch', () => {
   });
 
   test('restoring visible=true after false resumes rendering', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -415,7 +395,6 @@ describe('DebugOverlay — master visible switch', () => {
 
 describe('DebugOverlay — view-mode routing', () => {
   test('world-mode layers do NOT trigger setView (render in scene view)', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -433,7 +412,6 @@ describe('DebugOverlay — view-mode routing', () => {
   });
 
   test('screen-mode layers trigger setView twice (swap + restore)', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -451,7 +429,6 @@ describe('DebugOverlay — view-mode routing', () => {
   });
 
   test('world + screen layers: setView called for screen layer only', () => {
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
@@ -472,28 +449,22 @@ describe('DebugOverlay — view-mode routing', () => {
 
 describe('DebugOverlay — new layer exports', () => {
   test('BoundingBoxesLayer IS exported from debug subpath', () => {
-    const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-    expect(typeof debugExports['BoundingBoxesLayer']).toBe('function');
+    expect(typeof (debugExports as Record<string, unknown>)['BoundingBoxesLayer']).toBe('function');
   });
 
   test('HitTestLayer IS exported from debug subpath', () => {
-    const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-    expect(typeof debugExports['HitTestLayer']).toBe('function');
+    expect(typeof (debugExports as Record<string, unknown>)['HitTestLayer']).toBe('function');
   });
 
   test('PointerStackLayer IS exported from debug subpath', () => {
-    const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-    expect(typeof debugExports['PointerStackLayer']).toBe('function');
+    expect(typeof (debugExports as Record<string, unknown>)['PointerStackLayer']).toBe('function');
   });
 
   test('DebugLayerViewMode type guard: "world" and "screen" are valid values', () => {
     // Type-level check (values exist at runtime via the layer getters).
-    const { BoundingBoxesLayer } = require('../../src/debug/BoundingBoxesLayer') as typeof import('../../src/debug/BoundingBoxesLayer');
-    const { PerformanceLayer } = require('../../src/debug/PerformanceLayer') as typeof import('../../src/debug/PerformanceLayer');
-    const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
     const app = makeApp();
     const debug = new DebugOverlay(app);
 

@@ -1,4 +1,4 @@
-import { Drawable } from '@/rendering/Drawable';
+﻿import { Drawable } from '@/rendering/Drawable';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import type { Renderer } from '@/rendering/Renderer';
@@ -85,10 +85,10 @@ const createRuntime = (): RenderBackend => {
 
 const createRenderer = (): Renderer<RenderBackend, BaseDrawable> => ({
   backendType: RenderBackendType.WebGl2,
-  connect: jest.fn(),
-  disconnect: jest.fn(),
-  render: jest.fn(),
-  flush: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  render: vi.fn(),
+  flush: vi.fn(),
 });
 
 describe('RendererRegistry', () => {

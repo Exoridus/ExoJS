@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 import { Sound } from '@/audio/Sound';
 
@@ -13,20 +13,20 @@ const createAudioBufferStub = (): AudioBuffer =>
 
 const setupPannerSpy = () => {
   const ctx = getAudioContext() as AudioContext & { createPanner: () => PannerNode };
-  const spy = jest.spyOn(ctx, 'createPanner').mockImplementation(
+  const spy = vi.spyOn(ctx, 'createPanner').mockImplementation(
     () =>
       ({
-        connect: jest.fn(),
-        disconnect: jest.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
         context: ctx,
         panningModel: 'equalpower' as PanningModelType,
         distanceModel: 'linear' as DistanceModelType,
         maxDistance: 10000,
         refDistance: 1,
         rolloffFactor: 1,
-        positionX: { setValueAtTime: jest.fn() },
-        positionY: { setValueAtTime: jest.fn() },
-        positionZ: { setValueAtTime: jest.fn() },
+        positionX: { setValueAtTime: vi.fn() },
+        positionY: { setValueAtTime: vi.fn() },
+        positionZ: { setValueAtTime: vi.fn() },
       }) as unknown as PannerNode,
   );
   return { restore: () => spy.mockRestore() };
@@ -43,13 +43,13 @@ describe('AudioManager.update()', () => {
 
   afterEach(() => {
     disposeAudioManager();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // 1. mixer.update() ticks listener
   test('update() calls listener._tick()', () => {
     const mixer = getAudioManager();
-    const tickSpy = jest.spyOn(mixer.listener, '_tick');
+    const tickSpy = vi.spyOn(mixer.listener, '_tick');
     mixer.update();
     expect(tickSpy).toHaveBeenCalledTimes(1);
   });
@@ -63,8 +63,8 @@ describe('AudioManager.update()', () => {
     sound1.position = { x: 0, y: 0 };
     sound2.position = { x: 10, y: 10 };
 
-    const tick1 = jest.spyOn(sound1, '_tickSpatial');
-    const tick2 = jest.spyOn(sound2, '_tickSpatial');
+    const tick1 = vi.spyOn(sound1, '_tickSpatial');
+    const tick2 = vi.spyOn(sound2, '_tickSpatial');
 
     mixer.update();
 
@@ -78,102 +78,97 @@ describe('AudioManager.update()', () => {
     const mixer = getAudioManager();
     const sound = new Sound(createAudioBufferStub());
     // sound.position remains null — not spatial
-    const tickSpy = jest.spyOn(sound, '_tickSpatial');
+    const tickSpy = vi.spyOn(sound, '_tickSpatial');
     mixer.update();
     expect(tickSpy).not.toHaveBeenCalled();
   });
 
   // 4. Application.update() invokes mixer.update() between interaction and tweens
-  test('Application.update() calls getAudioManager().update() between interaction.update() and tweens.update()', () => {
-    jest.resetModules();
+  test('Application.update() calls getAudioManager().update() between interaction.update() and tweens.update()', async () => {
+    vi.resetModules();
 
     const callOrder: string[] = [];
 
     const mixerMock = {
-      update: jest.fn(() => {
+      update: vi.fn(() => {
         callOrder.push('mixer');
       }),
-      _applyVisibility: jest.fn(),
+      _applyVisibility: vi.fn(),
     };
-    jest.doMock('@/audio/AudioManager', () => ({
+    vi.doMock('@/audio/AudioManager', () => ({
       getAudioManager: () => mixerMock,
     }));
-    jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-      WebGl2Backend: jest.fn(() => ({
-        initialize: jest.fn(),
-        flush: jest.fn(),
-        resize: jest.fn(),
-        destroy: jest.fn(),
-        resetStats: jest.fn().mockReturnThis(),
+    vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+      WebGl2Backend: vi.fn(function () { return {
+        initialize: vi.fn(),
+        flush: vi.fn(),
+        resize: vi.fn(),
+        destroy: vi.fn(),
+        resetStats: vi.fn().mockReturnThis(),
         stats: { frameTimeMs: 0 },
-      })),
+      }; }),
     }));
-    jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-      WebGpuBackend: jest.fn(),
+    vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+      WebGpuBackend: vi.fn(),
     }));
-    jest.doMock('@/resources/Loader', () => ({
-      Loader: jest.fn(() => ({ destroy: jest.fn() })),
+    vi.doMock('@/resources/Loader', () => ({
+      Loader: vi.fn(function () { return { destroy: vi.fn() }; }),
     }));
-    jest.doMock('@/input/InputManager', () => ({
-      InputManager: jest.fn(() => ({
-        update: jest.fn(),
-        destroy: jest.fn(),
-        onCanvasFocusChange: { add: jest.fn() },
-      })),
+    vi.doMock('@/input/InputManager', () => ({
+      InputManager: vi.fn(function () { return {
+        update: vi.fn(),
+        destroy: vi.fn(),
+        onCanvasFocusChange: { add: vi.fn() },
+      }; }),
     }));
-    jest.doMock('@/input/InteractionManager', () => ({
-      InteractionManager: jest.fn(() => ({
-        update: jest.fn(() => {
-          callOrder.push('interaction');
-        }),
-        destroy: jest.fn(),
-      })),
+    vi.doMock('@/input/InteractionManager', () => ({
+      InteractionManager: vi.fn(function () {
+        return {
+          update: vi.fn(() => {
+            callOrder.push('interaction');
+          }),
+          destroy: vi.fn(),
+        };
+      }),
     }));
-    jest.doMock('@/core/SceneManager', () => ({
-      SceneManager: jest.fn(() => ({ update: jest.fn(), setScene: jest.fn(), destroy: jest.fn() })),
+    vi.doMock('@/core/SceneManager', () => ({
+      SceneManager: vi.fn(function () { return { update: vi.fn(), setScene: vi.fn(), destroy: vi.fn() }; }),
     }));
 
-    let Application!: typeof import('@/core/Application').Application;
-    let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
-
-    jest.isolateModules(() => {
-      const mod = require('@/core/Application') as typeof import('@/core/Application');
-      Application = mod.Application;
-      ApplicationStatus = mod.ApplicationStatus;
-    });
+    const { Application, ApplicationStatus } = await import('@/core/Application');
 
     const app = Object.create(Application.prototype) as import('@/core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
     const tweens = {
-      update: jest.fn(() => {
+      update: vi.fn(() => {
         callOrder.push('tweens');
       }),
     };
 
     rawApp['_status'] = ApplicationStatus.Running;
-    rawApp['input'] = { update: jest.fn() };
+    rawApp['input'] = { update: vi.fn() };
     rawApp['interaction'] = {
       update: () => {
         callOrder.push('interaction');
       },
     };
     rawApp['tweens'] = tweens;
-    rawApp['scene'] = { update: jest.fn() };
+    rawApp['scene'] = { update: vi.fn() };
     rawApp['_backend'] = {
-      flush: jest.fn(),
-      resetStats: jest.fn().mockReturnThis(),
+      flush: vi.fn(),
+      resetStats: vi.fn().mockReturnThis(),
       stats: { frameTimeMs: 0 },
     };
     rawApp['_frameClock'] = {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: jest.fn(),
+      restart: vi.fn(),
     };
-    rawApp['_updateHandler'] = jest.fn();
+    rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
-    rawApp['onFrame'] = { dispatch: jest.fn() };
+    rawApp['onFrame'] = { dispatch: vi.fn() };
 
-    jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     app.update();
 
@@ -185,7 +180,7 @@ describe('AudioManager.update()', () => {
     expect(mixerIdx).toBeGreaterThan(interactionIdx);
     expect(tweensIdx).toBeGreaterThan(mixerIdx);
 
-    jest.resetModules();
+    vi.resetModules();
   });
 
   test('update() still works after all spatial sounds are unregistered', () => {
@@ -208,7 +203,7 @@ describe('AudioManager.update()', () => {
     mixer.destroy();
 
     // After destroy, update() shouldn't call anything on the old sound
-    const tickSpy = jest.spyOn(sound, '_tickSpatial');
+    const tickSpy = vi.spyOn(sound, '_tickSpatial');
     // mixer is now destroyed — but we can still call update (though mixer is invalid, so don't call it)
     expect(tickSpy).not.toHaveBeenCalled();
     pannerSpy.restore();

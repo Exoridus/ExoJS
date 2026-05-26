@@ -1,4 +1,4 @@
-import { Color } from '@/core/Color';
+﻿import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
 import { Container } from '@/rendering/Container';
@@ -21,7 +21,7 @@ class TestDrawable extends Drawable {}
 class RecordingFilter extends Filter {
   private readonly _id: string;
   private readonly _events: string[];
-  public readonly calls = jest.fn();
+  public readonly calls = vi.fn();
 
   public constructor(id: string, events: string[]) {
     super();
@@ -52,10 +52,10 @@ const createRuntime = () => {
   const released: RenderTexture[] = [];
   const clipEvents: string[] = [];
   const clipBoundsCalls: Rectangle[] = [];
-  const draw = jest.fn(function (this: RenderBackend) {
+  const draw = vi.fn(function (this: RenderBackend) {
     return this;
   });
-  const clear = jest.fn(function (this: RenderBackend) {
+  const clear = vi.fn(function (this: RenderBackend) {
     return this;
   });
   const runtime: RenderBackend = {
@@ -373,7 +373,7 @@ describe('render effects', () => {
 
   test('CallbackRenderPass executes supplied callback', () => {
     const { runtime } = createRuntime();
-    const callback = jest.fn();
+    const callback = vi.fn();
 
     runtime.execute(new CallbackRenderPass(callback));
 
@@ -385,7 +385,7 @@ describe('render effects', () => {
     const container = new Container();
     const texture = createTexture();
     const child = new Sprite(texture);
-    const childRender = jest.spyOn(child, 'render');
+    const childRender = vi.spyOn(child, 'render');
 
     container.addChild(child);
     container.cacheAsBitmap = true;

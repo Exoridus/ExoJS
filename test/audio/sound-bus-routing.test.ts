@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
 import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 import { Music } from '@/audio/Music';
@@ -29,19 +29,19 @@ const createVideoElementStub = (): HTMLVideoElement => {
 
 // Spy on gainNode.connect to capture where it connects to.
 interface ConnectSpy {
-  gainNode: { connect: jest.Mock; disconnect: jest.Mock; gain: object };
+  gainNode: { connect: MockInstance; disconnect: MockInstance; gain: object };
   restore: () => void;
 }
 
 const spyOnGainConnect = (): ConnectSpy => {
   const gainNode = {
-    connect: jest.fn(),
-    disconnect: jest.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
     gain: {
-      setTargetAtTime: jest.fn(),
-      cancelScheduledValues: jest.fn(),
-      setValueAtTime: jest.fn(),
-      linearRampToValueAtTime: jest.fn(),
+      setTargetAtTime: vi.fn(),
+      cancelScheduledValues: vi.fn(),
+      setValueAtTime: vi.fn(),
+      linearRampToValueAtTime: vi.fn(),
       value: 1,
     },
   };
@@ -52,7 +52,7 @@ const spyOnGainConnect = (): ConnectSpy => {
   // the mock only once and fall through for subsequent calls.
   const original = ctx.createGain.bind(ctx);
   let firstCall = true;
-  const spy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+  const spy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     if (firstCall) {
       firstCall = false;
       return gainNode as unknown as GainNode;
@@ -77,7 +77,7 @@ describe('Bus routing (Sound / Music / Video)', () => {
 
   afterEach(() => {
     disposeAudioManager();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // 1. Default bus for Sound

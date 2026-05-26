@@ -1,7 +1,7 @@
+import * as exo from '@/index';
+
 describe('root index public API exports', () => {
   test('exports core surfaces documented in README and guides', () => {
-    const exo = require('../../src/index') as Record<string, unknown>;
-
     expect(exo.Application).toBeDefined();
     expect(exo.Scene).toBeDefined();
     expect(exo.AnimatedSprite).toBeDefined();

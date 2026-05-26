@@ -1,4 +1,4 @@
-import { SceneNode } from '@/core/SceneNode';
+﻿import { SceneNode } from '@/core/SceneNode';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import type { RenderBackend } from '@/rendering/RenderBackend';
@@ -107,7 +107,7 @@ describe('RenderNode and SceneNode contract', () => {
   test('Drawable is a concrete RenderNode and renders by submitting to runtime.draw', () => {
     const runtime = createRuntime();
     const drawable = new TestDrawable();
-    const draw = jest.spyOn(runtime, 'draw');
+    const draw = vi.spyOn(runtime, 'draw');
 
     drawable.render(runtime);
 
@@ -121,7 +121,7 @@ describe('RenderNode and SceneNode contract', () => {
     const runtime = createRuntime();
     const container = new Container();
     const child = new TestDrawable();
-    const childRender = jest.spyOn(child, 'render');
+    const childRender = vi.spyOn(child, 'render');
 
     container.addChild(child);
     container.render(runtime);

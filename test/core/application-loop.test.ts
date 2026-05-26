@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for Application.update() loop timing fixes:
  *   F1 — pauseOnHidden resume delta-spike fix (_frameClock.restart in hidden path)
  *   F2 — internal MAX_DELTA_MS clamp applied to simulation delta
@@ -9,14 +9,14 @@ import { Time } from '@/core/Time';
 
 // ---------------------------------------------------------------------------
 // Backend stubs — keep WebGL2 / WebGPU out of jsdom.
-// The factory functions must be inline because jest.mock() is hoisted before
+// The factory functions must be inline because vi.mock() is hoisted before
 // any variable declarations in the file.
 // ---------------------------------------------------------------------------
 
-jest.mock('@/rendering/webgl2/WebGl2Backend', () => ({
-  WebGl2Backend: jest.fn().mockImplementation(() => ({
-    onContextLost: { add: jest.fn() },
-    onContextRestored: { add: jest.fn() },
+vi.mock('@/rendering/webgl2/WebGl2Backend', () => ({
+  WebGl2Backend: vi.fn().mockImplementation(function () { return {
+    onContextLost: { add: vi.fn() },
+    onContextRestored: { add: vi.fn() },
     stats: {
       frameTimeMs: 0,
       drawCalls: 0,
@@ -28,30 +28,30 @@ jest.mock('@/rendering/webgl2/WebGl2Backend', () => ({
       frame: 0,
       rawFrameDeltaMs: 0,
     },
-    resetStats: jest.fn().mockReturnThis(),
-    flush: jest.fn().mockReturnThis(),
-    initialize: jest.fn().mockResolvedValue(undefined),
-    destroy: jest.fn(),
-    resize: jest.fn().mockReturnThis(),
+    resetStats: vi.fn().mockReturnThis(),
+    flush: vi.fn().mockReturnThis(),
+    initialize: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn(),
+    resize: vi.fn().mockReturnThis(),
     view: {},
     renderTarget: {},
     backendType: 'webgl2',
-    setView: jest.fn().mockReturnThis(),
-    draw: jest.fn().mockReturnThis(),
-    execute: jest.fn().mockReturnThis(),
-    clear: jest.fn().mockReturnThis(),
-    pushScissorRect: jest.fn().mockReturnThis(),
-    popScissorRect: jest.fn().mockReturnThis(),
-    acquireRenderTexture: jest.fn(),
-    releaseRenderTexture: jest.fn().mockReturnThis(),
-    composeWithAlphaMask: jest.fn().mockReturnThis(),
-  })),
+    setView: vi.fn().mockReturnThis(),
+    draw: vi.fn().mockReturnThis(),
+    execute: vi.fn().mockReturnThis(),
+    clear: vi.fn().mockReturnThis(),
+    pushScissorRect: vi.fn().mockReturnThis(),
+    popScissorRect: vi.fn().mockReturnThis(),
+    acquireRenderTexture: vi.fn(),
+    releaseRenderTexture: vi.fn().mockReturnThis(),
+    composeWithAlphaMask: vi.fn().mockReturnThis(),
+  }; }),
 }));
 
-jest.mock('@/rendering/webgpu/WebGpuBackend', () => ({
-  WebGpuBackend: jest.fn().mockImplementation(() => ({
-    onDeviceLost: { add: jest.fn() },
-    onDeviceRestored: { add: jest.fn() },
+vi.mock('@/rendering/webgpu/WebGpuBackend', () => ({
+  WebGpuBackend: vi.fn().mockImplementation(function () { return {
+    onDeviceLost: { add: vi.fn() },
+    onDeviceRestored: { add: vi.fn() },
     stats: {
       frameTimeMs: 0,
       drawCalls: 0,
@@ -63,24 +63,24 @@ jest.mock('@/rendering/webgpu/WebGpuBackend', () => ({
       frame: 0,
       rawFrameDeltaMs: 0,
     },
-    resetStats: jest.fn().mockReturnThis(),
-    flush: jest.fn().mockReturnThis(),
-    initialize: jest.fn().mockResolvedValue(undefined),
-    destroy: jest.fn(),
-    resize: jest.fn().mockReturnThis(),
+    resetStats: vi.fn().mockReturnThis(),
+    flush: vi.fn().mockReturnThis(),
+    initialize: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn(),
+    resize: vi.fn().mockReturnThis(),
     view: {},
     renderTarget: {},
     backendType: 'webgpu',
-    setView: jest.fn().mockReturnThis(),
-    draw: jest.fn().mockReturnThis(),
-    execute: jest.fn().mockReturnThis(),
-    clear: jest.fn().mockReturnThis(),
-    pushScissorRect: jest.fn().mockReturnThis(),
-    popScissorRect: jest.fn().mockReturnThis(),
-    acquireRenderTexture: jest.fn(),
-    releaseRenderTexture: jest.fn().mockReturnThis(),
-    composeWithAlphaMask: jest.fn().mockReturnThis(),
-  })),
+    setView: vi.fn().mockReturnThis(),
+    draw: vi.fn().mockReturnThis(),
+    execute: vi.fn().mockReturnThis(),
+    clear: vi.fn().mockReturnThis(),
+    pushScissorRect: vi.fn().mockReturnThis(),
+    popScissorRect: vi.fn().mockReturnThis(),
+    acquireRenderTexture: vi.fn(),
+    releaseRenderTexture: vi.fn().mockReturnThis(),
+    composeWithAlphaMask: vi.fn().mockReturnThis(),
+  }; }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -98,9 +98,9 @@ function frameClock(app: Application): import('@/core/Clock').Clock {
 }
 
 /** Mock _frameClock.elapsedTime getter to return a fixed Time value. */
-function mockFrameElapsed(app: Application, ms: number): jest.SpyInstance {
+function mockFrameElapsed(app: Application, ms: number): MockInstance {
   const fixed = new Time(ms);
-  return jest.spyOn(frameClock(app), 'elapsedTime', 'get').mockReturnValue(fixed);
+  return vi.spyOn(frameClock(app), 'elapsedTime', 'get').mockReturnValue(fixed);
 }
 
 // ---------------------------------------------------------------------------
@@ -109,26 +109,26 @@ function mockFrameElapsed(app: Application, ms: number): jest.SpyInstance {
 
 describe('Application.update() — loop timing (F1 + F2)', () => {
   let app: Application;
-  let rafSpy: jest.SpyInstance;
+  let rafSpy: MockInstance;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1 as unknown as ReturnType<typeof requestAnimationFrame>);
+    vi.clearAllMocks();
+    rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1 as unknown as ReturnType<typeof requestAnimationFrame>);
 
     app = new Application({ backend: { type: 'webgl2' } });
     forceRunning(app);
 
     // Stub out input/interaction so jsdom's missing gamepad API doesn't error.
     // These tests exercise loop timing logic, not the input subsystem.
-    jest.spyOn(app.input, 'update').mockReturnValue(app.input);
-    jest.spyOn(app.interaction, 'update').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'update').mockReturnValue(app.input);
+    vi.spyOn(app.interaction, 'update').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     // Stop before destroy so destroy() doesn't try to unload a scene
     (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
     app.destroy();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // -------------------------------------------------------------------------
@@ -140,7 +140,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
       app.pauseOnHidden = true;
       (app as unknown as Record<string, unknown>)['_documentVisible'] = false;
 
-      const restartSpy = jest.spyOn(frameClock(app), 'restart');
+      const restartSpy = vi.spyOn(frameClock(app), 'restart');
 
       app.update();
 
@@ -191,7 +191,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
       app.pauseOnHidden = true;
       (app as unknown as Record<string, unknown>)['_documentVisible'] = false;
 
-      const restartSpy = jest.spyOn(frameClock(app), 'restart');
+      const restartSpy = vi.spyOn(frameClock(app), 'restart');
 
       app.update();
 
@@ -203,7 +203,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
       (app as unknown as Record<string, unknown>)['_documentVisible'] = true;
 
       // On the visible frame, capture what delta tweens receive
-      const tweensUpdateSpy = jest.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
 
       // Control the clock to return a small post-resume delta
       mockFrameElapsed(app, 16);
@@ -223,7 +223,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('a very large raw delta is clamped before tweens.update receives it', () => {
       mockFrameElapsed(app, 30_000); // 30 seconds — simulates device sleep
 
-      const tweensUpdateSpy = jest.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
 
       app.update();
 
@@ -237,7 +237,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('a very large raw delta is clamped before sceneManager.update receives it', () => {
       mockFrameElapsed(app, 30_000);
 
-      const sceneUpdateSpy = jest.spyOn(app.scene, 'update');
+      const sceneUpdateSpy = vi.spyOn(app.scene, 'update');
 
       app.update();
 
@@ -250,7 +250,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('a normal frame delta (16ms) passes through unchanged', () => {
       mockFrameElapsed(app, 16);
 
-      const tweensUpdateSpy = jest.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
 
       app.update();
 
@@ -263,7 +263,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('a delta exactly at the cap boundary (100ms) passes through unchanged', () => {
       mockFrameElapsed(app, 100);
 
-      const tweensUpdateSpy = jest.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
 
       app.update();
 
@@ -275,7 +275,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('a delta one millisecond above the cap is clamped to exactly the cap', () => {
       mockFrameElapsed(app, 101);
 
-      const tweensUpdateSpy = jest.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
 
       app.update();
 
@@ -296,7 +296,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('rawFrameDeltaMs equals the unclamped value even when clamped', () => {
       mockFrameElapsed(app, 200);
 
-      const tweensUpdateSpy = jest.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
 
       app.update();
 
@@ -339,7 +339,7 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
     test('onFrame signal is dispatched each normal frame', () => {
       mockFrameElapsed(app, 16);
 
-      const frameHandler = jest.fn();
+      const frameHandler = vi.fn();
       app.onFrame.add(frameHandler);
 
       app.update();

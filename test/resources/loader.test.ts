@@ -1,4 +1,4 @@
-import { Asset } from '@/resources/Asset';
+﻿import { Asset } from '@/resources/Asset';
 import type { AssetFactory } from '@/resources/AssetFactory';
 import { BundleLoadError, defineAssetManifest } from '@/resources/AssetManifest';
 import { Assets } from '@/resources/Assets';
@@ -16,8 +16,8 @@ declare module '@/resources/AssetDefinitions' {
 
 class MockTextFactory implements AssetFactory<string> {
   public readonly storageName = 'text';
-  public readonly process = jest.fn(async (_response: Response): Promise<string> => 'fresh-source');
-  public readonly create = jest.fn(async (source: string): Promise<string> => `resource:${source}`);
+  public readonly process = vi.fn(async (_response: Response): Promise<string> => 'fresh-source');
+  public readonly create = vi.fn(async (source: string): Promise<string> => `resource:${source}`);
 
   public destroy(): void {}
 }
@@ -28,19 +28,19 @@ class DummyAsset {
 
 class DummyFactory implements AssetFactory<DummyAsset> {
   public readonly storageName = 'dummy';
-  public readonly process = jest.fn(async (response: Response): Promise<string> => 'raw');
-  public readonly create = jest.fn(async (source: string): Promise<DummyAsset> => new DummyAsset(source));
+  public readonly process = vi.fn(async (response: Response): Promise<string> => 'raw');
+  public readonly create = vi.fn(async (source: string): Promise<DummyAsset> => new DummyAsset(source));
 
   public destroy(): void {}
 }
 
 class InstanceFactory<T> implements AssetFactory<T> {
   public readonly storageName = 'instance';
-  public readonly process = jest.fn(async (_response: Response): Promise<string> => 'raw');
+  public readonly process = vi.fn(async (_response: Response): Promise<string> => 'raw');
   public readonly create: (source: string) => Promise<T>;
 
   public constructor(resource: T) {
-    this.create = jest.fn(async (_source: string): Promise<T> => resource);
+    this.create = vi.fn(async (_source: string): Promise<T> => resource);
   }
 
   public destroy(): void {}
@@ -64,11 +64,11 @@ const createDeferred = <T>(): Deferred<T> => {
 };
 
 const createCacheStoreMock = (overrides: Partial<CacheStore> = {}): CacheStore => ({
-  load: jest.fn(async (): Promise<unknown | null> => null),
-  save: jest.fn(async (): Promise<void> => undefined),
-  delete: jest.fn(async (): Promise<boolean> => true),
-  clear: jest.fn(async (): Promise<boolean> => true),
-  destroy: jest.fn(),
+  load: vi.fn(async (): Promise<unknown | null> => null),
+  save: vi.fn(async (): Promise<void> => undefined),
+  delete: vi.fn(async (): Promise<boolean> => true),
+  clear: vi.fn(async (): Promise<boolean> => true),
+  destroy: vi.fn(),
   ...overrides,
 });
 
@@ -80,7 +80,7 @@ describe('Loader', () => {
   });
 
   const mockFetch = (body = ''): void => {
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: true,
@@ -94,7 +94,7 @@ describe('Loader', () => {
   };
 
   const mockFetch404 = (): void => {
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: false,
@@ -278,12 +278,12 @@ describe('Loader', () => {
   test('reads from cache hit and skips network fetch', async () => {
     const factory = new MockTextFactory();
     const cacheStore = createCacheStoreMock({
-      load: jest.fn(async (): Promise<string> => 'cached-source'),
+      load: vi.fn(async (): Promise<string> => 'cached-source'),
     });
     const loader = new Loader({ basePath: '/', cache: cacheStore });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    global.fetch = jest.fn(async (): Promise<Response> => {
+    global.fetch = vi.fn(async (): Promise<Response> => {
       throw new Error('Unexpected network fetch on cache hit.');
     });
 
@@ -315,7 +315,7 @@ describe('Loader', () => {
   test('deletes corrupt cached source and retries via network', async () => {
     const factory = new MockTextFactory();
     const cacheStore = createCacheStoreMock({
-      load: jest.fn(async (): Promise<string> => 'corrupt-source'),
+      load: vi.fn(async (): Promise<string> => 'corrupt-source'),
     });
     const loader = new Loader({ basePath: '/', cache: cacheStore });
 
@@ -336,7 +336,7 @@ describe('Loader', () => {
   test('load(Json, path) returns unknown by default', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: true,
@@ -358,7 +358,7 @@ describe('Loader', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
 
     let fetchCount = 0;
-    global.fetch = jest.fn(async (): Promise<Response> => {
+    global.fetch = vi.fn(async (): Promise<Response> => {
       fetchCount++;
       return { ok: true, status: 200, statusText: 'OK' } as Response;
     });
@@ -375,7 +375,7 @@ describe('Loader', () => {
   test('background load dispatches onLoaded exactly once per successful resource', async () => {
     const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
-    const onLoaded = jest.fn();
+    const onLoaded = vi.fn();
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.onLoaded.add(onLoaded);
@@ -401,7 +401,7 @@ describe('Loader', () => {
       progress.push([loaded, total]);
     });
 
-    global.fetch = jest.fn((input: RequestInfo | URL): Promise<Response> => {
+    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.endsWith('/first.txt')) {
@@ -455,7 +455,7 @@ describe('Loader', () => {
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
 
-    global.fetch = jest.fn((_input: RequestInfo | URL): Promise<Response> => deferredFetch.promise);
+    global.fetch = vi.fn((_input: RequestInfo | URL): Promise<Response> => deferredFetch.promise);
 
     const loadPromise = loader.load(TextAsset, 'inflight.txt');
 
@@ -688,7 +688,7 @@ describe('Loader', () => {
       }),
     );
 
-    global.fetch = jest.fn(async (input: RequestInfo | URL): Promise<Response> => {
+    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.endsWith('/missing.txt')) {
@@ -741,7 +741,7 @@ describe('Loader', () => {
       }),
     );
 
-    global.fetch = jest.fn(async (input: RequestInfo | URL): Promise<Response> => {
+    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.endsWith('/missing.txt')) {
@@ -839,7 +839,7 @@ describe('Loader', () => {
       }),
     );
 
-    global.fetch = jest.fn((input: RequestInfo | URL): Promise<Response> => {
+    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.endsWith('/first.txt')) {
@@ -919,7 +919,7 @@ describe('Loader', () => {
       }),
     );
 
-    global.fetch = jest.fn(async (input: RequestInfo | URL): Promise<Response> => {
+    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.endsWith('/bad.txt')) {
@@ -948,8 +948,8 @@ describe('Loader', () => {
 
 class MockAssetFactory implements AssetFactory<string> {
   public readonly storageName = 'mockAsset';
-  public readonly process = jest.fn(async (_response: Response): Promise<string> => 'raw');
-  public readonly create = jest.fn(async (source: string): Promise<string> => `loaded:${source}`);
+  public readonly process = vi.fn(async (_response: Response): Promise<string> => 'raw');
+  public readonly create = vi.fn(async (source: string): Promise<string> => `loaded:${source}`);
   public destroy(): void {}
 }
 
@@ -1008,7 +1008,7 @@ describe('LoadingQueue progress tracking', () => {
 
   // Shared mockFetch helper (redeclare locally in scope)
   function mockFetch(): void {
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: true,
@@ -1022,7 +1022,7 @@ describe('LoadingQueue progress tracking', () => {
   }
 
   afterEach(() => {
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
   });
 });
 
@@ -1034,7 +1034,7 @@ describe('Asset / Assets identity and alias semantics', () => {
   });
 
   function mockFetch(): void {
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: true,
@@ -1223,11 +1223,11 @@ describe('registerAssetType() handler form — cache-aware context', () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   function mockFetchText(body: string): void {
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: true,
@@ -1279,7 +1279,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     // First load — populates in-memory result
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     // Reset the mock so we can check if it was called during the second load
-    (global.fetch as jest.Mock).mockClear();
+    (global.fetch as MockInstance).mockClear();
     // Second load — same asset, should be served from _resources (no new fetch call)
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
@@ -1369,7 +1369,7 @@ describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () =
   });
 
   function mockFetch(): void {
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: true,
@@ -1426,7 +1426,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
   afterEach(() => {
     global.fetch = originalFetch;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   function makeMockStore(): { store: CacheStore; saves: { storageName: string; key: string }[] } {
@@ -1444,7 +1444,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
   }
 
   function mockFetch(body: string): void {
-    global.fetch = jest.fn(
+    global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
           ok: true,
@@ -1531,7 +1531,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     // First load — populates _resources; context.fetchText goes to network, store has no entry yet
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     // Second load — served from _resources, handler not called, store not consulted
-    (global.fetch as jest.Mock).mockClear();
+    (global.fetch as MockInstance).mockClear();
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
   });

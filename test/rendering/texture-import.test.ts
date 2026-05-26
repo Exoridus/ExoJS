@@ -1,29 +1,29 @@
 describe('@/rendering/texture/Texture import behavior', () => {
-  afterEach(() => {
-    jest.restoreAllMocks();
-    jest.resetModules();
+  beforeEach(() => {
+    vi.resetModules();
   });
 
-  it('does not create canvases on import', () => {
-    const createElementSpy = jest.spyOn(document, 'createElement');
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
 
-    jest.isolateModules(() => {
-      require('@/rendering/texture/Texture');
-    });
+  it('does not create canvases on import', async () => {
+    const createElementSpy = vi.spyOn(document, 'createElement');
+
+    await import('@/rendering/texture/Texture');
 
     expect(createElementSpy).not.toHaveBeenCalled();
   });
 
-  it('creates the cached black texture lazily on first access', () => {
-    const createElementSpy = jest.spyOn(document, 'createElement');
+  it('creates the cached black texture lazily on first access', async () => {
+    const createElementSpy = vi.spyOn(document, 'createElement');
 
-    jest.isolateModules(() => {
-      const { Texture } = require('@/rendering/texture/Texture');
+    const { Texture } = await import('@/rendering/texture/Texture');
 
-      expect(createElementSpy).not.toHaveBeenCalled();
+    expect(createElementSpy).not.toHaveBeenCalled();
 
-      void Texture.black;
-    });
+    void Texture.black;
 
     expect(createElementSpy).toHaveBeenCalledWith('canvas');
   });

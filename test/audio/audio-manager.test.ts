@@ -1,4 +1,4 @@
-import { AudioBus } from '@/audio/AudioBus';
+﻿import { AudioBus } from '@/audio/AudioBus';
 import { AudioManager, disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 
 // ---------------------------------------------------------------------------
@@ -12,7 +12,7 @@ describe('AudioManager', () => {
 
   afterEach(() => {
     disposeAudioManager();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // 1. Singleton

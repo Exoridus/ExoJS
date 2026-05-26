@@ -1,4 +1,4 @@
-import { Rectangle } from '@/math/Rectangle';
+﻿import { Rectangle } from '@/math/Rectangle';
 import { AnimatedSprite } from '@/rendering/sprite/AnimatedSprite';
 import { Spritesheet } from '@/rendering/sprite/Spritesheet';
 import type { Texture } from '@/rendering/texture/Texture';
@@ -63,7 +63,7 @@ describe('AnimatedSprite', () => {
         loop: false,
       },
     });
-    const completeSpy = jest.fn();
+    const completeSpy = vi.fn();
 
     sprite.onComplete.add(completeSpy);
     sprite.play('burst');

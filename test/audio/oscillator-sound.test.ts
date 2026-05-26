@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
 import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 import { Envelope } from '@/audio/Envelope';
@@ -7,52 +7,52 @@ import { SoundPoolStrategy } from '@/audio/Sound';
 
 interface MockAudioParam {
   value: number;
-  cancelScheduledValues: jest.Mock;
-  setValueAtTime: jest.Mock;
-  linearRampToValueAtTime: jest.Mock;
-  setTargetAtTime: jest.Mock;
+  cancelScheduledValues: MockInstance;
+  setValueAtTime: MockInstance;
+  linearRampToValueAtTime: MockInstance;
+  setTargetAtTime: MockInstance;
 }
 
 interface MockOscillatorNode {
   type: OscillatorType;
   frequency: MockAudioParam;
   detune: MockAudioParam;
-  start: jest.Mock;
-  stop: jest.Mock;
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  start: MockInstance;
+  stop: MockInstance;
+  connect: MockInstance;
+  disconnect: MockInstance;
   onended: (() => void) | null;
 }
 
 const makeMockAudioParam = (value = 0): MockAudioParam => ({
   value,
-  cancelScheduledValues: jest.fn(),
-  setValueAtTime: jest.fn(),
-  linearRampToValueAtTime: jest.fn(),
-  setTargetAtTime: jest.fn(),
+  cancelScheduledValues: vi.fn(),
+  setValueAtTime: vi.fn(),
+  linearRampToValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
 });
 
 const createOscillatorMock = (): MockOscillatorNode => ({
   type: 'sine',
   frequency: makeMockAudioParam(440),
   detune: makeMockAudioParam(0),
-  start: jest.fn(),
-  stop: jest.fn(),
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  start: vi.fn(),
+  stop: vi.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   onended: null,
 });
 
 interface MockGainNode {
   gain: MockAudioParam;
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  connect: MockInstance;
+  disconnect: MockInstance;
 }
 
 const createGainMock = (): MockGainNode => ({
   gain: makeMockAudioParam(1),
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
 });
 
 // Setup spies for createOscillator and createGain on the live mock AudioContext
@@ -70,13 +70,13 @@ const setupOscillatorSpy = (): {
   const oscillators: MockOscillatorNode[] = [];
   const gains: MockGainNode[] = [];
 
-  const oscillatorSpy = jest.spyOn(ctx, 'createOscillator').mockImplementation(() => {
+  const oscillatorSpy = vi.spyOn(ctx, 'createOscillator').mockImplementation(() => {
     const node = createOscillatorMock();
     oscillators.push(node);
     return node as unknown as OscillatorNode;
   });
 
-  const gainSpy = jest.spyOn(ctx, 'createGain').mockImplementation(() => {
+  const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     const node = createGainMock();
     gains.push(node);
     return node as unknown as GainNode;
@@ -92,7 +92,7 @@ const setupOscillatorSpy = (): {
 
 describe('OscillatorSound', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     disposeAudioManager();
   });
 
@@ -246,7 +246,7 @@ describe('OscillatorSound', () => {
     const spy = setupOscillatorSpy();
 
     const env = new Envelope({ attackMs: 10, decayMs: 50, sustainLevel: 0.8, releaseMs: 100 });
-    const triggerSpy = jest.spyOn(env, 'trigger');
+    const triggerSpy = vi.spyOn(env, 'trigger');
 
     const sound = new OscillatorSound({ envelope: env });
     sound.play();
@@ -267,7 +267,7 @@ describe('OscillatorSound', () => {
     const spy = setupOscillatorSpy();
 
     const env = new Envelope({ attackMs: 10, decayMs: 50, sustainLevel: 0.8, releaseMs: 200 });
-    const releaseSpy = jest.spyOn(env, 'release');
+    const releaseSpy = vi.spyOn(env, 'release');
 
     const sound = new OscillatorSound({ envelope: env });
     sound.play();

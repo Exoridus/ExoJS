@@ -1,6 +1,6 @@
-import type { Application } from '@/core/Application';
+﻿import type { Application } from '@/core/Application';
 import { Scene } from '@/core/Scene';
-import type { Signal } from '@/core/Signal';
+import { Signal } from '@/core/Signal';
 import type { InputManager } from '@/input/InputManager';
 import type { InteractionEvent } from '@/input/InteractionEvent';
 import { InteractionManager } from '@/input/InteractionManager';
@@ -72,15 +72,13 @@ const createApp = (): {
   signals: MockSignals;
   canvas: HTMLCanvasElement;
 } => {
-  const { Signal: SIG } = jest.requireActual<{ Signal: typeof import('@/core/Signal').Signal }>('@/core/Signal');
-
   const signals: MockSignals = {
-    onPointerDown: new SIG<[Pointer]>(),
-    onPointerMove: new SIG<[Pointer]>(),
-    onPointerUp: new SIG<[Pointer]>(),
-    onPointerTap: new SIG<[Pointer]>(),
-    onPointerCancel: new SIG<[Pointer]>(),
-    onPointerLeave: new SIG<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer]>(),
+    onPointerMove: new Signal<[Pointer]>(),
+    onPointerUp: new Signal<[Pointer]>(),
+    onPointerTap: new Signal<[Pointer]>(),
+    onPointerCancel: new Signal<[Pointer]>(),
+    onPointerLeave: new Signal<[Pointer]>(),
   };
 
   const canvas = document.createElement('canvas');
@@ -392,7 +390,7 @@ describe('InteractionManager — spatial index: basic hit', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
@@ -414,7 +412,7 @@ describe('InteractionManager — spatial index: basic hit', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
     signals.onPointerDown.dispatch(makePointer({ x: 200, y: 200 }));
@@ -440,8 +438,8 @@ describe('InteractionManager — spatial index: z-order preserved', () => {
     scene.addChild(bottom);
     scene.addChild(top);
 
-    const bottomHandler = jest.fn();
-    const topHandler = jest.fn();
+    const bottomHandler = vi.fn();
+    const topHandler = vi.fn();
 
     bottom.onPointerDown.add(bottomHandler);
     top.onPointerDown.add(topHandler);
@@ -522,7 +520,7 @@ describe('InteractionManager — spatial index: transform mutation reflected at 
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
 
@@ -561,8 +559,8 @@ describe('InteractionManager — spatial index: query results match recursive-wa
     scene.addChild(spriteA);
     scene.addChild(spriteB);
 
-    const aHandler = jest.fn();
-    const bHandler = jest.fn();
+    const aHandler = vi.fn();
+    const bHandler = vi.fn();
 
     spriteA.onPointerDown.add(aHandler);
     spriteB.onPointerDown.add(bHandler);

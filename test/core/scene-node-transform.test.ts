@@ -1,4 +1,4 @@
-import { SceneNode } from '@/core/SceneNode';
+﻿import { SceneNode } from '@/core/SceneNode';
 import { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
@@ -31,7 +31,7 @@ class TestDrawable extends Drawable {
 describe('SceneNode transform cache (post-Transformable inline)', () => {
   test('first getTransform() materializes the local matrix once', () => {
     const node = new SceneNode();
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     // Touching getTransform() the first time triggers updateTransform()
     // because the dirty `Transform` bit is set in the field initializer.
@@ -55,7 +55,7 @@ describe('SceneNode transform cache (post-Transformable inline)', () => {
     // Settle the cache.
     node.getTransform();
 
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     // No-op writes (same value) must not push a dirty bit.
     node.setPosition(0, 0);
@@ -76,7 +76,7 @@ describe('SceneNode transform cache (post-Transformable inline)', () => {
     // Settle initial cache.
     node.getTransform();
 
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     node.setPosition(10, 20);
 
@@ -97,7 +97,7 @@ describe('SceneNode transform cache (post-Transformable inline)', () => {
 
     node.getTransform();
 
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     node.setRotation(90);
 
@@ -120,7 +120,7 @@ describe('SceneNode transform cache (post-Transformable inline)', () => {
 
     node.getTransform();
 
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     // Mutate via the observable vector directly — confirms that the
     // ObservableVector → _setScalingDirty wiring survives the inline.
@@ -141,7 +141,7 @@ describe('SceneNode transform cache (post-Transformable inline)', () => {
     node.setPosition(50, 60);
     node.getTransform();
 
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     node.origin.set(10, 20);
 
@@ -214,9 +214,9 @@ describe('SceneNode parent-chain composition', () => {
     grandparent.addChild(parent);
     parent.addChild(child);
 
-    const grandSpy = jest.spyOn(grandparent, 'updateTransform');
-    const parentSpy = jest.spyOn(parent, 'updateTransform');
-    const childSpy = jest.spyOn(child, 'updateTransform');
+    const grandSpy = vi.spyOn(grandparent, 'updateTransform');
+    const parentSpy = vi.spyOn(parent, 'updateTransform');
+    const childSpy = vi.spyOn(child, 'updateTransform');
 
     child.updateParentTransform();
 
@@ -326,15 +326,15 @@ describe('SceneNode.destroy() releases all owned resources', () => {
     node.getTransform();
     node.getBounds();
 
-    const transformSpy = jest.spyOn(node['_transform'], 'destroy');
-    const positionSpy = jest.spyOn(node['_position'], 'destroy');
-    const scaleSpy = jest.spyOn(node['_scale'], 'destroy');
-    const originSpy = jest.spyOn(node['_origin'], 'destroy');
-    const flagsSpy = jest.spyOn(node.flags, 'destroy');
-    const globalTransformSpy = jest.spyOn(node['_globalTransform'], 'destroy');
-    const localBoundsSpy = jest.spyOn(node['_localBounds'], 'destroy');
-    const boundsSpy = jest.spyOn(node['_bounds'], 'destroy');
-    const anchorSpy = jest.spyOn(node['_anchor'], 'destroy');
+    const transformSpy = vi.spyOn(node['_transform'], 'destroy');
+    const positionSpy = vi.spyOn(node['_position'], 'destroy');
+    const scaleSpy = vi.spyOn(node['_scale'], 'destroy');
+    const originSpy = vi.spyOn(node['_origin'], 'destroy');
+    const flagsSpy = vi.spyOn(node.flags, 'destroy');
+    const globalTransformSpy = vi.spyOn(node['_globalTransform'], 'destroy');
+    const localBoundsSpy = vi.spyOn(node['_localBounds'], 'destroy');
+    const boundsSpy = vi.spyOn(node['_bounds'], 'destroy');
+    const anchorSpy = vi.spyOn(node['_anchor'], 'destroy');
 
     node.destroy();
 
@@ -356,7 +356,7 @@ describe('SceneNode.destroy() releases all owned resources', () => {
 
     container.getTransform();
 
-    const positionSpy = jest.spyOn(container['_position'], 'destroy');
+    const positionSpy = vi.spyOn(container['_position'], 'destroy');
 
     // Container.destroy → super.destroy() → RenderNode.destroy() →
     // super.destroy() → SceneNode.destroy() → _position.destroy().
@@ -607,7 +607,7 @@ describe('SceneNode skew — dirty-flag invalidation', () => {
 
     node.getTransform(); // settle cache
 
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     node.skewX = 30;
 
@@ -626,7 +626,7 @@ describe('SceneNode skew — dirty-flag invalidation', () => {
     node.setSkew(0, 0);
     node.getTransform(); // settle cache
 
-    const updateSpy = jest.spyOn(node, 'updateTransform');
+    const updateSpy = vi.spyOn(node, 'updateTransform');
 
     node.skewX = 0;
     node.skewY = 0;

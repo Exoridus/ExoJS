@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for GlyphAtlas.
  *
  * jsdom does not implement canvas 2D, so we install a richer mock on
@@ -26,8 +26,8 @@ function makeMockCtx(overrides: Partial<CanvasRenderingContext2D> = {}): CanvasR
         fontBoundingBoxAscent: 14,
         fontBoundingBoxDescent: 4,
       }) as TextMetrics,
-    fillText: jest.fn(),
-    clearRect: jest.fn(),
+    fillText: vi.fn(),
+    clearRect: vi.fn(),
     ...overrides,
   } as unknown as CanvasRenderingContext2D;
 }

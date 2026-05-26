@@ -29,17 +29,15 @@ describe('WebGl2Backend', () => {
   // Import the real Signal so we can construct real Signal instances.
   let Signal!: typeof import('@/core/Signal').Signal;
 
-  beforeEach(() => {
-    jest.resetModules();
-
-    jest.isolateModules(() => {
-      Signal = (require('@/core/Signal') as typeof import('@/core/Signal')).Signal;
-    });
+  beforeEach(async () => {
+    vi.resetModules();
+    const mod = await import('@/core/Signal');
+    Signal = mod.Signal;
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.resetModules();
+    vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   const buildMockBackend = (canvas: HTMLCanvasElement): MockWebGl2BackendInstance => {
@@ -59,7 +57,7 @@ describe('WebGl2Backend', () => {
   test('onContextLost signal fires when the webglcontextlost event is dispatched', () => {
     const canvas = document.createElement('canvas');
     const backend = buildMockBackend(canvas);
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     backend.onContextLost.add(handler);
     canvas.dispatchEvent(new Event('webglcontextlost'));
@@ -70,7 +68,7 @@ describe('WebGl2Backend', () => {
   test('onContextRestored signal fires when the webglcontextrestored event is dispatched', () => {
     const canvas = document.createElement('canvas');
     const backend = buildMockBackend(canvas);
-    const handler = jest.fn();
+    const handler = vi.fn();
 
     backend.onContextRestored.add(handler);
     canvas.dispatchEvent(new Event('webglcontextlost'));
@@ -79,14 +77,11 @@ describe('WebGl2Backend', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  test('WebGl2Backend class does not declare a setCursor method', () => {
+  test('WebGl2Backend class does not declare a setCursor method', async () => {
     // Import the real class just to inspect its prototype — no GL context required.
     // We don't call the constructor, so no GL calls happen.
-    let WebGl2BackendCtor!: typeof import('@/rendering/webgl2/WebGl2Backend').WebGl2Backend;
-
-    jest.isolateModules(() => {
-      WebGl2BackendCtor = (require('@/rendering/webgl2/WebGl2Backend') as typeof import('@/rendering/webgl2/WebGl2Backend')).WebGl2Backend;
-    });
+    vi.resetModules();
+    const { WebGl2Backend: WebGl2BackendCtor } = await import('@/rendering/webgl2/WebGl2Backend');
 
     // setCursor has been moved to Application; it must not be on the prototype.
     // Cast via Record to avoid TS error — the point is it does not exist at runtime.
@@ -95,12 +90,9 @@ describe('WebGl2Backend', () => {
     expect(proto['setCursor']).toBeUndefined();
   });
 
-  test('WebGl2Backend class does not declare a cursor getter', () => {
-    let WebGl2BackendCtor!: typeof import('@/rendering/webgl2/WebGl2Backend').WebGl2Backend;
-
-    jest.isolateModules(() => {
-      WebGl2BackendCtor = (require('@/rendering/webgl2/WebGl2Backend') as typeof import('@/rendering/webgl2/WebGl2Backend')).WebGl2Backend;
-    });
+  test('WebGl2Backend class does not declare a cursor getter', async () => {
+    vi.resetModules();
+    const { WebGl2Backend: WebGl2BackendCtor } = await import('@/rendering/webgl2/WebGl2Backend');
 
     // The cursor getter was also removed from the backend.
     expect(Object.getOwnPropertyDescriptor(WebGl2BackendCtor.prototype, 'cursor')).toBeUndefined();
@@ -113,54 +105,52 @@ describe('WebGl2Backend', () => {
 describe('Application.setCursor', () => {
   let Application: typeof import('@/core/Application').Application;
 
-  beforeEach(() => {
-    jest.resetModules();
-    jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-      WebGl2Backend: jest.fn(() => ({
-        initialize: jest.fn().mockResolvedValue(undefined),
-        flush: jest.fn(),
-        resize: jest.fn(),
-        destroy: jest.fn(),
-        resetStats: jest.fn().mockReturnThis(),
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+      WebGl2Backend: vi.fn(function () { return {
+        initialize: vi.fn().mockResolvedValue(undefined),
+        flush: vi.fn(),
+        resize: vi.fn(),
+        destroy: vi.fn(),
+        resetStats: vi.fn().mockReturnThis(),
         stats: { frameTimeMs: 0 },
-        renderTarget: { setView: jest.fn() },
-        onContextLost: { add: jest.fn(), destroy: jest.fn() },
-        onContextRestored: { add: jest.fn(), destroy: jest.fn() },
-      })),
+        renderTarget: { setView: vi.fn() },
+        onContextLost: { add: vi.fn(), destroy: vi.fn() },
+        onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+      }; }),
     }));
-    jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-      WebGpuBackend: jest.fn(() => null),
+    vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+      WebGpuBackend: vi.fn(function () { return null; }),
     }));
 
     // stub out non-rendering deps
-    jest.doMock('@/resources/Loader', () => ({ Loader: jest.fn(() => ({ destroy: jest.fn() })) }));
-    jest.doMock('@/input/InputManager', () => ({
-      InputManager: jest.fn(() => ({
-        update: jest.fn(),
-        destroy: jest.fn(),
-        onCanvasFocusChange: { add: jest.fn(), destroy: jest.fn() },
-      })),
+    vi.doMock('@/resources/Loader', () => ({ Loader: vi.fn(function () { return { destroy: vi.fn() }; }) }));
+    vi.doMock('@/input/InputManager', () => ({
+      InputManager: vi.fn(function () { return {
+        update: vi.fn(),
+        destroy: vi.fn(),
+        onCanvasFocusChange: { add: vi.fn(), destroy: vi.fn() },
+      }; }),
     }));
-    jest.doMock('@/input/InteractionManager', () => ({
-      InteractionManager: jest.fn(() => ({ update: jest.fn(), destroy: jest.fn() })),
+    vi.doMock('@/input/InteractionManager', () => ({
+      InteractionManager: vi.fn(function () { return { update: vi.fn(), destroy: vi.fn() }; }),
     }));
-    jest.doMock('@/core/SceneManager', () => ({
-      SceneManager: jest.fn(() => ({
-        update: jest.fn(),
-        setScene: jest.fn().mockResolvedValue(undefined),
-        destroy: jest.fn(),
-      })),
+    vi.doMock('@/core/SceneManager', () => ({
+      SceneManager: vi.fn(function () { return {
+        update: vi.fn(),
+        setScene: vi.fn().mockResolvedValue(undefined),
+        destroy: vi.fn(),
+      }; }),
     }));
 
-    jest.isolateModules(() => {
-      const m = require('@/core/Application') as typeof import('@/core/Application');
-      Application = m.Application;
-    });
+    const m = await import('@/core/Application');
+    Application = m.Application;
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.resetModules();
+    vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   test('setCursor(string) updates canvas.style.cursor and cursor getter', () => {
@@ -187,12 +177,8 @@ describe('Application.setCursor', () => {
     const canvas = document.createElement('canvas');
     const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
 
-    // Create a real HTMLImageElement source and mock toDataURL on a temp canvas.
     const img = new Image();
 
-    // canvasSourceToDataUrl draws to a temp canvas; jsdom won't produce a real
-    // data URL, but it will call toDataURL and produce an empty string.
-    // We just verify setCursor does not throw and sets a url() wrapper.
     app.setCursor(img);
 
     expect(canvas.style.cursor).toMatch(/^url\(/);
@@ -209,9 +195,9 @@ describe('Application.setCursor', () => {
 
     // setCursor with an HTMLCanvasElement uses the non-Texture branch (source IS
     // the canvas element itself), exercising the url() wrapping code.
-    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     app.setCursor(sourceCanvas);
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
 
     expect(app.cursor).toMatch(/^url\(/);
   });

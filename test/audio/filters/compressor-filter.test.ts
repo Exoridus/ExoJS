@@ -1,15 +1,15 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { CompressorFilter } from '@/audio/filters/CompressorFilter';
 
 const makeAudioParam = (initial: number) => ({
-  setValueAtTime: jest.fn(),
-  setTargetAtTime: jest.fn(),
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
   value: initial,
 });
 
 const createMockCompressor = (ctx: AudioContext) => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
   context: ctx,
   threshold: makeAudioParam(-24),
   knee: makeAudioParam(30),
@@ -23,7 +23,7 @@ describe('CompressorFilter', () => {
   describe('construction', () => {
     it('creates a DynamicsCompressorNode on construction', () => {
       const ctx = getAudioContext();
-      const spy = jest.spyOn(ctx, 'createDynamicsCompressor');
+      const spy = vi.spyOn(ctx, 'createDynamicsCompressor');
       const filter = new CompressorFilter();
       expect(spy).toHaveBeenCalledTimes(1);
       filter.destroy();
@@ -140,7 +140,7 @@ describe('CompressorFilter', () => {
     it('setters call setTargetAtTime on the underlying audio param', () => {
       const ctx = getAudioContext();
       const mockNode = createMockCompressor(ctx);
-      const spy = jest.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(mockNode as unknown as DynamicsCompressorNode);
+      const spy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(mockNode as unknown as DynamicsCompressorNode);
       const filter = new CompressorFilter();
       filter.threshold = -18;
       expect(mockNode.threshold.setTargetAtTime).toHaveBeenCalledWith(-18, 0, 0.01);
@@ -161,7 +161,7 @@ describe('CompressorFilter', () => {
     it('disconnects the compressor node', () => {
       const ctx = getAudioContext();
       const mockNode = createMockCompressor(ctx);
-      const spy = jest.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(mockNode as unknown as DynamicsCompressorNode);
+      const spy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(mockNode as unknown as DynamicsCompressorNode);
       const filter = new CompressorFilter();
       filter.destroy();
       expect(mockNode.disconnect).toHaveBeenCalledTimes(1);

@@ -50,6 +50,11 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
   value: () => mockContext2d,
 });
 
+Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
+  configurable: true,
+  value: () => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+});
+
 const makeMockAudioParam = (): AudioParam =>
   ({
     setValueAtTime: vi.fn(),

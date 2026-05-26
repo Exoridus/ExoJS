@@ -1,4 +1,4 @@
-import { Gamepad } from '@/input/Gamepad';
+﻿import { Gamepad } from '@/input/Gamepad';
 import { GamepadButton } from '@/input/GamepadButton';
 import { resolveGamepadDefinition } from '@/input/GamepadDefinitions';
 import { GamepadMappingFamily } from '@/input/GamepadMapping';
@@ -45,7 +45,7 @@ describe('Gamepad', () => {
 
   test('_bind dispatches onConnect once', () => {
     const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
-    const onConnect = jest.fn();
+    const onConnect = vi.fn();
 
     pad.onConnect.add(onConnect);
     pad._bind(createNativeGamepad('first'), buildDefinition());
@@ -57,7 +57,7 @@ describe('Gamepad', () => {
   test('_unbind dispatches onDisconnect and clears mapped channels', () => {
     const channels = new Float32Array(ChannelSize.Container);
     const pad = new Gamepad(0, channels);
-    const onDisconnect = jest.fn();
+    const onDisconnect = vi.fn();
     const buttonSouthChannel = Gamepad.resolveChannelOffset(0, GamepadButton.South);
 
     pad.onDisconnect.add(onDisconnect);
@@ -104,17 +104,17 @@ describe('Gamepad', () => {
     const padWithRumble = new Gamepad(1, new Float32Array(ChannelSize.Container));
     const nativeWithRumble = {
       ...createNativeGamepad('rumble', 1),
-      vibrationActuator: { playEffect: jest.fn().mockResolvedValue(undefined), reset: jest.fn() },
+      vibrationActuator: { playEffect: vi.fn().mockResolvedValue(undefined), reset: vi.fn() },
     } as unknown as BrowserGamepad;
     padWithRumble._bind(nativeWithRumble, buildDefinition());
     expect(padWithRumble.canVibrate).toBe(true);
   });
 
   test('vibrate forwards to vibrationActuator.playEffect when available', async () => {
-    const playEffect = jest.fn().mockResolvedValue(undefined);
+    const playEffect = vi.fn().mockResolvedValue(undefined);
     const native = {
       ...createNativeGamepad('rumble', 0),
-      vibrationActuator: { playEffect, reset: jest.fn() },
+      vibrationActuator: { playEffect, reset: vi.fn() },
     } as unknown as BrowserGamepad;
     const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
 
@@ -148,7 +148,7 @@ describe('Gamepad', () => {
 
     pad._bind(native, buildDefinition());
 
-    const trigger = jest.fn();
+    const trigger = vi.fn();
     pad.onTrigger(GamepadButton.South, trigger);
 
     pad.update();

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for Text.
  *
  * Text uses GlyphAtlasPool internally. A mock pool is injected via
@@ -55,14 +55,14 @@ const mockPage = {
 };
 
 const mockAtlas: Partial<GlyphAtlas> = {
-  getGlyph: jest.fn(() => fixedGlyphInfo),
+  getGlyph: vi.fn(() => fixedGlyphInfo),
   pages: [mockPage] as unknown as GlyphAtlas['pages'],
   mode: 'sdf',
-  clear: jest.fn(),
+  clear: vi.fn(),
 };
 
 const mockPool = {
-  getAtlas: jest.fn(() => mockAtlas),
+  getAtlas: vi.fn(() => mockAtlas),
 };
 
 beforeEach(() => {
@@ -78,7 +78,7 @@ afterEach(() => {
 
 describe('Text', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('extends Drawable', () => {
@@ -238,7 +238,7 @@ describe('Text — FontFace-first', () => {
   // Minimal FontFace stand-in so instanceof checks work in jsdom.
   class MockFontFace {
     family: string;
-    load = jest.fn().mockResolvedValue(undefined);
+    load = vi.fn().mockResolvedValue(undefined);
     constructor(family: string) {
       this.family = family;
     }
@@ -247,19 +247,19 @@ describe('Text — FontFace-first', () => {
   /** Drain the microtask queue so async _loadFace() completes. */
   const flushMicrotasks = (): Promise<void> => new Promise(r => setTimeout(r, 0));
 
-  let mockFontsAdd: jest.Mock;
-  let mockFontsHas: jest.Mock;
+  let mockFontsAdd: MockInstance;
+  let mockFontsHas: MockInstance;
   let origFontFace: unknown;
 
   beforeEach(() => {
     origFontFace = (globalThis as Record<string, unknown>).FontFace;
     (globalThis as Record<string, unknown>).FontFace = MockFontFace;
 
-    mockFontsAdd = jest.fn();
-    mockFontsHas = jest.fn().mockReturnValue(false);
+    mockFontsAdd = vi.fn();
+    mockFontsHas = vi.fn().mockReturnValue(false);
 
     Object.defineProperty(document, 'fonts', {
-      value: { has: mockFontsHas, add: mockFontsAdd, check: jest.fn().mockReturnValue(false) },
+      value: { has: mockFontsHas, add: mockFontsAdd, check: vi.fn().mockReturnValue(false) },
       configurable: true,
     });
   });
@@ -297,7 +297,7 @@ describe('Text — FontFace-first', () => {
   test('atlas is cleared and geometry rebuilt after face loads', async () => {
     let resolve!: () => void;
     const face = makeFace();
-    (face as unknown as MockFontFace).load = jest.fn(
+    (face as unknown as MockFontFace).load = vi.fn(
       () =>
         new Promise<void>(r => {
           resolve = r;
@@ -317,7 +317,7 @@ describe('Text — FontFace-first', () => {
   test('destroy() prevents post-load rebuild', async () => {
     let resolve!: () => void;
     const face = makeFace();
-    (face as unknown as MockFontFace).load = jest.fn(
+    (face as unknown as MockFontFace).load = vi.fn(
       () =>
         new Promise<void>(r => {
           resolve = r;

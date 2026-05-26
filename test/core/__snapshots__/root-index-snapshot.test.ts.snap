@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`root index export surface snapshot sorted runtime export names match committed snapshot 1`] = `
+exports[`root index export surface snapshot > sorted runtime export names match committed snapshot 1`] = `
 [
   "AbstractAssetFactory",
   "AbstractMedia",
@@ -43,11 +43,13 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "CacheFirstStrategy",
   "CallbackRenderPass",
   "Capabilities",
+  "ChannelOffset",
   "ChannelSize",
   "ChorusFilter",
   "Circle",
   "CircleArea",
   "Clock",
+  "CollisionType",
   "Color",
   "ColorFilter",
   "ColorOverLifetime",
@@ -193,6 +195,7 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "View",
   "ViewFlags",
   "VocoderFilter",
+  "VoronoiRegion",
   "WasmAsset",
   "WasmFactory",
   "WebGl2Backend",

@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`root index type-level export inventory all exported symbols with kind annotations match committed snapshot 1`] = `
+exports[`root index type-level export inventory > all exported symbols with kind annotations match committed snapshot 1`] = `
 [
   "AbstractAssetFactory: class",
   "AbstractMedia: class",

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for the layoutText() function.
  *
  * We use a minimal mock GlyphAtlas that returns predictable GlyphInfo values
@@ -31,7 +31,7 @@ function makeAtlas(advance = 10, width = 8, height = 16): GlyphAtlas {
   };
 
   return {
-    getGlyph: jest.fn(() => infoBase),
+    getGlyph: vi.fn(() => infoBase),
     pages: [{ texture: { width: 1024, height: 1024 } }],
   } as unknown as GlyphAtlas;
 }

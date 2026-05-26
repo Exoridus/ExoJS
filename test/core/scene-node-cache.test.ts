@@ -1,4 +1,4 @@
-import { Container } from '@/rendering/Container';
+﻿import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 
@@ -37,8 +37,8 @@ describe('SceneNode.getGlobalTransform() — dirty-flag cache', () => {
     node.setPosition(10, 20);
 
     const gt1 = node.getGlobalTransform();
-    const combineSpy = jest.spyOn(node['_globalTransform'], 'combine');
-    const copySpy = jest.spyOn(node['_globalTransform'], 'copy');
+    const combineSpy = vi.spyOn(node['_globalTransform'], 'combine');
+    const copySpy = vi.spyOn(node['_globalTransform'], 'copy');
 
     // 9 more reads — cache should be warm, no recomputation.
     for (let i = 0; i < 9; i++) {

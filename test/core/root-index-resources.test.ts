@@ -1,7 +1,7 @@
+import * as exo from '@/index';
+
 describe('root index resources exports', () => {
   test('re-exports resource tokens, stores, and factories', () => {
-    const exo = require('../../src/index') as Record<string, unknown>;
-
     expect(exo.Json).toBeDefined();
     expect(exo.TextAsset).toBeDefined();
     expect(exo.SvgAsset).toBeDefined();

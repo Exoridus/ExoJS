@@ -1,4 +1,4 @@
-import { Tween } from '@/animation/Tween';
+﻿import { Tween } from '@/animation/Tween';
 import { TweenManager } from '@/animation/TweenManager';
 import { TweenState } from '@/animation/types';
 
@@ -74,7 +74,7 @@ describe('TweenManager', () => {
 
   test('clear() removes all tweens without firing onComplete', () => {
     const manager = new TweenManager();
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
 
     manager.create(makeTarget()).to({ x: 100 }, 1.0).onComplete(onComplete).start();
     manager.create(makeTarget()).to({ x: 200 }, 1.0).onComplete(onComplete).start();

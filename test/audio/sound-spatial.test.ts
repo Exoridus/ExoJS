@@ -1,4 +1,4 @@
-import { getAudioContext } from '@/audio/audio-context';
+﻿import { getAudioContext } from '@/audio/audio-context';
 import { AudioBus } from '@/audio/AudioBus';
 import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
 import { Sound } from '@/audio/Sound';
@@ -13,17 +13,17 @@ const createAudioBufferStub = (): AudioBuffer =>
   }) as AudioBuffer;
 
 interface MockPannerNode {
-  connect: jest.Mock;
-  disconnect: jest.Mock;
+  connect: MockInstance;
+  disconnect: MockInstance;
   context: AudioContext;
   panningModel: PanningModelType;
   distanceModel: DistanceModelType;
   maxDistance: number;
   refDistance: number;
   rolloffFactor: number;
-  positionX: { setValueAtTime: jest.Mock };
-  positionY: { setValueAtTime: jest.Mock };
-  positionZ: { setValueAtTime: jest.Mock };
+  positionX: { setValueAtTime: MockInstance };
+  positionY: { setValueAtTime: MockInstance };
+  positionZ: { setValueAtTime: MockInstance };
 }
 
 const setupPannerSpy = (): {
@@ -32,19 +32,19 @@ const setupPannerSpy = (): {
 } => {
   const ctx = getAudioContext() as AudioContext & { createPanner: () => PannerNode };
   const panners: MockPannerNode[] = [];
-  const spy = jest.spyOn(ctx, 'createPanner').mockImplementation(() => {
+  const spy = vi.spyOn(ctx, 'createPanner').mockImplementation(() => {
     const panner: MockPannerNode = {
-      connect: jest.fn(),
-      disconnect: jest.fn(),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
       context: ctx,
       panningModel: 'equalpower',
       distanceModel: 'linear',
       maxDistance: 10000,
       refDistance: 1,
       rolloffFactor: 1,
-      positionX: { setValueAtTime: jest.fn() },
-      positionY: { setValueAtTime: jest.fn() },
-      positionZ: { setValueAtTime: jest.fn() },
+      positionX: { setValueAtTime: vi.fn() },
+      positionY: { setValueAtTime: vi.fn() },
+      positionZ: { setValueAtTime: vi.fn() },
     };
     panners.push(panner);
     return panner as unknown as PannerNode;
@@ -63,7 +63,7 @@ describe('Sound — spatial (PannerNode)', () => {
 
   afterEach(() => {
     disposeAudioManager();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // 1. Default position === null, no PannerNode
@@ -110,7 +110,7 @@ describe('Sound — spatial (PannerNode)', () => {
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     // Confirm by calling update — should call _tickSpatial on the sound.
-    const tickSpy = jest.spyOn(sound, '_tickSpatial');
+    const tickSpy = vi.spyOn(sound, '_tickSpatial');
     mixer.update();
     expect(tickSpy).toHaveBeenCalledTimes(1);
     spy.restore();
@@ -145,7 +145,7 @@ describe('Sound — spatial (PannerNode)', () => {
     expect(spy.panners[0].disconnect).toHaveBeenCalled();
 
     // Mixer should no longer tick this sound
-    const tickSpy = jest.spyOn(sound, '_tickSpatial');
+    const tickSpy = vi.spyOn(sound, '_tickSpatial');
     mixer.update();
     expect(tickSpy).not.toHaveBeenCalled();
     spy.restore();
@@ -228,8 +228,8 @@ describe('Sound — spatial (PannerNode)', () => {
     expect(panner.disconnect).toHaveBeenCalled();
 
     // Mixer should no longer tick after destroy
-    const tickSpy = jest.fn();
-    (sound as unknown as { _tickSpatial: jest.Mock })._tickSpatial = tickSpy;
+    const tickSpy = vi.fn();
+    (sound as unknown as { _tickSpatial: MockInstance })._tickSpatial = tickSpy;
     mixer.update();
     expect(tickSpy).not.toHaveBeenCalled();
 
