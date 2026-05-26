@@ -461,7 +461,7 @@ export class Application {
       throw new Error('Provided Texture has no source.');
     }
 
-    this._cursor = typeof source === 'string' ? source : `url(${canvasSourceToDataUrl(source)})`;
+    this._cursor = typeof source === 'string' ? source : `url(${canvasSourceToDataUrl(source)}), auto`;
     this.canvas.style.cursor = this._cursor;
 
     return this;
