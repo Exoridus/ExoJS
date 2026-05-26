@@ -2,11 +2,11 @@ import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { Filter } from '@/rendering/filters/Filter';
+import { RenderEntryKind } from '@/rendering/plan/RenderCommand';
+import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
+import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
-import { RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import { Sprite } from '@/rendering/sprite/Sprite';
@@ -54,9 +54,9 @@ const createRuntime = () => {
   const stats = createRenderStats();
   const acquired: RenderTexture[] = [];
   const released: RenderTexture[] = [];
-  const drawEvents: Array<{ drawable: Drawable; target: RenderTarget }> = [];
+  const drawEvents: { drawable: Drawable; target: RenderTarget }[] = [];
   const clipEvents: string[] = [];
-  const composeCalls: Array<[RenderTexture, Texture | RenderTexture, number, number, number, number, number]> = [];
+  const composeCalls: [RenderTexture, Texture | RenderTexture, number, number, number, number, number][] = [];
 
   const draw = vi.fn(function (this: RenderBackend, drawable: Drawable) {
     drawEvents.push({ drawable, target: currentTarget });
@@ -167,7 +167,7 @@ const createRuntime = () => {
   };
 };
 
-const filterDrawOrder = (drawEvents: Array<{ drawable: Drawable }>, expected: Drawable[]): Drawable[] => {
+const filterDrawOrder = (drawEvents: { drawable: Drawable }[], expected: Drawable[]): Drawable[] => {
   const expectedSet = new Set(expected);
 
   return drawEvents.map(event => event.drawable).filter(drawable => expectedSet.has(drawable));
