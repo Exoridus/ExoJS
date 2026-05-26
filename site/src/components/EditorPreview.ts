@@ -469,9 +469,10 @@ export class EditorPreview extends LitElement {
     }
 
     private _buildPreviewUrl(options: { noCache: number; sourceKey?: string }): string {
-        // Pass the selected version through to preview.html so it can build a
-        // versioned import map (`vendor/exojs/<v>/exo.esm.js`). Omit the key when
-        // empty so direct preview.html opens can use the flat vendor fallback.
+        // Pass the selected version through to preview.html so it can resolve
+        // the matching `dist/esm` runtime (plus `@codexo/exojs/debug`) for the
+        // iframe import map. Omit the key when empty so direct preview.html
+        // opens can use the local vendor snapshot.
         const params: UrlParams = { 'no-cache': options.noCache };
         if (this.selectedVersionId) {
             params.v = this.selectedVersionId;

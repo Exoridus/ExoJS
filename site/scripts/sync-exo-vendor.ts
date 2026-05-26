@@ -192,11 +192,9 @@ const copyArtifact = (fileName: string, targetDir: string, options: { required: 
     return true;
 };
 
-// Walks a directory and returns every `.d.ts` file's path relative to the
-// passed root, using forward slashes. Used to enumerate the library's
-// `dist/esm/` declaration tree so it can be shipped to the vendor snapshot
-// and consumed via a manifest at runtime.
-const collectDeclarationFiles = (rootDir: string): string[] => {
+// Walks a directory and returns every file path relative to the passed root,
+// using forward slashes.
+const collectFiles = (rootDir: string): string[] => {
     const results: string[] = [];
 
     const walk = (relDir: string): void => {
@@ -205,7 +203,7 @@ const collectDeclarationFiles = (rootDir: string): string[] => {
             const relEntry = relDir ? path.join(relDir, entry.name) : entry.name;
             if (entry.isDirectory()) {
                 walk(relEntry);
-            } else if (entry.isFile() && relEntry.endsWith('.d.ts')) {
+            } else if (entry.isFile()) {
                 results.push(relEntry.split(path.sep).join('/'));
             }
         }
@@ -215,22 +213,29 @@ const collectDeclarationFiles = (rootDir: string): string[] => {
     return results.sort();
 };
 
-const copyDeclarationTree = (sourceEsmDir: string, destEsmDir: string): string[] => {
+// Enumerate only declaration files from a root path.
+const collectDeclarationFiles = (rootDir: string): string[] => collectFiles(rootDir).filter(rel => rel.endsWith('.d.ts'));
+
+const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: string[]; dtsFiles: string[] } => {
     fs.rmSync(destEsmDir, { recursive: true, force: true });
     fs.mkdirSync(destEsmDir, { recursive: true });
 
-    const dtsFiles = collectDeclarationFiles(sourceEsmDir);
-    for (const rel of dtsFiles) {
+    const allFiles = collectFiles(sourceEsmDir);
+    for (const rel of allFiles) {
         const src = path.resolve(sourceEsmDir, rel);
         const dst = path.resolve(destEsmDir, rel);
         fs.mkdirSync(path.dirname(dst), { recursive: true });
         fs.copyFileSync(src, dst);
     }
-    return dtsFiles;
+
+    return {
+        allFiles,
+        dtsFiles: collectDeclarationFiles(sourceEsmDir),
+    };
 };
 
-// Normalize the library's TypeScript declarations into a layout Monaco can
-// resolve. Two paths are supported, in order of preference:
+// Copy the ESM runtime tree and normalize declarations into a layout Monaco
+// can resolve. Two declaration paths are supported, in order of preference:
 //
 //   1. The library ships a single bundled `dist/exo.d.ts`. We copy it
 //      verbatim and apply the existing inline patch.
@@ -239,8 +244,8 @@ const copyDeclarationTree = (sourceEsmDir: string, destEsmDir: string): string[]
 //      that re-exports from `./esm/index`, and emit `esm-typings.json`
 //      so the editor can enumerate every `.d.ts` at runtime.
 //
-// If neither source exists we warn and skip. Monaco will still work, just
-// without ExoJS-aware IntelliSense.
+// `preview.html` imports both `@codexo/exojs` and `@codexo/exojs/debug` from
+// the ESM tree. Missing `dist/esm/` is therefore a hard error.
 const syncTypings = (): void => {
     const sourceFlatDts = path.resolve(sourceDistDir, 'exo.d.ts');
     const sourceEsmDir = path.resolve(sourceDistDir, 'esm');
@@ -253,16 +258,19 @@ const syncTypings = (): void => {
     fs.rmSync(destManifest, { force: true });
     fs.rmSync(destEsmDir, { recursive: true, force: true });
 
+    if (!fs.existsSync(sourceEsmDir)) {
+        throw new Error(
+            `[vendor:sync] Missing required ExoJS package ESM runtime at ${sourceEsmDir}. preview.html imports @codexo/exojs from dist/esm/.`
+        );
+    }
+
+    const { allFiles, dtsFiles } = copyEsmTree(sourceEsmDir, destEsmDir);
+
     if (fs.existsSync(sourceFlatDts)) {
         fs.copyFileSync(sourceFlatDts, destFlatDts);
         patchExoDeclarations(destFlatDts);
         console.log(`[vendor:sync] exo.d.ts: copied bundled declarations from ${sourceFlatDts}.`);
-        return;
-    }
-
-    if (fs.existsSync(sourceEsmDir)) {
-        const dtsFiles = copyDeclarationTree(sourceEsmDir, destEsmDir);
-
+    } else {
         fs.writeFileSync(
             destFlatDts,
             [
@@ -278,14 +286,11 @@ const syncTypings = (): void => {
             ].join('\n'),
             'utf8'
         );
-
-        fs.writeFileSync(destManifest, JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
-
         console.log(`[vendor:sync] exo.d.ts: shim re-exporting ${dtsFiles.length} declarations from ${sourceEsmDir}.`);
-        return;
     }
 
-    console.warn(`[vendor:sync] No declaration source found at ${sourceFlatDts} or ${sourceEsmDir}. Monaco will run without ExoJS-aware IntelliSense.`);
+    fs.writeFileSync(destManifest, JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
+    console.log(`[vendor:sync] esm runtime: copied ${allFiles.length} files (${dtsFiles.length} declarations) from ${sourceEsmDir}.`);
 };
 
 const syncVendor = (): void => {

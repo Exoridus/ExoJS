@@ -34,17 +34,21 @@
                 var safeVersion = /^[A-Za-z0-9._-]+$/.test(rawVersion) ? rawVersion : '';
 
                 var exoEntry;
+                var exoDebugEntry;
                 if (!safeVersion || safeVersion === 'current') {
-                    exoEntry = './vendor/exojs/exo.esm.js?no-cache=' + noCache;
+                    exoEntry = './vendor/exojs/esm/index.js?no-cache=' + noCache;
+                    exoDebugEntry = './vendor/exojs/esm/debug/index.js?no-cache=' + noCache;
                 } else {
                     // jsDelivr serves immutable npm tarballs — the version pin
                     // alone is enough, no cache-buster needed.
-                    exoEntry = 'https://cdn.jsdelivr.net/npm/@codexo/exojs@' + safeVersion + '/dist/exo.esm.js';
+                    exoEntry = 'https://cdn.jsdelivr.net/npm/@codexo/exojs@' + safeVersion + '/dist/esm/index.js';
+                    exoDebugEntry = 'https://cdn.jsdelivr.net/npm/@codexo/exojs@' + safeVersion + '/dist/esm/debug/index.js';
                 }
 
                 var importMap = {
                     imports: {
                         '@codexo/exojs': exoEntry,
+                        '@codexo/exojs/debug': exoDebugEntry,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
                     },
                 };

@@ -474,6 +474,22 @@ const PARTS: ReadonlyArray<GuidePartMeta> = [
                     "render-targets/trail-feedback",
                     "render-targets/water-mirror"
                 ]
+            },
+            {
+                part: 6,
+                chapter: 4,
+                partSlug: "effects",
+                partTitle: "06 Effects",
+                partDescription: "Layer visual effects to build mood, motion, and feedback.",
+                slug: "custom-mesh-shaders",
+                title: "6.4 Custom mesh shaders",
+                description: "Attach custom GLSL or WGSL programs to meshes for geometry-space effects.",
+                path: "effects/custom-mesh-shaders",
+                examples: [
+                    "geometry-graphics/mesh-triangle",
+                    "geometry-graphics/mesh-textured-quad",
+                    "geometry-graphics/mesh-deformed-grid"
+                ]
             }
         ]
     },
@@ -557,6 +573,21 @@ const PARTS: ReadonlyArray<GuidePartMeta> = [
                 path: "advanced/collision-detection",
                 examples: [
                     "showcase/rectangles-collision"
+                ]
+            },
+            {
+                part: 7,
+                chapter: 6,
+                partSlug: "advanced",
+                partTitle: "07 Advanced",
+                partDescription: "Go deeper when you need custom pipelines, tooling, and profiling data.",
+                slug: "render-pipeline-debugging",
+                title: "7.6 Render pipeline debugging",
+                description: "Inspect filter chains and pass counts with the render-pass inspector.",
+                path: "advanced/render-pipeline-debugging",
+                examples: [
+                    "render-targets/post-processing-chain",
+                    "render-targets/bloom-lite"
                 ]
             }
         ]
