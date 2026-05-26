@@ -165,7 +165,7 @@ export class AtlasPage {
       return this._ctx.measureText(char);
     }
     const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(1, 1) : document.createElement('canvas');
-    const ctx = c.getContext('2d') as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
+    const ctx = c.getContext('2d')!;
     ctx.font = font;
     ctx.textBaseline = 'alphabetic';
     return ctx.measureText(char);
