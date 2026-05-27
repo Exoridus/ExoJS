@@ -15,6 +15,16 @@ import { View } from './View';
  * the underlying canvas / texture dimensions change.
  */
 export class RenderTarget {
+  /**
+   * Whether this target needs a stencil attachment. Set by the backend when a
+   * geometric stencil clip ({@link RenderNode.clip} with a `Geometry`
+   * `clipShape`) is rendered into this target, so the offscreen framebuffer
+   * gets a depth/stencil renderbuffer. The on-screen root target always has a
+   * stencil buffer (requested at context creation), so this flag only affects
+   * offscreen {@link RenderTexture} targets.
+   */
+  public needsStencil = false;
+
   private readonly _root: boolean;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private _version = 0;

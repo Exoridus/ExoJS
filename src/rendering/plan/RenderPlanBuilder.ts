@@ -1,5 +1,6 @@
 import { Rectangle } from '@/math/Rectangle';
 import type { Drawable } from '@/rendering/Drawable';
+import type { Geometry } from '@/rendering/geometry/Geometry';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderNode } from '@/rendering/RenderNode';
 import type { View } from '@/rendering/View';
@@ -95,7 +96,8 @@ export class RenderPlanBuilder {
 
     if (node._renderPlanHasBarrierEffects()) {
       const effect = this._createEffectDescriptor(node);
-      const needsBounds = effect.cacheAsBitmap || effect.filters.length > 0 || effect.clip === ClipKind.AlphaMask;
+      const hasAlphaMask = effect.maskSource !== null && !(effect.maskSource instanceof Rectangle);
+      const needsBounds = effect.cacheAsBitmap || effect.filters.length > 0 || hasAlphaMask;
       let left = 0;
       let top = 0;
       let width = 0;
@@ -275,16 +277,24 @@ export class RenderPlanBuilder {
   private _createEffectDescriptor(node: RenderNode): EffectDescriptor {
     const mask = node._renderPlanGetMaskSource();
     let clip = ClipKind.None;
+    let clipShape: Rectangle | Geometry | null = null;
 
-    if (mask instanceof Rectangle) {
-      clip = ClipKind.Rect;
-    } else if (mask !== null) {
-      clip = ClipKind.AlphaMask;
+    if (node.clip) {
+      const shape = node.clipShape;
+
+      if (shape === null || shape instanceof Rectangle) {
+        clip = ClipKind.Rect;
+        clipShape = shape;
+      } else {
+        clip = ClipKind.Stencil;
+        clipShape = shape;
+      }
     }
 
     return {
       filters: node._renderPlanGetFilters(),
       clip,
+      clipShape,
       maskSource: mask,
       cacheAsBitmap: node.cacheAsBitmap,
       blendMode: node._renderPlanGetBlendMode(),

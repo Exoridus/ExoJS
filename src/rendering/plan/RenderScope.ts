@@ -1,20 +1,29 @@
+import type { Rectangle } from '@/math/Rectangle';
 import type { Filter } from '@/rendering/filters/Filter';
+import type { Geometry } from '@/rendering/geometry/Geometry';
 import type { MaskSource, RenderNode } from '@/rendering/RenderNode';
 import type { BlendModes } from '@/rendering/types';
 
 import type { DrawCommand, RenderEntryKind } from './RenderCommand';
 
-/** @internal */
+/**
+ * Geometric clip kind for a {@link RenderNode}'s `clip`/`clipShape`. Distinct
+ * from `maskSource` (alpha/visibility masking): `Rect` uses the GPU scissor
+ * fast path, `Stencil` writes a {@link Geometry} silhouette into the stencil
+ * buffer. `maskSource` continues to drive the separate alpha-mask machinery.
+ * @internal
+ */
 export const enum ClipKind {
   None,
   Rect,
-  AlphaMask,
+  Stencil,
 }
 
 /** @internal */
 export interface EffectDescriptor {
   readonly filters: readonly Filter[];
   readonly clip: ClipKind;
+  readonly clipShape: Rectangle | Geometry | null;
   readonly maskSource: MaskSource;
   readonly cacheAsBitmap: boolean;
   readonly blendMode: BlendModes;

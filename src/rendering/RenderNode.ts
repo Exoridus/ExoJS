@@ -5,6 +5,7 @@ import type { InteractionEvent } from '@/input/InteractionEvent';
 import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 import { Rectangle } from '@/math/Rectangle';
 import type { Filter } from '@/rendering/filters/Filter';
+import type { Geometry } from '@/rendering/geometry/Geometry';
 import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '@/rendering/plan/RenderPlanPlayer';
@@ -118,6 +119,35 @@ export abstract class RenderNode extends SceneNode {
    * @default false
    */
   public preserveDrawOrder = false;
+
+  /**
+   * When `true`, descendants are geometrically clipped to {@link clipShape}.
+   * Unlike {@link mask} (which is alpha/visibility masking), `clip` is a hard
+   * geometric boundary:
+   *
+   * - `clipShape === null` — clip to this node's world-space bounds
+   *   ({@link getBounds}), using the GPU scissor fast path.
+   * - `clipShape` is a `Rectangle` — clip to that world-space rectangle via
+   *   scissor.
+   * - `clipShape` is a `Geometry` — clip to the geometry's silhouette via the
+   *   stencil buffer (WebGL2). Only fragments inside the shape survive.
+   *
+   * Clipping wraps the node's final (filtered/masked) output and acts as a
+   * render barrier: draw commands are never reordered or batched across the
+   * clip boundary.
+   *
+   * @default false
+   */
+  public clip = false;
+
+  /**
+   * Clip region used when {@link clip} is `true`. A `Rectangle` (or `null` for
+   * the node's bounds) maps to the scissor fast path; a `Geometry` maps to the
+   * stencil path. Has no effect while `clip` is `false`.
+   *
+   * @default null
+   */
+  public clipShape: Rectangle | Geometry | null = null;
 
   public readonly onPointerDown = new Signal<[InteractionEvent]>();
   public readonly onPointerUp = new Signal<[InteractionEvent]>();
@@ -273,7 +303,7 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanHasBarrierEffects(): boolean {
-    return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap;
+    return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap || this.clip;
   }
 
   /** @internal */

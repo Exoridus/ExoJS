@@ -1,6 +1,7 @@
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
 import { Signal } from '@/core/Signal';
+import { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 import { ParticleSystem } from '@/particles/ParticleSystem';
@@ -9,6 +10,7 @@ import { Text } from '@/rendering/text/Text';
 import { BlendModes } from '@/rendering/types';
 
 import type { Drawable } from '../Drawable';
+import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
 import type { DrawCommand } from '../plan/RenderCommand';
 import type { RenderBackend } from '../RenderBackend';
@@ -30,6 +32,7 @@ import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
 import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
+import { WebGl2StencilClipper } from './WebGl2StencilClipper';
 import { WebGl2TextRenderer } from './WebGl2TextRenderer';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
@@ -82,6 +85,23 @@ interface ManagedRenderTargetState {
   framebuffer: WebGLFramebuffer | null;
   version: number;
   attachedTexture: WebGLTexture | null;
+  stencilRenderbuffer: WebGLRenderbuffer | null;
+  stencilWidth: number;
+  stencilHeight: number;
+}
+
+interface StencilClipEntry {
+  readonly shape: Geometry;
+  readonly transform: Matrix;
+}
+
+// Stencil clipping is per-target: each framebuffer owns its stencil buffer, so
+// a clip established on one target must not affect rendering into another
+// (e.g. an alpha-mask capture nested inside a stencil clip). State is keyed by
+// the target it was pushed on and re-applied on every target switch.
+interface StencilTargetState {
+  depth: number;
+  stack: StencilClipEntry[];
 }
 
 interface PixelClipBoundsState {
@@ -130,6 +150,9 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGl2MaskCompositor = new WebGl2MaskCompositor();
   private _maskCompositorConnected = false;
+  private readonly _stencilClipper: WebGl2StencilClipper = new WebGl2StencilClipper();
+  private readonly _stencilStates: Map<RenderTarget, StencilTargetState> = new Map<RenderTarget, StencilTargetState>();
+  private _stencilClipperConnected = false;
 
   private _canvas: HTMLCanvasElement;
   private _contextLost: boolean;
@@ -148,6 +171,7 @@ export class WebGl2Backend implements RenderBackend {
   private _transformTextureHash = 0;
   private _transformTextureCount = -1;
   private _activeDrawCommand: DrawCommand | null = null;
+  private _drawPlanDepth = 0;
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -240,6 +264,7 @@ export class WebGl2Backend implements RenderBackend {
   public _beginDrawPlan(nodeCount: number): void {
     this._transformBuffer.begin(nodeCount);
     this._activeDrawCommand = null;
+    this._drawPlanDepth++;
   }
 
   /** @internal */
@@ -254,6 +279,43 @@ export class WebGl2Backend implements RenderBackend {
   /** @internal */
   public _endDrawPlan(): void {
     this._activeDrawCommand = null;
+
+    if (this._drawPlanDepth > 0) {
+      this._drawPlanDepth--;
+    }
+
+    // Only assert balance at the outermost plan: cacheAsBitmap draws a cache
+    // sprite via a nested render(), whose inner _endDrawPlan sees the still-open
+    // outer clips — those are not leaks.
+    if (this._drawPlanDepth === 0) {
+      this._assertBalancedStencil();
+    }
+  }
+
+  private _assertBalancedStencil(): void {
+    let unpopped = 0;
+
+    for (const state of this._stencilStates.values()) {
+      unpopped += state.stack.length;
+    }
+
+    if (unpopped === 0) {
+      return;
+    }
+
+    // Reset so a leaked clip cannot corrupt subsequent frames, then surface it.
+    for (const state of this._stencilStates.values()) {
+      state.depth = 0;
+      state.stack.length = 0;
+    }
+
+    const gl = this._context;
+
+    gl.stencilFunc(gl.ALWAYS, 0, 0xff);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+    gl.disable(gl.STENCIL_TEST);
+
+    throw new Error(`Unbalanced stencil clip stack at end of frame (${unpopped} unpopped clip(s)).`);
   }
 
   public draw(drawable: Drawable): this {
@@ -277,13 +339,20 @@ export class WebGl2Backend implements RenderBackend {
 
   public setRenderTarget(target: RenderTarget | null): this {
     const renderTarget = target || this._rootRenderTarget;
+    const changed = this._renderTarget !== renderTarget;
 
-    if (this._renderTarget !== renderTarget) {
+    if (changed) {
       this._renderTarget = renderTarget;
       this._stats.renderTargetChanges++;
     }
 
     this._bindRenderTarget(renderTarget);
+
+    if (changed) {
+      // Stencil state is per-target: restore the new target's clip depth so an
+      // outer clip on the previous target does not leak onto this one.
+      this._applyStencilState(renderTarget);
+    }
 
     return this;
   }
@@ -318,6 +387,87 @@ export class WebGl2Backend implements RenderBackend {
 
     this._clipPixelStack.pop();
     this._applyClipState();
+
+    return this;
+  }
+
+  public pushStencilClip(shape: Geometry, transform: Matrix): this {
+    const target = this._renderTarget;
+    const state = this._getStencilState(target);
+
+    if (state.depth >= 255) {
+      throw new Error('Stencil clip nesting exceeds the 255-level limit.');
+    }
+
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+
+    if (!this._stencilClipperConnected) {
+      this._stencilClipper.connect(this);
+      this._stencilClipperConnected = true;
+    }
+
+    const gl = this._context;
+    const depth = state.depth;
+
+    if (depth === 0) {
+      this._ensureTargetStencil();
+      gl.enable(gl.STENCIL_TEST);
+
+      // Clear the whole stencil buffer to 0 regardless of any active scissor,
+      // then restore the scissor state for the shape/content draws.
+      gl.disable(gl.SCISSOR_TEST);
+      gl.clearStencil(0);
+      gl.clear(gl.STENCIL_BUFFER_BIT);
+      this._applyClipState();
+    }
+
+    // Increment the stencil where the shape covers the already-valid region
+    // (EQUAL depth). Color/depth writes off so only the stencil is touched.
+    gl.colorMask(false, false, false, false);
+    gl.stencilFunc(gl.EQUAL, depth, 0xff);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.INCR);
+
+    this._stencilClipper.draw(this, shape, transform);
+
+    gl.colorMask(true, true, true, true);
+
+    state.depth = depth + 1;
+    state.stack.push({ shape, transform: new Matrix().copy(transform) });
+
+    // Content now passes only where the stencil equals the new depth.
+    gl.stencilFunc(gl.EQUAL, state.depth, 0xff);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+
+    return this;
+  }
+
+  public popStencilClip(): this {
+    const target = this._renderTarget;
+    const state = this._getStencilState(target);
+    const entry = state.stack.pop();
+
+    if (entry === undefined) {
+      return this;
+    }
+
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+
+    const gl = this._context;
+    const depth = state.depth;
+
+    // Decrement the region this clip incremented, restoring the outer level.
+    gl.colorMask(false, false, false, false);
+    gl.stencilFunc(gl.EQUAL, depth, 0xff);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.DECR);
+
+    this._stencilClipper.draw(this, entry.shape, entry.transform);
+
+    gl.colorMask(true, true, true, true);
+
+    state.depth = depth - 1;
+    this._applyStencilState(target);
 
     return this;
   }
@@ -386,11 +536,13 @@ export class WebGl2Backend implements RenderBackend {
   public bindVertexArrayObject(vao: WebGl2VertexArrayObject | null): this {
     if (this._vao !== vao) {
       if (vao) {
+        // Binding a VAO implicitly replaces the previous binding. Only when
+        // switching to "no VAO" do we explicitly unbind — unbinding the old VAO
+        // *after* binding the new one would leave the GL default (null) VAO
+        // bound and silently break the next draw (a renderer/clip VAO switch).
         vao.bind();
-      }
-
-      if (this._vao) {
-        this._vao.unbind();
+      } else {
+        this._vao?.unbind();
       }
 
       this._vao = vao;
@@ -593,6 +745,14 @@ export class WebGl2Backend implements RenderBackend {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
     }
+
+    if (this._stencilClipperConnected) {
+      this._stencilClipper.disconnect();
+      this._stencilClipperConnected = false;
+    }
+
+    this._stencilStates.clear();
+    this._drawPlanDepth = 0;
     this._rootRenderTarget.destroy();
 
     if (this._transformTexture !== null) {
@@ -613,7 +773,10 @@ export class WebGl2Backend implements RenderBackend {
 
   private _createContext(options?: WebGLContextAttributes): WebGL2RenderingContext | null {
     try {
-      return this._canvas.getContext('webgl2', options);
+      // Force a stencil buffer on the default framebuffer so geometric stencil
+      // clipping (RenderNode.clip with a Geometry clipShape) works on the root
+      // target. Inert until a clip is pushed (STENCIL_TEST stays disabled).
+      return this._canvas.getContext('webgl2', { ...options, stencil: true });
     } catch (_e) {
       return null;
     }
@@ -708,6 +871,9 @@ export class WebGl2Backend implements RenderBackend {
         framebuffer: target.root ? null : this._createFramebuffer(),
         version: -1,
         attachedTexture: null,
+        stencilRenderbuffer: null,
+        stencilWidth: 0,
+        stencilHeight: 0,
       };
 
       this._renderTargetStates.set(target, state);
@@ -772,8 +938,15 @@ export class WebGl2Backend implements RenderBackend {
         this._context.deleteFramebuffer(state.framebuffer);
       }
 
+      if (state.stencilRenderbuffer !== null) {
+        this._context.deleteRenderbuffer(state.stencilRenderbuffer);
+        state.stencilRenderbuffer = null;
+      }
+
       this._renderTargetStates.delete(target);
     }
+
+    this._stencilStates.delete(target);
 
     if (this._renderTarget === target) {
       this._renderTarget = this._rootRenderTarget;
@@ -863,9 +1036,96 @@ export class WebGl2Backend implements RenderBackend {
 
         state.attachedTexture = textureState.handle;
       }
+
+      // Reset the on-demand flag for pooled RenderTexture targets, so a
+      // stencil renderbuffer from a previous use does not permanently
+      // consume GPU memory when the target is re-purposed for non-clip
+      // rendering.
+      if (!this._stencilStates.has(target)) {
+        target.needsStencil = false;
+      }
+
+      // Keep an existing stencil attachment sized to the (possibly resized)
+      // texture so the framebuffer stays complete during non-clip rendering.
+      if (target.needsStencil || state.stencilRenderbuffer !== null) {
+        this._syncStencilAttachment(target, state);
+      }
     }
 
     return state;
+  }
+
+  /** Attach a depth/stencil renderbuffer to the active target if it lacks one. */
+  private _ensureTargetStencil(): void {
+    const target = this._renderTarget;
+
+    if (target.root) {
+      // The default framebuffer's stencil comes from the context attributes.
+      return;
+    }
+
+    target.needsStencil = true;
+    this._syncStencilAttachment(target, this._getRenderTargetState(target));
+  }
+
+  private _syncStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
+    if (state.framebuffer === null) {
+      return;
+    }
+
+    const gl = this._context;
+    const width = Math.max(1, target.width);
+    const height = Math.max(1, target.height);
+
+    if (state.stencilRenderbuffer !== null && state.stencilWidth === width && state.stencilHeight === height) {
+      return;
+    }
+
+    if (state.stencilRenderbuffer === null) {
+      state.stencilRenderbuffer = gl.createRenderbuffer();
+    }
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, state.stencilRenderbuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+    const previousFramebuffer = this._boundFramebuffer;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, state.stencilRenderbuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+
+    state.stencilWidth = width;
+    state.stencilHeight = height;
+  }
+
+  private _getStencilState(target: RenderTarget): StencilTargetState {
+    let state = this._stencilStates.get(target);
+
+    if (state === undefined) {
+      state = { depth: 0, stack: [] };
+      this._stencilStates.set(target, state);
+    }
+
+    return state;
+  }
+
+  /** Re-apply the GL stencil test to match `target`'s current clip depth. */
+  private _applyStencilState(target: RenderTarget): void {
+    const gl = this._context;
+    const depth = this._getStencilState(target).depth;
+
+    if (depth === 0) {
+      gl.stencilFunc(gl.ALWAYS, 0, 0xff);
+      gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+      gl.disable(gl.STENCIL_TEST);
+
+      return;
+    }
+
+    gl.enable(gl.STENCIL_TEST);
+    gl.stencilFunc(gl.EQUAL, depth, 0xff);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
   }
 
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {

@@ -4,6 +4,7 @@
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
 import { Signal } from '@/core/Signal';
+import type { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 import { ParticleSystem } from '@/particles/ParticleSystem';
@@ -13,6 +14,7 @@ import type { BlendModes } from '@/rendering/types';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 
 import type { Drawable } from '../Drawable';
+import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
 import type { DrawCommand } from '../plan/RenderCommand';
 import type { RenderBackend } from '../RenderBackend';
@@ -352,6 +354,25 @@ export class WebGpuBackend implements RenderBackend {
 
     this._clipPixelStack.pop();
 
+    return this;
+  }
+
+  public pushStencilClip(_shape: Geometry, _transform: Matrix): this {
+    // Rectangle/bounds clipping (RenderNode.clip with a Rectangle or null
+    // clipShape) runs through the scissor path above and has full parity with
+    // WebGL2. Geometric stencil clipping would require a depth/stencil
+    // attachment on every render pass and matching depthStencil state on every
+    // pipeline; the WebGPU renderers own their passes/pipelines independently,
+    // so that is deferred past 0.10. Fail clearly instead of silently
+    // rendering the content unclipped.
+    throw new Error(
+      'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) is not supported on the WebGPU backend yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend.',
+    );
+  }
+
+  public popStencilClip(): this {
+    // pushStencilClip always throws on WebGPU, so no clip is ever open here;
+    // present only to satisfy the RenderBackend contract.
     return this;
   }
 

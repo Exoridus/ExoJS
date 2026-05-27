@@ -1,10 +1,11 @@
 import { Rectangle } from '@/math/Rectangle';
+import type { Geometry } from '@/rendering/geometry/Geometry';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { MaskSource, RenderNode } from '@/rendering/RenderNode';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 
-import type { BarrierScope, GroupScope } from './RenderScope';
+import { type BarrierScope, ClipKind, type GroupScope } from './RenderScope';
 
 /** @internal */
 export class RenderEffectExecutor {
@@ -15,7 +16,7 @@ export class RenderEffectExecutor {
     const { left, top, width, height } = barrier;
 
     if (!hasFilters && !needsBitmapCache) {
-      this._withMask(node, backend, barrier, () => {
+      this._withClip(node, backend, barrier, () => {
         if (barrier.childPlan !== null) {
           playScope(barrier.childPlan);
         }
@@ -28,7 +29,7 @@ export class RenderEffectExecutor {
       const cachedTexture = node._renderPlanGetCacheTexture();
 
       if (cachedTexture !== null) {
-        this._withMask(node, backend, barrier, () => {
+        this._withClip(node, backend, barrier, () => {
           node._renderPlanDrawTexture(backend, cachedTexture, left, top, width, height, effect.blendMode);
         });
       }
@@ -86,7 +87,7 @@ export class RenderEffectExecutor {
         node._renderPlanStoreCacheTexture(cacheTexture!, left, top, width, height);
       }
 
-      this._withMask(node, backend, barrier, () => {
+      this._withClip(node, backend, barrier, () => {
         node._renderPlanDrawTexture(backend, finalTexture, left, top, width, height, effect.blendMode);
       });
     } finally {
@@ -94,6 +95,48 @@ export class RenderEffectExecutor {
         backend.releaseRenderTexture(pooledTexture);
       }
     }
+  }
+
+  // Clip wraps the mask block as the outermost effect boundary, so it acts on
+  // the final filtered/masked output. Stencil (Geometry) is outermost; the Rect
+  // scissor sits between it and the alpha-mask machinery; both compose with any
+  // existing mask scissor since scissors/stencil are all restrictive.
+  private static _withClip(node: RenderNode, backend: RenderBackend, barrier: BarrierScope, callback: () => void): void {
+    if (barrier.effect.clip === ClipKind.Stencil) {
+      backend.pushStencilClip(barrier.effect.clipShape as Geometry, node.getGlobalTransform());
+
+      try {
+        this._withRectClip(node, backend, barrier, callback);
+      } finally {
+        backend.popStencilClip();
+      }
+
+      return;
+    }
+
+    this._withRectClip(node, backend, barrier, callback);
+  }
+
+  private static _withRectClip(node: RenderNode, backend: RenderBackend, barrier: BarrierScope, callback: () => void): void {
+    if (barrier.effect.clip === ClipKind.Rect) {
+      const rect = (barrier.effect.clipShape as Rectangle | null) ?? node.getBounds();
+
+      if (rect.width <= 0 || rect.height <= 0) {
+        return;
+      }
+
+      backend.pushScissorRect(rect);
+
+      try {
+        this._withMask(node, backend, barrier, callback);
+      } finally {
+        backend.popScissorRect();
+      }
+
+      return;
+    }
+
+    this._withMask(node, backend, barrier, callback);
   }
 
   private static _withMask(node: RenderNode, backend: RenderBackend, barrier: BarrierScope, callback: () => void): void {

@@ -1,7 +1,9 @@
 import type { Color } from '@/core/Color';
+import type { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 
 import type { Drawable } from './Drawable';
+import type { Geometry } from './geometry/Geometry';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RenderPass } from './RenderPass';
 import type { RenderStats } from './RenderStats';
@@ -49,6 +51,24 @@ export interface RenderBackend {
    * Pop the most recently pushed scissor rectangle.
    */
   popScissorRect(): this;
+
+  /**
+   * Push a geometric stencil clip. The `shape` silhouette (transformed by
+   * `transform`, the clipping node's global transform) is written into the
+   * stencil buffer; subsequent draws are restricted to fragments inside the
+   * shape. Nested clips intersect (ref-incremented). Used internally by the
+   * `Geometry` `clipShape` path on {@link RenderNode.clip}.
+   *
+   * Composes freely with the scissor stack. Backends without stencil support
+   * (currently WebGPU) throw a clear error rather than rendering incorrectly.
+   */
+  pushStencilClip(shape: Geometry, transform: Matrix): this;
+
+  /**
+   * Pop the most recently pushed stencil clip, restoring the previous nesting
+   * level (or disabling the stencil test at the outermost level).
+   */
+  popStencilClip(): this;
 
   acquireRenderTexture(width: number, height: number): RenderTexture;
   releaseRenderTexture(texture: RenderTexture): this;
