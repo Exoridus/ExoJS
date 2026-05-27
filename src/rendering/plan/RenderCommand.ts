@@ -1,4 +1,5 @@
 import type { Drawable } from '@/rendering/Drawable';
+import type { Material } from '@/rendering/material/Material';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
@@ -14,17 +15,30 @@ export const enum RenderEntryKind {
 /**
  * @internal
  *
- * Conservative batch identity for future material-aware reordering.
+ * Stable material identity used for safe draw-command grouping and
+ * eventual instanced batching.
  *
- * MVP note:
- * - keys are populated but never used for command reordering/grouping.
- * - ids intentionally prefer stable/conservative derivation over aggressive inference.
+ * - {@link pipelineKey} drives pipeline/program reuse: identical key ⇒
+ *   identical GPU pipeline state (shader + blend + sampler). Two draws
+ *   with the same pipeline key can be issued with a single pipeline bind.
+ * - {@link bindKey} drives texture-bind reuse: identical key ⇒ identical
+ *   texture bindings. Two draws with the same bind key can share a bind
+ *   group / texture-slot state.
+ *
+ * When the drawable carries a {@link Material}, both keys are taken
+ * directly from `material.pipelineKey` and `material.bindKey` (Phase 4+
+ * Material system). When the drawable uses its default path (no material),
+ * the keys are derived conservatively from renderer identity, blend mode,
+ * and texture identity so grouping never accidentally merges draws with
+ * incompatible state.
  */
 export interface MaterialKey {
   readonly rendererId: number;
   readonly blendMode: BlendModes;
   readonly textureId: number;
   readonly shaderId: number;
+  readonly pipelineKey: number;
+  readonly bindKey: number;
 }
 
 /** @internal */
@@ -35,6 +49,9 @@ export interface DrawCommand {
   seq: number;
   zIndex: number;
   material: MaterialKey;
+  /** Assigned by the optimizer; consecutive draws with the same groupIndex
+   *  form a batch-safe unit.  Undefined before optimisation. */
+  groupIndex?: number;
   minX: number;
   minY: number;
   maxX: number;
@@ -53,6 +70,10 @@ interface TextureCarrier {
 
 interface ShaderCarrier {
   readonly shader?: object | null;
+}
+
+interface MaterialCarrier {
+  readonly material?: Material | null;
 }
 
 const rendererIds = new WeakMap<object, number>();
@@ -122,10 +143,45 @@ const getShaderId = (drawable: Drawable): number => {
   return -1;
 };
 
-/** @internal */
-export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | null): MaterialKey => ({
-  rendererId: getRendererId(drawable, backend),
-  blendMode: drawable.blendMode,
-  textureId: getTextureId(drawable),
-  shaderId: getShaderId(drawable),
-});
+const getMaterial = (drawable: Drawable): Material | null => {
+  const material = (drawable as MaterialCarrier).material;
+
+  return material ?? null;
+};
+
+/**
+ * Derive a stable material key from the drawable.
+ *
+ * When the drawable carries a {@link Material} (e.g. a {@link MeshMaterial}
+ * or {@link SpriteMaterial}), the pipeline and bind keys are taken directly
+ * from the material so identically configured materials group together.
+ * When the drawable uses its default rendering path, both keys fall back
+ * to a conservative derivation from renderer identity, blend mode, and
+ * texture identity — keeping grouping safe but still enabling adjacency
+ * coalescing for default-pipeline draws of the same type.
+ *
+ * @internal
+ */
+export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | null): MaterialKey => {
+  const rendererId = getRendererId(drawable, backend);
+  const blendMode = drawable.blendMode;
+  const textureId = getTextureId(drawable);
+  const shaderId = getShaderId(drawable);
+  const material = getMaterial(drawable);
+
+  const pipelineKey = material !== null
+    ? material.pipelineKey
+    : rendererId * 31 + blendMode;
+  const bindKey = material !== null
+    ? material.bindKey
+    : rendererId * 31 + (textureId > 0 ? textureId : 0);
+
+  return {
+    rendererId,
+    blendMode,
+    textureId,
+    shaderId,
+    pipelineKey,
+    bindKey,
+  };
+};

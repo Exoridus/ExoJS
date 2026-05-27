@@ -3,8 +3,8 @@
 import { Color } from '@/core/Color';
 import { Time } from '@/core/Time';
 import { Rectangle } from '@/math/Rectangle';
-import { Curve } from '@/particles/distributions/Curve';
 import { ColorGradient } from '@/particles/distributions/ColorGradient';
+import { Curve } from '@/particles/distributions/Curve';
 import { ApplyForce } from '@/particles/modules/ApplyForce';
 import { ColorOverLifetime } from '@/particles/modules/ColorOverLifetime';
 import { Drag } from '@/particles/modules/Drag';

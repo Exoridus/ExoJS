@@ -62,7 +62,7 @@ export class RenderPlanBuilder {
     this._pendingEntryPlacement = null;
     this._nodeIndex = 0;
 
-    const rootScope = this._acquireGroupScope();
+    const rootScope = this._acquireGroupScope(false);
 
     this._scopeStack.push(rootScope);
     root._collect(this);
@@ -114,7 +114,7 @@ export class RenderPlanBuilder {
         height = Math.max(1, Math.ceil(bounds.height));
       }
 
-      const childPlan = effect.cacheAsBitmap && node._renderPlanCanReuseBitmapCache(left, top, width, height) ? null : this._acquireGroupScope();
+      const childPlan = effect.cacheAsBitmap && node._renderPlanCanReuseBitmapCache(left, top, width, height) ? null : this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
       const barrierScope: BarrierScope = {
         kind: RenderEntryKind.Barrier,
         node,
@@ -158,7 +158,7 @@ export class RenderPlanBuilder {
       return;
     }
 
-    const groupScope = this._acquireGroupScope();
+    const groupScope = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
 
     this._pushEntry({
       kind: RenderEntryKind.Group,
@@ -215,11 +215,12 @@ export class RenderPlanBuilder {
     this._nodeIndex = 0;
   }
 
-  private _acquireGroupScope(): MutableGroupScope {
+  private _acquireGroupScope(preserveDrawOrder: boolean): MutableGroupScope {
     const scope = this._groupPool[this._groupPoolCursor] ?? {
       kind: RenderEntryKind.Group,
       entries: [],
       hasMixedZ: false,
+      preserveDrawOrder: false,
       _nextSeq: 0,
       firstZ: null,
     };
@@ -229,6 +230,7 @@ export class RenderPlanBuilder {
 
     scope.entries.length = 0;
     scope.hasMixedZ = false;
+    scope.preserveDrawOrder = preserveDrawOrder;
     scope._nextSeq = 0;
     scope.firstZ = null;
 
@@ -264,6 +266,10 @@ export class RenderPlanBuilder {
     }
 
     return scope;
+  }
+
+  private _resolvePreserveDrawOrder(node: RenderNode): boolean {
+    return node.preserveDrawOrder;
   }
 
   private _createEffectDescriptor(node: RenderNode): EffectDescriptor {

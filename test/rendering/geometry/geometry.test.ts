@@ -1,6 +1,5 @@
 import { Rectangle } from '@/math/Rectangle';
 import { Geometry } from '@/rendering/geometry/Geometry';
-
 import type { GeometryAttribute, GeometryOptions } from '@/rendering/geometry/GeometryAttribute';
 
 const createAttributes = (): readonly GeometryAttribute[] => [

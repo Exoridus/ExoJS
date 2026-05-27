@@ -52,6 +52,7 @@ export interface GroupScope {
   readonly kind: RenderEntryKind.Group;
   entries: ScopeEntry[];
   hasMixedZ: boolean;
+  preserveDrawOrder: boolean;
 }
 
 /** @internal */

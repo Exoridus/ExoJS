@@ -106,6 +106,19 @@ export abstract class RenderNode extends SceneNode {
    */
   public draggable = false;
 
+  /**
+   * When `true`, material-aware overlap reordering is disabled for this
+   * node's draw-order scope. Draw commands are submitted in exact document
+   * order (after scope-local z-sorting), preserving the painter's guarantee
+   * irrespective of material compatibility or AABB safety analysis.
+   *
+   * Adjacency coalescing of consecutive same-material draws still applies;
+   * it does not change visual output order.
+   *
+   * @default false
+   */
+  public preserveDrawOrder = false;
+
   public readonly onPointerDown = new Signal<[InteractionEvent]>();
   public readonly onPointerUp = new Signal<[InteractionEvent]>();
   public readonly onPointerMove = new Signal<[InteractionEvent]>();

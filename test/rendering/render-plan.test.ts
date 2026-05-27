@@ -2,7 +2,7 @@ import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { Filter } from '@/rendering/filters/Filter';
-import { RenderEntryKind } from '@/rendering/plan/RenderCommand';
+import { type DrawCommand,RenderEntryKind } from '@/rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
 import type { RenderBackend } from '@/rendering/RenderBackend';
@@ -479,7 +479,7 @@ describe('render plan', () => {
         nodeIndex: 0,
         seq: 1,
         zIndex: 0,
-        material: { rendererId: 1, blendMode: a.blendMode, textureId: -1, shaderId: -1 },
+        material: { rendererId: 1, blendMode: a.blendMode, textureId: -1, shaderId: -1, pipelineKey: 1, bindKey: 1 },
         minX: 0,
         minY: 0,
         maxX: 1,
@@ -496,7 +496,7 @@ describe('render plan', () => {
         nodeIndex: 1,
         seq: 0,
         zIndex: 0,
-        material: { rendererId: 2, blendMode: b.blendMode, textureId: -1, shaderId: -1 },
+        material: { rendererId: 2, blendMode: b.blendMode, textureId: -1, shaderId: -1, pipelineKey: 2, bindKey: 2 },
         minX: 0,
         minY: 0,
         maxX: 1,
@@ -546,5 +546,56 @@ describe('render plan', () => {
 
     expect(filterDrawOrder(drawEvents, [a, b, c])).toEqual([b, a, c]);
     expect(root.children).toEqual([a, b, c]);
+  });
+
+  test('adjacent same-material draws coalesce into same groupIndex', () => {
+    const a = new BoxDrawable('a');
+    const b = new BoxDrawable('b');
+
+    const mkMat = (pk: number, bk: number) => ({
+      rendererId: 1, blendMode: 0, textureId: -1, shaderId: -1, pipelineKey: pk, bindKey: bk,
+    });
+
+    const createDraw = (d: Drawable, opts: { pk?: number; bk?: number } = {}) => ({
+      kind: RenderEntryKind.Draw as const,
+      seq: 0,
+      zIndex: 0,
+      command: {
+        kind: RenderEntryKind.Draw as const,
+        drawable: d,
+        nodeIndex: 0,
+        seq: 0,
+        zIndex: 0,
+        material: mkMat(opts.pk ?? 100, opts.bk ?? 100),
+        minX: 0, minY: 0, maxX: 16, maxY: 16,
+      },
+    });
+
+    const { backend } = createRuntime();
+    const plan = {
+      passes: [{
+        target: null as any, view: backend.view, clearColor: null as any,
+        root: {
+          kind: RenderEntryKind.Group as const,
+          entries: [
+            createDraw(a, { pk: 100, bk: 100 }),
+            createDraw(b, { pk: 100, bk: 100 }),
+          ],
+          hasMixedZ: false,
+          preserveDrawOrder: false,
+        },
+      }],
+      nodeCount: 0,
+      reset() { this.passes.length = 0; this.nodeCount = 0; },
+    };
+
+    RenderPlanOptimizer.optimize(plan);
+
+    const root = plan.passes[0].root;
+    const g0 = (root.entries[0] as any).command as DrawCommand;
+    const g1 = (root.entries[1] as any).command as DrawCommand;
+
+    expect(g0.groupIndex).toBeGreaterThan(0);
+    expect(g0.groupIndex).toBe(g1.groupIndex);
   });
 });

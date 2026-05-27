@@ -1,8 +1,8 @@
 import { Color } from '@/core/Color';
 import { Time } from '@/core/Time';
+import { ColorGradient } from '@/particles/distributions/ColorGradient';
 import { Constant } from '@/particles/distributions/Constant';
 import { Curve } from '@/particles/distributions/Curve';
-import { ColorGradient } from '@/particles/distributions/ColorGradient';
 import { Range } from '@/particles/distributions/Range';
 import { VectorRange } from '@/particles/distributions/VectorRange';
 import { AlphaFadeOverLifetime } from '@/particles/modules/AlphaFadeOverLifetime';
