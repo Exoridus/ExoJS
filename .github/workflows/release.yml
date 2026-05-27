@@ -58,15 +58,18 @@ jobs:
       # Node 24 ships with npm 11+ which is required for Trusted Publisher
       # OIDC authentication. We use Node 22 in the checks job above (library
       # compat) and Node 24 here (npm toolchain requirement).
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts --no-audit --fund=false
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       # Refuse to publish unless the resolved tag name matches the
       # version inside package.json. Catches the "tag and package.json
@@ -84,11 +87,11 @@ jobs:
       # any build failure surfaces before the publish attempt rather than
       # mid-publish.
       - name: Build library
-        run: npm run build
+        run: pnpm build
 
       # Site build produces site/dist/ needed for the release bundle below.
       - name: Build site
-        run: npm run site:build
+        run: pnpm site:build
 
       - name: Assemble release bundle
         run: |
@@ -102,7 +105,7 @@ jobs:
 
       - name: Generate release notes
         run: |
-          npm run release:notes -- \
+          pnpm release:notes -- \
             --tag "${TARGET_TAG}" \
             --repo "${GITHUB_REPOSITORY}" \
             --out ".release/release-notes.md"

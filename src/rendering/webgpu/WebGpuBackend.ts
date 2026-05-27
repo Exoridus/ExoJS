@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /// <reference types="@webgpu/types" />
 
 import type { Application } from '@/core/Application';
@@ -13,6 +14,7 @@ import { ScaleModes, WrapModes } from '@/rendering/types';
 
 import type { Drawable } from '../Drawable';
 import { Mesh } from '../mesh/Mesh';
+import type { DrawCommand } from '../plan/RenderCommand';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
@@ -31,6 +33,7 @@ import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuParticleRenderer } from './WebGpuParticleRenderer';
 import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuTextRenderer } from './WebGpuTextRenderer';
+import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
 interface ManagedWebGpuTextureState {
   texture: GPUTexture;
@@ -112,6 +115,8 @@ export class WebGpuBackend implements RenderBackend {
   private _clearRequested = false;
   private _hasPresentedFrame = false;
   private readonly _stats: RenderStats = createRenderStats();
+  private _transformStorage: WebGpuTransformStorage | null = new WebGpuTransformStorage();
+  private _activeDrawCommand: DrawCommand | null = null;
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -179,6 +184,11 @@ export class WebGpuBackend implements RenderBackend {
     return this._stats;
   }
 
+  /** @internal */
+  public get activeDrawCommand(): DrawCommand | null {
+    return this._activeDrawCommand;
+  }
+
   public get clearColor(): Color {
     return this._clearColor;
   }
@@ -210,8 +220,26 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
+  /** @internal */
+  public _beginDrawPlan(nodeCount: number): void {
+    this._getTransformStorage().begin(nodeCount);
+    this._activeDrawCommand = null;
+  }
+
+  /** @internal */
+  public _prepareDrawCommand(command: DrawCommand): void {
+    this._activeDrawCommand = command;
+    this._getTransformStorage().writeCommand(command);
+  }
+
+  /** @internal */
+  public _endDrawPlan(): void {
+    this._activeDrawCommand = null;
+  }
+
   public draw(drawable: Drawable): this {
     if (this._deviceLost || this._device === null) {
+      this._activeDrawCommand = null;
       return this;
     }
 
@@ -219,6 +247,7 @@ export class WebGpuBackend implements RenderBackend {
 
     this._setActiveRenderer(renderer);
     renderer.render(drawable);
+    this._activeDrawCommand = null;
     this._stats.submittedNodes++;
 
     return this;
@@ -436,6 +465,10 @@ export class WebGpuBackend implements RenderBackend {
       this._maskCompositorConnected = false;
     }
 
+    this._transformStorage?.destroy();
+    this._transformStorage = null;
+    this._activeDrawCommand = null;
+
     for (const target of [...this._renderTargetDestroyHandlers.keys()]) {
       this._unsubscribeRenderTarget(target);
     }
@@ -525,6 +558,11 @@ export class WebGpuBackend implements RenderBackend {
     return !(texture instanceof RenderTexture) && texture.premultiplyAlpha;
   }
 
+  /** @internal */
+  public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly count: number } {
+    return this._getTransformStorage().getBuffer(this.device, minCount);
+  }
+
   private _setActiveRenderer(renderer: Renderer | null): void {
     if (this._renderer !== renderer) {
       this._flushActiveRenderer();
@@ -534,6 +572,14 @@ export class WebGpuBackend implements RenderBackend {
 
   private _flushActiveRenderer(): void {
     this._renderer?.flush();
+  }
+
+  private _getTransformStorage(): WebGpuTransformStorage {
+    if (this._transformStorage === null || this._transformStorage === undefined) {
+      this._transformStorage = new WebGpuTransformStorage();
+    }
+
+    return this._transformStorage;
   }
 
   private async _initialize(): Promise<this> {
@@ -739,6 +785,9 @@ export class WebGpuBackend implements RenderBackend {
     this._mipmapPipelineLayout = null;
     this._mipmapPipeline = null;
     this._mipmapSampler = null;
+    this._transformStorage?.destroy();
+    this._transformStorage = null;
+    this._activeDrawCommand = null;
 
     this._context?.unconfigure();
     this._context = null;

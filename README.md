@@ -111,28 +111,28 @@ ExoJS `v0.9.0` includes pre-1.0 API consolidation changes. See the migration gui
 ## Development
 
 ```bash
-npm run bootstrap
-npm run typecheck
-npm run lint
-npm test
-npm run build
-npm run verify:package
+pnpm bootstrap
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm verify:package
 ```
 
 Internal imports use the `@/*` path alias (mapped to `src/*`) — the same convention used by Vite, Next.js, and other modern TypeScript setups. Building the library requires TypeScript 6.
 
 ### Workspace Commands
 
-This repository uses npm workspaces (`site/` is a workspace package).
+This repository uses pnpm workspaces (`site/` is a workspace package).
 Use root-level commands as the source of truth:
 
 ```bash
-npm run bootstrap
-npm run site:build
-npm run site:build:api
+pnpm bootstrap
+pnpm site:build
+pnpm site:build:api
 ```
 
-Avoid running `npm install`/`npm ci` inside `site/` directly to prevent lockfile drift.
+Avoid running `pnpm install` inside `site/` directly to prevent lockfile drift.
 
 ## Links
 

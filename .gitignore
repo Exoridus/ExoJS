@@ -6,6 +6,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.tgz
 test/perf/results/*.json
 test/perf/results/*.md
 
@@ -25,7 +26,6 @@ test/perf/results/*.md
 !.gitignore
 !.gitkeep
 !.gitmojirc.json
-!.npmrc
 !.prettierignore
 !.prettierrc
 

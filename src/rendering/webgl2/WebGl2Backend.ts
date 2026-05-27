@@ -10,6 +10,7 @@ import { BlendModes } from '@/rendering/types';
 
 import type { Drawable } from '../Drawable';
 import { Mesh } from '../mesh/Mesh';
+import type { DrawCommand } from '../plan/RenderCommand';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
@@ -23,6 +24,7 @@ import { Sprite } from '../sprite/Sprite';
 import { DataTexture, type DataTextureFormat } from '../texture/DataTexture';
 import { RenderTexture } from '../texture/RenderTexture';
 import type { Texture } from '../texture/Texture';
+import { TransformBuffer } from '../TransformBuffer';
 import type { View } from '../View';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
@@ -141,6 +143,11 @@ export class WebGl2Backend implements RenderBackend {
   private _clearColor: Color = new Color();
   private _boundFramebuffer: WebGLFramebuffer | null = null;
   private readonly _stats: RenderStats = createRenderStats();
+  private readonly _transformBuffer = new TransformBuffer();
+  private _transformTexture: DataTexture<'rgba32f'> | null = null;
+  private _transformTextureHash = 0;
+  private _transformTextureCount = -1;
+  private _activeDrawCommand: DrawCommand | null = null;
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -214,6 +221,11 @@ export class WebGl2Backend implements RenderBackend {
     return this._stats;
   }
 
+  /** @internal */
+  public get activeDrawCommand(): DrawCommand | null {
+    return this._activeDrawCommand;
+  }
+
   public async initialize(): Promise<this> {
     return this;
   }
@@ -224,11 +236,32 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  /** @internal */
+  public _beginDrawPlan(nodeCount: number): void {
+    this._transformBuffer.begin(nodeCount);
+    this._activeDrawCommand = null;
+  }
+
+  /** @internal */
+  public _prepareDrawCommand(command: DrawCommand): void {
+    this._activeDrawCommand = command;
+
+    const drawable = command.drawable;
+
+    this._transformBuffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
+  }
+
+  /** @internal */
+  public _endDrawPlan(): void {
+    this._activeDrawCommand = null;
+  }
+
   public draw(drawable: Drawable): this {
     const renderer = this.rendererRegistry.resolve(drawable);
 
     this._setActiveRenderer(renderer);
     renderer.render(drawable);
+    this._activeDrawCommand = null;
     this._stats.submittedNodes++;
 
     return this;
@@ -405,6 +438,43 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  /** @internal */
+  public bindTransformBufferTexture(unit: number, minCount: number): this {
+    const requiredCount = Math.max(1, minCount);
+    const transformTexture = this._transformTexture;
+
+    if (
+      transformTexture?.height !== this._transformBuffer.capacity
+      || transformTexture.buffer !== this._transformBuffer.data
+    ) {
+      transformTexture?.destroy();
+
+      this._transformTexture = new DataTexture({
+        width: 3,
+        height: this._transformBuffer.capacity,
+        format: 'rgba32f',
+        data: this._transformBuffer.data,
+      });
+      this._transformTextureHash = 0;
+      this._transformTextureCount = -1;
+    }
+
+    const snapshot = this._transformBuffer.commitSnapshot(requiredCount);
+    const nextTransformTexture = this._transformTexture;
+
+    if (nextTransformTexture === null) {
+      throw new Error('Transform texture must be initialized before binding.');
+    }
+
+    if (snapshot.changed || snapshot.count !== this._transformTextureCount || snapshot.hash !== this._transformTextureHash) {
+      nextTransformTexture.commitRect(0, 0, 3, snapshot.count);
+      this._transformTextureHash = snapshot.hash;
+      this._transformTextureCount = snapshot.count;
+    }
+
+    return this.bindTexture(nextTransformTexture, unit);
+  }
+
   public setBlendMode(blendMode: BlendModes | null): this {
     if (blendMode !== this._blendMode) {
       const gl = this._context;
@@ -525,12 +595,20 @@ export class WebGl2Backend implements RenderBackend {
     }
     this._rootRenderTarget.destroy();
 
+    if (this._transformTexture !== null) {
+      this._transformTexture.destroy();
+      this._transformTexture = null;
+    }
+
     this._vao = null;
     this._renderer = null;
     this._shader = null;
     this._blendMode = null;
     this._texture = null;
     this._boundFramebuffer = null;
+    this._activeDrawCommand = null;
+    this._transformTextureCount = -1;
+    this._transformTextureHash = 0;
   }
 
   private _createContext(options?: WebGLContextAttributes): WebGL2RenderingContext | null {

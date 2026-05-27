@@ -5,8 +5,8 @@
  * adapter null, or device request rejected). This keeps normal CI green even
  * on hosts without a usable GPU adapter.
  *
- * Run via:  npm run test:browser:webgpu
- * Headed:   EXOJS_BROWSER_HEADED=1 npm run test:browser:webgpu
+ * Run via:  pnpm test:browser:webgpu
+ * Headed:   EXOJS_BROWSER_HEADED=1 pnpm test:browser:webgpu
  */
 
 vi.mock('@/rendering/RendererRegistry', () => ({

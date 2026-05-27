@@ -6,7 +6,7 @@
  * exports are added or removed, forcing the change to be deliberate.
  *
  * To update the snapshot after an intentional export change:
- *   npx vitest run --update
+ *   pnpm exec vitest run --update
  *
  * Note: only runtime-visible names appear here (classes, functions, enums,
  * const objects). Pure TypeScript interfaces and type aliases are erased at

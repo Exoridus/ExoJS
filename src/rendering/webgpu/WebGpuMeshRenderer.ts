@@ -1,8 +1,11 @@
+/* eslint-disable max-lines */
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '@/math/Matrix';
+import type { Geometry } from '@/rendering/geometry/Geometry';
 import type { Material, UniformValue } from '@/rendering/material/Material';
 import type { Mesh } from '@/rendering/mesh/Mesh';
+import type { DrawCommand } from '@/rendering/plan/RenderCommand';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
 import { Texture as TextureClass } from '@/rendering/texture/Texture';
@@ -55,6 +58,66 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 
+const instancedMeshShaderSource = `
+struct VertexInput {
+    @location(0) position: vec2<f32>,
+    @location(1) texcoord: vec2<f32>,
+    @location(2) color: vec4<f32>,
+    @location(6) nodeIndex: u32,
+};
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) texcoord: vec2<f32>,
+    @location(1) color: vec4<f32>,
+    @location(2) tint: vec4<f32>,
+    @location(3) @interpolate(flat) premultiplySample: u32,
+};
+
+struct TransformSlot {
+    m0: vec4<f32>,
+    m1: vec4<f32>,
+    m2: vec4<f32>,
+};
+
+struct TransformUniforms {
+    projection: mat3x3<f32>,
+    flags: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: TransformUniforms;
+@group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
+
+@group(1) @binding(0) var meshTexture: texture_2d<f32>;
+@group(1) @binding(1) var meshSampler: sampler;
+
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+    let slot = transforms[input.nodeIndex];
+    let world = vec3<f32>(
+        slot.m0.x * input.position.x + slot.m0.z * input.position.y + slot.m1.x,
+        slot.m0.y * input.position.x + slot.m0.w * input.position.y + slot.m1.y,
+        1.0
+    );
+
+    var output: VertexOutput;
+    output.position = vec4<f32>((uniforms.projection * world).xy, 0.0, 1.0);
+    output.texcoord = input.texcoord;
+    output.color = input.color;
+    output.tint = slot.m2;
+    output.premultiplySample = u32(uniforms.flags.x);
+    return output;
+}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+    let sample = textureSample(meshTexture, meshSampler, input.texcoord);
+    let resolvedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), input.premultiplySample == 1u);
+    let modulated = resolvedSample * input.color * input.tint;
+    return vec4<f32>(modulated.rgb * modulated.a, modulated.a);
+}
+`;
+
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + color u8x4-norm.
 // Default-shader path bakes the (view * globalTransform) into position so the
 // vertex shader stays branchless and uniform-free except for the per-mesh tint.
@@ -63,6 +126,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / 4;
 const tintByteLength = 32; // vec4 tint + vec4 flags (only flags.x used)
+const transformUniformByteLength = 64; // mat3x3<f32> (48B) + vec4<f32> flags (16B)
 
 // Custom-shader uniform layout:
 //   mat3x3<f32> projection   — 48 bytes (3 vec3 columns padded to vec4 in WGSL)
@@ -74,6 +138,7 @@ const customMeshUniformBytes = 112;
 interface MeshDrawCall {
   readonly mesh: Mesh;
   readonly customShader: Material | null;
+  readonly command: DrawCommand | null;
   readonly blendMode: BlendModes;
   readonly texture: Texture | RenderTexture;
   readonly premultiplySample: boolean;
@@ -87,6 +152,19 @@ interface MeshDrawCall {
 interface MeshPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
+}
+
+interface InstancedPipelineKey {
+  readonly blendMode: BlendModes;
+  readonly format: GPUTextureFormat;
+}
+
+interface StaticGeometryCacheEntry {
+  readonly geometry: Geometry;
+  readonly vertexBuffer: GPUBuffer;
+  readonly indexBuffer: GPUBuffer;
+  readonly indexCount: number;
+  readonly disposeListener: () => void;
 }
 
 /**
@@ -134,18 +212,31 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   private readonly _combinedTransform: Matrix = new Matrix();
   private readonly _drawCalls: MeshDrawCall[] = [];
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
+  private readonly _instancedPipelines = new Map<string, GPURenderPipeline>();
+  private readonly _staticGeometryCache = new Map<Geometry, StaticGeometryCacheEntry>();
   private _textureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
   private readonly _customShaders = new Map<Material, CustomShaderResources>();
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
+  private _instancedShaderModule: GPUShaderModule | null = null;
   private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _instancedTransformBindGroupLayout: GPUBindGroupLayout | null = null;
   private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
   private _pipelineLayout: GPUPipelineLayout | null = null;
+  private _instancedPipelineLayout: GPUPipelineLayout | null = null;
   private _vertexBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
   private _uniformBindGroup: GPUBindGroup | null = null;
+  private _instancedUniformBuffer: GPUBuffer | null = null;
+  private _instancedUniformBufferCapacity = 0;
+  private readonly _instancedUniformScratch = new Float32Array(transformUniformByteLength / Float32Array.BYTES_PER_ELEMENT);
+  private _instancedNodeIndexBuffer: GPUBuffer | null = null;
+  private _instancedNodeIndexBufferCapacity = 0;
+  private _instancedNodeIndexData: Uint32Array = new Uint32Array(0);
+  private _instancedTransformBindGroup: GPUBindGroup | null = null;
+  private _instancedTransformStorageBuffer: GPUBuffer | null = null;
   private _uniformAlignment = 256;
   private _vertexBufferCapacity = 0;
   private _indexBufferCapacity = 0;
@@ -182,6 +273,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     backend.setBlendMode(blendMode);
 
     const meshTexture = mesh.texture ?? TextureClass.white;
+    const command = backend.activeDrawCommand;
     // backend.shouldPremultiplyTextureSample expects RenderTexture-or-Texture.
     // Both branches are valid here. Premultiply flag is ignored by custom
     // shaders (they handle premultiplication themselves), but we still record
@@ -205,6 +297,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const drawCall: MeshDrawCall = {
       mesh,
       customShader,
+      command,
       blendMode,
       texture: meshTexture,
       premultiplySample,
@@ -284,6 +377,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     // each custom-shader resource manages its own.
     const defaultDrawCalls = this._drawCallCount - this._totalCustomDraws();
     this._ensureUniformCapacity(defaultDrawCalls);
+    this._ensureInstancedUniformCapacity(this._drawCallCount);
 
     // Phase 3: pack default-path vertex/index/uniform data.
     const defaultUniformBytes = defaultDrawCalls * this._uniformAlignment;
@@ -407,17 +501,63 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     const renderTargetFormat = backend.renderTargetFormat;
 
-    let lastShader: Material | 'default' | null = null;
+    let lastShader: Material | 'default' | 'instanced' | null = null;
     let lastBlendMode: BlendModes | null = null;
     let lastFormat: GPUTextureFormat | null = null;
     let lastTexture: Texture | RenderTexture | null = null;
     let defaultDrawCursor = 0;
+    let instancedDrawCursor = 0;
     const customDrawCursors = new Map<Material, number>();
 
     for (let i = 0; i < this._drawCallCount; i++) {
       const dc = this._drawCalls[i];
 
       if (dc.customShader === null) {
+        const batchLength = this._getStaticBatchLength(i);
+
+        if (batchLength >= 2) {
+          const needsPipeline = lastShader !== 'instanced' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
+
+          if (needsPipeline) {
+            pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat }));
+            lastShader = 'instanced';
+            lastBlendMode = dc.blendMode;
+            lastFormat = renderTargetFormat;
+            lastTexture = null;
+          }
+
+          const maxNodeIndex = this._uploadInstancedNodeIndices(i, batchLength);
+          const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
+
+          this._writeInstancedUniformSlot(instancedDrawCursor, backend, dc.premultiplySample);
+          pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer), [instancedDrawCursor * this._uniformAlignment]);
+
+          if (dc.texture !== lastTexture) {
+            lastTexture = dc.texture;
+            pass.setBindGroup(1, this._getTextureBindGroup(backend, dc.texture));
+          }
+
+          const staticGeometry = this._getOrCreateStaticGeometryEntry(dc.mesh);
+          const instanceNodeIndexBuffer = this._instancedNodeIndexBuffer;
+
+          if (instanceNodeIndexBuffer === null) {
+            throw new Error('Instanced node-index buffer must be initialized before drawing.');
+          }
+
+          pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
+          pass.setVertexBuffer(1, instanceNodeIndexBuffer);
+          pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
+          pass.drawIndexed(staticGeometry.indexCount, batchLength);
+
+          backend.stats.batches++;
+          backend.stats.drawCalls++;
+
+          defaultDrawCursor += batchLength;
+          instancedDrawCursor++;
+          i += batchLength - 1;
+          continue;
+        }
+
         // ----- Default path -----
         const needsPipeline = lastShader !== 'default' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
@@ -529,6 +669,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
             this._pipelines.set(key, pipeline);
           }),
         );
+
+        if (!this._instancedPipelines.has(key)) {
+          promises.push(
+            device.createRenderPipelineAsync(this._buildInstancedPipelineDescriptor(blendMode, format)).then(pipeline => {
+              this._instancedPipelines.set(key, pipeline);
+            }),
+          );
+        }
       }
     }
 
@@ -542,6 +690,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     this._device = backend.device;
     this._shaderModule = this._device.createShaderModule({ code: meshShaderSource });
+    this._instancedShaderModule = this._device.createShaderModule({ code: instancedMeshShaderSource });
 
     this._uniformBindGroupLayout = this._device.createBindGroupLayout({
       entries: [
@@ -569,6 +718,23 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._pipelineLayout = this._device.createPipelineLayout({
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
+    this._instancedTransformBindGroupLayout = this._device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform', hasDynamicOffset: true },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: { type: 'read-only-storage' },
+        },
+      ],
+    });
+    this._instancedPipelineLayout = this._device.createPipelineLayout({
+      bindGroupLayouts: [this._instancedTransformBindGroupLayout, this._textureBindGroupLayout],
+    });
   }
 
   protected onDisconnect(): void {
@@ -576,16 +742,33 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._vertexBuffer?.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
+    this._instancedUniformBuffer?.destroy();
+    this._instancedNodeIndexBuffer?.destroy();
     this._pipelines.clear();
+    this._instancedPipelines.clear();
     this._textureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
+
+    for (const entry of this._staticGeometryCache.values()) {
+      entry.vertexBuffer.destroy();
+      entry.indexBuffer.destroy();
+    }
+
+    this._staticGeometryCache.clear();
     this._vertexBuffer = null;
     this._indexBuffer = null;
     this._uniformBuffer = null;
     this._uniformBindGroup = null;
+    this._instancedUniformBuffer = null;
+    this._instancedNodeIndexBuffer = null;
+    this._instancedTransformBindGroup = null;
+    this._instancedTransformStorageBuffer = null;
     this._pipelineLayout = null;
+    this._instancedPipelineLayout = null;
     this._textureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
+    this._instancedTransformBindGroupLayout = null;
     this._shaderModule = null;
+    this._instancedShaderModule = null;
     // Custom materials are owned by user code (one MeshMaterial can be shared
     // across multiple Mesh instances). Their resources are released when the
     // user calls material.destroy(), which fires our _onDispose callback. On
@@ -601,6 +784,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._vertexBufferCapacity = 0;
     this._indexBufferCapacity = 0;
     this._uniformBufferCapacity = 0;
+    this._instancedUniformBufferCapacity = 0;
+    this._instancedNodeIndexBufferCapacity = 0;
+    this._instancedNodeIndexData = new Uint32Array(0);
   }
 
   // ---------------------------------------------------------------------------
@@ -715,6 +901,283 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     return group;
+  }
+
+  private _getStaticBatchLength(startIndex: number): number {
+    const first = this._drawCalls[startIndex];
+
+    if (!this._isStaticBatchCandidate(first)) {
+      return 1;
+    }
+
+    let length = 1;
+
+    for (let i = startIndex + 1; i < this._drawCallCount; i++) {
+      const next = this._drawCalls[i];
+
+      if (!this._isSameStaticBatch(first, next)) {
+        break;
+      }
+
+      length++;
+    }
+
+    return length;
+  }
+
+  private _isStaticBatchCandidate(drawCall: MeshDrawCall): boolean {
+    const command = drawCall.command;
+
+    return drawCall.customShader === null
+      && command?.groupIndex !== undefined
+      && drawCall.mesh.geometry?.usage === 'static';
+  }
+
+  private _isSameStaticBatch(left: MeshDrawCall, right: MeshDrawCall): boolean {
+    if (!this._isStaticBatchCandidate(left) || !this._isStaticBatchCandidate(right)) {
+      return false;
+    }
+
+    return left.command!.groupIndex === right.command!.groupIndex
+      && left.mesh.geometry === right.mesh.geometry
+      && left.texture === right.texture
+      && left.blendMode === right.blendMode
+      && left.command!.material.pipelineKey === right.command!.material.pipelineKey
+      && left.command!.material.bindKey === right.command!.material.bindKey;
+  }
+
+  private _uploadInstancedNodeIndices(startIndex: number, batchLength: number): number {
+    this._ensureInstancedNodeIndexCapacity(batchLength);
+
+    let maxNodeIndex = 0;
+
+    for (let i = 0; i < batchLength; i++) {
+      const nodeIndex = this._drawCalls[startIndex + i].command!.nodeIndex >>> 0;
+
+      this._instancedNodeIndexData[i] = nodeIndex;
+
+      if (nodeIndex > maxNodeIndex) {
+        maxNodeIndex = nodeIndex;
+      }
+    }
+
+    this._device!.queue.writeBuffer(
+      this._instancedNodeIndexBuffer!,
+      0,
+      this._instancedNodeIndexData.buffer,
+      this._instancedNodeIndexData.byteOffset,
+      batchLength * Uint32Array.BYTES_PER_ELEMENT,
+    );
+
+    return maxNodeIndex;
+  }
+
+  private _ensureInstancedNodeIndexCapacity(instanceCount: number): void {
+    const requiredBytes = instanceCount * Uint32Array.BYTES_PER_ELEMENT;
+
+    if (this._instancedNodeIndexData.length < instanceCount) {
+      this._instancedNodeIndexData = new Uint32Array(Math.max(instanceCount, this._instancedNodeIndexData.length * 2 || 1));
+    }
+
+    if (requiredBytes > this._instancedNodeIndexBufferCapacity) {
+      this._instancedNodeIndexBuffer?.destroy();
+      this._instancedNodeIndexBufferCapacity = Math.max(requiredBytes, this._instancedNodeIndexBufferCapacity * 2 || Uint32Array.BYTES_PER_ELEMENT);
+      this._instancedNodeIndexBuffer = this._device!.createBuffer({
+        size: this._instancedNodeIndexBufferCapacity,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+  }
+
+  private _ensureInstancedUniformCapacity(drawCallCount: number): void {
+    if (drawCallCount === 0) {
+      return;
+    }
+
+    const requiredBytes = drawCallCount * this._uniformAlignment;
+
+    if (requiredBytes > this._instancedUniformBufferCapacity) {
+      this._instancedUniformBuffer?.destroy();
+      this._instancedUniformBufferCapacity = Math.max(requiredBytes, this._instancedUniformBufferCapacity * 2 || this._uniformAlignment);
+      this._instancedUniformBuffer = this._device!.createBuffer({
+        size: this._instancedUniformBufferCapacity,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      this._instancedTransformBindGroup = null;
+      this._instancedTransformStorageBuffer = null;
+    }
+  }
+
+  private _writeInstancedUniformSlot(slot: number, backend: WebGpuBackend, premultiplySample: boolean): void {
+    const data = this._instancedUniformScratch;
+    const projection = backend.view.getTransform();
+
+    data.fill(0);
+    data[0] = projection.a;
+    data[1] = projection.b;
+    data[4] = projection.c;
+    data[5] = projection.d;
+    data[8] = projection.x;
+    data[9] = projection.y;
+    data[10] = 1;
+    data[12] = premultiplySample ? 1 : 0;
+
+    this._device!.queue.writeBuffer(
+      this._instancedUniformBuffer!,
+      slot * this._uniformAlignment,
+      data.buffer,
+      data.byteOffset,
+      transformUniformByteLength,
+    );
+  }
+
+  private _getOrCreateInstancedTransformBindGroup(storageBuffer: GPUBuffer): GPUBindGroup {
+    if (this._instancedTransformBindGroup !== null && this._instancedTransformStorageBuffer === storageBuffer) {
+      return this._instancedTransformBindGroup;
+    }
+
+    this._instancedTransformStorageBuffer = storageBuffer;
+    this._instancedTransformBindGroup = this._device!.createBindGroup({
+      layout: this._instancedTransformBindGroupLayout!,
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this._instancedUniformBuffer!,
+            size: transformUniformByteLength,
+          },
+        },
+        {
+          binding: 1,
+          resource: {
+            buffer: storageBuffer,
+          },
+        },
+      ],
+    });
+
+    return this._instancedTransformBindGroup;
+  }
+
+  private _getInstancedPipeline(key: InstancedPipelineKey): GPURenderPipeline {
+    const cacheKey = `${key.blendMode}:${key.format}`;
+    let pipeline = this._instancedPipelines.get(cacheKey);
+
+    if (!pipeline) {
+      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format));
+      this._instancedPipelines.set(cacheKey, pipeline);
+    }
+
+    return pipeline;
+  }
+
+  private _buildInstancedPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipelineDescriptor {
+    return {
+      layout: this._instancedPipelineLayout!,
+      vertex: {
+        module: this._instancedShaderModule!,
+        entryPoint: 'vertexMain',
+        buffers: [
+          {
+            arrayStride: vertexStrideBytes,
+            stepMode: 'vertex',
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: 'float32x2' },
+              { shaderLocation: 1, offset: 8, format: 'float32x2' },
+              { shaderLocation: 2, offset: 16, format: 'unorm8x4' },
+            ],
+          },
+          {
+            arrayStride: Uint32Array.BYTES_PER_ELEMENT,
+            stepMode: 'instance',
+            attributes: [{ shaderLocation: 6, offset: 0, format: 'uint32' }],
+          },
+        ],
+      },
+      fragment: {
+        module: this._instancedShaderModule!,
+        entryPoint: 'fragmentMain',
+        targets: [
+          {
+            format,
+            blend: getWebGpuBlendState(blendMode),
+            writeMask: GPUColorWrite.ALL,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+        cullMode: 'none',
+      },
+    };
+  }
+
+  private _getOrCreateStaticGeometryEntry(mesh: Mesh): StaticGeometryCacheEntry {
+    const geometry = mesh.geometry;
+
+    if (geometry?.usage !== 'static') {
+      throw new Error('Static mesh batching requires Geometry with usage="static".');
+    }
+
+    const existing = this._staticGeometryCache.get(geometry);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const vertexData = new ArrayBuffer(mesh.vertexCount * vertexStrideBytes);
+    const vertexFloatView = new Float32Array(vertexData);
+    const vertexUintView = new Uint32Array(vertexData);
+
+    this._writeMeshVerticesIntoBuffer(mesh, 0, vertexFloatView, vertexUintView);
+
+    const indexData = new Uint16Array(mesh.indexCount);
+
+    if (mesh.indices !== null) {
+      indexData.set(mesh.indices, 0);
+    } else {
+      for (let i = 0; i < mesh.indexCount; i++) {
+        indexData[i] = i;
+      }
+    }
+
+    const vertexBuffer = this._device!.createBuffer({
+      size: vertexData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    const indexBuffer = this._device!.createBuffer({
+      size: indexData.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+
+    this._device!.queue.writeBuffer(vertexBuffer, 0, vertexData, 0, vertexData.byteLength);
+    this._device!.queue.writeBuffer(indexBuffer, 0, indexData.buffer, indexData.byteOffset, indexData.byteLength);
+
+    const disposeListener = (): void => {
+      const entry = this._staticGeometryCache.get(geometry);
+
+      if (entry === undefined) {
+        return;
+      }
+
+      entry.vertexBuffer.destroy();
+      entry.indexBuffer.destroy();
+      this._staticGeometryCache.delete(geometry);
+    };
+
+    geometry._onDispose(disposeListener);
+
+    const created: StaticGeometryCacheEntry = {
+      geometry,
+      vertexBuffer,
+      indexBuffer,
+      indexCount: mesh.indexCount,
+      disposeListener,
+    };
+
+    this._staticGeometryCache.set(geometry, created);
+
+    return created;
   }
 
   private _ensureVertexCapacity(vertexCount: number): void {

@@ -548,6 +548,49 @@ describe('render plan', () => {
     expect(root.children).toEqual([a, b, c]);
   });
 
+  test('nodeIndex remains stable for each draw command after optimize', () => {
+    const { backend } = createRuntime();
+    const root = new Container();
+    const first = new BoxDrawable('first');
+    const second = new BoxDrawable('second');
+
+    // Force a re-order during optimize.
+    first.zIndex = 10;
+    second.zIndex = 0;
+    root.addChild(first, second);
+
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      const plan = builder.build(root, backend);
+      const collectNodeIndices = (entries: readonly any[], target: Map<Drawable, number>): void => {
+        for (const entry of entries) {
+          if (entry.kind === RenderEntryKind.Draw) {
+            target.set(entry.command.drawable, entry.command.nodeIndex);
+            continue;
+          }
+
+          if (entry.kind === RenderEntryKind.Group) {
+            collectNodeIndices(entry.scope.entries, target);
+          }
+        }
+      };
+      const before = new Map<Drawable, number>();
+      collectNodeIndices(plan.passes[0].root.entries, before);
+
+      RenderPlanOptimizer.optimize(plan);
+
+      const after = new Map<Drawable, number>();
+      collectNodeIndices(plan.passes[0].root.entries, after);
+
+      expect(after.get(first)).toBe(before.get(first));
+      expect(after.get(second)).toBe(before.get(second));
+      expect(after.get(first)).not.toBe(after.get(second));
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+  });
+
   test('adjacent same-material draws coalesce into same groupIndex', () => {
     const a = new BoxDrawable('a');
     const b = new BoxDrawable('b');

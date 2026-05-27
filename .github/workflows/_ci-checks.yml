@@ -32,23 +32,26 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node-version }}
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts --no-audit --fund=false
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm typecheck
 
       - name: Lint
-        run: npm run lint
+        run: pnpm lint
 
       - name: Test (with coverage)
-        run: npm run test:coverage
+        run: pnpm test:coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -59,19 +62,19 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Browser tests (WebGL2 / Chromium)
-        run: npm run test:browser
+        run: pnpm test:browser
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
       - name: Verify package exports
-        run: npm run verify:exports
+        run: pnpm verify:exports
 
       - name: Package dry run
-        run: npm pack --dry-run --ignore-scripts
+        run: pnpm pack --dry-run
 
   site-build:
     name: Site build
@@ -83,22 +86,24 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node-version }}
-          cache: npm
-          cache-dependency-path: package-lock.json
+          cache: pnpm
 
       # Root install + build are required because site/package.json
       # depends on the library via "file:.." and the vendor:sync script
       # reads from the local dist/ tree.
       - name: Install root dependencies
-        run: npm ci --ignore-scripts --no-audit --fund=false
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build library
-        run: npm run build
+        run: pnpm build
 
       # Site build = vendor:sync + examples:sync + astro build.
       - name: Build site
-        run: npm run site:build
+        run: pnpm site:build

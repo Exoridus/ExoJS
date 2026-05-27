@@ -270,8 +270,8 @@ async function main(): Promise<void> {
 
     if (parsed.values.help) {
         console.log(`Usage:
-npm run screenshots
-npm run screenshots -- --base-url http://localhost:4321 --label desktop-pass
+pnpm screenshots
+pnpm screenshots -- --base-url http://localhost:4321 --label desktop-pass
 
 Options:
   --base-url      Preview URL (default: http://localhost:4321/ExoJS/)

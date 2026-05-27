@@ -5,7 +5,7 @@ Astro + Lit docs/playground app for ExoJS. This package is private and is not pu
 ## Relationship to `../examples`
 
 - `../examples` is the canonical source for example scripts, manifest, and shared assets.
-- `npm run examples:sync` mirrors `../examples` into `site/public/examples` and `site/public/assets` for playground runtime serving.
+- `examples:sync` mirrors `../examples` into `site/public/examples` and `site/public/assets` for playground runtime serving.
 - `site/public/examples` and `site/public/assets` are generated artifacts (gitignored).
 
 This keeps source ownership outside the site framework while preserving the existing runtime contract (`preview.html` + static `examples/*.js` + `assets/*` URLs).
@@ -14,23 +14,23 @@ This keeps source ownership outside the site framework while preserving the exis
 
 ```bash
 cd site
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Prerequisite for `vendor:sync:exo`: build the library once from repo root so `../dist` exists.
 
 ```bash
 cd ..
-npm run build
+pnpm build
 ```
 
 ## Build
 
 ```bash
 cd site
-npm run build
-npm run preview
+pnpm build
+pnpm preview
 ```
 
 ## Structure

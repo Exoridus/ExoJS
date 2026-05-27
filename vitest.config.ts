@@ -62,9 +62,9 @@ export default defineConfig({
       },
 
       // ── Project 3: browser-webgpu — opt-in WebGPU via Playwright/Chromium ──
-      // Not part of verify:release. Run with: npm run test:browser:webgpu
+      // Not part of verify:release. Run with: pnpm test:browser:webgpu
       // Tests skip gracefully when WebGPU is unavailable.
-      // For local headed debugging: EXOJS_BROWSER_HEADED=1 npm run test:browser:webgpu
+      // For local headed debugging: EXOJS_BROWSER_HEADED=1 pnpm test:browser:webgpu
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],

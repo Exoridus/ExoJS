@@ -1,10 +1,13 @@
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
+import { Container } from '@/rendering/Container';
+import { Geometry } from '@/rendering/geometry/Geometry';
 import { MeshMaterial } from '@/rendering/material/MeshMaterial';
 import { ShaderSource } from '@/rendering/material/ShaderSource';
 import { Mesh } from '@/rendering/mesh/Mesh';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Texture } from '@/rendering/texture/Texture';
+import { BlendModes } from '@/rendering/types';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
@@ -85,25 +88,36 @@ precision lowp float;
 layout(location = 0) in vec2 a_position;
 layout(location = 1) in vec2 a_texcoord;
 layout(location = 2) in vec4 a_color;
+layout(location = 6) in uint a_nodeIndex;
 uniform mat3 u_projection;
-uniform mat3 u_translation;
+uniform sampler2D u_transforms;
 out vec2 v_texcoord;
 out vec4 v_color;
+out vec4 v_tint;
 void main(void) {
-  gl_Position = vec4((u_projection * u_translation * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+  int row = int(a_nodeIndex);
+  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
+  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  mat3 transform = mat3(
+    m0.x, m0.z, 0.0,
+    m0.y, m0.w, 0.0,
+    m1.x, m1.y, 1.0
+  );
+  gl_Position = vec4((u_projection * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
   v_texcoord = a_texcoord;
   v_color = a_color;
+  v_tint = texelFetch(u_transforms, ivec2(2, row), 0);
 }`,
 
   meshFragmentSource: `#version 300 es
 precision lowp float;
 uniform sampler2D u_texture;
-uniform vec4 u_tint;
 in vec2 v_texcoord;
 in vec4 v_color;
+in vec4 v_tint;
 layout(location = 0) out vec4 fragColor;
 void main(void) {
-  vec4 base = texture(u_texture, v_texcoord) * v_color * u_tint;
+  vec4 base = texture(u_texture, v_texcoord) * v_color * v_tint;
   fragColor = vec4(base.rgb * base.a, base.a);
 }`,
 
@@ -297,6 +311,82 @@ const createQuadMesh = (size: number, material: MeshMaterial): Mesh =>
     material,
   });
 
+const createQuadGeometry = (size: number): Geometry => {
+  const stride = 20;
+  const vertexCount = 6;
+  const data = new ArrayBuffer(vertexCount * stride);
+  const view = new DataView(data);
+  const positions = [
+    [0, 0, 0, 0],
+    [size, 0, 1, 0],
+    [size, size, 1, 1],
+    [0, 0, 0, 0],
+    [size, size, 1, 1],
+    [0, size, 0, 1],
+  ] as const;
+
+  for (let i = 0; i < vertexCount; i++) {
+    const base = i * stride;
+    const [x, y, u, v] = positions[i];
+
+    view.setFloat32(base + 0, x, true);
+    view.setFloat32(base + 4, y, true);
+    view.setFloat32(base + 8, u, true);
+    view.setFloat32(base + 12, v, true);
+    view.setUint8(base + 16, 255);
+    view.setUint8(base + 17, 255);
+    view.setUint8(base + 18, 255);
+    view.setUint8(base + 19, 255);
+  }
+
+  return new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
+      { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 16 },
+    ],
+    vertexData: data,
+    stride,
+    usage: 'static',
+  });
+};
+
+const instancedBatchVertex = `#version 300 es
+precision mediump float;
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_texcoord;
+layout(location = 2) in vec4 a_color;
+layout(location = 6) in uint a_nodeIndex;
+uniform mat3 u_projection;
+uniform sampler2D u_transforms;
+out vec2 v_texcoord;
+out vec4 v_tint;
+void main() {
+  int row = int(a_nodeIndex);
+  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
+  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  mat3 transform = mat3(
+    m0.x, m0.z, 0.0,
+    m0.y, m0.w, 0.0,
+    m1.x, m1.y, 1.0
+  );
+  gl_Position = vec4((u_projection * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+  v_texcoord = a_texcoord;
+  v_tint = texelFetch(u_transforms, ivec2(2, row), 0) * a_color;
+}`;
+
+const instancedBatchFragment = `#version 300 es
+precision mediump float;
+uniform sampler2D u_texture;
+uniform vec4 u_userColor;
+in vec2 v_texcoord;
+in vec4 v_tint;
+out vec4 fragColor;
+void main() {
+  vec4 sampled = texture(u_texture, v_texcoord) * v_tint;
+  fragColor = vec4(sampled.rgb * u_userColor.rgb, sampled.a);
+}`;
+
 describe('custom MeshMaterial WebGL2 browser', () => {
   test('binds a user uniform and a user texture into a custom mesh shader', async () => {
     const backend = await createBackend();
@@ -350,6 +440,177 @@ describe('custom MeshMaterial WebGL2 browser', () => {
       mesh.destroy();
       material.destroy();
       pattern.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('batches compatible static-geometry mesh materials into one draw call', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture(255, 255, 255);
+    const geometry = createQuadGeometry(12);
+    const material = new MeshMaterial({
+      shader: new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
+      uniforms: { u_userColor: [1, 1, 1, 1] as const },
+    });
+    const root = new Container();
+    const a = new Mesh({ geometry, material, texture });
+    const b = new Mesh({ geometry, material, texture });
+
+    try {
+      a.setPosition(8, 16);
+      b.setPosition(28, 16);
+      root.addChild(a, b);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(readPixel(backend, 12, 20), [255, 255, 255, 255]);
+      expectPixelNear(readPixel(backend, 32, 20), [255, 255, 255, 255]);
+    } finally {
+      root.destroy();
+      material.destroy();
+      geometry.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('does not batch across different groupIndex values', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture(255, 255, 255);
+    const geometry = createQuadGeometry(12);
+    const material = new MeshMaterial({
+      shader: new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
+      uniforms: { u_userColor: [1, 1, 1, 1] as const },
+    });
+    const root = new Container();
+    const a = new Mesh({ geometry, material, texture });
+    const b = new Mesh({ geometry, material, texture });
+
+    try {
+      a.setPosition(8, 16);
+      b.setPosition(28, 16);
+      a.zIndex = 0;
+      b.zIndex = 1;
+      root.addChild(a, b);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(2);
+    } finally {
+      root.destroy();
+      material.destroy();
+      geometry.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('does not batch across different Geometry instances', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture(255, 255, 255);
+    const leftGeometry = createQuadGeometry(12);
+    const rightGeometry = createQuadGeometry(12);
+    const material = new MeshMaterial({
+      shader: new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
+      uniforms: { u_userColor: [1, 1, 1, 1] as const },
+    });
+    const root = new Container();
+    const a = new Mesh({ geometry: leftGeometry, material, texture });
+    const b = new Mesh({ geometry: rightGeometry, material, texture });
+
+    try {
+      a.setPosition(8, 16);
+      b.setPosition(28, 16);
+      root.addChild(a, b);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(2);
+    } finally {
+      root.destroy();
+      material.destroy();
+      leftGeometry.destroy();
+      rightGeometry.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('does not batch across different material pipeline keys', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture(255, 255, 255);
+    const geometry = createQuadGeometry(12);
+    const sharedShader = new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } });
+    const normalMaterial = new MeshMaterial({
+      shader: sharedShader,
+      uniforms: { u_userColor: [1, 1, 1, 1] as const },
+      blendMode: BlendModes.Normal,
+    });
+    const additiveMaterial = new MeshMaterial({
+      shader: sharedShader,
+      uniforms: { u_userColor: [1, 1, 1, 1] as const },
+      blendMode: BlendModes.Additive,
+    });
+    const root = new Container();
+    const a = new Mesh({ geometry, material: normalMaterial, texture });
+    const b = new Mesh({ geometry, material: additiveMaterial, texture });
+
+    try {
+      a.setPosition(8, 16);
+      b.setPosition(28, 16);
+      root.addChild(a, b);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(2);
+    } finally {
+      root.destroy();
+      normalMaterial.destroy();
+      additiveMaterial.destroy();
+      geometry.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('does not batch across different material bind keys', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture(255, 255, 255);
+    const geometry = createQuadGeometry(12);
+    const patternA = createSolidTexture(255, 255, 255);
+    const patternB = createSolidTexture(255, 0, 0);
+    const sharedShader = new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } });
+    const leftMaterial = new MeshMaterial({
+      shader: sharedShader,
+      uniforms: { u_userColor: [1, 1, 1, 1] as const },
+      textures: { u_unusedPattern: patternA },
+    });
+    const rightMaterial = new MeshMaterial({
+      shader: sharedShader,
+      uniforms: { u_userColor: [1, 1, 1, 1] as const },
+      textures: { u_unusedPattern: patternB },
+    });
+    const root = new Container();
+    const a = new Mesh({ geometry, material: leftMaterial, texture });
+    const b = new Mesh({ geometry, material: rightMaterial, texture });
+
+    try {
+      a.setPosition(8, 16);
+      b.setPosition(28, 16);
+      root.addChild(a, b);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(2);
+    } finally {
+      root.destroy();
+      leftMaterial.destroy();
+      rightMaterial.destroy();
+      geometry.destroy();
+      texture.destroy();
+      patternA.destroy();
+      patternB.destroy();
       backend.destroy();
     }
   });

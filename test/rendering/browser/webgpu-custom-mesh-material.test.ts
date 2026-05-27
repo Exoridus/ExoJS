@@ -8,11 +8,13 @@
  * 0 mesh-uniforms, group 1 mesh texture, group 2 user UBO + texture) issues a
  * draw without raising a GPU validation error.
  *
- * Run via:  npm run test:browser:webgpu
+ * Run via:  pnpm test:browser:webgpu
  */
 
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
+import { Container } from '@/rendering/Container';
+import { Geometry } from '@/rendering/geometry/Geometry';
 import { MeshMaterial } from '@/rendering/material/MeshMaterial';
 import { ShaderSource } from '@/rendering/material/ShaderSource';
 import { Mesh } from '@/rendering/mesh/Mesh';
@@ -100,6 +102,46 @@ const createQuadMesh = (size: number, material: MeshMaterial): Mesh =>
     material,
   });
 
+const createQuadGeometry = (size: number): Geometry => {
+  const stride = 20;
+  const vertexCount = 6;
+  const data = new ArrayBuffer(vertexCount * stride);
+  const view = new DataView(data);
+  const positions = [
+    [0, 0, 0, 0],
+    [size, 0, 1, 0],
+    [size, size, 1, 1],
+    [0, 0, 0, 0],
+    [size, size, 1, 1],
+    [0, size, 0, 1],
+  ] as const;
+
+  for (let i = 0; i < vertexCount; i++) {
+    const base = i * stride;
+    const [x, y, u, v] = positions[i];
+
+    view.setFloat32(base + 0, x, true);
+    view.setFloat32(base + 4, y, true);
+    view.setFloat32(base + 8, u, true);
+    view.setFloat32(base + 12, v, true);
+    view.setUint8(base + 16, 255);
+    view.setUint8(base + 17, 255);
+    view.setUint8(base + 18, 255);
+    view.setUint8(base + 19, 255);
+  }
+
+  return new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
+      { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 16 },
+    ],
+    vertexData: data,
+    stride,
+    usage: 'static',
+  });
+};
+
 describe('custom MeshMaterial WebGPU browser', () => {
   test('issues a custom-material draw with user uniform + texture and no validation error', async (ctx) => {
     if (!navigator.gpu) {
@@ -148,6 +190,94 @@ describe('custom MeshMaterial WebGPU browser', () => {
       mesh.destroy();
       material.destroy();
       pattern.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('batches compatible static-geometry mesh draws with default material', async (ctx) => {
+    if (!navigator.gpu) {
+      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
+    }
+
+    const adapter = await navigator.gpu.requestAdapter();
+
+    if (!adapter) {
+      ctx.skip('WebGPU unavailable: requestAdapter() returned null');
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+
+    const root = new Container();
+    const texture = Texture.white;
+    const geometry = createQuadGeometry(12);
+    const first = new Mesh({ geometry, texture });
+    const second = new Mesh({ geometry, texture });
+
+    first.setPosition(8, 20);
+    second.setPosition(28, 20);
+    root.addChild(first, second);
+
+    backend.resetStats();
+    backend.clear(Color.black);
+    root.render(backend);
+    backend.flush();
+
+    try {
+      expect(backend.stats.drawCalls).toBe(1);
+    } finally {
+      root.destroy();
+      geometry.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('does not batch default static-geometry meshes across different groupIndex values', async (ctx) => {
+    if (!navigator.gpu) {
+      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
+    }
+
+    const adapter = await navigator.gpu.requestAdapter();
+
+    if (!adapter) {
+      ctx.skip('WebGPU unavailable: requestAdapter() returned null');
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+
+    const root = new Container();
+    const texture = Texture.white;
+    const geometry = createQuadGeometry(12);
+    const first = new Mesh({ geometry, texture });
+    const second = new Mesh({ geometry, texture });
+
+    first.setPosition(8, 20);
+    second.setPosition(28, 20);
+    first.zIndex = 0;
+    second.zIndex = 1;
+    root.addChild(first, second);
+
+    backend.resetStats();
+    backend.clear(Color.black);
+    root.render(backend);
+    backend.flush();
+
+    try {
+      expect(backend.stats.drawCalls).toBe(2);
+    } finally {
+      root.destroy();
+      geometry.destroy();
       backend.destroy();
     }
   });

@@ -78,28 +78,38 @@ precision mediump float;
 in vec2 a_position;
 in vec2 a_texcoord;
 in vec4 a_color;
+in uint a_nodeIndex;
 uniform mat3 u_projection;
-uniform mat3 u_translation;
+uniform sampler2D u_transforms;
 out vec2 v_uv;
 out vec4 v_color;
+out vec4 v_tint;
 void main() {
-  vec3 world = u_translation * vec3(a_position, 1.0);
+  int row = int(a_nodeIndex);
+  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
+  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  mat3 transform = mat3(
+    m0.x, m0.z, 0.0,
+    m0.y, m0.w, 0.0,
+    m1.x, m1.y, 1.0
+  );
+  vec3 world = transform * vec3(a_position, 1.0);
   vec3 clip = u_projection * world;
   gl_Position = vec4(clip.xy, 0.0, 1.0);
   v_uv = a_texcoord;
   v_color = a_color;
+  v_tint = texelFetch(u_transforms, ivec2(2, row), 0);
 }`,
 
   meshFragmentSource: `#version 300 es
 precision mediump float;
 in vec2 v_uv;
 in vec4 v_color;
+in vec4 v_tint;
 uniform sampler2D u_texture;
-uniform vec4 u_tint;
 out vec4 outColor;
 void main() {
-  vec4 tint = vec4(u_tint.rgb / 255.0, u_tint.a);
-  outColor = texture(u_texture, v_uv) * v_color * tint;
+  outColor = texture(u_texture, v_uv) * v_color * v_tint;
 }`,
 
   particleVertexSource: `#version 300 es

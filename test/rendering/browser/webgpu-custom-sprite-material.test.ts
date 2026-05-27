@@ -8,7 +8,7 @@
  * group 1 base texture, group 2 user UBO) issues an instanced draw without
  * raising a GPU validation error, while keeping the 56-byte instance buffer.
  *
- * Run via:  npm run test:browser:webgpu
+ * Run via:  pnpm test:browser:webgpu
  */
 
 import type { Application } from '@/core/Application';

@@ -10,7 +10,7 @@
  *  2. Active branch is `main`.
  *  3. Local `main` is up to date with `origin/main`.
  *  4. The `vX.Y.Z` tag for `package.json#version` does not already exist.
- *  5. `npm run verify:release` (typecheck + lint + test + verify:package)
+ *  5. `pnpm verify:release` (typecheck + lint + test + verify:package)
  *     passes.
  *  6. Release notes can be generated from `CHANGELOG.md`.
  *  7. Annotated tag is created at HEAD.
@@ -20,7 +20,7 @@
  * (the failed run never reaches the tag-creation step). To undo a created
  * tag before pushing: `git tag -d vX.Y.Z`.
  *
- * Usage: `npm run release`
+ * Usage: `pnpm release`
  */
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -179,7 +179,7 @@ if (remoteTag) {
 step(`Running verify:release (this mirrors CI's verify job)`);
 
 try {
-  sh('npm run verify:release');
+  sh('pnpm verify:release');
 } catch {
   fail('verify:release failed. Fix the issues above and re-run.');
 }

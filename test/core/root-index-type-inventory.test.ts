@@ -11,8 +11,8 @@
  *   - root-index-type-inventory  → 332 TypeScript-level exports (superset)
  *
  * To update after an intentional export change:
- *   npm test -- --updateSnapshot
- *   npx jest root-index-type-inventory --updateSnapshot
+ *   pnpm test -- --updateSnapshot
+ *   pnpm exec vitest root-index-type-inventory --updateSnapshot
  */
 
 import * as path from 'path';
