@@ -19,6 +19,12 @@ export type { GradientStop, GradientToTextureOptions } from './gradient/Gradient
 export { Gradient } from './gradient/Gradient';
 export { LinearGradient } from './gradient/LinearGradient';
 export { RadialGradient } from './gradient/RadialGradient';
+export type { MaterialOptions, UniformValue } from './material/Material';
+export { Material } from './material/Material';
+export { MeshMaterial } from './material/MeshMaterial';
+export type { ShaderSourceOptions } from './material/ShaderSource';
+export { ShaderSource } from './material/ShaderSource';
+export { SpriteMaterial } from './material/SpriteMaterial';
 export type { MeshOptions } from './mesh/Mesh';
 export { Mesh } from './mesh/Mesh';
 export type { MeshShaderOptions, MeshShaderUniformValue } from './mesh/MeshShader';
