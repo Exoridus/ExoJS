@@ -13,12 +13,16 @@ export type { ShaderFilterUniformValue, WebGl2ShaderFilterOptions } from './filt
 export { WebGl2ShaderFilter } from './filters/WebGl2ShaderFilter';
 export type { WebGpuShaderFilterOptions } from './filters/WebGpuShaderFilter';
 export { WebGpuShaderFilter } from './filters/WebGpuShaderFilter';
+export { Geometry } from './geometry/Geometry';
+export type { AttributeType, GeometryAttribute, GeometryOptions, GeometryUsage, Topology } from './geometry/GeometryAttribute';
+export type { GradientStop, GradientToTextureOptions } from './gradient/Gradient';
+export { Gradient } from './gradient/Gradient';
+export { LinearGradient } from './gradient/LinearGradient';
+export { RadialGradient } from './gradient/RadialGradient';
 export type { MeshOptions } from './mesh/Mesh';
 export { Mesh } from './mesh/Mesh';
 export type { MeshShaderOptions, MeshShaderUniformValue } from './mesh/MeshShader';
 export { MeshShader } from './mesh/MeshShader';
-export type { GradientMode, GradientOptions, GradientStop } from './primitives/Gradient';
-export { GradientDrawable } from './primitives/Gradient';
 export { Graphics } from './primitives/Graphics';
 export type { RenderBackend } from './RenderBackend';
 export { RenderBackendType } from './RenderBackendType';
