@@ -3,8 +3,8 @@ import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import { ColorFilter } from '@/rendering/filters/ColorFilter';
+import { LinearGradient } from '@/rendering/gradient/LinearGradient';
 import { Mesh } from '@/rendering/mesh/Mesh';
-import { GradientDrawable } from '@/rendering/primitives/Gradient';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
@@ -401,20 +401,19 @@ describe('RenderPlan WebGL2 browser regressions', () => {
     }
   });
 
-  test('gradient drawable renders a linear red-blue ramp', async () => {
+  test('gradient texture sprite renders a linear red-blue ramp', async () => {
     const { backend } = await createBackend();
     const root = new Container();
-    const gradient = new GradientDrawable({
-      width: 24,
-      height: 24,
-      mode: 'linear',
-      linearStart: [0, 0],
-      linearEnd: [1, 0],
-      stops: [
+    const texture = new LinearGradient(
+      [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },
       ],
-    });
+      [0, 0],
+      [1, 0],
+    );
+    const gradientTexture = texture.toTexture(24, 24);
+    const gradient = new Sprite(gradientTexture);
 
     try {
       gradient.setPosition(20, 20);
@@ -431,6 +430,8 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       expect(right[3]).toBeGreaterThanOrEqual(250);
     } finally {
       root.destroy();
+      gradientTexture.destroy();
+      texture.destroy();
       backend.destroy();
     }
   });

@@ -1,4 +1,5 @@
 import { DataTexture } from '@/rendering/texture/DataTexture';
+import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 
@@ -197,6 +198,40 @@ describe('DataTexture', () => {
     test('commitRect() throws on non-integer coords', () => {
       const tex = new DataTexture({ width: 8, height: 8, format: 'r8' });
       expect(() => tex.commitRect(0.5, 0, 4, 4)).toThrow(/integer coordinates/);
+    });
+
+    test('updateSource keeps dimensions and backing buffer, and marks full dirty', () => {
+      const tex = new DataTexture({ width: 16, height: 8, format: 'rgba8' });
+      const originalBuffer = tex.buffer;
+
+      tex._consumeDirtyRegion(); // clear initial full dirty
+      const versionBefore = tex.version;
+
+      tex.updateSource();
+
+      expect(tex.width).toBe(16);
+      expect(tex.height).toBe(8);
+      expect(tex.buffer).toBe(originalBuffer);
+      expect(tex.version).toBeGreaterThan(versionBefore);
+      expect(tex._consumeDirtyRegion()).toEqual({ full: true, x: 0, y: 0, width: 16, height: 8 });
+    });
+  });
+
+  describe('sprite integration', () => {
+    test('Sprite.setTexture(DataTexture) preserves texture bounds across repeated updates', () => {
+      const texture = new DataTexture({ width: 16, height: 8, format: 'rgba8' });
+      const sprite = new Sprite(texture);
+
+      expect(sprite.texture?.width).toBe(16);
+      expect(sprite.texture?.height).toBe(8);
+
+      // Force the path that previously collapsed DataTexture to 0x0.
+      sprite.updateTexture();
+      sprite.setTexture(null);
+      sprite.setTexture(texture);
+
+      expect(sprite.getLocalBounds().width).toBe(16);
+      expect(sprite.getLocalBounds().height).toBe(8);
     });
   });
 });

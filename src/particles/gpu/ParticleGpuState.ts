@@ -20,7 +20,7 @@ import type { Texture } from '@/rendering/texture/Texture';
  * - **One uniform buffer** for frame UVs — `array<vec4<f32>, N>` where N
  *   is the system's frame count (or 1 when no atlas is declared). Each
  *   vec4 is `(uvMinX, uvMinY, uvMaxX, uvMaxY)` already flipY-adjusted.
- * - **N 1D textures** for modules that use lookup tables (Curve / Gradient).
+ * - **N 1D textures** for modules that use lookup tables (Curve / ColorGradient).
  * - **Composite compute pipeline** built once at construction by
  *   concatenating the integration step + every registered module body +
  *   the pack-instances step into a single shader.

@@ -3,9 +3,9 @@ import {
     BlendModes,
     Color,
     ColorOverLifetime,
+    ColorGradient,
     ConeDirection,
     Constant,
-    Gradient,
     ParticleSystem,
     Range,
     RateSpawn,
@@ -54,7 +54,7 @@ app.start(
             // Hot ember-orange fading to transparent black over lifetime.
             this._particleSystem.addUpdateModule(
                 new ColorOverLifetime(
-                    new Gradient([
+                    new ColorGradient([
                         { t: 0, color: new Color(194, 64, 30, 1) },
                         { t: 1, color: new Color(0, 0, 0, 0) },
                     ])

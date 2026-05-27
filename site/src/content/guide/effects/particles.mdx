@@ -87,9 +87,9 @@ Distributions let each spawned particle get a different value. The most commonly
 | `ConeDirection(angle, halfAngle, minSpeed, maxSpeed)` | Velocity vector within a directional cone |
 | `ConeDirection.omni(minSpeed, maxSpeed)` | Full 360° omnidirectional velocity |
 | `Curve(keys)` | Piecewise-linear spline evaluated over a particle's lifetime normalised progress (0..1) |
-| `Gradient(keys)` | Same as `Curve` but interpolates `Color` values |
+| `ColorGradient(keys)` | Same as `Curve` but interpolates `Color` values |
 
-`Curve` and `Gradient` are `LifetimeFunction<T>` rather than `Distribution<T>` — they're evaluated with a normalised lifetime `t` in 0..1, not sampled at spawn. They're typically used with update modules, not spawn modules.
+`Curve` and `ColorGradient` are `LifetimeFunction<T>` rather than `Distribution<T>` — they're evaluated with a normalised lifetime `t` in 0..1, not sampled at spawn. They're typically used with update modules, not spawn modules.
 
 ## Update modules
 
@@ -103,9 +103,9 @@ import {
     ApplyForce,
     Color,
     ColorOverLifetime,
+    ColorGradient,
     Curve,
     Drag,
-    Gradient,
     ScaleOverLifetime,
     Turbulence,
 } from '@codexo/exojs';
@@ -123,7 +123,7 @@ system.addUpdateModule(new AlphaFadeOverLifetime(
 
 // Full color interpolation over lifetime
 system.addUpdateModule(new ColorOverLifetime(
-    new Gradient([
+    new ColorGradient([
         { t: 0, color: new Color(255, 200, 100, 1) },
         { t: 1, color: new Color(0, 0, 0, 0) },
     ])

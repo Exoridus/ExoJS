@@ -12,7 +12,7 @@ import type { WgslContribution } from './WgslContribution';
  * WebGPU backends), additionally implement {@link wgsl} and
  * {@link writeUniforms}. Modules that declare a {@link WgslContribution}
  * may also opt to declare a 1D texture binding via the `textures` field
- * (used by `Curve` / `Gradient`-driven modules) — in which case
+ * (used by `Curve` / `ColorGradient`-driven modules) — in which case
  * {@link uploadTextures} runs once at compile time to upload the data.
  *
  * Implementation pattern (CPU-only module):
@@ -87,7 +87,7 @@ export abstract class UpdateModule {
   public writeUniforms?(view: DataView, byteOffset: number, dt: number): void;
 
   /**
-   * Upload texture data (Curve/Gradient lookup tables) to the GPU at
+   * Upload texture data (Curve/ColorGradient lookup tables) to the GPU at
    * compile time. Receives the GPUDevice and a map of texture bindings
    * keyed by the `name` in {@link WgslContribution.textures}. Called once
    * after pipeline creation.

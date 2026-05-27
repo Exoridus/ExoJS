@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Color } from '@/core/Color';
-import type { Gradient } from '@/particles/distributions/Gradient';
+import type { ColorGradient } from '@/particles/distributions/ColorGradient';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
 
 import { UpdateModule } from './UpdateModule';
@@ -19,9 +19,9 @@ const lookupSize = 256;
  * and sampled with linear filtering on the GPU.
  */
 export class ColorOverLifetime extends UpdateModule {
-  public gradient: Gradient;
+  public gradient: ColorGradient;
 
-  public constructor(gradient: Gradient) {
+  public constructor(gradient: ColorGradient) {
     super();
     this.gradient = gradient;
   }

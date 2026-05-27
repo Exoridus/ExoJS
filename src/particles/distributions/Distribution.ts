@@ -16,7 +16,7 @@
  * @example
  * const lifetime = new Range(0.5, 1.5);          // seconds, uniform
  * const velocity = new VectorRange(-50, 50, -200, -100);
- * const tint     = new Gradient([
+ * const tint     = new ColorGradient([
  *     { t: 0,   color: Color.white },
  *     { t: 0.7, color: Color.yellow },
  *     { t: 1,   color: Color.transparent },
@@ -35,7 +35,7 @@ export interface Distribution<T> {
 /**
  * Lifetime-parameterised function that produces a deterministic `T` for a
  * given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules
- * that interpolate over particle lifetime — `ColorOverLifetime` (Gradient),
+ * that interpolate over particle lifetime — `ColorOverLifetime` (ColorGradient),
  * `ScaleOverLifetime` (Curve), etc.
  *
  * Mutable-target rule: same as {@link Distribution} — pass your own scratch

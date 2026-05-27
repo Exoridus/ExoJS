@@ -13,11 +13,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Sorting is now non-destructive to `Container.children`; render ordering no longer mutates the child array.
 - Removed `SceneNode.childOrder` / `SceneNode.setChildOrder()` from the public scene-node surface.
 
+### Breaking — Gradient and storage cleanup
+
+- Removed `GradientDrawable` (`src/rendering/primitives/Gradient.ts`).
+- Added texture-first gradients: `Gradient`, `LinearGradient`, and `RadialGradient` with `toTexture(width, height, options?)`.
+- Removed `SaveStore`; replaced with `JsonStore`.
+- `JsonStore` API rename: `save()` -> `set()`, `load()` -> `get()`.
+- Renamed particles `Gradient` to `ColorGradient` and `GradientKey` to `ColorGradientKey` to avoid root export collisions.
+
 ### Migration notes
 
 - Remove `container.sortableChildren = true` from user code.
 - Keep using `render(backend): this`; no signature change.
 - For custom drawables, use `Drawable` + `RendererRegistry` so rendering remains on the backend dispatch path (`backend.draw(drawable)`).
+- Replace `GradientDrawable` with `new Sprite(new LinearGradient(...).toTexture(w, h))` (or `RadialGradient`).
+- Replace `SaveStore` imports/usages with `JsonStore` and update calls to `set()/get()`.
+- Replace particles `Gradient` imports with `ColorGradient`.
 
 ## [0.9.0] - 2026-05-24
 

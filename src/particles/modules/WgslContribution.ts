@@ -19,11 +19,11 @@ export interface WgslUniformField {
   type: WgslPrimitive;
 }
 
-/** A 1D texture binding (used by Curve / Gradient lookups). */
+/** A 1D texture binding (used by Curve / ColorGradient lookups). */
 export interface WgslTextureBinding {
   /** Field name within the module — referenced in WGSL as `u_${moduleKey}_${name}`. */
   name: string;
-  /** WGSL texture format. `r32float` for Curve, `rgba8unorm` for Gradient. */
+  /** WGSL texture format. `r32float` for Curve, `rgba8unorm` for ColorGradient. */
   format: 'r32float' | 'rgba8unorm';
 }
 

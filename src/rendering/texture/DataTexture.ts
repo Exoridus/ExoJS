@@ -173,6 +173,14 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   }
 
   /**
+   * DataTexture has no external image source. Override the base implementation
+   * so Sprite/Mesh texture assignment does not collapse dimensions to 0x0.
+   */
+  public override updateSource(): this {
+    return this.commit();
+  }
+
+  /**
    * Mark the entire buffer for re-upload on next backend sync. Call after
    * mutating `buffer` contents to flush changes to the GPU.
    */

@@ -2,7 +2,7 @@ import { Color } from '@/core/Color';
 import { Time } from '@/core/Time';
 import { Constant } from '@/particles/distributions/Constant';
 import { Curve } from '@/particles/distributions/Curve';
-import { Gradient } from '@/particles/distributions/Gradient';
+import { ColorGradient } from '@/particles/distributions/ColorGradient';
 import { Range } from '@/particles/distributions/Range';
 import { VectorRange } from '@/particles/distributions/VectorRange';
 import { AlphaFadeOverLifetime } from '@/particles/modules/AlphaFadeOverLifetime';
@@ -149,8 +149,8 @@ describe('Distribution', () => {
     expect(c.evaluate(2)).toBe(200);
   });
 
-  test('Gradient interpolates and packs RGBA', () => {
-    const g = new Gradient([
+  test('ColorGradient interpolates and packs RGBA', () => {
+    const g = new ColorGradient([
       { t: 0, color: new Color(0, 0, 0, 0) },
       { t: 1, color: new Color(255, 255, 255, 1) },
     ]);
@@ -268,7 +268,7 @@ describe('UpdateModule', () => {
     system.lifetime[slot] = 1;
     system.addUpdateModule(
       new ColorOverLifetime(
-        new Gradient([
+        new ColorGradient([
           { t: 0, color: new Color(0, 0, 0, 1) },
           { t: 1, color: new Color(255, 255, 255, 1) },
         ]),
@@ -475,7 +475,7 @@ describe('UpdateModule', () => {
     system.velY[slot] = 0;
     system.addUpdateModule(
       new ColorOverSpeed(
-        new Gradient([
+        new ColorGradient([
           { t: 0, color: new Color(0, 0, 0, 1) },
           { t: 1, color: new Color(255, 255, 255, 1) },
         ]),

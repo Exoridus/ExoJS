@@ -36,41 +36,41 @@ vi.mock('@/resources/IndexedDbStore', () => {
 });
 
 import { IndexedDbStore } from '@/resources/IndexedDbStore';
-import { SaveStore } from '@/resources/SaveStore';
+import { JsonStore } from '@/resources/JsonStore';
 
-describe('SaveStore', () => {
+describe('JsonStore', () => {
   afterEach(() => {
     storage.clear();
     vi.restoreAllMocks();
   });
 
-  test('save/load roundtrip stores JSON payload by key', async () => {
-    const store = new SaveStore('test-save-store');
+  test('set/get roundtrip stores JSON payload by key', async () => {
+    const store = new JsonStore('test-json-store');
     const payload = {
       profile: 'pilot',
       score: 1280,
       flags: { hardcore: false },
     };
 
-    await store.save('slot-1', payload);
+    await store.set('slot-1', payload);
 
-    await expect(store.load('slot-1')).resolves.toEqual(payload);
+    await expect(store.get('slot-1')).resolves.toEqual(payload);
   });
 
-  test('delete removes an existing entry and load returns null afterwards', async () => {
-    const store = new SaveStore('test-save-store');
+  test('delete removes an existing entry and get returns null afterwards', async () => {
+    const store = new JsonStore('test-json-store');
 
-    await store.save('slot-1', { score: 10 });
+    await store.set('slot-1', { score: 10 });
 
     await expect(store.delete('slot-1')).resolves.toBe(true);
-    await expect(store.load('slot-1')).resolves.toBeNull();
+    await expect(store.get('slot-1')).resolves.toBeNull();
   });
 
   test('has and clear reflect storage state', async () => {
-    const store = new SaveStore('test-save-store');
+    const store = new JsonStore('test-json-store');
 
-    await store.save('slot-1', { score: 10 });
-    await store.save('slot-2', { score: 20 });
+    await store.set('slot-1', { score: 10 });
+    await store.set('slot-2', { score: 20 });
 
     await expect(store.has('slot-1')).resolves.toBe(true);
     await expect(store.clear()).resolves.toBe(true);
@@ -78,27 +78,27 @@ describe('SaveStore', () => {
     await expect(store.has('slot-2')).resolves.toBe(false);
   });
 
-  test('save throws for non-JSON-serializable data', async () => {
-    const store = new SaveStore('test-save-store');
+  test('set throws for non-JSON-serializable data', async () => {
+    const store = new JsonStore('test-json-store');
     const circular: { self?: unknown } = {};
 
     circular.self = circular;
 
-    await expect(store.save('slot-1', circular)).rejects.toThrow('SaveStore.save() failed: data is not JSON-serializable.');
+    await expect(store.set('slot-1', circular)).rejects.toThrow('JsonStore.set() failed: data is not JSON-serializable.');
   });
 
-  test('load throws when underlying store payload is not a JSON string', async () => {
+  test('get throws when underlying store payload is not a JSON string', async () => {
     const loadSpy = vi.spyOn(IndexedDbStore.prototype, 'load').mockResolvedValueOnce({ invalid: true });
-    const store = new SaveStore('test-save-store');
+    const store = new JsonStore('test-json-store');
 
-    await expect(store.load('slot-1')).rejects.toThrow('SaveStore.load() failed: stored payload is not a JSON string.');
+    await expect(store.get('slot-1')).rejects.toThrow('JsonStore.get() failed: stored payload is not a JSON string.');
     expect(loadSpy).toHaveBeenCalledTimes(1);
   });
 
-  test('load throws when stored JSON is invalid', async () => {
+  test('get throws when stored JSON is invalid', async () => {
     vi.spyOn(IndexedDbStore.prototype, 'load').mockResolvedValueOnce('{invalid-json');
-    const store = new SaveStore('test-save-store');
+    const store = new JsonStore('test-json-store');
 
-    await expect(store.load('slot-1')).rejects.toThrow('SaveStore.load() failed: invalid JSON payload for key "slot-1".');
+    await expect(store.get('slot-1')).rejects.toThrow('JsonStore.get() failed: invalid JSON payload for key "slot-1".');
   });
 });

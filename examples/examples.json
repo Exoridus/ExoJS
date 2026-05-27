@@ -518,10 +518,10 @@
             ]
         },
         {
-            "slug": "gradient-drawable",
-            "path": "geometry-graphics/gradient-drawable.js",
-            "title": "Gradient Drawable",
-            "description": "Example: Gradient Drawable.",
+            "slug": "gradient",
+            "path": "geometry-graphics/gradient.js",
+            "title": "Gradient",
+            "description": "Example: Gradient.",
             "backend": "core",
             "tags": [
                 "gradient",

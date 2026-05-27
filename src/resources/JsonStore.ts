@@ -1,23 +1,20 @@
 import { IndexedDbStore, type IndexedDbStoreOptions } from './IndexedDbStore';
 
-export interface SaveStoreOptions extends Omit<IndexedDbStoreOptions, 'storeNames'> {
+export interface JsonStoreOptions extends Omit<IndexedDbStoreOptions, 'storeNames'> {
   storeName?: string;
 }
 
-const defaultDatabaseName = 'exojs-save-store';
-const defaultStoreName = '__save_store';
+const defaultDatabaseName = 'exojs-json-store';
+const defaultStoreName = '__json_store';
 
 /**
- * JSON-first save-data store built on top of {@link IndexedDbStore}.
- *
- * Uses a dedicated IndexedDB object store and persists JSON payloads by key.
- * Intended for user-facing save data (settings, profiles, checkpoints, etc.).
+ * JSON-first key-value store built on top of {@link IndexedDbStore}.
  */
-export class SaveStore {
+export class JsonStore {
   private readonly _storageName: string;
   private readonly _store: IndexedDbStore;
 
-  public constructor(nameOrOptions: string | SaveStoreOptions = defaultDatabaseName) {
+  public constructor(nameOrOptions: string | JsonStoreOptions = defaultDatabaseName) {
     const options = typeof nameOrOptions === 'string' ? { name: nameOrOptions } : nameOrOptions;
     const storageName = options.storeName ?? defaultStoreName;
 
@@ -30,19 +27,19 @@ export class SaveStore {
     });
   }
 
-  public async save(key: string, data: unknown): Promise<void> {
+  public async set(key: string, data: unknown): Promise<void> {
     let payload: string;
 
     try {
       payload = JSON.stringify(data);
     } catch {
-      throw new Error('SaveStore.save() failed: data is not JSON-serializable.');
+      throw new Error('JsonStore.set() failed: data is not JSON-serializable.');
     }
 
     await this._store.save(this._storageName, key, payload);
   }
 
-  public async load<T = unknown>(key: string): Promise<T | null> {
+  public async get<T = unknown>(key: string): Promise<T | null> {
     const payload = await this._store.load(this._storageName, key);
 
     if (payload === null) {
@@ -50,13 +47,13 @@ export class SaveStore {
     }
 
     if (typeof payload !== 'string') {
-      throw new Error('SaveStore.load() failed: stored payload is not a JSON string.');
+      throw new Error('JsonStore.get() failed: stored payload is not a JSON string.');
     }
 
     try {
       return JSON.parse(payload) as T;
     } catch {
-      throw new Error(`SaveStore.load() failed: invalid JSON payload for key "${key}".`);
+      throw new Error(`JsonStore.get() failed: invalid JSON payload for key "${key}".`);
     }
   }
 
@@ -65,7 +62,7 @@ export class SaveStore {
   }
 
   public async has(key: string): Promise<boolean> {
-    return (await this.load(key)) !== null;
+    return (await this.get(key)) !== null;
   }
 
   public async clear(): Promise<boolean> {

@@ -4,7 +4,7 @@ import { Color } from '@/core/Color';
 import { Time } from '@/core/Time';
 import { Rectangle } from '@/math/Rectangle';
 import { Curve } from '@/particles/distributions/Curve';
-import { Gradient } from '@/particles/distributions/Gradient';
+import { ColorGradient } from '@/particles/distributions/ColorGradient';
 import { ApplyForce } from '@/particles/modules/ApplyForce';
 import { ColorOverLifetime } from '@/particles/modules/ColorOverLifetime';
 import { Drag } from '@/particles/modules/Drag';
@@ -208,7 +208,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     expect(env.device.createComputePipeline).not.toHaveBeenCalled();
   });
 
-  test('Curve / Gradient modules trigger texture allocation in GPU mode', () => {
+  test('Curve / ColorGradient modules trigger texture allocation in GPU mode', () => {
     const env = makeMockDevice();
     const system = new ParticleSystem(makeTexture(), { capacity: 256, device: env.device });
 
@@ -222,7 +222,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     );
     system.addUpdateModule(
       new ColorOverLifetime(
-        new Gradient([
+        new ColorGradient([
           { t: 0, color: new Color(255, 0, 0, 1) },
           { t: 1, color: new Color(0, 0, 0, 0) },
         ]),
@@ -234,7 +234,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     system.update(tick(0.016));
 
-    // Two textures (one for Curve, one for Gradient).
+    // Two textures (one for Curve, one for ColorGradient).
     expect(env.device.createTexture).toHaveBeenCalledTimes(2);
     expect(env.queue.writeTexture).toHaveBeenCalledTimes(2);
   });
@@ -286,7 +286,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     // Every owned buffer's destroy() called.
     expect(env.buffers.slice(0, buffersBefore).every(b => b.destroy.mock.calls.length > 0)).toBe(true);
-    // No textures used in this test (no Curve/Gradient modules) but verify destroy didn't crash.
+    // No textures used in this test (no Curve/ColorGradient modules) but verify destroy didn't crash.
     expect(env.textures.length).toBe(texturesBefore);
   });
 });

@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Color } from '@/core/Color';
-import type { Gradient } from '@/particles/distributions/Gradient';
+import type { ColorGradient } from '@/particles/distributions/ColorGradient';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
 
 import { UpdateModule } from './UpdateModule';
@@ -23,11 +23,11 @@ const lookupSize = 256;
  * keep alpha controlled by lifetime.
  */
 export class ColorOverSpeed extends UpdateModule {
-  public gradient: Gradient;
+  public gradient: ColorGradient;
   public minSpeed: number;
   public maxSpeed: number;
 
-  public constructor(gradient: Gradient, minSpeed: number, maxSpeed: number) {
+  public constructor(gradient: ColorGradient, minSpeed: number, maxSpeed: number) {
     super();
     this.gradient = gradient;
     this.minSpeed = minSpeed;
