@@ -1,30 +1,45 @@
 import { Drawable } from '@/rendering/Drawable';
-import type { MeshShader } from '@/rendering/mesh/MeshShader';
+import type { Geometry } from '@/rendering/geometry/Geometry';
+import type { GeometryAttribute } from '@/rendering/geometry/GeometryAttribute';
+import type { MeshMaterial } from '@/rendering/material/MeshMaterial';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
 
 /**
  * Construction-time options for a {@link Mesh}.
  *
- * Vertices are required and must be a flat sequence of (x, y) pairs in
- * local space. UVs and per-vertex colors are optional but, when present,
- * must match the vertex count (UVs as (u, v) pairs, colors as one
- * packed-RGBA8 u32 per vertex). Indices are optional — if absent, the
- * vertex stream is drawn as a flat triangle list (3*N vertices = N
- * triangles). A texture is optional; a textured mesh samples it at the
- * supplied UVs while an untextured mesh paints solid vertex colors only.
+ * Provide the geometry in exactly one of two forms:
+ *
+ * - **Convenience form** — a flat `vertices` array of (x, y) pairs in local
+ *   space, with optional `uvs`, per-vertex `colors`, and `indices`. This is
+ *   the simplest path: `new Mesh({ vertices })`.
+ * - **Geometry form** — a {@link Geometry} object whose standard attributes
+ *   (`a_position`/`position`, `a_texcoord`/`texcoord`, `a_color`/`color`) are
+ *   read into the mesh: `new Mesh({ geometry })`. The geometry must use the
+ *   `triangle-list` topology.
+ *
+ * Supplying both `vertices` and `geometry`, or neither, throws.
+ *
+ * When present, `uvs` must match the vertex count (as (u, v) pairs) and
+ * `colors` must supply one packed-RGBA8 u32 per vertex. `indices` are optional
+ * — if absent, the vertex stream is drawn as a flat triangle list (3*N
+ * vertices = N triangles). A texture is optional; a textured mesh samples it
+ * at the supplied UVs while an untextured mesh paints solid vertex colors only.
  *
  * Validation is enforced at construction; any mismatch throws.
  *
- * For custom shaders, see {@link MeshShader}.
+ * For custom shaders/uniforms/textures, attach a {@link MeshMaterial}.
  */
 export interface MeshOptions {
-  readonly vertices: Float32Array;
+  readonly vertices?: Float32Array;
   readonly indices?: Uint16Array;
   readonly uvs?: Float32Array;
   readonly colors?: Uint32Array;
+  /** Interleaved geometry source; mutually exclusive with `vertices`. */
+  readonly geometry?: Geometry;
   readonly texture?: Texture | RenderTexture | null;
-  readonly shader?: MeshShader;
+  /** Custom look (shader/uniforms/textures/blendMode); `null` uses the default mesh material. */
+  readonly material?: MeshMaterial;
 }
 
 /**
@@ -60,14 +75,48 @@ export class Mesh extends Drawable {
   public readonly indices: Uint16Array | null;
   public readonly uvs: Float32Array | null;
   public readonly colors: Uint32Array | null;
-  public readonly shader: MeshShader | null;
+
+  /** Custom material attached to this mesh, or `null` for the default mesh path. */
+  public readonly material: MeshMaterial | null;
+
+  /** Source geometry when constructed from the geometry form, otherwise `null`. */
+  public readonly geometry: Geometry | null;
 
   private _texture: Texture | RenderTexture | null;
 
   public constructor(options: MeshOptions) {
     super();
 
-    const { vertices, indices = null, uvs = null, colors = null, texture = null, shader = null } = options;
+    const { texture = null, material = null } = options;
+
+    let vertices: Float32Array;
+    let indices: Uint16Array | null;
+    let uvs: Float32Array | null;
+    let colors: Uint32Array | null;
+    let geometry: Geometry | null;
+
+    if (options.geometry !== undefined) {
+      if (options.vertices !== undefined) {
+        throw new Error('Mesh accepts either `vertices` or `geometry`, not both.');
+      }
+
+      geometry = options.geometry;
+      const data = readGeometry(geometry);
+      vertices = data.vertices;
+      uvs = data.uvs;
+      colors = data.colors;
+      indices = data.indices;
+    } else {
+      if (options.vertices === undefined) {
+        throw new Error('Mesh requires either `vertices` or `geometry`.');
+      }
+
+      geometry = null;
+      vertices = options.vertices;
+      indices = options.indices ?? null;
+      uvs = options.uvs ?? null;
+      colors = options.colors ?? null;
+    }
 
     if (vertices.length === 0 || vertices.length % 2 !== 0) {
       throw new Error(`Mesh vertices must be a non-empty flat array of (x,y) pairs (got length ${vertices.length}).`);
@@ -105,7 +154,8 @@ export class Mesh extends Drawable {
     this.indices = indices;
     this.uvs = uvs;
     this.colors = colors;
-    this.shader = shader;
+    this.material = material;
+    this.geometry = geometry;
     this._texture = texture;
 
     this.recomputeLocalBounds();
@@ -155,4 +205,122 @@ export class Mesh extends Drawable {
 
     return this;
   }
+}
+
+const positionAttributeNames = new Set<string>(['a_position', 'position']);
+const texcoordAttributeNames = new Set<string>(['a_texcoord', 'texcoord', 'a_uv', 'uv']);
+const colorAttributeNames = new Set<string>(['a_color', 'color']);
+
+const findAttribute = (attributes: readonly GeometryAttribute[], names: Set<string>): GeometryAttribute | undefined =>
+  attributes.find(attribute => names.has(attribute.name));
+
+/**
+ * Read a {@link Geometry}'s standard mesh attributes into the flat
+ * `vertices`/`uvs`/`colors` arrays the mesh renderers consume. Only the
+ * `triangle-list` topology and the canonical attribute layout (`f32` position
+ * and texcoord, `u8`/`u32`/`f32` color) are supported — this is the immediate
+ * (non-batched) bridge; shared GPU buffers and instancing arrive later.
+ */
+function readGeometry(geometry: Geometry): {
+  vertices: Float32Array;
+  uvs: Float32Array | null;
+  colors: Uint32Array | null;
+  indices: Uint16Array | null;
+} {
+  if (geometry.topology !== 'triangle-list') {
+    throw new Error(`Mesh only supports triangle-list geometry (got "${geometry.topology}").`);
+  }
+
+  const position = findAttribute(geometry.attributes, positionAttributeNames);
+
+  if (position === undefined) {
+    throw new Error('Mesh geometry requires a position attribute named `a_position` or `position`.');
+  }
+
+  if (position.type !== 'f32' || position.size < 2) {
+    throw new Error('Mesh geometry position attribute must be a float vector with at least 2 components.');
+  }
+
+  const texcoord = findAttribute(geometry.attributes, texcoordAttributeNames);
+
+  if (texcoord !== undefined && (texcoord.type !== 'f32' || texcoord.size < 2)) {
+    throw new Error('Mesh geometry texcoord attribute must be a float vector with at least 2 components.');
+  }
+
+  const color = findAttribute(geometry.attributes, colorAttributeNames);
+  const vertexCount = geometry.vertexCount;
+  const { stride } = geometry;
+  const source = geometry.vertexData;
+  const view = source instanceof Float32Array ? new DataView(source.buffer, source.byteOffset, source.byteLength) : new DataView(source);
+
+  const vertices = new Float32Array(vertexCount * 2);
+  const uvs = texcoord !== undefined ? new Float32Array(vertexCount * 2) : null;
+  const colors = color !== undefined ? new Uint32Array(vertexCount) : null;
+
+  for (let i = 0; i < vertexCount; i++) {
+    const base = i * stride;
+
+    vertices[i * 2] = view.getFloat32(base + position.offset, true);
+    vertices[i * 2 + 1] = view.getFloat32(base + position.offset + 4, true);
+
+    if (uvs !== null && texcoord !== undefined) {
+      uvs[i * 2] = view.getFloat32(base + texcoord.offset, true);
+      uvs[i * 2 + 1] = view.getFloat32(base + texcoord.offset + 4, true);
+    }
+
+    if (colors !== null && color !== undefined) {
+      colors[i] = readPackedColor(view, base + color.offset, color);
+    }
+  }
+
+  const indices = readIndices(geometry.indices, vertexCount);
+
+  return { vertices, uvs, colors, indices };
+}
+
+/** Pack a geometry color attribute into the mesh's RGBA8 u32 representation. */
+function readPackedColor(view: DataView, offset: number, attribute: GeometryAttribute): number {
+  if (attribute.type === 'u32' && attribute.size === 1) {
+    return view.getUint32(offset, true) >>> 0;
+  }
+
+  if (attribute.type === 'u8' && attribute.size === 4) {
+    const r = view.getUint8(offset);
+    const g = view.getUint8(offset + 1);
+    const b = view.getUint8(offset + 2);
+    const a = view.getUint8(offset + 3);
+    return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
+  }
+
+  if (attribute.type === 'f32' && attribute.size === 4) {
+    const r = Math.round(clamp01(view.getFloat32(offset, true)) * 255);
+    const g = Math.round(clamp01(view.getFloat32(offset + 4, true)) * 255);
+    const b = Math.round(clamp01(view.getFloat32(offset + 8, true)) * 255);
+    const a = Math.round(clamp01(view.getFloat32(offset + 12, true)) * 255);
+    return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
+  }
+
+  throw new Error('Mesh geometry color attribute must be u8x4, u32x1, or f32x4.');
+}
+
+function readIndices(indices: Uint16Array | Uint32Array | null, vertexCount: number): Uint16Array | null {
+  if (indices === null) {
+    return null;
+  }
+
+  if (indices instanceof Uint16Array) {
+    return indices;
+  }
+
+  if (vertexCount > 0xffff) {
+    throw new Error(`Mesh geometry with ${vertexCount} vertices exceeds the 16-bit index limit.`);
+  }
+
+  return Uint16Array.from(indices);
+}
+
+function clamp01(value: number): number {
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
 }

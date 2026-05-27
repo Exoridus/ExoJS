@@ -27,8 +27,6 @@ export { ShaderSource } from './material/ShaderSource';
 export { SpriteMaterial } from './material/SpriteMaterial';
 export type { MeshOptions } from './mesh/Mesh';
 export { Mesh } from './mesh/Mesh';
-export type { MeshShaderOptions, MeshShaderUniformValue } from './mesh/MeshShader';
-export { MeshShader } from './mesh/MeshShader';
 export { Graphics } from './primitives/Graphics';
 export type { RenderBackend } from './RenderBackend';
 export { RenderBackendType } from './RenderBackendType';

@@ -1,8 +1,8 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '@/math/Matrix';
+import type { Material, UniformValue } from '@/rendering/material/Material';
 import type { Mesh } from '@/rendering/mesh/Mesh';
-import type { MeshShader, MeshShaderUniformValue } from '@/rendering/mesh/MeshShader';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
 import { Texture as TextureClass } from '@/rendering/texture/Texture';
@@ -73,7 +73,7 @@ const customMeshUniformBytes = 112;
 
 interface MeshDrawCall {
   readonly mesh: Mesh;
-  readonly customShader: MeshShader | null;
+  readonly customShader: Material | null;
   readonly blendMode: BlendModes;
   readonly texture: Texture | RenderTexture;
   readonly premultiplySample: boolean;
@@ -90,8 +90,8 @@ interface MeshPipelineKey {
 }
 
 /**
- * Per-MeshShader resources cached against the shader instance reference.
- * Disposed when the shader's `_onDispose` callback fires.
+ * Per-material resources cached against the material instance reference.
+ * Disposed when the material's `_onDispose` callback fires.
  */
 interface CustomShaderResources {
   shaderModule: GPUShaderModule;
@@ -135,7 +135,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   private readonly _drawCalls: MeshDrawCall[] = [];
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
   private _textureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
-  private readonly _customShaders = new Map<MeshShader, CustomShaderResources>();
+  private readonly _customShaders = new Map<Material, CustomShaderResources>();
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -163,10 +163,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       throw new Error('WebGpuMeshRenderer is not connected to a backend.');
     }
 
-    const customShader = mesh.shader;
+    const customShader = mesh.material;
 
-    if (customShader !== null && customShader.wgsl === null) {
-      throw new Error('MeshShader has no `wgsl` source; cannot render through the WebGPU backend.');
+    if (customShader !== null && customShader.shader.wgsl === null) {
+      throw new Error('Mesh material shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
     const vertexCount = mesh.vertexCount;
@@ -175,7 +175,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       return;
     }
 
-    const blendMode = mesh.blendMode;
+    // The material owns its blend mode; the mesh's own blendMode overrides it
+    // when set away from the default (Normal). Default-path meshes keep their
+    // own blendMode verbatim.
+    const blendMode = customShader !== null && mesh.blendMode === BlendModes.Normal ? customShader.blendMode : mesh.blendMode;
     backend.setBlendMode(blendMode);
 
     const meshTexture = mesh.texture ?? TextureClass.white;
@@ -252,8 +255,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     // buffers, so default offsets are independent of custom offsets).
     let defaultVertices = 0;
     let defaultIndices = 0;
-    const customVertexCursors = new Map<MeshShader, number>(); // running vertex count per shader
-    const customIndexCursors = new Map<MeshShader, number>();
+    const customVertexCursors = new Map<Material, number>(); // running vertex count per material
+    const customIndexCursors = new Map<Material, number>();
 
     for (let i = 0; i < this._drawCallCount; i++) {
       const dc = this._drawCalls[i] as { -readonly [K in keyof MeshDrawCall]: MeshDrawCall[K] };
@@ -324,8 +327,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       }
     }
 
-    // Phase 3b: pack custom-path vertex/index/uniform data per shader.
-    for (const [shader, resources] of this._customShaders) {
+    // Phase 3b: pack custom-path vertex/index/uniform data per material.
+    for (const [material, resources] of this._customShaders) {
       if (resources.drawCount === 0) {
         continue;
       }
@@ -339,7 +342,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
       for (let i = 0; i < this._drawCallCount; i++) {
         const dc = this._drawCalls[i];
-        if (dc.customShader !== shader) continue;
+        if (dc.customShader !== material) continue;
 
         this._writeMeshVerticesIntoBuffer(dc.mesh, vWritten, resources.vertexFloatView, resources.vertexUintView);
 
@@ -352,7 +355,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         }
 
         // Write mesh-uniform slot (proj/trans/tint) with dynamic offset.
-        this._writeCustomMeshUniform(shader, resources, drawCursor, dc.mesh, backend);
+        this._writeCustomMeshUniform(material, resources, drawCursor, dc.mesh, backend);
 
         vWritten += dc.vertexCount;
         iWritten += dc.indexCount;
@@ -368,9 +371,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT,
       );
 
-      // Build/refresh user uniform UBO from shader.uniforms (re-built every
-      // frame so mutations to shader.uniforms.X are picked up).
-      this._uploadUserUniforms(shader, resources);
+      // Build/refresh user uniform UBO from the material (re-built every frame
+      // so mutations to material.uniforms.X are picked up).
+      this._uploadUserUniforms(material, resources);
     }
 
     // Phase 4: single writeBuffer per resource for the default path.
@@ -404,12 +407,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     const renderTargetFormat = backend.renderTargetFormat;
 
-    let lastShader: MeshShader | 'default' | null = null;
+    let lastShader: Material | 'default' | null = null;
     let lastBlendMode: BlendModes | null = null;
     let lastFormat: GPUTextureFormat | null = null;
     let lastTexture: Texture | RenderTexture | null = null;
     let defaultDrawCursor = 0;
-    const customDrawCursors = new Map<MeshShader, number>();
+    const customDrawCursors = new Map<Material, number>();
 
     for (let i = 0; i < this._drawCallCount; i++) {
       const dc = this._drawCalls[i];
@@ -448,7 +451,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         // (Spector.js, Chrome DevTools' WebGPU panel) show meaningful
         // labels for the otherwise-anonymous mesh draws inside the
         // batched render pass.
-        pass.pushDebugGroup('MeshShader (custom)');
+        pass.pushDebugGroup('MeshMaterial (custom)');
 
         if (needsPipeline) {
           pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, renderTargetFormat));
@@ -583,11 +586,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._textureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
     this._shaderModule = null;
-    // Custom shaders are owned by user code (one MeshShader can be shared
+    // Custom materials are owned by user code (one MeshMaterial can be shared
     // across multiple Mesh instances). Their resources are released when the
-    // user calls shader.destroy(), which fires our _onDispose callback. On
+    // user calls material.destroy(), which fires our _onDispose callback. On
     // backend disconnect we eagerly release everything to avoid GPU leaks
-    // even if the user keeps the shader reference around.
+    // even if the user keeps the material reference around.
     for (const resources of this._customShaders.values()) {
       this._releaseCustomShaderResources(resources);
     }
@@ -798,8 +801,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
   }
 
-  private _getOrCreateCustomShaderResources(shader: MeshShader): CustomShaderResources {
-    let resources = this._customShaders.get(shader);
+  private _getOrCreateCustomShaderResources(material: Material): CustomShaderResources {
+    let resources = this._customShaders.get(material);
     if (resources !== undefined) {
       return resources;
     }
@@ -808,12 +811,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       throw new Error('WebGpuMeshRenderer is not connected to a backend.');
     }
 
-    if (shader.wgsl === null) {
-      throw new Error('MeshShader has no `wgsl` source; cannot render through the WebGPU backend.');
+    if (material.shader.wgsl === null) {
+      throw new Error('Mesh material shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
     const device = this._device;
-    const shaderModule = device.createShaderModule({ code: shader.wgsl });
+    const shaderModule = device.createShaderModule({ code: material.shader.wgsl });
 
     const meshUniformLayout = device.createBindGroupLayout({
       entries: [
@@ -832,7 +835,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       ],
     });
 
-    const userLayout = this._buildUserBindGroupLayout(device, shader);
+    const userLayout = this._buildUserBindGroupLayout(device, material);
 
     const pipelineLayout = device.createPipelineLayout({
       bindGroupLayouts: [meshUniformLayout, meshTextureLayout, userLayout],
@@ -876,14 +879,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       totalIndices: 0,
     };
 
-    this._customShaders.set(shader, resources);
+    this._customShaders.set(material, resources);
 
-    // When the user calls shader.destroy(), evict and release.
-    shader._onDispose(() => {
-      const r = this._customShaders.get(shader);
+    // When the user calls material.destroy(), evict and release.
+    material._onDispose(() => {
+      const r = this._customShaders.get(material);
       if (r !== undefined) {
         this._releaseCustomShaderResources(r);
-        this._customShaders.delete(shader);
+        this._customShaders.delete(material);
       }
     });
 
@@ -963,7 +966,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
   }
 
-  private _writeCustomMeshUniform(_shader: MeshShader, resources: CustomShaderResources, drawCursor: number, mesh: Mesh, backend: WebGpuBackend): void {
+  private _writeCustomMeshUniform(_material: Material, resources: CustomShaderResources, drawCursor: number, mesh: Mesh, backend: WebGpuBackend): void {
     // Layout: mat3x3 projection (48B) + mat3x3 translation (48B) + vec4 tint (16B) = 112B.
     // WGSL mat3x3 stores 3 vec3 columns padded to vec4 alignment.
     const slotBytes = meshUniformAlignment;
@@ -1085,10 +1088,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     return group;
   }
 
-  private _buildUserBindGroupLayout(device: GPUDevice, shader: MeshShader): GPUBindGroupLayout {
+  private _buildUserBindGroupLayout(device: GPUDevice, material: Material): GPUBindGroupLayout {
     const entries: GPUBindGroupLayoutEntry[] = [];
-    const userUniforms = shader.uniforms;
-    const hasScalarUniforms = Object.values(userUniforms).some(v => !isTextureUniform(v));
 
     // Binding 0 always reserved for the user UBO (even if empty), so the
     // bind-group layout is stable across user-uniform mutations.
@@ -1098,18 +1099,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       buffer: { type: 'uniform' },
     });
 
+    const textureBindings = collectTextureBindings(material);
+
+    if (textureBindings.length > maxCustomTextureSlots) {
+      throw new Error(`Mesh material requested more than ${maxCustomTextureSlots} user texture bindings.`);
+    }
+
     let bindingIndex = 1;
-    let textureCount = 0;
 
-    for (const value of Object.values(userUniforms)) {
-      if (!isTextureUniform(value)) {
-        continue;
-      }
-
-      if (textureCount >= maxCustomTextureSlots) {
-        throw new Error(`MeshShader requested more than ${maxCustomTextureSlots} user texture uniforms.`);
-      }
-
+    for (let t = 0; t < textureBindings.length; t++) {
       entries.push({
         binding: bindingIndex,
         visibility: GPUShaderStage.FRAGMENT,
@@ -1122,19 +1120,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         sampler: { type: 'filtering' },
       });
       bindingIndex++;
-      textureCount++;
     }
-
-    // Suppress unused warning at build time.
-    void hasScalarUniforms;
 
     return device.createBindGroupLayout({ entries });
   }
 
-  private _uploadUserUniforms(_shader: MeshShader, resources: CustomShaderResources): void {
+  private _uploadUserUniforms(material: Material, resources: CustomShaderResources): void {
     const device = this._device!;
-    const uniforms = _shader.uniforms;
-    const scalarValues = Object.values(uniforms).filter(v => !isTextureUniform(v));
+    const scalarValues = collectScalarUniforms(material);
 
     // Always create a UBO (even if empty) since binding 0 of the user layout
     // is fixed. Min size 16 bytes to satisfy WebGPU's minimum buffer size.
@@ -1177,7 +1170,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     device.queue.writeBuffer(resources.userUniformBuffer, 0, data);
   }
 
-  private _buildUserBindGroup(backend: WebGpuBackend, shader: MeshShader, resources: CustomShaderResources): GPUBindGroup {
+  private _buildUserBindGroup(backend: WebGpuBackend, material: Material, resources: CustomShaderResources): GPUBindGroup {
     const device = this._device!;
     const entries: GPUBindGroupEntry[] = [];
 
@@ -1185,12 +1178,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     let bindingIndex = 1;
 
-    for (const value of Object.values(shader.uniforms)) {
-      if (!isTextureUniform(value)) {
-        continue;
-      }
-
-      const binding = backend.getTextureBinding(value);
+    for (const texture of collectTextureBindings(material)) {
+      const binding = backend.getTextureBinding(texture);
       entries.push({ binding: bindingIndex, resource: binding.view });
       bindingIndex++;
       entries.push({ binding: bindingIndex, resource: binding.sampler });
@@ -1222,7 +1211,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 }
 
-function isTextureUniform(value: MeshShaderUniformValue): value is Texture | RenderTexture {
+function isTextureUniform(value: UniformValue): value is Texture | RenderTexture {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -1232,4 +1221,39 @@ function isTextureUniform(value: MeshShaderUniformValue): value is Texture | Ren
     !(value instanceof Int32Array) &&
     !Array.isArray(value)
   );
+}
+
+/** Scalar/vector/matrix uniforms (texture values excluded) in declaration order. */
+function collectScalarUniforms(material: Material): Array<Exclude<UniformValue, Texture | RenderTexture>> {
+  const result: Array<Exclude<UniformValue, Texture | RenderTexture>> = [];
+
+  for (const value of Object.values(material.uniforms)) {
+    if (!isTextureUniform(value)) {
+      result.push(value);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Texture bindings claimed by the material, in a stable order: texture-valued
+ * entries of `uniforms` first (declaration order), then the dedicated
+ * `textures` map (declaration order). The WGSL source must declare its
+ * `@group(2)` texture/sampler pairs in this same order.
+ */
+function collectTextureBindings(material: Material): Array<Texture | RenderTexture> {
+  const result: Array<Texture | RenderTexture> = [];
+
+  for (const value of Object.values(material.uniforms)) {
+    if (isTextureUniform(value)) {
+      result.push(value);
+    }
+  }
+
+  for (const texture of Object.values(material.textures)) {
+    result.push(texture);
+  }
+
+  return result;
 }

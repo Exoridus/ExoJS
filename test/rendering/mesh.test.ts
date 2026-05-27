@@ -1,8 +1,50 @@
 import { Drawable } from '@/rendering/Drawable';
+import { Geometry } from '@/rendering/geometry/Geometry';
+import { MeshMaterial } from '@/rendering/material/MeshMaterial';
+import { ShaderSource } from '@/rendering/material/ShaderSource';
 import { Mesh } from '@/rendering/mesh/Mesh';
-import { MeshShader } from '@/rendering/mesh/MeshShader';
 
 const validVertices = (): Float32Array => new Float32Array([0, 0, 100, 0, 50, 100]);
+
+const minimalGlsl = {
+  vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+  fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
+};
+
+// Standard interleaved mesh layout: position f32x2 @0, texcoord f32x2 @8,
+// color u8x4 @16, stride 20.
+const createStandardGeometry = (): Geometry => {
+  const stride = 20;
+  const vertices = [
+    { x: 0, y: 0, u: 0, v: 0, rgba: [255, 0, 0, 255] },
+    { x: 10, y: 0, u: 1, v: 0, rgba: [0, 255, 0, 255] },
+    { x: 5, y: 10, u: 0.5, v: 1, rgba: [0, 0, 255, 255] },
+  ];
+  const buffer = new ArrayBuffer(vertices.length * stride);
+  const view = new DataView(buffer);
+
+  vertices.forEach((vertex, index) => {
+    const base = index * stride;
+    view.setFloat32(base + 0, vertex.x, true);
+    view.setFloat32(base + 4, vertex.y, true);
+    view.setFloat32(base + 8, vertex.u, true);
+    view.setFloat32(base + 12, vertex.v, true);
+    view.setUint8(base + 16, vertex.rgba[0]);
+    view.setUint8(base + 17, vertex.rgba[1]);
+    view.setUint8(base + 18, vertex.rgba[2]);
+    view.setUint8(base + 19, vertex.rgba[3]);
+  });
+
+  return new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
+      { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 16 },
+    ],
+    vertexData: buffer,
+    stride,
+  });
+};
 
 describe('Mesh', () => {
   test('extends Drawable', () => {
@@ -128,23 +170,63 @@ describe('Mesh', () => {
     expect(mesh.texture).toBeNull();
   });
 
-  test('shader is null by default', () => {
+  test('material and geometry are null by default', () => {
     const mesh = new Mesh({ vertices: validVertices() });
-    expect(mesh.shader).toBeNull();
+    expect(mesh.material).toBeNull();
+    expect(mesh.geometry).toBeNull();
   });
 
-  test('shader instance is exposed on the mesh', () => {
-    const shader = new MeshShader({
-      glsl: {
-        vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
-        fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
-      },
+  test('material instance is exposed on the mesh', () => {
+    const material = new MeshMaterial({
+      shader: new ShaderSource({ glsl: minimalGlsl }),
       uniforms: { uTime: 0 },
     });
-    const mesh = new Mesh({ vertices: validVertices(), shader });
+    const mesh = new Mesh({ vertices: validVertices(), material });
 
-    expect(mesh.shader).toBe(shader);
-    expect(mesh.shader?.glsl?.vertex).toContain('#version 300 es');
-    expect(mesh.shader?.uniforms.uTime).toBe(0);
+    expect(mesh.material).toBe(material);
+    expect(mesh.material?.shader.glsl?.vertex).toContain('#version 300 es');
+    expect(mesh.material?.uniforms.uTime).toBe(0);
+  });
+
+  test('geometry form derives vertices, uvs, colors, and stores the geometry', () => {
+    const geometry = createStandardGeometry();
+    const mesh = new Mesh({ geometry });
+
+    expect(mesh.geometry).toBe(geometry);
+    expect(mesh.vertexCount).toBe(3);
+    expect(Array.from(mesh.vertices)).toEqual([0, 0, 10, 0, 5, 10]);
+    expect(mesh.uvs).not.toBeNull();
+    expect(mesh.uvs?.[2]).toBeCloseTo(1);
+    expect(mesh.uvs?.[4]).toBeCloseTo(0.5);
+    // RGBA8 packed little-endian: R | G<<8 | B<<16 | A<<24.
+    expect(mesh.colors?.[0]).toBe(0xff0000ff);
+    expect(mesh.colors?.[1]).toBe(0xff00ff00);
+    expect(mesh.colors?.[2]).toBe(0xffff0000);
+  });
+
+  test('geometry form carries an optional material', () => {
+    const material = new MeshMaterial({ shader: new ShaderSource({ glsl: minimalGlsl }) });
+    const mesh = new Mesh({ geometry: createStandardGeometry(), material });
+
+    expect(mesh.material).toBe(material);
+  });
+
+  test('rejects supplying both vertices and geometry', () => {
+    expect(() => new Mesh({ vertices: validVertices(), geometry: createStandardGeometry() })).toThrow(/either `vertices` or `geometry`/);
+  });
+
+  test('rejects supplying neither vertices nor geometry', () => {
+    expect(() => new Mesh({})).toThrow(/either `vertices` or `geometry`/);
+  });
+
+  test('rejects non-triangle-list geometry', () => {
+    const geometry = new Geometry({
+      attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+      vertexData: new Float32Array([0, 0, 10, 0, 5, 10, 0, 0]),
+      stride: 8,
+      topology: 'triangle-strip',
+    });
+
+    expect(() => new Mesh({ geometry })).toThrow(/triangle-list/);
   });
 });

@@ -1,12 +1,10 @@
+import type { MaterialOptions } from '@/rendering/material/Material';
 import { MeshMaterial } from '@/rendering/material/MeshMaterial';
 import { ShaderSource } from '@/rendering/material/ShaderSource';
 import { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import { MeshShader } from '@/rendering/mesh/MeshShader';
+import type { SamplerOptions } from '@/rendering/texture/Sampler';
 import { Texture } from '@/rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '@/rendering/types';
-
-import type { MaterialOptions } from '@/rendering/material/Material';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
 
 const GLSL_VERTEX = /* glsl */ `#version 300 es
 layout(location = 0) in vec2 a_position;
@@ -105,20 +103,6 @@ describe('ShaderSource', () => {
     expect(wgsl).not.toHaveProperty('u_hidden');
     // group(0) mesh-uniform binding must not be reported as a user uniform.
     expect(wgsl).not.toHaveProperty('u_mesh');
-  });
-
-  test('getDeclaredUniforms matches the legacy MeshShader reflection', () => {
-    const source = createShaderSource();
-    const shader = new MeshShader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT }, wgsl: WGSL });
-
-    expect(source.getDeclaredUniforms()).toEqual(shader.getDeclaredUniforms());
-  });
-
-  test('detectUniformDrift matches the legacy MeshShader behavior', () => {
-    const source = createShaderSource();
-    const shader = new MeshShader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT }, wgsl: WGSL });
-
-    expect(source.detectUniformDrift()).toEqual(shader.detectUniformDrift());
   });
 
   test('detectUniformDrift reports names declared in only one language', () => {

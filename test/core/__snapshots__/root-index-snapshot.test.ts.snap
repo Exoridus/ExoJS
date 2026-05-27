@@ -119,7 +119,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Matrix",
   "Mesh",
   "MeshMaterial",
-  "MeshShader",
   "Music",
   "MusicFactory",
   "NetworkOnlyStrategy",

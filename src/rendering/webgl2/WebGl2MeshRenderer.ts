@@ -1,7 +1,7 @@
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
 
+import type { Material, UniformValue } from '../material/Material';
 import type { Mesh } from '../mesh/Mesh';
-import type { MeshShader, MeshShaderUniformValue } from '../mesh/MeshShader';
 import { Shader } from '../shader/Shader';
 import { RenderTexture } from '../texture/RenderTexture';
 import { Texture } from '../texture/Texture';
@@ -33,7 +33,7 @@ interface MeshRendererConnection {
 
 export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   private readonly _defaultShader: Shader = new Shader(vertexSource, fragmentSource);
-  private readonly _customShaders = new Map<MeshShader, Shader>();
+  private readonly _customShaders = new Map<Material, Shader>();
   private readonly _tintScratch: Float32Array = new Float32Array(4);
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
   // Pre-built texture-unit indices used for custom-shader sampler bindings;
@@ -64,14 +64,18 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     }
 
     const backend = this.getBackend();
-    const blendMode = mesh.blendMode;
+    const material = mesh.material;
+    // The material owns its blend mode; the mesh's own blendMode overrides it
+    // when set away from the default (Normal). Default-path meshes keep their
+    // own blendMode verbatim.
+    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
 
     if (blendMode !== this._currentBlendMode) {
       this._currentBlendMode = blendMode;
       backend.setBlendMode(blendMode);
     }
 
-    const shader = mesh.shader === null ? this._defaultShader : this._getOrCreateCustomShader(mesh.shader, connection.gl);
+    const shader = material === null ? this._defaultShader : this._getOrCreateCustomShader(material, connection.gl);
     const view = backend.view;
 
     // Auto-bound uniforms are set unconditionally if the (possibly custom)
@@ -103,8 +107,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       backend.bindTexture(meshTexture, 0);
     }
 
-    if (mesh.shader?.uniforms !== undefined) {
-      this._bindCustomUniforms(shader, mesh.shader.uniforms, backend);
+    if (material !== null) {
+      this._bindCustomUniforms(shader, material, backend);
     }
 
     this._ensureVertexCapacity(vertexCount);
@@ -331,40 +335,44 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     };
   }
 
-  private _getOrCreateCustomShader(config: MeshShader, gl: WebGL2RenderingContext): Shader {
-    const cached = this._customShaders.get(config);
+  private _getOrCreateCustomShader(material: Material, gl: WebGL2RenderingContext): Shader {
+    const cached = this._customShaders.get(material);
     if (cached !== undefined) {
       return cached;
     }
 
-    if (config.glsl === null) {
-      throw new Error('MeshShader has no `glsl` source; cannot render through the WebGL2 backend.');
+    const glsl = material.shader.glsl;
+
+    if (glsl === null) {
+      throw new Error('Mesh material shader has no `glsl` source; cannot render through the WebGL2 backend.');
     }
 
-    const shader = new Shader(config.glsl.vertex, config.glsl.fragment);
+    const shader = new Shader(glsl.vertex, glsl.fragment);
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force first finalize so getUniform()/uniforms.has() are usable below.
     shader.sync();
 
-    this._customShaders.set(config, shader);
+    this._customShaders.set(material, shader);
 
-    // Wire shader.destroy() through to evict + dispose the cached program.
-    config._onDispose(() => {
-      const stored = this._customShaders.get(config);
+    // Wire material.destroy() through to evict + dispose the cached program.
+    material._onDispose(() => {
+      const stored = this._customShaders.get(material);
       if (stored !== undefined) {
         stored.destroy();
-        this._customShaders.delete(config);
+        this._customShaders.delete(material);
       }
     });
 
     return shader;
   }
 
-  private _bindCustomUniforms(shader: Shader, uniforms: Record<string, MeshShaderUniformValue>, backend: WebGl2Backend): void {
-    // Texture uniforms take consecutive slots starting at 1 (slot 0 belongs
-    // to the mesh's own `u_texture` binding).
+  private _bindCustomUniforms(shader: Shader, material: Material, backend: WebGl2Backend): void {
+    // Texture bindings take consecutive slots starting at 1 (slot 0 belongs to
+    // the mesh's own `u_texture`). Texture-valued uniforms bind first, then the
+    // entries of the material's dedicated `textures` map.
     let textureSlot = 1;
 
+    const uniforms = material.uniforms;
     for (const name in uniforms) {
       if (!shader.uniforms.has(name)) {
         continue;
@@ -375,7 +383,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
       if (value instanceof Texture || value instanceof RenderTexture) {
         if (textureSlot >= maxCustomTextureSlots) {
-          throw new Error(`Mesh custom shader requested more than ${maxCustomTextureSlots - 1} texture uniforms.`);
+          throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
         }
         backend.bindTexture(value, textureSlot);
         uniform.setValue(this._slotScratches[textureSlot]);
@@ -384,9 +392,24 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
         uniform.setValue(this._marshalUniformValue(value));
       }
     }
+
+    const textures = material.textures;
+    for (const name in textures) {
+      if (!shader.uniforms.has(name)) {
+        continue;
+      }
+
+      if (textureSlot >= maxCustomTextureSlots) {
+        throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
+      }
+
+      backend.bindTexture(textures[name], textureSlot);
+      shader.getUniform(name).setValue(this._slotScratches[textureSlot]);
+      textureSlot++;
+    }
   }
 
-  private _marshalUniformValue(value: Exclude<MeshShaderUniformValue, Texture | RenderTexture>): Float32Array | Int32Array {
+  private _marshalUniformValue(value: Exclude<UniformValue, Texture | RenderTexture>): Float32Array | Int32Array {
     if (value instanceof Float32Array || value instanceof Int32Array) {
       return value;
     }
