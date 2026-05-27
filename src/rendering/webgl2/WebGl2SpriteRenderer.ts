@@ -1,10 +1,12 @@
-import type { BlendModes } from '@/rendering/types';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
+import type { UniformValue } from '@/rendering/material/Material';
+import type { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
 
 import { Shader } from '../shader/Shader';
 import type { Sprite } from '../sprite/Sprite';
-import type { RenderTexture } from '../texture/RenderTexture';
-import type { Texture } from '../texture/Texture';
+import { spriteVertexGlsl } from '../sprite/spriteMaterialSources';
+import { RenderTexture } from '../texture/RenderTexture';
+import { Texture } from '../texture/Texture';
 import type { View } from '../View';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/sprite.frag';
@@ -37,6 +39,17 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * vertex shader expands one instance into four corners on the GPU
  * instead of the CPU duplicating the same color/slot/transform across
  * four vertex entries.
+ *
+ * # Default vs custom-material path
+ *
+ * Sprites without a material take the default path: up to 8 base textures
+ * rotate through `u_texture0..7`, selected per-instance via `a_textureSlot`,
+ * so unrelated sprites merge into one draw. Sprites with a {@link SpriteMaterial}
+ * take the custom path: the material's fragment program runs against the same
+ * instance buffer, the single base texture binds to unit 0 as `u_texture`, and
+ * material uniforms/textures bind once per batch (units 1..N). The custom path
+ * keeps instancing but not the opportunistic 8-slot merge — a custom batch
+ * breaks on material instance, base texture, blend mode, or buffer capacity.
  */
 
 const maxBatchTextures = 8;
@@ -59,6 +72,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   private readonly _activeTextures: Array<Texture | RenderTexture | null> = new Array(maxBatchTextures).fill(null);
   private readonly _textureSlots = new Map<Texture | RenderTexture, number>();
   private _slotCount = 0;
+
+  // Custom-material state. Compiled fragment programs are cached per material
+  // instance; the current batch's material/base-texture decide when to flush.
+  private readonly _customShaders = new Map<SpriteMaterial, Shader>();
+  // Texture-unit index scratches reused for sampler-uniform binds so the
+  // per-batch path stays allocation-free.
+  private readonly _slotScratches: Int32Array[] = Array.from({ length: maxBatchTextures }, (_, i) => new Int32Array([i]));
+  private _currentMaterial: SpriteMaterial | null = null;
+  private _currentBaseTexture: Texture | RenderTexture | null = null;
 
   private _instanceCount = 0;
   private _currentBlendMode: BlendModes | null = null;
@@ -87,12 +109,133 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     }
 
     const backend = this.getBackend();
+    const material = sprite.material;
+
+    if (material === null) {
+      this._renderDefault(sprite, texture, backend);
+    } else {
+      this._renderCustom(sprite, texture, material, backend);
+    }
+
+    return this;
+  }
+
+  public flush(): void {
+    const backend = this.getBackendOrNull();
+    const instanceBuffer = this._instanceBuffer;
+    const vao = this._vao;
+    const connection = this._connection;
+
+    if (this._instanceCount === 0 || backend === null || instanceBuffer === null || vao === null || connection === null) {
+      this._resetSlots();
+
+      return;
+    }
+
+    const material = this._currentMaterial;
+    const shader = material === null ? this._shader : this._getOrCreateCustomShader(material, connection.gl);
+
+    if (material === null) {
+      const view = backend.view;
+
+      if (this._currentView !== view || this._currentViewId !== view.updateId) {
+        this._currentView = view;
+        this._currentViewId = view.updateId;
+        this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+      }
+    } else {
+      // Custom path: projection is set per flush (cheap, and the cached
+      // default-shader view state does not carry over to a custom program).
+      if (shader.uniforms.has('u_projection')) {
+        shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
+      }
+
+      // The single base texture binds to unit 0 as `u_texture`.
+      const baseTexture = this._currentBaseTexture;
+
+      if (baseTexture !== null && shader.uniforms.has('u_texture')) {
+        backend.bindTexture(baseTexture, 0);
+        shader.getUniform('u_texture').setValue(this._slotScratches[0]);
+      }
+
+      this._bindCustomUniforms(shader, material, backend);
+    }
+
+    shader.sync();
+    backend.bindVertexArrayObject(vao);
+    instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
+    vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+    this._instanceCount = 0;
+
+    this._resetSlots();
+  }
+
+  protected onConnect(backend: WebGl2Backend): void {
+    const gl = backend.context;
+
+    this._shader.connect(createWebGl2ShaderProgram(gl));
+    this._connection = this._createConnection(gl);
+    this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw).connect(
+      this._createBufferRuntime(this._connection),
+    );
+    this._shader.sync();
+
+    this._vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_localBounds'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformAB'), gl.FLOAT, false, instanceStrideBytes, 16, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformCD'), gl.FLOAT, false, instanceStrideBytes, 28, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 40, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 48, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 52, true, 1)
+      .connect(this._createVaoRuntime(this._connection));
+
+    // Pin the per-slot sampler uniforms to texture units 0..N-1.
+    const samplerUnit = new Int32Array(1);
+
+    for (let i = 0; i < maxBatchTextures; i++) {
+      samplerUnit[0] = i;
+      this._shader.getUniform(`u_texture${i}`).setValue(samplerUnit);
+    }
+  }
+
+  protected onDisconnect(): void {
+    this._shader.disconnect();
+
+    for (const shader of this._customShaders.values()) {
+      shader.destroy();
+    }
+
+    this._customShaders.clear();
+    this._currentMaterial = null;
+    this._currentBaseTexture = null;
+    this._instanceBuffer?.destroy();
+    this._instanceBuffer = null;
+    this._vao?.destroy();
+    this._vao = null;
+    this._connection = null;
+    this._currentBlendMode = null;
+    this._currentView = null;
+    this._currentViewId = -1;
+    this._instanceCount = 0;
+  }
+
+  public destroy(): void {
+    this.disconnect();
+    this._shader.destroy();
+  }
+
+  /** Default multi-texture path: rotate the base texture through 8 slots. */
+  private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGl2Backend): void {
     const blendMode = sprite.blendMode;
     const batchFull = this._instanceCount >= this._batchSize;
     const blendModeChanged = blendMode !== this._currentBlendMode;
     const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= maxBatchTextures;
+    // A custom batch in flight must drain before default sprites resume.
+    const materialSwitch = this._currentMaterial !== null && this._instanceCount > 0;
 
-    if (batchFull || blendModeChanged || slotExhausted) {
+    if (batchFull || blendModeChanged || slotExhausted || materialSwitch) {
       this.flush();
 
       if (blendModeChanged) {
@@ -100,6 +243,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
         backend.setBlendMode(blendMode);
       }
     }
+
+    this._currentMaterial = null;
 
     let slot = this._textureSlots.get(texture);
 
@@ -110,6 +255,38 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
       backend.bindTexture(texture, slot);
     }
 
+    this._packInstance(sprite, texture, slot);
+    this._instanceCount++;
+  }
+
+  /** Custom-material path: single base texture on unit 0, instanced. */
+  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGl2Backend): void {
+    // The material owns its blend mode; the sprite's own blendMode overrides it
+    // when set away from the default (Normal).
+    const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
+    const batchFull = this._instanceCount >= this._batchSize;
+    const blendModeChanged = blendMode !== this._currentBlendMode;
+    const materialChanged = material !== this._currentMaterial;
+    const textureChanged = texture !== this._currentBaseTexture;
+
+    if (this._instanceCount > 0 && (batchFull || blendModeChanged || materialChanged || textureChanged)) {
+      this.flush();
+    }
+
+    if (blendModeChanged) {
+      this._currentBlendMode = blendMode;
+      backend.setBlendMode(blendMode);
+    }
+
+    this._currentMaterial = material;
+    this._currentBaseTexture = texture;
+
+    // textureSlot word is unused by custom fragments (base binds to unit 0).
+    this._packInstance(sprite, texture, 0);
+    this._instanceCount++;
+  }
+
+  private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, slot: number): void {
     const offset = this._instanceCount * wordsPerInstance;
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
@@ -154,86 +331,99 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
 
     // textureSlot (u32) at word 13
     u32[offset + 13] = slot;
-
-    this._instanceCount++;
-
-    return this;
   }
 
-  public flush(): void {
-    const backend = this.getBackendOrNull();
-    const instanceBuffer = this._instanceBuffer;
-    const vao = this._vao;
+  private _getOrCreateCustomShader(material: SpriteMaterial, gl: WebGL2RenderingContext): Shader {
+    const cached = this._customShaders.get(material);
 
-    if (this._instanceCount === 0 || backend === null || instanceBuffer === null || vao === null) {
-      this._resetSlots();
-
-      return;
+    if (cached !== undefined) {
+      return cached;
     }
 
-    const view = backend.view;
+    const glsl = material.shader.glsl;
 
-    if (this._currentView !== view || this._currentViewId !== view.updateId) {
-      this._currentView = view;
-      this._currentViewId = view.updateId;
-      this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    if (glsl === null) {
+      throw new Error('SpriteMaterial shader has no `glsl` source; cannot render through the WebGL2 backend.');
     }
 
-    this._shader.sync();
-    backend.bindVertexArrayObject(vao);
-    instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
-    vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
-    backend.stats.batches++;
-    backend.stats.drawCalls++;
-    this._instanceCount = 0;
+    // The engine owns the vertex stage: pair the canonical sprite vertex shader
+    // with the material's fragment so the corner-expansion / instancing
+    // contract is fixed regardless of the material author.
+    const shader = new Shader(spriteVertexGlsl, glsl.fragment);
 
-    this._resetSlots();
+    shader.connect(createWebGl2ShaderProgram(gl));
+    shader.sync();
+
+    this._customShaders.set(material, shader);
+
+    material._onDispose(() => {
+      const stored = this._customShaders.get(material);
+
+      if (stored !== undefined) {
+        stored.destroy();
+        this._customShaders.delete(material);
+      }
+    });
+
+    return shader;
   }
 
-  protected onConnect(backend: WebGl2Backend): void {
-    const gl = backend.context;
+  private _bindCustomUniforms(shader: Shader, material: SpriteMaterial, backend: WebGl2Backend): void {
+    // Texture bindings take consecutive units starting at 1 (unit 0 belongs to
+    // the sprite's own base texture). Texture-valued uniforms bind first, then
+    // the entries of the material's dedicated `textures` map.
+    let textureSlot = 1;
 
-    this._shader.connect(createWebGl2ShaderProgram(gl));
-    this._connection = this._createConnection(gl);
-    this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(this._connection),
-    );
-    this._shader.sync();
+    const uniforms = material.uniforms;
 
-    this._vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_localBounds'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformAB'), gl.FLOAT, false, instanceStrideBytes, 16, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformCD'), gl.FLOAT, false, instanceStrideBytes, 28, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 40, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 48, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 52, true, 1)
-      .connect(this._createVaoRuntime(this._connection));
+    for (const name in uniforms) {
+      if (!shader.uniforms.has(name)) {
+        continue;
+      }
 
-    // Pin the per-slot sampler uniforms to texture units 0..N-1.
-    const samplerUnit = new Int32Array(1);
+      const value = uniforms[name];
+      const uniform = shader.getUniform(name);
 
-    for (let i = 0; i < maxBatchTextures; i++) {
-      samplerUnit[0] = i;
-      this._shader.getUniform(`u_texture${i}`).setValue(samplerUnit);
+      if (value instanceof Texture || value instanceof RenderTexture) {
+        if (textureSlot >= maxBatchTextures) {
+          throw new Error(`SpriteMaterial requested more than ${maxBatchTextures - 1} texture bindings.`);
+        }
+
+        backend.bindTexture(value, textureSlot);
+        uniform.setValue(this._slotScratches[textureSlot]);
+        textureSlot++;
+      } else {
+        uniform.setValue(this._marshalUniformValue(value));
+      }
+    }
+
+    const textures = material.textures;
+
+    for (const name in textures) {
+      if (!shader.uniforms.has(name)) {
+        continue;
+      }
+
+      if (textureSlot >= maxBatchTextures) {
+        throw new Error(`SpriteMaterial requested more than ${maxBatchTextures - 1} texture bindings.`);
+      }
+
+      backend.bindTexture(textures[name], textureSlot);
+      shader.getUniform(name).setValue(this._slotScratches[textureSlot]);
+      textureSlot++;
     }
   }
 
-  protected onDisconnect(): void {
-    this._shader.disconnect();
-    this._instanceBuffer?.destroy();
-    this._instanceBuffer = null;
-    this._vao?.destroy();
-    this._vao = null;
-    this._connection = null;
-    this._currentBlendMode = null;
-    this._currentView = null;
-    this._currentViewId = -1;
-    this._instanceCount = 0;
-  }
+  private _marshalUniformValue(value: Exclude<UniformValue, Texture | RenderTexture>): Float32Array | Int32Array {
+    if (value instanceof Float32Array || value instanceof Int32Array) {
+      return value;
+    }
 
-  public destroy(): void {
-    this.disconnect();
-    this._shader.destroy();
+    if (typeof value === 'number') {
+      return new Float32Array([value]);
+    }
+
+    return new Float32Array(value as readonly number[]);
   }
 
   private _resetSlots(): void {

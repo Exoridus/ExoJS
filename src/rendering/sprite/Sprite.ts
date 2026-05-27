@@ -2,6 +2,8 @@ import { Interval } from '@/math/Interval';
 import { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 import { Drawable } from '@/rendering/Drawable';
+import type { Material } from '@/rendering/material/Material';
+import type { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
 import { RenderNode } from '@/rendering/RenderNode';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
@@ -45,6 +47,7 @@ export enum SpriteFlags {
 export class Sprite extends Drawable {
   private _texture: Texture | RenderTexture | null = null;
   private _textureFrame: Rectangle = new Rectangle();
+  private _material: SpriteMaterial | null = null;
   private _vertices: Float32Array = new Float32Array(8);
   private _texCoords: Uint32Array = new Uint32Array(4);
   private readonly _normals: [Vector, Vector, Vector, Vector] = [new Vector(), new Vector(), new Vector(), new Vector()];
@@ -74,6 +77,27 @@ export class Sprite extends Drawable {
 
   public set textureFrame(frame: Rectangle) {
     this.setTextureFrame(frame);
+  }
+
+  /**
+   * Custom material giving this sprite its own fragment program, uniforms, and
+   * extra texture bindings, or `null` for the default multi-texture sprite path.
+   *
+   * Sprites that share the same material instance and base texture still batch
+   * into a single instanced draw call; the base texture stays on the sprite and
+   * is bound per batch. Assigning a non-sprite material throws.
+   */
+  public get material(): SpriteMaterial | null {
+    return this._material;
+  }
+
+  public set material(material: SpriteMaterial | null) {
+    if (material !== null && (material as Material).target !== 'sprite') {
+      throw new Error(`Sprite requires a SpriteMaterial (got a ${(material as Material).target} material).`);
+    }
+
+    this._material = material;
+    this.invalidateCache();
   }
 
   public get width(): number {
@@ -305,6 +329,7 @@ export class Sprite extends Drawable {
 
     this._textureFrame.destroy();
     this._texture = null;
+    this._material = null;
   }
 }
 

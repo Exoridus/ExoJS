@@ -1,6 +1,9 @@
 /// <reference types="@webgpu/types" />
 
+import type { UniformValue } from '@/rendering/material/Material';
+import type { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
 import type { Sprite } from '@/rendering/sprite/Sprite';
+import { spriteVertexWgsl } from '@/rendering/sprite/spriteMaterialSources';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import { BlendModes } from '@/rendering/types';
@@ -150,10 +153,27 @@ const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const projectionByteLength = 64;
 const initialBatchCapacity = 32;
 const maxBatchTextures = 8;
+const maxCustomTextureSlots = 7; // user texture uniforms; group(2) binding 1..N
 const indicesPerSprite = 6;
 // Static index buffer: two triangles forming a quad, vertex IDs 0..3 in
 // TL/TR/BR/BL order so the WGSL `cornerX/cornerY` derivation matches.
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+
+/**
+ * Per-material GPU resources for the custom sprite path, cached against the
+ * material instance and released when the material's `_onDispose` fires.
+ * group(0) reuses the shared projection UBO; group(1) is the single base
+ * texture; group(2) is the user UBO + texture/sampler pairs.
+ */
+interface CustomSpriteResources {
+  shaderModule: GPUShaderModule;
+  userLayout: GPUBindGroupLayout;
+  pipelineLayout: GPUPipelineLayout;
+  pipelines: Map<string, GPURenderPipeline>;
+  userUniformBuffer: GPUBuffer | null;
+  userUniformBufferCapacity: number;
+  baseTextureBindGroups: WeakMap<Texture | RenderTexture, GPUBindGroup>;
+}
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
@@ -178,6 +198,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private _slotCount = 0;
   private _instanceCount = 0;
   private _currentBlendMode: BlendModes | null = null;
+
+  // Custom-material state. Per-material pipelines/bind groups are cached; the
+  // current batch's material/base-texture decide when to flush.
+  private readonly _customMaterials = new Map<SpriteMaterial, CustomSpriteResources>();
+  private _customBaseTextureLayout: GPUBindGroupLayout | null = null;
+  private _currentMaterial: SpriteMaterial | null = null;
+  private _currentBaseTexture: Texture | RenderTexture | null = null;
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) {
@@ -219,6 +246,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._pipelineLayout = this._device.createPipelineLayout({
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
+    // Single base-texture layout for the custom-material path (group 1).
+    this._customBaseTextureLayout = this._device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      ],
+    });
     this._uniformBuffer = this._device.createBuffer({
       size: projectionByteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -249,12 +283,21 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
 
+    // Custom materials are owned by user code (one SpriteMaterial can be shared
+    // across many sprites); their resources are released when the user calls
+    // material.destroy(). On disconnect we eagerly release to avoid GPU leaks.
+    for (const resources of this._customMaterials.values()) {
+      this._releaseCustomResources(resources);
+    }
+
+    this._customMaterials.clear();
     this._pipelines.clear();
     this._instanceBuffer = null;
     this._indexBuffer = null;
     this._uniformBindGroup = null;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
+    this._customBaseTextureLayout = null;
     this._textureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
     this._shaderModule = null;
@@ -266,6 +309,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._instanceUint32 = new Uint32Array(this._instanceData);
     this._instanceCount = 0;
     this._currentBlendMode = null;
+    this._currentMaterial = null;
+    this._currentBaseTexture = null;
     this._resetSlots();
   }
 
@@ -284,18 +329,31 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       return;
     }
 
+    const material = sprite.material;
+
+    if (material === null) {
+      this._renderDefault(sprite, texture, backend);
+    } else {
+      this._renderCustom(sprite, texture, material, backend);
+    }
+  }
+
+  /** Default multi-texture path: rotate the base texture through 8 slots. */
+  private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGpuBackend): void {
     const blendMode = sprite.blendMode;
 
-    // Flush triggers: blend-mode change, instance buffer full at current
-    // capacity (we'll grow on next render), or texture-slot exhaustion.
+    // Flush triggers: blend-mode change, texture-slot exhaustion, or a custom
+    // batch still in flight that must drain first.
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
     const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= maxBatchTextures;
+    const materialSwitch = this._currentMaterial !== null && this._instanceCount > 0;
 
-    if (blendModeChanged || slotExhausted) {
+    if (blendModeChanged || slotExhausted || materialSwitch) {
       this.flush();
     }
 
     this._currentBlendMode = blendMode;
+    this._currentMaterial = null;
     backend.setBlendMode(blendMode);
 
     // Resolve / assign texture slot.
@@ -315,6 +373,35 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // too-small buffer.
     this._ensureInstanceCapacity(this._instanceCount + 1);
     this._packInstance(sprite, texture, packedSlotFlags);
+    this._instanceCount++;
+  }
+
+  /** Custom-material path: single base texture on group(1), instanced. */
+  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGpuBackend): void {
+    if (material.shader.wgsl === null) {
+      throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
+    }
+
+    // The material owns its blend mode; the sprite's own blendMode overrides it
+    // when set away from the default (Normal).
+    const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
+    const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
+    const materialChanged = this._currentMaterial !== null && material !== this._currentMaterial;
+    const textureChanged = this._currentBaseTexture !== null && texture !== this._currentBaseTexture;
+    const modeSwitch = this._currentMaterial === null && this._instanceCount > 0;
+
+    if (blendModeChanged || materialChanged || textureChanged || modeSwitch) {
+      this.flush();
+    }
+
+    this._currentBlendMode = blendMode;
+    this._currentMaterial = material;
+    this._currentBaseTexture = texture;
+    backend.setBlendMode(blendMode);
+
+    // textureSlot word is unused by custom fragments (base binds to group(1)).
+    this._ensureInstanceCapacity(this._instanceCount + 1);
+    this._packInstance(sprite, texture, 0);
     this._instanceCount++;
   }
 
@@ -354,15 +441,23 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     if (this._instanceCount > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null) {
       device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._instanceCount * instanceStrideBytes);
 
-      const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat);
-      const textureBindGroup = this._createTextureBindGroup(device, backend);
+      const material = this._currentMaterial;
 
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, uniformBindGroup);
-      pass.setBindGroup(1, textureBindGroup);
-      pass.setVertexBuffer(0, this._instanceBuffer);
-      pass.setIndexBuffer(this._indexBuffer, 'uint16');
-      pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
+      if (material === null) {
+        const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat);
+        const textureBindGroup = this._createTextureBindGroup(device, backend);
+
+        pass.setPipeline(pipeline);
+        pass.setBindGroup(0, uniformBindGroup);
+        pass.setBindGroup(1, textureBindGroup);
+        pass.setVertexBuffer(0, this._instanceBuffer);
+        pass.setIndexBuffer(this._indexBuffer, 'uint16');
+        pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
+      } else {
+        pass.pushDebugGroup('SpriteMaterial (custom)');
+        this._drawCustomBatch(pass, device, backend, material, uniformBindGroup);
+        pass.popDebugGroup();
+      }
 
       backend.stats.batches++;
       backend.stats.drawCalls++;
@@ -374,6 +469,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._instanceCount = 0;
     this._resetSlots();
     this._currentBlendMode = null;
+    this._currentMaterial = null;
+    this._currentBaseTexture = null;
   }
 
   public destroy(): void {
@@ -644,4 +741,306 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       },
     };
   }
+
+  // ---------------------------------------------------------------------------
+  // Custom-material path
+  // ---------------------------------------------------------------------------
+
+  private _drawCustomBatch(
+    pass: GPURenderPassEncoder,
+    device: GPUDevice,
+    backend: WebGpuBackend,
+    material: SpriteMaterial,
+    projectionBindGroup: GPUBindGroup,
+  ): void {
+    const resources = this._getOrCreateCustomResources(material, device);
+    const baseTexture = this._currentBaseTexture ?? Texture.empty;
+
+    // Re-built every frame so mutations to material.uniforms.X are picked up.
+    this._uploadUserUniforms(material, resources, device);
+
+    const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormat, device);
+
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, projectionBindGroup);
+    pass.setBindGroup(1, this._getCustomBaseTextureBindGroup(resources, backend, baseTexture, device));
+    pass.setBindGroup(2, this._buildUserBindGroup(material, resources, backend, device));
+    pass.setVertexBuffer(0, this._instanceBuffer);
+    pass.setIndexBuffer(this._indexBuffer!, 'uint16');
+    pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
+  }
+
+  private _getOrCreateCustomResources(material: SpriteMaterial, device: GPUDevice): CustomSpriteResources {
+    const existing = this._customMaterials.get(material);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const wgsl = material.shader.wgsl;
+
+    if (wgsl === null) {
+      throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
+    }
+
+    // The engine owns the vertex stage: prepend the canonical sprite vertex
+    // module (VertexInput/VertexOutput, group(0) projection, group(1) base
+    // texture + sampler) to the material's fragment WGSL.
+    const shaderModule = device.createShaderModule({ code: `${spriteVertexWgsl}\n${wgsl}` });
+    const userLayout = this._buildUserBindGroupLayout(device, material);
+    const pipelineLayout = device.createPipelineLayout({
+      bindGroupLayouts: [this._uniformBindGroupLayout!, this._customBaseTextureLayout!, userLayout],
+    });
+
+    const resources: CustomSpriteResources = {
+      shaderModule,
+      userLayout,
+      pipelineLayout,
+      pipelines: new Map(),
+      userUniformBuffer: null,
+      userUniformBufferCapacity: 0,
+      baseTextureBindGroups: new WeakMap(),
+    };
+
+    this._customMaterials.set(material, resources);
+
+    material._onDispose(() => {
+      const stored = this._customMaterials.get(material);
+
+      if (stored !== undefined) {
+        this._releaseCustomResources(stored);
+        this._customMaterials.delete(material);
+      }
+    });
+
+    return resources;
+  }
+
+  private _getOrCreateCustomPipeline(
+    resources: CustomSpriteResources,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    device: GPUDevice,
+  ): GPURenderPipeline {
+    const cacheKey = `${blendMode}:${format}`;
+    const existing = resources.pipelines.get(cacheKey);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const pipeline = device.createRenderPipeline({
+      layout: resources.pipelineLayout,
+      vertex: {
+        module: resources.shaderModule,
+        entryPoint: 'vertexMain',
+        buffers: [
+          {
+            arrayStride: instanceStrideBytes,
+            stepMode: 'instance',
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: 'float32x4' },
+              { shaderLocation: 1, offset: 16, format: 'float32x3' },
+              { shaderLocation: 2, offset: 28, format: 'float32x3' },
+              { shaderLocation: 3, offset: 40, format: 'unorm16x4' },
+              { shaderLocation: 4, offset: 48, format: 'unorm8x4' },
+              { shaderLocation: 5, offset: 52, format: 'uint32' },
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: resources.shaderModule,
+        entryPoint: 'fragmentMain',
+        targets: [
+          {
+            format,
+            blend: getWebGpuBlendState(blendMode),
+            writeMask: GPUColorWrite.ALL,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+
+    resources.pipelines.set(cacheKey, pipeline);
+
+    return pipeline;
+  }
+
+  private _getCustomBaseTextureBindGroup(
+    resources: CustomSpriteResources,
+    backend: WebGpuBackend,
+    texture: Texture | RenderTexture,
+    device: GPUDevice,
+  ): GPUBindGroup {
+    const existing = resources.baseTextureBindGroups.get(texture);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const binding = backend.getTextureBinding(texture);
+    const group = device.createBindGroup({
+      layout: this._customBaseTextureLayout!,
+      entries: [
+        { binding: 0, resource: binding.view },
+        { binding: 1, resource: binding.sampler },
+      ],
+    });
+
+    resources.baseTextureBindGroups.set(texture, group);
+
+    return group;
+  }
+
+  private _buildUserBindGroupLayout(device: GPUDevice, material: SpriteMaterial): GPUBindGroupLayout {
+    const entries: GPUBindGroupLayoutEntry[] = [];
+
+    // Binding 0 always reserved for the user UBO (even if empty), so the layout
+    // is stable across user-uniform mutations.
+    entries.push({
+      binding: 0,
+      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      buffer: { type: 'uniform' },
+    });
+
+    const textureBindings = collectTextureBindings(material);
+
+    if (textureBindings.length > maxCustomTextureSlots) {
+      throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} user texture bindings.`);
+    }
+
+    let bindingIndex = 1;
+
+    for (let t = 0; t < textureBindings.length; t++) {
+      entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } });
+      bindingIndex++;
+      entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } });
+      bindingIndex++;
+    }
+
+    return device.createBindGroupLayout({ entries });
+  }
+
+  private _uploadUserUniforms(material: SpriteMaterial, resources: CustomSpriteResources, device: GPUDevice): void {
+    const scalarValues = collectScalarUniforms(material);
+
+    // Always create a UBO (even if empty) since binding 0 of the user layout is
+    // fixed. Min size 16 bytes to satisfy WebGPU's minimum buffer size.
+    const slotCount = Math.max(scalarValues.length, 1);
+    const bufferBytes = slotCount * 16;
+
+    if (resources.userUniformBuffer === null || resources.userUniformBufferCapacity < bufferBytes) {
+      resources.userUniformBuffer?.destroy();
+      resources.userUniformBufferCapacity = bufferBytes;
+      resources.userUniformBuffer = device.createBuffer({
+        size: bufferBytes,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+    }
+
+    const data = new Float32Array(bufferBytes / 4);
+
+    let slot = 0;
+
+    for (const value of scalarValues) {
+      const baseFloatIndex = slot * 4;
+
+      if (typeof value === 'number') {
+        data[baseFloatIndex] = value;
+      } else if (value instanceof Float32Array) {
+        data.set(value, baseFloatIndex);
+      } else if (value instanceof Int32Array) {
+        for (let i = 0; i < value.length; i++) {
+          data[baseFloatIndex + i] = value[i];
+        }
+      } else {
+        const arr = value as readonly number[];
+
+        for (let i = 0; i < arr.length; i++) {
+          data[baseFloatIndex + i] = arr[i];
+        }
+      }
+
+      slot++;
+    }
+
+    device.queue.writeBuffer(resources.userUniformBuffer, 0, data);
+  }
+
+  private _buildUserBindGroup(material: SpriteMaterial, resources: CustomSpriteResources, backend: WebGpuBackend, device: GPUDevice): GPUBindGroup {
+    const entries: GPUBindGroupEntry[] = [];
+
+    entries.push({ binding: 0, resource: { buffer: resources.userUniformBuffer! } });
+
+    let bindingIndex = 1;
+
+    for (const texture of collectTextureBindings(material)) {
+      const binding = backend.getTextureBinding(texture);
+      entries.push({ binding: bindingIndex, resource: binding.view });
+      bindingIndex++;
+      entries.push({ binding: bindingIndex, resource: binding.sampler });
+      bindingIndex++;
+    }
+
+    return device.createBindGroup({ layout: resources.userLayout, entries });
+  }
+
+  private _releaseCustomResources(resources: CustomSpriteResources): void {
+    resources.userUniformBuffer?.destroy();
+    resources.pipelines.clear();
+    resources.userUniformBuffer = null;
+    resources.userUniformBufferCapacity = 0;
+    resources.baseTextureBindGroups = new WeakMap();
+  }
+}
+
+function isTextureUniform(value: UniformValue): value is Texture | RenderTexture {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'width' in value &&
+    'height' in value &&
+    !(value instanceof Float32Array) &&
+    !(value instanceof Int32Array) &&
+    !Array.isArray(value)
+  );
+}
+
+/** Scalar/vector/matrix uniforms (texture values excluded) in declaration order. */
+function collectScalarUniforms(material: SpriteMaterial): Array<Exclude<UniformValue, Texture | RenderTexture>> {
+  const result: Array<Exclude<UniformValue, Texture | RenderTexture>> = [];
+
+  for (const value of Object.values(material.uniforms)) {
+    if (!isTextureUniform(value)) {
+      result.push(value);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Texture bindings claimed by the material, in a stable order: texture-valued
+ * entries of `uniforms` first (declaration order), then the dedicated
+ * `textures` map. The WGSL source must declare its `@group(2)` texture/sampler
+ * pairs in this same order.
+ */
+function collectTextureBindings(material: SpriteMaterial): Array<Texture | RenderTexture> {
+  const result: Array<Texture | RenderTexture> = [];
+
+  for (const value of Object.values(material.uniforms)) {
+    if (isTextureUniform(value)) {
+      result.push(value);
+    }
+  }
+
+  for (const texture of Object.values(material.textures)) {
+    result.push(texture);
+  }
+
+  return result;
 }
