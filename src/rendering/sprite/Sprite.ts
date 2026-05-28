@@ -179,11 +179,24 @@ export class Sprite extends Drawable {
     return this._texCoords;
   }
 
-  /** Assign a new texture, refreshing the texture frame to the full texture dimensions. */
+  /**
+   * Assign a new texture, refreshing the texture frame to the full texture dimensions.
+   *
+   * Does **not** bump the texture's version. That signal means "the source data
+   * has been mutated"; replacing the sprite's texture reference is not that.
+   * Bumping it here would force the backend to re-allocate the GPU texture on
+   * the next bind — destroying any FBO content already rendered into a
+   * {@link RenderTexture} (the cacheAsBitmap and filter capture pipelines).
+   * Call {@link updateTexture} explicitly when you mutate the source.
+   */
   public setTexture(texture: Texture | RenderTexture | null): this {
     if (this._texture !== texture) {
       this._texture = texture;
-      this.updateTexture();
+
+      if (texture !== null) {
+        this.resetTextureFrame();
+      }
+
       this.invalidateCache();
     }
 

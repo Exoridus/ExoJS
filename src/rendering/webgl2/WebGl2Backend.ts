@@ -116,6 +116,8 @@ interface DestroyListenable {
   removeDestroyListener(listener: () => void): unknown;
 }
 
+const renderTargetTextureSyncUnit = 15;
+
 /**
  * WebGL 2.0 implementation of {@link RenderBackend}. Manages the GL
  * context, texture and framebuffer caches keyed by user-side
@@ -342,6 +344,7 @@ export class WebGl2Backend implements RenderBackend {
     const changed = this._renderTarget !== renderTarget;
 
     if (changed) {
+      this._flushActiveRenderer();
       this._renderTarget = renderTarget;
       this._stats.renderTargetChanges++;
     }
@@ -1025,7 +1028,12 @@ export class WebGl2Backend implements RenderBackend {
 
     if (target instanceof RenderTexture && state.framebuffer) {
       const previousFramebuffer = this._boundFramebuffer;
+
+      const previousUnit = this._textureUnit;
+
+      this._setTextureUnit(renderTargetTextureSyncUnit);
       const textureState = this._syncTexture(target);
+      this._setTextureUnit(previousUnit);
 
       if (state.attachedTexture !== textureState.handle) {
         const gl = this._context;
