@@ -3,17 +3,18 @@ import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
+import { RenderingContext } from '@/rendering/RenderingContext';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 
 class DummyDrawable extends Drawable {}
 
-const createRuntime = (): RenderBackend => {
+const createRuntime = (): { backend: RenderBackend; context: RenderingContext } => {
   const renderTarget = new RenderTarget(200, 200, true);
   const stats = createRenderStats();
 
-  return {
+  const backend: RenderBackend = {
     backendType: RenderBackendType.WebGl2,
     stats,
     renderTarget,
@@ -74,6 +75,10 @@ const createRuntime = (): RenderBackend => {
       renderTarget.destroy();
     },
   };
+
+  const context = new RenderingContext(backend);
+
+  return { backend, context };
 };
 
 describe('Scene', () => {
@@ -104,31 +109,30 @@ describe('Scene', () => {
   // framework must never auto-render it. This test pins down the
   // "explicit instead of implicit" identity rule: Scene.draw is the
   // user's selection point, and rendering happens only when the user
-  // calls render() on the chosen subtree.
+  // calls context.render() on the chosen subtree.
   //
   // See docs/api/Scene.md#scene-root-contract.
-  test('draw(runtime) remains the explicit rendering orchestration point', () => {
-    const runtime = createRuntime();
+  test('draw(context) remains the explicit rendering orchestration point', () => {
+    const { backend, context } = createRuntime();
     const scene = new Scene();
     const world = new Container();
     const ui = new Container();
     const worldSprite = new DummyDrawable();
     const uiSprite = new DummyDrawable();
-    const worldRender = vi.spyOn(world, 'render');
-    const uiRender = vi.spyOn(ui, 'render');
+    const backendDraw = vi.spyOn(backend, 'draw');
 
     world.addChild(worldSprite);
     ui.addChild(uiSprite);
     scene.addChild(world);
     scene.addChild(ui);
 
-    scene.draw = (backend): void => {
-      world.render(backend);
+    scene.draw = (ctx): void => {
+      ctx.render(world);
     };
 
-    scene.draw(runtime);
+    scene.draw(context);
 
-    expect(worldRender).toHaveBeenCalledWith(runtime);
-    expect(uiRender).not.toHaveBeenCalled();
+    expect(backendDraw).toHaveBeenCalledWith(worldSprite);
+    expect(backendDraw).not.toHaveBeenCalledWith(uiSprite);
   });
 });

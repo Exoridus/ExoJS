@@ -20,7 +20,7 @@ export interface RenderToOptions {
  *
  * The conceptual model is "the context renders the node":
  *   context.render(node)            // into the active target (canvas by default)
- *   context.renderTo(rt, node, opts) // into an off-screen RenderTexture
+ *   context.renderTo(node, opts)    // into an off-screen RenderTexture
  * @stable
  */
 export class RenderingContext {
@@ -31,14 +31,15 @@ export class RenderingContext {
   }
 
   /** Render a RenderNode subtree into the active target via the RenderPlan machinery. */
-  public render(node: RenderNode): this {
+  public render(node: RenderNode): void {
     playRenderTree(node, this._backend);
-
-    return this;
   }
 
   /**
    * Renders `node` into an off-screen {@link RenderTexture} and returns it.
+   *
+   * The View is centered at `(width / 2, height / 2)` so that the origin
+   * of the node's local space sits at the center of the render texture.
    *
    * Saves and restores the active render target and view so the caller's
    * rendering state is undisturbed.

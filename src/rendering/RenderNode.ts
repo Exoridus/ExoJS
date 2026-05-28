@@ -204,6 +204,14 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
+  /**
+   * Raw rendering entry point. Direct backend access — bypasses the
+   * RenderPlan pipeline machinery. Prefer the high-level
+   * {@link RenderingContext.render} path via the owning
+   * `RenderingContext` wherever possible.
+   *
+   * @advanced
+   */
   public render(backend: RenderBackend): this {
     playRenderTree(this, backend);
 

@@ -5,7 +5,7 @@ import type { GamepadSlotStrategy } from '@/input/InputManager';
 import { InputManager } from '@/input/InputManager';
 import { InteractionManager } from '@/input/InteractionManager';
 import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderingContext,type RenderToOptions } from '@/rendering/RenderingContext';
+import { RenderingContext, type RenderToOptions } from '@/rendering/RenderingContext';
 import { type RenderNode } from '@/rendering/RenderNode';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
@@ -118,8 +118,6 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
   pointerDistanceThreshold: 10,
 };
 
-export type { RenderToOptions } from '@/rendering/RenderingContext';
-
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
  * controller, input + interaction managers, asset loader, tween manager,
@@ -170,7 +168,7 @@ export class Application {
   private _frameRequest = 0;
   private _backendType: 'webgl2' | 'webgpu';
   private _backend: RenderBackend;
-  private _renderer: RenderingContext;
+  private _rendering: RenderingContext;
   private _capabilities: Capabilities | null = null;
   private _documentVisible = true;
   private _cursor = 'default';
@@ -233,7 +231,7 @@ export class Application {
     this.loader = new Loader(this.options.loader);
     this._backendType = this.resolveInitialBackendType();
     this._backend = this.createBackend(this._backendType);
-    this._renderer = new RenderingContext(this._backend);
+      this._rendering = new RenderingContext(this._backend);
     this.input = new InputManager(this);
     this.interaction = new InteractionManager(this);
     this.scene = new SceneManager(this);
@@ -279,8 +277,14 @@ export class Application {
     return this._backend;
   }
 
-  public get renderer(): RenderingContext {
-    return this._renderer;
+  /**
+   * High-level rendering context. Routes scene drawing through the
+   * RenderPlan pipeline (build → optimize → play) and provides off-screen
+   * capture via {@link RenderingContext.renderTo}. Exposes the raw
+   * {@link RenderBackend} for advanced / custom-renderer use.
+   */
+  public get rendering(): RenderingContext {
+    return this._rendering;
   }
 
   /**
@@ -359,7 +363,7 @@ export class Application {
    * advancement, optional view runtime update, then `scene.update(delta)` for
    * each participating scene in stack order.
    *
-   * **Render phase** — `scene.draw(backend)` for each participating scene in
+   * **Render phase** — `scene.draw(context)` for each participating scene in
    * stack order, followed by the transition overlay when active.
    *
    * **Frame dispatch / flush** — `onFrame` signal, backend GPU flush,
@@ -479,7 +483,7 @@ export class Application {
    * Convenience wrapper that delegates to {@link RenderingContext.renderTo}.
    */
   public renderTo(node: RenderNode, options: RenderToOptions): RenderTexture {
-    return this._renderer.renderTo(node, options);
+    return this._rendering.renderTo(node, options);
   }
 
   /**
@@ -570,7 +574,7 @@ export class Application {
       this._backend.destroy();
       this._backendType = 'webgl2';
       this._backend = this.createBackend(this._backendType);
-      this._renderer = new RenderingContext(this._backend);
+    this._rendering = new RenderingContext(this._backend);
       await this._backend.initialize();
     }
   }

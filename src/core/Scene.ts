@@ -1,7 +1,7 @@
 import type { Tween } from '@/animation/Tween';
 import type { InputBinding, InputBindingOptions, InputChannel } from '@/input/InputBinding';
 import { Container } from '@/rendering/Container';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+import type { RenderingContext } from '@/rendering/RenderingContext';
 import type { RenderNode } from '@/rendering/RenderNode';
 import type { Loader } from '@/resources/Loader';
 
@@ -101,7 +101,7 @@ export interface SceneParticipationPolicy {
  *   class GameScene extends Scene {
  *       override init(loader: Loader): void { ... }
  *       override update(delta: Time): void { ... }
- *       override draw(backend: RenderBackend): void { ... }
+ *       override draw(context: RenderingContext): void { ... }
  *   }
  *
  *   app.start(new GameScene());
@@ -110,7 +110,7 @@ export interface SceneParticipationPolicy {
  *
  *   app.start(new class extends Scene {
  *       override update(delta) { ... }
- *       override draw(backend) { ... }
+ *       override draw(context) { ... }
  *   });
  * @stable
  */
@@ -134,7 +134,7 @@ export class Scene {
    *
    * `Scene.root` is an **ownership and traversal anchor**, not an
    * automatic render-authoritative root. The framework never calls
-   * `root.render(backend)` for you. `Scene.draw(backend)` is the
+   * `root.render(backend)` for you. `Scene.draw(context)` is the
    * explicit orchestration point — see {@link Scene.draw}.
    *
    * The root exists eagerly so `addChild` / `removeChild` can proxy
@@ -248,14 +248,14 @@ export class Scene {
    * automatically traverse {@link Scene.root}. Auto-rendering the
    * full hierarchy would conflict with ExoJS's "explicit instead of
    * implicit" identity. Users decide which subtree(s) render each
-   * frame — `this.root.render(backend)` is one common pattern, but
-   * selective rendering (e.g. `world.render(backend)` while skipping
-   * `ui` for a given frame) is equally valid and intentionally
+   * frame — `context.render(this.root)` is the recommended high-level
+   * path, but selective rendering (e.g. `context.render(world)` while
+   * skipping `ui` for a given frame) is equally valid and intentionally
    * supported.
    *
    * @see Scene.root for why root is structural, not render-authoritative.
    */
-  public draw(_backend: RenderBackend): void {
+  public draw(_context: RenderingContext): void {
     // override in subclass
   }
 
