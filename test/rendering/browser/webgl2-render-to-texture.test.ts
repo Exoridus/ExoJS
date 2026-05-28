@@ -1,6 +1,5 @@
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
-import { Container } from '@/rendering/Container';
 import type { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { Sprite } from '@/rendering/sprite/Sprite';
@@ -172,7 +171,7 @@ vi.mock('@/rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSourc
 vi.mock('@/rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFragmentSource }));
 vi.mock('@/rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFragmentSource }));
 
-type RgbaTuple = [number, number, number, number];
+type RGBATuple = [number, number, number, number];
 
 const canvasSize = 64;
 const defaultWebGlAttributes: WebGLContextAttributes = {
@@ -208,14 +207,14 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   return backend;
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
+const readPixel = (backend: WebGl2Backend, x: number, y: number): RGBATuple => {
   const pixel = new Uint8Array(4);
   const gl = backend.context;
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
-const readPixelsFromTarget = (backend: WebGl2Backend, target: RenderTarget, x: number, y: number): RgbaTuple => {
+const readPixelsFromTarget = (backend: WebGl2Backend, target: RenderTarget, x: number, y: number): RGBATuple => {
   const previousTarget = backend.renderTarget;
   backend.setRenderTarget(target);
   const pixel = new Uint8Array(4);
@@ -225,10 +224,10 @@ const readPixelsFromTarget = (backend: WebGl2Backend, target: RenderTarget, x: n
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
+const expectPixelNear = (actual: RGBATuple, expected: RGBATuple, tolerance = 8): void => {
   for (let index = 0; index < 4; index++) {
     if (Math.abs(actual[index] - expected[index]) > tolerance) {
-      throw new Error(`Pixel mismatch at channel ${index}: expected ${expected}, got ${actual} (tolerance ${tolerance})`);
+      throw new Error(`Pixel mismatch at channel ${index}: expected ${expected.toString()}, got ${actual.toString()} (tolerance ${tolerance})`);
     }
   }
 };
