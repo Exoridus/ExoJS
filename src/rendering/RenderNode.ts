@@ -6,10 +6,9 @@ import { getActiveInteractionManager } from '@/input/internal/interactionManager
 import { Rectangle } from '@/math/Rectangle';
 import type { Filter } from '@/rendering/filters/Filter';
 import type { Geometry } from '@/rendering/geometry/Geometry';
-import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
-import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
-import { RenderPlanPlayer } from '@/rendering/plan/RenderPlanPlayer';
+import { type RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 import type { RenderBackend } from '@/rendering/RenderBackend';
+import { playRenderTree } from '@/rendering/RenderingContext';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
@@ -206,16 +205,7 @@ export abstract class RenderNode extends SceneNode {
   }
 
   public render(backend: RenderBackend): this {
-    const builder = RenderPlanBuilder.acquire();
-
-    try {
-      const plan = builder.build(this, backend);
-
-      RenderPlanOptimizer.optimize(plan);
-      RenderPlanPlayer.play(plan, backend);
-    } finally {
-      RenderPlanBuilder.release(builder);
-    }
+    playRenderTree(this, backend);
 
     return this;
   }

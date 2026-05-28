@@ -32,6 +32,8 @@ export type { RenderBackend } from './RenderBackend';
 export { RenderBackendType } from './RenderBackendType';
 export type { DrawableConstructor, Renderer } from './Renderer';
 export { RendererRegistry } from './RendererRegistry';
+export type { RenderToOptions } from './RenderingContext';
+export { RenderingContext } from './RenderingContext';
 export type { MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
 export type { RenderPass } from './RenderPass';

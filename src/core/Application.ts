@@ -5,10 +5,10 @@ import type { GamepadSlotStrategy } from '@/input/InputManager';
 import { InputManager } from '@/input/InputManager';
 import { InteractionManager } from '@/input/InteractionManager';
 import type { RenderBackend } from '@/rendering/RenderBackend';
+import { RenderingContext,type RenderToOptions } from '@/rendering/RenderingContext';
 import { type RenderNode } from '@/rendering/RenderNode';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
-import { View } from '@/rendering/View';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { Loader, type LoaderOptions } from '@/resources/Loader';
@@ -82,17 +82,6 @@ export interface AutoBackendConfig {
   type: 'auto';
 }
 
-export interface RenderToOptions {
-  width: number;
-  height: number;
-  clearColor?: Color;
-}
-
-/**
- * Discriminated union of backend selection options. `'auto'` picks WebGPU
- * when available, falling back to WebGL2 if adapter acquisition fails;
- * the explicit values pin the choice and skip the fallback path.
- */
 export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig;
 
 const maxDeltaMs = 100;
@@ -128,6 +117,8 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
   gamepadSlotStrategy: 'sticky',
   pointerDistanceThreshold: 10,
 };
+
+export type { RenderToOptions } from '@/rendering/RenderingContext';
 
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
@@ -179,6 +170,7 @@ export class Application {
   private _frameRequest = 0;
   private _backendType: 'webgl2' | 'webgpu';
   private _backend: RenderBackend;
+  private _renderer: RenderingContext;
   private _capabilities: Capabilities | null = null;
   private _documentVisible = true;
   private _cursor = 'default';
@@ -241,6 +233,7 @@ export class Application {
     this.loader = new Loader(this.options.loader);
     this._backendType = this.resolveInitialBackendType();
     this._backend = this.createBackend(this._backendType);
+    this._renderer = new RenderingContext(this._backend);
     this.input = new InputManager(this);
     this.interaction = new InteractionManager(this);
     this.scene = new SceneManager(this);
@@ -284,6 +277,10 @@ export class Application {
 
   public get backend(): RenderBackend {
     return this._backend;
+  }
+
+  public get renderer(): RenderingContext {
+    return this._renderer;
   }
 
   /**
@@ -479,34 +476,10 @@ export class Application {
   /**
    * Renders `node` into an off-screen {@link RenderTexture} and returns it.
    *
-   * This is a convenience method for snapshotting / pre-compositing a sub-tree
-   * into a texture usable by other drawables or filters. The returned texture
-   * is sized to `options.width × options.height` and cleared to
-   * `options.clearColor` before rendering.
+   * Convenience wrapper that delegates to {@link RenderingContext.renderTo}.
    */
   public renderTo(node: RenderNode, options: RenderToOptions): RenderTexture {
-    const target = new RenderTexture(options.width, options.height);
-    const view = new View(options.width / 2, options.height / 2, options.width, options.height);
-
-    const previousTarget = this._backend.renderTarget;
-    const previousView = this._backend.view;
-
-    this._backend.setRenderTarget(target);
-    this._backend.setView(view);
-
-    if (options.clearColor !== undefined) {
-      this._backend.clear(options.clearColor);
-    }
-
-    try {
-      node.render(this._backend);
-      this._backend.flush();
-    } finally {
-      this._backend.setRenderTarget(previousTarget);
-      this._backend.setView(previousView);
-    }
-
-    return target;
+    return this._renderer.renderTo(node, options);
   }
 
   /**
@@ -597,6 +570,7 @@ export class Application {
       this._backend.destroy();
       this._backendType = 'webgl2';
       this._backend = this.createBackend(this._backendType);
+      this._renderer = new RenderingContext(this._backend);
       await this._backend.initialize();
     }
   }
