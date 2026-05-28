@@ -8,7 +8,7 @@ import { RenderTarget } from '@/rendering/RenderTarget';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
-import { View } from '@/rendering/View';
+import type { View } from '@/rendering/View';
 
 const createTexture = (width = 16, height = 16): Texture => {
   const canvas = document.createElement('canvas');
