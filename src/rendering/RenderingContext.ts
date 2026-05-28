@@ -5,28 +5,12 @@ import { type RenderStats } from '@/rendering/RenderStats';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { View } from '@/rendering/View';
 
-import { RenderPlanBuilder } from './plan/RenderPlanBuilder';
-import { RenderPlanOptimizer } from './plan/RenderPlanOptimizer';
-import { RenderPlanPlayer } from './plan/RenderPlanPlayer';
+import { playRenderTree } from './plan/playRenderTree';
 
 export interface RenderToOptions {
   width: number;
   height: number;
   clearColor?: Color;
-}
-
-/** @internal — single source of truth for plan build→optimize→play. */
-export function playRenderTree(node: RenderNode, backend: RenderBackend): void {
-  const builder = RenderPlanBuilder.acquire();
-
-  try {
-    const plan = builder.build(node, backend);
-
-    RenderPlanOptimizer.optimize(plan);
-    RenderPlanPlayer.play(plan, backend);
-  } finally {
-    RenderPlanBuilder.release(builder);
-  }
 }
 
 /**

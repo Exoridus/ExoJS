@@ -6,9 +6,9 @@ import { getActiveInteractionManager } from '@/input/internal/interactionManager
 import { Rectangle } from '@/math/Rectangle';
 import type { Filter } from '@/rendering/filters/Filter';
 import type { Geometry } from '@/rendering/geometry/Geometry';
+import { playRenderTree } from '@/rendering/plan/playRenderTree';
 import { type RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 import type { RenderBackend } from '@/rendering/RenderBackend';
-import { playRenderTree } from '@/rendering/RenderingContext';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
