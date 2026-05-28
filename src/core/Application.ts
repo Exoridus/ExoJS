@@ -5,7 +5,10 @@ import type { GamepadSlotStrategy } from '@/input/InputManager';
 import { InputManager } from '@/input/InputManager';
 import { InteractionManager } from '@/input/InteractionManager';
 import type { RenderBackend } from '@/rendering/RenderBackend';
+import { type RenderNode } from '@/rendering/RenderNode';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
+import { View } from '@/rendering/View';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { Loader, type LoaderOptions } from '@/resources/Loader';
@@ -77,6 +80,12 @@ export interface WebGpuBackendConfig {
 
 export interface AutoBackendConfig {
   type: 'auto';
+}
+
+export interface RenderToOptions {
+  width: number;
+  height: number;
+  clearColor?: Color;
 }
 
 /**
@@ -465,6 +474,39 @@ export class Application {
     this.canvas.style.cursor = this._cursor;
 
     return this;
+  }
+
+  /**
+   * Renders `node` into an off-screen {@link RenderTexture} and returns it.
+   *
+   * This is a convenience method for snapshotting / pre-compositing a sub-tree
+   * into a texture usable by other drawables or filters. The returned texture
+   * is sized to `options.width × options.height` and cleared to
+   * `options.clearColor` before rendering.
+   */
+  public renderTo(node: RenderNode, options: RenderToOptions): RenderTexture {
+    const target = new RenderTexture(options.width, options.height);
+    const view = new View(options.width / 2, options.height / 2, options.width, options.height);
+
+    const previousTarget = this._backend.renderTarget;
+    const previousView = this._backend.view;
+
+    this._backend.setRenderTarget(target);
+    this._backend.setView(view);
+
+    if (options.clearColor !== undefined) {
+      this._backend.clear(options.clearColor);
+    }
+
+    try {
+      node.render(this._backend);
+      this._backend.flush();
+    } finally {
+      this._backend.setRenderTarget(previousTarget);
+      this._backend.setView(previousView);
+    }
+
+    return target;
   }
 
   /**
