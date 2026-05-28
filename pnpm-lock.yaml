@@ -31,7 +31,7 @@ importers:
         version: 25.9.1
       '@vitest/browser':
         specifier: ^4.1.7
-        version: 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7(@types/node@25.9.1)(@vitest/browser-playwright@4.1.7)(@vitest/coverage-istanbul@4.1.7)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0)))
+        version: 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7)
       '@vitest/browser-playwright':
         specifier: ^4.1.7
         version: 4.1.7(playwright@1.60.0)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7)
@@ -105,6 +105,8 @@ importers:
         specifier: ^4.1.7
         version: 4.1.7(@types/node@25.9.1)(@vitest/browser-playwright@4.1.7)(@vitest/coverage-istanbul@4.1.7)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))
 
+  packages/assets: {}
+
   site:
     dependencies:
       '@astrojs/mdx':
@@ -113,6 +115,9 @@ importers:
       '@codexo/exojs':
         specifier: file:..
         version: 'file:'
+      '@codexo/exojs-assets':
+        specifier: workspace:*
+        version: link:../packages/assets
       '@fontsource/inter':
         specifier: ^5.2.8
         version: 5.2.8
@@ -5161,7 +5166,7 @@ snapshots:
 
   '@vitest/browser-playwright@4.1.7(playwright@1.60.0)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7)':
     dependencies:
-      '@vitest/browser': 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7(@types/node@25.9.1)(@vitest/browser-playwright@4.1.7)(@vitest/coverage-istanbul@4.1.7)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0)))
+      '@vitest/browser': 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7)
       '@vitest/mocker': 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))
       playwright: 1.60.0
       tinyrainbow: 3.1.0
@@ -5172,7 +5177,7 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser@4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7(@types/node@25.9.1)(@vitest/browser-playwright@4.1.7)(@vitest/coverage-istanbul@4.1.7)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0)))':
+  '@vitest/browser@4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7)':
     dependencies:
       '@blazediff/core': 1.9.1
       '@vitest/mocker': 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))
@@ -5219,7 +5224,7 @@ snapshots:
       tinyrainbow: 3.1.0
       vitest: 4.1.7(@types/node@25.9.1)(@vitest/browser-playwright@4.1.7)(@vitest/coverage-istanbul@4.1.7)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))
     optionalDependencies:
-      '@vitest/browser': 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7(@types/node@25.9.1)(@vitest/browser-playwright@4.1.7)(@vitest/coverage-istanbul@4.1.7)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0)))
+      '@vitest/browser': 4.1.7(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))(vitest@4.1.7)
     optional: true
 
   '@vitest/expect@4.1.7':
