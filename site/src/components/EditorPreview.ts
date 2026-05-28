@@ -4,6 +4,7 @@ import type { Capability } from '../lib/examples-catalog';
 import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
 import { buildIframeUrl } from '../lib/url-builder';
+import { assets } from '../lib/asset-catalog';
 import componentStyles from './EditorPreview.scss?inline';
 import './LoadingSpinner';
 
@@ -24,6 +25,7 @@ const CAPABILITY_LABELS: Record<Capability, string> = {
 interface ExamplePreviewWindow extends Window {
     __EXAMPLE_META__?: Example | null;
     __EXAMPLE_PREVIEW_ERROR_RENDERED__?: boolean;
+    assets?: Record<string, unknown>;
 }
 
 export interface PreviewShellState {
@@ -130,6 +132,7 @@ export class EditorPreview extends LitElement {
 
         if (iframeWindow) {
             iframeWindow.__EXAMPLE_META__ = this.exampleMeta;
+            iframeWindow.assets = assets;
             this._installPreviewErrorHandlers(iframeWindow, iframeBody);
         }
 

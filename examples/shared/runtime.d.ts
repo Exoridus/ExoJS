@@ -46,10 +46,16 @@ export interface ExampleRuntimeMeta {
     status?: string;
 }
 
+export interface ExampleRuntime {
+    assets: Record<string, unknown>;
+    assetUrl?: (path: string) => string;
+}
+
 declare global {
     interface Window {
         __EXAMPLE_META__?: ExampleRuntimeMeta | null;
         __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
+        assets?: Record<string, unknown>;
     }
 }
 

@@ -34,6 +34,7 @@
     "dependencies": {
         "@astrojs/mdx": "^5.0.4",
         "@codexo/exojs": "file:..",
+        "@codexo/exojs-assets": "workspace:*",
         "@fontsource/inter": "^5.2.8",
         "@fontsource/jetbrains-mono": "^5.2.8",
         "@fontsource/space-grotesk": "^5.2.10",
