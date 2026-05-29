@@ -1,14 +1,13 @@
 import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -18,8 +17,11 @@ const title = 'VOID EMPEROR';
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { boss: 'image/bunny.png' });
-            await loader.load(Music, { track: 'audio/example.ogg' });
+            // TODO: replace bunny boss sprite when a suitable Kenney character asset is added to the catalog
+            const bossUrl = assets?.textures?.bunny ?? 'assets/image/bunny.png';
+            const trackUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
+            await loader.load(Texture, { boss: bossUrl });
+            await loader.load(Music, { track: trackUrl });
         }
         init(loader) {
             this._view = new View(220, 300, 800, 600);

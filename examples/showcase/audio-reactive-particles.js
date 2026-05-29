@@ -13,15 +13,14 @@ import {
     Vector,
 } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -31,8 +30,10 @@ const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(13
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Music, { track: 'audio/example.ogg' });
-            await loader.load(Texture, { particle: 'image/particle.png' });
+            const trackUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
+            const particleUrl = assets?.textures?.particleLight ?? 'assets/demo/textures/particle-light.png';
+            await loader.load(Music, { track: trackUrl });
+            await loader.load(Texture, { particle: particleUrl });
         }
         init(loader) {
             this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();

@@ -1,14 +1,13 @@
 import { Application, Color, Scene, Sound, Sprite, Text, Texture } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 900,
         height: 620,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -22,8 +21,10 @@ const lines = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { portrait: 'image/bunny.png' });
-            await loader.load(Sound, { beep: 'audio/example.ogg' });
+            const portraitUrl = assets?.textures?.bunny ?? 'assets/image/bunny.png';
+            const beepUrl = assets?.audio?.uiConfirm ?? 'assets/demo/audio/ui-confirm.ogg';
+            await loader.load(Texture, { portrait: portraitUrl });
+            await loader.load(Sound, { beep: beepUrl });
         }
         init(loader) {
             this._portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(1.7).setPosition(170, 420);
