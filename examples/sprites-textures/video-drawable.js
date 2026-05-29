@@ -1,5 +1,7 @@
 import { Application, Color, Scene, Video } from '@codexo/exojs';
 
+const VIDEO_URL = globalThis.assets?.video?.demoLoop ?? 'video/demo-loop.webm';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -16,7 +18,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Video, { demo: 'video/demo-loop.webm' });
+            await loader.load(Video, { demo: VIDEO_URL });
         }
         init(loader) {
             const { width, height } = this.app.canvas;

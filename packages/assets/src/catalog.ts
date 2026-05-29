@@ -142,6 +142,9 @@ export const rawAssets = {
         imagePlaceholder: 'demo/svg/image-placeholder.svg',
         runeMark: 'demo/svg/rune-mark.svg',
     },
+    video: {
+        demoLoop: 'demo/video/demo-loop.webm',
+    },
     inputPrompts: {
         generic: {
             image: 'demo/input-prompts/generic.png',
