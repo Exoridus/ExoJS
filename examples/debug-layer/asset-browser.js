@@ -38,7 +38,14 @@ const CATEGORIES = [
     { id: 'fonts',        label: 'FNT',  catKey: 'fonts' },
     { id: 'video',        label: 'VID',  catKey: 'video' },
     { id: 'inputPrompts', label: 'INP',  catKey: 'inputPrompts' },
+    { id: 'technical',    label: 'TECH', catKey: 'technical' },
 ];
+
+const TECH_PURPOSE = {
+    alpha:     'alpha / premultiplied / halo checks',
+    filtering: 'nearest / linear / sampler checks',
+    color:     'ramp / gamma / color-shift checks',
+};
 
 const BG_OPTIONS = [
     { label: 'W', r: 255, g: 255, b: 255 },
@@ -95,6 +102,7 @@ app.start(
         _svgSprites     = new Map();  // key → Sprite (svg)
         _inpSheets      = new Map();  // key → Spritesheet (inputPrompts)
         _fontFamilies   = new Map();  // key → CSS family string (fonts)
+        _techSprites    = new Map();  // 'subcat.key' → Sprite (technical)
 
         // Lazily created per-draw objects
         _animG = null;
@@ -125,6 +133,15 @@ app.start(
         _itemTexts = Array.from({ length: 22 }, () => new Text('', { fillColor: C.white, fontSize: 13 }));
 
         // Preview area texts
+        // Technical sidebar headers (one per subcategory)
+        _techHeaderTexts = new Map([
+            ['alpha',     new Text('ALPHA',     { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
+            ['filtering', new Text('FILTERING', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
+            ['color',     new Text('COLOR',     { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
+        ]);
+
+        _txtTechPurpose = new Text('', { fillColor: C.dim, fontSize: 11 });
+
         _txtNoAssets  = new Text(
             'globalThis.assets is not available.\nRun this example in the ExoJS playground.',
             { fillColor: C.dim, fontSize: 16 },
@@ -190,6 +207,15 @@ app.start(
                 const family = 'assetbrowser_' + k;
                 await loader.load(FontFace, { ['fnt_' + k]: url }, { family });
             }
+
+            // Technical PNGs (loaded as textures, keyed by 'tech_subcat_key')
+            const techBatch = {};
+            for (const [subcat, items] of Object.entries(catalog.technical ?? {})) {
+                for (const [k, url] of Object.entries(items)) {
+                    techBatch['tech_' + subcat + '_' + k] = url;
+                }
+            }
+            if (Object.keys(techBatch).length) await loader.load(Texture, techBatch);
         }
 
         // ── Init phase ─────────────────────────────────────────────────────
@@ -241,6 +267,15 @@ app.start(
                 this._fontFamilies.set(k, 'assetbrowser_' + k);
             }
 
+            // Build technical sprites
+            for (const [subcat, items] of Object.entries(catalog.technical ?? {})) {
+                for (const [k] of Object.entries(items)) {
+                    const s = new Sprite(loader.get(Texture, 'tech_' + subcat + '_' + k));
+                    s.setAnchor(0.5);
+                    this._techSprites.set(subcat + '.' + k, s);
+                }
+            }
+
             // Pointer & wheel input
             this.app.input.onPointerTap.add(p => this._onTap(p.x, p.y));
             this.app.input.onPointerMove.add(p => this._onMove(p.x, p.y));
@@ -250,8 +285,21 @@ app.start(
         }
 
         // ── Helpers ────────────────────────────────────────────────────────
+        _techFlatKeys() {
+            if (!catalog?.technical) return [];
+            const out = [];
+            for (const subcat of ['alpha', 'filtering', 'color']) {
+                const items = catalog.technical[subcat];
+                if (!items) continue;
+                out.push(subcat);                                    // header
+                for (const k of Object.keys(items)) out.push(subcat + '.' + k);
+            }
+            return out;
+        }
+
         _keys() {
             if (!catalog) return [];
+            if (this._cat === 'technical') return this._techFlatKeys();
             const cat = CATEGORIES.find(c => c.id === this._cat);
             const obj = catalog[cat?.catKey];
             return obj ? Object.keys(obj) : [];
@@ -259,6 +307,11 @@ app.start(
 
         _assetPath() {
             if (!catalog || !this._key) return '';
+            if (this._cat === 'technical') {
+                if (!this._key.includes('.')) return '';
+                const [subcat, itemKey] = this._key.split('.');
+                return catalog.technical?.[subcat]?.[itemKey] ?? '';
+            }
             const cat = CATEGORIES.find(c => c.id === this._cat);
             const v = catalog[cat?.catKey]?.[this._key];
             if (typeof v === 'string')          return v;
@@ -273,7 +326,10 @@ app.start(
 
         _selectFirstInCategory() {
             const keys = this._keys();
-            this._key = keys[0] ?? null;
+            // For technical: skip header rows (no dot means header)
+            this._key = this._cat === 'technical'
+                ? (keys.find(k => k.includes('.')) ?? null)
+                : (keys[0] ?? null);
             this._scrollOff = 0;
             this._resetPreviewState();
         }
@@ -346,7 +402,8 @@ app.start(
                 const idx = Math.floor((y - LIST_Y) / ITEM_H) + this._scrollOff;
                 if (idx >= 0 && idx < keys.length) {
                     const newKey = keys[idx];
-                    if (newKey !== this._key) {
+                    const isHeader = this._cat === 'technical' && !newKey.includes('.');
+                    if (!isHeader && newKey !== this._key) {
                         this._key = newKey;
                         this._resetPreviewState();
                     }
@@ -386,8 +443,12 @@ app.start(
         _onMove(x, y) {
             this._hoverIdx = null;
             if (x >= 0 && x < SIDEBAR_W && y >= TOOLBAR_H) {
+                const keys = this._keys();
                 const idx = Math.floor((y - LIST_Y) / ITEM_H) + this._scrollOff;
-                if (idx >= 0 && idx < this._keys().length) this._hoverIdx = idx;
+                if (idx >= 0 && idx < keys.length) {
+                    const isHeader = this._cat === 'technical' && !keys[idx].includes('.');
+                    if (!isHeader) this._hoverIdx = idx;
+                }
             }
         }
 
@@ -504,13 +565,18 @@ app.start(
 
             const keys = this._keys();
 
-            // Item backgrounds (selected / hover)
+            // Item backgrounds (selected / hover / technical headers)
             for (let i = 0; i < keys.length; i++) {
                 const iy = LIST_Y + (i - this._scrollOff) * ITEM_H;
                 if (iy + ITEM_H <= TOOLBAR_H || iy >= H) continue;
-                const isSelected = keys[i] === this._key;
-                const isHover    = this._hoverIdx === i && !isSelected;
-                if (isSelected) {
+                const isHeader   = this._cat === 'technical' && !keys[i].includes('.');
+                const isSelected = !isHeader && keys[i] === this._key;
+                const isHover    = !isHeader && this._hoverIdx === i && !isSelected;
+                if (isHeader) {
+                    g.fillColor = C.infoBar;
+                    g.lineWidth = 0;
+                    g.drawRectangle(0, iy, SIDEBAR_W - 1, ITEM_H);
+                } else if (isSelected) {
                     g.fillColor = C.active;
                     g.lineWidth = 0;
                     g.drawRectangle(0, iy, SIDEBAR_W - 1, ITEM_H);
@@ -527,11 +593,20 @@ app.start(
             for (let i = 0; i < keys.length && (i - this._scrollOff) < this._itemTexts.length; i++) {
                 const iy = LIST_Y + (i - this._scrollOff) * ITEM_H;
                 if (iy + ITEM_H <= TOOLBAR_H || iy >= H) continue;
+
+                // Technical subcategory header rows
+                if (this._cat === 'technical' && !keys[i].includes('.')) {
+                    const ht = this._techHeaderTexts.get(keys[i]);
+                    if (ht) { ht.setPosition(10, iy + 12); context.render(ht); }
+                    continue;
+                }
+
                 const t = this._itemTexts[i - this._scrollOff];
                 if (!t) continue;
-                t.text = keys[i];
+                // For technical items show only the leaf key, indented
+                t.text = this._cat === 'technical' ? (keys[i].split('.')[1] ?? keys[i]) : keys[i];
                 t.style.fillColor = keys[i] === this._key ? C.white : C.dim;
-                t.setPosition(10, iy + 10);
+                t.setPosition(this._cat === 'technical' ? 18 : 10, iy + 10);
                 context.render(t);
             }
 
@@ -570,6 +645,7 @@ app.start(
                 case 'fonts':        this._drawFontPreview(context);  break;
                 case 'video':        this._drawVideoPreview(context); break;
                 case 'inputPrompts': this._drawInpPreview(context);   break;
+                case 'technical':    this._drawTechPreview(context);  break;
             }
 
             this._drawInfoBar(context);
@@ -766,6 +842,25 @@ app.start(
                 `VIDEO\n\nKey: assets.video.${this._key}\nURL: ${this._assetPath()}\n\nOpen the URL in your browser to preview.`;
             this._txtMeta.setPosition(PREVIEW_X + 40, PREVIEW_Y + 80);
             context.render(this._txtMeta);
+        }
+
+        // ── Draw: technical PNG preview ────────────────────────────────────
+        _drawTechPreview(context) {
+            if (!this._key?.includes('.')) return;
+            const sprite = this._techSprites.get(this._key);
+            if (!sprite) return;
+            const { cx, cy, maxW, maxH } = this._previewCenter();
+            // Leave 28 px at bottom for the purpose label
+            this._fitSprite(sprite, maxW, maxH - 28, cx, cy - 14);
+            context.render(sprite);
+
+            const subcat = this._key.split('.')[0];
+            const purpose = TECH_PURPOSE[subcat] ?? '';
+            if (purpose) {
+                this._txtTechPurpose.text = purpose;
+                this._txtTechPurpose.setPosition(PREVIEW_X + 16, PREVIEW_Y + PREVIEW_H - 22);
+                context.render(this._txtTechPurpose);
+            }
         }
 
         // ── Draw: animation controls ───────────────────────────────────────
