@@ -9,7 +9,7 @@ const catalog = globalThis.assets ?? null;
 // ─── Layout constants ─────────────────────────────────────────────────────────
 const W = 900;
 const H = 680;
-const TOOLBAR_H = 52;
+const TOOLBAR_H = 110;
 const SIDEBAR_W = 220;
 const ITEM_H = 36;
 const LIST_Y = TOOLBAR_H + 4;
@@ -18,19 +18,20 @@ const PREVIEW_Y = TOOLBAR_H;
 const PREVIEW_W = W - SIDEBAR_W;
 const PREVIEW_H = H - TOOLBAR_H;
 
-// Category toolbar
-const CAT_BTN_W = 86;
-const CAT_BTN_H = 40;
-const CAT_BTN_Y = 6;
+// Category toolbar – two rows of 8
+const CAT_BTN_W = 82;
+const CAT_BTN_H = 38;
+const CAT_BTN_Y1 = 6;
+const CAT_BTN_Y2 = 58;
 const CAT_BTN_X0 = 6;
 
-// BG toggle buttons (right side of toolbar)
+// BG toggle buttons (right side of toolbar, row 1)
 const BG_BTN_SIZE = 26;
-const BG_BTN_Y = 13;
+const BG_BTN_Y = 16;
 const BG_BTN_X0 = W - 3 * (BG_BTN_SIZE + 5) - 6;
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-const CATEGORIES = [
+const CATEGORIES_ROW1 = [
     { id: 'textures',     label: 'IMG',  catKey: 'textures' },
     { id: 'sprites',      label: 'SPR',  catKey: 'sprites' },
     { id: 'audio',        label: 'AUD',  catKey: 'audio' },
@@ -40,6 +41,19 @@ const CATEGORIES = [
     { id: 'inputPrompts', label: 'INP',  catKey: 'inputPrompts' },
     { id: 'technical',    label: 'TECH', catKey: 'technical' },
 ];
+
+const CATEGORIES_ROW2 = [
+    { id: 'sound',        label: 'SND',  catKey: 'sound' },
+    { id: 'music',        label: 'MUS',  catKey: 'music' },
+    { id: 'soundSprites', label: 'SDS',  catKey: 'soundSprites' },
+    { id: 'spritesheets', label: 'SSH',  catKey: 'spritesheets' },
+    { id: 'tilesets',     label: 'TLS',  catKey: 'tilesets' },
+    { id: 'backgrounds',  label: 'BGS',  catKey: 'backgrounds' },
+    { id: 'cursors',      label: 'CSR',  catKey: 'cursors' },
+    { id: 'vendor',       label: 'VND',  catKey: 'vendor' },
+];
+
+const CATEGORIES = [...CATEGORIES_ROW1, ...CATEGORIES_ROW2];
 
 const TECH_PURPOSE = {
     alpha:     'alpha / premultiplied / halo checks',
@@ -85,11 +99,14 @@ app.start(
         _cat = 'textures';
         _key = null;
         _bgIdx = 1;
-        _scrollOff = 0;  // in items
+        _scrollOff = 0;
         _hoverIdx = null;
 
-        // Audio state — keyed by catalog audio key → Music instance
-        _audioMusics = new Map();
+        // Audio state — keyed by catalog key → Music instance
+        _audioMusics    = new Map();  // audio.*
+        _soundMusics    = new Map();  // sound.*
+        _musicMusics    = new Map();  // music.*
+        _soundSpriteAudio = new Map(); // soundSprites.* → Music
 
         // Sprite animation state
         _frameIdx = 0;
@@ -97,12 +114,18 @@ app.start(
         _animPlaying = true;
 
         // Asset maps (populated in init())
-        _texSprites     = new Map();  // key → Sprite (textures)
-        _sprSheets      = new Map();  // key → Spritesheet (sprites)
-        _svgSprites     = new Map();  // key → Sprite (svg)
-        _inpSheets      = new Map();  // key → Spritesheet (inputPrompts)
-        _fontFamilies   = new Map();  // key → CSS family string (fonts)
-        _techSprites    = new Map();  // 'subcat.key' → Sprite (technical)
+        _texSprites     = new Map();  // textures.key → Sprite
+        _sprSheets      = new Map();  // sprites.key  → Spritesheet
+        _sshSheets      = new Map();  // spritesheets.key → Spritesheet
+        _svgSprites     = new Map();  // svg.key → Sprite
+        _inpSheets      = new Map();  // inputPrompts.key → Spritesheet
+        _fontFamilies   = new Map();  // fonts.key → CSS family string
+        _techSprites    = new Map();  // 'subcat.key' → Sprite
+        _bgSprites      = new Map();  // backgrounds.key → Sprite
+        _cursorSprites  = new Map();  // cursors.key → Sprite
+        _tilesetSprites = new Map();  // tilesets.key → Sprite
+        _soundSpriteData = new Map(); // soundSprites.key → parsed JSON
+        _vendorData     = new Map();  // vendor.key → parsed JSON
 
         // Lazily created per-draw objects
         _animG = null;
@@ -123,17 +146,13 @@ app.start(
         });
         _bgBtnTexts = BG_OPTIONS.map(o => new Text(o.label, { fillColor: C.dim, fontSize: 11, fontWeight: 'bold' }));
 
-        // Info bar texts
         _txtKey   = new Text('', { fillColor: C.white,  fontSize: 12, fontWeight: 'bold' });
         _txtPath  = new Text('', { fillColor: C.dim,    fontSize: 11 });
         _txtType  = new Text('', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' });
         _txtCopy  = new Text('COPY KEY', { fillColor: C.white, fontSize: 10 });
 
-        // List item texts (pooled – enough for the visible list)
         _itemTexts = Array.from({ length: 22 }, () => new Text('', { fillColor: C.white, fontSize: 13 }));
 
-        // Preview area texts
-        // Technical sidebar headers (one per subcategory)
         _techHeaderTexts = new Map([
             ['alpha',     new Text('ALPHA',     { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
             ['filtering', new Text('FILTERING', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
@@ -176,6 +195,18 @@ app.start(
                 await loader.load(Json, sprJsonBatch);
             }
 
+            // Spritesheets (image + JSON)
+            const sshImgBatch = {};
+            const sshJsonBatch = {};
+            for (const [k, entry] of Object.entries(catalog.spritesheets ?? {})) {
+                sshImgBatch['ssh_' + k]  = entry.image;
+                sshJsonBatch['ssh_' + k] = entry.data;
+            }
+            if (Object.keys(sshImgBatch).length) {
+                await loader.load(Texture, sshImgBatch);
+                await loader.load(Json, sshJsonBatch);
+            }
+
             // SVG
             const svgBatch = {};
             for (const [k, url] of Object.entries(catalog.svg ?? {})) {
@@ -195,12 +226,38 @@ app.start(
                 await loader.load(Json, inpJsonBatch);
             }
 
-            // Audio — loaded as Music for true pause/resume support
+            // Audio (legacy)
             const audBatch = {};
             for (const [k, url] of Object.entries(catalog.audio ?? {})) {
                 audBatch['aud_' + k] = url;
             }
             if (Object.keys(audBatch).length) await loader.load(Music, audBatch);
+
+            // Sound
+            const sndBatch = {};
+            for (const [k, url] of Object.entries(catalog.sound ?? {})) {
+                sndBatch['snd_' + k] = url;
+            }
+            if (Object.keys(sndBatch).length) await loader.load(Music, sndBatch);
+
+            // Music
+            const musBatch = {};
+            for (const [k, url] of Object.entries(catalog.music ?? {})) {
+                musBatch['mus_' + k] = url;
+            }
+            if (Object.keys(musBatch).length) await loader.load(Music, musBatch);
+
+            // SoundSprites – load audio + JSON data
+            const sdsBatch = {};
+            const sdsJsonBatch = {};
+            for (const [k, entry] of Object.entries(catalog.soundSprites ?? {})) {
+                sdsBatch['sds_' + k]     = entry.audio;
+                sdsJsonBatch['sds_' + k] = entry.data;
+            }
+            if (Object.keys(sdsBatch).length) {
+                await loader.load(Music, sdsBatch);
+                await loader.load(Json, sdsJsonBatch);
+            }
 
             // Fonts
             for (const [k, url] of Object.entries(catalog.fonts ?? {})) {
@@ -208,7 +265,7 @@ app.start(
                 await loader.load(FontFace, { ['fnt_' + k]: url }, { family });
             }
 
-            // Technical PNGs (loaded as textures, keyed by 'tech_subcat_key')
+            // Technical PNGs
             const techBatch = {};
             for (const [subcat, items] of Object.entries(catalog.technical ?? {})) {
                 for (const [k, url] of Object.entries(items)) {
@@ -216,6 +273,34 @@ app.start(
                 }
             }
             if (Object.keys(techBatch).length) await loader.load(Texture, techBatch);
+
+            // Backgrounds
+            const bgBatch = {};
+            for (const [k, url] of Object.entries(catalog.backgrounds ?? {})) {
+                bgBatch['bg_' + k] = url;
+            }
+            if (Object.keys(bgBatch).length) await loader.load(Texture, bgBatch);
+
+            // Cursors (SVG)
+            const curBatch = {};
+            for (const [k, url] of Object.entries(catalog.cursors ?? {})) {
+                curBatch['cur_' + k] = url;
+            }
+            if (Object.keys(curBatch).length) await loader.load(SvgAsset, curBatch);
+
+            // Tilesets (image only)
+            const tlsBatch = {};
+            for (const [k, entry] of Object.entries(catalog.tilesets ?? {})) {
+                tlsBatch['tls_' + k] = entry.image;
+            }
+            if (Object.keys(tlsBatch).length) await loader.load(Texture, tlsBatch);
+
+            // Vendor JSON
+            const vndBatch = {};
+            for (const [k, url] of Object.entries(catalog.vendor ?? {})) {
+                vndBatch['vnd_' + k] = url;
+            }
+            if (Object.keys(vndBatch).length) await loader.load(Json, vndBatch);
         }
 
         // ── Init phase ─────────────────────────────────────────────────────
@@ -225,14 +310,12 @@ app.start(
                 return;
             }
 
-            // Build texture sprites
             for (const [k] of Object.entries(catalog.textures ?? {})) {
                 const s = new Sprite(loader.get(Texture, 'tex_' + k));
                 s.setAnchor(0.5);
                 this._texSprites.set(k, s);
             }
 
-            // Build spritesheets
             for (const [k] of Object.entries(catalog.sprites ?? {})) {
                 const tex  = loader.get(Texture, 'spr_' + k);
                 const data = loader.get(Json, 'spr_' + k);
@@ -241,14 +324,20 @@ app.start(
                 for (const s of ss.sprites.values()) s.setAnchor(0.5);
             }
 
-            // Build SVG sprites
+            for (const [k] of Object.entries(catalog.spritesheets ?? {})) {
+                const tex  = loader.get(Texture, 'ssh_' + k);
+                const data = loader.get(Json, 'ssh_' + k);
+                const ss   = new Spritesheet(tex, data);
+                this._sshSheets.set(k, ss);
+                for (const s of ss.sprites.values()) s.setAnchor(0.5);
+            }
+
             for (const [k] of Object.entries(catalog.svg ?? {})) {
                 const s = new Sprite(new Texture(loader.get(SvgAsset, 'svg_' + k)));
                 s.setAnchor(0.5);
                 this._svgSprites.set(k, s);
             }
 
-            // Build input-prompt spritesheets
             for (const [k] of Object.entries(catalog.inputPrompts ?? {})) {
                 const tex  = loader.get(Texture, 'inp_' + k);
                 const data = loader.get(Json, 'inp_' + k);
@@ -257,17 +346,27 @@ app.start(
                 for (const s of ss.sprites.values()) s.setAnchor(0.5);
             }
 
-            // Build audio Music map
             for (const [k] of Object.entries(catalog.audio ?? {})) {
                 this._audioMusics.set(k, loader.get(Music, 'aud_' + k));
             }
 
-            // Record font families
+            for (const [k] of Object.entries(catalog.sound ?? {})) {
+                this._soundMusics.set(k, loader.get(Music, 'snd_' + k));
+            }
+
+            for (const [k] of Object.entries(catalog.music ?? {})) {
+                this._musicMusics.set(k, loader.get(Music, 'mus_' + k));
+            }
+
+            for (const [k] of Object.entries(catalog.soundSprites ?? {})) {
+                this._soundSpriteAudio.set(k, loader.get(Music, 'sds_' + k));
+                this._soundSpriteData.set(k, loader.get(Json, 'sds_' + k));
+            }
+
             for (const [k] of Object.entries(catalog.fonts ?? {})) {
                 this._fontFamilies.set(k, 'assetbrowser_' + k);
             }
 
-            // Build technical sprites
             for (const [subcat, items] of Object.entries(catalog.technical ?? {})) {
                 for (const [k] of Object.entries(items)) {
                     const s = new Sprite(loader.get(Texture, 'tech_' + subcat + '_' + k));
@@ -276,7 +375,28 @@ app.start(
                 }
             }
 
-            // Pointer & wheel input
+            for (const [k] of Object.entries(catalog.backgrounds ?? {})) {
+                const s = new Sprite(loader.get(Texture, 'bg_' + k));
+                s.setAnchor(0.5);
+                this._bgSprites.set(k, s);
+            }
+
+            for (const [k] of Object.entries(catalog.cursors ?? {})) {
+                const s = new Sprite(new Texture(loader.get(SvgAsset, 'cur_' + k)));
+                s.setAnchor(0.5);
+                this._cursorSprites.set(k, s);
+            }
+
+            for (const [k] of Object.entries(catalog.tilesets ?? {})) {
+                const s = new Sprite(loader.get(Texture, 'tls_' + k));
+                s.setAnchor(0.5);
+                this._tilesetSprites.set(k, s);
+            }
+
+            for (const [k] of Object.entries(catalog.vendor ?? {})) {
+                this._vendorData.set(k, loader.get(Json, 'vnd_' + k));
+            }
+
             this.app.input.onPointerTap.add(p => this._onTap(p.x, p.y));
             this.app.input.onPointerMove.add(p => this._onMove(p.x, p.y));
             this.app.input.onMouseWheel.add(v => this._onWheel(v.y));
@@ -291,7 +411,7 @@ app.start(
             for (const subcat of ['alpha', 'filtering', 'color']) {
                 const items = catalog.technical[subcat];
                 if (!items) continue;
-                out.push(subcat);                                    // header
+                out.push(subcat);
                 for (const k of Object.keys(items)) out.push(subcat + '.' + k);
             }
             return out;
@@ -314,8 +434,9 @@ app.start(
             }
             const cat = CATEGORIES.find(c => c.id === this._cat);
             const v = catalog[cat?.catKey]?.[this._key];
-            if (typeof v === 'string')          return v;
-            if (v && typeof v.image === 'string') return v.image;
+            if (typeof v === 'string')              return v;
+            if (v && typeof v.image === 'string')   return v.image;
+            if (v && typeof v.audio === 'string')   return v.audio;
             return '';
         }
 
@@ -326,7 +447,6 @@ app.start(
 
         _selectFirstInCategory() {
             const keys = this._keys();
-            // For technical: skip header rows (no dot means header)
             this._key = this._cat === 'technical'
                 ? (keys.find(k => k.includes('.')) ?? null)
                 : (keys[0] ?? null);
@@ -335,35 +455,43 @@ app.start(
         }
 
         _resetPreviewState() {
-            this._stopAudio();
+            this._stopAllAudio();
             this._frameIdx = 0;
             this._frameTimer = 0;
             this._animPlaying = true;
         }
 
-        _stopAudio() {
-            for (const music of this._audioMusics.values()) {
-                if (music.playing) {
-                    music.pause();
-                    music.setTime(0);
-                }
+        _stopAllAudio() {
+            for (const music of [
+                ...this._audioMusics.values(),
+                ...this._soundMusics.values(),
+                ...this._musicMusics.values(),
+                ...this._soundSpriteAudio.values(),
+            ]) {
+                if (music.playing) { music.pause(); music.setTime(0); }
             }
+        }
+
+        _currentPlayingMap() {
+            if (this._cat === 'audio')        return this._audioMusics;
+            if (this._cat === 'sound')        return this._soundMusics;
+            if (this._cat === 'music')        return this._musicMusics;
+            if (this._cat === 'soundSprites') return this._soundSpriteAudio;
+            return null;
         }
 
         _toggleAudio() {
-            if (!this._key || this._cat !== 'audio') return;
-            const music = this._audioMusics.get(this._key);
+            if (!this._key) return;
+            const map = this._currentPlayingMap();
+            if (!map) return;
+            const music = map.get(this._key);
             if (!music) return;
-            if (music.playing) {
-                music.pause();
-            } else {
-                music.play();
-            }
+            if (music.playing) { music.pause(); } else { music.play(); }
         }
 
         _currentFrameKeys() {
-            const id = this._cat + ':' + this._key;
             if (this._cat === 'sprites')      return [...(this._sprSheets.get(this._key)?.sprites.keys() ?? [])];
+            if (this._cat === 'spritesheets') return [...(this._sshSheets.get(this._key)?.sprites.keys() ?? [])];
             if (this._cat === 'inputPrompts') return [...(this._inpSheets.get(this._key)?.sprites.keys() ?? [])];
             return [];
         }
@@ -373,14 +501,30 @@ app.start(
             return Math.max(0, this._keys().length - visibleItems);
         }
 
+        _isAudioLikeCategory() {
+            return this._cat === 'audio' || this._cat === 'sound'
+                || this._cat === 'music' || this._cat === 'soundSprites';
+        }
+
         // ── Input handlers ─────────────────────────────────────────────────
         _onTap(x, y) {
-            // Category buttons
-            for (let i = 0; i < CATEGORIES.length; i++) {
+            // Category buttons – row 1
+            for (let i = 0; i < CATEGORIES_ROW1.length; i++) {
                 const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-                if (x >= bx && x < bx + CAT_BTN_W && y >= CAT_BTN_Y && y < CAT_BTN_Y + CAT_BTN_H) {
-                    if (this._cat !== CATEGORIES[i].id) {
-                        this._cat = CATEGORIES[i].id;
+                if (x >= bx && x < bx + CAT_BTN_W && y >= CAT_BTN_Y1 && y < CAT_BTN_Y1 + CAT_BTN_H) {
+                    if (this._cat !== CATEGORIES_ROW1[i].id) {
+                        this._cat = CATEGORIES_ROW1[i].id;
+                        this._selectFirstInCategory();
+                    }
+                    return;
+                }
+            }
+            // Category buttons – row 2
+            for (let i = 0; i < CATEGORIES_ROW2.length; i++) {
+                const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
+                if (x >= bx && x < bx + CAT_BTN_W && y >= CAT_BTN_Y2 && y < CAT_BTN_Y2 + CAT_BTN_H) {
+                    if (this._cat !== CATEGORIES_ROW2[i].id) {
+                        this._cat = CATEGORIES_ROW2[i].id;
                         this._selectFirstInCategory();
                     }
                     return;
@@ -419,8 +563,8 @@ app.start(
                 return;
             }
 
-            // Preview: audio play/pause
-            if (this._cat === 'audio' && this._key) {
+            // Preview: audio-like play/pause
+            if (this._isAudioLikeCategory() && this._key) {
                 const bx = PREVIEW_X + (PREVIEW_W - 100) / 2;
                 const by = PREVIEW_Y + PREVIEW_H / 2 - 30;
                 if (x >= bx && x < bx + 100 && y >= by && y < by + 56) {
@@ -430,7 +574,7 @@ app.start(
             }
 
             // Preview: animation play/pause
-            if ((this._cat === 'sprites' || this._cat === 'inputPrompts') && this._key) {
+            if ((this._cat === 'sprites' || this._cat === 'spritesheets' || this._cat === 'inputPrompts') && this._key) {
                 const bx = PREVIEW_X + 16;
                 const by = H - 48;
                 if (x >= bx && x < bx + 90 && y >= by && y < by + 30) {
@@ -453,7 +597,6 @@ app.start(
         }
 
         _onWheel(dy) {
-            // Only scroll when pointer is over the sidebar
             const maxScroll = this._maxScroll();
             const delta = dy > 0 ? 1 : -1;
             this._scrollOff = Math.max(0, Math.min(maxScroll, this._scrollOff + delta));
@@ -462,7 +605,7 @@ app.start(
         // ── Update ─────────────────────────────────────────────────────────
         update(delta) {
             if (!this._animPlaying) return;
-            if (this._cat !== 'sprites' && this._cat !== 'inputPrompts') return;
+            if (this._cat !== 'sprites' && this._cat !== 'spritesheets' && this._cat !== 'inputPrompts') return;
             const frames = this._currentFrameKeys();
             if (!frames.length) return;
             this._frameTimer += delta.seconds;
@@ -502,24 +645,31 @@ app.start(
             const g = this._gToolbar;
             g.clear();
 
-            // Background
             g.fillColor = C.toolbar;
             g.drawRectangle(0, 0, W, TOOLBAR_H);
 
-            // Bottom separator
             g.lineWidth = 1;
             g.lineColor = C.border;
             g.drawLine(0, TOOLBAR_H - 1, W, TOOLBAR_H - 1);
+            g.drawLine(0, CAT_BTN_Y2 - 4, W, CAT_BTN_Y2 - 4);
 
-            // Category buttons
-            for (let i = 0; i < CATEGORIES.length; i++) {
+            // Row 1 buttons
+            for (let i = 0; i < CATEGORIES_ROW1.length; i++) {
                 const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-                g.fillColor = this._cat === CATEGORIES[i].id ? C.active : C.btnDark;
+                g.fillColor = this._cat === CATEGORIES_ROW1[i].id ? C.active : C.btnDark;
                 g.lineWidth = 0;
-                g.drawRectangle(bx, CAT_BTN_Y, CAT_BTN_W, CAT_BTN_H);
+                g.drawRectangle(bx, CAT_BTN_Y1, CAT_BTN_W, CAT_BTN_H);
             }
 
-            // BG toggle buttons
+            // Row 2 buttons
+            for (let i = 0; i < CATEGORIES_ROW2.length; i++) {
+                const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
+                g.fillColor = this._cat === CATEGORIES_ROW2[i].id ? C.active : C.btnDark;
+                g.lineWidth = 0;
+                g.drawRectangle(bx, CAT_BTN_Y2, CAT_BTN_W, CAT_BTN_H);
+            }
+
+            // BG toggle buttons (right side, row 1)
             for (let i = 0; i < BG_OPTIONS.length; i++) {
                 const { r, g: gv, b } = BG_OPTIONS[i];
                 const bx = BG_BTN_X0 + i * (BG_BTN_SIZE + 5);
@@ -531,11 +681,19 @@ app.start(
 
             context.render(g);
 
-            // Category button labels
-            for (let i = 0; i < CATEGORIES.length; i++) {
+            // Row 1 labels
+            for (let i = 0; i < CATEGORIES_ROW1.length; i++) {
                 const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
                 const t = this._catBtnTexts[i];
-                t.setPosition(bx + (CAT_BTN_W - 22) / 2, CAT_BTN_Y + 13);
+                t.setPosition(bx + (CAT_BTN_W - 22) / 2, CAT_BTN_Y1 + 12);
+                context.render(t);
+            }
+
+            // Row 2 labels
+            for (let i = 0; i < CATEGORIES_ROW2.length; i++) {
+                const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
+                const t = this._catBtnTexts[CATEGORIES_ROW1.length + i];
+                t.setPosition(bx + (CAT_BTN_W - 22) / 2, CAT_BTN_Y2 + 12);
                 context.render(t);
             }
 
@@ -554,18 +712,15 @@ app.start(
             const g = this._gSidebar;
             g.clear();
 
-            // Panel background
             g.fillColor = C.panel;
             g.drawRectangle(0, TOOLBAR_H, SIDEBAR_W, H - TOOLBAR_H);
 
-            // Right border
             g.lineWidth = 1;
             g.lineColor = C.border;
             g.drawLine(SIDEBAR_W, TOOLBAR_H, SIDEBAR_W, H);
 
             const keys = this._keys();
 
-            // Item backgrounds (selected / hover / technical headers)
             for (let i = 0; i < keys.length; i++) {
                 const iy = LIST_Y + (i - this._scrollOff) * ITEM_H;
                 if (iy + ITEM_H <= TOOLBAR_H || iy >= H) continue;
@@ -589,12 +744,10 @@ app.start(
 
             context.render(g);
 
-            // Item labels
             for (let i = 0; i < keys.length && (i - this._scrollOff) < this._itemTexts.length; i++) {
                 const iy = LIST_Y + (i - this._scrollOff) * ITEM_H;
                 if (iy + ITEM_H <= TOOLBAR_H || iy >= H) continue;
 
-                // Technical subcategory header rows
                 if (this._cat === 'technical' && !keys[i].includes('.')) {
                     const ht = this._techHeaderTexts.get(keys[i]);
                     if (ht) { ht.setPosition(10, iy + 12); context.render(ht); }
@@ -603,14 +756,12 @@ app.start(
 
                 const t = this._itemTexts[i - this._scrollOff];
                 if (!t) continue;
-                // For technical items show only the leaf key, indented
                 t.text = this._cat === 'technical' ? (keys[i].split('.')[1] ?? keys[i]) : keys[i];
                 t.style.fillColor = keys[i] === this._key ? C.white : C.dim;
                 t.setPosition(this._cat === 'technical' ? 18 : 10, iy + 10);
                 context.render(t);
             }
 
-            // Empty state
             if (keys.length === 0) {
                 this._txtEmptyCat.setPosition(60, LIST_Y + 14);
                 context.render(this._txtEmptyCat);
@@ -636,22 +787,29 @@ app.start(
                 return;
             }
 
-            // Asset-type preview
             switch (this._cat) {
                 case 'textures':     this._drawTexPreview(context);   break;
                 case 'sprites':      this._drawSprPreview(context);   break;
+                case 'spritesheets': this._drawSshPreview(context);   break;
                 case 'svg':          this._drawSvgPreview(context);   break;
-                case 'audio':        this._drawAudioPreview(context); break;
+                case 'audio':        this._drawAudioPreview(context, this._audioMusics); break;
+                case 'sound':        this._drawAudioPreview(context, this._soundMusics); break;
+                case 'music':        this._drawAudioPreview(context, this._musicMusics); break;
+                case 'soundSprites': this._drawSoundSpritePreview(context); break;
                 case 'fonts':        this._drawFontPreview(context);  break;
                 case 'video':        this._drawVideoPreview(context); break;
                 case 'inputPrompts': this._drawInpPreview(context);   break;
                 case 'technical':    this._drawTechPreview(context);  break;
+                case 'backgrounds':  this._drawBgPreview(context);    break;
+                case 'cursors':      this._drawCursorPreview(context); break;
+                case 'tilesets':     this._drawTilesetPreview(context); break;
+                case 'vendor':       this._drawVendorPreview(context); break;
             }
 
             this._drawInfoBar(context);
         }
 
-        // ── Draw: info bar (always on top of preview) ──────────────────────
+        // ── Draw: info bar ─────────────────────────────────────────────────
         _drawInfoBar(context) {
             const g = this._gInfoBar;
             g.clear();
@@ -664,17 +822,14 @@ app.start(
 
             if (!this._key) return;
 
-            // Asset key
             this._txtKey.text = `assets.${this._cat}.${this._key}`;
             this._txtKey.setPosition(PREVIEW_X + 10, PREVIEW_Y + 5);
             context.render(this._txtKey);
 
-            // Resolved path
             this._txtPath.text = this._assetPath();
             this._txtPath.setPosition(PREVIEW_X + 10, PREVIEW_Y + 24);
             context.render(this._txtPath);
 
-            // Type badge
             const ext = this._typeLabel();
             if (ext) {
                 this._txtType.text = ext;
@@ -682,10 +837,7 @@ app.start(
                 context.render(this._txtType);
             }
 
-            // Copy button
-            if (!this._copyBtnBg) {
-                this._copyBtnBg = new Graphics();
-            }
+            if (!this._copyBtnBg) this._copyBtnBg = new Graphics();
             const copyX = PREVIEW_X + PREVIEW_W - 84;
             const copyY = PREVIEW_Y + 9;
             this._copyBtnBg.clear();
@@ -718,7 +870,7 @@ app.start(
             sprite.setPosition(cx, cy);
         }
 
-        // ── Draw: texture preview ──────────────────────────────────────────
+        // ── Draw: texture ──────────────────────────────────────────────────
         _drawTexPreview(context) {
             const sprite = this._texSprites.get(this._key);
             if (!sprite) return;
@@ -727,14 +879,13 @@ app.start(
             context.render(sprite);
         }
 
-        // ── Draw: spritesheet preview ──────────────────────────────────────
+        // ── Draw: sprites (animated) ───────────────────────────────────────
         _drawSprPreview(context) {
             const ss = this._sprSheets.get(this._key);
             if (!ss) return;
             const frames = [...ss.sprites.keys()];
             if (!frames.length) return;
-            const frameKey = frames[this._frameIdx % frames.length];
-            const sprite   = ss.getFrameSprite(frameKey);
+            const sprite = ss.getFrameSprite(frames[this._frameIdx % frames.length]);
             sprite.setAnchor(0.5);
             const { cx, cy, maxW, maxH } = this._previewCenter();
             this._fitSprite(sprite, maxW, maxH - 50, cx, cy);
@@ -742,14 +893,27 @@ app.start(
             this._drawAnimControls(context, frames.length);
         }
 
-        // ── Draw: input-prompt preview ─────────────────────────────────────
+        // ── Draw: spritesheets (animated) ──────────────────────────────────
+        _drawSshPreview(context) {
+            const ss = this._sshSheets.get(this._key);
+            if (!ss) return;
+            const frames = [...ss.sprites.keys()];
+            if (!frames.length) return;
+            const sprite = ss.getFrameSprite(frames[this._frameIdx % frames.length]);
+            sprite.setAnchor(0.5);
+            const { cx, cy, maxW, maxH } = this._previewCenter();
+            this._fitSprite(sprite, maxW, maxH - 50, cx, cy);
+            context.render(sprite);
+            this._drawAnimControls(context, frames.length);
+        }
+
+        // ── Draw: input-prompt ─────────────────────────────────────────────
         _drawInpPreview(context) {
             const ss = this._inpSheets.get(this._key);
             if (ss) {
                 const frames = [...ss.sprites.keys()];
                 if (frames.length > 0) {
-                    const frameKey = frames[this._frameIdx % frames.length];
-                    const sprite   = ss.getFrameSprite(frameKey);
+                    const sprite = ss.getFrameSprite(frames[this._frameIdx % frames.length]);
                     sprite.setAnchor(0.5);
                     const { cx, cy, maxW, maxH } = this._previewCenter();
                     this._fitSprite(sprite, maxW, maxH - 50, cx, cy);
@@ -758,16 +922,9 @@ app.start(
                     return;
                 }
             }
-            // Fallback: raw texture
-            const tex = this._texSprites.get('inp_' + this._key);
-            if (tex) {
-                const { cx, cy, maxW, maxH } = this._previewCenter();
-                this._fitSprite(tex, maxW, maxH, cx, cy);
-                context.render(tex);
-            }
         }
 
-        // ── Draw: SVG preview ──────────────────────────────────────────────
+        // ── Draw: SVG ──────────────────────────────────────────────────────
         _drawSvgPreview(context) {
             const sprite = this._svgSprites.get(this._key);
             if (!sprite) return;
@@ -776,12 +933,10 @@ app.start(
             context.render(sprite);
         }
 
-        // ── Draw: audio preview ────────────────────────────────────────────
-        _drawAudioPreview(context) {
-            if (!this._audioG) {
-                this._audioG = new Graphics();
-            }
-            const music = this._audioMusics.get(this._key);
+        // ── Draw: audio/sound/music ────────────────────────────────────────
+        _drawAudioPreview(context, musicMap) {
+            if (!this._audioG) this._audioG = new Graphics();
+            const music = musicMap.get(this._key);
             const isPlaying = music ? music.playing : false;
             const g   = this._audioG;
             const { cx, cy } = this._previewCenter();
@@ -794,19 +949,51 @@ app.start(
             g.drawRectangle(bx, by, 100, 56);
             context.render(g);
 
-            // Play/pause icon text
             this._txtAudioIcon.text = isPlaying ? '⏸' : '▶';
             this._txtAudioIcon.setPosition(bx + (isPlaying ? 30 : 34), by + 10);
             context.render(this._txtAudioIcon);
 
-            // Format label beneath button
-            const ext = this._typeLabel();
-            this._txtMeta.text = ext;
+            this._txtMeta.text = this._typeLabel();
             this._txtMeta.setPosition(cx - 15, by + 68);
             context.render(this._txtMeta);
         }
 
-        // ── Draw: font preview ─────────────────────────────────────────────
+        // ── Draw: soundSprites ─────────────────────────────────────────────
+        _drawSoundSpritePreview(context) {
+            if (!this._audioG) this._audioG = new Graphics();
+            const music   = this._soundSpriteAudio.get(this._key);
+            const data    = this._soundSpriteData.get(this._key);
+            const isPlaying = music ? music.playing : false;
+            const sprites = data?.sprites ?? {};
+
+            const g   = this._audioG;
+            const { cx, cy } = this._previewCenter();
+            const bx  = cx - 50;
+            const by  = PREVIEW_Y + 56;
+
+            g.clear();
+            g.fillColor = isPlaying ? C.btnGreen : C.btnDark;
+            g.lineWidth = 1;
+            g.lineColor = C.border;
+            g.drawRectangle(bx, by, 100, 44);
+            context.render(g);
+
+            this._txtAudioIcon.text = isPlaying ? '⏸' : '▶';
+            this._txtAudioIcon.setPosition(bx + (isPlaying ? 30 : 34), by + 6);
+            context.render(this._txtAudioIcon);
+
+            // List sprites
+            let y = by + 64;
+            for (const [name, info] of Object.entries(sprites)) {
+                this._txtMeta.text = `${name}  start:${info.start.toFixed(3)}s  dur:${info.duration.toFixed(3)}s`;
+                this._txtMeta.setPosition(PREVIEW_X + 30, y);
+                context.render(this._txtMeta);
+                y += 20;
+                if (y > H - 20) break;
+            }
+        }
+
+        // ── Draw: font ─────────────────────────────────────────────────────
         _drawFontPreview(context) {
             const family = this._fontFamilies.get(this._key);
             if (!family) {
@@ -820,12 +1007,10 @@ app.start(
                 t = new Text('AaBbCc 123 !?', { fontFamily: family, fontSize: 48, fillColor: C.white });
                 this._fontSampleTexts.set(this._key, t);
             }
-            // Adapt text color to background
             t.style.fillColor = this._bgIdx === 0 ? C.black : C.white;
             t.setPosition(PREVIEW_X + 40, PREVIEW_Y + 120);
             context.render(t);
 
-            // Smaller specimen
             let t2 = this._fontSampleTexts.get(this._key + '_sm');
             if (!t2) {
                 t2 = new Text('The quick brown fox jumps over the lazy dog', { fontFamily: family, fontSize: 20, fillColor: C.dim });
@@ -836,7 +1021,7 @@ app.start(
             context.render(t2);
         }
 
-        // ── Draw: video preview ────────────────────────────────────────────
+        // ── Draw: video ────────────────────────────────────────────────────
         _drawVideoPreview(context) {
             this._txtMeta.text =
                 `VIDEO\n\nKey: assets.video.${this._key}\nURL: ${this._assetPath()}\n\nOpen the URL in your browser to preview.`;
@@ -844,13 +1029,12 @@ app.start(
             context.render(this._txtMeta);
         }
 
-        // ── Draw: technical PNG preview ────────────────────────────────────
+        // ── Draw: technical ────────────────────────────────────────────────
         _drawTechPreview(context) {
             if (!this._key?.includes('.')) return;
             const sprite = this._techSprites.get(this._key);
             if (!sprite) return;
             const { cx, cy, maxW, maxH } = this._previewCenter();
-            // Leave 28 px at bottom for the purpose label
             this._fitSprite(sprite, maxW, maxH - 28, cx, cy - 14);
             context.render(sprite);
 
@@ -861,6 +1045,61 @@ app.start(
                 this._txtTechPurpose.setPosition(PREVIEW_X + 16, PREVIEW_Y + PREVIEW_H - 22);
                 context.render(this._txtTechPurpose);
             }
+        }
+
+        // ── Draw: backgrounds ──────────────────────────────────────────────
+        _drawBgPreview(context) {
+            const sprite = this._bgSprites.get(this._key);
+            if (!sprite) return;
+            const { cx, cy, maxW, maxH } = this._previewCenter();
+            this._fitSprite(sprite, maxW, maxH, cx, cy);
+            context.render(sprite);
+        }
+
+        // ── Draw: cursors ──────────────────────────────────────────────────
+        _drawCursorPreview(context) {
+            const sprite = this._cursorSprites.get(this._key);
+            if (!sprite) return;
+            const { cx, cy, maxW, maxH } = this._previewCenter();
+            this._fitSprite(sprite, Math.min(maxW, 256), Math.min(maxH, 256), cx, cy);
+            context.render(sprite);
+        }
+
+        // ── Draw: tilesets ─────────────────────────────────────────────────
+        _drawTilesetPreview(context) {
+            const sprite = this._tilesetSprites.get(this._key);
+            if (!sprite) return;
+            const entry = catalog?.tilesets?.[this._key];
+            const { cx, cy, maxW, maxH } = this._previewCenter();
+            this._fitSprite(sprite, maxW, maxH - 30, cx, cy - 15);
+            context.render(sprite);
+
+            if (entry?.tileWidth && entry?.tileHeight) {
+                this._txtMeta.text = `tile: ${entry.tileWidth}×${entry.tileHeight}px`;
+                this._txtMeta.setPosition(PREVIEW_X + 16, PREVIEW_Y + PREVIEW_H - 22);
+                context.render(this._txtMeta);
+            }
+        }
+
+        // ── Draw: vendor ───────────────────────────────────────────────────
+        _drawVendorPreview(context) {
+            const data = this._vendorData.get(this._key);
+            if (!data) {
+                this._txtMeta.text = `Loading: ${this._assetPath()}`;
+                this._txtMeta.setPosition(PREVIEW_X + 30, PREVIEW_Y + 80);
+                context.render(this._txtMeta);
+                return;
+            }
+            const packs = data.packs ?? [];
+            const lines = [
+                `License: ${data.license ?? 'CC0'}`,
+                `Packs: ${packs.length}`,
+                '',
+                ...packs.slice(0, 14).map(p => `  ${p.slug}  (${Object.values(p.fileCountByExtension ?? {}).reduce((a, b) => a + b, 0)} files)`),
+            ];
+            this._txtMeta.text = lines.join('\n');
+            this._txtMeta.setPosition(PREVIEW_X + 30, PREVIEW_Y + 60);
+            context.render(this._txtMeta);
         }
 
         // ── Draw: animation controls ───────────────────────────────────────

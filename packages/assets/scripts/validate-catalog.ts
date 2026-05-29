@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const packageRoot = path.resolve(__dirname, '..');
 const assetRoots = ['demo', 'technical'];
 
-const excludedDirs = new Set(['src', 'scripts', 'node_modules']);
+const excludedDirs = new Set(['src', 'scripts', 'node_modules', 'vendor']);
 const excludedFiles = new Set(['package.json', 'tsconfig.json', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md']);
 
 function walkDir(baseDir: string, relative = ''): string[] {
@@ -46,7 +46,8 @@ for (const file of diskFiles) {
 }
 
 for (const file of catalogPaths) {
-    if (!diskFiles.has(file)) {
+    const absPath = path.join(packageRoot, file);
+    if (!diskFiles.has(file) && !fs.existsSync(absPath)) {
         missingFromDisk.push(file);
     }
 }
