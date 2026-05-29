@@ -16,12 +16,12 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(FontFace, { andy: 'font/AndyBold.woff2' }, { family: 'AndyBold' });
+            await loader.load(FontFace, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
         }
         init() {
             this._default = new Text('Default Font', { fill: 'white', fontSize: 52 });
             this._default.setPosition(120, 200);
-            this._loaded = new Text('AndyBold Font', { fill: 'white', fontFamily: 'AndyBold', fontSize: 52 });
+            this._loaded = new Text('Kenney Future Font', { fill: 'white', fontFamily: 'Kenney Future', fontSize: 52 });
             this._loaded.setPosition(120, 320);
         }
         draw(context) {

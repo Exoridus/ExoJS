@@ -16,12 +16,12 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Video, { example: 'video/example.webm' });
+            await loader.load(Video, { demo: 'video/demo-loop.webm' });
         }
         init(loader) {
             const { width, height } = this.app.canvas;
 
-            this._video = loader.get(Video, 'example');
+            this._video = loader.get(Video, 'demo');
             this._video.width = width;
             this._video.height = height;
             this._video.applyOptions({ loop: true, muted: false, volume: 0.5 });

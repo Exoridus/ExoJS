@@ -17,9 +17,8 @@ const title = 'VOID EMPEROR';
 app.start(
     new (class extends Scene {
         async load(loader) {
-            // TODO: replace bunny boss sprite when a suitable Kenney character asset is added to the catalog
-            const bossUrl = assets?.textures?.bunny ?? 'assets/image/bunny.png';
-            const trackUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
+            const bossUrl = assets?.textures?.shipA ?? 'assets/image/ship-a.png';
+            const trackUrl = assets?.music?.loopMain ?? 'assets/demo/music/demo-loop-main.ogg';
             await loader.load(Texture, { boss: bossUrl });
             await loader.load(Music, { track: trackUrl });
         }

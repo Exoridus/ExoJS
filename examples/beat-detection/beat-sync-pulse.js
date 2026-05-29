@@ -30,8 +30,8 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png', particle: 'image/particle.png' });
-            await loader.load(Music, { track: 'audio/example.ogg' });
+            await loader.load(Texture, { bunny: 'image/ship-a.png', particle: 'image/particle-light.png' });
+            await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
         }
         init(loader) {
             this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();

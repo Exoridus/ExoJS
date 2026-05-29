@@ -16,18 +16,19 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { explosion: 'image/explosion.png' });
-            await loader.load(Json, { explosion: 'json/explosion.json' });
+            await loader.load(Texture, { characters: 'image/platformer-characters.png' });
+            await loader.load(Json, { characters: 'json/platformer-characters.json' });
         }
         init(loader) {
-            const texture = loader.get(Texture, 'explosion');
-            const data = loader.get(Json, 'explosion');
+            const texture = loader.get(Texture, 'characters');
+            const data = loader.get(Json, 'characters');
             const sheet = new Spritesheet(texture, data);
-            const frames = Array.from(sheet.frames.values());
 
-            this._sprite = new AnimatedSprite(texture, { burst: { frames, fps: 22, loop: true } });
-            this._sprite.setAnchor(0.5).setScale(2).setPosition(400, 300);
-            this._sprite.play('burst');
+            const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));
+
+            this._sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: 8, loop: true } });
+            this._sprite.setAnchor(0.5).setScale(3).setPosition(400, 300);
+            this._sprite.play('walk');
         }
         update(delta) {
             this._sprite.update(delta);

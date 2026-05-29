@@ -21,8 +21,8 @@ const lines = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const portraitUrl = assets?.textures?.bunny ?? 'assets/image/bunny.png';
-            const beepUrl = assets?.audio?.uiConfirm ?? 'assets/demo/audio/ui-confirm.ogg';
+            const portraitUrl = assets?.textures?.shipA ?? 'assets/image/ship-a.png';
+            const beepUrl = assets?.sound?.uiConfirm ?? 'assets/demo/sound/ui-confirm.ogg';
             await loader.load(Texture, { portrait: portraitUrl });
             await loader.load(Sound, { beep: beepUrl });
         }

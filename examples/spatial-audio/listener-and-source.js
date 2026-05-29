@@ -16,7 +16,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Sound, { source: 'audio/example.ogg' });
+            await loader.load(Sound, { source: 'audio/impact-light.ogg' });
         }
         init(loader) {
             this._sound = loader.get(Sound, 'source');

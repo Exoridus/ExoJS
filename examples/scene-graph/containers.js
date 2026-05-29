@@ -17,8 +17,8 @@ app.start(
     new (class extends Scene {
         async load(loader) {
             await loader.load(Texture, {
-                bunny: 'image/bunny.png',
-                rainbow: 'image/rainbow.png',
+                bunny: 'image/ship-a.png',
+                rainbow: 'image/hue-ramp.png',
             });
         }
         init(loader) {

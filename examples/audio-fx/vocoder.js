@@ -16,7 +16,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Music, { mod: 'audio/example.ogg' });
+            await loader.load(Music, { mod: 'audio/demo-loop-main.ogg' });
         }
         init(loader) {
             this._modBus = new AudioBus('modulator', { parent: app.audio.master });

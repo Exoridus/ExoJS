@@ -1,9 +1,5 @@
 export const rawAssets = {
     textures: {
-        bunny: 'demo/textures/bunny.png',
-        particle: 'demo/textures/particle.png',
-        rainbow: 'demo/textures/rainbow.png',
-        uv: 'demo/textures/uv.png',
         particleFlame: 'demo/textures/particle-flame.png',
         particleSmoke: 'demo/textures/particle-smoke.png',
         particleStar: 'demo/textures/particle-star.png',
@@ -24,19 +20,11 @@ export const rawAssets = {
             image: 'demo/sprites/buttons.png',
             data: 'demo/sprites/buttons.json',
         },
-        explosion: {
-            image: 'demo/sprites/explosion.png',
-            data: 'demo/sprites/explosion.json',
-        },
     },
     spritesheets: {
         buttons: {
             image: 'demo/sprites/buttons.png',
             data: 'demo/sprites/buttons.json',
-        },
-        explosion: {
-            image: 'demo/sprites/explosion.png',
-            data: 'demo/sprites/explosion.json',
         },
         platformerBackgrounds: {
             image: 'demo/spritesheets/kenney/platformer-backgrounds.png',
@@ -77,7 +65,6 @@ export const rawAssets = {
         },
     },
     audio: {
-        example: 'demo/audio/example.ogg',
         uiClick: 'demo/audio/ui-click.ogg',
         uiConfirm: 'demo/audio/ui-confirm.ogg',
         uiBong: 'demo/audio/ui-bong.ogg',
@@ -127,7 +114,6 @@ export const rawAssets = {
         },
     },
     fonts: {
-        andyBold: 'demo/fonts/AndyBold.woff2',
         kenneyFuture: 'demo/fonts/Kenney Future.ttf',
         kenneyPixel: 'demo/fonts/Kenney Pixel.ttf',
         kenneyMini: 'demo/fonts/Kenney Mini.ttf',
@@ -147,7 +133,6 @@ export const rawAssets = {
         cross: 'demo/cursors/cross.svg',
     },
     svg: {
-        tiger: 'demo/svg/tiger.svg',
         play: 'demo/svg/play.svg',
         pause: 'demo/svg/pause.svg',
         reset: 'demo/svg/reset.svg',
@@ -156,9 +141,6 @@ export const rawAssets = {
         audioWave: 'demo/svg/audio-wave.svg',
         imagePlaceholder: 'demo/svg/image-placeholder.svg',
         runeMark: 'demo/svg/rune-mark.svg',
-    },
-    video: {
-        example: 'demo/video/example.webm',
     },
     inputPrompts: {
         generic: {

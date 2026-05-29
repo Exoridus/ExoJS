@@ -18,18 +18,18 @@ const collisionRed = new Color(255, 0, 0);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { rainbow: 'image/rainbow.png' });
+            await loader.load(Texture, { gradient: 'image/hue-ramp.png' });
         }
         init(loader) {
             const { width, height } = this.app.canvas;
 
             this._time = new Time();
 
-            this._boxA = new Sprite(loader.get(Texture, 'rainbow'));
+            this._boxA = new Sprite(loader.get(Texture, 'gradient'));
             this._boxA.setPosition(width / 2, height / 2);
             this._boxA.setAnchor(0.5, 0.5);
 
-            this._boxB = new Sprite(loader.get(Texture, 'rainbow'));
+            this._boxB = new Sprite(loader.get(Texture, 'gradient'));
             this._boxB.setPosition(width / 2, height / 2);
             this._boxB.setAnchor(0.5, 0.5);
 

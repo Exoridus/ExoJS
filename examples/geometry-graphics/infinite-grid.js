@@ -46,7 +46,7 @@ fn gridLine(p: vec2<f32>, s: f32, w: f32) -> f32 {
     let m = min(c.x, c.y) * 120.0;
     return 1.0 - smoothstep(w, w + 1.0, m);
 }
-@fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+@fragment fn main(@location(0) vuvGrid: vec2<f32>) -> @location(0) vec4<f32> {
     let world = (vUv - vec2<f32>(0.5)) * uniforms.uViewSize + uniforms.uCenter;
     let fine = gridLine(world, 40.0, 0.8) * 0.35;
     let bold = gridLine(world, 200.0, 1.1) * 0.7;
@@ -59,12 +59,12 @@ fn gridLine(p: vec2<f32>, s: f32, w: f32) -> f32 {
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { uv: 'image/uv.png' });
+            await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
         }
         init(loader) {
             this._view = new View(0, 0, 800, 600);
             this._move = { x: 0, y: 0, zoom: 0 };
-            this._sprite = new Sprite(loader.get(Texture, 'uv'));
+            this._sprite = new Sprite(loader.get(Texture, 'uvGrid'));
             this._sprite.width = 800;
             this._sprite.height = 600;
             this._filter =

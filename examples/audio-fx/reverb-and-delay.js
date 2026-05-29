@@ -22,7 +22,7 @@ const sliders = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Sound, { sfx: 'audio/example.ogg' });
+            await loader.load(Sound, { sfx: 'audio/impact-light.ogg' });
         }
         init(loader) {
             this._sound = loader.get(Sound, 'sfx');

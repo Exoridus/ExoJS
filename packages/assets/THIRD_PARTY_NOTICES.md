@@ -2,11 +2,6 @@
 
 This package includes assets that may be subject to third-party licenses.
 
-## Bunny Texture
-
-The bunny.png texture is derived from the classic Stanford Bunny model and
-is included for demonstration purposes.
-
 ## Kenney Assets
 
 Full packs and curated selections from the following Kenney CC0 releases are
@@ -37,10 +32,6 @@ https://creativecommons.org/publicdomain/zero/1.0/
 - Particle Pack (https://kenney.nl/assets/particle-pack)
 - Input Prompts 1.5 (https://kenney.nl/assets/input-prompts)
 - Simple Space (https://kenney.nl/assets/simple-space)
-
-## AndyBold Font
-
-The AndyBold font is included for demonstration purposes.
 
 ## All Other Assets
 

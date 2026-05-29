@@ -17,9 +17,9 @@ app.start(
     new (class extends Scene {
         async load(loader) {
             const loading = loader.load(Texture, {
-                bunny:   'image/bunny.png',
-                rainbow: 'image/rainbow.png',
-                uv:      'image/uv.png',
+                bunny:    'image/ship-a.png',
+                gradient: 'image/hue-ramp.png',
+                uvGrid:   'image/uv-grid-256.png',
             });
 
             loading.onProgress.add((progress) => {
@@ -30,7 +30,7 @@ app.start(
         }
         init(loader) {
             const { width, height } = this.app.canvas;
-            const textures = [loader.get(Texture, 'bunny'), loader.get(Texture, 'rainbow'), loader.get(Texture, 'uv')];
+            const textures = [loader.get(Texture, 'bunny'), loader.get(Texture, 'gradient'), loader.get(Texture, 'uvGrid')];
 
             this._sprites = textures.map((texture, index) => {
                 const sprite = new Sprite(texture);

@@ -16,7 +16,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { bunny: 'image/ship-a.png' });
         }
         init(loader) {
             this._hit = new Signal();

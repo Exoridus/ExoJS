@@ -37,7 +37,7 @@ function attenuation(model, d) {
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Sound, { source: 'audio/example.ogg' });
+            await loader.load(Sound, { source: 'audio/impact-light.ogg' });
         }
         init(loader) {
             this._listener = { x: 400, y: 300 };

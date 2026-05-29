@@ -7,12 +7,11 @@ Asset catalog and resolver for ExoJS examples and playground.
 ```
 packages/assets/
   demo/           Demo assets used by guides, playground, and examples
-    textures/     Sprite textures (bunny, particle, rainbow, uv)
-    sprites/      Spritesheet images and JSON data (buttons, explosion)
-    audio/        Audio files (example.ogg)
-    fonts/        Web fonts (AndyBold)
-    svg/          SVG images (tiger)
-    video/        Video files (example.webm)
+    textures/     Sprite textures (particles, ship, prototypes)
+    sprites/      Spritesheet images and JSON data (buttons)
+    audio/        Audio files (Kenney CC0)
+    fonts/        Web fonts (Kenney CC0)
+    svg/          SVG images (rune-mark, UI icons)
     input-prompts/ Input prompt sprites and JSON mappings
   technical/      Technical test/diagnostic assets
     alpha/        Alpha blending test images
@@ -28,7 +27,7 @@ packages/assets/
 import { rawAssets, resolveAssetCatalog } from '@codexo/exojs-assets';
 
 const assets = resolveAssetCatalog(rawAssets, '/ExoJS/assets/');
-// assets.textures.bunny → '/ExoJS/assets/demo/textures/bunny.png'
+// assets.textures.shipA → '/ExoJS/assets/demo/textures/ship-a.png'
 ```
 
 ## Usage (examples — loose-coupled)
@@ -39,7 +38,7 @@ Examples receive resolved assets via the playground runtime:
 // injected by playground shell
 declare const assets: Record<string, unknown>;
 
-const bunnyUrl = assets.textures.bunny;
+const shipUrl = assets.textures.shipA;
 ```
 
 Examples do **not** import `@codexo/exojs-assets` directly at runtime.

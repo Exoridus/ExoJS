@@ -1,26 +1,26 @@
 {
-    "audio": ["example.ogg"],
-    "font": ["AndyBold.woff2"],
+    "audio": ["demo-loop-main.ogg", "impact-light.ogg", "ui-click.ogg"],
+    "font": ["Kenney Future.ttf"],
     "image": [
-        "bunny.png",
         "buttons.png",
-        "explosion.png",
+        "hue-ramp.png",
         "input-prompts-generic.png",
         "input-prompts-xbox-series.png",
         "input-prompts-playstation-series.png",
         "input-prompts-nintendo-switch.png",
-        "particle.png",
-        "rainbow.png",
-        "uv.png"
+        "particle-light.png",
+        "platformer-characters.png",
+        "ship-a.png",
+        "uv-grid-256.png"
     ],
     "json": [
         "buttons.json",
-        "explosion.json",
         "input-prompts-generic.json",
         "input-prompts-xbox-series.json",
         "input-prompts-playstation-series.json",
-        "input-prompts-nintendo-switch.json"
+        "input-prompts-nintendo-switch.json",
+        "platformer-characters.json"
     ],
-    "svg": ["tiger.svg"],
-    "video": ["example.webm"]
+    "svg": ["rune-mark.svg"],
+    "video": ["demo-loop.webm"]
 }

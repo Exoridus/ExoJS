@@ -16,7 +16,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { particle: 'image/particle.png' });
+            await loader.load(Texture, { particle: 'image/particle-light.png' });
         }
         init(loader) {
             this._view = new View(400, 300, 800, 600);

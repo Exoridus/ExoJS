@@ -16,7 +16,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(FontFace, { example: 'font/AndyBold.woff2' }, { family: 'AndyBold' });
+            await loader.load(FontFace, { example: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
         }
         init() {
             const { width, height } = this.app.canvas;
@@ -29,7 +29,7 @@ app.start(
                 stroke: 'black',
                 strokeThickness: 3,
                 fontSize: 25,
-                fontFamily: 'AndyBold',
+                fontFamily: 'Kenney Future',
             });
 
             this._text.setPosition(width / 2, height / 2);

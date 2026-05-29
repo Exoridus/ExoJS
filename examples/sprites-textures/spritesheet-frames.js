@@ -16,32 +16,31 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { explosion: 'image/explosion.png' });
-            await loader.load(Json, { explosion: 'json/explosion.json' });
+            await loader.load(Texture, { characters: 'image/platformer-characters.png' });
+            await loader.load(Json, { characters: 'json/platformer-characters.json' });
         }
         init(loader) {
             const { width, height } = this.app.canvas;
-            const texture = loader.get(Texture, 'explosion');
+            const texture = loader.get(Texture, 'characters');
             /** @type {import('@codexo/exojs').SpritesheetData} */
-            const data = loader.get(Json, 'explosion');
+            const data = loader.get(Json, 'characters');
 
             this._spritesheet = new Spritesheet(texture, data);
-            this._sprite = this._spritesheet.getFrameSprite('explosion-0');
+            this._frameNames = Array.from(this._spritesheet.frames.keys());
             this._frame = 0;
-            this._frames = 64;
 
             for (const sprite of this._spritesheet.sprites.values()) {
                 sprite.setAnchor(0.5);
                 sprite.setPosition(width / 2, height / 2);
+                sprite.setScale(2);
             }
         }
         update() {
-            this._frame = (this._frame + 1) % this._frames;
-            this._sprite = this._spritesheet.getFrameSprite(`explosion-${this._frame}`);
+            this._frame = (this._frame + 1) % this._frameNames.length;
         }
         draw(context) {
             context.backend.clear();
-            context.render(this._sprite);
+            context.render(this._spritesheet.getFrameSprite(this._frameNames[this._frame]));
         }
     })()
 );

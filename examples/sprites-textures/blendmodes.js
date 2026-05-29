@@ -22,7 +22,7 @@ app.start(
                 Texture,
                 {
                     background: ALPHA_RINGS,
-                    bunny: 'image/bunny.png',
+                    bunny: 'image/ship-a.png',
                 },
                 {
                     scaleMode: ScaleModes.Nearest,

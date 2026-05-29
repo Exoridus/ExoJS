@@ -22,7 +22,7 @@ const modes = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { bunny: 'image/ship-a.png' });
         }
         init(loader) {
             this._sprite = new Sprite(loader.get(Texture, 'bunny')).setPosition(400, 300);

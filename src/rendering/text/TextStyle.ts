@@ -31,7 +31,7 @@ export type FontWeight = 'normal' | 'bold' | '100' | '200' | '300' | '400' | '50
  * ```ts
  * declare module 'exojs' {
  *   interface FontRegistry {
- *     'AndyBold': true;
+ *     'Kenney Future': true;
  *   }
  * }
  * ```

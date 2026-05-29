@@ -18,7 +18,7 @@ const message = 'ExoJS gives you explicit rendering control with a compact scene
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Sound, { tick: 'audio/example.ogg' });
+            await loader.load(Sound, { tick: 'audio/ui-click.ogg' });
         }
         init(loader) {
             this._sound = loader.get(Sound, 'tick');

@@ -18,7 +18,7 @@ const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { bunny: 'image/ship-a.png' });
         }
         init(loader) {
             this._players = app.input.gamepads.map((pad, index) => {
