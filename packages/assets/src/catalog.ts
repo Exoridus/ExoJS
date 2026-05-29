@@ -71,5 +71,20 @@ export const rawAssets = {
             data: 'demo/input-prompts/keyboard-mouse.json',
         },
     },
-    technical: {},
+    technical: {
+        alpha: {
+            alphaEdgeStraight: 'technical/alpha/alpha-edge-straight.png',
+            alphaGradientRings: 'technical/alpha/alpha-gradient-rings.png',
+        },
+        filtering: {
+            checker256: 'technical/filtering/checker-256.png',
+            pixelGrid128: 'technical/filtering/pixel-grid-128.png',
+            uvGrid256: 'technical/filtering/uv-grid-256.png',
+        },
+        color: {
+            srgbRamp: 'technical/color/srgb-ramp.png',
+            hueRamp: 'technical/color/hue-ramp.png',
+            primaryRamp: 'technical/color/primary-ramp.png',
+        },
+    },
 } as const;
