@@ -21,7 +21,7 @@ const rows = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const musicUrl = assets?.audio?.example ?? 'assets/demo/audio/example.ogg';
+            const musicUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
             const sfxUrl = assets?.audio?.uiClick ?? 'assets/demo/audio/ui-click.ogg';
             await loader.load(Music, { music: musicUrl });
             await loader.load(Sound, { sfx: sfxUrl });

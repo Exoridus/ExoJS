@@ -28,8 +28,9 @@ export const rawAssets = {
         uiBong: 'demo/audio/ui-bong.ogg',
         impactLight: 'demo/audio/impact-light.ogg',
         impactHeavy: 'demo/audio/impact-heavy.ogg',
-        musicA: 'demo/audio/ui-bong.ogg',
-        musicB: 'demo/audio/impact-heavy.ogg',
+        musicA: 'demo/audio/demo-loop-a.ogg',
+        musicB: 'demo/audio/demo-loop-b.ogg',
+        musicLoop: 'demo/audio/demo-loop-main.ogg',
     },
     fonts: {
         andyBold: 'demo/fonts/AndyBold.woff2',

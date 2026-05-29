@@ -15,7 +15,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const musicUrl = assets?.audio?.example ?? 'assets/demo/audio/example.ogg';
+            const musicUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
             const voiceUrl = assets?.audio?.uiConfirm ?? 'assets/demo/audio/ui-confirm.ogg';
             await loader.load(Music, { music: musicUrl });
             await loader.load(Sound, { voice: voiceUrl });
