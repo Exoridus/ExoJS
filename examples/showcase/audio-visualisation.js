@@ -94,7 +94,7 @@ app.start(
             this._values[2] = mid / len;
             this._values[3] = high / len;
         }
-        draw(backend) {
+        draw(context) {
             if (this._music.paused) {
                 return;
             }
@@ -133,8 +133,8 @@ app.start(
 
             this._screen.updateTexture();
 
-            backend.clear();
-            this._screen.render(backend);
+            context.backend.clear();
+            context.render(this._screen);
         }
     })()
 );

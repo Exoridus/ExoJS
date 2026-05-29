@@ -43,10 +43,10 @@ app.start(
                 sprite.zIndex = i === index ? 3 : i;
             });
         }
-        draw(backend) {
-            backend.clear();
-            this._root.render(backend);
-            this._label.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._root);
+            context.render(this._label);
         }
     })()
 );

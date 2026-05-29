@@ -77,12 +77,12 @@ app.start(
             this._camera.move(this._moveX * 420 * delta.seconds, this._moveY * 420 * delta.seconds);
             this._camera.setZoom(Math.max(0.25, this._camera.zoomLevel + this._zoom * 0.75 * delta.seconds));
         }
-        draw(backend) {
-            backend.clear();
-            backend.setView(this._camera);
-            this._world.render(backend);
-            backend.setView(null);
-            this._overlay.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.backend.setView(this._camera);
+            context.render(this._world);
+            context.backend.setView(null);
+            context.render(this._overlay);
         }
     })()
 );

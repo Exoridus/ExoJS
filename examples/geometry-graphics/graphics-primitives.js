@@ -42,9 +42,9 @@ app.start(
             this._star.rotate(delta.seconds * 60);
             this._circle.y = Math.sin(this.app.activeTime.seconds * 2) * 18;
         }
-        draw(backend) {
-            backend.clear();
-            this._sceneRoot.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sceneRoot);
         }
         unload() {
             this._sceneRoot?.destroy();

@@ -35,10 +35,10 @@ app.start(
                 this._forward.start();
             });
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
-            this._text.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
+            context.render(this._text);
         }
     })()
 );

@@ -48,9 +48,9 @@ app.start(
             this._time += delta.seconds;
             this._filter.uniforms.uTime = this._time;
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

@@ -57,8 +57,8 @@ app.start(
             const t = Math.max(0, Math.min(1, (x - 200) / 420));
             rows[this._drag].bus().volume = t;
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._graphics.clear();
             rows.forEach((row, index) => {
                 const value = row.bus().volume;
@@ -71,8 +71,8 @@ app.start(
             });
             this._graphics.fillColor = new Color(200, 200, 200);
             this._graphics.drawRectangle(250, 485, 300, 36);
-            this._graphics.render(backend);
-            for (const label of this._labels) label.render(backend);
+            context.render(this._graphics);
+            for (const label of this._labels) context.render(label);
         }
     })()
 );

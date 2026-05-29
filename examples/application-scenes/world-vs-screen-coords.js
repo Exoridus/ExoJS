@@ -49,16 +49,16 @@ app.start(
                 y: inverse.c * clipX + inverse.d * clipY + inverse.y,
             };
         }
-        draw(backend) {
+        draw(context) {
             const world = this._toWorld(this._pointer.x, this._pointer.y);
             this._text.text = `screen: ${this._pointer.x | 0}, ${this._pointer.y | 0}\nworld: ${world.x | 0}, ${world.y | 0}`;
             this._text.setPosition(12, 12);
-            backend.clear();
-            backend.setView(this._view);
-            this._grid.render(backend);
-            this._markers.render(backend);
-            backend.setView(null);
-            this._text.render(backend);
+            context.backend.clear();
+            context.backend.setView(this._view);
+            context.render(this._grid);
+            context.render(this._markers);
+            context.backend.setView(null);
+            context.render(this._text);
         }
     })()
 );

@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [0.10.0] - Unreleased
 
+### Breaking — RenderingContext and Scene.draw migration
+
+- `Scene.draw()` now receives `RenderingContext` instead of `RenderBackend`.
+- Use `context.render(node)` instead of `node.render(backend)` for the high-level path.
+- Use `context.backend` for advanced raw backend calls (`clear`, `setRenderTarget`, `setView`, etc.).
+- `app.rendering` is the canonical high-level rendering accessor (replaces the former `app.renderer` name).
+- `Application.renderTo()` remains available as a convenience wrapper.
+- `RenderNode.render(backend)` remains available as an advanced/raw path, marked `@advanced`.
+
 ### Breaking — Rendering order semantics
 
 - Removed `Container.sortableChildren`.
@@ -24,7 +33,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Migration notes
 
 - Remove `container.sortableChildren = true` from user code.
-- Keep using `render(backend): this`; no signature change.
+- `Scene.draw(backend)` → `Scene.draw(context)`: the draw method now receives `RenderingContext` instead of `RenderBackend`.
+  - `node.render(backend)` → `context.render(node)` (recommended high-level path).
+  - `backend.clear()` → `context.backend.clear()` (raw accessor is still available).
+  - `RenderNode.render(backend)` remains as the advanced raw path when needed.
 - For custom drawables, use `Drawable` + `RendererRegistry` so rendering remains on the backend dispatch path (`backend.draw(drawable)`).
 - Replace `GradientDrawable` with `new Sprite(new LinearGradient(...).toTexture(w, h))` (or `RadialGradient`).
 - Replace `SaveStore` imports/usages with `JsonStore` and update calls to `set()/get()`.

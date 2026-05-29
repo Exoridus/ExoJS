@@ -62,9 +62,9 @@ app.start(
         _applyMode() {
             this._sprite.filters = [this._mode === 0 ? this._tint : this._mode === 1 ? this._gray : this._sat];
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

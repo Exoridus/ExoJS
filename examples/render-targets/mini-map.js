@@ -41,24 +41,24 @@ app.start(
             this._player.drawCircle(x, y, 18);
             this._player.render(backend);
         }
-        draw(backend) {
-            backend.execute(
+        draw(context) {
+            context.backend.execute(
                 new RenderTargetPass(
                     () => {
-                        backend.clear();
-                        this._renderWorld(backend);
+                        context.backend.clear();
+                        this._renderWorld(context.backend);
                     },
                     { target: this._miniRt, view: this._miniRt.view }
                 )
             );
-            backend.clear();
-            this._renderWorld(backend);
-            this._miniSprite.render(backend);
+            context.backend.clear();
+            this._renderWorld(context.backend);
+            context.render(this._miniSprite);
             this._miniFrame.clear();
             this._miniFrame.lineWidth = 2;
             this._miniFrame.lineColor = Color.white;
             this._miniFrame.drawRectangle(560, 20, 220, 160);
-            this._miniFrame.render(backend);
+            context.render(this._miniFrame);
         }
     })()
 );

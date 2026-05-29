@@ -24,10 +24,10 @@ app.start(
             this._loaded = new Text('AndyBold Font', { fill: 'white', fontFamily: 'AndyBold', fontSize: 52 });
             this._loaded.setPosition(120, 320);
         }
-        draw(backend) {
-            backend.clear();
-            this._default.render(backend);
-            this._loaded.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._default);
+            context.render(this._loaded);
         }
     })()
 );

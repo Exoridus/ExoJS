@@ -26,18 +26,18 @@ app.start(
             this._text.setPosition(280, 220);
             this._bar = new Graphics();
         }
-        draw(backend) {
+        draw(context) {
             const bpm = this._detector.tempo;
             const confidence = this._detector.confidence;
             this._text.text = `BPM ${bpm.toFixed(1)}\nconfidence ${confidence.toFixed(2)}`;
-            backend.clear();
+            context.backend.clear();
             this._bar.clear();
             this._bar.fillColor = new Color(70, 70, 70);
             this._bar.drawRectangle(220, 360, 360, 22);
             this._bar.fillColor = new Color(120, 220, 150);
             this._bar.drawRectangle(220, 360, 360 * confidence, 22);
-            this._bar.render(backend);
-            this._text.render(backend);
+            context.render(this._bar);
+            context.render(this._text);
         }
     })()
 );

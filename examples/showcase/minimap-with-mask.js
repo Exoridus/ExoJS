@@ -42,24 +42,24 @@ app.start(
             this._player.drawCircle(400 + Math.cos(this._time) * 230, 300 + Math.sin(this._time * 1.2) * 170, 18);
             this._player.render(backend);
         }
-        draw(backend) {
-            backend.execute(
+        draw(context) {
+            context.backend.execute(
                 new RenderTargetPass(
                     () => {
-                        backend.clear();
-                        this._drawWorld(backend);
+                        context.backend.clear();
+                        this._drawWorld(context.backend);
                     },
                     { target: this._rt, view: this._rt.view }
                 )
             );
-            backend.clear();
-            this._drawWorld(backend);
-            this._mini.render(backend);
+            context.backend.clear();
+            this._drawWorld(context.backend);
+            context.render(this._mini);
             this._frame.clear();
             this._frame.lineWidth = 3;
             this._frame.lineColor = Color.white;
             this._frame.drawCircle(660, 150, 120);
-            this._frame.render(backend);
+            context.render(this._frame);
         }
     })()
 );

@@ -47,9 +47,9 @@ app.start(
                 this._filter.uniforms.uOffset = (t - 0.5) * 0.03;
             });
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

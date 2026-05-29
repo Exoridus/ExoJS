@@ -23,9 +23,9 @@ app.start(
             this.app.tweens.create(this._sprite.scale).to({ x: 1.5, y: 1.5 }, 0.8).yoyo(true).repeat(-1).start();
             this.app.tweens.create(this._sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

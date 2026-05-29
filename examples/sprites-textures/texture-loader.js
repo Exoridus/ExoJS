@@ -45,20 +45,20 @@ app.start(
             this._width = width;
             this._progress = { loaded: 0, total: 3 };
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             const { loaded, total } = this._progress;
             this._bar.clear();
             this._bar.fillColor = new Color(60, 60, 60);
             this._bar.drawRectangle(200, 150, 400, 24);
             this._bar.fillColor = new Color(90, 220, 120);
             this._bar.drawRectangle(200, 150, total > 0 ? (400 * loaded) / total : 0, 24);
-            this._bar.render(backend);
+            context.render(this._bar);
             this._label.text = `Loaded ${loaded} / ${total}`;
-            this._label.render(backend);
+            context.render(this._label);
 
             for (const sprite of this._sprites) {
-                sprite.render(backend);
+                context.render(sprite);
             }
         }
     })()

@@ -25,9 +25,9 @@ app.start(
             this._sprite.setAnchor(0.5);
             this._sprite.setPosition(width / 2, height / 2);
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

@@ -35,15 +35,15 @@ app.start(
                 }
             });
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._ui.clear();
             this._ui.fillColor = new Color(70, 130, 220);
             this._ui.drawRectangle(120, 280, 240, 70);
             this._ui.fillColor = new Color(220, 90, 90);
             this._ui.drawRectangle(440, 280, 240, 70);
-            this._ui.render(backend);
-            this._text.render(backend);
+            context.render(this._ui);
+            context.render(this._text);
         }
     })()
 );

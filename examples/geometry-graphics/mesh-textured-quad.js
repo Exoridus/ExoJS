@@ -54,9 +54,9 @@ app.start(
             this._quad.rotate(delta.seconds * 30);
         }
 
-        draw(backend) {
-            backend.clear();
-            this._quad.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._quad);
         }
     })()
 );

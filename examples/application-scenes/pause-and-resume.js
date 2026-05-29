@@ -40,10 +40,10 @@ app.start(
 
             this._sprite.rotate(delta.seconds * 180);
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
-            this._label.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
+            context.render(this._label);
         }
     })()
 );

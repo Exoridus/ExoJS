@@ -42,14 +42,14 @@ app.start(
             }
             this._pipView.follow(this._sprite, { lerp: 1 });
         }
-        draw(backend) {
-            backend.clear();
-            backend.setView(this._mainView);
-            this._sprite.render(backend);
-            backend.setView(this._pipView);
-            this._sprite.render(backend);
-            backend.setView(null);
-            this._frame.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.backend.setView(this._mainView);
+            context.render(this._sprite);
+            context.backend.setView(this._pipView);
+            context.render(this._sprite);
+            context.backend.setView(null);
+            context.render(this._frame);
         }
     })()
 );

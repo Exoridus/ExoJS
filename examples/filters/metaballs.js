@@ -38,9 +38,9 @@ app.start(
                 this._balls.drawCircle(400 + Math.cos(point.a) * point.r, 300 + Math.sin(point.a * 1.4) * point.r * 0.6, 36);
             }
         }
-        draw(backend) {
-            backend.clear();
-            this._balls.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._balls);
         }
     })()
 );

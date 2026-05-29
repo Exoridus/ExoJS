@@ -57,10 +57,10 @@ app.start(
             }
             this._box.text = lines[this._lineIndex].slice(0, this._chars);
         }
-        draw(backend) {
-            backend.clear(new Color(20, 24, 34));
-            this._portrait.render(backend);
-            this._box.render(backend);
+        draw(context) {
+            context.backend.clear(new Color(20, 24, 34));
+            context.render(this._portrait);
+            context.render(this._box);
         }
     })()
 );

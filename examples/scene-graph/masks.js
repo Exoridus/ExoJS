@@ -51,10 +51,10 @@ app.start(
             this._rectMask.x = (width / 4 + Math.cos(this._time * 1.4) * r - 55) | 0;
             this._rectMask.y = (height / 2 + Math.sin(this._time * 1.4) * r - 55) | 0;
         }
-        draw(backend) {
-            backend.clear();
-            this._rectSprite.render(backend);
-            this._gfxSprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._rectSprite);
+            context.render(this._gfxSprite);
         }
     })()
 );

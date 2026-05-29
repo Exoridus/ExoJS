@@ -32,12 +32,12 @@ app.start(
                 this._pointer = { x: p.x, y: p.y };
             });
         }
-        draw(backend) {
-            backend.clear(new Color(18, 22, 34));
+        draw(context) {
+            context.backend.clear(new Color(18, 22, 34));
             for (let i = 0; i < this._layers.length; i++) {
                 const layer = this._layers[i];
                 layer.setPosition((400 - this._pointer.x) * scales[i], (300 - this._pointer.y) * scales[i]);
-                layer.render(backend);
+                context.render(layer);
             }
         }
     })()

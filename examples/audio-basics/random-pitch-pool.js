@@ -42,9 +42,9 @@ app.start(
                 this._sound.play({ playbackRate: Math.pow(2, cents / 1200) });
             }
         }
-        draw(backend) {
-            backend.clear();
-            this._text.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._text);
         }
     })()
 );

@@ -55,9 +55,9 @@ app.start(
             this._offset = (this._offset + delta.seconds * 80) % PALETTE_SIZE;
             this._palette.source = buildPaletteCanvas(Math.floor(this._offset));
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

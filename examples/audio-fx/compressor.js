@@ -58,8 +58,8 @@ app.start(
         _value(def) {
             return this._filter[def.key];
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._gfx.clear();
             for (let i = 0; i < sliders.length; i++) {
                 const def = sliders[i];
@@ -71,7 +71,7 @@ app.start(
                 this._gfx.drawRectangle(260, def.y - 6, 420 * t, 12);
                 this._labels[i].text = `${def.key}: ${val.toFixed(def.key === 'ratio' ? 2 : 3)}`;
                 this._labels[i].setPosition(120, def.y - 12);
-                this._labels[i].render(backend);
+                context.render(this._labels[i]);
             }
 
             // Live gain-reduction meter (bottom). reduction is in dB, always <= 0.
@@ -82,9 +82,9 @@ app.start(
             this._gfx.fillColor = new Color(255, 140, 140);
             this._gfx.drawRectangle(260, 484, 420 * meterT, 12);
             this._meterLabel.text = `gain reduction: ${reduction.toFixed(1)} dB`;
-            this._meterLabel.render(backend);
+            context.render(this._meterLabel);
 
-            this._gfx.render(backend);
+            context.render(this._gfx);
         }
     })()
 );

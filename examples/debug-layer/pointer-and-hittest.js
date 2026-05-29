@@ -39,9 +39,9 @@ app.start(
                 this._sprites.push(sprite);
             }
         }
-        draw(backend) {
-            backend.clear();
-            for (const sprite of this._sprites) sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            for (const sprite of this._sprites) context.render(sprite);
         }
     })()
 );

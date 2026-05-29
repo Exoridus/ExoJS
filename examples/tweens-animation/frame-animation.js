@@ -32,9 +32,9 @@ app.start(
         update(delta) {
             this._sprite.update(delta);
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

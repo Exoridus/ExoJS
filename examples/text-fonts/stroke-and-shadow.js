@@ -31,10 +31,10 @@ app.start(
             });
             this._title.setPosition(170, 200);
         }
-        draw(backend) {
-            backend.clear(new Color(24, 28, 42));
-            this._shadow.render(backend);
-            this._title.render(backend);
+        draw(context) {
+            context.backend.clear(new Color(24, 28, 42));
+            context.render(this._shadow);
+            context.render(this._title);
         }
     })()
 );

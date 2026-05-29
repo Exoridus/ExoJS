@@ -27,9 +27,9 @@ class MenuScene extends Scene {
     _onTap() {
         void this.app.scene.setScene(gameScene);
     }
-    draw(backend) {
-        backend.clear(new Color(18, 38, 72, 1));
-        this._label.render(backend);
+    draw(context) {
+        context.backend.clear(new Color(18, 38, 72, 1));
+        context.render(this._label);
     }
     destroy() {
         this.app.input.onPointerTap.remove(this._onTap, this);
@@ -47,9 +47,9 @@ class GameScene extends Scene {
             void this.app.scene.setScene(menuScene);
         });
     }
-    draw(backend) {
-        backend.clear(new Color(24, 72, 42, 1));
-        this._label.render(backend);
+    draw(context) {
+        context.backend.clear(new Color(24, 72, 42, 1));
+        context.render(this._label);
     }
 }
 

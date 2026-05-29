@@ -41,9 +41,9 @@ app.start(
                 this._sound.play();
             }
         }
-        draw(backend) {
-            backend.clear();
-            this._label.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._label);
         }
     })()
 );

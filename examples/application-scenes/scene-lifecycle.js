@@ -36,11 +36,11 @@ app.start(
                 this._timer.restart();
             }
         }
-        draw(backend) {
+        draw(context) {
             this._drawCount++;
-            backend.clear();
+            context.backend.clear();
             this._text.text = [...this._events.slice(-8), `draw ${this._drawCount}`].join('\n');
-            this._text.render(backend);
+            context.render(this._text);
         }
         destroy() {
             this._events.push('destroy');

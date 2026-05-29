@@ -46,10 +46,10 @@ app.start(
         update() {
             this._layout();
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
-            this._info.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
+            context.render(this._info);
         }
     })()
 );

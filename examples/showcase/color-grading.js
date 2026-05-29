@@ -97,11 +97,11 @@ app.start(
                 this._label.text = LOOKS[this._index].name;
             });
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
-            this._label.render(backend);
-            this._hint.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
+            context.render(this._label);
+            context.render(this._hint);
         }
     })()
 );

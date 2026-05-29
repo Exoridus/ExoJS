@@ -36,20 +36,20 @@ app.start(
             this._scene.drawCircle(400 + Math.cos(this._time * 1.2 + 1) * 210, 300 + Math.sin(this._time * 1.3 + 0.7) * 170, 54);
             this._scene.render(backend);
         }
-        draw(backend) {
-            backend.execute(
+        draw(context) {
+            context.backend.execute(
                 new RenderTargetPass(
                     () => {
-                        backend.clear();
-                        this._drawScene(backend);
+                        context.backend.clear();
+                        this._drawScene(context.backend);
                     },
                     { target: this._a, view: this._a.view }
                 )
             );
-            this._blur.apply(backend, this._a, this._b);
-            this._color.apply(backend, this._b, this._c);
-            backend.clear();
-            this._final.render(backend);
+            this._blur.apply(context.backend, this._a, this._b);
+            this._color.apply(context.backend, this._b, this._c);
+            context.backend.clear();
+            context.render(this._final);
         }
     })()
 );

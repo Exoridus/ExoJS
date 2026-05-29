@@ -43,12 +43,12 @@ app.start(
                 y: matrix.c * clipX + matrix.d * clipY + matrix.y,
             };
         }
-        draw(backend) {
-            backend.clear();
-            backend.setView(this._view);
-            this._grid.render(backend);
-            this._markers.render(backend);
-            backend.setView(null);
+        draw(context) {
+            context.backend.clear();
+            context.backend.setView(this._view);
+            context.render(this._grid);
+            context.render(this._markers);
+            context.backend.setView(null);
         }
     })()
 );

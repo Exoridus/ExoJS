@@ -34,9 +34,9 @@ app.start(
             this._triangle.rotate(delta.seconds * 60);
         }
 
-        draw(backend) {
-            backend.clear();
-            this._triangle.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._triangle);
         }
     })()
 );

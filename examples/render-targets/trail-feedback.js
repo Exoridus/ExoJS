@@ -29,18 +29,18 @@ app.start(
             this._time += delta.seconds;
             this._bunny.setPosition(400 + Math.cos(this._time * 2.0) * 230, 300 + Math.sin(this._time * 2.7) * 170);
         }
-        draw(backend) {
-            backend.execute(
+        draw(context) {
+            context.backend.execute(
                 new RenderTargetPass(
                     () => {
-                        this._decay.render(backend);
-                        this._bunny.render(backend);
+                        context.render(this._decay);
+                        context.render(this._bunny);
                     },
                     { target: this._rt, view: this._rt.view }
                 )
             );
-            backend.clear();
-            this._final.render(backend);
+            context.backend.clear();
+            context.render(this._final);
         }
     })()
 );

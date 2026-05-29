@@ -74,9 +74,9 @@ app.start(
                 entry.sprite.setScale(scale);
             }
         }
-        draw(backend) {
-            backend.clear();
-            this._spriteLayer.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._spriteLayer);
         }
         unload() {
             this._spriteLayer?.destroy();

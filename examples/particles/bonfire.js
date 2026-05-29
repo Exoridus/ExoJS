@@ -64,9 +64,9 @@ app.start(
         update(delta) {
             this._particleSystem.update(delta);
         }
-        draw(backend) {
-            backend.clear();
-            this._particleSystem.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._particleSystem);
         }
     })()
 );

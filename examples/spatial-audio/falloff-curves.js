@@ -69,8 +69,8 @@ app.start(
                 this._listener.y = pointer.y;
             });
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._graphics.clear();
 
             // Falloff-curve plots in the upper canvas area.
@@ -109,9 +109,9 @@ app.start(
                 this._labels[i].text = `${model}\nvol ${v.toFixed(2)}`;
             }
 
-            this._graphics.render(backend);
-            this._hint.render(backend);
-            for (const label of this._labels) label.render(backend);
+            context.render(this._graphics);
+            context.render(this._hint);
+            for (const label of this._labels) context.render(label);
         }
     })()
 );

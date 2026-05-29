@@ -33,9 +33,9 @@ app.start(
                     : new WebGl2ShaderFilter({ fragmentSource: glsl });
             this._sprite.filters = [blur, tint, custom];
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

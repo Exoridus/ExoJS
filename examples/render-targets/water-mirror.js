@@ -58,19 +58,19 @@ app.start(
             this._source.setPosition(400 + Math.cos(this._time * 1.7) * 170, 180 + Math.sin(this._time * 1.3) * 60);
             this._filter.uniforms.uTime = this._time;
         }
-        draw(backend) {
-            backend.execute(
+        draw(context) {
+            context.backend.execute(
                 new RenderTargetPass(
                     () => {
-                        backend.clear();
-                        this._source.render(backend);
+                        context.backend.clear();
+                        context.render(this._source);
                     },
                     { target: this._rt, view: this._rt.view, clearColor: Color.transparentBlack }
                 )
             );
-            backend.clear(new Color(18, 24, 36));
-            this._source.render(backend);
-            this._mirror.render(backend);
+            context.backend.clear(new Color(18, 24, 36));
+            context.render(this._source);
+            context.render(this._mirror);
         }
     })()
 );

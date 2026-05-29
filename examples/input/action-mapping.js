@@ -78,9 +78,9 @@ app.start(
             this._sprite.move(0, this._jumpImpulse * delta.seconds);
             this._jumpImpulse = Math.min(0, this._jumpImpulse + 800 * delta.seconds);
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

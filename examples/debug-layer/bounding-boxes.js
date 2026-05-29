@@ -39,9 +39,9 @@ app.start(
                 sprite.setPosition(sprite.position.x, 300 + Math.sin(this._time * sprite._speed) * 100);
             }
         }
-        draw(backend) {
-            backend.clear();
-            for (const sprite of this._sprites) sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            for (const sprite of this._sprites) context.render(sprite);
         }
     })()
 );

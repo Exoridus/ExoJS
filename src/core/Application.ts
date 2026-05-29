@@ -273,6 +273,13 @@ export class Application {
     return this._frameCount;
   }
 
+  /**
+   * Low-level render backend. Prefer the high-level
+   * {@link Application.rendering} render context for normal rendering.
+   * Direct backend access is an escape hatch for custom render passes
+   * and advanced GPU work.
+   * @advanced
+   */
   public get backend(): RenderBackend {
     return this._backend;
   }

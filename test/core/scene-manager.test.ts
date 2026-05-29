@@ -37,6 +37,13 @@ const createInputManagerStub = (): InputManagerStub => ({
 
 const createApplicationStub = (): Application & {
   input: InputManagerStub;
+  rendering: {
+    backend: {
+      view: { getBounds: () => Rectangle };
+      draw: MockInstance;
+    };
+    render: MockInstance;
+  };
   backend: {
     view: { getBounds: () => Rectangle };
     draw: MockInstance;
@@ -45,20 +52,32 @@ const createApplicationStub = (): Application & {
   };
 } => {
   const bounds = new Rectangle(0, 0, 320, 180);
+  const backendMock = {
+    view: {
+      getBounds: () => bounds,
+    },
+    draw: vi.fn().mockReturnThis(),
+    stats: { culledNodes: 0 },
+    resetStats: vi.fn().mockReturnThis(),
+  };
 
   return {
     loader: {},
     input: createInputManagerStub(),
-    backend: {
-      view: {
-        getBounds: () => bounds,
-      },
-      draw: vi.fn().mockReturnThis(),
-      stats: { culledNodes: 0 },
-      resetStats: vi.fn().mockReturnThis(),
+    rendering: {
+      backend: backendMock,
+      render: vi.fn(),
     },
+    backend: backendMock,
   } as unknown as Application & {
     input: InputManagerStub;
+    rendering: {
+      backend: {
+        view: { getBounds: () => Rectangle };
+        draw: MockInstance;
+      };
+      render: MockInstance;
+    };
     backend: {
       view: { getBounds: () => Rectangle };
       draw: MockInstance;
@@ -362,5 +381,21 @@ describe('SceneManager', () => {
 
     await expect(manager.setScene(fallback)).resolves.toBe(manager);
     expect(manager.currentScene).toBe(fallback);
+  });
+
+  test('passes the rendering context to scene.draw()', async () => {
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
+    let drawArg: unknown = null;
+    const scene = makeScene({
+      draw(context): void {
+        drawArg = context;
+      },
+    });
+
+    await manager.setScene(scene);
+    tick(manager);
+
+    expect(drawArg).toBe(app.rendering);
   });
 });

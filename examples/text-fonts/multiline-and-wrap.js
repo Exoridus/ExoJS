@@ -38,14 +38,14 @@ app.start(
             });
             this._textC.setPosition(680, 110);
         }
-        draw(backend) {
-            backend.clear();
-            this._titleA.render(backend);
-            this._titleB.render(backend);
-            this._titleC.render(backend);
-            this._textA.render(backend);
-            this._textB.render(backend);
-            this._textC.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._titleA);
+            context.render(this._titleB);
+            context.render(this._titleC);
+            context.render(this._textA);
+            context.render(this._textB);
+            context.render(this._textC);
         }
     })()
 );

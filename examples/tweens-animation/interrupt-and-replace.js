@@ -28,9 +28,9 @@ app.start(
                 this._moveTween = this.app.tweens.create(this._sprite.position).to({ x: pointer.x, y: pointer.y }, 0.35).start();
             });
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

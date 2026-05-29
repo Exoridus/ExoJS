@@ -42,9 +42,9 @@ app.start(
             this._planet.rotate(delta.seconds * 120);
             this._moonOrbit.rotate(delta.seconds * 180);
         }
-        draw(backend) {
-            backend.clear();
-            this._planetOrbit.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._planetOrbit);
         }
     })()
 );

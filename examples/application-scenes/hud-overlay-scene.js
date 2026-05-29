@@ -21,13 +21,13 @@ class GameScene extends Scene {
     update(delta) {
         this._angle += delta.seconds * 90;
     }
-    draw(backend) {
-        backend.clear(new Color(20, 32, 58));
+    draw(context) {
+        context.backend.clear(new Color(20, 32, 58));
         this._ring.clear();
         this._ring.lineWidth = 20;
         this._ring.lineColor = new Color(90, 180, 255);
         this._ring.drawArc(400, 300, 160, 0, (this._angle * Math.PI) / 180);
-        this._ring.render(backend);
+        context.render(this._ring);
     }
 }
 
@@ -37,14 +37,14 @@ class HudScene extends Scene {
         this._text = new Text('HUD Overlay', { fill: 'white', fontSize: 22 });
         this._text.setPosition(18, 14);
     }
-    draw(backend) {
+    draw(context) {
         this._bar.clear();
         this._bar.fillColor = new Color(0, 0, 0, 0.45);
         this._bar.drawRectangle(0, 0, 800, 56);
         this._bar.fillColor = new Color(80, 220, 120);
         this._bar.drawRectangle(18, 40, 220, 8);
-        this._bar.render(backend);
-        this._text.render(backend);
+        context.render(this._bar);
+        context.render(this._text);
     }
 }
 

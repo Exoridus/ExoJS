@@ -32,31 +32,31 @@ app.start(
             this._time += delta.seconds;
             this._bunny.setPosition(400 + Math.cos(this._time * 1.7) * 190, 300 + Math.sin(this._time * 1.2) * 160);
         }
-        draw(backend) {
-            backend.execute(
+        draw(context) {
+            context.backend.execute(
                 new RenderTargetPass(
                     () => {
-                        backend.clear();
+                        context.backend.clear();
                         this._bunny.setTint(Color.white);
-                        this._bunny.render(backend);
+                        context.render(this._bunny);
                     },
                     { target: this._baseRt, view: this._baseRt.view }
                 )
             );
-            backend.execute(
+            context.backend.execute(
                 new RenderTargetPass(
                     () => {
-                        backend.clear();
+                        context.backend.clear();
                         this._bunny.setTint(new Color(255, 230, 190));
-                        this._bunny.render(backend);
+                        context.render(this._bunny);
                     },
                     { target: this._glowRt, view: this._glowRt.view }
                 )
             );
-            this._blur.apply(backend, this._glowRt, this._blurredRt);
-            backend.clear();
-            this._baseSprite.render(backend);
-            this._glowSprite.render(backend);
+            this._blur.apply(context.backend, this._glowRt, this._blurredRt);
+            context.backend.clear();
+            context.render(this._baseSprite);
+            context.render(this._glowSprite);
         }
     })()
 );

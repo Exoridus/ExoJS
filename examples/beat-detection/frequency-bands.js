@@ -31,8 +31,8 @@ app.start(
             this._levels.mid = v.mid;
             this._levels.high = v.high;
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._bars.clear();
             const values = [this._levels.low, this._levels.mid, this._levels.high];
             const colors = [new Color(255, 140, 120), new Color(130, 220, 255), new Color(150, 255, 150)];
@@ -42,7 +42,7 @@ app.start(
                 this._bars.fillColor = colors[i];
                 this._bars.drawRectangle(180 + i * 170, 420, 110, -260 * values[i]);
             }
-            this._bars.render(backend);
+            context.render(this._bars);
         }
     })()
 );

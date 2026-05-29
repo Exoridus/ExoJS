@@ -58,8 +58,8 @@ app.start(
             if (this._drag === 1) this._delay.wet = t;
             if (this._drag === 2) this._delay.delaySeconds = 0.02 + t * 0.8;
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._gfx.clear();
             const values = [this._reverb.wet, this._delay.wet, this._delay.delaySeconds / 0.82];
             const names = [
@@ -74,11 +74,11 @@ app.start(
                 this._gfx.drawRectangle(260, sliders[i].y - 6, 420 * values[i], 12);
                 this._labels[i].text = names[i];
                 this._labels[i].setPosition(110, sliders[i].y - 12);
-                this._labels[i].render(backend);
+                context.render(this._labels[i]);
             }
             this._gfx.fillColor = new Color(200, 200, 200);
             this._gfx.drawRectangle(280, 495, 300, 40);
-            this._gfx.render(backend);
+            context.render(this._gfx);
         }
     })()
 );

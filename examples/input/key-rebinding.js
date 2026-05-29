@@ -53,10 +53,10 @@ app.start(
             if (this._sprite.position.y > 300) this._sprite.position.y = 300;
             this._text.text = `Press J to rebind jump\nCurrent jump channel: ${this._jumpChannel}`;
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
-            this._text.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
+            context.render(this._text);
         }
     })()
 );

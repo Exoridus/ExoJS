@@ -39,9 +39,9 @@ app.start(
             this._frame = (this._frame + 1) % this._frames;
             this._sprite = this._spritesheet.getFrameSprite(`explosion-${this._frame}`);
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

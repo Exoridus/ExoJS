@@ -29,15 +29,15 @@ app.start(
                 this._pointer = { x: pointer.x, y: pointer.y };
             });
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
             this._crosshair.clear();
             this._crosshair.lineWidth = 2;
             this._crosshair.lineColor = new Color(255, 220, 80);
             this._crosshair.drawLine(this._pointer.x - 10, this._pointer.y, this._pointer.x + 10, this._pointer.y);
             this._crosshair.drawLine(this._pointer.x, this._pointer.y - 10, this._pointer.x, this._pointer.y + 10);
-            this._crosshair.render(backend);
+            context.render(this._crosshair);
         }
     })()
 );

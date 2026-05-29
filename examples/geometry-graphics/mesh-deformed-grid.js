@@ -96,9 +96,9 @@ app.start(
             this._mesh.recomputeLocalBounds();
         }
 
-        draw(backend) {
-            backend.clear();
-            this._mesh.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._mesh);
         }
     })()
 );

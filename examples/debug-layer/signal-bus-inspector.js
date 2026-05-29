@@ -42,13 +42,13 @@ app.start(
                 this._tick.restart();
             }
         }
-        draw(backend) {
+        draw(context) {
             this._text.text =
                 `Manual Signal Inspector\n\nspawn listeners: ${this._signals.spawn.bindings.length}\n` +
                     `damage listeners: ${this._signals.damage.bindings.length}\n` +
                     `score listeners: ${this._signals.score.bindings.length}`;
-            backend.clear();
-            this._text.render(backend);
+            context.backend.clear();
+            context.render(this._text);
         }
     })()
 );

@@ -36,15 +36,15 @@ app.start(
                 y: this._listener.y + Math.sin(this._angle) * 120,
             };
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._graphics.clear();
             this._graphics.fillColor = new Color(120, 255, 160);
             this._graphics.drawCircle(this._listener.x, this._listener.y, 12);
             this._graphics.fillColor = new Color(255, 150, 120);
             this._graphics.drawCircle(this._sound.position.x, this._sound.position.y, 16);
-            this._graphics.render(backend);
-            this._text.render(backend);
+            context.render(this._graphics);
+            context.render(this._text);
         }
     })()
 );

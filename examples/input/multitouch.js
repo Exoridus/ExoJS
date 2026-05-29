@@ -34,8 +34,8 @@ app.start(
                 this._pointers.delete(pointer.id);
             });
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             this._graphics.clear();
             let index = 0;
             for (const point of this._pointers.values()) {
@@ -43,7 +43,7 @@ app.start(
                 this._graphics.drawCircle(point.x, point.y, 24);
                 index++;
             }
-            this._graphics.render(backend);
+            context.render(this._graphics);
         }
     })()
 );

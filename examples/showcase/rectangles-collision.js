@@ -63,10 +63,10 @@ app.start(
                 this._boxB.tint.a = 0.5;
             }
         }
-        draw(backend) {
-            backend.clear();
-            this._boxA.render(backend);
-            this._boxB.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._boxA);
+            context.render(this._boxB);
         }
     })()
 );

@@ -115,9 +115,9 @@ app.start(
             this._filter.uniforms.uCenter = [this._view.center.x, this._view.center.y];
             this._filter.uniforms.uViewSize = [this._view.width, this._view.height];
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

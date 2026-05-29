@@ -49,21 +49,21 @@ app.start(
                 .start();
             this.app.tweens.create(this._music).to({ volume: 0.85 }, 2.0).start();
         }
-        draw(backend) {
-            backend.clear(new Color(16, 16, 24));
+        draw(context) {
+            context.backend.clear(new Color(16, 16, 24));
             this._bg.clear();
             this._bg.fillColor = new Color(36, 42, 70);
             this._bg.drawRectangle(-200, 0, 1600, 600);
-            backend.setView(this._view);
-            this._bg.render(backend);
-            this._boss.render(backend);
-            backend.setView(null);
-            this._title.render(backend);
+            context.backend.setView(this._view);
+            context.render(this._bg);
+            context.render(this._boss);
+            context.backend.setView(null);
+            context.render(this._title);
             this._bars.clear();
             this._bars.fillColor = Color.black;
             this._bars.drawRectangle(0, 0, 800, this._barSize.v);
             this._bars.drawRectangle(0, 600 - this._barSize.v, 800, this._barSize.v);
-            this._bars.render(backend);
+            context.render(this._bars);
         }
     })()
 );

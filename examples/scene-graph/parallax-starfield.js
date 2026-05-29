@@ -36,13 +36,13 @@ app.start(
                 this._pointer = { x: pointer.x, y: pointer.y };
             });
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             for (let i = 0; i < this._layers.length; i++) {
                 const layer = this._layers[i];
                 const factor = speeds[i];
                 layer.setPosition((400 - this._pointer.x) * factor, (300 - this._pointer.y) * factor);
-                layer.render(backend);
+                context.render(layer);
             }
         }
     })()

@@ -28,9 +28,9 @@ app.start(
 
             this.app.input.onPointerTap.add(() => this._video.toggle());
         }
-        draw(backend) {
-            backend.clear();
-            this._video.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._video);
         }
     })()
 );

@@ -80,12 +80,12 @@ app.start(
 
             this._ticker += delta.seconds;
         }
-        draw(backend) {
-            backend.clear();
-            this._background.render(backend);
-            this._leftBunny.render(backend);
-            this._rightBunny.render(backend);
-            this._info.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._background);
+            context.render(this._leftBunny);
+            context.render(this._rightBunny);
+            context.render(this._info);
         }
     })()
 );

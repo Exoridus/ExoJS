@@ -49,10 +49,10 @@ app.start(
 
             this._bunnies.rotate(delta.seconds * 36);
         }
-        draw(backend) {
-            backend.clear();
-            this._rainbow.render(backend);
-            this._bunnies.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._rainbow);
+            context.render(this._bunnies);
         }
     })()
 );

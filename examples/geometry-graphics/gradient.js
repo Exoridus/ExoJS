@@ -46,10 +46,10 @@ app.start(
             this._orb.rotate(-delta.seconds * 30);
             this._orb.setScale(1 + Math.sin(this.app.activeTime.seconds * 2) * 0.07);
         }
-        draw(backend) {
-            backend.clear();
-            this._background.render(backend);
-            this._orb.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._background);
+            context.render(this._orb);
         }
         unload() {
             this._background?.texture?.destroy();

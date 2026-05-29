@@ -54,9 +54,9 @@ app.start(
             const speed = 280 * delta.seconds;
             this._sprite.move((this._move.d - this._move.a) * speed, (this._move.s - this._move.w) * speed);
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
         }
     })()
 );

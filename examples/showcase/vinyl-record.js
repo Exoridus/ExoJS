@@ -32,9 +32,9 @@ app.start(
             const bpm = this._beat.tempo > 0 ? this._beat.tempo : 120;
             this._angle += delta.seconds * (bpm / 60) * 360;
         }
-        draw(backend) {
+        draw(context) {
             const spectrum = this._analyser.getSpectrum();
-            backend.clear(new Color(16, 18, 26));
+            context.backend.clear(new Color(16, 18, 26));
             this._disc.clear();
             this._disc.fillColor = new Color(28, 28, 30);
             this._disc.drawCircle(400, 300, 150);
@@ -43,7 +43,7 @@ app.start(
             this._disc.lineWidth = 2;
             this._disc.lineColor = new Color(80, 80, 84);
             for (let r = 45; r <= 140; r += 14) this._disc.drawArc(400, 300, r, 0, Math.PI * 2);
-            this._disc.render(backend);
+            context.render(this._disc);
 
             this._bars.clear();
             for (let i = 0; i < 36; i++) {
@@ -58,7 +58,7 @@ app.start(
                 this._bars.lineColor = new Color(120, 200, 255);
                 this._bars.drawLine(x0, y0, x1, y1);
             }
-            this._bars.render(backend);
+            context.render(this._bars);
         }
     })()
 );

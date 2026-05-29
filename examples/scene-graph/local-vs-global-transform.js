@@ -42,12 +42,12 @@ app.start(
         update(delta) {
             this._parent.rotate(delta.seconds * 60);
         }
-        draw(backend) {
-            backend.clear();
-            this._parent.render(backend);
-            this._globalSprite.render(backend);
-            this._localLabel.render(backend);
-            this._globalLabel.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._parent);
+            context.render(this._globalSprite);
+            context.render(this._localLabel);
+            context.render(this._globalLabel);
         }
     })()
 );

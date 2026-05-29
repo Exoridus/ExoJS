@@ -34,9 +34,9 @@ app.start(
                 this._toB = !this._toB;
             });
         }
-        draw(backend) {
-            backend.clear();
-            this._text.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._text);
         }
     })()
 );

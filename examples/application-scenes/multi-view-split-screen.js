@@ -95,16 +95,16 @@ app.start(
             this._leftView.setCenter(this._leftPlayer.position.x, this._leftPlayer.position.y);
             this._rightView.setCenter(this._rightPlayer.position.x, this._rightPlayer.position.y);
         }
-        draw(backend) {
-            backend.clear();
-            backend.setView(this._leftView);
-            this._leftPlayer.render(backend);
-            this._rightPlayer.render(backend);
-            backend.setView(this._rightView);
-            this._leftPlayer.render(backend);
-            this._rightPlayer.render(backend);
-            backend.setView(null);
-            this._divider.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.backend.setView(this._leftView);
+            context.render(this._leftPlayer);
+            context.render(this._rightPlayer);
+            context.backend.setView(this._rightView);
+            context.render(this._leftPlayer);
+            context.render(this._rightPlayer);
+            context.backend.setView(null);
+            context.render(this._divider);
         }
     })()
 );

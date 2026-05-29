@@ -57,10 +57,10 @@ app.start(
 
             return renderTexture;
         }
-        draw(backend) {
-            backend.clear();
-            this._container.render(backend);
-            this._renderSprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._container);
+            context.render(this._renderSprite);
         }
     })()
 );

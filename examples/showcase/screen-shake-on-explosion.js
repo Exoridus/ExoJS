@@ -41,11 +41,11 @@ app.start(
         update(delta) {
             this._ps.update(delta);
         }
-        draw(backend) {
-            backend.clear();
-            backend.setView(this._view);
-            this._ps.render(backend);
-            backend.setView(null);
+        draw(context) {
+            context.backend.clear();
+            context.backend.setView(this._view);
+            context.render(this._ps);
+            context.backend.setView(null);
         }
     })()
 );

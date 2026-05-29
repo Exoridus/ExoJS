@@ -83,10 +83,10 @@ app.start(
             this._velocity.y *= 0.985;
             this._particles.update(delta);
         }
-        draw(backend) {
-            backend.clear();
-            this._particles.render(backend);
-            this._ship.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._particles);
+            context.render(this._ship);
         }
     })()
 );

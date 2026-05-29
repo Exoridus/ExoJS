@@ -30,9 +30,9 @@ class GameScene extends Scene {
         this._time += delta.seconds;
         this._sprite.setRotation(this._time * 80);
     }
-    draw(backend) {
-        backend.clear(new Color(20, 24, 34));
-        this.root.render(backend);
+    draw(context) {
+        context.backend.clear(new Color(20, 24, 34));
+        context.render(this.root);
     }
 }
 
@@ -46,8 +46,8 @@ class PauseScene extends Scene {
             await this.app.scene.popScene();
         });
     }
-    draw(backend) {
-        this._text.render(backend);
+    draw(context) {
+        context.render(this._text);
     }
     destroy() {
         gameScene.root.clearFilters();

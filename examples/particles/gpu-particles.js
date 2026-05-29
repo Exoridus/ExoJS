@@ -52,10 +52,10 @@ app.start(
             this._system.update(delta);
             this._label.text = `alive: ${this._system.aliveCount}  gpuMode: ${this._system.gpuMode}`;
         }
-        draw(backend) {
-            backend.clear();
-            this._system.render(backend);
-            this._label.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._system);
+            context.render(this._label);
         }
     })()
 );

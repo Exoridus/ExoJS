@@ -49,10 +49,10 @@ app.start(
             this._filter.uniforms.uProgress = this._progress.v;
             this._label.text = `${(this._progress.v * 100) | 0}%`;
         }
-        draw(backend) {
-            backend.clear(new Color(14, 18, 28));
-            this._ring.render(backend);
-            this._label.render(backend);
+        draw(context) {
+            context.backend.clear(new Color(14, 18, 28));
+            context.render(this._ring);
+            context.render(this._label);
         }
     })()
 );

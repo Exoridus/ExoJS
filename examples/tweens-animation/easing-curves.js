@@ -43,11 +43,11 @@ app.start(
                 return { sprite, label, tween };
             });
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             for (const row of this._rows) {
-                row.sprite.render(backend);
-                row.label.render(backend);
+                context.render(row.sprite);
+                context.render(row.label);
             }
         }
     })()

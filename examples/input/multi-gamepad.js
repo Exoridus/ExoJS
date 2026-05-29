@@ -49,10 +49,10 @@ app.start(
                 player.sprite.move(player.move.x * 260 * delta.seconds, player.move.y * 260 * delta.seconds);
             }
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
             for (const player of this._players) {
-                player.sprite.render(backend);
+                context.render(player.sprite);
             }
         }
     })()

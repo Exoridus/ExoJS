@@ -44,10 +44,10 @@ app.start(
                 }
             }
         }
-        draw(backend) {
-            backend.clear();
-            this._status.render(backend);
-            this._container.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._status);
+            context.render(this._container);
         }
         handleGamepadConnected(pad) {
             if (!this._activePad) {

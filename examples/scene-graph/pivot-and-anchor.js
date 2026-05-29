@@ -48,15 +48,15 @@ app.start(
                 this._applyMode();
             }
         }
-        draw(backend) {
+        draw(context) {
             const m = this._sprite.getGlobalTransform();
-            backend.clear();
-            this._sprite.render(backend);
+            context.backend.clear();
+            context.render(this._sprite);
             this._pivotMarker.clear();
             this._pivotMarker.fillColor = new Color(255, 80, 80);
             this._pivotMarker.drawCircle(m.x, m.y, 5);
-            this._pivotMarker.render(backend);
-            this._label.render(backend);
+            context.render(this._pivotMarker);
+            context.render(this._label);
         }
     })()
 );

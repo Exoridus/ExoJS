@@ -39,9 +39,9 @@ app.start(
             this._text.text = `Hello World! ${this._time.addTime(delta).seconds | 0}`;
             this._text.rotate(delta.seconds * 36);
         }
-        draw(backend) {
-            backend.clear();
-            this._text.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._text);
         }
     })()
 );

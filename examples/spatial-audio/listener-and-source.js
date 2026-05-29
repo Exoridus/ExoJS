@@ -43,20 +43,20 @@ app.start(
                 this._dragging = false;
             });
         }
-        draw(backend) {
+        draw(context) {
             const dx = this._sound.position.x - this._listener.x;
             const dy = this._sound.position.y - this._listener.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             this._label.text = `Drag source circle  distance: ${dist.toFixed(0)}`;
 
-            backend.clear();
+            context.backend.clear();
             this._graphics.clear();
             this._graphics.fillColor = new Color(120, 255, 160);
             this._graphics.drawCircle(this._listener.x, this._listener.y, 14);
             this._graphics.fillColor = new Color(255, 140, 140);
             this._graphics.drawCircle(this._sound.position.x, this._sound.position.y, 18);
-            this._graphics.render(backend);
-            this._label.render(backend);
+            context.render(this._graphics);
+            context.render(this._label);
         }
     })()
 );

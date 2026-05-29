@@ -39,9 +39,9 @@ app.start(
                 this._bunny.setTint(this._tints[this._tintIndex]);
             }
         }
-        draw(backend) {
-            backend.clear();
-            this._bunny.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._bunny);
         }
     })()
 );

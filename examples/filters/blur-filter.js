@@ -41,15 +41,15 @@ app.start(
             const t = Math.max(0, Math.min(1, (x - 180) / 440));
             this._blur.radius = t * 14;
         }
-        draw(backend) {
-            backend.clear();
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._sprite);
             this._ui.clear();
             this._ui.fillColor = new Color(60, 60, 60);
             this._ui.drawRectangle(180, 510, 440, 14);
             this._ui.fillColor = new Color(130, 220, 255);
             this._ui.drawRectangle(180, 510, (this._blur.radius / 14) * 440, 14);
-            this._ui.render(backend);
+            context.render(this._ui);
         }
     })()
 );

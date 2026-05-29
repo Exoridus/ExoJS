@@ -61,10 +61,10 @@ app.start(
             this._sprite.setScale(1 + this._pulse);
             this._particles.update(delta);
         }
-        draw(backend) {
-            backend.clear();
-            this._particles.render(backend);
-            this._sprite.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._particles);
+            context.render(this._sprite);
         }
     })()
 );

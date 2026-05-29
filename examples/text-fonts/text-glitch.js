@@ -55,9 +55,9 @@ app.start(
         update() {
             this._filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
         }
-        draw(backend) {
-            backend.clear();
-            this._text.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._text);
         }
     })()
 );

@@ -158,11 +158,11 @@ app.start(
                 entry.instance.update(delta);
             }
         }
-        draw(backend) {
-            backend.clear();
+        draw(context) {
+            context.backend.clear();
 
             for (const entry of this._particleSystems) {
-                entry.instance.render(backend);
+                context.render(entry.instance);
             }
         }
         unload() {

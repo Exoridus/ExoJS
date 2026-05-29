@@ -30,11 +30,11 @@ app.start(
             const low = this._analyser.getBandEnergy(20, 180);
             this._view.shake(2 + low * 26, 90, { decay: true, frequency: 22 });
         }
-        draw(backend) {
-            backend.clear(new Color(22, 24, 34));
-            backend.setView(this._view);
-            this._sprite.render(backend);
-            backend.setView(null);
+        draw(context) {
+            context.backend.clear(new Color(22, 24, 34));
+            context.backend.setView(this._view);
+            context.render(this._sprite);
+            context.backend.setView(null);
         }
     })()
 );

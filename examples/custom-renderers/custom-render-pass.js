@@ -42,11 +42,11 @@ app.start(
         update(delta) {
             this._angle += delta.seconds * 2.2;
         }
-        draw(backend) {
-            backend.clear();
-            this._back.render(backend);
-            backend.execute(this._pass);
-            this._front.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._back);
+            context.backend.execute(this._pass);
+            context.render(this._front);
         }
     })()
 );

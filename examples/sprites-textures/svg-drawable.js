@@ -27,9 +27,9 @@ app.start(
             this._tiger.setAnchor(0.5);
             this._tiger.setPosition((width / 2) | 0, (height / 2) | 0);
         }
-        draw(backend) {
-            backend.clear();
-            this._tiger.render(backend);
+        draw(context) {
+            context.backend.clear();
+            context.render(this._tiger);
         }
     })()
 );
