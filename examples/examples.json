@@ -353,7 +353,8 @@
                 "debug"
             ],
             "capabilities": [
-                "pointer"
+                "pointer",
+                "audio"
             ]
         },
         {

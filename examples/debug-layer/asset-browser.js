@@ -1,5 +1,5 @@
 import {
-    Application, Color, Graphics, Json, Scene,
+    Application, Color, Graphics, Json, Music, Scene,
     Sprite, Spritesheet, SvgAsset, Text, Texture,
 } from '@codexo/exojs';
 
@@ -81,9 +81,8 @@ app.start(
         _scrollOff = 0;  // in items
         _hoverIdx = null;
 
-        // Audio state
-        _audioEl = null;
-        _audioPlaying = false;
+        // Audio state — keyed by catalog audio key → Music instance
+        _audioMusics = new Map();
 
         // Sprite animation state
         _frameIdx = 0;
@@ -179,6 +178,13 @@ app.start(
                 await loader.load(Json, inpJsonBatch);
             }
 
+            // Audio — loaded as Music for true pause/resume support
+            const audBatch = {};
+            for (const [k, url] of Object.entries(catalog.audio ?? {})) {
+                audBatch['aud_' + k] = url;
+            }
+            if (Object.keys(audBatch).length) await loader.load(Music, audBatch);
+
             // Fonts
             for (const [k, url] of Object.entries(catalog.fonts ?? {})) {
                 const family = 'assetbrowser_' + k;
@@ -223,6 +229,11 @@ app.start(
                 const ss   = new Spritesheet(tex, data);
                 this._inpSheets.set(k, ss);
                 for (const s of ss.sprites.values()) s.setAnchor(0.5);
+            }
+
+            // Build audio Music map
+            for (const [k] of Object.entries(catalog.audio ?? {})) {
+                this._audioMusics.set(k, loader.get(Music, 'aud_' + k));
             }
 
             // Record font families
@@ -275,28 +286,22 @@ app.start(
         }
 
         _stopAudio() {
-            if (this._audioEl) {
-                this._audioEl.pause();
-                this._audioEl.src = '';
-                this._audioEl = null;
+            for (const music of this._audioMusics.values()) {
+                if (music.playing) {
+                    music.pause();
+                    music.setTime(0);
+                }
             }
-            this._audioPlaying = false;
         }
 
         _toggleAudio() {
             if (!this._key || this._cat !== 'audio') return;
-            const url = catalog?.audio?.[this._key];
-            if (!url) return;
-            if (!this._audioEl) {
-                this._audioEl = new Audio(url);
-                this._audioEl.addEventListener('ended', () => { this._audioPlaying = false; });
-            }
-            if (this._audioPlaying) {
-                this._audioEl.pause();
-                this._audioPlaying = false;
+            const music = this._audioMusics.get(this._key);
+            if (!music) return;
+            if (music.playing) {
+                music.pause();
             } else {
-                this._audioEl.play().catch(() => {});
-                this._audioPlaying = true;
+                music.play();
             }
         }
 
@@ -700,20 +705,22 @@ app.start(
             if (!this._audioG) {
                 this._audioG = new Graphics();
             }
+            const music = this._audioMusics.get(this._key);
+            const isPlaying = music ? music.playing : false;
             const g   = this._audioG;
             const { cx, cy } = this._previewCenter();
             const bx = cx - 50;
             const by = cy - 28;
             g.clear();
-            g.fillColor = this._audioPlaying ? C.btnGreen : C.btnDark;
+            g.fillColor = isPlaying ? C.btnGreen : C.btnDark;
             g.lineWidth = 1;
             g.lineColor = C.border;
             g.drawRectangle(bx, by, 100, 56);
             context.render(g);
 
             // Play/pause icon text
-            this._txtAudioIcon.text = this._audioPlaying ? '⏸' : '▶';
-            this._txtAudioIcon.setPosition(bx + (this._audioPlaying ? 30 : 34), by + 10);
+            this._txtAudioIcon.text = isPlaying ? '⏸' : '▶';
+            this._txtAudioIcon.setPosition(bx + (isPlaying ? 30 : 34), by + 10);
             context.render(this._txtAudioIcon);
 
             // Format label beneath button
