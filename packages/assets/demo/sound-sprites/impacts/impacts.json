@@ -1,0 +1,16 @@
+{
+  "sprites": {
+    "impactLight": {
+      "start": 0.0,
+      "duration": 0.1387
+    },
+    "impactHeavy": {
+      "start": 0.2387,
+      "duration": 0.1677
+    },
+    "impactWood": {
+      "start": 0.5063,
+      "duration": 0.3327
+    }
+  }
+}

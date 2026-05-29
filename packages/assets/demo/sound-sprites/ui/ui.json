@@ -1,0 +1,28 @@
+{
+  "sprites": {
+    "uiClick": {
+      "start": 0.0,
+      "duration": 0.1
+    },
+    "uiConfirm": {
+      "start": 0.2,
+      "duration": 0.2898
+    },
+    "uiBong": {
+      "start": 0.5899,
+      "duration": 0.1228
+    },
+    "back": {
+      "start": 0.8127,
+      "duration": 0.0639
+    },
+    "clickAlt": {
+      "start": 0.9766,
+      "duration": 0.3671
+    },
+    "switch": {
+      "start": 1.4437,
+      "duration": 0.2273
+    }
+  }
+}
