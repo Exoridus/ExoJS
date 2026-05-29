@@ -70,9 +70,12 @@ export class RenderingContext {
   }
 
   /**
-   * A 1:1 screen-space {@link View} suitable for UI overlays.
-   * Center is `(width / 2, height / 2)` and size matches the canvas
-   * logical dimensions. Never follows, shakes, or rotates by default.
+   * A RenderingContext-managed screen-space {@link View} suitable for UI
+   * overlays. Center and size are reset to match canvas logical dimensions
+   * on each {@link resize} call. The returned reference is stable (the same
+   * View object across frames), but its properties may change.
+   *
+   * Never follows, shakes, or rotates by default.
    */
   public get screenView(): View {
     return this._screenView;

@@ -1,4 +1,6 @@
 import { Color } from '@/core/Color';
+import { Rectangle } from '@/math/Rectangle';
+import { Camera } from '@/rendering/Camera';
 import { Container } from '@/rendering/Container';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
@@ -8,7 +10,7 @@ import { RenderTarget } from '@/rendering/RenderTarget';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
-import type { View } from '@/rendering/View';
+import { View } from '@/rendering/View';
 
 const createTexture = (width = 16, height = 16): Texture => {
   const canvas = document.createElement('canvas');
@@ -293,5 +295,53 @@ describe('RenderingContext', () => {
     expect(backend.view).toBe(root.view);
 
     result.destroy();
+  });
+
+  test('render() calls backend.setView with the active camera', () => {
+    const { backend, setViewSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const texture = createTexture();
+    const sprite = new Sprite(texture);
+
+    context.render(sprite);
+
+    expect(setViewSpy).toHaveBeenCalledWith(context.camera);
+  });
+
+  test('render() with custom view calls backend.setView with that view', () => {
+    const { backend, setViewSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const texture = createTexture();
+    const sprite = new Sprite(texture);
+    const customView = new View(100, 100, 200, 200);
+
+    context.render(sprite, { view: customView });
+
+    expect(setViewSpy).toHaveBeenCalledWith(customView);
+  });
+
+  test('dual render with different viewports sets viewport correctly', () => {
+    const { backend, setViewSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const texture = createTexture();
+    const sprite = new Sprite(texture);
+
+    const leftCam = new Camera({
+      center: { x: 400, y: 300 },
+      size: { width: 800, height: 600 },
+      viewport: new Rectangle(0, 0, 0.5, 1),
+    });
+    const rightCam = new Camera({
+      center: { x: 400, y: 300 },
+      size: { width: 800, height: 600 },
+      viewport: new Rectangle(0.5, 0, 0.5, 1),
+    });
+
+    context.render(sprite, { view: leftCam });
+    context.render(sprite, { view: rightCam });
+
+    expect(setViewSpy).toHaveBeenCalledTimes(2);
+    expect(setViewSpy.mock.calls[0][0]).toBe(leftCam);
+    expect(setViewSpy.mock.calls[1][0]).toBe(rightCam);
   });
 });

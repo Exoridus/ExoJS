@@ -62,6 +62,10 @@ export const rawAssets = {
             image: 'demo/input-prompts/nintendo-switch.png',
             data: 'demo/input-prompts/nintendo-switch.json',
         },
+        keyboardMouse: {
+            image: 'demo/input-prompts/keyboard-mouse.png',
+            data: 'demo/input-prompts/keyboard-mouse.json',
+        },
     },
     technical: {},
 } as const;

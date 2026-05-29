@@ -15,8 +15,12 @@ export interface CameraOptions {
  * {@link RenderingContext} or pass custom instances to
  * `context.render(node, { view: myCamera })`.
  *
- * Defaults: center `(0, 0)`, size `(0, 0)`, full viewport `(0,0,1,1)`,
- * rotation `0`, zoom `1`.
+ * ```ts
+ * const cam = new Camera({ center: { x: 50, y: 50 }, size: { width: 800, height: 600 } });
+ * ```
+ *
+ * Defaults: center `(0, 0)`, size `{ width: 0, height: 0 }`, full viewport
+ * `(0, 0, 1, 1)`, rotation `0`, zoom `1`.
  *
  * @stable
  */
