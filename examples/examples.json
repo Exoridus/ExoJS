@@ -342,6 +342,21 @@
     ],
     "debug-layer": [
         {
+            "slug": "asset-browser",
+            "path": "debug-layer/asset-browser.js",
+            "title": "Asset Browser",
+            "description": "Interactive browser for the injected globalThis.assets catalog — inspect textures, sprites, audio, SVG, fonts, video, and input-prompt sheets with per-type previews.",
+            "backend": "core",
+            "tags": [
+                "asset",
+                "browser",
+                "debug"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
+        },
+        {
             "slug": "bounding-boxes",
             "path": "debug-layer/bounding-boxes.js",
             "title": "Bounding Boxes",
