@@ -13,14 +13,16 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const PIXEL_GRID = globalThis.assets?.technical?.filtering?.pixelGrid128 ?? 'technical/filtering/pixel-grid-128.png';
+
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { grid: PIXEL_GRID });
         }
         init(loader) {
             this._blur = new BlurFilter({ radius: 2, quality: 2 });
-            this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(1.8).setPosition(400, 280);
+            this._sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(3.5).setPosition(400, 280);
             this._sprite.filters = [this._blur];
             this._ui = new Graphics();
             this._drag = false;

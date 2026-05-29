@@ -13,13 +13,15 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const ALPHA_RINGS = globalThis.assets?.technical?.alpha?.alphaGradientRings ?? 'technical/alpha/alpha-gradient-rings.png';
+
 app.start(
     new (class extends Scene {
         async load(loader) {
             await loader.load(
                 Texture,
                 {
-                    background: 'image/uv.png',
+                    background: ALPHA_RINGS,
                     bunny: 'image/bunny.png',
                 },
                 {
@@ -33,6 +35,7 @@ app.start(
             this._background = new Sprite(loader.get(Texture, 'background'));
             this._background.setPosition(width / 2, height / 2);
             this._background.setAnchor(0.5, 0.5);
+            this._background.setScale(Math.max(width, height) / 256);
 
             this._leftBunny = new Sprite(loader.get(Texture, 'bunny'));
             this._leftBunny.setAnchor(0.5, 0.5);

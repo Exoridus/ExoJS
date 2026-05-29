@@ -72,17 +72,19 @@ const LOOKS = [
     },
 ];
 
+const PRIMARY_RAMP = globalThis.assets?.technical?.color?.primaryRamp ?? 'technical/color/primary-ramp.png';
+
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { scene: 'image/bunny.png' });
+            await loader.load(Texture, { ramp: PRIMARY_RAMP });
         }
         init(loader) {
             this._luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
             this._filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this._luts[0]);
             this._index = 0;
 
-            this._sprite = new Sprite(loader.get(Texture, 'scene')).setAnchor(0.5).setScale(6);
+            this._sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(2.5);
             this._sprite.setPosition(400, 320);
             this._sprite.filters = [this._filter];
 

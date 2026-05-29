@@ -13,19 +13,17 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const UV_GRID = globalThis.assets?.technical?.filtering?.uvGrid256 ?? 'technical/filtering/uv-grid-256.png';
+const HALF = 240;
+
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { uvGrid: UV_GRID });
         }
 
         init(loader) {
             const { width, height } = this.app.canvas;
-            const bunny = loader.get(Texture, 'bunny');
-            const w = bunny.width * 4;
-            const h = bunny.height * 4;
-            const halfW = w / 2;
-            const halfH = h / 2;
 
             // Manual textured quad — same visual as `new Sprite(texture)` but
             // built up from the lower-level Mesh primitive. The four corners
@@ -33,18 +31,18 @@ app.start(
             // splits the quad into two triangles.
             this._quad = new Mesh({
                 vertices: new Float32Array([
-                    -halfW,
-                    -halfH, // TL
-                    halfW,
-                    -halfH, // TR
-                    halfW,
-                    halfH, // BR
-                    -halfW,
-                    halfH, // BL
+                    -HALF,
+                    -HALF, // TL
+                    HALF,
+                    -HALF, // TR
+                    HALF,
+                    HALF, // BR
+                    -HALF,
+                    HALF, // BL
                 ]),
                 uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
                 indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-                texture: bunny,
+                texture: loader.get(Texture, 'uvGrid'),
             });
 
             this._quad.setPosition((width / 2) | 0, (height / 2) | 0);

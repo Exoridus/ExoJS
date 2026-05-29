@@ -55,10 +55,12 @@ function buildGrid() {
     return { vertices, uvs, indices };
 }
 
+const UV_GRID = globalThis.assets?.technical?.filtering?.uvGrid256 ?? 'technical/filtering/uv-grid-256.png';
+
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { uvGrid: UV_GRID });
         }
 
         init(loader) {
@@ -71,7 +73,7 @@ app.start(
                 vertices: grid.vertices,
                 uvs: grid.uvs,
                 indices: grid.indices,
-                texture: loader.get(Texture, 'bunny'),
+                texture: loader.get(Texture, 'uvGrid'),
             });
             this._mesh.setPosition((width / 2) | 0, (height / 2) | 0);
             this._time = 0;
