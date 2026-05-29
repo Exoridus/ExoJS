@@ -9,6 +9,7 @@ export const rawAssets = {
         particleStar: 'demo/textures/particle-star.png',
         particleSpark: 'demo/textures/particle-spark.png',
         particleLight: 'demo/textures/particle-light.png',
+        shipA: 'demo/textures/ship-a.png',
     },
     sprites: {
         buttons: {
@@ -27,6 +28,8 @@ export const rawAssets = {
         uiBong: 'demo/audio/ui-bong.ogg',
         impactLight: 'demo/audio/impact-light.ogg',
         impactHeavy: 'demo/audio/impact-heavy.ogg',
+        musicA: 'demo/audio/ui-bong.ogg',
+        musicB: 'demo/audio/impact-heavy.ogg',
     },
     fonts: {
         andyBold: 'demo/fonts/AndyBold.woff2',

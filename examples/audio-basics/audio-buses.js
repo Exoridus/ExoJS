@@ -1,14 +1,13 @@
 import { Application, Color, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -22,8 +21,10 @@ const rows = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Music, { music: 'audio/example.ogg' });
-            await loader.load(Sound, { sfx: 'audio/example.ogg' });
+            const musicUrl = assets?.audio?.example ?? 'assets/demo/audio/example.ogg';
+            const sfxUrl = assets?.audio?.uiClick ?? 'assets/demo/audio/ui-click.ogg';
+            await loader.load(Music, { music: musicUrl });
+            await loader.load(Sound, { sfx: sfxUrl });
         }
         init(loader) {
             this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.6).play();

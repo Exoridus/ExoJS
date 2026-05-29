@@ -13,15 +13,14 @@ import {
     Vector,
 } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -29,10 +28,12 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { ship: 'image/bunny.png', particle: 'image/particle.png' });
+            const shipUrl = assets?.textures?.shipA ?? 'assets/demo/textures/ship-a.png';
+            const sparkUrl = assets?.textures?.particleSpark ?? 'assets/demo/textures/particle-spark.png';
+            await loader.load(Texture, { ship: shipUrl, particle: sparkUrl });
         }
         init(loader) {
-            this._ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(1.2).setPosition(400, 300);
+            this._ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(400, 300);
             this._velocity = new Vector(0, 0);
             this._thrust = new Vector(0, 0);
             this._engine = new OscillatorSound({ type: 'sawtooth', frequency: 90, volume: 0 }).play();

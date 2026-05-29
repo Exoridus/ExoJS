@@ -14,15 +14,14 @@ import {
     VectorRange,
 } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -30,19 +29,18 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { particle: 'image/particle.png' });
+            const flameUrl = assets?.textures?.particleFlame ?? 'assets/demo/textures/particle-flame.png';
+            const smokeUrl = assets?.textures?.particleSmoke ?? 'assets/demo/textures/particle-smoke.png';
+            await loader.load(Texture, { flame: flameUrl, smoke: smokeUrl });
         }
         init(loader) {
             const { width, height } = this.app.canvas;
 
-            this._particleSystem = new ParticleSystem(loader.get(Texture, 'particle'));
-            this._particleSystem.setPosition(width * 0.5, height * 0.75);
-            this._particleSystem.setBlendMode(BlendModes.Additive);
+            this._fireSystem = new ParticleSystem(loader.get(Texture, 'flame'));
+            this._fireSystem.setPosition(width * 0.5, height * 0.75);
+            this._fireSystem.setBlendMode(BlendModes.Additive);
 
-            // Constant 50 particles/s, randomised position and upward velocity.
-            // Particle positions are LOCAL — the system's own transform places
-            // them in world space.
-            this._particleSystem.addSpawnModule(
+            this._fireSystem.addSpawnModule(
                 new RateSpawn({
                     rate: new Constant(50),
                     lifetime: new Range(5, 10),
@@ -51,8 +49,7 @@ app.start(
                 })
             );
 
-            // Hot ember-orange fading to transparent black over lifetime.
-            this._particleSystem.addUpdateModule(
+            this._fireSystem.addUpdateModule(
                 new ColorOverLifetime(
                     new ColorGradient([
                         { t: 0, color: new Color(194, 64, 30, 1) },
@@ -60,13 +57,37 @@ app.start(
                     ])
                 )
             );
+
+            this._smokeSystem = new ParticleSystem(loader.get(Texture, 'smoke'));
+            this._smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
+            this._smokeSystem.setBlendMode(BlendModes.Normal);
+
+            this._smokeSystem.addSpawnModule(
+                new RateSpawn({
+                    rate: new Constant(8),
+                    lifetime: new Range(8, 14),
+                    position: new VectorRange(-30, 30, -5, 5),
+                    velocity: new ConeDirection(-Math.PI / 2, Math.PI / 12, 20, 35),
+                })
+            );
+
+            this._smokeSystem.addUpdateModule(
+                new ColorOverLifetime(
+                    new ColorGradient([
+                        { t: 0, color: new Color(120, 100, 80, 0.4) },
+                        { t: 1, color: new Color(60, 55, 50, 0) },
+                    ])
+                )
+            );
         }
         update(delta) {
-            this._particleSystem.update(delta);
+            this._fireSystem.update(delta);
+            this._smokeSystem.update(delta);
         }
         draw(context) {
             context.backend.clear();
-            context.render(this._particleSystem);
+            context.render(this._smokeSystem);
+            context.render(this._fireSystem);
         }
     })()
 );

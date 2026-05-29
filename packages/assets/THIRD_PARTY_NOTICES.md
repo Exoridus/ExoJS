@@ -16,6 +16,7 @@ directory of packages/assets:
 - Interface Sounds (https://kenney.nl/assets/interface-sounds)
 - Impact Sounds (https://kenney.nl/assets/impact-sounds)
 - Input Prompts 1.5 (https://kenney.nl/assets/input-prompts)
+- Simple Space (https://kenney.nl/assets/simple-space)
 
 License: Creative Commons Zero, CC0
 https://creativecommons.org/publicdomain/zero/1.0/

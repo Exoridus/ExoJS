@@ -18,15 +18,14 @@ import {
     Vector,
 } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -49,17 +48,14 @@ const fireworkColors = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { particle: 'image/particle.png' });
+            const starUrl = assets?.textures?.particleStar ?? 'assets/demo/textures/particle-star.png';
+            await loader.load(Texture, { star: starUrl });
         }
         init(loader) {
             const { width, height } = this.app.canvas;
 
             this._canvasSize = new Size(width, height);
-            // Particle positions live in world space — the system itself stays
-            // at the origin. Each explosion writes its absolute position into
-            // the burst's `position` distribution so older bursts keep their
-            // own coordinates instead of teleporting with the system transform.
-            this._particleSystem = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 8192 });
+            this._particleSystem = new ParticleSystem(loader.get(Texture, 'star'), { capacity: 8192 });
 
             this._burstPosition = new Vector(0, 0);
             this._burst = new BurstSpawn({

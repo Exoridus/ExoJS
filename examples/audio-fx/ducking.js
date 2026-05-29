@@ -1,14 +1,13 @@
 import { Application, AudioBus, Color, DuckingFilter, Music, Scene, Sound, Text } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -16,8 +15,10 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Music, { music: 'audio/example.ogg' });
-            await loader.load(Sound, { voice: 'audio/example.ogg' });
+            const musicUrl = assets?.audio?.example ?? 'assets/demo/audio/example.ogg';
+            const voiceUrl = assets?.audio?.uiConfirm ?? 'assets/demo/audio/ui-confirm.ogg';
+            await loader.load(Music, { music: musicUrl });
+            await loader.load(Sound, { voice: voiceUrl });
         }
         init(loader) {
             this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.7).play();

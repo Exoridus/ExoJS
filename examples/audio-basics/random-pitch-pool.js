@@ -1,14 +1,13 @@
 import { Application, Color, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
 
+const assets = globalThis.assets;
+
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -16,7 +15,8 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Sound, { blip: 'audio/example.ogg' });
+            const url = assets?.audio?.impactLight ?? 'assets/demo/audio/impact-light.ogg';
+            await loader.load(Sound, { blip: url });
         }
         init(loader) {
             this._sound = loader.get(Sound, 'blip');
