@@ -1,0 +1,344 @@
+{
+  "generatedAt": "2026-05-29T18:23:42.9698036+02:00",
+  "license": "Creative Commons CC0 1.0 Universal",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "packs": [
+    {
+      "id": "impact-sounds",
+      "title": "Impact Sounds",
+      "slug": "impact-sounds",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "impact",
+        "foley"
+      ],
+      "categories": "Audio",
+      "series": null,
+      "downloadFileName": "kenney_impact-sounds.zip",
+      "localVendorFolder": "vendor/kenney/impact-sounds",
+      "fileCountByExtension": {
+        ".url": 2,
+        ".txt": 1,
+        ".ogg": 130
+      },
+      "notableXml": null,
+      "notableOggCount": 130,
+      "notablePngCount": 0,
+      "notableSvgCount": 0,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "interface-sounds",
+      "title": "Interface Sounds",
+      "slug": "interface-sounds",
+      "url": "https://kenney.nl/assets/interface-sounds",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "interface",
+        "click",
+        "button"
+      ],
+      "categories": "Audio",
+      "series": null,
+      "downloadFileName": "kenney_interface-sounds.zip",
+      "localVendorFolder": "vendor/kenney/interface-sounds",
+      "fileCountByExtension": {
+        ".url": 2,
+        ".txt": 1,
+        ".ogg": 100
+      },
+      "notableXml": null,
+      "notableOggCount": 100,
+      "notablePngCount": 0,
+      "notableSvgCount": 0,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "kenney-fonts",
+      "title": "Kenney Fonts",
+      "slug": "kenney-fonts",
+      "url": "https://kenney.nl/assets/kenney-fonts",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "font",
+        "letter",
+        "pixel"
+      ],
+      "categories": "2D",
+      "series": null,
+      "downloadFileName": "kenney_kenney-fonts.zip",
+      "localVendorFolder": "vendor/kenney/kenney-fonts",
+      "fileCountByExtension": {
+        ".ttf": 12,
+        ".txt": 1
+      },
+      "notableXml": null,
+      "notableOggCount": 0,
+      "notablePngCount": 0,
+      "notableSvgCount": 0,
+      "notableTtfCount": 12
+    },
+    {
+      "id": "map-pack",
+      "title": "Map Pack",
+      "slug": "map-pack",
+      "url": "https://kenney.nl/assets/map-pack",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "tile",
+        "map",
+        "world",
+        "overworld",
+        "oopi"
+      ],
+      "categories": "2D",
+      "series": null,
+      "downloadFileName": "kenney_map-pack.zip",
+      "localVendorFolder": "vendor/kenney/map-pack",
+      "fileCountByExtension": {
+        ".png": 194,
+        ".swf": 1,
+        ".xml": 1,
+        ".svg": 1,
+        ".txt": 1
+      },
+      "notableXml": "Spritesheet/mapPack_spritesheet.xml",
+      "notableOggCount": 0,
+      "notablePngCount": 194,
+      "notableSvgCount": 1,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "ui-pack",
+      "title": "UI Pack",
+      "slug": "ui-pack",
+      "url": "https://kenney.nl/assets/ui-pack",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "button",
+        "panel",
+        "slider",
+        "interface"
+      ],
+      "categories": [
+        "2D",
+        "UI Pack"
+      ],
+      "series": null,
+      "downloadFileName": "kenney_ui-pack.zip",
+      "localVendorFolder": "vendor/kenney/ui-pack",
+      "fileCountByExtension": {
+        ".png": 870,
+        ".txt": 1,
+        ".ogg": 6,
+        ".svg": 434,
+        ".ttf": 2,
+        ".url": 2
+      },
+      "notableXml": null,
+      "notableOggCount": 6,
+      "notablePngCount": 870,
+      "notableSvgCount": 434,
+      "notableTtfCount": 2
+    },
+    {
+      "id": "background-elements-remastered",
+      "title": "Background Elements Remastered",
+      "slug": "background-elements-remastered",
+      "url": "https://kenney.nl/assets/background-elements-remastered",
+      "license": "Creative Commons CC0",
+      "tags": "background",
+      "categories": "2D",
+      "series": null,
+      "downloadFileName": "kenney_background-elements-remastered.zip",
+      "localVendorFolder": "vendor/kenney/background-elements-remastered",
+      "fileCountByExtension": {
+        ".png": 162,
+        ".swf": 2,
+        ".xml": 2,
+        ".svg": 2,
+        ".txt": 1,
+        ".url": 2
+      },
+      "notableXml": [
+        "Spritesheet/spritesheet_default.xml",
+        "Spritesheet/spritesheet_retina.xml"
+      ],
+      "notableOggCount": 0,
+      "notablePngCount": 162,
+      "notableSvgCount": 2,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "development-essentials",
+      "title": "Development Essentials",
+      "slug": "development-essentials",
+      "url": "https://kenney.nl/assets/development-essentials",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "essential",
+        "prototype"
+      ],
+      "categories": "Textures",
+      "series": null,
+      "downloadFileName": "kenney_development-essentials.zip",
+      "localVendorFolder": "vendor/kenney/development-essentials",
+      "fileCountByExtension": {
+        ".png": 19,
+        ".txt": 1,
+        ".url": 2
+      },
+      "notableXml": null,
+      "notableOggCount": 0,
+      "notablePngCount": 19,
+      "notableSvgCount": 0,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "music-jingles",
+      "title": "Music Jingles",
+      "slug": "music-jingles",
+      "url": "https://kenney.nl/assets/music-jingles",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "music",
+        "jingle"
+      ],
+      "categories": "Audio",
+      "series": null,
+      "downloadFileName": "kenney_music-jingles.zip",
+      "localVendorFolder": "vendor/kenney/music-jingles",
+      "fileCountByExtension": {
+        ".url": 2,
+        ".txt": 1,
+        ".ogg": 86
+      },
+      "notableXml": null,
+      "notableOggCount": 86,
+      "notablePngCount": 0,
+      "notableSvgCount": 0,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "new-platformer-pack",
+      "title": "New Platformer Pack",
+      "slug": "new-platformer-pack",
+      "url": "https://kenney.nl/assets/new-platformer-pack",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "platformer",
+        "tile",
+        "character",
+        "oopi"
+      ],
+      "categories": "2D",
+      "series": null,
+      "downloadFileName": "kenney_new-platformer-pack-1.1.zip",
+      "localVendorFolder": "vendor/kenney/new-platformer-pack",
+      "fileCountByExtension": {
+        ".png": 879,
+        ".xml": 8,
+        ".ogg": 10,
+        ".svg": 433,
+        ".txt": 1,
+        ".url": 2
+      },
+      "notableXml": [
+        "Spritesheets/spritesheet-backgrounds-default.xml",
+        "Spritesheets/spritesheet-backgrounds-double.xml",
+        "Spritesheets/spritesheet-characters-default.xml",
+        "Spritesheets/spritesheet-characters-double.xml",
+        "Spritesheets/spritesheet-enemies-default.xml",
+        "Spritesheets/spritesheet-enemies-double.xml",
+        "Spritesheets/spritesheet-tiles-default.xml",
+        "Spritesheets/spritesheet-tiles-double.xml"
+      ],
+      "notableOggCount": 10,
+      "notablePngCount": 879,
+      "notableSvgCount": 433,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "prototype-textures",
+      "title": "Prototype Textures",
+      "slug": "prototype-textures",
+      "url": "https://kenney.nl/assets/prototype-textures",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "texture",
+        "prototype",
+        "grid"
+      ],
+      "categories": "Textures",
+      "series": null,
+      "downloadFileName": "kenney_prototype-textures.zip",
+      "localVendorFolder": "vendor/kenney/prototype-textures",
+      "fileCountByExtension": {
+        ".png": 80,
+        ".swf": 13,
+        ".svg": 13,
+        ".txt": 1,
+        ".url": 2
+      },
+      "notableXml": null,
+      "notableOggCount": 0,
+      "notablePngCount": 80,
+      "notableSvgCount": 13,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "cursor-pack",
+      "title": "Cursor Pack",
+      "slug": "cursor-pack",
+      "url": "https://kenney.nl/assets/cursor-pack",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "cursor",
+        "icon",
+        "interface"
+      ],
+      "categories": "2D",
+      "series": null,
+      "downloadFileName": "kenney_cursor-pack.zip",
+      "localVendorFolder": "vendor/kenney/cursor-pack",
+      "fileCountByExtension": {
+        ".png": 729,
+        ".txt": 1,
+        ".svg": 364,
+        ".url": 2
+      },
+      "notableXml": null,
+      "notableOggCount": 0,
+      "notablePngCount": 729,
+      "notableSvgCount": 364,
+      "notableTtfCount": 0
+    },
+    {
+      "id": "digital-audio",
+      "title": "Digital Audio",
+      "slug": "digital-audio",
+      "url": "https://kenney.nl/assets/digital-audio",
+      "license": "Creative Commons CC0",
+      "tags": [
+        "space",
+        "laser"
+      ],
+      "categories": "Audio",
+      "series": null,
+      "downloadFileName": "kenney_digital-audio.zip",
+      "localVendorFolder": "vendor/kenney/digital-audio",
+      "fileCountByExtension": {
+        ".url": 2,
+        ".txt": 1,
+        ".ini": 1,
+        ".ogg": 63
+      },
+      "notableXml": null,
+      "notableOggCount": 63,
+      "notablePngCount": 0,
+      "notableSvgCount": 0,
+      "notableTtfCount": 0
+    }
+  ]
+}
