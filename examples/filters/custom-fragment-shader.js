@@ -13,6 +13,8 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const HUE_RAMP = globalThis.assets?.technical?.color?.hueRamp ?? 'technical/color/hue-ramp.png';
+
 const glsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
@@ -34,7 +36,7 @@ struct Uniforms { uTime:f32, _pad0:vec3<f32> };
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { hueRamp: HUE_RAMP });
         }
         init(loader) {
             this._time = 0;
@@ -42,7 +44,7 @@ app.start(
                 app.backend.backendType === RenderBackendType.WebGpu
                     ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                     : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
-            this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2.1).setPosition(400, 300);
+            this._sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(3).setPosition(400, 300);
             this._sprite.filters = [this._filter];
         }
         update(delta) {

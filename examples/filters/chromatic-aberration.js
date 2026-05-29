@@ -13,6 +13,8 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const CHECKER = globalThis.assets?.technical?.filtering?.checker256 ?? 'technical/filtering/checker-256.png';
+
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 o=vec2(uOffset,0.0); float r=texture(uTexture,vUv+o).r; float g=texture(uTexture,vUv).g; float b=texture(uTexture,vUv-o).b; float a=texture(uTexture,vUv).a; fragColor=vec4(r,g,b,a);} `;
@@ -33,14 +35,14 @@ struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { checker: CHECKER });
         }
         init(loader) {
             this._filter =
                 app.backend.backendType === RenderBackendType.WebGpu
                     ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
                     : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uOffset: 0 } });
-            this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
+            this._sprite = new Sprite(loader.get(Texture, 'checker')).setAnchor(0.5).setScale(2).setPosition(400, 300);
             this._sprite.filters = [this._filter];
             this.app.input.onPointerMove.add(pointer => {
                 const t = Math.max(0, Math.min(1, pointer.x / app.canvas.width));

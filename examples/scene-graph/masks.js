@@ -13,18 +13,20 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const ALPHA_RINGS = globalThis.assets?.technical?.alpha?.alphaGradientRings ?? 'technical/alpha/alpha-gradient-rings.png';
+
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { alphaRings: ALPHA_RINGS });
         }
         init(loader) {
             const { width, height } = this.app.canvas;
-            const bunny = loader.get(Texture, 'bunny');
+            const tex = loader.get(Texture, 'alphaRings');
 
             // Rectangle mask — GPU scissor, O(1) cost.
-            this._rectSprite = new Sprite(bunny);
-            this._rectSprite.setScale(5);
+            this._rectSprite = new Sprite(tex);
+            this._rectSprite.setScale(1);
             this._rectSprite.setPosition((width / 4) | 0, (height / 2) | 0);
             this._rectSprite.setAnchor(0.5);
             this._rectMask = new Rectangle(0, 0, 110, 110);
@@ -35,8 +37,8 @@ app.start(
             circle.fillColor = Color.white;
             circle.drawCircle(0, 0, 72);
 
-            this._gfxSprite = new Sprite(bunny);
-            this._gfxSprite.setScale(5);
+            this._gfxSprite = new Sprite(tex);
+            this._gfxSprite.setScale(1);
             this._gfxSprite.setPosition(((width * 3) / 4) | 0, (height / 2) | 0);
             this._gfxSprite.setAnchor(0.5);
             this._gfxSprite.mask = circle;

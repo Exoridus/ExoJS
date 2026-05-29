@@ -13,6 +13,8 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+const PRIMARY_RAMP = globalThis.assets?.technical?.color?.primaryRamp ?? 'technical/color/primary-ramp.png';
+
 const PALETTE_SIZE = 256;
 
 function buildPaletteCanvas(offset) {
@@ -39,13 +41,13 @@ function buildPaletteCanvas(offset) {
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(Texture, { bunny: 'image/bunny.png' });
+            await loader.load(Texture, { ramp: PRIMARY_RAMP });
         }
         init(loader) {
             this._palette = LutFilter.fromImage(buildPaletteCanvas(0));
             this._filter = new LutFilter({ mode: '1d' }).setLut(this._palette);
 
-            this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(4);
+            this._sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3);
             this._sprite.setPosition(400, 300);
             this._sprite.filters = [this._filter];
 
