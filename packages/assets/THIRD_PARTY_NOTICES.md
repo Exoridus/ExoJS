@@ -7,10 +7,18 @@ This package includes assets that may be subject to third-party licenses.
 The bunny.png texture is derived from the classic Stanford Bunny model and
 is included for demonstration purposes.
 
-## Input Prompt Sprites
+## Kenney Assets
 
-Input prompt sprites are from the Kenney Input Prompts pack (CC0 1.0 Universal).
-See: https://kenney.nl/assets/input-prompts
+Selected assets from the following Kenney packs are included in the demo
+directory of packages/assets:
+
+- Particle Pack (https://kenney.nl/assets/particle-pack)
+- Interface Sounds (https://kenney.nl/assets/interface-sounds)
+- Impact Sounds (https://kenney.nl/assets/impact-sounds)
+- Input Prompts 1.5 (https://kenney.nl/assets/input-prompts)
+
+License: Creative Commons Zero, CC0
+https://creativecommons.org/publicdomain/zero/1.0/
 
 ## AndyBold Font
 
