@@ -42,6 +42,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "BurstSpawn",
   "CacheFirstStrategy",
   "CallbackRenderPass",
+  "Camera",
   "Capabilities",
   "ChannelOffset",
   "ChannelSize",

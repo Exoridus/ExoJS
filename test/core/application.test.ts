@@ -148,12 +148,11 @@ describe('Application', () => {
     const inputManager = { update: vi.fn() };
     const tweens = { update: vi.fn() };
     const sceneManager = { update: vi.fn() };
-    const viewUpdate = vi.fn();
+    const renderingUpdate = vi.fn();
     const backend = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),
       stats: { frameTimeMs: 0 },
-      view: { update: viewUpdate },
     };
     const frameClock = {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
@@ -167,6 +166,7 @@ describe('Application', () => {
     rawApp['interaction'] = interaction;
     rawApp['tweens'] = tweens;
     rawApp['scene'] = sceneManager;
+    rawApp['_rendering'] = { update: renderingUpdate };
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
     rawApp['_updateHandler'] = vi.fn();
@@ -179,7 +179,7 @@ describe('Application', () => {
 
     expect(inputManager.update).toHaveBeenCalledTimes(1);
     expect(sceneManager.update).toHaveBeenCalledTimes(1);
-    expect(viewUpdate).toHaveBeenCalledWith(16);
+    expect(renderingUpdate).toHaveBeenCalledWith(16);
     expect(backend.resetStats).toHaveBeenCalledTimes(1);
     expect(backend.flush).toHaveBeenCalledTimes(1);
     expect(backend.stats.frameTimeMs).toBeGreaterThanOrEqual(0);

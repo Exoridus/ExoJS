@@ -135,6 +135,7 @@ describe('Application.onFrame', () => {
     rawApp['interaction'] = { update: vi.fn() };
     rawApp['tweens'] = { update: vi.fn() };
     rawApp['scene'] = sceneManager;
+    rawApp['_rendering'] = { update: vi.fn() };
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = { elapsedTime: { milliseconds: 16, seconds: 0.016 }, restart: vi.fn() };
     rawApp['_updateHandler'] = vi.fn();

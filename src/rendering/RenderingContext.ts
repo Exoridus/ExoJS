@@ -5,12 +5,18 @@ import { type RenderStats } from '@/rendering/RenderStats';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { View } from '@/rendering/View';
 
+import { Camera } from './Camera';
 import { playRenderTree } from './plan/playRenderTree';
 
 export interface RenderToOptions {
   width: number;
   height: number;
   clearColor?: Color;
+}
+
+export interface RenderOptions {
+  /** Override the view used for this render call. Defaults to the context's active camera. */
+  view?: View;
 }
 
 /**
@@ -20,18 +26,92 @@ export interface RenderToOptions {
  *
  * The conceptual model is "the context renders the node":
  *   context.render(node)            // into the active target (canvas by default)
+ *   context.render(node, { view })  // override view (camera, screenView, etc.)
  *   context.renderTo(node, opts)    // into an off-screen RenderTexture
  * @stable
  */
 export class RenderingContext {
   private readonly _backend: RenderBackend;
+  private _camera: Camera;
+  private readonly _screenView: View;
 
   public constructor(backend: RenderBackend) {
     this._backend = backend;
+
+    const viewWidth = backend.view?.width ?? 0;
+    const viewHeight = backend.view?.height ?? 0;
+    const viewCenterX = backend.view?.center?.x ?? viewWidth / 2;
+    const viewCenterY = backend.view?.center?.y ?? viewHeight / 2;
+
+    this._camera = new Camera({
+      center: { x: viewCenterX, y: viewCenterY },
+      size: { width: viewWidth, height: viewHeight },
+    });
+    this._screenView = new View(viewCenterX, viewCenterY, viewWidth, viewHeight);
   }
 
-  /** Render a RenderNode subtree into the active target via the RenderPlan machinery. */
-  public render(node: RenderNode): void {
+  /**
+   * The active camera. Defaults to a camera that matches the initial
+   * backend view. Replace with a custom `Camera` instance for follow,
+   * zoom, bounds, or split-screen viewport behavior.
+   */
+  public get camera(): Camera {
+    return this._camera;
+  }
+
+  public set camera(camera: Camera) {
+    const previousCamera = this._camera;
+
+    this._camera = camera;
+
+    if (previousCamera !== camera) {
+      previousCamera.destroy();
+    }
+  }
+
+  /**
+   * A 1:1 screen-space {@link View} suitable for UI overlays.
+   * Center is `(width / 2, height / 2)` and size matches the canvas
+   * logical dimensions. Never follows, shakes, or rotates by default.
+   */
+  public get screenView(): View {
+    return this._screenView;
+  }
+
+  /** Backward-compatible alias — returns the active {@link camera}. */
+  public get view(): View {
+    return this._camera;
+  }
+
+  /**
+   * Advance follow, shake, and bounds-constraint animations on the
+   * active camera. Call once per frame before rendering.
+   */
+  public update(deltaMs: number): void {
+    this._camera.update(deltaMs);
+  }
+
+  /**
+   * Resize the camera and screen view to match new canvas dimensions.
+   * Preserves the camera's center and zoom; only the visible area size changes.
+   */
+  public resize(width: number, height: number): void {
+    this._camera.resize(width, height);
+    this._screenView.resize(width, height);
+    this._screenView.setCenter(width / 2, height / 2);
+  }
+
+  /**
+   * Render `node` into the active render target.
+   *
+   * Sets the backend's active view to `options.view` (or the default camera)
+   * before building and playing the render plan. This is the recommended
+   * high-level rendering entry point.
+   */
+  public render(node: RenderNode, options: RenderOptions = {}): void {
+    const view = options.view ?? this._camera;
+
+    this._backend.setView(view);
     playRenderTree(node, this._backend);
   }
 
@@ -66,11 +146,6 @@ export class RenderingContext {
     }
 
     return target;
-  }
-
-  /** Active camera view of the current target. Convenience over backend.view. */
-  public get view(): View {
-    return this._backend.view;
   }
 
   /** Per-frame render counters. Convenience over backend.stats. */

@@ -155,6 +155,7 @@ describe('AudioManager.update()', () => {
     };
     rawApp['tweens'] = tweens;
     rawApp['scene'] = { update: vi.fn() };
+    rawApp['_rendering'] = { update: vi.fn() };
     rawApp['_backend'] = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),

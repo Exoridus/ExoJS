@@ -403,15 +403,8 @@ export class Application {
       this.interaction.update();
       getAudioManager().update();
       this.tweens.update(frameDelta.seconds);
-      const runtimeView = (
-        this.backend as Partial<{
-          view: Partial<{ update(deltaMilliseconds: number): unknown }>;
-        }>
-      ).view;
 
-      if (runtimeView && typeof runtimeView.update === 'function') {
-        runtimeView.update(frameDelta.milliseconds);
-      }
+      this._rendering.update(frameDelta.milliseconds);
 
       this.scene.update(frameDelta);
       this.onFrame.dispatch(frameDelta);
@@ -460,6 +453,7 @@ export class Application {
     };
 
     this.backend.resize(width, height);
+    this._rendering.resize(width, height);
     this.onResize.dispatch(width, height, this);
 
     return this;

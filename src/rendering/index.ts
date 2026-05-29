@@ -1,6 +1,8 @@
 /// <reference types="@webgpu/types" />
 
 export { CallbackRenderPass } from './CallbackRenderPass';
+export type { CameraOptions } from './Camera';
+export { Camera } from './Camera';
 export { Container } from './Container';
 export { Drawable } from './Drawable';
 export type { BlurFilterOptions } from './filters/BlurFilter';
@@ -32,7 +34,7 @@ export type { RenderBackend } from './RenderBackend';
 export { RenderBackendType } from './RenderBackendType';
 export type { DrawableConstructor, Renderer } from './Renderer';
 export { RendererRegistry } from './RendererRegistry';
-export type { RenderToOptions } from './RenderingContext';
+export type { RenderOptions, RenderToOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
 export type { MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';

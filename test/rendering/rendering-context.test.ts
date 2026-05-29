@@ -157,11 +157,11 @@ describe('RenderingContext', () => {
     expect(drawEvents[1]).toBe(green);
   });
 
-  test('view exposes backend view', () => {
-    const { backend, root } = createMockBackend();
+  test('view returns the active camera', () => {
+    const { backend } = createMockBackend();
     const context = new RenderingContext(backend);
 
-    expect(context.view).toBe(root.view);
+    expect(context.view).toBe(context.camera);
   });
 
   test('stats exposes backend stats', () => {
