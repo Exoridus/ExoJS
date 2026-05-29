@@ -33,6 +33,22 @@ https://creativecommons.org/publicdomain/zero/1.0/
 - Input Prompts 1.5 (https://kenney.nl/assets/input-prompts)
 - Simple Space (https://kenney.nl/assets/simple-space)
 
+## Blender Open Movies
+
+Short clips (30 seconds each) from the following Blender Foundation Open Movies are
+included under `demo/video/` as video test assets.
+
+All Blender Open Movies are released under the Creative Commons Attribution 4.0
+International (CC-BY 4.0) license: https://creativecommons.org/licenses/by/4.0/
+
+| File | Film | Year | Director | Source |
+|------|------|------|----------|--------|
+| `high-res.mp4` | Glass Half | 2022 | Blender Studio | https://studio.blender.org/films/glass-half/ |
+| `high-fps.webm` | Big Buck Bunny (Sunflower 60fps re-render) | 2008/2013 | Sacha Goedegebure | https://peach.blender.org/ |
+| `hdr10.webm` | Singularity | 2026 | Andy Goralczyk | https://studio.blender.org/films/singularity/ |
+
+© Blender Foundation | www.blender.org
+
 ## All Other Assets
 
 All other assets in this package are original works created for the ExoJS

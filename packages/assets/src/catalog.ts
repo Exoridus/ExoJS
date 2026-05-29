@@ -144,6 +144,9 @@ export const rawAssets = {
     },
     video: {
         demoLoop: 'demo/video/demo-loop.webm',
+        highRes: 'demo/video/high-res.mp4',
+        highFps: 'demo/video/high-fps.webm',
+        hdr10: 'demo/video/hdr10.webm',
     },
     inputPrompts: {
         generic: {
