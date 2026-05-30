@@ -11,6 +11,7 @@ import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRendere
 import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 const spriteShaderSource = `
 struct ProjectionUniforms {
@@ -382,6 +383,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
+    if (backend._passCoordinator.stencilActive) {
+      // MVP boundary: only default-material sprites support the stencil pipeline
+      // variant. Throw at collection time so the clip scope's push/pop balances.
+      throw new Error(
+        'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) of a custom-material Sprite is not supported yet on the WebGPU backend. Clip a default-material Sprite, use a Rectangle clipShape (scissor), or the WebGL2 backend.',
+      );
+    }
+
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
     const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
@@ -437,9 +446,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._instanceCount * instanceStrideBytes);
 
       const material = this._currentMaterial;
+      const stencil = backend._passCoordinator.stencilActive;
 
       if (material === null) {
-        const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat);
+        const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat, stencil);
         const textureBindGroup = this._createTextureBindGroup(device, backend);
 
         pass.setPipeline(pipeline);
@@ -651,8 +661,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     });
   }
 
-  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
-    const pipelineKey = `${blendMode}:${format}`;
+  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    const pipelineKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
     const existingPipeline = this._pipelines.get(pipelineKey);
 
     if (existingPipeline) {
@@ -663,19 +673,19 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       throw new Error('Renderer has to be connected first!');
     }
 
-    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(blendMode, format));
+    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(blendMode, format, stencil));
 
     this._pipelines.set(pipelineKey, pipeline);
 
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
       throw new Error('Renderer has to be connected first!');
     }
 
-    return {
+    const descriptor: GPURenderPipelineDescriptor = {
       layout: this._pipelineLayout,
       vertex: {
         module: this._shaderModule,
@@ -734,6 +744,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         topology: 'triangle-list',
       },
     };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    return descriptor;
   }
 
   // ---------------------------------------------------------------------------

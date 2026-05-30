@@ -1,16 +1,21 @@
 /**
- * WebGPU browser tests for geometric clipping — opt-in, capability-aware.
+ * WebGPU geometric (stencil) clipping browser tests — opt-in, capability-aware.
  *
  * The WebGPU backend supports Rectangle/bounds clipping (scissor parity with
- * WebGL2) but intentionally rejects Geometry/stencil clipping in 0.10: stencil
- * would require a depth/stencil attachment on every per-renderer pass plus
- * matching depthStencil pipeline state, which the WebGPU renderers do not share
- * (see WebGpuBackend.pushStencilClip). These tests verify the scissor path
- * works and the stencil path fails clearly rather than rendering incorrectly.
+ * WebGL2) AND geometric stencil clipping (phase 12E): a per-target
+ * depth24plus-stencil8 attachment shared across the clip scope's passes, an
+ * increment/decrement stencil-write pipeline, and stencil-enabled content
+ * pipeline variants. These tests mirror webgl2-stencil-clip.test.ts.
+ *
+ * Correctness is checked two ways:
+ *  - GPU validation: every scenario runs inside a pushErrorScope('validation')
+ *    so a mismatched pipeline/attachment or bad setStencilReference fails.
+ *  - Pixels: the presented WebGPU canvas is read back via drawImage onto a 2D
+ *    canvas (a standard cross-context read) and sampled.
  *
  * All tests skip gracefully when WebGPU is unavailable.
  *
- * Run via:  pnpm test:browser:webgpu
+ * Run via:  EXOJS_BROWSER_HEADED=1 pnpm test:browser:webgpu
  */
 
 import type { Application } from '@/core/Application';
@@ -18,20 +23,26 @@ import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import { Geometry } from '@/rendering/geometry/Geometry';
+import { Graphics } from '@/rendering/primitives/Graphics';
+import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+
+type RgbaTuple = readonly [number, number, number, number];
+
+const canvasSize = 64;
 
 const makeApp = (canvas: HTMLCanvasElement): Application =>
   ({
     canvas,
     options: {
-      canvas: { width: 64, height: 64 },
+      canvas: { width: canvasSize, height: canvasSize },
       clearColor: Color.black,
     },
   }) as unknown as Application;
 
-const createSolidTexture = (color: string, size = 48): Texture => {
+const createSolidTexture = (color: string, size = 64): Texture => {
   const source = document.createElement('canvas');
 
   source.width = size;
@@ -49,10 +60,19 @@ const createSolidTexture = (color: string, size = 48): Texture => {
   return new Texture(source);
 };
 
-const createTriangle = (size: number): Geometry =>
+// Right triangle covering the lower-left half of a `size` box anchored at the
+// origin: (0,0) -> (size,0) -> (0,size). Points with x + y < size are inside.
+const createRightTriangle = (size: number): Geometry =>
   new Geometry({
     attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
     vertexData: new Float32Array([0, 0, size, 0, 0, size]),
+    stride: 8,
+  });
+
+const createQuadGeometry = (x: number, y: number, width: number, height: number): Geometry =>
+  new Geometry({
+    attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+    vertexData: new Float32Array([x, y, x + width, y, x + width, y + height, x, y, x + width, y + height, x, y + height]),
     stride: 8,
   });
 
@@ -69,8 +89,8 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
 
   const canvas = document.createElement('canvas');
 
-  canvas.width = 64;
-  canvas.height = 64;
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
 
   const backend = new WebGpuBackend(makeApp(canvas));
 
@@ -79,8 +99,250 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
   return backend;
 };
 
-describe('WebGPU geometric clipping', () => {
-  test('Rectangle clipShape renders through the scissor path without throwing', async (ctx) => {
+// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
+// WebGPU-configured canvas as an image source, giving CPU-side pixel access
+// without touching the backend's managed GPU textures.
+const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
+  const source = backend.context.canvas as HTMLCanvasElement;
+  const readback = document.createElement('canvas');
+
+  readback.width = canvasSize;
+  readback.height = canvasSize;
+
+  const ctx = readback.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('2D context is required for canvas readback.');
+  }
+
+  ctx.drawImage(source, 0, 0);
+
+  return (x: number, y: number): RgbaTuple => {
+    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
+
+    return [data[0], data[1], data[2], data[3]];
+  };
+};
+
+const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
+  for (let index = 0; index < 4; index++) {
+    expect(Math.abs(actual[index] - expected[index])).toBeLessThanOrEqual(tolerance);
+  }
+};
+
+const renderClipped = async (backend: WebGpuBackend, root: RenderNode): Promise<void> => {
+  const device = backend.device;
+
+  device.pushErrorScope('validation');
+  backend.resetStats();
+  backend.clear(Color.black);
+  root.render(backend);
+  backend.flush();
+
+  const validationError = await device.popErrorScope();
+
+  expect(validationError).toBeNull();
+};
+
+describe('WebGPU geometric (stencil) clipping', () => {
+  test('Geometry clipShape discards fragments outside the shape', async ctx => {
+    const backend = await setupBackend(ctx);
+    const texture = createSolidTexture('#ff0000');
+    const root = new Container();
+    const clipped = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.setPosition(0, 0);
+      sprite.width = 48;
+      sprite.height = 48;
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(sprite);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Inside the triangle (x + y << 48): red survives.
+      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
+      // Outside the triangle (x + y >> 48): clipped to the black clear.
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('nested stencil clips render only the intersection', async ctx => {
+    const backend = await setupBackend(ctx);
+    const texture = createSolidTexture('#ff0000');
+    const root = new Container();
+    const outer = new Container();
+    const inner = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.setPosition(0, 0);
+      sprite.width = 64;
+      sprite.height = 64;
+      // Outer clip: left half (x in [0,32)). Inner clip: top half (y in [0,32)).
+      outer.clip = true;
+      outer.clipShape = createQuadGeometry(0, 0, 32, 64);
+      inner.clip = true;
+      inner.clipShape = createQuadGeometry(0, 0, 64, 32);
+      inner.addChild(sprite);
+      outer.addChild(inner);
+      root.addChild(outer);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Intersection (top-left quadrant): visible.
+      expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
+      // Only outer (bottom-left): clipped by inner.
+      expectPixelNear(readPixel(12, 48), [0, 0, 0, 255]);
+      // Only inner (top-right): clipped by outer.
+      expectPixelNear(readPixel(48, 12), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (outer.clipShape as Geometry).destroy();
+      (inner.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('stencil clip composes with a scissor rect (intersection)', async ctx => {
+    const backend = await setupBackend(ctx);
+    const texture = createSolidTexture('#ff0000');
+    const root = new Container();
+    const clipped = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.setPosition(0, 0);
+      sprite.width = 64;
+      sprite.height = 64;
+      // Stencil: left half. Scissor (mask Rectangle): top half. Both restrict.
+      clipped.clip = true;
+      clipped.clipShape = createQuadGeometry(0, 0, 32, 64);
+      clipped.mask = new Rectangle(0, 0, 64, 32);
+      clipped.addChild(sprite);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Top-left: inside both.
+      expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
+      // Bottom-left: inside stencil, outside scissor.
+      expectPixelNear(readPixel(12, 48), [0, 0, 0, 255]);
+      // Top-right: inside scissor, outside stencil.
+      expectPixelNear(readPixel(48, 12), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a clipped container clips multiple children', async ctx => {
+    const backend = await setupBackend(ctx);
+    const redTexture = createSolidTexture('#ff0000');
+    const greenTexture = createSolidTexture('#00ff00');
+    const root = new Container();
+    const clipped = new Container();
+    const left = new Sprite(redTexture);
+    const right = new Sprite(greenTexture);
+
+    try {
+      left.setPosition(0, 0);
+      left.width = 24;
+      left.height = 64;
+      right.setPosition(40, 0);
+      right.width = 24;
+      right.height = 64;
+      // Clip to the top half: both children keep their top, lose their bottom.
+      clipped.clip = true;
+      clipped.clipShape = createQuadGeometry(0, 0, 64, 32);
+      clipped.addChild(left, right);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(8, 12), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(48, 12), [0, 255, 0, 255]);
+      // Both clipped away below y = 32.
+      expectPixelNear(readPixel(8, 48), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(48, 48), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      redTexture.destroy();
+      greenTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('scene without clip renders unchanged (stencil attachment inert)', async ctx => {
+    const backend = await setupBackend(ctx);
+    const texture = createSolidTexture('#ff0000');
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.setPosition(8, 8);
+      sprite.width = 24;
+      sprite.height = 24;
+      root.addChild(sprite);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('balanced clips do not throw', async ctx => {
+    const backend = await setupBackend(ctx);
+    const texture = createSolidTexture('#ff0000');
+    const root = new Container();
+    const clipped = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.width = 48;
+      sprite.height = 48;
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(sprite);
+      root.addChild(clipped);
+
+      await expect(renderClipped(backend, root)).resolves.toBeUndefined();
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('Rectangle clipShape still uses the scissor path (no throw)', async ctx => {
     const backend = await setupBackend(ctx);
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
@@ -95,11 +357,12 @@ describe('WebGPU geometric clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      expect(() => {
-        backend.clear(Color.black);
-        root.render(backend);
-        backend.flush();
-      }).not.toThrow();
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -107,82 +370,28 @@ describe('WebGPU geometric clipping', () => {
     }
   });
 
-  test('clip with a null clipShape (bounds scissor) does not throw', async (ctx) => {
+  test('Geometry-clipping non-Sprite content (Graphics/mesh) fails clearly (MVP boundary)', async ctx => {
     const backend = await setupBackend(ctx);
-    const texture = createSolidTexture('#00ff00');
     const root = new Container();
     const clipped = new Container();
-    const sprite = new Sprite(texture);
+    const graphics = new Graphics();
 
     try {
-      sprite.width = 48;
-      sprite.height = 48;
+      graphics.fillColor = Color.red;
+      graphics.drawRectangle(0, 0, 48, 48);
       clipped.clip = true;
-      clipped.addChild(sprite);
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(graphics);
       root.addChild(clipped);
 
       expect(() => {
         backend.clear(Color.black);
         root.render(backend);
         backend.flush();
-      }).not.toThrow();
-    } finally {
-      root.destroy();
-      texture.destroy();
-      backend.destroy();
-    }
-  });
-
-  test('Geometry clipShape fails clearly (stencil unsupported on WebGPU in 0.10)', async (ctx) => {
-    const backend = await setupBackend(ctx);
-    const texture = createSolidTexture('#ff0000');
-    const root = new Container();
-    const clipped = new Container();
-    const sprite = new Sprite(texture);
-
-    try {
-      sprite.width = 48;
-      sprite.height = 48;
-      clipped.clip = true;
-      clipped.clipShape = createTriangle(48);
-      clipped.addChild(sprite);
-      root.addChild(clipped);
-
-      expect(() => {
-        backend.clear(Color.black);
-        root.render(backend);
-        backend.flush();
-      }).toThrow(/stencil clipping.*not supported/i);
+      }).toThrow(/stencil clipping.*Mesh\/Graphics.*not supported/i);
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
-      texture.destroy();
-      backend.destroy();
-    }
-  });
-
-  test('Rectangle alpha mask still works alongside the new clip API', async (ctx) => {
-    const backend = await setupBackend(ctx);
-    const texture = createSolidTexture('#ff0000');
-    const root = new Container();
-    const masked = new Container();
-    const sprite = new Sprite(texture);
-
-    try {
-      sprite.width = 48;
-      sprite.height = 48;
-      masked.mask = new Rectangle(16, 16, 16, 16);
-      masked.addChild(sprite);
-      root.addChild(masked);
-
-      expect(() => {
-        backend.clear(Color.black);
-        root.render(backend);
-        backend.flush();
-      }).not.toThrow();
-    } finally {
-      root.destroy();
-      texture.destroy();
       backend.destroy();
     }
   });

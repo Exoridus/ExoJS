@@ -119,6 +119,14 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       return;
     }
 
+    if (backend._passCoordinator.stencilActive) {
+      // MVP boundary: stencil clipping supports default-material Sprites. Throw
+      // at collection time (inside the clip scope's try) so the push/pop balances.
+      throw new Error(
+        'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) of ParticleSystem content is not supported yet on the WebGPU backend. Clip default-material Sprites, use a Rectangle clipShape (scissor), or the WebGL2 backend.',
+      );
+    }
+
     backend.setBlendMode(system.blendMode);
     const drawCallIndex = this._drawCallCount++;
     const drawCall = this._drawCalls[drawCallIndex];

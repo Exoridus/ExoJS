@@ -121,6 +121,7 @@ export class WebGpuBackend implements RenderBackend {
   private _transformStorage: WebGpuTransformStorage | null = new WebGpuTransformStorage();
   private _activeDrawCommand: DrawCommand | null = null;
   private _passCoordinatorInstance: WebGpuPassCoordinator | null = null;
+  private _drawPlanDepth = 0;
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -238,6 +239,7 @@ export class WebGpuBackend implements RenderBackend {
   public _beginDrawPlan(nodeCount: number): void {
     this._getTransformStorage().begin(nodeCount);
     this._activeDrawCommand = null;
+    this._drawPlanDepth++;
   }
 
   /** @internal */
@@ -249,6 +251,22 @@ export class WebGpuBackend implements RenderBackend {
   /** @internal */
   public _endDrawPlan(): void {
     this._activeDrawCommand = null;
+
+    if (this._drawPlanDepth > 0) {
+      this._drawPlanDepth--;
+    }
+
+    // Only assert balance at the outermost plan: a nested render() (e.g.
+    // cacheAsBitmap drawing its cache sprite) sees the still-open outer clips,
+    // which are not leaks.
+    if (this._drawPlanDepth === 0 && this._passCoordinatorInstance !== null) {
+      const unbalanced = this._passCoordinatorInstance.unbalancedStencilClips();
+
+      if (unbalanced > 0) {
+        this._passCoordinatorInstance.resetStencil();
+        throw new Error(`Unbalanced stencil clip stack at end of frame (${unbalanced} unpopped clip(s)).`);
+      }
+    }
   }
 
   public draw(drawable: Drawable): this {
@@ -369,22 +387,31 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
-  public pushStencilClip(_shape: Geometry, _transform: Matrix): this {
-    // Rectangle/bounds clipping (RenderNode.clip with a Rectangle or null
-    // clipShape) runs through the scissor path above and has full parity with
-    // WebGL2. Geometric stencil clipping would require a depth/stencil
-    // attachment on every render pass and matching depthStencil state on every
-    // pipeline; the WebGPU renderers own their passes/pipelines independently,
-    // so that is deferred past 0.10. Fail clearly instead of silently
-    // rendering the content unclipped.
-    throw new Error(
-      'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) is not supported on the WebGPU backend yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend.',
-    );
+  public pushStencilClip(shape: Geometry, transform: Matrix): this {
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
+    // Geometric stencil clipping is owned by the pass coordinator: it shares a
+    // per-target depth/stencil attachment across the clip scope's passes and
+    // draws the shape silhouette into the stencil aspect. Content renderers
+    // select stencil-enabled pipeline variants while the clip is in effect.
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+    this._passCoordinator.pushStencilClip(shape, transform);
+
+    return this;
   }
 
   public popStencilClip(): this {
-    // pushStencilClip always throws on WebGPU, so no clip is ever open here;
-    // present only to satisfy the RenderBackend contract.
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+    this._passCoordinator.popStencilClip();
+
     return this;
   }
 
@@ -497,6 +524,8 @@ export class WebGpuBackend implements RenderBackend {
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;
+    this._passCoordinatorInstance?.destroyStencil();
+    this._drawPlanDepth = 0;
 
     for (const target of [...this._renderTargetDestroyHandlers.keys()]) {
       this._unsubscribeRenderTarget(target);
@@ -831,6 +860,9 @@ export class WebGpuBackend implements RenderBackend {
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;
+    // Stencil GPU resources belong to the dead device; drop them so they are
+    // lazily rebuilt against the fresh device on the next clip.
+    this._passCoordinatorInstance?.destroyStencil();
 
     this._context?.unconfigure();
     this._context = null;
@@ -1047,6 +1079,7 @@ export class WebGpuBackend implements RenderBackend {
           this._renderTarget = this._rootRenderTarget;
         }
 
+        this._passCoordinatorInstance?.releaseStencilTarget(target);
         this._renderTargetDestroyHandlers.delete(target);
       };
 

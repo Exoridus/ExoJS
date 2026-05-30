@@ -260,6 +260,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       throw new Error('Mesh material shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
+    if (backend._passCoordinator.stencilActive) {
+      // The WebGPU geometric stencil MVP supports clipping default-material
+      // Sprites; Mesh/Graphics content under a Geometry clip would need
+      // stencil-enabled mesh pipeline variants. Throw at collection time (inside
+      // the clip scope's try) so the surrounding push/pop balances cleanly,
+      // rather than at flush time where the pop has not yet run.
+      throw new Error(
+        'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) of Mesh/Graphics content is not supported yet on the WebGPU backend. Clip default-material Sprites, use a Rectangle clipShape (scissor), or the WebGL2 backend.',
+      );
+    }
+
     const vertexCount = mesh.vertexCount;
 
     if (vertexCount === 0) {

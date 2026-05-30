@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import type { Color } from '@/core/Color';
-import type { Matrix } from '@/math/Matrix';
+import { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 
 import type { Geometry } from '../geometry/Geometry';
@@ -10,6 +10,7 @@ import { type RenderPassDescriptor, type RenderPassLoad, StencilAttachmentMode }
 import type { RenderStats } from '../RenderStats';
 import type { RenderTarget } from '../RenderTarget';
 import type { View } from '../View';
+import { stencilAttachmentFormat, WebGpuStencilClipper } from './WebGpuStencilClipper';
 
 /** Pixel-space scissor rectangle, as returned by the backend. @internal */
 interface ScissorRect {
@@ -30,13 +31,18 @@ export interface WebGpuActiveRenderPass {
   readonly targetFormat: GPUTextureFormat;
   readonly view: View;
   readonly stencilEnabled: boolean;
+  readonly stencilRef: number;
+}
+
+interface StencilClipEntry {
+  readonly shape: Geometry;
+  readonly transform: Matrix;
 }
 
 /**
  * The minimal surface of {@link WebGpuBackend} the coordinator drives. Declared
  * structurally so the coordinator is decoupled from the backend class and is
- * unit-testable with a mock — no GPU device required for the `resolveLoad`
- * surface (the `acquirePass` surface needs a device).
+ * unit-testable with a mock.
  * @internal
  */
 export interface WebGpuPassBackend {
@@ -51,8 +57,6 @@ export interface WebGpuPassBackend {
   flush(): unknown;
   pushScissorRect(bounds: Rectangle): unknown;
   popScissorRect(): unknown;
-  pushStencilClip(shape: Geometry, transform: Matrix): unknown;
-  popStencilClip(): unknown;
   createColorAttachment(): GPURenderPassColorAttachment;
   getScissorRect(): ScissorRect | null;
   submit(commandBuffer: GPUCommandBuffer): void;
@@ -63,26 +67,24 @@ export interface WebGpuPassBackend {
 /**
  * WebGPU implementation of {@link RenderPassCoordinator}.
  *
- * Owns the GPU render-pass mechanics: `acquirePass` lazily opens a command
- * encoder + `GPURenderPassEncoder` for the backend's current target/view
- * (resolving load/clear and applying the active scissor), and `endPass` ends
- * and submits it. Renderers / the mask compositor / shader filters record their
- * draws into `acquirePass().pass` and call `endPass` instead of creating and
- * submitting their own command buffers, so render-pass ownership lives in one
- * place — the prerequisite for sharing a stencil attachment across a clip
- * scope (phase 12E).
- *
- * Each `acquirePass` is paired with an `endPass` inside the same synchronous
- * flush, so no pass ever spans backend operations; submit count is unchanged.
- *
- * Also owns the canonical clear-vs-load decision ({@link resolveLoad}) and the
- * thin target/view/clear/scissor delegators used by the shared orchestration
- * paths (RenderTargetPass, RenderingContext.renderTo).
+ * Owns the GPU render-pass mechanics (acquire/end the active
+ * `GPURenderPassEncoder`), the clear-vs-load decision, and — from phase 12E —
+ * geometric stencil clipping: a per-target `depth24plus-stencil8` attachment
+ * shared across the multiple submits of a clip scope (via `stencilLoadOp:'load'`)
+ * plus a position-only stencil-write pipeline. Renderers select stencil-enabled
+ * content pipelines while {@link stencilActive} is true.
  * @internal
  */
 export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private readonly _backend: WebGpuPassBackend;
-  private _stencilEnabled = false;
+  private readonly _stencil = new WebGpuStencilClipper();
+  private readonly _stencilDepths = new Map<RenderTarget, number>();
+  private readonly _stencilStacks = new Map<RenderTarget, StencilClipEntry[]>();
+  private _stencilConnected = false;
+  private _stencilWriteInProgress = false;
+  private _stencilLoadOp: GPULoadOp = 'load';
+  private _stencilRef = 0;
+  private _descriptorStencil = false;
   private _active: WebGpuActiveRenderPass | null = null;
 
   public constructor(backend: WebGpuPassBackend) {
@@ -107,9 +109,25 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   }
 
   /**
+   * Whether a geometric stencil clip is currently in effect on the active
+   * target. Renderers read this to select a stencil-enabled content pipeline
+   * (matching the depth/stencil attachment {@link acquirePass} adds).
+   * @internal
+   */
+  public get stencilActive(): boolean {
+    return this._stencilWriteInProgress || this._activeTargetDepth() > 0;
+  }
+
+  /** Current stencil reference value content pipelines must test against. @internal */
+  public get stencilReference(): number {
+    return this._stencilRef;
+  }
+
+  /**
    * Open (or return the already-open) GPU render pass for the backend's current
-   * target/view. Resolves load/clear via {@link createColorAttachment}, counts
-   * the pass, and applies the active scissor rectangle.
+   * target/view. Resolves colour load/clear via {@link createColorAttachment},
+   * counts the pass, applies the active scissor, and — when a stencil clip is in
+   * effect — attaches the per-target depth/stencil buffer and sets the reference.
    */
   public acquirePass(): WebGpuActiveRenderPass {
     if (this._active !== null) {
@@ -117,10 +135,17 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     }
 
     const backend = this._backend;
-    const encoder = backend.device.createCommandEncoder();
-    const pass = encoder.beginRenderPass({
+    const stencilEnabled = this.stencilActive;
+    const descriptor: GPURenderPassDescriptor = {
       colorAttachments: [backend.createColorAttachment()],
-    });
+    };
+
+    if (stencilEnabled) {
+      descriptor.depthStencilAttachment = this._createStencilAttachment(backend.renderTarget);
+    }
+
+    const encoder = backend.device.createCommandEncoder();
+    const pass = encoder.beginRenderPass(descriptor);
 
     backend.stats.renderPasses++;
 
@@ -130,12 +155,17 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
     }
 
+    if (stencilEnabled) {
+      pass.setStencilReference(this._stencilRef);
+    }
+
     this._active = {
       encoder,
       pass,
       targetFormat: backend.renderTargetFormat,
       view: backend.view,
-      stencilEnabled: this._stencilEnabled,
+      stencilEnabled,
+      stencilRef: this._stencilRef,
     };
 
     return this._active;
@@ -157,7 +187,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   public beginPass(descriptor: RenderPassDescriptor): void {
     this._backend.setRenderTarget(descriptor.target);
     this._backend.setView(descriptor.view);
-    this._stencilEnabled = descriptor.stencil === StencilAttachmentMode.Enabled;
+    this._descriptorStencil = descriptor.stencil === StencilAttachmentMode.Enabled;
 
     if (descriptor.load === 'clear') {
       this._backend.clear(descriptor.clearColor ?? undefined);
@@ -167,7 +197,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   public withChildPass(descriptor: RenderPassDescriptor, body: () => void): void {
     const previousTarget = this._backend.renderTarget;
     const previousView = this._backend.view;
-    const previousStencilEnabled = this._stencilEnabled;
+    const previousDescriptorStencil = this._descriptorStencil;
 
     this.beginPass(descriptor);
 
@@ -179,7 +209,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       // before the bind switches back.
       this._backend.setRenderTarget(previousTarget);
       this._backend.setView(previousView);
-      this._stencilEnabled = previousStencilEnabled;
+      this._descriptorStencil = previousDescriptorStencil;
     }
   }
 
@@ -191,12 +221,67 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     this._backend.popScissorRect();
   }
 
+  /**
+   * Establish a geometric stencil clip on the active target. The shape silhouette
+   * is incremented into the stencil buffer where it covers the already-valid
+   * region (intersection on nesting); subsequent content draws are restricted to
+   * the new depth via the stencil-enabled content pipelines.
+   */
   public pushStencilClip(shape: Geometry, transform: Matrix): void {
-    this._backend.pushStencilClip(shape, transform);
+    const target = this._backend.renderTarget;
+    const depth = this._stencilDepths.get(target) ?? 0;
+
+    if (depth >= 255) {
+      throw new Error('Stencil clip nesting exceeds the 255-level limit.');
+    }
+
+    this._connectStencil();
+    this.endPass();
+
+    // The write pass tests stencil == depth and increments to depth+1. At the
+    // outermost level the stencil aspect is cleared first so stale values from a
+    // previous frame cannot leak in; deeper levels load the existing buffer.
+    this._stencilWriteInProgress = true;
+    this._stencilRef = depth;
+    this._stencilLoadOp = depth === 0 ? 'clear' : 'load';
+
+    const active = this.acquirePass();
+    this._stencil.draw(active.pass, active.targetFormat, true, shape, transform, active.view);
+    this.endPass();
+
+    this._stencilWriteInProgress = false;
+    this._stencilDepths.set(target, depth + 1);
+    this._stencilRef = depth + 1;
+    this._getStencilStack(target).push({ shape, transform: new Matrix().copy(transform) });
   }
 
+  /** Pop the most recent stencil clip on the active target, restoring the outer level. */
   public popStencilClip(): void {
-    this._backend.popStencilClip();
+    const target = this._backend.renderTarget;
+    const stack = this._stencilStacks.get(target);
+    const entry = stack?.pop();
+
+    if (entry === undefined) {
+      return;
+    }
+
+    const depth = this._stencilDepths.get(target) ?? 0;
+
+    this.endPass();
+
+    // The decrement pass tests stencil == depth and decrements the region this
+    // clip incremented, restoring the outer level. The stencil aspect is loaded.
+    this._stencilWriteInProgress = true;
+    this._stencilRef = depth;
+    this._stencilLoadOp = 'load';
+
+    const active = this.acquirePass();
+    this._stencil.draw(active.pass, active.targetFormat, false, entry.shape, entry.transform, active.view);
+    this.endPass();
+
+    this._stencilWriteInProgress = false;
+    this._stencilDepths.set(target, depth - 1);
+    this._stencilRef = depth - 1;
   }
 
   public resolveLoad(target: RenderTarget, clearRequested: boolean): RenderPassLoad {
@@ -205,4 +290,90 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     // across multiple passes in the same frame.
     return clearRequested || !this._backend._targetHasContent(target) ? 'clear' : 'load';
   }
+
+  /**
+   * Drop a target's cached stencil attachment and clip state. Called when the
+   * target is destroyed so a pooled render texture never reuses a stale buffer.
+   * @internal
+   */
+  public releaseStencilTarget(target: RenderTarget): void {
+    if (this._stencilConnected) {
+      this._stencil.releaseAttachment(target);
+    }
+
+    this._stencilDepths.delete(target);
+    this._stencilStacks.delete(target);
+  }
+
+  /** Reset stencil state at plan start so a leaked clip cannot corrupt the next frame. @internal */
+  public resetStencil(): void {
+    this._stencilDepths.clear();
+    this._stencilStacks.clear();
+    this._stencilWriteInProgress = false;
+    this._stencilRef = 0;
+  }
+
+  /** Tear down all stencil GPU resources (device loss / backend destroy). @internal */
+  public destroyStencil(): void {
+    if (this._stencilConnected) {
+      this._stencil.disconnect();
+      this._stencilConnected = false;
+    }
+
+    this._stencilDepths.clear();
+    this._stencilStacks.clear();
+    this._stencilWriteInProgress = false;
+    this._stencilRef = 0;
+  }
+
+  /** Number of unpopped stencil clips across all targets (balance assertion). @internal */
+  public unbalancedStencilClips(): number {
+    let total = 0;
+
+    for (const stack of this._stencilStacks.values()) {
+      total += stack.length;
+    }
+
+    return total;
+  }
+
+  private _activeTargetDepth(): number {
+    return this._stencilDepths.get(this._backend.renderTarget) ?? 0;
+  }
+
+  private _connectStencil(): void {
+    if (!this._stencilConnected) {
+      this._stencil.connect(this._backend.device);
+      this._stencilConnected = true;
+    }
+  }
+
+  private _getStencilStack(target: RenderTarget): StencilClipEntry[] {
+    let stack = this._stencilStacks.get(target);
+
+    if (stack === undefined) {
+      stack = [];
+      this._stencilStacks.set(target, stack);
+    }
+
+    return stack;
+  }
+
+  private _createStencilAttachment(target: RenderTarget): GPURenderPassDepthStencilAttachment {
+    const view = this._stencil.getAttachmentView(target, target.width, target.height);
+    const stencilLoadOp = this._stencilLoadOp;
+
+    // Consumed once; subsequent passes within the clip scope load the buffer.
+    this._stencilLoadOp = 'load';
+
+    return {
+      view,
+      depthReadOnly: true,
+      stencilLoadOp,
+      stencilStoreOp: 'store',
+      stencilClearValue: 0,
+    };
+  }
 }
+
+export { stencilAttachmentFormat };

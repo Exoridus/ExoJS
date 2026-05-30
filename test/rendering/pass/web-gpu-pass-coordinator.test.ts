@@ -1,7 +1,7 @@
 import { Color } from '@/core/Color';
-import { Matrix } from '@/math/Matrix';
+import { type Matrix } from '@/math/Matrix';
 import { Rectangle } from '@/math/Rectangle';
-import { Geometry } from '@/rendering/geometry/Geometry';
+import { type Geometry } from '@/rendering/geometry/Geometry';
 import { type RenderPassDescriptor, StencilAttachmentMode } from '@/rendering/pass/RenderPassDescriptor';
 import { createRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
@@ -167,32 +167,35 @@ describe('WebGpuPassCoordinator', () => {
     }
   });
 
-  test('scissor and stencil delegate to the backend', () => {
+  test('scissor delegates to the backend', () => {
     const root = new RenderTarget(64, 64, true);
-    const { backend, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip } = createMockBackend(root);
+    const { backend, pushScissorRect, popScissorRect } = createMockBackend(root);
     const coordinator = new WebGpuPassCoordinator(backend);
     const bounds = new Rectangle(0, 0, 8, 8);
-    const shape = new Geometry({
-      attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
-      vertexData: new Float32Array([0, 0, 8, 0, 0, 8]),
-      stride: 8,
-    });
-    const transform = new Matrix();
 
     try {
       coordinator.pushScissorRect(bounds);
       coordinator.popScissorRect();
-      coordinator.pushStencilClip(shape, transform);
-      coordinator.popStencilClip();
 
       expect(pushScissorRect).toHaveBeenCalledWith(bounds);
       expect(popScissorRect).toHaveBeenCalledTimes(1);
-      expect(pushStencilClip).toHaveBeenCalledWith(shape, transform);
-      expect(popStencilClip).toHaveBeenCalledTimes(1);
     } finally {
-      transform.destroy();
-      shape.destroy();
       bounds.destroy();
+      root.destroy();
+    }
+  });
+
+  test('popStencilClip on an empty target is a no-op (no pass opened)', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend, beginRenderPass } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      expect(coordinator.stencilActive).toBe(false);
+      expect(() => coordinator.popStencilClip()).not.toThrow();
+      expect(coordinator.unbalancedStencilClips()).toBe(0);
+      expect(beginRenderPass).not.toHaveBeenCalled();
+    } finally {
       root.destroy();
     }
   });
