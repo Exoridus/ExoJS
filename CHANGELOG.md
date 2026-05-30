@@ -46,7 +46,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Centralized render-pass ownership inside the backends behind an internal `RenderPassCoordinator`: the WebGPU renderers, mask compositor, and shader filter now record into a single coordinator-owned `GPURenderPassEncoder` per flush instead of each opening and submitting its own. Submit/pass counts are unchanged and there is no public API change.
 - The clear-vs-load decision (including `RenderTexture` content preservation across multiple passes in a frame) is now owned by the coordinator.
-- WebGPU now supports geometric stencil clipping (`RenderNode.clip` with a `Geometry` `clipShape`) at pixel parity with WebGL2 for default-material `Sprite` content; it previously failed clearly. Clipping `Mesh`/`Graphics`, `Text`, `ParticleSystem`, or custom-material `Sprite` content with a `Geometry` clipShape on WebGPU still throws a clear error (use a `Rectangle` clipShape for the scissor path, or the WebGL2 backend); `Rectangle`/bounds clips are unaffected.
+- WebGPU now supports geometric stencil clipping (`RenderNode.clip` with a `Geometry` `clipShape`) at pixel parity with WebGL2 for default-material `Sprite` and default-material `Mesh`/`Graphics` content (including composition with scissor rects and nested clips); it previously failed clearly. Clipping `Text`, `ParticleSystem`, custom-material `Sprite`, or custom-material `Mesh` content with a `Geometry` clipShape on WebGPU still throws a clear error at collection time (use a `Rectangle` clipShape for the scissor path, or the WebGL2 backend); `Rectangle`/bounds clips are unaffected.
 
 ## [0.9.0] - 2026-05-24
 

@@ -14,6 +14,7 @@ import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRendere
 import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 const meshShaderSource = `
 struct VertexInput {
@@ -152,11 +153,26 @@ interface MeshDrawCall {
 interface MeshPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
+  // Stencil-enabled variant: carries the depth/stencil state matching the
+  // attachment the coordinator adds while a geometric clip is active.
+  readonly stencil: boolean;
 }
 
 interface InstancedPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
+  readonly stencil: boolean;
+}
+
+/**
+ * Cache key for the default + instanced (static-batch) pipeline maps. The
+ * stencil dimension keeps the clip and no-clip variants distinct, mirroring the
+ * sprite renderer: a stencil pipeline carries depth/stencil state and is only
+ * valid in a pass with the matching attachment, so the two are never
+ * interchangeable.
+ */
+function meshPipelineCacheKey(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): string {
+  return `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
 }
 
 interface StaticGeometryCacheEntry {
@@ -260,14 +276,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       throw new Error('Mesh material shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
-    if (backend._passCoordinator.stencilActive) {
+    if (customShader !== null && backend._passCoordinator.stencilActive) {
       // The WebGPU geometric stencil MVP supports clipping default-material
-      // Sprites; Mesh/Graphics content under a Geometry clip would need
-      // stencil-enabled mesh pipeline variants. Throw at collection time (inside
-      // the clip scope's try) so the surrounding push/pop balances cleanly,
-      // rather than at flush time where the pop has not yet run.
+      // Sprites and Mesh/Graphics (which select stencil-enabled pipeline
+      // variants below); a custom MeshMaterial under a Geometry clip would need
+      // its own stencil pipeline variants and is not supported yet. Throw at
+      // collection time (inside the clip scope's try) so the surrounding
+      // push/pop balances cleanly, rather than at flush time where the pop has
+      // not yet run.
       throw new Error(
-        'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) of Mesh/Graphics content is not supported yet on the WebGPU backend. Clip default-material Sprites, use a Rectangle clipShape (scissor), or the WebGL2 backend.',
+        'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) of a custom-material Mesh is not supported yet on the WebGPU backend. Clip a default-material Mesh/Graphics or Sprite, use a Rectangle clipShape (scissor), or the WebGL2 backend.',
       );
     }
 
@@ -498,6 +516,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const pass = backend._passCoordinator.acquirePass().pass;
 
     const renderTargetFormat = backend.renderTargetFormat;
+    // A clip scope flushes the active renderer on push/pop, so every draw call
+    // in this batch shares one stencil state — read it once. While active, the
+    // coordinator's pass carries a depth/stencil attachment, so the default and
+    // static-batch pipelines must select their stencil-enabled variants. The
+    // custom path never reaches here under a clip (render() throws at collection
+    // time), so its pipelines stay stencil-free.
+    const stencil = backend._passCoordinator.stencilActive;
 
     let lastShader: Material | 'default' | 'instanced' | null = null;
     let lastBlendMode: BlendModes | null = null;
@@ -517,7 +542,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
           const needsPipeline = lastShader !== 'instanced' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
           if (needsPipeline) {
-            pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat }));
+            pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil }));
             lastShader = 'instanced';
             lastBlendMode = dc.blendMode;
             lastFormat = renderTargetFormat;
@@ -560,7 +585,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         const needsPipeline = lastShader !== 'default' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
         if (needsPipeline) {
-          pass.setPipeline(this._getPipeline({ blendMode: dc.blendMode, format: renderTargetFormat }));
+          pass.setPipeline(this._getPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil }));
           lastShader = 'default';
           lastBlendMode = dc.blendMode;
           lastFormat = renderTargetFormat;
@@ -657,7 +682,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     for (const blendMode of blendModes) {
       for (const format of formats) {
-        const key = `${blendMode}:${format}`;
+        // Prewarm only the no-clip variants; the stencil pipelines are created
+        // lazily on the first clipped draw (a rare path not worth the upfront
+        // compile cost for every blend-mode × format combination).
+        const key = meshPipelineCacheKey(blendMode, format, false);
 
         if (this._pipelines.has(key)) continue;
 
@@ -835,19 +863,19 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 
   private _getPipeline(key: MeshPipelineKey): GPURenderPipeline {
-    const cacheKey = `${key.blendMode}:${key.format}`;
+    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil);
     let pipeline = this._pipelines.get(cacheKey);
 
     if (!pipeline) {
-      pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(key.blendMode, key.format));
+      pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(key.blendMode, key.format, key.stencil));
       this._pipelines.set(cacheKey, pipeline);
     }
 
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipelineDescriptor {
-    return {
+  private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+    const descriptor: GPURenderPipelineDescriptor = {
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,
@@ -880,6 +908,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         cullMode: 'none',
       },
     };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    return descriptor;
   }
 
   private _getTextureBindGroup(backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
@@ -1057,19 +1091,19 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 
   private _getInstancedPipeline(key: InstancedPipelineKey): GPURenderPipeline {
-    const cacheKey = `${key.blendMode}:${key.format}`;
+    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil);
     let pipeline = this._instancedPipelines.get(cacheKey);
 
     if (!pipeline) {
-      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format));
+      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format, key.stencil));
       this._instancedPipelines.set(cacheKey, pipeline);
     }
 
     return pipeline;
   }
 
-  private _buildInstancedPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipelineDescriptor {
-    return {
+  private _buildInstancedPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+    const descriptor: GPURenderPipelineDescriptor = {
       layout: this._instancedPipelineLayout!,
       vertex: {
         module: this._instancedShaderModule!,
@@ -1107,6 +1141,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         cullMode: 'none',
       },
     };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    return descriptor;
   }
 
   private _getOrCreateStaticGeometryEntry(mesh: Mesh): StaticGeometryCacheEntry {

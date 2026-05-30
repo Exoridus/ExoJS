@@ -23,6 +23,9 @@ import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import { Geometry } from '@/rendering/geometry/Geometry';
+import { MeshMaterial } from '@/rendering/material/MeshMaterial';
+import { ShaderSource } from '@/rendering/material/ShaderSource';
+import { Mesh } from '@/rendering/mesh/Mesh';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
@@ -75,6 +78,57 @@ const createQuadGeometry = (x: number, y: number, width: number, height: number)
     vertexData: new Float32Array([x, y, x + width, y, x + width, y + height, x, y, x + width, y + height, x, y + height]),
     stride: 8,
   });
+
+// A solid `size`×`size` quad Mesh anchored at the origin, painted with `color`
+// via tint over the implicit white texture (default-material mesh path).
+const createQuadMesh = (size: number, color: Color): Mesh => {
+  const mesh = new Mesh({
+    vertices: new Float32Array([0, 0, size, 0, size, size, 0, 0, size, size, 0, size]),
+  });
+
+  mesh.tint = color;
+
+  return mesh;
+};
+
+// Minimal custom MeshMaterial WGSL. Never compiled here: the renderer throws at
+// collection time when a custom-material Mesh is drawn under a Geometry clip,
+// before any pipeline is built, so this only has to be a non-null shader source.
+const customMeshWgsl = /* wgsl */ `
+struct MeshUniforms {
+    projection: mat3x3<f32>,
+    translation: mat3x3<f32>,
+    tint: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> u_mesh: MeshUniforms;
+
+struct VertexInput {
+    @location(0) position: vec2<f32>,
+    @location(1) texcoord: vec2<f32>,
+    @location(2) color: vec4<f32>,
+};
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+};
+
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+    let world = u_mesh.translation * vec3<f32>(input.position, 1.0);
+    let clip = u_mesh.projection * world;
+    var output: VertexOutput;
+    output.position = vec4<f32>(clip.xy, 0.0, 1.0);
+    output.color = input.color * u_mesh.tint;
+    return output;
+}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+    return input.color;
+}
+`;
 
 const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
   if (!navigator.gpu) {
@@ -370,7 +424,34 @@ describe('WebGPU geometric (stencil) clipping', () => {
     }
   });
 
-  test('Geometry-clipping non-Sprite content (Graphics/mesh) fails clearly (MVP boundary)', async ctx => {
+  test('a default-material Mesh renders inside a Geometry stencil clip', async ctx => {
+    const backend = await setupBackend(ctx);
+    const root = new Container();
+    const clipped = new Container();
+    const mesh = createQuadMesh(48, Color.red);
+
+    try {
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(mesh);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Inside the triangle (x + y << 48): the red mesh survives.
+      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
+      // Outside the triangle (x + y >> 48): clipped to the black clear.
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a Graphics shape renders inside a Geometry stencil clip', async ctx => {
     const backend = await setupBackend(ctx);
     const root = new Container();
     const clipped = new Container();
@@ -384,14 +465,138 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(graphics);
       root.addChild(clipped);
 
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Inside the triangle: the filled rectangle survives.
+      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
+      // Outside the triangle: clipped to the black clear.
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a Mesh stencil clip composes with a scissor rect (intersection)', async ctx => {
+    const backend = await setupBackend(ctx);
+    const root = new Container();
+    const clipped = new Container();
+    const mesh = createQuadMesh(64, Color.red);
+
+    try {
+      // Stencil: left half. Scissor (mask Rectangle): top half. Both restrict.
+      clipped.clip = true;
+      clipped.clipShape = createQuadGeometry(0, 0, 32, 64);
+      clipped.mask = new Rectangle(0, 0, 64, 32);
+      clipped.addChild(mesh);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Top-left: inside both.
+      expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
+      // Bottom-left: inside stencil, outside scissor.
+      expectPixelNear(readPixel(12, 48), [0, 0, 0, 255]);
+      // Top-right: inside scissor, outside stencil.
+      expectPixelNear(readPixel(48, 12), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a custom-material Mesh under a Geometry clip fails clearly (MVP boundary)', async ctx => {
+    const backend = await setupBackend(ctx);
+    const root = new Container();
+    const clipped = new Container();
+    const material = new MeshMaterial({ shader: new ShaderSource({ wgsl: customMeshWgsl }) });
+    const mesh = new Mesh({
+      vertices: new Float32Array([0, 0, 48, 0, 48, 48, 0, 0, 48, 48, 0, 48]),
+      material,
+    });
+
+    try {
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(mesh);
+      root.addChild(clipped);
+
       expect(() => {
         backend.clear(Color.black);
         root.render(backend);
         backend.flush();
-      }).toThrow(/stencil clipping.*Mesh\/Graphics.*not supported/i);
+      }).toThrow(/stencil clipping.*custom-material Mesh.*not supported/i);
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
+      material.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('the stencil stack stays balanced after unsupported content throws', async ctx => {
+    const backend = await setupBackend(ctx);
+    const material = new MeshMaterial({ shader: new ShaderSource({ wgsl: customMeshWgsl }) });
+
+    try {
+      // First render: a custom-material Mesh under a clip throws at collection
+      // time. The clip scope's finally still runs popStencilClip, so the stack
+      // must end balanced rather than leaking the pushed level.
+      const failingRoot = new Container();
+      const failingClip = new Container();
+      const customMesh = new Mesh({
+        vertices: new Float32Array([0, 0, 48, 0, 48, 48, 0, 0, 48, 48, 0, 48]),
+        material,
+      });
+
+      failingClip.clip = true;
+      failingClip.clipShape = createRightTriangle(48);
+      failingClip.addChild(customMesh);
+      failingRoot.addChild(failingClip);
+
+      expect(() => {
+        backend.clear(Color.black);
+        failingRoot.render(backend);
+        backend.flush();
+      }).toThrow(/custom-material Mesh/i);
+
+      // The pushed clip was popped in the scope's finally — nothing leaked. A
+      // surfacing "Unbalanced stencil clip stack" error (from _endDrawPlan)
+      // would have replaced the content error above, so reaching here already
+      // implies balance; assert it directly for clarity.
+      expect(backend._passCoordinator.unbalancedStencilClips()).toBe(0);
+
+      failingRoot.destroy();
+      (failingClip.clipShape as Geometry).destroy();
+
+      // A subsequent clipped default Mesh must still render correctly: the
+      // stencil attachment/state was not corrupted by the earlier throw.
+      const root = new Container();
+      const clipped = new Container();
+      const mesh = createQuadMesh(48, Color.red);
+
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(mesh);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+    } finally {
+      material.destroy();
       backend.destroy();
     }
   });
