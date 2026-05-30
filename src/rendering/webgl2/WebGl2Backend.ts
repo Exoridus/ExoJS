@@ -31,6 +31,7 @@ import type { View } from '../View';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
+import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
 import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import { WebGl2StencilClipper } from './WebGl2StencilClipper';
 import { WebGl2TextRenderer } from './WebGl2TextRenderer';
@@ -155,6 +156,7 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _stencilClipper: WebGl2StencilClipper = new WebGl2StencilClipper();
   private readonly _stencilStates: Map<RenderTarget, StencilTargetState> = new Map<RenderTarget, StencilTargetState>();
   private _stencilClipperConnected = false;
+  private _passCoordinatorInstance: WebGl2PassCoordinator | null = null;
 
   private _canvas: HTMLCanvasElement;
   private _contextLost: boolean;
@@ -250,6 +252,16 @@ export class WebGl2Backend implements RenderBackend {
   /** @internal */
   public get activeDrawCommand(): DrawCommand | null {
     return this._activeDrawCommand;
+  }
+
+  /**
+   * Internal render-pass coordinator. Owns target / view / clear orchestration
+   * and the scissor / stencil-clip stacks for this backend; not part of the
+   * public {@link RenderBackend} surface.
+   * @internal
+   */
+  public get _passCoordinator(): WebGl2PassCoordinator {
+    return (this._passCoordinatorInstance ??= new WebGl2PassCoordinator(this));
   }
 
   public async initialize(): Promise<this> {
