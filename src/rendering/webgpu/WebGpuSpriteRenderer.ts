@@ -425,18 +425,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
 
-    const encoder = device.createCommandEncoder();
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [backend.createColorAttachment()],
-    });
-    backend.stats.renderPasses++;
-
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    if (scissor !== null && !maskClipsAll) {
-      pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-    }
+    // The coordinator owns the GPU pass: it opens the encoder + render pass
+    // (load/clear resolution, pass count and scissor are applied there) and
+    // ends + submits it below.
+    const pass = backend._passCoordinator.acquirePass().pass;
 
     if (this._instanceCount > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null) {
       device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._instanceCount * instanceStrideBytes);
@@ -463,8 +458,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       backend.stats.drawCalls++;
     }
 
-    pass.end();
-    backend.submit(encoder.finish());
+    backend._passCoordinator.endPass();
 
     this._instanceCount = 0;
     this._resetSlots();

@@ -160,13 +160,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // pass so createColorAttachment consumes the clear state.
     if (this._drawCallCount === 0 || maskClipsAll) {
       if (backend.clearRequested) {
-        const encoder = device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-          colorAttachments: [backend.createColorAttachment()],
-        });
-        backend.stats.renderPasses++;
-        pass.end();
-        backend.submit(encoder.finish());
+        backend._passCoordinator.acquirePass();
+        backend._passCoordinator.endPass();
       }
       this._drawCallCount = 0;
       return;
@@ -227,15 +222,10 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
       device.queue.writeBuffer(uniformBuffer, 0, this._uniformData.buffer, this._uniformData.byteOffset, this._uniformData.byteLength);
 
-      const encoder = device.createCommandEncoder();
-      const pass = encoder.beginRenderPass({
-        colorAttachments: [backend.createColorAttachment()],
-      });
-      backend.stats.renderPasses++;
-
-      if (scissor !== null) {
-        pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-      }
+      // One coordinator-owned pass per drawcall: each system's writeBuffers
+      // target offset 0, so the pass must be submitted before the next system
+      // overwrites those buffers. acquirePass/endPass preserve that 1:1 ratio.
+      const pass = backend._passCoordinator.acquirePass().pass;
 
       pass.setBindGroup(0, uniformBindGroup);
       pass.setPipeline(pipeline);
@@ -247,8 +237,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       backend.stats.batches++;
       backend.stats.drawCalls++;
 
-      pass.end();
-      backend.submit(encoder.finish());
+      backend._passCoordinator.endPass();
     }
 
     this._drawCallCount = 0;

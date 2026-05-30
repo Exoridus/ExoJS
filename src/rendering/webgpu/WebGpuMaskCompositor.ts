@@ -205,19 +205,9 @@ export class WebGpuMaskCompositor {
     const targetFormat = manager.renderTargetFormat;
     const pipeline = this._getOrCreatePipeline(targetFormat, blendMode);
 
-    const encoder = device.createCommandEncoder({ label: 'WebGpuMaskCompositor' });
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [manager.createColorAttachment()],
-      label: 'WebGpuMaskCompositor pass',
-    });
-
-    manager.stats.renderPasses++;
-
-    const scissor = manager.getScissorRect();
-
-    if (scissor !== null) {
-      pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-    }
+    // The coordinator owns the GPU pass (load/clear resolution, pass count and
+    // scissor are applied there) and ends + submits it below.
+    const pass = manager._passCoordinator.acquirePass().pass;
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, this._projectionBindGroup);
@@ -229,8 +219,7 @@ export class WebGpuMaskCompositor {
     manager.stats.batches++;
     manager.stats.drawCalls++;
 
-    pass.end();
-    manager.submit(encoder.finish());
+    manager._passCoordinator.endPass();
   }
 
   private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes): GPURenderPipeline {

@@ -332,13 +332,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       // Honor a pending clear with an empty pass so createColorAttachment
       // consumes the clear-state once.
       if (backend.clearRequested) {
-        const encoder = device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-          colorAttachments: [backend.createColorAttachment()],
-        });
-        backend.stats.renderPasses++;
-        pass.end();
-        backend.submit(encoder.finish());
+        backend._passCoordinator.acquirePass();
+        backend._passCoordinator.endPass();
       }
       this._resetFrame();
       return;
@@ -486,18 +481,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     // Phase 5: single render pass with one drawIndexed per mesh, switching
-    // pipeline+bind groups between default and custom paths as needed.
-    const encoder = device.createCommandEncoder({ label: 'WebGpuMeshRenderer' });
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [backend.createColorAttachment()],
-      label: 'WebGpuMeshRenderer pass',
-    });
-
-    backend.stats.renderPasses++;
-
-    if (scissor !== null) {
-      pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-    }
+    // pipeline+bind groups between default and custom paths as needed. The
+    // coordinator owns the GPU pass (load/clear resolution, pass count and
+    // scissor are applied there) and ends + submits it below.
+    const pass = backend._passCoordinator.acquirePass().pass;
 
     const renderTargetFormat = backend.renderTargetFormat;
 
@@ -624,8 +611,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       backend.stats.drawCalls++;
     }
 
-    pass.end();
-    backend.submit(encoder.finish());
+    backend._passCoordinator.endPass();
 
     this._resetFrame();
   }

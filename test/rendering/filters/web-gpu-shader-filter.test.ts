@@ -18,6 +18,7 @@ import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import type { View } from '@/rendering/View';
 import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import { type WebGpuPassBackend, WebGpuPassCoordinator } from '@/rendering/webgpu/WebGpuPassCoordinator';
 
 // ---------------------------------------------------------------------------
 // WebGPU mock environment (mirrors webgpu-backend.test.ts pattern)
@@ -213,6 +214,18 @@ function makeWebGpuBackend(env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     popScissorRect() {
       return this;
     },
+    pushStencilClip() {
+      return this;
+    },
+    popStencilClip() {
+      return this;
+    },
+    getScissorRect() {
+      return null;
+    },
+    _targetHasContent() {
+      return false;
+    },
     composeWithAlphaMask() {
       return this;
     },
@@ -236,6 +249,10 @@ function makeWebGpuBackend(env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     createColorAttachment,
     submit,
   } as unknown as RenderBackend & WebGpuBackend & MockWebGpuBackendExtras;
+
+  // The shader filter records into the backend-owned coordinator's active pass;
+  // give the mock a real coordinator over itself (it satisfies WebGpuPassBackend).
+  (backend as unknown as { _passCoordinator: WebGpuPassCoordinator })._passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
 
   return backend;
 }

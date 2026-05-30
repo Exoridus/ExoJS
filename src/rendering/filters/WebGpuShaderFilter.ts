@@ -251,17 +251,10 @@ export class WebGpuShaderFilter extends Filter {
           const userBindGroup = this._buildUserBindGroup(gpu, conn);
 
           // ---- Encode render pass ----
-          // Labels are picked up by Spector.js and Chrome DevTools' WebGPU
-          // panel and displayed as the pass name in capture views; ignored
-          // by WebGPU at runtime so they cost nothing in release builds.
-          const device2 = gpu.device;
-          const encoder = device2.createCommandEncoder({ label: 'WebGpuShaderFilter' });
-          const pass = encoder.beginRenderPass({
-            colorAttachments: [gpu.createColorAttachment()],
-            label: 'WebGpuShaderFilter pass',
-          });
-
-          gpu.stats.renderPasses++;
+          // The coordinator owns the GPU pass (it runs inside the surrounding
+          // RenderTargetPass child pass, so load/clear is already resolved to
+          // a clear of the output target) and ends + submits it below.
+          const pass = gpu._passCoordinator.acquirePass().pass;
 
           pass.setPipeline(conn.pipeline);
           pass.setVertexBuffer(0, conn.vertexBuffer);
@@ -271,8 +264,7 @@ export class WebGpuShaderFilter extends Filter {
 
           gpu.stats.drawCalls++;
 
-          pass.end();
-          gpu.submit(encoder.finish());
+          gpu._passCoordinator.endPass();
         },
         {
           target: output,

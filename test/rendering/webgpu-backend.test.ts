@@ -685,6 +685,52 @@ describe('WebGpuBackend', () => {
     }
   });
 
+  test('a single sprite flush opens exactly one coordinator pass and one submit', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 128, height: 128 },
+          clearColor: Color.black,
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+      const sourceCanvas = document.createElement('canvas');
+      const texture = new Texture(sourceCanvas);
+      const first = new Sprite(texture);
+      const second = new Sprite(texture);
+
+      sourceCanvas.width = 16;
+      sourceCanvas.height = 16;
+      // Disable mipmaps so the only render passes are content passes — mipmap
+      // generation legitimately opens its own (non-coordinator) passes against
+      // mip-level targets, which would otherwise inflate the raw mock counts.
+      texture.generateMipMap = false;
+      texture.updateSource();
+      second.x = 20;
+
+      await manager.initialize();
+
+      manager.clear();
+      first.render(manager);
+      second.render(manager);
+      manager.flush();
+
+      // Pass ownership is centralized in the coordinator: two batched sprites
+      // produce exactly one render pass and one submit (no extra passes from
+      // moving ownership out of the renderer).
+      expect(environment.encoder.beginRenderPass).toHaveBeenCalledTimes(1);
+      expect(environment.queue.submit).toHaveBeenCalledTimes(1);
+      expect(manager.stats.renderPasses).toBe(1);
+
+      manager.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('batches contiguous same-texture WebGPU sprites into one indexed draw', async () => {
     const environment = createMockWebGpuEnvironment();
 

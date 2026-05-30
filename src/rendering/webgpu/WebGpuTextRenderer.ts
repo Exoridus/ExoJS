@@ -401,20 +401,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     device.queue.writeBuffer(this._vertexBuffer!, 0, this._vertexData, 0, packedV * vertexStrideBytes);
     device.queue.writeBuffer(this._indexBuffer!, 0, this._indexData.buffer, 0, packedI * 2);
 
-    const scissor = backend.getScissorRect();
     const format = backend.renderTargetFormat;
     const frameBindGroup = this._getFrameBindGroup(device);
 
-    const encoder = device.createCommandEncoder({ label: 'WebGpuTextRenderer' });
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [backend.createColorAttachment()],
-      label: 'WebGpuTextRenderer pass',
-    });
-    backend.stats.renderPasses++;
-
-    if (scissor !== null) {
-      pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-    }
+    // The coordinator owns the GPU pass (load/clear resolution, pass count and
+    // scissor are applied there) and ends + submits it below.
+    const pass = backend._passCoordinator.acquirePass().pass;
 
     pass.setVertexBuffer(0, this._vertexBuffer);
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
@@ -437,8 +429,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       backend.stats.drawCalls++;
     }
 
-    pass.end();
-    backend.submit(encoder.finish());
+    backend._passCoordinator.endPass();
 
     this._resetFrameState();
   }

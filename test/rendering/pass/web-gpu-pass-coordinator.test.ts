@@ -3,13 +3,16 @@ import { Matrix } from '@/math/Matrix';
 import { Rectangle } from '@/math/Rectangle';
 import { Geometry } from '@/rendering/geometry/Geometry';
 import { type RenderPassDescriptor, StencilAttachmentMode } from '@/rendering/pass/RenderPassDescriptor';
+import { createRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { View } from '@/rendering/View';
 import { type WebGpuPassBackend, WebGpuPassCoordinator } from '@/rendering/webgpu/WebGpuPassCoordinator';
 
-// A stateful mock backend (no GPU device) that records delegated calls and
-// reports per-target content presence via a caller-controlled set.
+// A stateful mock backend with a minimal GPU device (createCommandEncoder →
+// encoder → beginRenderPass → pass) so the coordinator's real acquire/end pass
+// cycle runs without a real adapter. Records delegated calls and reports
+// per-target content presence via a caller-controlled set.
 const createMockBackend = (root: RenderTarget, contentTargets: Set<RenderTarget> = new Set<RenderTarget>()) => {
   let currentTarget: RenderTarget = root;
   let currentView: View = root.view;
@@ -28,6 +31,15 @@ const createMockBackend = (root: RenderTarget, contentTargets: Set<RenderTarget>
   const popStencilClip = vi.fn(() => undefined);
   const targetHasContent = vi.fn((target: RenderTarget) => contentTargets.has(target));
 
+  const passEncoder = { end: vi.fn(), setScissorRect: vi.fn() };
+  const beginRenderPass = vi.fn(() => passEncoder);
+  const encoder = { beginRenderPass, finish: vi.fn(() => ({}) as GPUCommandBuffer) };
+  const createCommandEncoder = vi.fn(() => encoder);
+  const submit = vi.fn((_commandBuffer: GPUCommandBuffer) => undefined);
+  const createColorAttachment = vi.fn(() => ({}) as GPURenderPassColorAttachment);
+  const getScissorRect = vi.fn(() => null);
+  const stats = createRenderStats();
+
   const backend: WebGpuPassBackend = {
     get renderTarget() {
       return currentTarget;
@@ -35,6 +47,9 @@ const createMockBackend = (root: RenderTarget, contentTargets: Set<RenderTarget>
     get view() {
       return currentView;
     },
+    device: { createCommandEncoder } as unknown as GPUDevice,
+    renderTargetFormat: 'rgba8unorm' as GPUTextureFormat,
+    stats,
     setRenderTarget,
     setView,
     clear,
@@ -43,10 +58,28 @@ const createMockBackend = (root: RenderTarget, contentTargets: Set<RenderTarget>
     popScissorRect,
     pushStencilClip,
     popStencilClip,
+    createColorAttachment,
+    getScissorRect,
+    submit,
     _targetHasContent: targetHasContent,
   };
 
-  return { backend, setRenderTarget, setView, clear, flush, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip, targetHasContent };
+  return {
+    backend,
+    stats,
+    setRenderTarget,
+    setView,
+    clear,
+    flush,
+    pushScissorRect,
+    popScissorRect,
+    pushStencilClip,
+    popStencilClip,
+    targetHasContent,
+    beginRenderPass,
+    passEncoder,
+    submit,
+  };
 };
 
 const descriptor = (
@@ -134,9 +167,9 @@ describe('WebGpuPassCoordinator', () => {
     }
   });
 
-  test('scissor and stencil delegate to the backend; endPass flushes', () => {
+  test('scissor and stencil delegate to the backend', () => {
     const root = new RenderTarget(64, 64, true);
-    const { backend, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip, flush } = createMockBackend(root);
+    const { backend, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip } = createMockBackend(root);
     const coordinator = new WebGpuPassCoordinator(backend);
     const bounds = new Rectangle(0, 0, 8, 8);
     const shape = new Geometry({
@@ -151,17 +184,46 @@ describe('WebGpuPassCoordinator', () => {
       coordinator.popScissorRect();
       coordinator.pushStencilClip(shape, transform);
       coordinator.popStencilClip();
-      coordinator.endPass();
 
       expect(pushScissorRect).toHaveBeenCalledWith(bounds);
       expect(popScissorRect).toHaveBeenCalledTimes(1);
       expect(pushStencilClip).toHaveBeenCalledWith(shape, transform);
       expect(popStencilClip).toHaveBeenCalledTimes(1);
-      expect(flush).toHaveBeenCalledTimes(1);
     } finally {
       transform.destroy();
       shape.destroy();
       bounds.destroy();
+      root.destroy();
+    }
+  });
+
+  test('acquirePass opens one GPU pass and is idempotent; endPass ends + submits it', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend, stats, beginRenderPass, passEncoder, submit } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      expect(coordinator.hasActivePass).toBe(false);
+
+      const active = coordinator.acquirePass();
+
+      // A second acquire returns the same open pass — no extra GPU pass.
+      expect(coordinator.acquirePass()).toBe(active);
+      expect(beginRenderPass).toHaveBeenCalledTimes(1);
+      expect(stats.renderPasses).toBe(1);
+      expect(coordinator.hasActivePass).toBe(true);
+
+      coordinator.endPass();
+
+      expect(passEncoder.end).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledTimes(1);
+      expect(coordinator.hasActivePass).toBe(false);
+
+      // endPass with no open pass is a no-op (no extra end/submit).
+      coordinator.endPass();
+      expect(passEncoder.end).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledTimes(1);
+    } finally {
       root.destroy();
     }
   });
