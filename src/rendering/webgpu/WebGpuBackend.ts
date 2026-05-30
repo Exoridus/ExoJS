@@ -33,6 +33,7 @@ import type { View } from '../View';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuParticleRenderer } from './WebGpuParticleRenderer';
+import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuTextRenderer } from './WebGpuTextRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
@@ -119,6 +120,7 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _stats: RenderStats = createRenderStats();
   private _transformStorage: WebGpuTransformStorage | null = new WebGpuTransformStorage();
   private _activeDrawCommand: DrawCommand | null = null;
+  private _passCoordinatorInstance: WebGpuPassCoordinator | null = null;
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -189,6 +191,16 @@ export class WebGpuBackend implements RenderBackend {
   /** @internal */
   public get activeDrawCommand(): DrawCommand | null {
     return this._activeDrawCommand;
+  }
+
+  /**
+   * Internal render-pass coordinator. Owns the clear-vs-load decision and (from
+   * phase 12D) the active render pass; not part of the public
+   * {@link RenderBackend} surface.
+   * @internal
+   */
+  public get _passCoordinator(): WebGpuPassCoordinator {
+    return (this._passCoordinatorInstance ??= new WebGpuPassCoordinator(this));
   }
 
   public get clearColor(): Color {
@@ -514,35 +526,31 @@ export class WebGpuBackend implements RenderBackend {
 
   public createColorAttachment(): GPURenderPassColorAttachment {
     const renderTarget = this._renderTarget;
-    let attachmentState: { view: GPUTextureView; shouldClear: boolean };
+    let view: GPUTextureView;
 
     if (renderTarget === this._rootRenderTarget) {
-      attachmentState = {
-        view: this.context.getCurrentTexture().createView(),
-        shouldClear: this._clearRequested || !this._hasPresentedFrame,
-      };
+      view = this.context.getCurrentTexture().createView();
     } else if (renderTarget instanceof RenderTexture) {
-      const state = this._syncTexture(renderTarget);
-
-      attachmentState = {
-        view: state.view,
-        shouldClear: this._clearRequested || !state.hasContent,
-      };
+      // Sync first so a resized RenderTexture resets its content flag before the
+      // coordinator resolves the load op below.
+      view = this._syncTexture(renderTarget).view;
     } else {
       throw new Error('WebGPU currently supports only root targets and RenderTexture targets.');
     }
 
+    const loadOp = this._passCoordinator.resolveLoad(renderTarget, this._clearRequested);
+
     this._clearRequested = false;
 
     return {
-      view: attachmentState.view,
+      view,
       clearValue: {
         r: this._clearColor.r / 255,
         g: this._clearColor.g / 255,
         b: this._clearColor.b / 255,
         a: this._clearColor.a,
       },
-      loadOp: attachmentState.shouldClear ? 'clear' : 'load',
+      loadOp,
       storeOp: 'store',
     };
   }
@@ -561,6 +569,24 @@ export class WebGpuBackend implements RenderBackend {
         this._generateMipmaps(state.texture, state.mipLevelCount);
       }
     }
+  }
+
+  /**
+   * Whether `target` already holds rendered content this frame. The canonical
+   * source of the `hasPresentedFrame` (root) / per-texture `hasContent`
+   * (RenderTexture) flags that drive the coordinator's clear-vs-load decision.
+   * @internal
+   */
+  public _targetHasContent(target: RenderTarget): boolean {
+    if (target === this._rootRenderTarget) {
+      return this._hasPresentedFrame;
+    }
+
+    if (target instanceof RenderTexture) {
+      return this._getTextureState(target).hasContent;
+    }
+
+    return false;
   }
 
   public getTextureBinding(texture: Texture | RenderTexture): {

@@ -54,3 +54,17 @@ export interface RenderPassCoordinator {
    */
   resolveLoad(target: RenderTarget, clearRequested: boolean): RenderPassLoad;
 }
+
+/**
+ * Duck-typing host for backends that own a {@link RenderPassCoordinator}.
+ *
+ * Generic, `RenderBackend`-typed orchestration code ({@link RenderTargetPass},
+ * {@link RenderingContext.renderTo}) reaches the coordinator through this
+ * optional accessor and falls back to a legacy inline target/view save-restore
+ * when it is absent (e.g. test stub backends), mirroring the `_beginDrawPlan?`
+ * hook pattern used by `RenderPlanPlayer`.
+ * @internal
+ */
+export interface RenderPassCoordinatorHost {
+  readonly _passCoordinator: RenderPassCoordinator;
+}

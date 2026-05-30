@@ -1749,6 +1749,45 @@ describe('WebGpuBackend', () => {
     }
   });
 
+  test('RenderTexture content survives across passes in a frame: clear first use, then load', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 128, height: 128 },
+          clearColor: Color.black,
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+      const renderTexture = new RenderTexture(32, 32);
+
+      await manager.initialize();
+
+      manager.setRenderTarget(renderTexture);
+
+      // First use of the target this frame: nothing to preserve → clear.
+      expect(manager.createColorAttachment().loadOp).toBe('clear');
+
+      // A submitted frame marks the target as holding content.
+      manager.submit(environment.encoder.finish());
+
+      // Next pass into the same target without an explicit clear must load,
+      // preserving the previous contents (the v0.10 content-preservation
+      // invariant, now owned by the pass coordinator's resolveLoad).
+      expect(manager.createColorAttachment().loadOp).toBe('load');
+
+      // An explicit clear still forces a clear even when content exists.
+      manager.clear(Color.red);
+      expect(manager.createColorAttachment().loadOp).toBe('clear');
+
+      manager.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('applies WebGPU filters through render-target passes', async () => {
     const environment = createMockWebGpuEnvironment();
 

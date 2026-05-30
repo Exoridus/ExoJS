@@ -1,5 +1,6 @@
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
+import { RenderingContext } from '@/rendering/RenderingContext';
 import type { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { Sprite } from '@/rendering/sprite/Sprite';
@@ -309,7 +310,10 @@ describe('RenderTo WebGL2 browser', () => {
 
     // Use raw GL draw to verify framebuffer write capability.
     const vs = gl.createShader(gl.VERTEX_SHADER)!;
-    gl.shaderSource(vs, '#version 300 es\nprecision mediump float;\nvoid main() {\n  float x=float((gl_VertexID&1)<<2)-1.0;\n  float y=float((gl_VertexID&2)<<1)-1.0;\n  gl_Position=vec4(x,y,0.0,1.0);\n}');
+    gl.shaderSource(
+      vs,
+      '#version 300 es\nprecision mediump float;\nvoid main() {\n  float x=float((gl_VertexID&1)<<2)-1.0;\n  float y=float((gl_VertexID&2)<<1)-1.0;\n  gl_Position=vec4(x,y,0.0,1.0);\n}',
+    );
     gl.compileShader(vs);
 
     const fs = gl.createShader(gl.FRAGMENT_SHADER)!;
@@ -342,7 +346,11 @@ describe('RenderTo WebGL2 browser', () => {
     const target = new RenderTexture(canvasSize, canvasSize);
     const { sprite: spriteA, texture: textureA } = createFullScreenSprite('#ff0000');
     const { sprite: spriteB, texture: textureB } = createFullScreenSprite('#00ff00');
-    const samples = [[4, 4], [32, 32], [60, 60]] as const;
+    const samples = [
+      [4, 4],
+      [32, 32],
+      [60, 60],
+    ] as const;
 
     try {
       // A is buffered into the root, then a pass draws B into the off-screen
@@ -353,7 +361,7 @@ describe('RenderTo WebGL2 browser', () => {
 
       backend.execute(
         new RenderTargetPass(
-          (passBackend) => {
+          passBackend => {
             spriteB.render(passBackend);
           },
           { target, view: target.view, clearColor: Color.transparentBlack },
@@ -387,7 +395,11 @@ describe('RenderTo WebGL2 browser', () => {
     captureSprite.setPosition(16, 16);
     const captureView = new View(16, 16, 32, 32);
 
-    type HookedBackend = WebGl2Backend & { _beginDrawPlan(n: number): void; _endDrawPlan(): void; _prepareDrawCommand(cmd: { drawable: Sprite; nodeIndex: number }): void };
+    type HookedBackend = WebGl2Backend & {
+      _beginDrawPlan(n: number): void;
+      _endDrawPlan(): void;
+      _prepareDrawCommand(cmd: { drawable: Sprite; nodeIndex: number }): void;
+    };
     const hooked = backend as HookedBackend;
 
     try {
@@ -397,7 +409,7 @@ describe('RenderTo WebGL2 browser', () => {
       try {
         backend.execute(
           new RenderTargetPass(
-            (passBackend) => {
+            passBackend => {
               (passBackend as HookedBackend)._prepareDrawCommand({ drawable: captureSprite, nodeIndex: 0 });
               passBackend.draw(captureSprite);
             },
@@ -434,7 +446,11 @@ describe('RenderTo WebGL2 browser', () => {
     captureSprite.cacheAsBitmap = true;
     const captureView = new View(24, 24, 16, 16);
 
-    type HookedBackend = WebGl2Backend & { _beginDrawPlan(n: number): void; _endDrawPlan(): void; _prepareDrawCommand(cmd: { drawable: Sprite; nodeIndex: number }): void };
+    type HookedBackend = WebGl2Backend & {
+      _beginDrawPlan(n: number): void;
+      _endDrawPlan(): void;
+      _prepareDrawCommand(cmd: { drawable: Sprite; nodeIndex: number }): void;
+    };
     const hooked = backend as HookedBackend;
 
     const cacheSpriteForComposite = new Sprite(cacheTexture);
@@ -446,7 +462,7 @@ describe('RenderTo WebGL2 browser', () => {
       try {
         backend.execute(
           new RenderTargetPass(
-            (passBackend) => {
+            passBackend => {
               (passBackend as HookedBackend)._prepareDrawCommand({ drawable: captureSprite, nodeIndex: 0 });
               passBackend.draw(captureSprite);
             },
@@ -492,7 +508,7 @@ describe('RenderTo WebGL2 browser', () => {
       backend.clear(Color.black);
       backend.execute(
         new RenderTargetPass(
-          (passBackend) => {
+          passBackend => {
             passBackend.draw(captureSprite);
           },
           { target: cacheTexture, view: captureView, clearColor: Color.transparentBlack },
@@ -515,5 +531,74 @@ describe('RenderTo WebGL2 browser', () => {
       backend.destroy();
     }
   });
-});
 
+  test('RenderingContext.renderTo output can be sampled as a Sprite', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const { sprite: source, texture: sourceTexture } = createFullScreenSprite('#ff0000');
+
+    try {
+      // Render the red sprite into an off-screen RenderTexture via the context
+      // (RenderingContext.renderTo → coordinator child pass).
+      const captured = context.renderTo(source, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
+      const display = new Sprite(captured);
+
+      display.setPosition(0, 0);
+
+      backend.clear(Color.black);
+      display.render(backend);
+      backend.flush();
+
+      // The captured texture, sampled as a Sprite, paints the root red.
+      for (const [x, y] of [
+        [16, 16],
+        [32, 32],
+        [48, 48],
+      ] as const) {
+        expectPixelNear(readPixel(backend, x, y), [255, 0, 0, 255]);
+      }
+
+      display.destroy();
+      captured.destroy();
+    } finally {
+      sourceTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a second RenderTargetPass without a clear preserves the first pass content', async () => {
+    const backend = await createBackend();
+    const target = new RenderTexture(canvasSize, canvasSize);
+    const { sprite: red, texture: redTexture } = createFullScreenSprite('#ff0000');
+    const samples = [
+      [4, 4],
+      [32, 32],
+      [60, 60],
+    ] as const;
+
+    try {
+      // Pass 1: clear to black, draw full-screen red into the target.
+      backend.execute(
+        new RenderTargetPass(
+          passBackend => {
+            red.render(passBackend);
+          },
+          { target, view: target.view, clearColor: Color.black },
+        ),
+      );
+
+      // Pass 2: no clearColor → the coordinator loads (preserves) the target.
+      // The empty callback draws nothing, so the red from pass 1 must survive.
+      backend.execute(new RenderTargetPass(() => undefined, { target, view: target.view }));
+      backend.flush();
+
+      for (const [x, y] of samples) {
+        expectPixelNear(readPixelsFromTarget(backend, target, x, y), [255, 0, 0, 255]);
+      }
+    } finally {
+      redTexture.destroy();
+      target.destroy();
+      backend.destroy();
+    }
+  });
+});

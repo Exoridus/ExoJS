@@ -1,5 +1,7 @@
 import type { Color } from '@/core/Color';
 
+import type { RenderPassCoordinatorHost } from './pass/RenderPassCoordinator';
+import { StencilAttachmentMode } from './pass/RenderPassDescriptor';
 import type { RenderBackend } from './RenderBackend';
 import type { RenderPass } from './RenderPass';
 import type { RenderTarget } from './RenderTarget';
@@ -36,6 +38,27 @@ export class RenderTargetPass implements RenderPass {
   }
 
   public execute(backend: RenderBackend): void {
+    const coordinator = (backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+
+    if (coordinator) {
+      coordinator.withChildPass(
+        {
+          target: this._target,
+          view: this._view,
+          load: this._clearColor !== null ? 'clear' : 'load',
+          clearColor: this._clearColor,
+          stencil: StencilAttachmentMode.None,
+        },
+        () => {
+          this._callback(backend);
+        },
+      );
+
+      return;
+    }
+
+    // Legacy fallback for backends without a pass coordinator (e.g. test stubs):
+    // save the target/view, run the callback, then restore — even if it throws.
     const previousTarget = backend.renderTarget;
     const previousView = backend.view;
 

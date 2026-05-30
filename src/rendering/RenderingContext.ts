@@ -6,6 +6,8 @@ import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { View } from '@/rendering/View';
 
 import { Camera } from './Camera';
+import type { RenderPassCoordinatorHost } from './pass/RenderPassCoordinator';
+import { StencilAttachmentMode } from './pass/RenderPassDescriptor';
 import { playRenderTree } from './plan/playRenderTree';
 
 export interface RenderToOptions {
@@ -130,7 +132,26 @@ export class RenderingContext {
   public renderTo(node: RenderNode, options: RenderToOptions): RenderTexture {
     const target = new RenderTexture(options.width, options.height);
     const view = new View(options.width / 2, options.height / 2, options.width, options.height);
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
 
+    if (coordinator) {
+      coordinator.withChildPass(
+        {
+          target,
+          view,
+          load: options.clearColor !== undefined ? 'clear' : 'load',
+          clearColor: options.clearColor ?? null,
+          stencil: StencilAttachmentMode.None,
+        },
+        () => {
+          playRenderTree(node, this._backend);
+        },
+      );
+
+      return target;
+    }
+
+    // Legacy fallback for backends without a pass coordinator (e.g. test stubs).
     const previousTarget = this._backend.renderTarget;
     const previousView = this._backend.view;
 
