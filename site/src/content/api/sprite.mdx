@@ -5,11 +5,11 @@ symbol: "Sprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 75
+memberCount: 79
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/Sprite.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/Sprite.ts#L45"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/Sprite.ts#L47"
 ---
 ## Import
 
@@ -73,10 +73,13 @@ operate on the exact rotated quad rather than the AABB.
 
 ## Properties
 
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
@@ -86,6 +89,7 @@ operate on the exact rotated quad rather than the AABB.
 - `interactive: boolean`
 - `isAlignedBox: boolean`
 - `mask: MaskSource`
+- `material: SpriteMaterial | null`
 - `origin: ObservableVector`
 - `parent: Container | null`
 - `position: ObservableVector`
@@ -118,4 +122,4 @@ operate on the exact rotated quad rather than the AABB.
 
 ## Source
 
-[src/rendering/sprite/Sprite.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/Sprite.ts#L45)
+[src/rendering/sprite/Sprite.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/Sprite.ts#L47)

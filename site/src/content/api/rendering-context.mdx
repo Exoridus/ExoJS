@@ -1,0 +1,48 @@
+---
+title: "RenderingContext"
+description: "Owns rendering orchestration: builds, optimizes and plays the internal RenderPlan for a RenderNode subtree, manages render-target/view state for off-screen capture, and exposes the low-level backend as an escape hatch. The conceptual model is \"the context renders the node\": context.render(node) // into the active target (canvas by default) context.render(node, { view }) // override view (camera, screenView, etc.) context.renderTo(node, opts) // into an off-screen RenderTexture"
+symbol: "RenderingContext"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 10
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/RenderingContext.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderingContext.ts#L33"
+---
+## Import
+
+`import { RenderingContext } from '@codexo/exojs'`
+
+Owns rendering orchestration: builds, optimizes and plays the internal
+RenderPlan for a RenderNode subtree, manages render-target/view state for
+off-screen capture, and exposes the low-level backend as an escape hatch.
+
+The conceptual model is "the context renders the node":
+  context.render(node)            // into the active target (canvas by default)
+  context.render(node, \{ view \})  // override view (camera, screenView, etc.)
+  context.renderTo(node, opts)    // into an off-screen RenderTexture
+
+## Constructors
+
+- `new(backend: RenderBackend): RenderingContext`
+
+## Methods
+
+- `render(node: RenderNode, options: RenderOptions): void`
+- `renderTo(node: RenderNode, options: RenderToOptions): RenderTexture`
+- `resize(width: number, height: number): void`
+- `update(deltaMs: number): void`
+
+## Properties
+
+- `backend: RenderBackend`
+- `camera: Camera`
+- `screenView: View`
+- `stats: RenderStats`
+- `view: View`
+
+## Source
+
+[src/rendering/RenderingContext.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderingContext.ts#L33)

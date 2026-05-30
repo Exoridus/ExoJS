@@ -5,7 +5,7 @@ symbol: "Drawable"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 67
+memberCount: 70
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Drawable.ts"
@@ -63,10 +63,13 @@ and are paired with a matching Renderer via RendererRegistry.
 
 ## Properties
 
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`

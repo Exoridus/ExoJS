@@ -1,40 +1,38 @@
 ---
-title: "ColorGradient"
-description: "Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t`; sampling outside the range returns the nearest endpoint color. Like Curve, the last accessed segment is cached so monotonically advancing `t` is O(1) amortised. Two output paths: - evaluate — writes into a `Color` instance (own scratch by default). - evaluateRgba — returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer."
-symbol: "ColorGradient"
+title: "Gradient"
+description: "CPU-rasterized gradient base that can be converted into a DataTexture."
+symbol: "Gradient"
 kind: "class"
-subsystem: "particles"
+subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 3
+memberCount: 6
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Source"]
-sourcePath: "src/particles/distributions/ColorGradient.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/ColorGradient.ts#L33"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/gradient/Gradient.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts#L26"
 ---
 ## Import
 
-`import { ColorGradient } from '@codexo/exojs'`
+`import { Gradient } from '@codexo/exojs'`
 
-Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`.
-Keyframes are stored sorted by `t`; sampling outside the range returns
-the nearest endpoint color. Like Curve, the last accessed segment
-is cached so monotonically advancing `t` is O(1) amortised.
-
-Two output paths:
-- evaluate — writes into a `Color` instance (own scratch by default).
-- evaluateRgba — returns the packed `0xAABBGGRR` u32 directly,
-  skipping the Color object. Use this in tight per-particle inner loops
-  that write into a `Uint32Array` instance buffer.
+CPU-rasterized gradient base that can be converted into a DataTexture.
 
 ## Constructors
 
-- `new(keys: readonly ColorGradientKey[]): ColorGradient`
+- `new(stops: readonly GradientStop[]): Gradient`
 
 ## Methods
 
-- `evaluate(t: number, out: Color): Color`
-- `evaluateRgba(t: number): number`
+- `destroy(): void`
+- `resolveT(u: number, v: number): number`
+- `sampleAt(t: number, out: Float32Array): void`
+- `toTexture(width: number, height: number, options?: GradientToTextureOptions & object): DataTexture<"rgba8">`
+- `toTexture(width: number, height: number, options: GradientToTextureOptions & object): DataTexture<"rgba32f">`
+
+## Properties
+
+- `stops: readonly GradientStop[]`
 
 ## Source
 
-[src/particles/distributions/ColorGradient.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/ColorGradient.ts#L33)
+[src/rendering/gradient/Gradient.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts#L26)

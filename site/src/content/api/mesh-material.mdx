@@ -1,0 +1,49 @@
+---
+title: "MeshMaterial"
+description: "Material specialization for Mesh drawables. Carries the mesh contract conceptually: fixed vertex attribute locations (0 = position, 1 = texcoord, 2 = color), the auto-bound uniforms `u_projection`/`u_translation`/`u_tint`/`u_texture`, and the WGSL group(0)=mesh-uniforms / group(1)=texture / group(2)=user binding scheme. Renderer wiring is added in a later phase."
+symbol: "MeshMaterial"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 12
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/material/MeshMaterial.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/MeshMaterial.ts#L14"
+---
+## Import
+
+`import { MeshMaterial } from '@codexo/exojs'`
+
+Material specialization for Mesh drawables.
+
+Carries the mesh contract conceptually: fixed vertex attribute locations
+(0 = position, 1 = texcoord, 2 = color), the auto-bound uniforms
+`u_projection`/`u_translation`/`u_tint`/`u_texture`, and the WGSL
+group(0)=mesh-uniforms / group(1)=texture / group(2)=user binding scheme.
+Renderer wiring is added in a later phase.
+
+## Constructors
+
+- `new(options: MaterialOptions): MeshMaterial`
+
+## Methods
+
+- `destroy(): void`
+- `setTexture(name: string, texture: RenderTexture | Texture): this`
+- `setUniform(name: string, value: UniformValue): this`
+
+## Properties
+
+- `blendMode: BlendModes`
+- `sampler: SamplerOptions | null`
+- `shader: ShaderSource`
+- `target: "mesh"`
+- `textures: Record<string, Texture | RenderTexture>`
+- `uniforms: Record<string, UniformValue>`
+- `bindKey: number`
+- `pipelineKey: number`
+
+## Source
+
+[src/rendering/material/MeshMaterial.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/MeshMaterial.ts#L14)

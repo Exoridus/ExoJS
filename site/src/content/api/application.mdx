@@ -5,11 +5,11 @@ symbol: "Application"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 32
+memberCount: 34
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/core/Application.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L146"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L144"
 ---
 ## Import
 
@@ -44,6 +44,7 @@ background-active simulations.
 ## Methods
 
 - `destroy(): void`
+- `renderTo(node: RenderNode, options: RenderToOptions): RenderTexture`
 - `resize(width: number, height: number): this`
 - `setCursor(cursor: string | HTMLImageElement | HTMLCanvasElement | Texture): this`
 - `start(scene: Scene): Promise<Application>`
@@ -69,6 +70,7 @@ background-active simulations.
 - `documentVisible: boolean`
 - `frameCount: number`
 - `frameTime: Time`
+- `rendering: RenderingContext`
 - `startupTime: Time`
 - `status: ApplicationStatus`
 
@@ -83,4 +85,4 @@ background-active simulations.
 
 ## Source
 
-[src/core/Application.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L146)
+[src/core/Application.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L144)

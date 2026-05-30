@@ -1,0 +1,56 @@
+---
+title: "Material"
+description: "Describes the look of a renderable — shader, uniforms, textures, blend mode, and sampling state — independent of its geometry. A `Material` can be shared across many drawables; renderers cache compiled programs/pipelines keyed on pipelineKey and reuse bindings keyed on bindKey. Subclasses fix the target drawable class. Call destroy when the material is no longer needed to release the GPU resources cached on every backend it was used on. Both keys are derived live from the current material state, so they stay stable across repeated reads and change exactly when the relevant state changes — even when uniforms, textures, blendMode, or sampler are mutated in place."
+symbol: "Material"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 12
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/material/Material.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/Material.ts#L72"
+---
+## Import
+
+`import { Material } from '@codexo/exojs'`
+
+Describes the look of a renderable — shader, uniforms, textures, blend
+mode, and sampling state — independent of its geometry.
+
+A `Material` can be shared across many drawables; renderers cache
+compiled programs/pipelines keyed on pipelineKey and reuse
+bindings keyed on bindKey. Subclasses fix the target
+drawable class. Call destroy when the material is no longer
+needed to release the GPU resources cached on every backend it was used
+on.
+
+Both keys are derived live from the current material state, so they stay
+stable across repeated reads and change exactly when the relevant state
+changes — even when uniforms, textures, blendMode,
+or sampler are mutated in place.
+
+## Constructors
+
+- `new(options: MaterialOptions): Material`
+
+## Methods
+
+- `destroy(): void`
+- `setTexture(name: string, texture: RenderTexture | Texture): this`
+- `setUniform(name: string, value: UniformValue): this`
+
+## Properties
+
+- `blendMode: BlendModes`
+- `sampler: SamplerOptions | null`
+- `shader: ShaderSource`
+- `target: "mesh" | "sprite"`
+- `textures: Record<string, Texture | RenderTexture>`
+- `uniforms: Record<string, UniformValue>`
+- `bindKey: number`
+- `pipelineKey: number`
+
+## Source
+
+[src/rendering/material/Material.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/Material.ts#L72)

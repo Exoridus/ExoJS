@@ -5,11 +5,11 @@ symbol: "WebGpuBackend"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 37
+memberCount: 39
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/webgpu/WebGpuBackend.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L75"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L80"
 ---
 ## Import
 
@@ -52,7 +52,9 @@ acquisition fails on `'auto'`.
 - `getTextureBinding(texture: RenderTexture | Texture): object`
 - `initialize(): Promise<WebGpuBackend>`
 - `popScissorRect(): this`
+- `popStencilClip(): this`
 - `pushScissorRect(bounds: Rectangle): this`
+- `pushStencilClip(_shape: Geometry, _transform: Matrix): this`
 - `releaseRenderTexture(texture: RenderTexture): this`
 - `resetStats(): this`
 - `resize(width: number, height: number): this`
@@ -85,4 +87,4 @@ acquisition fails on `'auto'`.
 
 ## Source
 
-[src/rendering/webgpu/WebGpuBackend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L75)
+[src/rendering/webgpu/WebGpuBackend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L80)

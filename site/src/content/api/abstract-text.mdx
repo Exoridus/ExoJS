@@ -5,7 +5,7 @@ symbol: "AbstractText"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 71
+memberCount: 74
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/AbstractText.ts"
@@ -66,10 +66,13 @@ Subclasses:
 
 ## Properties
 
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`

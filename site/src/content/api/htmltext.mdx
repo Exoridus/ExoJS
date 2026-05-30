@@ -5,7 +5,7 @@ symbol: "HTMLText"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 86
+memberCount: 89
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/HTMLText.ts"
@@ -85,10 +85,13 @@ because it is embedded inside an XML document.
 
 ## Properties
 
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
 - `anchor: ObservableVector`
 - `bottom: number`
 - `cacheAsBitmap: boolean`

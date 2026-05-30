@@ -5,7 +5,7 @@ symbol: "RenderNode"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 63
+memberCount: 66
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/RenderNode.ts"
@@ -71,10 +71,13 @@ ParticleSystem (particles).
 
 ## Properties
 
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
 - `anchor: ObservableVector`
 - `cacheAsBitmap: boolean`
 - `cullable: boolean`

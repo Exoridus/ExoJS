@@ -1,0 +1,38 @@
+---
+title: "RadialGradient"
+description: "Radial gradient in UV space around `center` with normalized radius."
+symbol: "RadialGradient"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 6
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/gradient/RadialGradient.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/RadialGradient.ts#L6"
+---
+## Import
+
+`import { RadialGradient } from '@codexo/exojs'`
+
+Radial gradient in UV space around `center` with normalized radius.
+
+## Constructors
+
+- `new(stops: readonly GradientStop[], center: readonly [number, number], radius: number): RadialGradient`
+
+## Methods
+
+- `destroy(): void`
+- `resolveT(u: number, v: number): number`
+- `sampleAt(t: number, out: Float32Array): void`
+- `toTexture(width: number, height: number, options?: GradientToTextureOptions & object): DataTexture<"rgba8">`
+- `toTexture(width: number, height: number, options: GradientToTextureOptions & object): DataTexture<"rgba32f">`
+
+## Properties
+
+- `stops: readonly GradientStop[]`
+
+## Source
+
+[src/rendering/gradient/RadialGradient.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/RadialGradient.ts#L6)

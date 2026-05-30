@@ -5,7 +5,7 @@ symbol: "Video"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 100
+memberCount: 104
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/video/Video.ts"
@@ -79,10 +79,13 @@ node and can be directed to any AudioBus.
 
 ## Properties
 
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
 - `analyserTarget: AudioNode | null`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
@@ -97,6 +100,7 @@ node and can be directed to any AudioBus.
 - `isAlignedBox: boolean`
 - `loop: boolean`
 - `mask: MaskSource`
+- `material: SpriteMaterial | null`
 - `muted: boolean`
 - `origin: ObservableVector`
 - `parent: Container | null`

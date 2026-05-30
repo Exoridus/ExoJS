@@ -5,7 +5,7 @@ symbol: "ParticleSystem"
 kind: "class"
 subsystem: "particles"
 importPath: "@codexo/exojs"
-memberCount: 106
+memberCount: 109
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/particles/ParticleSystem.ts"
@@ -119,6 +119,8 @@ to `(0, 0)`.
 
 - `alive: Uint8Array`
 - `capacity: number`
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `color: Uint32Array`
 - `cursor: string | null`
@@ -129,6 +131,7 @@ to `(0, 0)`.
 - `liveCount: number`
 - `posX: Float32Array`
 - `posY: Float32Array`
+- `preserveDrawOrder: boolean`
 - `rotations: Float32Array`
 - `rotationSpeeds: Float32Array`
 - `scaleX: Float32Array`

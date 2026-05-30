@@ -5,7 +5,7 @@ symbol: "AnimatedSprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 90
+memberCount: 94
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/AnimatedSprite.ts"
@@ -80,10 +80,13 @@ from a Spritesheet's named animations.
 
 ## Properties
 
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
@@ -96,6 +99,7 @@ from a Spritesheet's named animations.
 - `isAlignedBox: boolean`
 - `loop: boolean`
 - `mask: MaskSource`
+- `material: SpriteMaterial | null`
 - `origin: ObservableVector`
 - `parent: Container | null`
 - `playing: boolean`
