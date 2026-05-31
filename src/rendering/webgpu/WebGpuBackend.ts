@@ -614,6 +614,22 @@ export class WebGpuBackend implements RenderBackend {
     return false;
   }
 
+  /**
+   * Physical pixel size of `target`'s colour attachment. The root target's colour
+   * attachment is `context.getCurrentTexture()`, sized to the canvas backing
+   * store (logical × pixelRatio), so a geometric stencil attachment for the root
+   * must match these dimensions. RenderTexture targets back their colour and
+   * stencil attachments with the same (logical) size.
+   * @internal
+   */
+  public _getAttachmentPixelSize(target: RenderTarget): { readonly width: number; readonly height: number } {
+    if (target === this._rootRenderTarget) {
+      return { width: this._canvas.width, height: this._canvas.height };
+    }
+
+    return { width: target.width, height: target.height };
+  }
+
   public getTextureBinding(texture: Texture | RenderTexture): {
     readonly view: GPUTextureView;
     readonly sampler: GPUSampler;

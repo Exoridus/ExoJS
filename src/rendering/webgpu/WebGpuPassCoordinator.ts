@@ -6,7 +6,7 @@ import type { Rectangle } from '@/math/Rectangle';
 
 import type { Geometry } from '../geometry/Geometry';
 import type { RenderPassCoordinator } from '../pass/RenderPassCoordinator';
-import { type RenderPassDescriptor, type RenderPassLoad, StencilAttachmentMode } from '../pass/RenderPassDescriptor';
+import type { RenderPassDescriptor, RenderPassLoad } from '../pass/RenderPassDescriptor';
 import type { RenderStats } from '../RenderStats';
 import type { RenderTarget } from '../RenderTarget';
 import type { View } from '../View';
@@ -62,6 +62,8 @@ export interface WebGpuPassBackend {
   submit(commandBuffer: GPUCommandBuffer): void;
   /** Whether `target` already holds rendered content this frame. */
   _targetHasContent(target: RenderTarget): boolean;
+  /** Physical (backing-store) pixel size of `target`'s colour attachment. */
+  _getAttachmentPixelSize(target: RenderTarget): { readonly width: number; readonly height: number };
 }
 
 /**
@@ -84,7 +86,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _stencilWriteInProgress = false;
   private _stencilLoadOp: GPULoadOp = 'load';
   private _stencilRef = 0;
-  private _descriptorStencil = false;
   private _active: WebGpuActiveRenderPass | null = null;
 
   public constructor(backend: WebGpuPassBackend) {
@@ -187,7 +188,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   public beginPass(descriptor: RenderPassDescriptor): void {
     this._backend.setRenderTarget(descriptor.target);
     this._backend.setView(descriptor.view);
-    this._descriptorStencil = descriptor.stencil === StencilAttachmentMode.Enabled;
 
     if (descriptor.load === 'clear') {
       this._backend.clear(descriptor.clearColor ?? undefined);
@@ -197,7 +197,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   public withChildPass(descriptor: RenderPassDescriptor, body: () => void): void {
     const previousTarget = this._backend.renderTarget;
     const previousView = this._backend.view;
-    const previousDescriptorStencil = this._descriptorStencil;
 
     this.beginPass(descriptor);
 
@@ -209,7 +208,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       // before the bind switches back.
       this._backend.setRenderTarget(previousTarget);
       this._backend.setView(previousView);
-      this._descriptorStencil = previousDescriptorStencil;
     }
   }
 
@@ -305,7 +303,12 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     this._stencilStacks.delete(target);
   }
 
-  /** Reset stencil state at plan start so a leaked clip cannot corrupt the next frame. @internal */
+  /**
+   * Drop all stencil clip bookkeeping (depths, stacks, write/ref state). Invoked
+   * on the unbalanced-clip recovery path at the end of a draw plan (see
+   * `WebGpuBackend._endDrawPlan`) so a leaked clip cannot corrupt the next frame;
+   * backend destroy / device loss go through `destroyStencil` instead. @internal
+   */
   public resetStencil(): void {
     this._stencilDepths.clear();
     this._stencilStacks.clear();
@@ -360,7 +363,13 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   }
 
   private _createStencilAttachment(target: RenderTarget): GPURenderPassDepthStencilAttachment {
-    const view = this._stencil.getAttachmentView(target, target.width, target.height);
+    // Size the stencil attachment to the colour attachment's physical pixels, not
+    // the target's logical size. The root canvas backing store is logical ×
+    // pixelRatio, so a logical-sized stencil buffer would mismatch the
+    // getCurrentTexture() colour attachment at pixelRatio > 1; RenderTexture
+    // targets report the same size for both, so they are unaffected.
+    const { width, height } = this._backend._getAttachmentPixelSize(target);
+    const view = this._stencil.getAttachmentView(target, width, height);
     const stencilLoadOp = this._stencilLoadOp;
 
     // Consumed once; subsequent passes within the clip scope load the buffer.

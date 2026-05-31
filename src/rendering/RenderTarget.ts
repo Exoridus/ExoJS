@@ -16,12 +16,16 @@ import { View } from './View';
  */
 export class RenderTarget {
   /**
-   * Whether this target needs a stencil attachment. Set by the backend when a
-   * geometric stencil clip ({@link RenderNode.clip} with a `Geometry`
-   * `clipShape`) is rendered into this target, so the offscreen framebuffer
-   * gets a depth/stencil renderbuffer. The on-screen root target always has a
-   * stencil buffer (requested at context creation), so this flag only affects
-   * offscreen {@link RenderTexture} targets.
+   * Whether this target needs a stencil attachment for geometric stencil
+   * clipping ({@link RenderNode.clip} with a `Geometry` `clipShape`). Set by the
+   * WebGL2 backend when such a clip is rendered into an offscreen
+   * {@link RenderTexture}, so its framebuffer gets a depth/stencil renderbuffer;
+   * the WebGL2 on-screen root uses the default framebuffer's stencil (requested
+   * at context creation), so the flag only affects offscreen WebGL2 targets.
+   *
+   * The WebGPU backend does not consult this flag: it allocates a separate
+   * `depth24plus-stencil8` attachment per clipped target (root included) on
+   * demand, sized to the colour attachment's physical pixels.
    */
   public needsStencil = false;
 

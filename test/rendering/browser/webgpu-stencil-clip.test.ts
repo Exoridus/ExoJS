@@ -36,11 +36,11 @@ type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
-const makeApp = (canvas: HTMLCanvasElement): Application =>
+const makeApp = (canvas: HTMLCanvasElement, logicalSize = canvasSize): Application =>
   ({
     canvas,
     options: {
-      canvas: { width: canvasSize, height: canvasSize },
+      canvas: { width: logicalSize, height: logicalSize },
       clearColor: Color.black,
     },
   }) as unknown as Application;
@@ -130,7 +130,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
+const setupBackend = async (ctx: { skip: (reason: string) => void }, logicalSize = canvasSize): Promise<WebGpuBackend> => {
   if (!navigator.gpu) {
     ctx.skip('WebGPU unavailable: navigator.gpu is absent');
   }
@@ -143,10 +143,13 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
 
   const canvas = document.createElement('canvas');
 
+  // The physical backing store is always canvasSize. A logicalSize < canvasSize
+  // models pixelRatio = canvasSize / logicalSize: the root render target stays
+  // logical while the canvas / getCurrentTexture() colour attachment is physical.
   canvas.width = canvasSize;
   canvas.height = canvasSize;
 
-  const backend = new WebGpuBackend(makeApp(canvas));
+  const backend = new WebGpuBackend(makeApp(canvas, logicalSize));
 
   await backend.initialize();
 
@@ -597,6 +600,89 @@ describe('WebGPU geometric (stencil) clipping', () => {
       (clipped.clipShape as Geometry).destroy();
     } finally {
       material.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('root Geometry clip is correct at pixelRatio > 1 (physical-sized stencil attachment)', async ctx => {
+    // Logical render target 32×32, physical canvas 64×64 → pixelRatio 2. Before the
+    // physical-sizing fix the root stencil attachment (logical 32) mismatched the
+    // physical colour attachment (64) and the clip pass raised a validation error.
+    const backend = await setupBackend(ctx, 32);
+    const texture = createSolidTexture('#ff0000');
+    const root = new Container();
+    const clipped = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.setPosition(0, 0);
+      sprite.width = 32;
+      sprite.height = 32;
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(32);
+      clipped.addChild(sprite);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // A physical pixel (px, py) maps to logical (px / 2). Triangle inside:
+      // logical x + y < 32 ⇒ physical px + py < 64.
+      expectPixelNear(readPixel(10, 10), [255, 0, 0, 255]); // logical (5, 5): inside
+      expectPixelNear(readPixel(54, 54), [0, 0, 0, 255]); // logical (27, 27): outside
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('an alpha mask composites correctly under a Geometry stencil clip', async ctx => {
+    // RenderEffectExecutor pushes the Geometry clip outermost, so the mask
+    // compositor draws into the stencil-enabled pass. Without a stencil pipeline
+    // variant on the compositor this raised a WebGPU validation error.
+    const backend = await setupBackend(ctx);
+    const contentTexture = createSolidTexture('#ff0000');
+    const maskTexture = createSolidTexture('#ffffff');
+    const root = new Container();
+    const clipped = new Container();
+    const sprite = new Sprite(contentTexture);
+    const maskSprite = new Sprite(maskTexture);
+
+    try {
+      sprite.setPosition(0, 0);
+      sprite.width = 64;
+      sprite.height = 64;
+      // Alpha mask: opaque over the left half only (transparent elsewhere).
+      maskSprite.setPosition(0, 0);
+      maskSprite.width = 32;
+      maskSprite.height = 64;
+      // Stencil clip: top half. With the left-half mask, only the top-left
+      // quadrant survives.
+      clipped.clip = true;
+      clipped.clipShape = createQuadGeometry(0, 0, 64, 32);
+      clipped.mask = maskSprite;
+      clipped.addChild(sprite);
+      root.addChild(clipped);
+
+      await renderClipped(backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Top-left: inside the clip and the mask is opaque → red survives.
+      expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
+      // Top-right: inside the clip but mask alpha 0 → composited away to black.
+      expectPixelNear(readPixel(48, 12), [0, 0, 0, 255]);
+      // Bottom-left: outside the stencil clip → black.
+      expectPixelNear(readPixel(12, 48), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      maskSprite.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      contentTexture.destroy();
+      maskTexture.destroy();
       backend.destroy();
     }
   });

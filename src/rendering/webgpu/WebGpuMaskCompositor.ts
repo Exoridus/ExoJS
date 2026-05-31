@@ -7,6 +7,7 @@ import type { BlendModes } from '@/rendering/types';
 
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 const compositorShaderSource = `
 struct ProjectionUniforms {
@@ -203,7 +204,12 @@ export class WebGpuMaskCompositor {
     });
 
     const targetFormat = manager.renderTargetFormat;
-    const pipeline = this._getOrCreatePipeline(targetFormat, blendMode);
+    // A geometric stencil clip can wrap the mask block (RenderEffectExecutor
+    // pushes the clip outermost), so the compositor may draw into a
+    // stencil-enabled pass. Select the matching pipeline variant — a stencil-free
+    // pipeline is incompatible with the pass's depth/stencil attachment.
+    const stencil = manager._passCoordinator.stencilActive;
+    const pipeline = this._getOrCreatePipeline(targetFormat, blendMode, stencil);
 
     // The coordinator owns the GPU pass (load/clear resolution, pass count and
     // scissor are applied there) and ends + submits it below.
@@ -222,8 +228,8 @@ export class WebGpuMaskCompositor {
     manager._passCoordinator.endPass();
   }
 
-  private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes): GPURenderPipeline {
-    const key = `${format}|${blendMode}`;
+  private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes, stencil: boolean): GPURenderPipeline {
+    const key = `${format}|${blendMode}|${stencil ? 's' : 'n'}`;
     const cached = this._pipelines.get(key);
 
     if (cached !== undefined) {
@@ -231,7 +237,7 @@ export class WebGpuMaskCompositor {
     }
 
     const device = this._device!;
-    const pipeline = device.createRenderPipeline({
+    const descriptor: GPURenderPipelineDescriptor = {
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,
@@ -257,7 +263,16 @@ export class WebGpuMaskCompositor {
         ],
       },
       primitive: { topology: 'triangle-list' },
-    });
+    };
+
+    // Under an active clip the coordinator's pass carries a depth/stencil
+    // attachment; test (never write) the stencil so the composite is restricted
+    // to the clipped region, mirroring the sprite/mesh content pipelines.
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    const pipeline = device.createRenderPipeline(descriptor);
 
     this._pipelines.set(key, pipeline);
 
