@@ -7,13 +7,7 @@ const createAttributes = (): readonly GeometryAttribute[] => [
   { name: 'a_uv', size: 2, type: 'f32', normalized: false, offset: 8 },
 ];
 
-const createVertexData = (): Float32Array =>
-  new Float32Array([
-    -10, -20, 0, 0,
-    30, -20, 1, 0,
-    30, 50, 1, 1,
-    -10, 50, 0, 1,
-  ]);
+const createVertexData = (): Float32Array => new Float32Array([-10, -20, 0, 0, 30, -20, 1, 0, 30, 50, 1, 1, -10, 50, 0, 1]);
 
 const createGeometry = (options: Partial<GeometryOptions> = {}): Geometry => {
   return new Geometry({

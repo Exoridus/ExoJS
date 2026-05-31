@@ -2,7 +2,7 @@ import { Rectangle } from '@/math/Rectangle';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { Filter } from '@/rendering/filters/Filter';
-import { type DrawCommand,RenderEntryKind } from '@/rendering/plan/RenderCommand';
+import { type DrawCommand, RenderEntryKind } from '@/rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
 import type { RenderBackend } from '@/rendering/RenderBackend';
@@ -596,7 +596,12 @@ describe('render plan', () => {
     const b = new BoxDrawable('b');
 
     const mkMat = (pk: number, bk: number) => ({
-      rendererId: 1, blendMode: 0, textureId: -1, shaderId: -1, pipelineKey: pk, bindKey: bk,
+      rendererId: 1,
+      blendMode: 0,
+      textureId: -1,
+      shaderId: -1,
+      pipelineKey: pk,
+      bindKey: bk,
     });
 
     const createDraw = (d: Drawable, opts: { pk?: number; bk?: number } = {}) => ({
@@ -610,26 +615,33 @@ describe('render plan', () => {
         seq: 0,
         zIndex: 0,
         material: mkMat(opts.pk ?? 100, opts.bk ?? 100),
-        minX: 0, minY: 0, maxX: 16, maxY: 16,
+        minX: 0,
+        minY: 0,
+        maxX: 16,
+        maxY: 16,
       },
     });
 
     const { backend } = createRuntime();
     const plan = {
-      passes: [{
-        target: null as any, view: backend.view, clearColor: null as any,
-        root: {
-          kind: RenderEntryKind.Group as const,
-          entries: [
-            createDraw(a, { pk: 100, bk: 100 }),
-            createDraw(b, { pk: 100, bk: 100 }),
-          ],
-          hasMixedZ: false,
-          preserveDrawOrder: false,
+      passes: [
+        {
+          target: null as any,
+          view: backend.view,
+          clearColor: null as any,
+          root: {
+            kind: RenderEntryKind.Group as const,
+            entries: [createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })],
+            hasMixedZ: false,
+            preserveDrawOrder: false,
+          },
         },
-      }],
+      ],
       nodeCount: 0,
-      reset() { this.passes.length = 0; this.nodeCount = 0; },
+      reset() {
+        this.passes.length = 0;
+        this.nodeCount = 0;
+      },
     };
 
     RenderPlanOptimizer.optimize(plan);

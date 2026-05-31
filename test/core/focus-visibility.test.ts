@@ -60,22 +60,34 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
 
   vi.resetModules();
   vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-    WebGl2Backend: vi.fn(function () { return backendMock; }),
+    WebGl2Backend: vi.fn(function () {
+      return backendMock;
+    }),
   }));
   vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-    WebGpuBackend: vi.fn(function () { return backendMock; }),
+    WebGpuBackend: vi.fn(function () {
+      return backendMock;
+    }),
   }));
   vi.doMock('@/resources/Loader', () => ({
-    Loader: vi.fn(function () { return { destroy: vi.fn() }; }),
+    Loader: vi.fn(function () {
+      return { destroy: vi.fn() };
+    }),
   }));
   vi.doMock('@/input/InputManager', () => ({
-    InputManager: vi.fn(function () { return inputManagerMock; }),
+    InputManager: vi.fn(function () {
+      return inputManagerMock;
+    }),
   }));
   vi.doMock('@/input/InteractionManager', () => ({
-    InteractionManager: vi.fn(function () { return interactionMock; }),
+    InteractionManager: vi.fn(function () {
+      return interactionMock;
+    }),
   }));
   vi.doMock('@/core/SceneManager', () => ({
-    SceneManager: vi.fn(function () { return sceneManagerMock; }),
+    SceneManager: vi.fn(function () {
+      return sceneManagerMock;
+    }),
   }));
 
   const mod = await import('@/core/Application');

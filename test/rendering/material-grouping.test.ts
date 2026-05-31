@@ -69,23 +69,60 @@ const createRuntime = () => {
   const backend: RenderBackend = {
     backendType: RenderBackendType.WebGl2,
     stats,
-    get renderTarget() { return currentTarget; },
-    get view() { return currentTarget.view; },
-    async initialize() { return this; },
-    clear() { return this; },
-    resize() { return this; },
-    setView() { return this; },
-    setRenderTarget(target) { currentTarget = target ?? root; return this; },
-    pushScissorRect() { return this; },
-    popScissorRect() { return this; },
-    composeWithAlphaMask() { return this; },
-    acquireRenderTexture(width, height) { return new RenderTexture(width, height); },
-    releaseRenderTexture() { return this; },
-    draw() { return this; },
-    resetStats() { resetRenderStats(stats); return this; },
-    execute(pass) { pass.execute(this); return this; },
-    flush() { return this; },
-    destroy() { root.destroy(); },
+    get renderTarget() {
+      return currentTarget;
+    },
+    get view() {
+      return currentTarget.view;
+    },
+    async initialize() {
+      return this;
+    },
+    clear() {
+      return this;
+    },
+    resize() {
+      return this;
+    },
+    setView() {
+      return this;
+    },
+    setRenderTarget(target) {
+      currentTarget = target ?? root;
+      return this;
+    },
+    pushScissorRect() {
+      return this;
+    },
+    popScissorRect() {
+      return this;
+    },
+    composeWithAlphaMask() {
+      return this;
+    },
+    acquireRenderTexture(width, height) {
+      return new RenderTexture(width, height);
+    },
+    releaseRenderTexture() {
+      return this;
+    },
+    draw() {
+      return this;
+    },
+    resetStats() {
+      resetRenderStats(stats);
+      return this;
+    },
+    execute(pass) {
+      pass.execute(this);
+      return this;
+    },
+    flush() {
+      return this;
+    },
+    destroy() {
+      root.destroy();
+    },
   };
 
   return { backend };
@@ -117,14 +154,10 @@ const createPlan = (opts: CreatePlanOpts) => {
 };
 
 const getMaterials = (plan: ReturnType<typeof createPlan>) =>
-  plan.passes[0].root.entries
-    .filter((e: any) => e.kind === RenderEntryKind.Draw)
-    .map((e: any) => (e.command as DrawCommand).material);
+  plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).material);
 
 const getGroupIndices = (plan: ReturnType<typeof createPlan>) =>
-  plan.passes[0].root.entries
-    .filter((e: any) => e.kind === RenderEntryKind.Draw)
-    .map((e: any) => (e.command as DrawCommand).groupIndex ?? 0);
+  plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).groupIndex ?? 0);
 
 describe('material grouping', () => {
   test('different material draws do not coalesce', () => {
@@ -132,10 +165,7 @@ describe('material grouping', () => {
     const b = new BoxDrawable('b');
 
     const plan = createPlan({
-      entries: [
-        createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }),
-        createDrawEntry(b, { pipelineKey: 200, bindKey: 200 }),
-      ],
+      entries: [createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }), createDrawEntry(b, { pipelineKey: 200, bindKey: 200 })],
     });
 
     RenderPlanOptimizer.optimize(plan);
@@ -151,10 +181,7 @@ describe('material grouping', () => {
     const b = new BoxDrawable('b');
 
     const plan = createPlan({
-      entries: [
-        createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }),
-        createDrawEntry(b, { pipelineKey: 100, bindKey: 200 }),
-      ],
+      entries: [createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }), createDrawEntry(b, { pipelineKey: 100, bindKey: 200 })],
     });
 
     RenderPlanOptimizer.optimize(plan);
@@ -170,10 +197,7 @@ describe('material grouping', () => {
     const b = new BoxDrawable('b');
 
     const plan = createPlan({
-      entries: [
-        createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }),
-        createDrawEntry(b, { pipelineKey: 200, bindKey: 100 }),
-      ],
+      entries: [createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }), createDrawEntry(b, { pipelineKey: 200, bindKey: 100 })],
     });
 
     RenderPlanOptimizer.optimize(plan);
@@ -231,7 +255,10 @@ describe('material grouping', () => {
             node: a as any,
             effect: { filters: [], clip: 0, maskSource: null, cacheAsBitmap: false, blendMode: 0 },
             childPlan: null,
-            left: 0, top: 0, width: 16, height: 16,
+            left: 0,
+            top: 0,
+            width: 16,
+            height: 16,
           },
         },
         createDrawEntry(b, { pipelineKey: 100, bindKey: 100 }),
@@ -253,10 +280,7 @@ describe('material grouping', () => {
     const b = new BoxDrawable('b');
 
     const plan = createPlan({
-      entries: [
-        createDrawEntry(a, { pipelineKey: 100, bindKey: 100, zIndex: 0 }),
-        createDrawEntry(b, { pipelineKey: 100, bindKey: 100, zIndex: 10 }),
-      ],
+      entries: [createDrawEntry(a, { pipelineKey: 100, bindKey: 100, zIndex: 0 }), createDrawEntry(b, { pipelineKey: 100, bindKey: 100, zIndex: 10 })],
     });
 
     RenderPlanOptimizer.optimize(plan);
@@ -356,10 +380,7 @@ describe('material grouping', () => {
     const b = new BoxDrawable('b');
 
     const plan = createPlan({
-      entries: [
-        createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }),
-        createDrawEntry(b, { pipelineKey: 100, bindKey: 100 }),
-      ],
+      entries: [createDrawEntry(a, { pipelineKey: 100, bindKey: 100 }), createDrawEntry(b, { pipelineKey: 100, bindKey: 100 })],
       preserveDrawOrder: true,
     });
 

@@ -114,14 +114,7 @@ export class Geometry {
   private readonly _disposeCallbacks = new Set<() => void>();
 
   public constructor(options: GeometryOptions) {
-    const {
-      attributes,
-      vertexData,
-      stride,
-      indices = null,
-      topology = 'triangle-list',
-      usage = 'static',
-    } = options;
+    const { attributes, vertexData, stride, indices = null, topology = 'triangle-list', usage = 'static' } = options;
 
     if (attributes.length === 0) {
       throw new Error('Geometry attributes must be a non-empty array.');

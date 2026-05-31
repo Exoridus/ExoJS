@@ -108,40 +108,54 @@ describe('Application.setCursor', () => {
   beforeEach(async () => {
     vi.resetModules();
     vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-      WebGl2Backend: vi.fn(function () { return {
-        initialize: vi.fn().mockResolvedValue(undefined),
-        flush: vi.fn(),
-        resize: vi.fn(),
-        destroy: vi.fn(),
-        resetStats: vi.fn().mockReturnThis(),
-        stats: { frameTimeMs: 0 },
-        renderTarget: { setView: vi.fn() },
-        onContextLost: { add: vi.fn(), destroy: vi.fn() },
-        onContextRestored: { add: vi.fn(), destroy: vi.fn() },
-      }; }),
+      WebGl2Backend: vi.fn(function () {
+        return {
+          initialize: vi.fn().mockResolvedValue(undefined),
+          flush: vi.fn(),
+          resize: vi.fn(),
+          destroy: vi.fn(),
+          resetStats: vi.fn().mockReturnThis(),
+          stats: { frameTimeMs: 0 },
+          renderTarget: { setView: vi.fn() },
+          onContextLost: { add: vi.fn(), destroy: vi.fn() },
+          onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+        };
+      }),
     }));
     vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-      WebGpuBackend: vi.fn(function () { return null; }),
+      WebGpuBackend: vi.fn(function () {
+        return null;
+      }),
     }));
 
     // stub out non-rendering deps
-    vi.doMock('@/resources/Loader', () => ({ Loader: vi.fn(function () { return { destroy: vi.fn() }; }) }));
+    vi.doMock('@/resources/Loader', () => ({
+      Loader: vi.fn(function () {
+        return { destroy: vi.fn() };
+      }),
+    }));
     vi.doMock('@/input/InputManager', () => ({
-      InputManager: vi.fn(function () { return {
-        update: vi.fn(),
-        destroy: vi.fn(),
-        onCanvasFocusChange: { add: vi.fn(), destroy: vi.fn() },
-      }; }),
+      InputManager: vi.fn(function () {
+        return {
+          update: vi.fn(),
+          destroy: vi.fn(),
+          onCanvasFocusChange: { add: vi.fn(), destroy: vi.fn() },
+        };
+      }),
     }));
     vi.doMock('@/input/InteractionManager', () => ({
-      InteractionManager: vi.fn(function () { return { update: vi.fn(), destroy: vi.fn() }; }),
+      InteractionManager: vi.fn(function () {
+        return { update: vi.fn(), destroy: vi.fn() };
+      }),
     }));
     vi.doMock('@/core/SceneManager', () => ({
-      SceneManager: vi.fn(function () { return {
-        update: vi.fn(),
-        setScene: vi.fn().mockResolvedValue(undefined),
-        destroy: vi.fn(),
-      }; }),
+      SceneManager: vi.fn(function () {
+        return {
+          update: vi.fn(),
+          setScene: vi.fn().mockResolvedValue(undefined),
+          destroy: vi.fn(),
+        };
+      }),
     }));
 
     const m = await import('@/core/Application');

@@ -20,22 +20,59 @@ const createStubRuntime = (): RenderBackend => {
     backendType: RenderBackendType.WebGl2,
     stats,
     renderTarget,
-    get view() { return renderTarget.view; },
-    async initialize() { return this; },
-    resetStats() { resetRenderStats(stats); return this; },
-    clear() { return this; },
-    resize(w, h) { renderTarget.resize(w, h); return this; },
-    setView(v) { renderTarget.setView(v); return this; },
-    setRenderTarget() { return this; },
-    pushScissorRect() { return this; },
-    popScissorRect() { return this; },
-    composeWithAlphaMask() { return this; },
-    acquireRenderTexture(w, h) { return new RenderTexture(w, h); },
-    releaseRenderTexture(t) { t.destroy(); return this; },
-    draw() { stats.submittedNodes++; return this; },
-    execute() { return this; },
-    flush() { return this; },
-    destroy() { renderTarget.destroy(); },
+    get view() {
+      return renderTarget.view;
+    },
+    async initialize() {
+      return this;
+    },
+    resetStats() {
+      resetRenderStats(stats);
+      return this;
+    },
+    clear() {
+      return this;
+    },
+    resize(w, h) {
+      renderTarget.resize(w, h);
+      return this;
+    },
+    setView(v) {
+      renderTarget.setView(v);
+      return this;
+    },
+    setRenderTarget() {
+      return this;
+    },
+    pushScissorRect() {
+      return this;
+    },
+    popScissorRect() {
+      return this;
+    },
+    composeWithAlphaMask() {
+      return this;
+    },
+    acquireRenderTexture(w, h) {
+      return new RenderTexture(w, h);
+    },
+    releaseRenderTexture(t) {
+      t.destroy();
+      return this;
+    },
+    draw() {
+      stats.submittedNodes++;
+      return this;
+    },
+    execute() {
+      return this;
+    },
+    flush() {
+      return this;
+    },
+    destroy() {
+      renderTarget.destroy();
+    },
   };
 };
 

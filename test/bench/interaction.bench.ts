@@ -28,7 +28,10 @@ const hitTestRecursive = (node: RenderNode, x: number, y: number): RenderNode | 
   return null;
 };
 
-interface IndexedNode { node: RenderNode; order: number; }
+interface IndexedNode {
+  node: RenderNode;
+  order: number;
+}
 
 const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: QuadtreeItem<IndexedNode>[], x: number, y: number): RenderNode | null => {
   buf.length = 0;
@@ -37,7 +40,10 @@ const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: QuadtreeItem<IndexedNode
   let bestNode: RenderNode | null = null;
   for (const candidate of buf) {
     const { node, order } = candidate.payload;
-    if (order > bestOrder && node.contains(x, y)) { bestOrder = order; bestNode = node; }
+    if (order > bestOrder && node.contains(x, y)) {
+      bestOrder = order;
+      bestNode = node;
+    }
   }
   return bestNode;
 };
@@ -48,7 +54,9 @@ const buildIndex = (root: Container, worldBounds: Rectangle): Quadtree<IndexedNo
   const collect = (node: RenderNode): void => {
     if (!node.visible) return;
     if (node.interactive) qt.insert({ bounds: node.getBounds(), payload: { node, order: order++ } });
-    if (node instanceof Container) { for (const child of node.children) collect(child); }
+    if (node instanceof Container) {
+      for (const child of node.children) collect(child);
+    }
   };
   collect(root);
   return qt;

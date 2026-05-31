@@ -4,5 +4,7 @@ coverage
 src/vendor
 examples/**
 site/**
+packages/**
 *.min.*
 package-lock.json
+pnpm-lock.yaml

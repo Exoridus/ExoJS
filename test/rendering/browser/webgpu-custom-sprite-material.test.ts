@@ -69,7 +69,7 @@ const createMaterial = (): SpriteMaterial =>
   });
 
 describe('custom SpriteMaterial WebGPU browser', () => {
-  test('issues an instanced custom-material draw with a user uniform and no validation error', async (ctx) => {
+  test('issues an instanced custom-material draw with a user uniform and no validation error', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }

@@ -99,27 +99,33 @@ describe('AudioManager.update()', () => {
       getAudioManager: () => mixerMock,
     }));
     vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-      WebGl2Backend: vi.fn(function () { return {
-        initialize: vi.fn(),
-        flush: vi.fn(),
-        resize: vi.fn(),
-        destroy: vi.fn(),
-        resetStats: vi.fn().mockReturnThis(),
-        stats: { frameTimeMs: 0 },
-      }; }),
+      WebGl2Backend: vi.fn(function () {
+        return {
+          initialize: vi.fn(),
+          flush: vi.fn(),
+          resize: vi.fn(),
+          destroy: vi.fn(),
+          resetStats: vi.fn().mockReturnThis(),
+          stats: { frameTimeMs: 0 },
+        };
+      }),
     }));
     vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
       WebGpuBackend: vi.fn(),
     }));
     vi.doMock('@/resources/Loader', () => ({
-      Loader: vi.fn(function () { return { destroy: vi.fn() }; }),
+      Loader: vi.fn(function () {
+        return { destroy: vi.fn() };
+      }),
     }));
     vi.doMock('@/input/InputManager', () => ({
-      InputManager: vi.fn(function () { return {
-        update: vi.fn(),
-        destroy: vi.fn(),
-        onCanvasFocusChange: { add: vi.fn() },
-      }; }),
+      InputManager: vi.fn(function () {
+        return {
+          update: vi.fn(),
+          destroy: vi.fn(),
+          onCanvasFocusChange: { add: vi.fn() },
+        };
+      }),
     }));
     vi.doMock('@/input/InteractionManager', () => ({
       InteractionManager: vi.fn(function () {
@@ -132,7 +138,9 @@ describe('AudioManager.update()', () => {
       }),
     }));
     vi.doMock('@/core/SceneManager', () => ({
-      SceneManager: vi.fn(function () { return { update: vi.fn(), setScene: vi.fn(), destroy: vi.fn() }; }),
+      SceneManager: vi.fn(function () {
+        return { update: vi.fn(), setScene: vi.fn(), destroy: vi.fn() };
+      }),
     }));
 
     const { Application, ApplicationStatus } = await import('@/core/Application');

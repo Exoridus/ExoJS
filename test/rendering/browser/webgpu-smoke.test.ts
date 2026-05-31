@@ -11,13 +11,27 @@
 
 vi.mock('@/rendering/RendererRegistry', () => ({
   RendererRegistry: class {
-    registerRenderer() { return this; }
-    connect() { return this; }
-    disconnect() { return this; }
-    destroy() { return this; }
-    render() { return this; }
-    resolve() { return { connect: () => {}, render: () => {}, flush: () => {}, disconnect: () => {} }; }
-    renderers() { return [][Symbol.iterator](); }
+    registerRenderer() {
+      return this;
+    }
+    connect() {
+      return this;
+    }
+    disconnect() {
+      return this;
+    }
+    destroy() {
+      return this;
+    }
+    render() {
+      return this;
+    }
+    resolve() {
+      return { connect: () => {}, render: () => {}, flush: () => {}, disconnect: () => {} };
+    }
+    renderers() {
+      return [][Symbol.iterator]();
+    }
   },
 }));
 
@@ -29,7 +43,7 @@ import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 // ── Section 1: raw WebGPU API availability ────────────────────────────────
 
 describe('WebGPU API — navigator.gpu', () => {
-  test('navigator.gpu is present', (ctx) => {
+  test('navigator.gpu is present', ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent in this Chromium instance');
     }
@@ -37,7 +51,7 @@ describe('WebGPU API — navigator.gpu', () => {
     expect(navigator.gpu).toBeDefined();
   });
 
-  test('getPreferredCanvasFormat() returns a known format', (ctx) => {
+  test('getPreferredCanvasFormat() returns a known format', ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -51,7 +65,7 @@ describe('WebGPU API — navigator.gpu', () => {
 // ── Section 2: adapter & device ───────────────────────────────────────────
 
 describe('WebGPU API — adapter and device', () => {
-  test('requestAdapter() resolves to a non-null GPUAdapter', async (ctx) => {
+  test('requestAdapter() resolves to a non-null GPUAdapter', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -65,7 +79,7 @@ describe('WebGPU API — adapter and device', () => {
     expect(adapter).not.toBeNull();
   });
 
-  test('requestDevice() returns a GPUDevice and can be destroyed', async (ctx) => {
+  test('requestDevice() returns a GPUDevice and can be destroyed', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -84,7 +98,7 @@ describe('WebGPU API — adapter and device', () => {
     device.destroy();
   });
 
-  test('GPUDevice.lost promise resolves to a GPUDeviceLostInfo when device is destroyed', async (ctx) => {
+  test('GPUDevice.lost promise resolves to a GPUDeviceLostInfo when device is destroyed', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -118,7 +132,7 @@ describe('WebGpuBackend — real GPU initialization', () => {
       },
     }) as unknown as Application;
 
-  test('backendType is RenderBackendType.WebGpu', (ctx) => {
+  test('backendType is RenderBackendType.WebGpu', ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -129,7 +143,7 @@ describe('WebGpuBackend — real GPU initialization', () => {
     expect(backend.backendType).toBe(RenderBackendType.WebGpu);
   });
 
-  test('initialize() resolves with the backend instance', async (ctx) => {
+  test('initialize() resolves with the backend instance', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -150,7 +164,7 @@ describe('WebGpuBackend — real GPU initialization', () => {
     backend.destroy();
   });
 
-  test('stats object is defined after initialize()', async (ctx) => {
+  test('stats object is defined after initialize()', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -172,7 +186,7 @@ describe('WebGpuBackend — real GPU initialization', () => {
     backend.destroy();
   });
 
-  test('clear() and flush() complete without throwing after initialize()', async (ctx) => {
+  test('clear() and flush() complete without throwing after initialize()', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }

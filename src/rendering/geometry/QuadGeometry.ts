@@ -6,12 +6,7 @@ const quadAttributes: readonly GeometryAttribute[] = [
   { name: 'a_uv', size: 2, type: 'f32', normalized: false, offset: 8 },
 ];
 
-const quadVertexData = new Float32Array([
-  0, 0, 0, 0,
-  1, 0, 1, 0,
-  1, 1, 1, 1,
-  0, 1, 0, 1,
-]);
+const quadVertexData = new Float32Array([0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1]);
 
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 

@@ -173,7 +173,6 @@ describe('HitTestLayer', () => {
   });
 
   test('hovered node gets yellow color (1, 1, 0)', () => {
-
     const hoveredNode = makeNode({ interactive: true, boundsW: 50, boundsH: 50 });
     const interaction = makeInteraction({ hovered: hoveredNode as unknown as FakeNode });
     const app = makeApp(hoveredNode as unknown as FakeNode, interaction);
@@ -201,7 +200,6 @@ describe('HitTestLayer', () => {
   });
 
   test('captured node gets cyan color (0, 1, 1)', () => {
-
     const capturedNode = makeNode({ interactive: true, boundsW: 50, boundsH: 50 });
     const interaction = makeInteraction({
       hovered: null,
@@ -232,7 +230,6 @@ describe('HitTestLayer', () => {
   });
 
   test('idle interactive node gets magenta color (1, 0, 1)', () => {
-
     const idleNode = makeNode({ interactive: true, boundsW: 50, boundsH: 50 });
     const interaction = makeInteraction({ hovered: null, captured: [] });
     const app = makeApp(idleNode as unknown as FakeNode, interaction);
@@ -260,7 +257,6 @@ describe('HitTestLayer', () => {
   });
 
   test('quadtree regions rendered when spatial index is active (quadtree non-null)', () => {
-
     const node = makeNode({ interactive: false, boundsW: 10, boundsH: 10 });
 
     // Minimal quadtree stub with _walkBounds.
@@ -280,7 +276,6 @@ describe('HitTestLayer', () => {
   });
 
   test('quadtree regions NOT rendered when spatial index is inactive (quadtree null)', () => {
-
     const node = makeNode({ interactive: false, boundsW: 10, boundsH: 10 });
     const walkBoundsSpy = vi.fn();
     const interaction = makeInteraction({ quadtree: null });

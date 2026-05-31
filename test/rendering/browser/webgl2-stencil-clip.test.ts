@@ -313,7 +313,6 @@ const createQuadGeometry = (x: number, y: number, width: number, height: number)
   });
 
 describe('WebGL2 stencil clipping', () => {
-
   test('Geometry clipShape discards fragments outside the shape', async () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ff0000');

@@ -231,7 +231,7 @@ export class Application {
     this.loader = new Loader(this.options.loader);
     this._backendType = this.resolveInitialBackendType();
     this._backend = this.createBackend(this._backendType);
-      this._rendering = new RenderingContext(this._backend);
+    this._rendering = new RenderingContext(this._backend);
     this.input = new InputManager(this);
     this.interaction = new InteractionManager(this);
     this.scene = new SceneManager(this);
@@ -575,7 +575,7 @@ export class Application {
       this._backend.destroy();
       this._backendType = 'webgl2';
       this._backend = this.createBackend(this._backendType);
-    this._rendering = new RenderingContext(this._backend);
+      this._rendering = new RenderingContext(this._backend);
       await this._backend.initialize();
     }
   }

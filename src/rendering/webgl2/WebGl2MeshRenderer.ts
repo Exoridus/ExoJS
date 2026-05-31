@@ -64,7 +64,10 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   // Pre-built texture-unit indices used for custom-shader sampler bindings;
   // pre-allocated so the per-frame uniform path stays allocation-free.
-  private readonly _slotScratches: Int32Array[] = Array.from({ length: Math.max(transformTextureUnit + 1, maxCustomTextureSlots + 1) }, (_, i) => new Int32Array([i]));
+  private readonly _slotScratches: Int32Array[] = Array.from(
+    { length: Math.max(transformTextureUnit + 1, maxCustomTextureSlots + 1) },
+    (_, i) => new Int32Array([i]),
+  );
 
   private _vertexCapacity = initialVertexCapacity;
   private _indexCapacity = initialIndexCapacity;
@@ -264,7 +267,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     if (draw.command === null) {
       backend._prepareDrawCommand({
-        ...(this._createSyntheticCommand(draw.mesh, nodeIndex)),
+        ...this._createSyntheticCommand(draw.mesh, nodeIndex),
       });
     }
 
@@ -424,21 +427,15 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       return cached;
     }
 
-    const compatible = shader.attributes.has('a_nodeIndex')
-      && shader.uniforms.has('u_transforms')
-      && !shader.uniforms.has('u_translation')
-      && !shader.uniforms.has('u_tint');
+    const compatible =
+      shader.attributes.has('a_nodeIndex') && shader.uniforms.has('u_transforms') && !shader.uniforms.has('u_translation') && !shader.uniforms.has('u_tint');
 
     this._compatibilityCache.set(shader, compatible);
 
     return compatible;
   }
 
-  private _getOrCreateStaticGeometryEntry(
-    geometry: Geometry,
-    mesh: Mesh,
-    connection: MeshRendererConnection,
-  ): StaticGeometryCacheEntry {
+  private _getOrCreateStaticGeometryEntry(geometry: Geometry, mesh: Mesh, connection: MeshRendererConnection): StaticGeometryCacheEntry {
     const existing = this._staticGeometryCache.get(geometry);
 
     if (existing !== undefined) {

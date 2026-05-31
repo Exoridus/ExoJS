@@ -76,17 +76,8 @@ describe('TransformBuffer', () => {
     const parent = new Container();
     const child = new Sprite(Texture.white);
 
-    parent
-      .setPosition(32, -12)
-      .setScale(1.25, 0.75)
-      .setRotation(18)
-      .setSkew(7, -5);
-    child
-      .setPosition(11, 9)
-      .setScale(1.5, 0.5)
-      .setRotation(-22)
-      .setSkew(-3, 4)
-      .setAnchor(0.5, 0.25);
+    parent.setPosition(32, -12).setScale(1.25, 0.75).setRotation(18).setSkew(7, -5);
+    child.setPosition(11, 9).setScale(1.5, 0.5).setRotation(-22).setSkew(-3, 4).setAnchor(0.5, 0.25);
     child.setTint(new Color(40, 100, 220, 0.6));
     parent.addChild(child);
 

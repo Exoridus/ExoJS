@@ -45,7 +45,7 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
 };
 
 describe('RenderTo WebGPU browser', () => {
-  test('backend initializes and accepts render target changes', async (ctx) => {
+  test('backend initializes and accepts render target changes', async ctx => {
     const backend = await setupBackend(ctx);
     const rtSize = 32;
     const target = new RenderTexture(rtSize, rtSize);
@@ -63,7 +63,7 @@ describe('RenderTo WebGPU browser', () => {
     backend.destroy();
   });
 
-  test('renderTo pattern correctly sets and restores render target', async (ctx) => {
+  test('renderTo pattern correctly sets and restores render target', async ctx => {
     const backend = await setupBackend(ctx);
     const rtSize = 32;
     const target = new RenderTexture(rtSize, rtSize);

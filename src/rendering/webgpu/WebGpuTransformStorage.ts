@@ -65,4 +65,3 @@ export class WebGpuTransformStorage {
     this._storageCount = -1;
   }
 }
-

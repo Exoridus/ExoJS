@@ -959,9 +959,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   private _isStaticBatchCandidate(drawCall: MeshDrawCall): boolean {
     const command = drawCall.command;
 
-    return drawCall.customShader === null
-      && command?.groupIndex !== undefined
-      && drawCall.mesh.geometry?.usage === 'static';
+    return drawCall.customShader === null && command?.groupIndex !== undefined && drawCall.mesh.geometry?.usage === 'static';
   }
 
   private _isSameStaticBatch(left: MeshDrawCall, right: MeshDrawCall): boolean {
@@ -969,12 +967,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       return false;
     }
 
-    return left.command!.groupIndex === right.command!.groupIndex
-      && left.mesh.geometry === right.mesh.geometry
-      && left.texture === right.texture
-      && left.blendMode === right.blendMode
-      && left.command!.material.pipelineKey === right.command!.material.pipelineKey
-      && left.command!.material.bindKey === right.command!.material.bindKey;
+    return (
+      left.command!.groupIndex === right.command!.groupIndex &&
+      left.mesh.geometry === right.mesh.geometry &&
+      left.texture === right.texture &&
+      left.blendMode === right.blendMode &&
+      left.command!.material.pipelineKey === right.command!.material.pipelineKey &&
+      left.command!.material.bindKey === right.command!.material.bindKey
+    );
   }
 
   private _uploadInstancedNodeIndices(startIndex: number, batchLength: number): number {
@@ -1053,13 +1053,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     data[10] = 1;
     data[12] = premultiplySample ? 1 : 0;
 
-    this._device!.queue.writeBuffer(
-      this._instancedUniformBuffer!,
-      slot * this._uniformAlignment,
-      data.buffer,
-      data.byteOffset,
-      transformUniformByteLength,
-    );
+    this._device!.queue.writeBuffer(this._instancedUniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
   }
 
   private _getOrCreateInstancedTransformBindGroup(storageBuffer: GPUBuffer): GPUBindGroup {

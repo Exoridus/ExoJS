@@ -48,7 +48,7 @@ const glEnumToString = (gl: WebGL2RenderingContext, value: number): string => {
 };
 
 const glArgsToString = (gl: WebGL2RenderingContext, args: unknown[]): string =>
-  args.map((a) => (typeof a === 'number' ? glEnumToString(gl, a) : String(a))).join(', ');
+  args.map(a => (typeof a === 'number' ? glEnumToString(gl, a) : String(a))).join(', ');
 
 const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingContext =>
   new Proxy(gl, {
@@ -610,10 +610,7 @@ export class WebGl2Backend implements RenderBackend {
     const requiredCount = Math.max(1, minCount);
     const transformTexture = this._transformTexture;
 
-    if (
-      transformTexture?.height !== this._transformBuffer.capacity
-      || transformTexture.buffer !== this._transformBuffer.data
-    ) {
+    if (transformTexture?.height !== this._transformBuffer.capacity || transformTexture.buffer !== this._transformBuffer.data) {
       transformTexture?.destroy();
 
       this._transformTexture = new DataTexture({

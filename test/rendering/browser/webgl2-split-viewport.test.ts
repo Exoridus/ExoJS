@@ -253,10 +253,10 @@ const createSolidTexture = (color: string, width = 32, height = 32): Texture => 
 };
 
 const createFullscreenSprite = (texture: Texture): Sprite =>
-  new Sprite(texture).setPosition(canvasWidth / 2, canvasHeight / 2).setAnchor(0.5).setScale(
-    canvasWidth / texture.width,
-    canvasHeight / texture.height,
-  );
+  new Sprite(texture)
+    .setPosition(canvasWidth / 2, canvasHeight / 2)
+    .setAnchor(0.5)
+    .setScale(canvasWidth / texture.width, canvasHeight / texture.height);
 
 describe('WebGL2 split-screen viewport', () => {
   test('left and right viewports render independently via setView', async () => {

@@ -169,12 +169,8 @@ export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | nul
   const shaderId = getShaderId(drawable);
   const material = getMaterial(drawable);
 
-  const pipelineKey = material !== null
-    ? material.pipelineKey
-    : rendererId * 31 + blendMode;
-  const bindKey = material !== null
-    ? material.bindKey
-    : rendererId * 31 + (textureId > 0 ? textureId : 0);
+  const pipelineKey = material !== null ? material.pipelineKey : rendererId * 31 + blendMode;
+  const bindKey = material !== null ? material.bindKey : rendererId * 31 + (textureId > 0 ? textureId : 0);
 
   return {
     rendererId,

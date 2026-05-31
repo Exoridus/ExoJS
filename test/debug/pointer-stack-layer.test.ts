@@ -158,7 +158,6 @@ describe('PointerStackLayer', () => {
   });
 
   test('with cursor at (100, 100) and 3 containing nodes, all appear in stack', () => {
-
     const nodeA = makeNode({ name: 'NodeA', containsResult: true, zIndex: 5 });
     const nodeB = makeNode({ name: 'NodeB', containsResult: true, zIndex: 2 });
     const nodeC = makeNode({ name: 'NodeC', containsResult: true, zIndex: 8 });
@@ -181,7 +180,6 @@ describe('PointerStackLayer', () => {
   });
 
   test('stack entries sorted by zIndex descending (highest first)', () => {
-
     const nodeA = makeNode({ name: 'NodeA', containsResult: true, zIndex: 5 });
     const nodeB = makeNode({ name: 'NodeB', containsResult: true, zIndex: 2 });
     const nodeC = makeNode({ name: 'NodeC', containsResult: true, zIndex: 8 });
@@ -208,7 +206,6 @@ describe('PointerStackLayer', () => {
   });
 
   test('stack limited to at most 10 entries (overflow protection)', () => {
-
     // Create 15 nodes all containing the point.
     const nodes = Array.from({ length: 15 }, (_, i) => makeNode({ name: `Node${i}`, containsResult: true, zIndex: i }));
 
@@ -226,7 +223,6 @@ describe('PointerStackLayer', () => {
   });
 
   test('no-pointer state: panel shows "Pointer: (none)" without crashing', () => {
-
     const root = makeNode({ containsResult: false });
     const app = makeApp({ root, pointerPos: null });
     const layer = new PointerStackLayer(app);

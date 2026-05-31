@@ -116,7 +116,10 @@ export class RenderPlanBuilder {
         height = Math.max(1, Math.ceil(bounds.height));
       }
 
-      const childPlan = effect.cacheAsBitmap && node._renderPlanCanReuseBitmapCache(left, top, width, height) ? null : this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
+      const childPlan =
+        effect.cacheAsBitmap && node._renderPlanCanReuseBitmapCache(left, top, width, height)
+          ? null
+          : this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
       const barrierScope: BarrierScope = {
         kind: RenderEntryKind.Barrier,
         node,

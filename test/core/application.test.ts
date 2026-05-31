@@ -89,10 +89,18 @@ const loadApplicationHarness = async (
   const loader = {
     destroy: vi.fn(),
   };
-  const BackendMock = vi.fn(function () { return webglManager; });
-  const WebGpuBackendMock = vi.fn(function () { return webgpuManager; });
-  const LoaderMock = vi.fn(function () { return loader; });
-  const InputManagerMock = vi.fn(function () { return inputManager; });
+  const BackendMock = vi.fn(function () {
+    return webglManager;
+  });
+  const WebGpuBackendMock = vi.fn(function () {
+    return webgpuManager;
+  });
+  const LoaderMock = vi.fn(function () {
+    return loader;
+  });
+  const InputManagerMock = vi.fn(function () {
+    return inputManager;
+  });
 
   vi.resetModules();
   vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
@@ -117,7 +125,9 @@ const loadApplicationHarness = async (
     }),
   }));
   vi.doMock('@/core/SceneManager', () => ({
-    SceneManager: vi.fn(function () { return sceneManager; }),
+    SceneManager: vi.fn(function () {
+      return sceneManager;
+    }),
   }));
 
   const { Application, ApplicationStatus } = await import('@/core/Application');

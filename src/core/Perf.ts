@@ -20,11 +20,7 @@ export const perfMark = (name: string): void => {
  * - Returns the created `PerformanceMeasure`, or `undefined` if the API is
  *   unavailable or either mark was never emitted.
  */
-export const perfMeasure = (
-  name: string,
-  startMark: string,
-  endMark?: string,
-): PerformanceMeasure | undefined => {
+export const perfMeasure = (name: string, startMark: string, endMark?: string): PerformanceMeasure | undefined => {
   if (!hasPerf || typeof performance.measure !== 'function') return undefined;
   try {
     return performance.measure(name, startMark, endMark);

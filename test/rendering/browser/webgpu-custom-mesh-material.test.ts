@@ -143,7 +143,7 @@ const createQuadGeometry = (size: number): Geometry => {
 };
 
 describe('custom MeshMaterial WebGPU browser', () => {
-  test('issues a custom-material draw with user uniform + texture and no validation error', async (ctx) => {
+  test('issues a custom-material draw with user uniform + texture and no validation error', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -194,7 +194,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
     }
   });
 
-  test('batches compatible static-geometry mesh draws with default material', async (ctx) => {
+  test('batches compatible static-geometry mesh draws with default material', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -237,7 +237,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
     }
   });
 
-  test('does not batch default static-geometry meshes across different groupIndex values', async (ctx) => {
+  test('does not batch default static-geometry meshes across different groupIndex values', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }

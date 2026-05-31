@@ -827,12 +827,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     return resources;
   }
 
-  private _getOrCreateCustomPipeline(
-    resources: CustomSpriteResources,
-    blendMode: BlendModes,
-    format: GPUTextureFormat,
-    device: GPUDevice,
-  ): GPURenderPipeline {
+  private _getOrCreateCustomPipeline(resources: CustomSpriteResources, blendMode: BlendModes, format: GPUTextureFormat, device: GPUDevice): GPURenderPipeline {
     const cacheKey = `${blendMode}:${format}`;
     const existing = resources.pipelines.get(cacheKey);
 

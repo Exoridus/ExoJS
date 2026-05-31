@@ -13,11 +13,21 @@
 
 vi.mock('@/rendering/RendererRegistry', () => ({
   RendererRegistry: class {
-    registerRenderer() { return this; }
-    connect() { return this; }
-    disconnect() { return this; }
-    destroy() { return this; }
-    render() { return this; }
+    registerRenderer() {
+      return this;
+    }
+    connect() {
+      return this;
+    }
+    disconnect() {
+      return this;
+    }
+    destroy() {
+      return this;
+    }
+    render() {
+      return this;
+    }
   },
 }));
 
@@ -25,8 +35,7 @@ import type { Application } from '@/core/Application';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
-const makeMinimalApp = (canvas: HTMLCanvasElement): Application =>
-  ({ canvas, options: {} }) as unknown as Application;
+const makeMinimalApp = (canvas: HTMLCanvasElement): Application => ({ canvas, options: {} }) as unknown as Application;
 
 describe('WebGl2Backend — real context integration', () => {
   test('constructor succeeds with a real WebGL2 context', () => {

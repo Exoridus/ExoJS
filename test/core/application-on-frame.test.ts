@@ -47,17 +47,25 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
   vi.resetModules();
 
   vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-    WebGl2Backend: vi.fn(function () { return backend; }),
+    WebGl2Backend: vi.fn(function () {
+      return backend;
+    }),
   }));
   vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-    WebGpuBackend: vi.fn(function () { return backend; }),
+    WebGpuBackend: vi.fn(function () {
+      return backend;
+    }),
   }));
   vi.doMock('@/resources/Loader', () => ({
-    Loader: vi.fn(function () { return { destroy: vi.fn() }; }),
+    Loader: vi.fn(function () {
+      return { destroy: vi.fn() };
+    }),
   }));
   const onCanvasFocusChange = { add: vi.fn(), remove: vi.fn(), dispatch: vi.fn(), destroy: vi.fn() };
   vi.doMock('@/input/InputManager', () => ({
-    InputManager: vi.fn(function () { return { update: vi.fn(), destroy: vi.fn(), onKeyDown, onCanvasFocusChange }; }),
+    InputManager: vi.fn(function () {
+      return { update: vi.fn(), destroy: vi.fn(), onKeyDown, onCanvasFocusChange };
+    }),
   }));
   vi.doMock('@/input/InteractionManager', () => ({
     InteractionManager: vi.fn(function () {
@@ -69,7 +77,9 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     }),
   }));
   vi.doMock('@/core/SceneManager', () => ({
-    SceneManager: vi.fn(function () { return sceneManager; }),
+    SceneManager: vi.fn(function () {
+      return sceneManager;
+    }),
   }));
 
   const { Application, ApplicationStatus } = await import('@/core/Application');

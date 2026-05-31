@@ -3,11 +3,9 @@ import { RenderEntryKind } from './RenderCommand';
 import type { RenderPlan } from './RenderPlan';
 import type { DrawScopeEntry, GroupScope, ScopeEntry } from './RenderScope';
 
-const groupKey = (material: MaterialKey): string =>
-  `${material.pipelineKey}:${material.bindKey}`;
+const groupKey = (material: MaterialKey): string => `${material.pipelineKey}:${material.bindKey}`;
 
-const aabbOverlap = (a: DrawCommand, b: DrawCommand): boolean =>
-  a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+const aabbOverlap = (a: DrawCommand, b: DrawCommand): boolean => a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
 
 /** @internal */
 export class RenderPlanOptimizer {
@@ -53,9 +51,7 @@ export class RenderPlanOptimizer {
 
     for (let i = 0; i <= n; i++) {
       const entry = i < n ? entries[i] : null;
-      const isBoundary = entry === null
-        || entry.kind === RenderEntryKind.Group
-        || entry.kind === RenderEntryKind.Barrier;
+      const isBoundary = entry === null || entry.kind === RenderEntryKind.Group || entry.kind === RenderEntryKind.Barrier;
 
       if (isBoundary && i > segStart) {
         const segEnd = i;
@@ -100,12 +96,7 @@ export class RenderPlanOptimizer {
     }
   }
 
-  private static _materialGroupSegment(
-    entries: ScopeEntry[],
-    start: number,
-    end: number,
-    preserveDrawOrder: boolean,
-  ): void {
+  private static _materialGroupSegment(entries: ScopeEntry[], start: number, end: number, preserveDrawOrder: boolean): void {
     const len = end - start;
 
     if (len <= 1) {
@@ -145,12 +136,7 @@ export class RenderPlanOptimizer {
     }
   }
 
-  private static _overlapAwareGroup(
-    zGroup: Array<{ entry: DrawScopeEntry; origIdx: number }>,
-    entries: ScopeEntry[],
-    segStart: number,
-    segEnd: number,
-  ): void {
+  private static _overlapAwareGroup(zGroup: Array<{ entry: DrawScopeEntry; origIdx: number }>, entries: ScopeEntry[], segStart: number, segEnd: number): void {
     const keyGroups = new Map<string, Array<{ entry: DrawScopeEntry; origIdx: number }>>();
 
     for (const d of zGroup) {
@@ -239,12 +225,7 @@ export class RenderPlanOptimizer {
       }
 
       const groupEntries: ScopeEntry[] = group.map(g => g.entry);
-      const reordered: ScopeEntry[] = [
-        ...beforeFirst,
-        ...groupEntries,
-        ...betweenNonGroup,
-        ...afterLast,
-      ];
+      const reordered: ScopeEntry[] = [...beforeFirst, ...groupEntries, ...betweenNonGroup, ...afterLast];
 
       for (let p = segStart; p < segEnd; p++) {
         entries[p] = reordered[p - segStart];

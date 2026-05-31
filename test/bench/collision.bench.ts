@@ -64,10 +64,7 @@ describe('collision', () => {
     for (let i = 0; i < PAIRS; i++) {
       const ax = rand() * 5000;
       const ay = rand() * 5000;
-      circles.push([
-        new Circle(ax, ay, 10 + rand() * 30),
-        new Circle(ax + (rand() - 0.5) * 80, ay + (rand() - 0.5) * 80, 10 + rand() * 30),
-      ]);
+      circles.push([new Circle(ax, ay, 10 + rand() * 30), new Circle(ax + (rand() - 0.5) * 80, ay + (rand() - 0.5) * 80, 10 + rand() * 30)]);
     }
 
     for (let iter = 0; iter < ITERATIONS; iter++) {

@@ -107,22 +107,18 @@ const makeApp = () => {
 
 describe('DebugOverlay — tree-shake architecture', () => {
   test('DebugOverlay is NOT exported from the root barrel', () => {
-
     expect((rootExports as Record<string, unknown>)['DebugOverlay']).toBeUndefined();
   });
 
   test('DebugOverlay IS exported from the debug subpath', () => {
-
     expect(typeof (debugExports as Record<string, unknown>)['DebugOverlay']).toBe('function');
   });
 
   test('DebugLayer IS exported from the debug subpath', () => {
-
     expect(typeof (debugExports as Record<string, unknown>)['DebugLayer']).toBe('function');
   });
 
   test('PerformanceLayer IS exported from the debug subpath', () => {
-
     expect(typeof (debugExports as Record<string, unknown>)['PerformanceLayer']).toBe('function');
   });
 });
@@ -449,17 +445,14 @@ describe('DebugOverlay — view-mode routing', () => {
 
 describe('DebugOverlay — new layer exports', () => {
   test('BoundingBoxesLayer IS exported from debug subpath', () => {
-
     expect(typeof (debugExports as Record<string, unknown>)['BoundingBoxesLayer']).toBe('function');
   });
 
   test('HitTestLayer IS exported from debug subpath', () => {
-
     expect(typeof (debugExports as Record<string, unknown>)['HitTestLayer']).toBe('function');
   });
 
   test('PointerStackLayer IS exported from debug subpath', () => {
-
     expect(typeof (debugExports as Record<string, unknown>)['PointerStackLayer']).toBe('function');
   });
 

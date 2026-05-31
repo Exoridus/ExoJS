@@ -24,18 +24,15 @@ describe('Application type contracts', () => {
   });
 
   it('setCursor accepts the documented cursor source union', () => {
-    expectTypeOf<Application['setCursor']>().parameter(0)
-      .toMatchTypeOf<string | Texture | HTMLImageElement | HTMLCanvasElement>();
+    expectTypeOf<Application['setCursor']>().parameter(0).toMatchTypeOf<string | Texture | HTMLImageElement | HTMLCanvasElement>();
   });
 
   it('setCursor returns Application for chaining', () => {
-    expectTypeOf<Application['setCursor']>().returns
-      .toEqualTypeOf<Application>();
+    expectTypeOf<Application['setCursor']>().returns.toEqualTypeOf<Application>();
   });
 
   it('onResize signal carries (width, height, app) tuple', () => {
-    expectTypeOf<Application['onResize']>()
-      .toEqualTypeOf<Signal<[number, number, Application]>>();
+    expectTypeOf<Application['onResize']>().toEqualTypeOf<Signal<[number, number, Application]>>();
   });
 
   it('onFrame signal carries a Time argument', () => {

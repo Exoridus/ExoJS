@@ -141,11 +141,7 @@ const mockRenderTo = (
   node: { render: (b: RenderBackend) => void },
   options?: { clearColor?: Color; clear?: boolean; view?: View | null },
 ): void => {
-  const {
-    clearColor,
-    view: userView,
-    clear = true,
-  } = options ?? {};
+  const { clearColor, view: userView, clear = true } = options ?? {};
 
   const prevTarget = backend.renderTarget;
   const prevView = backend.view;
@@ -153,12 +149,7 @@ const mockRenderTo = (
   let tempView: View | null = null;
 
   try {
-    const renderView = userView ?? (tempView = new View(
-      target.width / 2,
-      target.height / 2,
-      target.width,
-      target.height,
-    ));
+    const renderView = userView ?? (tempView = new View(target.width / 2, target.height / 2, target.width, target.height));
 
     backend.setRenderTarget(target);
     backend.setView(renderView);
