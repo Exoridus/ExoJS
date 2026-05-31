@@ -113,13 +113,35 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12)
   }
 };
 
-const withValidation = async (backend: WebGpuBackend, run: () => void): Promise<void> => {
+// On the software (swiftshader) adapter used in CI the WebGPU device can be
+// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as an
+// unavailable-adapter skip rather than a failure, matching setupBackend().
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+
+const withValidation = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  run: () => void,
+): Promise<void> => {
   const device = backend.device;
 
   device.pushErrorScope('validation');
-  run();
 
-  const validationError = await device.popErrorScope();
+  let validationError: GPUError | null;
+
+  try {
+    run();
+    validationError = await device.popErrorScope();
+  } catch (error) {
+    if (isDeviceLoss(error)) {
+      ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+      return;
+    }
+
+    throw error;
+  }
 
   expect(validationError).toBeNull();
 };
@@ -141,7 +163,7 @@ describe('WebGPU stencil composition', () => {
       clipped.clipShape = createQuadGeometry(0, 0, 32, 64);
       clipped.addChild(sprite);
 
-      const readPixel = await renderClipIntoTextureAndSample(backend, context, clipped);
+      const readPixel = await renderClipIntoTextureAndSample(ctx, backend, context, clipped);
 
       // Left half survived the clip and was sampled back to the canvas.
       expectPixelNear(readPixel(12, 32), [255, 0, 0, 255]);
@@ -175,7 +197,7 @@ describe('WebGPU stencil composition', () => {
       clipped.addChild(cached);
       root.addChild(clipped);
 
-      await withValidation(backend, () => {
+      await withValidation(ctx, backend, () => {
         backend.resetStats();
         backend.clear(Color.black);
         root.render(backend);
@@ -213,7 +235,7 @@ describe('WebGPU stencil composition', () => {
       clipped.clipShape = createQuadGeometry(0, 0, 32, 64);
       clipped.addChild(clipSprite);
 
-      await withValidation(backend, () => {
+      await withValidation(ctx, backend, () => {
         const first = context.renderTo(clipped, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
 
         backend.releaseRenderTexture(first);
@@ -230,7 +252,7 @@ describe('WebGPU stencil composition', () => {
       plain.width = 64;
       plain.height = 64;
 
-      await withValidation(backend, () => {
+      await withValidation(ctx, backend, () => {
         backend.resetStats();
         backend.clear(Color.black);
         plain.render(backend);

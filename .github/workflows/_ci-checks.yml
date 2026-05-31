@@ -167,8 +167,55 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Browser tests (Chromium WebGL2 + WebGPU, new headless)
-        run: pnpm test:browser:webgl:chromium && pnpm test:browser:webgpu:chromium
+      - name: Browser tests (Chromium WebGL2, new headless)
+        run: pnpm test:browser:webgl:chromium
+
+  # Optional, non-blocking lane. Chromium WebGPU new-headless is real coverage
+  # locally, but the GitHub-hosted runner currently drops the device on
+  # custom-material tests; keep non-blocking until runner/driver stability is
+  # solved. A failure here never blocks a merge — the lane still runs and
+  # reports. Run locally via `pnpm test:browser:webgpu:chromium`.
+  browser-tests-webgpu-chromium:
+    name: Browser Tests (Chromium WebGPU, experimental)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser tests (Chromium WebGPU, new headless)
+        run: pnpm test:browser:webgpu:chromium
 
   # Optional, non-blocking lane. The Ubuntu CI runner does not give headless
   # Firefox a usable WebGL2 context, and Firefox only exposes a WebGPU adapter
