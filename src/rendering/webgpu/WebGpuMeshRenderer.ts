@@ -193,7 +193,7 @@ interface CustomShaderResources {
   meshTextureLayout: GPUBindGroupLayout; // group 1: mesh's own texture+sampler
   userLayout: GPUBindGroupLayout; // group 2: user UBO + texture/sampler pairs
   pipelineLayout: GPUPipelineLayout;
-  pipelines: Map<string, GPURenderPipeline>; // keyed `${blendMode}:${format}`
+  pipelines: Map<string, GPURenderPipeline>; // keyed `${blendMode}:${format}:${stencil}`
   // Vertex/index stream — local-space data, separate from the default path's
   // shared buffers because custom shaders read positions un-baked.
   vertexBuffer: GPUBuffer | null;
@@ -274,19 +274,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     if (customShader !== null && customShader.shader.wgsl === null) {
       throw new Error('Mesh material shader has no `wgsl` source; cannot render through the WebGPU backend.');
-    }
-
-    if (customShader !== null && backend._passCoordinator.stencilActive) {
-      // The WebGPU geometric stencil MVP supports clipping default-material
-      // Sprites and Mesh/Graphics (which select stencil-enabled pipeline
-      // variants below); a custom MeshMaterial under a Geometry clip would need
-      // its own stencil pipeline variants and is not supported yet. Throw at
-      // collection time (inside the clip scope's try) so the surrounding
-      // push/pop balances cleanly, rather than at flush time where the pop has
-      // not yet run.
-      throw new Error(
-        'WebGPU geometry stencil clipping currently supports default-material Sprites, Meshes, and Graphics. A custom-material Mesh under a Geometry clip (RenderNode.clip with a Geometry clipShape) is not supported yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend instead.',
-      );
     }
 
     const vertexCount = mesh.vertexCount;
@@ -518,10 +505,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const renderTargetFormat = backend.renderTargetFormat;
     // A clip scope flushes the active renderer on push/pop, so every draw call
     // in this batch shares one stencil state — read it once. While active, the
-    // coordinator's pass carries a depth/stencil attachment, so the default and
-    // static-batch pipelines must select their stencil-enabled variants. The
-    // custom path never reaches here under a clip (render() throws at collection
-    // time), so its pipelines stay stencil-free.
+    // coordinator's pass carries a depth/stencil attachment, so the default,
+    // static-batch, and custom-material pipelines must all select their
+    // stencil-enabled variants to match it.
     const stencil = backend._passCoordinator.stencilActive;
 
     let lastShader: Material | 'default' | 'instanced' | null = null;
@@ -617,7 +603,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         pass.pushDebugGroup('MeshMaterial (custom)');
 
         if (needsPipeline) {
-          pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, renderTargetFormat));
+          pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, renderTargetFormat, stencil));
           lastShader = dc.customShader;
           lastBlendMode = dc.blendMode;
           lastFormat = renderTargetFormat;
@@ -1519,12 +1505,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._device!.queue.writeBuffer(resources.meshUniformBuffer!, drawCursor * slotBytes, data);
   }
 
-  private _getOrCreateCustomPipeline(resources: CustomShaderResources, blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
-    const cacheKey = `${blendMode}:${format}`;
+  private _getOrCreateCustomPipeline(resources: CustomShaderResources, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    // The stencil dimension keeps the clip and no-clip variants distinct,
+    // mirroring the default and static-batch caches: a stencil pipeline carries
+    // depth/stencil state and is only valid in a pass with the matching
+    // attachment, so the two are never interchangeable.
+    const cacheKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
     let pipeline = resources.pipelines.get(cacheKey);
 
     if (pipeline === undefined) {
-      pipeline = this._device!.createRenderPipeline({
+      const descriptor: GPURenderPipelineDescriptor = {
         layout: resources.pipelineLayout,
         vertex: {
           module: resources.shaderModule,
@@ -1556,7 +1546,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
           topology: 'triangle-list',
           cullMode: 'none',
         },
-      });
+      };
+
+      // While a geometric clip is active the coordinator's pass carries a
+      // depth/stencil attachment; the content pipeline must test stencil ==
+      // reference and leave depth/stencil otherwise inert to match it.
+      if (stencil) {
+        descriptor.depthStencil = stencilContentDepthStencilState();
+      }
+
+      pipeline = this._device!.createRenderPipeline(descriptor);
 
       resources.pipelines.set(cacheKey, pipeline);
     }

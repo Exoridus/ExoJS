@@ -14,22 +14,16 @@ const shaderPlugin = {
   },
 };
 
-// Per-project browser headedness defaults:
-//  - WebGL2 (`browser`): headless by default; EXOJS_BROWSER_HEADED=1 opts into a
-//    visible browser for local debugging.
-//  - WebGPU (`browser-webgpu`): headed by default, because headless Chromium
-//    exposes no WebGPU adapter in this environment (phase 12 finding). The
-//    capability-smoke alias forces headless from the CLI via `--browser.headless`,
-//    which overrides this default; tests then skip gracefully (no adapter).
+// Per-project browser headedness:
+//  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
+//  - WebGL2 Firefox:  headless.
+//  - WebGPU Chromium: new headless — WebGPU adapter is available via swiftshader.
+//  - WebGPU Firefox:  headed — Firefox only exposes a WebGPU adapter in a headed session.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
-const webgl2Headless = !headed; // headless unless explicitly opted into headed
-const webgpuHeadless = false; // headed by default; `--browser.headless` overrides
+const webgl2Headless = !headed;
 
 export default defineConfig({
   test: {
-    // Coverage is a root-only option in Vitest's multi-project setup; a
-    // `coverage` block inside a project config is silently ignored, which
-    // would fall back to the default v8 provider. Keep it here.
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
@@ -52,12 +46,12 @@ export default defineConfig({
         },
       },
 
-      // ── Project 2: browser — real WebGL2 via Playwright/Chromium ──────
+      // ── Project 2: browser-webgl-chromium — WebGL2 via Chromium headless ──
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
         test: {
-          name: 'browser',
+          name: 'browser-webgl-chromium',
           globals: true,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: {
@@ -73,30 +67,59 @@ export default defineConfig({
         },
       },
 
-      // ── Project 3: browser-webgpu — opt-in WebGPU via Playwright/Chromium ──
-      // Not part of verify:release. Run with: pnpm test:browser:webgpu (headed).
-      // Headed by default: headless Chromium exposes no WebGPU adapter here.
-      // Capability smoke (headless): pnpm test:browser:webgpu:headless.
-      // Tests skip gracefully when WebGPU is unavailable.
+      // ── Project 3: browser-webgl-firefox — WebGL2 via Firefox headless ──
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
         test: {
-          name: 'browser-webgpu',
+          name: 'browser-webgl-firefox',
+          globals: true,
+          include: ['test/rendering/browser/webgl2-*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── Project 4: browser-webgpu-chromium — WebGPU via Chromium new headless ──
+      // New headless Chromium exposes a WebGPU adapter via swiftshader.
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        test: {
+          name: 'browser-webgpu-chromium',
           globals: true,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,
-            headless: webgpuHeadless,
+            headless: true,
             provider: playwright({
               launchOptions: {
-                // --enable-unsafe-webgpu: enable Dawn/WebGPU in Chromium
-                // --ignore-gpu-blocklist: allow software/virtual GPU adapters
-                // On Linux CI, add --use-vulkan=swiftshader if no hardware GPU
                 args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
               },
             }),
             instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── Project 5: browser-webgpu-firefox — WebGPU via Firefox headed ──
+      // Firefox only exposes a WebGPU adapter in a headed session.
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        test: {
+          name: 'browser-webgpu-firefox',
+          globals: true,
+          include: ['test/rendering/browser/webgpu-*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
           },
         },
       },

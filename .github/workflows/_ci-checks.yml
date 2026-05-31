@@ -130,7 +130,7 @@ jobs:
           slug: Exoridus/ExoJS
 
   browser-tests:
-    name: Browser Tests (WebGL2)
+    name: Browser Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -167,8 +167,63 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Browser tests (WebGL2 / Chromium)
-        run: pnpm test:browser
+      - name: Browser tests (Chromium WebGL2 + WebGPU, new headless)
+        run: pnpm test:browser:webgl:chromium && pnpm test:browser:webgpu:chromium
+
+  # Optional, non-blocking lane. The Ubuntu CI runner does not give headless
+  # Firefox a usable WebGL2 context, and Firefox only exposes a WebGPU adapter
+  # in a headed session, so both Firefox lanes are kept out of the required
+  # gate: a failure here never blocks a merge. Real Firefox coverage runs
+  # locally via `pnpm test:browser:webgl:firefox` / `:webgpu:firefox`.
+  browser-tests-firefox:
+    name: Browser Tests (Firefox, experimental)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps firefox
+
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb libxrender1 libxext6 libxtst6 libxi6 libxrandr2
+
+      - name: Browser tests (Firefox WebGL2, headless)
+        continue-on-error: true
+        run: pnpm test:browser:webgl:firefox
+
+      - name: Browser tests (Firefox WebGPU, headed)
+        continue-on-error: true
+        run: xvfb-run -a pnpm test:browser:webgpu:firefox
 
   package-verify:
     name: Package Build + Verify
