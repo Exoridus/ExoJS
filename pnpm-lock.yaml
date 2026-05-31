@@ -113,8 +113,8 @@ importers:
         specifier: ^5.0.4
         version: 5.0.6(astro@6.3.7(@types/node@25.9.1)(jiti@2.7.0)(rollup@4.60.4)(sass@1.100.0)(tsx@4.22.3)(yaml@2.9.0))
       '@codexo/exojs':
-        specifier: file:..
-        version: 'file:'
+        specifier: workspace:*
+        version: link:..
       '@codexo/exojs-assets':
         specifier: workspace:*
         version: link:../packages/assets
@@ -341,9 +341,6 @@ packages:
   '@clack/prompts@1.4.0':
     resolution: {integrity: sha512-S0My7XPGIgpRWMDG8uRqalbgT+a6FmCUdOW+HaIOVVpUPHOb7RrpvjTjiODadKp06fsrVDJZlIzc6yCTp4AnxA==}
     engines: {node: '>= 20.12.0'}
-
-  '@codexo/exojs@file:':
-    resolution: {directory: '', type: directory}
 
   '@csstools/color-helpers@6.0.2':
     resolution: {integrity: sha512-LMGQLS9EuADloEFkcTBR3BwV/CGHV7zyDxVRtVDTwdI2Ca4it0CCVTT9wCkxSgokjE5Ho41hEPgb8OEUwoXr6Q==}
@@ -4295,8 +4292,6 @@ snapshots:
       fast-string-width: 3.0.2
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
-
-  '@codexo/exojs@file:': {}
 
   '@csstools/color-helpers@6.0.2': {}
 

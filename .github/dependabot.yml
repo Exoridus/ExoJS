@@ -4,33 +4,69 @@ updates:
     directory: '/'
     schedule:
       interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: 'Europe/Berlin'
     open-pull-requests-limit: 10
+    cooldown:
+      semver-patch-days: 3
+      semver-minor-days: 14
+      semver-major-days: 30
     labels:
       - dependencies
     groups:
-      patch-and-minor:
+      patch-only:
         update-types:
           - patch
-          - minor
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
 
   - package-ecosystem: npm
     directory: '/examples'
     schedule:
       interval: weekly
+      day: monday
+      time: '06:15'
+      timezone: 'Europe/Berlin'
     open-pull-requests-limit: 10
+    cooldown:
+      semver-patch-days: 3
+      semver-minor-days: 14
+      semver-major-days: 30
     labels:
       - dependencies
       - examples
     groups:
-      patch-and-minor:
+      patch-only:
         update-types:
           - patch
-          - minor
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
       interval: weekly
+      day: monday
+      time: '06:30'
+      timezone: 'Europe/Berlin'
+    cooldown:
+      default-days: 3
     labels:
       - dependencies
       - github-actions
+    groups:
+      patch-only:
+        update-types:
+          - patch
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major

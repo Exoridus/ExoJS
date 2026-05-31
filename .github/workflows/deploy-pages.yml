@@ -1,8 +1,9 @@
 name: Deploy Pages
 
 on:
-  push:
-    branches: [docs]
+  workflow_run:
+    workflows: ['Release', 'CI']
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -11,28 +12,52 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages-${{ github.event.workflow_run.head_sha || github.ref }}
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: '24.x'
+  PNPM_VERSION: '11.4.0'
 
 jobs:
   build:
     name: Build site
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          (
+            github.event.workflow_run.name == 'Release' ||
+            (
+              github.event.workflow_run.name == 'CI' &&
+              github.event.workflow_run.event == 'push' &&
+              github.event.workflow_run.head_branch == 'main'
+            )
+          )
+        )
+      }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -41,10 +66,12 @@ jobs:
         run: pnpm build
 
       - name: Build site
+        env:
+          EXOJS_PACKAGE_PATH: ..
         run: pnpm site:build
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@v4
         with:
           path: site/dist
 
@@ -52,6 +79,7 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

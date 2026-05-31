@@ -3,7 +3,7 @@
   "description": "A TypeScript-first browser 2D runtime for games and interactive apps.",
   "version": "0.10.0",
   "type": "module",
-  "packageManager": "pnpm@9.4.0",
+  "packageManager": "pnpm@11.4.0",
   "files": [
     "dist/esm/",
     "dist/exo.esm.js",
