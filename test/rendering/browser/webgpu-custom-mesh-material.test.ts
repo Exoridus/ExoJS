@@ -176,12 +176,30 @@ describe('custom MeshMaterial WebGPU browser', () => {
 
     device.pushErrorScope('validation');
 
-    backend.resetStats();
-    backend.clear(Color.black);
-    mesh.render(backend);
-    backend.flush();
+    let validationError: GPUError | null;
 
-    const validationError = await device.popErrorScope();
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      mesh.render(backend);
+      backend.flush();
+      validationError = await device.popErrorScope();
+    } catch (error) {
+      // The software (swiftshader) adapter used in CI can drop the device
+      // mid-test ("Instance dropped in popErrorScope"); treat that as an
+      // unavailable-adapter skip rather than a failure.
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        mesh.destroy();
+        material.destroy();
+        pattern.destroy();
+        backend.destroy();
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    }
 
     try {
       expect(validationError).toBeNull();

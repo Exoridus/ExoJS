@@ -205,16 +205,38 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12)
   }
 };
 
-const renderClipped = async (backend: WebGpuBackend, root: RenderNode): Promise<void> => {
+// On the software (swiftshader) adapter used in CI the WebGPU device can be
+// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as an
+// unavailable-adapter skip rather than a failure, matching setupBackend().
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+
+const renderClipped = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  root: RenderNode,
+): Promise<void> => {
   const device = backend.device;
 
   device.pushErrorScope('validation');
-  backend.resetStats();
-  backend.clear(Color.black);
-  root.render(backend);
-  backend.flush();
 
-  const validationError = await device.popErrorScope();
+  let validationError: GPUError | null;
+
+  try {
+    backend.resetStats();
+    backend.clear(Color.black);
+    root.render(backend);
+    backend.flush();
+    validationError = await device.popErrorScope();
+  } catch (error) {
+    if (isDeviceLoss(error)) {
+      ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+      return;
+    }
+
+    throw error;
+  }
 
   expect(validationError).toBeNull();
 };
@@ -236,7 +258,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -273,7 +295,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       outer.addChild(inner);
       root.addChild(outer);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -310,7 +332,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -350,7 +372,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(left, right);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -380,7 +402,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       sprite.height = 24;
       root.addChild(sprite);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -408,7 +430,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      await expect(renderClipped(backend, root)).resolves.toBeUndefined();
+      await expect(renderClipped(ctx, backend, root)).resolves.toBeUndefined();
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
@@ -432,7 +454,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -457,7 +479,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(mesh);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -486,7 +508,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(graphics);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -515,7 +537,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(mesh);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -549,7 +571,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(mesh);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -584,7 +606,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(mesh);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -624,7 +646,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       outer.addChild(inner);
       root.addChild(outer);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -663,7 +685,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -698,7 +720,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
@@ -742,7 +764,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
       clipped.addChild(sprite);
       root.addChild(clipped);
 
-      await renderClipped(backend, root);
+      await renderClipped(ctx, backend, root);
 
       const readPixel = readCanvas(backend);
 
