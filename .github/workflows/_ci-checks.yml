@@ -1,7 +1,7 @@
 name: CI Checks
 
-# Reusable workflow: typecheck -> lint -> test -> build -> verify:exports -> pack,
-# then (needs: verify) a site build to confirm the Astro site compiles.
+# Reusable workflow with parallel quality gates (typecheck, lint, unit tests,
+# browser tests), plus package verification and a final site build gate.
 #
 # Called by ci.yml and release.yml so both use exactly the same gate.
 
@@ -30,10 +30,10 @@ env:
   CI: true
 
 jobs:
-  verify:
-    name: Typecheck, Lint, Test, Build
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -60,47 +60,38 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Lint
         run: pnpm lint
 
-      - name: Test (with coverage)
-        run: pnpm test:coverage
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
-        with:
-          files: ./coverage/lcov.info
-          flags: unit
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: Exoridus/ExoJS
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Browser tests (WebGL2 / Chromium)
-        run: pnpm test:browser
-
-      - name: Build
-        run: pnpm build
-
-      - name: Verify package exports
-        run: pnpm verify:exports
-
-      - name: Package dry run
-        run: pnpm pack --dry-run
-
-  site-build:
-    name: Site build
-    needs: verify
+  unit-tests:
+    name: Unit Tests (Coverage)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -123,9 +114,126 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      # Root install + build are required because site/package.json
-      # depends on the library via "file:.." and the vendor:sync script
-      # reads from the local dist/ tree.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Test (with coverage)
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage/lcov.info
+          flags: unit
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: Exoridus/ExoJS
+
+  browser-tests:
+    name: Browser Tests (WebGL2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser tests (WebGL2 / Chromium)
+        run: pnpm test:browser
+
+  package-verify:
+    name: Package Build + Verify
+    needs: [typecheck, lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify package exports
+        run: pnpm verify:exports
+
+      - name: Package dry run
+        run: pnpm pack --dry-run
+
+  site-build:
+    name: Site build
+    needs: [unit-tests, browser-tests, package-verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      # Root install + build are required because the site consumes the local
+      # workspace package and vendor:sync reads from the built dist/ tree.
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
