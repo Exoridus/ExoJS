@@ -165,18 +165,18 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium firefox
+        run: pnpm exec playwright install --with-deps chromium
 
-      - name: Browser tests (WebGL2 Chromium + Firefox, WebGPU Chromium)
-        run: pnpm test:browser:webgl && pnpm test:browser:webgpu:chromium
+      - name: Browser tests (Chromium WebGL2 + WebGPU, new headless)
+        run: pnpm test:browser:webgl:chromium && pnpm test:browser:webgpu:chromium
 
-  # Optional, non-blocking lane. Firefox only exposes a WebGPU adapter in a
-  # headed session, and headed Firefox under Xvfb is unreliable on CI runners,
-  # so this lane is intentionally kept out of the required gate: a failure here
-  # never blocks a merge. Real Firefox WebGPU coverage runs locally via
-  # `pnpm test:browser:webgpu:firefox`.
-  browser-tests-firefox-webgpu:
-    name: Browser Tests (Firefox WebGPU, experimental)
+  # Optional, non-blocking lane. The Ubuntu CI runner does not give headless
+  # Firefox a usable WebGL2 context, and Firefox only exposes a WebGPU adapter
+  # in a headed session, so both Firefox lanes are kept out of the required
+  # gate: a failure here never blocks a merge. Real Firefox coverage runs
+  # locally via `pnpm test:browser:webgl:firefox` / `:webgpu:firefox`.
+  browser-tests-firefox:
+    name: Browser Tests (Firefox, experimental)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true
@@ -217,7 +217,12 @@ jobs:
       - name: Install Xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb libxrender1 libxext6 libxtst6 libxi6 libxrandr2
 
+      - name: Browser tests (Firefox WebGL2, headless)
+        continue-on-error: true
+        run: pnpm test:browser:webgl:firefox
+
       - name: Browser tests (Firefox WebGPU, headed)
+        continue-on-error: true
         run: xvfb-run -a pnpm test:browser:webgpu:firefox
 
   package-verify:
