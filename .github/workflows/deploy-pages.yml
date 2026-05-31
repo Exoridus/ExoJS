@@ -48,6 +48,8 @@ jobs:
         run: pnpm build
 
       - name: Build site
+        env:
+          EXOJS_PACKAGE_PATH: ..
         run: pnpm site:build
 
       - name: Upload Pages artifact

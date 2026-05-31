@@ -91,6 +91,8 @@ jobs:
 
       # Site build produces site/dist/ needed for the release bundle below.
       - name: Build site
+        env:
+          EXOJS_PACKAGE_PATH: ..
         run: pnpm site:build
 
       - name: Assemble release bundle

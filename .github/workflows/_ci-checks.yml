@@ -134,4 +134,6 @@ jobs:
 
       # Site build = vendor:sync + examples:sync + astro build.
       - name: Build site
+        env:
+          EXOJS_PACKAGE_PATH: ..
         run: pnpm site:build
