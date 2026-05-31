@@ -15,15 +15,16 @@ const shaderPlugin = {
 };
 
 // Per-project browser headedness defaults:
-//  - WebGL2 (`browser`): headless by default; EXOJS_BROWSER_HEADED=1 opts into a
-//    visible browser for local debugging.
-//  - WebGPU (`browser-webgpu`): headed by default, because headless Chromium
-//    exposes no WebGPU adapter in this environment (phase 12 finding). The
-//    capability-smoke alias forces headless from the CLI via `--browser.headless`,
-//    which overrides this default; tests then skip gracefully (no adapter).
+//  - Chromium WebGL2 (`browser`): headless by default; EXOJS_BROWSER_HEADED=1
+//    or --browser.headless=false for a visible browser.
+//  - Firefox WebGL2 (`browser-webgl-firefox`): headed by default (headless
+//    Firefox WebGL2 works but headed is the Firefox default lane).
+//  - All WebGPU lanes: headed by default, because headless mode exposes no
+//    WebGPU adapter in either browser. The capability-smoke alias (`:headless`)
+//    forces headless; tests skip gracefully (no adapter).
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
-const webgl2Headless = !headed; // headless unless explicitly opted into headed
-const webgpuHeadless = false; // headed by default; `--browser.headless` overrides
+const webgl2Headless = !headed; // Chromium WebGL2: headless unless opted in
+const webgpuHeadless = false; // all WebGPU: headed by default; --browser.headless overrides
 
 export default defineConfig({
   test: {
@@ -73,7 +74,47 @@ export default defineConfig({
         },
       },
 
-      // ── Project 3: browser-webgpu — opt-in WebGPU via Playwright/Chromium ──
+      // ── Project 3: browser-webgl-firefox — WebGL2 via Playwright/Firefox ──
+      // Headed by default (Firefox default lane). Run with: pnpm test:browser:webgl:firefox.
+      // Headless variant: pnpm test:browser:webgl:firefox:headless.
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        test: {
+          name: 'browser-webgl-firefox',
+          globals: true,
+          include: ['test/rendering/browser/webgl2-*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: webgpuHeadless,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── Project 4: browser-webgpu-firefox — WebGPU via Playwright/Firefox ──
+      // Headed by default (headless Firefox exposes no WebGPU adapter).
+      // Run with: pnpm test:browser:webgpu:firefox.
+      // Headless smoke: pnpm test:browser:webgpu:firefox:headless.
+      // Tests skip gracefully when WebGPU is unavailable.
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        test: {
+          name: 'browser-webgpu-firefox',
+          globals: true,
+          include: ['test/rendering/browser/webgpu-*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: webgpuHeadless,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── Project 5: browser-webgpu — opt-in WebGPU via Playwright/Chromium ──
       // Not part of verify:release. Run with: pnpm test:browser:webgpu (headed).
       // Headed by default: headless Chromium exposes no WebGPU adapter here.
       // Capability smoke (headless): pnpm test:browser:webgpu:headless.
