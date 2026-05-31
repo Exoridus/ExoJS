@@ -14,7 +14,16 @@ const shaderPlugin = {
   },
 };
 
+// Per-project browser headedness defaults:
+//  - WebGL2 (`browser`): headless by default; EXOJS_BROWSER_HEADED=1 opts into a
+//    visible browser for local debugging.
+//  - WebGPU (`browser-webgpu`): headed by default, because headless Chromium
+//    exposes no WebGPU adapter in this environment (phase 12 finding). The
+//    capability-smoke alias forces headless from the CLI via `--browser.headless`,
+//    which overrides this default; tests then skip gracefully (no adapter).
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
+const webgl2Headless = !headed; // headless unless explicitly opted into headed
+const webgpuHeadless = false; // headed by default; `--browser.headless` overrides
 
 export default defineConfig({
   test: {
@@ -50,7 +59,7 @@ export default defineConfig({
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: {
             enabled: true,
-            headless: !headed,
+            headless: webgl2Headless,
             provider: playwright({
               launchOptions: {
                 args: ['--enable-webgl', '--use-angle=swiftshader'],
@@ -62,9 +71,10 @@ export default defineConfig({
       },
 
       // ── Project 3: browser-webgpu — opt-in WebGPU via Playwright/Chromium ──
-      // Not part of verify:release. Run with: pnpm test:browser:webgpu
+      // Not part of verify:release. Run with: pnpm test:browser:webgpu (headed).
+      // Headed by default: headless Chromium exposes no WebGPU adapter here.
+      // Capability smoke (headless): pnpm test:browser:webgpu:headless.
       // Tests skip gracefully when WebGPU is unavailable.
-      // For local headed debugging: EXOJS_BROWSER_HEADED=1 pnpm test:browser:webgpu
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
@@ -74,7 +84,7 @@ export default defineConfig({
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,
-            headless: !headed,
+            headless: webgpuHeadless,
             provider: playwright({
               launchOptions: {
                 // --enable-unsafe-webgpu: enable Dawn/WebGPU in Chromium
