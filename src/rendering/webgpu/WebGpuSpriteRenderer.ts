@@ -383,15 +383,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
-    if (backend._passCoordinator.stencilActive) {
-      // MVP boundary: default-material Sprites, Meshes, and Graphics support the
-      // stencil pipeline variants; a custom-material Sprite does not yet. Throw at
-      // collection time so the clip scope's push/pop balances.
-      throw new Error(
-        'WebGPU geometry stencil clipping currently supports default-material Sprites, Meshes, and Graphics. A custom-material Sprite under a Geometry clip (RenderNode.clip with a Geometry clipShape) is not supported yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend instead.',
-      );
-    }
-
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
     const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
@@ -461,7 +452,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
       } else {
         pass.pushDebugGroup('SpriteMaterial (custom)');
-        this._drawCustomBatch(pass, device, backend, material, uniformBindGroup);
+        this._drawCustomBatch(pass, device, backend, material, uniformBindGroup, stencil);
         pass.popDebugGroup();
       }
 
@@ -763,6 +754,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     backend: WebGpuBackend,
     material: SpriteMaterial,
     projectionBindGroup: GPUBindGroup,
+    stencil: boolean,
   ): void {
     const resources = this._getOrCreateCustomResources(material, device);
     const baseTexture = this._currentBaseTexture ?? Texture.empty;
@@ -770,7 +762,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // Re-built every frame so mutations to material.uniforms.X are picked up.
     this._uploadUserUniforms(material, resources, device);
 
-    const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormat, device);
+    const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormat, stencil, device);
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, projectionBindGroup);
@@ -827,15 +819,21 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     return resources;
   }
 
-  private _getOrCreateCustomPipeline(resources: CustomSpriteResources, blendMode: BlendModes, format: GPUTextureFormat, device: GPUDevice): GPURenderPipeline {
-    const cacheKey = `${blendMode}:${format}`;
+  private _getOrCreateCustomPipeline(
+    resources: CustomSpriteResources,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil: boolean,
+    device: GPUDevice,
+  ): GPURenderPipeline {
+    const cacheKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
     const existing = resources.pipelines.get(cacheKey);
 
     if (existing !== undefined) {
       return existing;
     }
 
-    const pipeline = device.createRenderPipeline({
+    const descriptor: GPURenderPipelineDescriptor = {
       layout: resources.pipelineLayout,
       vertex: {
         module: resources.shaderModule,
@@ -869,7 +867,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       primitive: {
         topology: 'triangle-list',
       },
-    });
+    };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    const pipeline = device.createRenderPipeline(descriptor);
 
     resources.pipelines.set(cacheKey, pipeline);
 
