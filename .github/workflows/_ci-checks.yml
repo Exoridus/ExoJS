@@ -245,3 +245,44 @@ jobs:
         env:
           EXOJS_PACKAGE_PATH: ..
         run: pnpm site:build
+
+  required-ci:
+    name: Required CI
+    if: ${{ always() }}
+    needs: [typecheck, lint, unit-tests, browser-tests, package-verify, site-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate required job results
+        env:
+          TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          UNIT_TESTS_RESULT: ${{ needs['unit-tests'].result }}
+          BROWSER_TESTS_RESULT: ${{ needs['browser-tests'].result }}
+          PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
+          SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
+        run: |
+          echo "typecheck: $TYPECHECK_RESULT"
+          echo "lint: $LINT_RESULT"
+          echo "unit-tests: $UNIT_TESTS_RESULT"
+          echo "browser-tests: $BROWSER_TESTS_RESULT"
+          echo "package-verify: $PACKAGE_VERIFY_RESULT"
+          echo "site-build: $SITE_BUILD_RESULT"
+
+          failed=0
+          for result in \
+            "$TYPECHECK_RESULT" \
+            "$LINT_RESULT" \
+            "$UNIT_TESTS_RESULT" \
+            "$BROWSER_TESTS_RESULT" \
+            "$PACKAGE_VERIFY_RESULT" \
+            "$SITE_BUILD_RESULT"; do
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::At least one required CI job did not succeed."
+            exit 1
+          fi
