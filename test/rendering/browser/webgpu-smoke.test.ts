@@ -6,7 +6,6 @@
  * on hosts without a usable GPU adapter.
  *
  * Run via:  pnpm test:browser:webgpu
- * Headed:   EXOJS_BROWSER_HEADED=1 pnpm test:browser:webgpu
  */
 
 vi.mock('@/rendering/RendererRegistry', () => ({

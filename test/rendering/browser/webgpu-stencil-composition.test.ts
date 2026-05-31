@@ -10,7 +10,7 @@
  * Pixels are read back via drawImage onto a 2D canvas, and every render runs
  * inside pushErrorScope('validation') to catch any GPU validation error.
  *
- * Run via:  EXOJS_BROWSER_HEADED=1 pnpm test:browser:webgpu
+ * Run via:  pnpm test:browser:webgpu
  */
 
 import type { Application } from '@/core/Application';

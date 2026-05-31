@@ -130,7 +130,7 @@ jobs:
           slug: Exoridus/ExoJS
 
   browser-tests:
-    name: Browser Tests (WebGL2)
+    name: Browser Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -165,10 +165,10 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium firefox
 
-      - name: Browser tests (WebGL2 / Chromium)
-        run: pnpm test:browser
+      - name: Browser tests (WebGL2 + WebGPU)
+        run: xvfb-run -a pnpm test:browser
 
   package-verify:
     name: Package Build + Verify

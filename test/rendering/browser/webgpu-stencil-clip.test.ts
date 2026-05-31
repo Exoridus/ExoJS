@@ -15,7 +15,7 @@
  *
  * All tests skip gracefully when WebGPU is unavailable.
  *
- * Run via:  EXOJS_BROWSER_HEADED=1 pnpm test:browser:webgpu
+ * Run via:  pnpm test:browser:webgpu
  */
 
 import type { Application } from '@/core/Application';
