@@ -285,7 +285,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       // push/pop balances cleanly, rather than at flush time where the pop has
       // not yet run.
       throw new Error(
-        'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) of a custom-material Mesh is not supported yet on the WebGPU backend. Clip a default-material Mesh/Graphics or Sprite, use a Rectangle clipShape (scissor), or the WebGL2 backend.',
+        'WebGPU geometry stencil clipping currently supports default-material Sprites, Meshes, and Graphics. A custom-material Mesh under a Geometry clip (RenderNode.clip with a Geometry clipShape) is not supported yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend instead.',
       );
     }
 

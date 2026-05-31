@@ -384,10 +384,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     if (backend._passCoordinator.stencilActive) {
-      // MVP boundary: only default-material sprites support the stencil pipeline
-      // variant. Throw at collection time so the clip scope's push/pop balances.
+      // MVP boundary: default-material Sprites, Meshes, and Graphics support the
+      // stencil pipeline variants; a custom-material Sprite does not yet. Throw at
+      // collection time so the clip scope's push/pop balances.
       throw new Error(
-        'Geometric stencil clipping (RenderNode.clip with a Geometry clipShape) of a custom-material Sprite is not supported yet on the WebGPU backend. Clip a default-material Sprite, use a Rectangle clipShape (scissor), or the WebGL2 backend.',
+        'WebGPU geometry stencil clipping currently supports default-material Sprites, Meshes, and Graphics. A custom-material Sprite under a Geometry clip (RenderNode.clip with a Geometry clipShape) is not supported yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend instead.',
       );
     }
 
