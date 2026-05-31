@@ -9,34 +9,49 @@ const projectRoot = path.resolve(__dirname, '..');
 const requireFromSite = createRequire(import.meta.url);
 
 const resolvePackageRoot = (): string => {
+    const candidates: string[] = [];
+
     if (process.env.EXOJS_PACKAGE_PATH) {
-        return path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH);
+        candidates.push(path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH));
     }
 
     // Prefer Node's module resolver so both classic installs and npm workspace
     // hoisting layouts are handled without hard-coded node_modules assumptions.
     try {
         const packageJsonPath = requireFromSite.resolve('@codexo/exojs/package.json');
-        return path.dirname(packageJsonPath);
+        candidates.push(path.dirname(packageJsonPath));
     } catch {
         // Fall through to explicit path candidates.
     }
 
-    const candidates = [
+    candidates.push(
         path.resolve(projectRoot, 'node_modules', '@codexo', 'exojs'),
         path.resolve(projectRoot, 'node_modules', 'exojs'),
         path.resolve(projectRoot, '..', 'node_modules', '@codexo', 'exojs'),
         // Workspace fallback: root package folder itself.
-        path.resolve(projectRoot, '..'),
-    ];
+        path.resolve(projectRoot, '..')
+    );
 
-    for (const candidate of candidates) {
-        if (fs.existsSync(path.resolve(candidate, 'package.json'))) {
+    const uniqueCandidates = [...new Set(candidates)];
+    const hasPackageJson = (candidate: string): boolean => fs.existsSync(path.resolve(candidate, 'package.json'));
+    const hasDist = (candidate: string): boolean => fs.existsSync(path.resolve(candidate, 'dist'));
+
+    // `file:` dependencies can resolve to a virtual-store snapshot that does not
+    // contain `dist` if install happened before the library build. Prefer a
+    // candidate with both package.json and dist to avoid stale snapshots.
+    for (const candidate of uniqueCandidates) {
+        if (hasPackageJson(candidate) && hasDist(candidate)) {
             return candidate;
         }
     }
 
-    return candidates[0];
+    for (const candidate of uniqueCandidates) {
+        if (hasPackageJson(candidate)) {
+            return candidate;
+        }
+    }
+
+    return uniqueCandidates[0] ?? path.resolve(projectRoot, '..');
 };
 
 const packageRoot = resolvePackageRoot();
