@@ -2,7 +2,7 @@ name: Deploy Pages
 
 on:
   workflow_run:
-    workflows: ['Release']
+    workflows: ['Release', 'CI']
     types: [completed]
   workflow_dispatch:
 
@@ -22,7 +22,21 @@ env:
 jobs:
   build:
     name: Build site
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          (
+            github.event.workflow_run.name == 'Release' ||
+            (
+              github.event.workflow_run.name == 'CI' &&
+              github.event.workflow_run.event == 'push' &&
+              github.event.workflow_run.head_branch == 'main'
+            )
+          )
+        )
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
