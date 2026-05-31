@@ -167,6 +167,9 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium firefox
 
+      - name: Install Xvfb (headed Firefox WebGPU lane)
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
       - name: Browser tests (WebGL2 + WebGPU)
         run: xvfb-run -a pnpm test:browser
 
