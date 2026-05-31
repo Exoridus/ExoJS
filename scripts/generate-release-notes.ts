@@ -296,6 +296,11 @@ const parseCliArgs = (argv: string[]): ParsedCliArgs => {
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+    // A bare "--" separator may be forwarded by the package manager (pnpm v10+
+    // passes it through to the script rather than consuming it); ignore it.
+    if (arg === '--') {
+      continue;
+    }
     if (!supported.has(arg)) {
       fail(`Unknown argument "${arg}". Supported arguments: --tag, --repo, --out, --changelog, --template`);
     }
