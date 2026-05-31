@@ -10,8 +10,7 @@ updates:
     open-pull-requests-limit: 10
     cooldown:
       semver-patch-days: 3
-      semver-minor-days: 14
-      semver-major-days: 30
+      semver-minor-days: 7
     labels:
       - dependencies
     groups:
@@ -21,7 +20,6 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types:
-          - version-update:semver-minor
           - version-update:semver-major
 
   - package-ecosystem: npm
@@ -34,8 +32,7 @@ updates:
     open-pull-requests-limit: 10
     cooldown:
       semver-patch-days: 3
-      semver-minor-days: 14
-      semver-major-days: 30
+      semver-minor-days: 7
     labels:
       - dependencies
       - examples
@@ -46,7 +43,6 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types:
-          - version-update:semver-minor
           - version-update:semver-major
 
   - package-ecosystem: github-actions
@@ -57,7 +53,8 @@ updates:
       time: '06:30'
       timezone: 'Europe/Berlin'
     cooldown:
-      default-days: 3
+      semver-patch-days: 3
+      semver-minor-days: 7
     labels:
       - dependencies
       - github-actions
@@ -68,5 +65,4 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types:
-          - version-update:semver-minor
           - version-update:semver-major
