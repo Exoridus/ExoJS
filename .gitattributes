@@ -1,0 +1,36 @@
+# Enforce LF line endings for every text file on all platforms, independent of
+# each developer's core.autocrlf. This is what `.prettierrc` (endOfLine: "lf")
+# and the release `format:check` expect, so the working tree is deterministic on
+# Windows and Linux alike. Binary assets are marked explicitly so Git never
+# applies EOL normalization (or textual diffs/merges) to them.
+* text=auto eol=lf
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+
+# Fonts
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+
+# Audio
+*.ogg binary
+*.mp3 binary
+*.wav binary
+*.m4a binary
+
+# Video / Flash
+*.mp4 binary
+*.webm binary
+*.mov binary
+*.swf binary
+
+# Archives / misc binaries
+*.zip binary
+*.pdf binary

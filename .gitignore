@@ -24,6 +24,7 @@ test/perf/results/*.md
 !.editorconfig
 !.eslintignore
 !.eslintrc.json
+!.gitattributes
 !.gitignore
 !.gitkeep
 !.gitmojirc.json
