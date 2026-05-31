@@ -30,6 +30,8 @@ import { Mesh } from '@/rendering/mesh/Mesh';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
+import { BitmapText, type BmFontData } from '@/rendering/text/BitmapText';
+import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
@@ -90,6 +92,25 @@ const createQuadMesh = (size: number, color: Color): Mesh => {
   mesh.tint = color;
 
   return mesh;
+};
+
+// A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas page,
+// placed at the line origin so its quad covers (0,0)–(size,size). The atlas page
+// is a solid-colour texture, so the colour-atlas shader (msdf = false) emits that
+// colour over the default white fill tint — deterministic pixels with no runtime
+// font rasterisation or atlas-upload timing.
+const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
+  const texture = createSolidTexture(color, size);
+  const fontData: BmFontData = {
+    pages: ['atlas_0.png'],
+    chars: new Map([[65, { x: 0, y: 0, width: size, height: size, xOffset: 0, yOffset: 0, xAdvance: size, page: 0 }]]),
+    kernings: new Map(),
+    // base === lineHeight ⇒ yBearing 0 ⇒ the glyph top sits at the line origin.
+    lineHeight: size,
+    base: size,
+  };
+
+  return { text: new BitmapText('A', new BmFont(fontData, [texture])), texture };
 };
 
 // Custom MeshMaterial WGSL honouring the mesh contract: group(0) auto-bound mesh
@@ -728,6 +749,35 @@ describe('WebGPU geometric (stencil) clipping', () => {
       // logical x + y < 32 ⇒ physical px + py < 64.
       expectPixelNear(readPixel(10, 10), [255, 0, 0, 255]); // logical (5, 5): inside
       expectPixelNear(readPixel(54, 54), [0, 0, 0, 255]); // logical (27, 27): outside
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a BitmapText renders inside a Geometry stencil clip', async ctx => {
+    const backend = await setupBackend(ctx);
+    const root = new Container();
+    const clipped = new Container();
+    const { text, texture } = createSolidBitmapText('#ff0000', 64);
+
+    try {
+      text.setPosition(0, 0);
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(text);
+      root.addChild(clipped);
+
+      await renderClipped(ctx, backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Inside the triangle (x + y << 48): the red glyph survives.
+      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
+      // Outside the triangle (x + y >> 48): clipped to the black clear.
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
