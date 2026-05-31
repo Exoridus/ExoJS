@@ -1505,12 +1505,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._device!.queue.writeBuffer(resources.meshUniformBuffer!, drawCursor * slotBytes, data);
   }
 
-  private _getOrCreateCustomPipeline(
-    resources: CustomShaderResources,
-    blendMode: BlendModes,
-    format: GPUTextureFormat,
-    stencil: boolean,
-  ): GPURenderPipeline {
+  private _getOrCreateCustomPipeline(resources: CustomShaderResources, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
     // The stencil dimension keeps the clip and no-clip variants distinct,
     // mirroring the default and static-batch caches: a stencil pipeline carries
     // depth/stencil state and is only valid in a pass with the matching
