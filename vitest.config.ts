@@ -27,6 +27,15 @@ const webgpuHeadless = false; // headed by default; `--browser.headless` overrid
 
 export default defineConfig({
   test: {
+    // Coverage is a root-only option in Vitest's multi-project setup; a
+    // `coverage` block inside a project config is silently ignored, which
+    // would fall back to the default v8 provider. Keep it here.
+    coverage: {
+      provider: 'istanbul',
+      reporter: ['lcov', 'clover', 'text-summary'],
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.d.ts'],
+    },
     projects: [
       // ── Project 1: jsdom — all unit/integration tests ─────────────────
       {
@@ -40,12 +49,6 @@ export default defineConfig({
           include: ['test/**/*.test.ts'],
           exclude: ['test/rendering/browser/**/*.test.ts'],
           testTimeout: 15_000,
-          coverage: {
-            provider: 'istanbul',
-            reporter: ['lcov', 'clover', 'text-summary'],
-            include: ['src/**/*.ts'],
-            exclude: ['src/**/*.d.ts'],
-          },
         },
       },
 
