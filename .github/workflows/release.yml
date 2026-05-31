@@ -12,11 +12,7 @@ on:
 
 permissions:
   contents: write
-  # Required so npm-cli can mint an OIDC-token from GitHub at publish
-  # time. The token both (a) authenticates against npm via the package's
-  # configured Trusted Publisher (no static NPM_TOKEN secret), and
-  # (b) signs the provenance attestation that lands on the npm version
-  # page.
+  # Required so npm-cli can mint an OIDC token from GitHub at publish time.
   id-token: write
 
 concurrency:
@@ -28,12 +24,12 @@ env:
   # and `main` for workflow_dispatch. The dispatch input takes priority so
   # an explicitly-passed tag always wins.
   TARGET_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  NODE_VERSION: '24.x'
+  PNPM_VERSION: '11.4.0'
 
 jobs:
-  # Run the full CI gate (typecheck → lint → test → build → site-build) at
-  # the exact tagged commit before any publish attempt. Uses Node 22 — the
-  # declared LTS target — so the library is verified against the version
-  # consumers are most likely running.
+  # Run the full CI gate (typecheck -> lint -> test -> build -> site-build) at
+  # the exact tagged commit before any publish attempt.
   checks:
     name: Verify at tag
     permissions:
@@ -41,13 +37,15 @@ jobs:
       pull-requests: write
     uses: ./.github/workflows/_ci-checks.yml
     with:
-      node-version: '22'
+      node-version: '24.x'
+      pnpm-version: '11.4.0'
       ref: ${{ github.event.inputs.tag || github.ref_name }}
 
   publish:
     name: Publish to npm
     needs: checks
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -55,18 +53,20 @@ jobs:
           fetch-depth: 0
           ref: ${{ env.TARGET_TAG }}
 
-      # Node 24 ships with npm 11+ which is required for Trusted Publisher
-      # OIDC authentication. We use Node 22 in the checks job above (library
-      # compat) and Node 24 here (npm toolchain requirement).
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
           registry-url: 'https://registry.npmjs.org'
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts

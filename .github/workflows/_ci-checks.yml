@@ -1,6 +1,6 @@
 name: CI Checks
 
-# Reusable workflow: typecheck → lint → test → build → verify:exports → pack,
+# Reusable workflow: typecheck -> lint -> test -> build -> verify:exports -> pack,
 # then (needs: verify) a site build to confirm the Astro site compiles.
 #
 # Called by ci.yml and release.yml so both use exactly the same gate.
@@ -11,21 +11,29 @@ on:
       node-version:
         description: 'Node.js version passed to setup-node'
         type: string
-        default: '22'
+        default: '24.x'
       ref:
         description: 'Git ref to check out (empty = triggering commit)'
         type: string
         default: ''
+      pnpm-version:
+        description: 'pnpm version spec (e.g. 11.4.0, 11, latest)'
+        type: string
+        default: '11.4.0'
 
 permissions:
   contents: read
   # Codecov action posts a coverage comment on PRs.
   pull-requests: write
 
+env:
+  CI: true
+
 jobs:
   verify:
     name: Typecheck, Lint, Test, Build
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -33,13 +41,18 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node-version }}
+          check-latest: true
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -54,12 +67,21 @@ jobs:
         run: pnpm test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: ./coverage/lcov.info
           flags: unit
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: Exoridus/ExoJS
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -80,6 +102,7 @@ jobs:
     name: Site build
     needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -87,13 +110,18 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node-version }}
+          check-latest: true
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       # Root install + build are required because site/package.json
       # depends on the library via "file:.." and the vendor:sync script
