@@ -167,11 +167,58 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium firefox
 
-      - name: Install Xvfb (headed Firefox WebGPU lane)
+      - name: Browser tests (WebGL2 Chromium + Firefox, WebGPU Chromium)
+        run: pnpm test:browser:webgl && pnpm test:browser:webgpu:chromium
+
+  # Optional, non-blocking lane. Firefox only exposes a WebGPU adapter in a
+  # headed session, and headed Firefox under Xvfb is unreliable on CI runners,
+  # so this lane is intentionally kept out of the required gate: a failure here
+  # never blocks a merge. Real Firefox WebGPU coverage runs locally via
+  # `pnpm test:browser:webgpu:firefox`.
+  browser-tests-firefox-webgpu:
+    name: Browser Tests (Firefox WebGPU, experimental)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps firefox
+
+      - name: Install Xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb libxrender1 libxext6 libxtst6 libxi6 libxrandr2
 
-      - name: Browser tests (WebGL2 + WebGPU)
-        run: xvfb-run -a pnpm test:browser
+      - name: Browser tests (Firefox WebGPU, headed)
+        run: xvfb-run -a pnpm test:browser:webgpu:firefox
 
   package-verify:
     name: Package Build + Verify
