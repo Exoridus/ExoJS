@@ -11,14 +11,23 @@ interface RenderInstructionSlot {
   readonly passInstructionIndex: number;
 }
 
+interface RenderGroupPlaybackContext {
+  readonly groupInstructionCount: number;
+  readonly firstPassInstructionIndex: number;
+  readonly lastPassInstructionIndex: number;
+  readonly passGroupIndex: number;
+}
+
 interface RenderPlanPlaybackContext {
   readonly instructionSlots: WeakMap<RenderInstruction, RenderInstructionSlot>;
   passInstructionIndex: number;
+  passGroupIndex: number;
 }
 
 interface RenderPlanPlaybackHooks {
   _beginDrawPlan?(nodeCount: number): void;
   _beginRenderGroup?(group: RenderGroup): void;
+  _prepareRenderGroupUpload?(group: RenderGroup, context: RenderGroupPlaybackContext): void;
   _prepareRenderInstructionSlot?(instruction: RenderInstruction, slot: RenderInstructionSlot): void;
   _prepareDrawCommand?(instruction: RenderInstruction): void;
   _endRenderGroup?(group: RenderGroup): void;
@@ -82,7 +91,13 @@ export class RenderPlanPlayer {
         if (currentGroup === null) {
           currentGroup = groups[groupCursor];
           currentInstructionIndex = 0;
+
           hooks._beginRenderGroup?.(currentGroup);
+          hooks._prepareRenderGroupUpload?.(
+            currentGroup,
+            this._createRenderGroupPlaybackContext(currentGroup.instructions.length, context.passInstructionIndex, context.passGroupIndex),
+          );
+          context.passGroupIndex++;
         }
 
         const slot = this._createRenderInstructionSlot(currentInstructionIndex, context.passInstructionIndex);
@@ -115,7 +130,21 @@ export class RenderPlanPlayer {
     return {
       instructionSlots: new WeakMap<RenderInstruction, RenderInstructionSlot>(),
       passInstructionIndex: 0,
+      passGroupIndex: 0,
     };
+  }
+
+  private static _createRenderGroupPlaybackContext(
+    groupInstructionCount: number,
+    firstPassInstructionIndex: number,
+    passGroupIndex: number,
+  ): RenderGroupPlaybackContext {
+    return Object.freeze({
+      groupInstructionCount,
+      firstPassInstructionIndex,
+      lastPassInstructionIndex: firstPassInstructionIndex + groupInstructionCount - 1,
+      passGroupIndex,
+    });
   }
 
   private static _createRenderInstructionSlot(groupInstructionIndex: number, passInstructionIndex: number): RenderInstructionSlot {
