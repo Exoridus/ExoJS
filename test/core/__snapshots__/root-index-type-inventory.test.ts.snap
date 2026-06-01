@@ -182,6 +182,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "GradientAxis: type alias",
   "GradientStop: interface",
   "GradientToTextureOptions: interface",
+  "GradientType: type alias",
   "GranularFilter: class",
   "GranularFilterOptions: interface",
   "Graphics: class",
