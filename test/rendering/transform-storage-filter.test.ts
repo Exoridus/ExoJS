@@ -106,6 +106,8 @@ const playFiltered = (scope: GroupScope): FilteredPlayback => {
         if (drawCommandUsesSharedTransform(command, this as unknown as RenderBackend)) {
           buffer.write(command.nodeIndex, command.drawable.getGlobalTransform(), command.drawable.tint);
           writtenNodeIndices.push(command.nodeIndex);
+        } else {
+          buffer.recordSkippedWrite();
         }
       }
     },
@@ -232,5 +234,52 @@ describe('render-group upload skips non-consuming transform writes', () => {
     expect(writtenNodeIndices).toEqual([]);
     expect(buffer.count).toBe(0);
     expect(drawOrder).toEqual([t1, t2]);
+  });
+});
+
+describe('render-group upload records transform write stats', () => {
+  test('consuming commands increment the write count, non-consuming the skip count', () => {
+    const { scope } = buildMixedScope();
+    const { buffer } = playFiltered(scope);
+
+    // Three Sprite/Mesh-like draws (nodes 0, 1, 3) are written; the two
+    // Text/Particle-like draws (nodes 2, 4) are skipped.
+    expect(buffer.writeCount).toBe(3);
+    expect(buffer.skippedWriteCount).toBe(2);
+  });
+
+  test('a group of only non-consuming draws performs zero writes and records every skip', () => {
+    const t1 = new NonConsumingDrawable(10, 20, new Color());
+    const t2 = new NonConsumingDrawable(30, 40, new Color());
+    const t3 = new NonConsumingDrawable(50, 60, new Color());
+    const scope = groupScope([
+      drawEntry(createDrawCommand(t1, 0, 1, 1)),
+      drawEntry(createDrawCommand(t2, 1, 1, 1)),
+      drawEntry(createDrawCommand(t3, 2, 1, 1)),
+    ]);
+
+    const { buffer } = playFiltered(scope);
+
+    expect(buffer.writeCount).toBe(0);
+    expect(buffer.skippedWriteCount).toBe(3);
+  });
+
+  test('a group of only consuming draws records no skips', () => {
+    const a = new ConsumingDrawable(10, 20, new Color());
+    const b = new ConsumingDrawable(30, 40, new Color());
+    const scope = groupScope([drawEntry(createDrawCommand(a, 0, 1, 1)), drawEntry(createDrawCommand(b, 1, 1, 1))]);
+
+    const { buffer } = playFiltered(scope);
+
+    expect(buffer.writeCount).toBe(2);
+    expect(buffer.skippedWriteCount).toBe(0);
+  });
+
+  test('write count covers exactly the written node indices', () => {
+    const { scope } = buildMixedScope();
+    const { buffer, writtenNodeIndices } = playFiltered(scope);
+
+    // The counter must not drift from the actual rows packed into the buffer.
+    expect(buffer.writeCount).toBe(writtenNodeIndices.length);
   });
 });

@@ -12,6 +12,15 @@ export class WebGpuTransformStorage {
   private _storageHash = 0;
   private _storageCount = -1;
 
+  /**
+   * Underlying shared transform buffer. Exposed for internal stats / tests
+   * (write, skip and upload counters); not part of any public surface.
+   * @internal
+   */
+  public get buffer(): TransformBuffer {
+    return this._buffer;
+  }
+
   public begin(nodeCount: number): void {
     this._buffer.begin(nodeCount);
   }
@@ -20,6 +29,15 @@ export class WebGpuTransformStorage {
     const drawable = command.drawable;
 
     this._buffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
+  }
+
+  /**
+   * Record that a draw command's transform write was skipped because its
+   * renderer opts out of the shared transform storage. Stats only.
+   * @internal
+   */
+  public recordSkippedWrite(): void {
+    this._buffer.recordSkippedWrite();
   }
 
   /**
@@ -58,6 +76,7 @@ export class WebGpuTransformStorage {
       const bytes = snapshot.count * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
 
       device.queue.writeBuffer(this._storageBuffer, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, bytes);
+      this._buffer.recordUpload(snapshot.count);
       this._storageHash = snapshot.hash;
       this._storageCount = snapshot.count;
     }

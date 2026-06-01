@@ -301,6 +301,8 @@ export class WebGl2Backend implements RenderBackend {
 
       if (drawCommandUsesSharedTransform(command, this)) {
         this._writeTransformCommand(command);
+      } else {
+        this._transformBuffer.recordSkippedWrite();
       }
     }
   }
@@ -682,6 +684,7 @@ export class WebGl2Backend implements RenderBackend {
 
     if (snapshot.changed || snapshot.count !== this._transformTextureCount || snapshot.hash !== this._transformTextureHash) {
       nextTransformTexture.commitRect(0, 0, 3, snapshot.count);
+      this._transformBuffer.recordUpload(snapshot.count);
       this._transformTextureHash = snapshot.hash;
       this._transformTextureCount = snapshot.count;
     }
