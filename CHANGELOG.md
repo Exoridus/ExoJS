@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added / Improved
 
+- RenderInstruction / RenderGroup foundation: an internal batching and reordering layer between scene traversal and GPU submit was wired for WebGL2, enabling group-level transform-buffer upload boundaries and draw-call reduction.
 - WebGPU geometric stencil clipping (`RenderNode.clip` with a `Geometry` `clipShape`) now covers custom-material `Sprite`, custom-material `Mesh`, `Text` / `BitmapText`, and `ParticleSystem`, in addition to the existing default-material `Sprite`, default-material `Mesh`, and `Graphics` paths.
 - Notes that still described those content types as unsupported under WebGPU geometry clips were updated to match the current renderer coverage.
 - Sprite rendering now uses shared transform storage on WebGL2/WebGPU.
