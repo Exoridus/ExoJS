@@ -10,6 +10,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - WebGPU geometric stencil clipping (`RenderNode.clip` with a `Geometry` `clipShape`) now covers custom-material `Sprite`, custom-material `Mesh`, `Text` / `BitmapText`, and `ParticleSystem`, in addition to the existing default-material `Sprite`, default-material `Mesh`, and `Graphics` paths.
 - Notes that still described those content types as unsupported under WebGPU geometry clips were updated to match the current renderer coverage.
+- Sprite rendering now uses shared transform storage on WebGL2/WebGPU.
+- Transform writes are skipped for renderer paths that do not consume shared transform storage.
+- Internal transform write/upload counters and a micro-benchmark were added to guard the optimization.
 
 ## [0.10.0] - 2026-05-31
 
