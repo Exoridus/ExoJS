@@ -252,4 +252,42 @@ describe('WebGPU sprite transform storage', () => {
       backend.destroy();
     }
   });
+
+  test('sprites in separate render groups (different z-indices) coalesce into one draw call', async ctx => {
+    // Different z-indices cause the optimizer to assign different groupIndices,
+    // but the sprite renderer coalesces them into a single instanced draw
+    // because it tracks blend-mode / texture / material — not render-group
+    // boundaries. Each sprite fetches its own transform row independently via
+    // its stable nodeIndex, so non-contiguous slots are handled correctly.
+    const backend = await setupBackend(ctx);
+    const texture = createSolidTexture('#ff0000', 8);
+    const root = new Container();
+    const a = new Sprite(texture);
+    const b = new Sprite(texture);
+
+    try {
+      a.setPosition(8, 8);
+      a.zIndex = 0;
+      b.setPosition(40, 40);
+      b.zIndex = 5;
+      root.addChild(a, b);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      expect(backend.stats.drawCalls).toBe(1);
+
+      const readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(10, 10), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(42, 42), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(25, 25), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
 });

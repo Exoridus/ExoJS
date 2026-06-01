@@ -8,6 +8,7 @@ import { Mesh } from '@/rendering/mesh/Mesh';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
+import { BlendModes } from '@/rendering/types';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
 const shaderSources = vi.hoisted(() => ({
@@ -505,6 +506,104 @@ describe('RenderPlan WebGL2 browser regressions', () => {
     } finally {
       root.destroy();
       gradientTexture.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('sprites in separate render groups (different z-indices) coalesce into one draw call', async () => {
+    // Different z-indices make the optimizer assign different groupIndices,
+    // producing two logical RenderGroups. The sprite renderer coalesces them
+    // into a single instanced draw because it tracks blend-mode / texture /
+    // material — not render-group boundaries. Each sprite's transform is
+    // resolved independently from the shared buffer via its stable nodeIndex,
+    // so non-contiguous nodeIndex values are handled correctly.
+    const { backend } = await createBackend();
+    const texture = createSolidTexture('#ff0000', 8, 8);
+    const root = new Container();
+    const a = new Sprite(texture);
+    const b = new Sprite(texture);
+
+    try {
+      a.setPosition(8, 8);
+      a.zIndex = 0;
+      b.setPosition(40, 40);
+      b.zIndex = 5;
+      root.addChild(a, b);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(readPixel(backend, 10, 10), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 42, 42), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 25, 25), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('sprites with different blend modes produce separate draw calls', async () => {
+    // A blend-mode change forces the renderer to flush its pending batch and
+    // begin a new one, so two sprites with incompatible blend modes always
+    // produce two separate instanced draw calls.
+    const { backend } = await createBackend();
+    const textureA = createSolidTexture('#ff0000', 8, 8);
+    const textureB = createSolidTexture('#ff0000', 8, 8);
+    const root = new Container();
+    const a = new Sprite(textureA);
+    const b = new Sprite(textureB);
+
+    try {
+      a.setPosition(8, 8);
+      b.setPosition(40, 8);
+      b.blendMode = BlendModes.Additive;
+      root.addChild(a, b);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(2);
+      expectPixelNear(readPixel(backend, 10, 10), [255, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      textureA.destroy();
+      textureB.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('sprites before and after a filter boundary are separate draw calls', async () => {
+    // A filter (barrier) on an intermediate container forces the plan player
+    // to execute a render-to-texture + compositing pass for the filtered
+    // content. The render-target switch flushes the active sprite renderer,
+    // so the sprites outside the barrier and those inside it are separate
+    // GPU draw submissions.
+    const { backend } = await createBackend();
+    const texture = createSolidTexture('#ff0000', 8, 8);
+    const root = new Container();
+    const spriteA = new Sprite(texture);
+    const filtered = new Container();
+    const spriteB = new Sprite(texture);
+    const spriteC = new Sprite(texture);
+
+    try {
+      spriteA.setPosition(4, 4);
+      spriteB.setPosition(20, 20);
+      spriteC.setPosition(36, 36);
+      filtered.addFilter(new ColorFilter(Color.white));
+      filtered.addChild(spriteB);
+      root.addChild(spriteA, filtered, spriteC);
+
+      render(backend, root);
+
+      // spriteA and spriteC are outside the filter; spriteB is inside.
+      // Each group crossing a render-target boundary is a separate draw.
+      expect(backend.stats.drawCalls).toBeGreaterThanOrEqual(2);
+      expectPixelNear(readPixel(backend, 6, 6), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 22, 22), [255, 0, 0, 255]);
+    } finally {
+      root.destroy();
       texture.destroy();
       backend.destroy();
     }
