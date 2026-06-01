@@ -59,6 +59,7 @@ export default defineConfig({
             headless: webgl2Headless,
             provider: playwright({
               launchOptions: {
+                channel: 'chromium',
                 args: ['--enable-webgl', '--use-angle=swiftshader'],
               },
             }),
@@ -84,13 +85,13 @@ export default defineConfig({
         },
       },
 
-      // ── Project 4: browser-webgpu-chromium — WebGPU via Chromium new headless ──
+      // ── Project 4: browser-webgpu — WebGPU via Chromium new headless ──
       // New headless Chromium exposes a WebGPU adapter via swiftshader.
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
         test: {
-          name: 'browser-webgpu-chromium',
+          name: 'browser-webgpu',
           globals: true,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
@@ -98,6 +99,7 @@ export default defineConfig({
             headless: true,
             provider: playwright({
               launchOptions: {
+                channel: 'chromium',
                 args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
               },
             }),
