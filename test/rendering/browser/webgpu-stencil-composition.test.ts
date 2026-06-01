@@ -118,14 +118,9 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12)
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
 // dropped mid-test ("Instance dropped in popErrorScope"). Treat that as an
 // unavailable-adapter skip rather than a failure, matching setupBackend().
-const isDeviceLoss = (error: unknown): boolean =>
-  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
-const withValidation = async (
-  ctx: { skip: (reason: string) => void },
-  backend: WebGpuBackend,
-  run: () => void,
-): Promise<void> => {
+const withValidation = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, run: () => void): Promise<void> => {
   const device = getBackendDeviceOrSkip(ctx, backend);
 
   if (!device) {

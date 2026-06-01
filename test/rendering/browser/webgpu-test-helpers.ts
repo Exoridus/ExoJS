@@ -7,10 +7,7 @@ export interface BrowserWebGpuTestContext {
 const missingDeviceReason = 'WebGPU unavailable: backend has no device';
 const uninitializedDeviceMessage = 'WebGPU device is not initialized yet.';
 
-export const getBackendDeviceOrSkip = (
-  ctx: BrowserWebGpuTestContext,
-  backend: WebGpuBackend,
-): GPUDevice | null => {
+export const getBackendDeviceOrSkip = (ctx: BrowserWebGpuTestContext, backend: WebGpuBackend): GPUDevice | null => {
   try {
     const device = backend.device as GPUDevice | undefined;
 
