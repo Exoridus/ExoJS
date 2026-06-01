@@ -36,6 +36,8 @@ import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+
 type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
@@ -238,7 +240,11 @@ const renderClipped = async (
   backend: WebGpuBackend,
   root: RenderNode,
 ): Promise<void> => {
-  const device = backend.device;
+  const device = getBackendDeviceOrSkip(ctx, backend);
+
+  if (!device) {
+    return;
+  }
 
   device.pushErrorScope('validation');
 

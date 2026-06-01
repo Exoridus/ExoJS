@@ -23,6 +23,8 @@ import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+
 type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
@@ -124,7 +126,11 @@ const withValidation = async (
   backend: WebGpuBackend,
   run: () => void,
 ): Promise<void> => {
-  const device = backend.device;
+  const device = getBackendDeviceOrSkip(ctx, backend);
+
+  if (!device) {
+    return;
+  }
 
   device.pushErrorScope('validation');
 
@@ -276,13 +282,14 @@ describe('WebGPU stencil composition', () => {
 // Render a clipped subtree into an off-screen RenderTexture, then draw that
 // texture as a full-screen sprite into the canvas so it can be read back.
 const renderClipIntoTextureAndSample = async (
+  ctx: { skip: (reason: string) => void },
   backend: WebGpuBackend,
   context: RenderingContext,
   clipped: RenderNode,
 ): Promise<(x: number, y: number) => RgbaTuple> => {
   let readPixel!: (x: number, y: number) => RgbaTuple;
 
-  await withValidation(backend, () => {
+  await withValidation(ctx, backend, () => {
     const offscreen = context.renderTo(clipped, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
     const display = new Sprite(offscreen);
 

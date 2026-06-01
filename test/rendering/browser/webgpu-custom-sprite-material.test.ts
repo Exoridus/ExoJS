@@ -20,6 +20,8 @@ import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+
 // Fragment-only WGSL: the engine prepends the canonical sprite vertex module
 // (spriteVertexWgsl), which declares VertexOutput, the group(0) projection, and
 // the group(1) base texture (`u_texture`/`u_sampler`). The author adds the
@@ -88,6 +90,14 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
     await backend.initialize();
 
+    const device = getBackendDeviceOrSkip(ctx, backend);
+
+    if (!device) {
+      backend.destroy();
+
+      return;
+    }
+
     const texture = createSolidTexture(128, 128, 128);
     const material = createMaterial();
     const root = new Container();
@@ -98,8 +108,6 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       sprite.setPosition(8 + index * 14, 16);
       root.addChild(sprite);
     });
-
-    const device = backend.device;
 
     device.pushErrorScope('validation');
 
