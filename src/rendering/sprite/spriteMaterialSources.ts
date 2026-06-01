@@ -12,10 +12,10 @@
  * projection binding exactly as the default sprite path does, so a custom
  * material keeps the single `drawArraysInstanced` / `drawIndexed` batch.
  *
- * The WebGL2 path (locations 0, 3, 4, 5, 6) fetches each instance's world
- * transform from the shared transform buffer (`u_transforms`) keyed by
- * `a_nodeIndex`; the WGSL path still packs the transform rows inline
- * (locations 0–5) pending the WebGPU transform-buffer migration.
+ * Both paths (locations 0, 3, 4, 5, 6) fetch each instance's world transform
+ * from the shared transform storage keyed by `a_nodeIndex` / `nodeIndex`: the
+ * WebGL2 path samples the `u_transforms` texture, the WGSL path reads the
+ * `transforms` storage buffer (group(0) binding(1)).
  *
  * A custom fragment receives the interpolated `v_texcoord` and premultiplied
  * `v_color`, plus the per-batch base texture bound as `u_texture` (WebGL2 unit 0
@@ -80,11 +80,11 @@ void main(void) {
 /**
  * WGSL vertex stage + shared bindings for the custom sprite-material path.
  * Prepend to a material's fragment WGSL: it declares the per-instance
- * `VertexInput` (locations 0–5), the `VertexOutput` a custom `@fragment`
- * consumes, the group(0) projection uniform, the group(1) base texture and
- * sampler (`u_texture` / `u_sampler`), and the `vertexMain` entry point. The
- * fragment author adds their group(2) bindings and a `fragmentMain` reading
- * `VertexOutput`.
+ * `VertexInput` (locations 0, 3, 4, 5, 6), the `VertexOutput` a custom
+ * `@fragment` consumes, the group(0) projection uniform + shared transform
+ * storage buffer, the group(1) base texture and sampler (`u_texture` /
+ * `u_sampler`), and the `vertexMain` entry point. The fragment author adds their
+ * group(2) bindings and a `fragmentMain` reading `VertexOutput`.
  * @internal
  */
 export const spriteVertexWgsl = `
@@ -92,18 +92,24 @@ struct ProjectionUniforms {
     matrix: mat4x4<f32>,
 };
 
+struct TransformSlot {
+    m0: vec4<f32>,
+    m1: vec4<f32>,
+    m2: vec4<f32>,
+};
+
 @group(0) @binding(0) var<uniform> projection: ProjectionUniforms;
+@group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
 
 @group(1) @binding(0) var u_texture: texture_2d<f32>;
 @group(1) @binding(1) var u_sampler: sampler;
 
 struct VertexInput {
     @location(0) localBounds: vec4<f32>,
-    @location(1) transformAB: vec3<f32>,
-    @location(2) transformCD: vec3<f32>,
     @location(3) uvBounds: vec4<f32>,
     @location(4) color: vec4<f32>,
     @location(5) textureSlot: u32,
+    @location(6) nodeIndex: u32,
 };
 
 struct VertexOutput {
@@ -122,8 +128,12 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
     let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
-    let worldX = input.transformAB.x * localX + input.transformAB.y * localY + input.transformAB.z;
-    let worldY = input.transformCD.x * localX + input.transformCD.y * localY + input.transformCD.z;
+    // Fetch this instance's world transform from the shared storage buffer,
+    // keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0). (m2 carries the
+    // node tint, unused here — the sprite keeps its own per-instance color.)
+    let slot = transforms[input.nodeIndex];
+    let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
+    let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
     output.position = projection.matrix * vec4<f32>(worldX, worldY, 0.0, 1.0);
 

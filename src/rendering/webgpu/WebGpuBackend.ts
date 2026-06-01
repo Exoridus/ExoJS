@@ -651,6 +651,19 @@ export class WebGpuBackend implements RenderBackend {
     return this._getTransformStorage().getBuffer(this.device, minCount);
   }
 
+  /**
+   * Append a drawable's world transform (+ tint) to the shared transform storage
+   * and return the slot it was written to. Used by instanced renderers for draws
+   * that arrive without a render-group upload boundary — i.e. a direct
+   * `backend.draw(drawable)` outside the plan player (`activeDrawCommand === null`),
+   * where no stable `nodeIndex` was assigned. Each call allocates a fresh slot, so
+   * a batch of synthetic draws does not collide on a single row.
+   * @internal
+   */
+  public _pushTransform(drawable: Drawable): number {
+    return this._getTransformStorage().push(drawable);
+  }
+
   private _setActiveRenderer(renderer: Renderer | null): void {
     if (this._renderer !== renderer) {
       this._flushActiveRenderer();
