@@ -50,39 +50,46 @@ export class WebGpuTransformStorage {
     return this._buffer.push(drawable.getGlobalTransform(), drawable.tint);
   }
 
+  /**
+   * Pre-allocate (or grow) the GPU storage buffer to hold at least
+   * `recordCount` transform slots. Called once before render-plan playback so
+   * that later per-group flushes never trigger a mid-frame reallocation.
+   *
+   * If the buffer already covers `recordCount` this is a no-op — no GPU
+   * objects are destroyed or re-created. Capacity only grows, never shrinks.
+   * @internal
+   */
+  public reserve(device: GPUDevice, recordCount: number): void {
+    const minCount = Math.max(1, recordCount);
+    const requiredBytes = minCount * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
+
+    if (this._storageBuffer !== null && requiredBytes <= this._storageCapacity) {
+      return;
+    }
+
+    this._growBuffer(device, requiredBytes);
+  }
+
   public getBuffer(device: GPUDevice, minCount: number): { readonly buffer: GPUBuffer; readonly count: number } {
     const requiredCount = Math.max(1, minCount);
     const requiredBytes = requiredCount * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
     const snapshot = this._buffer.commitSnapshot(requiredCount);
 
     if (this._storageBuffer === null || requiredBytes > this._storageCapacity) {
-      let nextCapacity = Math.max(this._storageCapacity, slotFloatCount * Float32Array.BYTES_PER_ELEMENT);
-
-      while (nextCapacity < requiredBytes) {
-        nextCapacity *= 2;
-      }
-
-      this._storageBuffer?.destroy();
-      this._storageBuffer = device.createBuffer({
-        size: nextCapacity,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      });
-      this._storageCapacity = nextCapacity;
-      this._storageHash = 0;
-      this._storageCount = -1;
+      this._growBuffer(device, requiredBytes);
     }
 
     if (snapshot.changed || snapshot.hash !== this._storageHash || snapshot.count !== this._storageCount) {
       const bytes = snapshot.count * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
 
-      device.queue.writeBuffer(this._storageBuffer, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, bytes);
+      device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, bytes);
       this._buffer.recordUpload(snapshot.count);
       this._storageHash = snapshot.hash;
       this._storageCount = snapshot.count;
     }
 
     return {
-      buffer: this._storageBuffer,
+      buffer: this._storageBuffer!,
       count: snapshot.count,
     };
   }
@@ -91,6 +98,23 @@ export class WebGpuTransformStorage {
     this._storageBuffer?.destroy();
     this._storageBuffer = null;
     this._storageCapacity = 0;
+    this._storageHash = 0;
+    this._storageCount = -1;
+  }
+
+  private _growBuffer(device: GPUDevice, requiredBytes: number): void {
+    let nextCapacity = Math.max(this._storageCapacity, slotFloatCount * Float32Array.BYTES_PER_ELEMENT);
+
+    while (nextCapacity < requiredBytes) {
+      nextCapacity *= 2;
+    }
+
+    this._storageBuffer?.destroy();
+    this._storageBuffer = device.createBuffer({
+      size: nextCapacity,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this._storageCapacity = nextCapacity;
     this._storageHash = 0;
     this._storageCount = -1;
   }

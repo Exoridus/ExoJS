@@ -26,6 +26,7 @@ import { Container } from '@/rendering/Container';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
+import { BlendModes } from '@/rendering/types';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
@@ -249,6 +250,63 @@ describe('WebGPU sprite transform storage', () => {
     } finally {
       root.destroy();
       texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('sprites with different blend modes produce separate draw calls without mid-frame buffer reallocation', async ctx => {
+    // Sprites with different blend modes cannot batch together and trigger
+    // separate renderer flushes. Before transform-storage pre-reservation, the
+    // second flush could allocate a larger GPU buffer while the first flush's
+    // command buffer still referenced the old one, causing WebGPU validation
+    // errors. With reserve() called in _beginDrawPlan the buffer is sized for
+    // the full plan once, so no reallocation happens between flushes.
+    const backend = await setupBackend(ctx);
+    const textureA = createSolidTexture('#ff0000', 12);
+    const textureB = createSolidTexture('#0000ff', 12);
+    const root = new Container();
+    const a = new Sprite(textureA);
+    const b = new Sprite(textureB);
+    const c = new Sprite(textureA);
+    const d = new Sprite(textureB);
+
+    try {
+      // Two pairs — each pair shares a texture but has a distinct blend mode,
+      // forcing at least two renderer flushes: Normal group and Additive group.
+      // The Additive sprites carry higher nodeIndices so the second flush
+      // requests a buffer sized for max(nodeIndex)+1. Pre-reservation ensures
+      // the buffer was already large enough from the start.
+      a.setPosition(4, 4);
+      a.blendMode = BlendModes.Normal;
+      b.setPosition(20, 4);
+      b.blendMode = BlendModes.Normal;
+      c.setPosition(4, 20);
+      c.blendMode = BlendModes.Additive;
+      d.setPosition(20, 20);
+      d.blendMode = BlendModes.Additive;
+      root.addChild(a, b, c, d);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      // Sprites with different blend modes must NOT coalesce.
+      expect(backend.stats.drawCalls).toBeGreaterThanOrEqual(2);
+
+      const readPixel = readCanvas(backend);
+
+      // Normal sprites (top row): red at (8, 8) and blue at (24, 8).
+      expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(24, 8), [0, 0, 255, 255]);
+
+      // Additive sprites (bottom row): red at (8, 24) and blue at (24, 24).
+      // Additive over black == same colour (black + colour = colour).
+      expectPixelNear(readPixel(8, 24), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(24, 24), [0, 0, 255, 255]);
+    } finally {
+      root.destroy();
+      textureA.destroy();
+      textureB.destroy();
       backend.destroy();
     }
   });

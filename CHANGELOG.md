@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Internal transform write/upload counters and a micro-benchmark were added to guard the optimization.
 - WebGPU transform writes now use the same RenderGroup upload boundary as WebGL2: transforms are packed once per group before the first draw, instead of once per draw command.
 - Adjacent compatible Sprite batches across render-group boundaries (e.g. sprites at different z-indices) are already coalesced into a single instanced draw call — the sprite renderer tracks blend-mode, texture, and material, not group-index boundaries. Tests and documentation were added to prove this behaviour and define the compatibility predicate (same blend mode, texture set, and material; no intervening barrier/filter/render-target switch). No public API change.
+- WebGPU TransformStorage now reserves per-plan capacity before render-plan playback to avoid mid-frame storage-buffer reallocations across multiple sprite/mesh flushes (e.g. different blend-mode groups).
 
 ## [0.10.0] - 2026-05-31
 
