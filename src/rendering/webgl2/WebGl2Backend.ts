@@ -318,6 +318,20 @@ export class WebGl2Backend implements RenderBackend {
     this._transformBuffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
   }
 
+  /**
+   * Append a drawable's world transform (+ tint) to the shared transform buffer
+   * and return the slot it was written to. Used by instanced renderers for draws
+   * that arrive without a render-group upload boundary — i.e. a direct
+   * `backend.draw(drawable)` outside the plan player (`activeDrawCommand === null`),
+   * where no stable `nodeIndex` was assigned. Unlike {@link _writeTransformCommand}
+   * (fixed slot) this allocates a fresh slot, so a batch of synthetic draws does
+   * not collide on a single row.
+   * @internal
+   */
+  public _pushTransform(drawable: Drawable): number {
+    return this._transformBuffer.push(drawable.getGlobalTransform(), drawable.tint);
+  }
+
   /** @internal */
   public _endDrawPlan(): void {
     this._activeDrawCommand = null;

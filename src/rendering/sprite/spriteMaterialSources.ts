@@ -8,9 +8,14 @@
  * `WebGl2SpriteRenderer` pairs {@link spriteVertexGlsl} with the material's
  * fragment (ignoring any author-supplied `glsl.vertex`), and
  * `WebGpuSpriteRenderer` prepends {@link spriteVertexWgsl} to the material's
- * fragment WGSL. Both pin the per-instance attribute locations 0–5 and the
+ * fragment WGSL. Both pin the per-instance attribute locations and the
  * projection binding exactly as the default sprite path does, so a custom
  * material keeps the single `drawArraysInstanced` / `drawIndexed` batch.
+ *
+ * The WebGL2 path (locations 0, 3, 4, 5, 6) fetches each instance's world
+ * transform from the shared transform buffer (`u_transforms`) keyed by
+ * `a_nodeIndex`; the WGSL path still packs the transform rows inline
+ * (locations 0–5) pending the WebGPU transform-buffer migration.
  *
  * A custom fragment receives the interpolated `v_texcoord` and premultiplied
  * `v_color`, plus the per-batch base texture bound as `u_texture` (WebGL2 unit 0
@@ -31,13 +36,13 @@ precision highp int;
 // to the per-instance buffer; gl_VertexID 0..3 selects which corner of the
 // quad this invocation is computing.
 layout(location = 0) in vec4 a_localBounds;     // left, top, right, bottom (local space)
-layout(location = 1) in vec3 a_transformAB;     // a, b, x — first row of 2D affine
-layout(location = 2) in vec3 a_transformCD;     // c, d, y — second row
 layout(location = 3) in vec4 a_uvBounds;        // uMin, vMin, uMax, vMax (normalised, already flipY-swapped)
 layout(location = 4) in vec4 a_color;           // RGBA tint
 layout(location = 5) in uint a_textureSlot;
+layout(location = 6) in uint a_nodeIndex;       // row into the shared transform buffer
 
 uniform mat3 u_projection;
+uniform sampler2D u_transforms;                 // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
 out vec4 v_color;
@@ -52,8 +57,14 @@ void main(void) {
     float localX = (cornerX == 0) ? a_localBounds.x : a_localBounds.z;
     float localY = (cornerY == 0) ? a_localBounds.y : a_localBounds.w;
 
-    float worldX = (a_transformAB.x * localX) + (a_transformAB.y * localY) + a_transformAB.z;
-    float worldY = (a_transformCD.x * localX) + (a_transformCD.y * localY) + a_transformCD.z;
+    // Fetch the per-instance world transform from the shared buffer (row =
+    // a_nodeIndex): texel 0 = (a, b, c, d), texel 1 = (tx, ty, 0, 0).
+    int row = int(a_nodeIndex);
+    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
+    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+
+    float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
+    float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
     gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
 

@@ -24,21 +24,23 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * the quad each invocation is computing. All per-sprite data lives in a
  * single per-instance buffer (divisor = 1).
  *
- * Per-instance layout (56 bytes per sprite, 6 attributes):
+ * Per-instance layout (36 bytes per sprite, 5 attributes):
  * ```
  *   localBounds    f32x4       (offset  0, 16 bytes)  — left, top, right, bottom
- *   transformAB    f32x3       (offset 16, 12 bytes)  — first  row of 2D affine
- *   transformCD    f32x3       (offset 28, 12 bytes)  — second row of 2D affine
- *   uvBounds       u16x4 norm  (offset 40,  8 bytes)  — uMin, vMin, uMax, vMax
- *   color          u8x4  norm  (offset 48,  4 bytes)  — RGBA tint
- *   textureSlot    u32         (offset 52,  4 bytes)  — multi-texture slot
+ *   uvBounds       u16x4 norm  (offset 16,  8 bytes)  — uMin, vMin, uMax, vMax
+ *   color          u8x4  norm  (offset 24,  4 bytes)  — RGBA tint
+ *   textureSlot    u32         (offset 28,  4 bytes)  — multi-texture slot
+ *   nodeIndex      u32         (offset 32,  4 bytes)  — row into the shared TransformBuffer
  * ```
  *
- * vs. the previous per-vertex layout (80 bytes per quad), this saves
- * roughly 30% bandwidth and ~75% of the CPU writes per sprite — the
- * vertex shader expands one instance into four corners on the GPU
- * instead of the CPU duplicating the same color/slot/transform across
- * four vertex entries.
+ * The per-instance world transform no longer lives in this buffer: it is
+ * fetched in the vertex shader from the shared {@link TransformBuffer}
+ * texture (`u_transforms`) keyed by `a_nodeIndex`, exactly like the mesh
+ * renderer. The render-group upload boundary (PR #44) already packs every
+ * draw command's transform into that buffer at its stable `nodeIndex`, so the
+ * sprite just reads it back instead of re-packing 24 bytes of affine rows per
+ * instance. vs. the previous per-vertex layout (80 bytes per quad), the
+ * vertex shader still expands one instance into four corners on the GPU.
  *
  * # Default vs custom-material path
  *
@@ -53,7 +55,10 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  */
 
 const maxBatchTextures = 8;
-const instanceStrideBytes = 56;
+// Sprite base textures occupy units 0..7; the shared transform buffer texture
+// binds on unit 8, matching the mesh renderer's convention.
+const transformTextureUnit = 8;
+const instanceStrideBytes = 36;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
 interface SpriteRendererConnection {
@@ -79,10 +84,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   // Texture-unit index scratches reused for sampler-uniform binds so the
   // per-batch path stays allocation-free.
   private readonly _slotScratches: Int32Array[] = Array.from({ length: maxBatchTextures }, (_, i) => new Int32Array([i]));
+  // Pinned unit index for the shared transform buffer sampler.
+  private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
 
   private _instanceCount = 0;
+  // Highest transform-buffer row referenced by the pending batch; drives the
+  // minimum row count uploaded for the transform texture at flush time.
+  private _maxNodeIndex = 0;
   private _currentBlendMode: BlendModes | null = null;
   private _currentView: View | null = null;
   private _currentViewId = -1;
@@ -111,10 +121,17 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     const backend = this.getBackend();
     const material = sprite.material;
 
+    // The transform lives in the shared buffer, keyed by the draw command's
+    // stable nodeIndex (already packed at the render-group upload boundary).
+    // A direct, non-plan `backend.draw(sprite)` has no command — push the
+    // sprite's transform into the buffer and use the freshly-allocated slot.
+    const command = backend.activeDrawCommand;
+    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+
     if (material === null) {
-      this._renderDefault(sprite, texture, backend);
+      this._renderDefault(sprite, texture, backend, nodeIndex);
     } else {
-      this._renderCustom(sprite, texture, material, backend);
+      this._renderCustom(sprite, texture, material, backend, nodeIndex);
     }
 
     return this;
@@ -127,6 +144,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     const connection = this._connection;
 
     if (this._instanceCount === 0 || backend === null || instanceBuffer === null || vao === null || connection === null) {
+      this._maxNodeIndex = 0;
       this._resetSlots();
 
       return;
@@ -161,6 +179,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
       this._bindCustomUniforms(shader, material, backend);
     }
 
+    // Bind the shared transform buffer texture (one row per nodeIndex) on the
+    // dedicated unit and point the sampler at it. Done for both the default and
+    // custom programs — both fetch the world transform via a_nodeIndex.
+    backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
+
+    if (shader.uniforms.has('u_transforms')) {
+      shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    }
+
     shader.sync();
     backend.bindVertexArrayObject(vao);
     instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
@@ -168,6 +195,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     backend.stats.batches++;
     backend.stats.drawCalls++;
     this._instanceCount = 0;
+    this._maxNodeIndex = 0;
 
     this._resetSlots();
   }
@@ -184,11 +212,10 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
 
     this._vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_localBounds'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformAB'), gl.FLOAT, false, instanceStrideBytes, 16, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformCD'), gl.FLOAT, false, instanceStrideBytes, 28, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 40, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 48, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 52, true, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 16, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 24, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 28, true, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, 32, true, 1)
       .connect(this._createVaoRuntime(this._connection));
 
     // Pin the per-slot sampler uniforms to texture units 0..N-1.
@@ -219,6 +246,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     this._currentView = null;
     this._currentViewId = -1;
     this._instanceCount = 0;
+    this._maxNodeIndex = 0;
   }
 
   public destroy(): void {
@@ -227,7 +255,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   }
 
   /** Default multi-texture path: rotate the base texture through 8 slots. */
-  private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGl2Backend): void {
+  private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGl2Backend, nodeIndex: number): void {
     const blendMode = sprite.blendMode;
     const batchFull = this._instanceCount >= this._batchSize;
     const blendModeChanged = blendMode !== this._currentBlendMode;
@@ -255,12 +283,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
       backend.bindTexture(texture, slot);
     }
 
-    this._packInstance(sprite, texture, slot);
+    this._packInstance(sprite, texture, slot, nodeIndex);
     this._instanceCount++;
   }
 
   /** Custom-material path: single base texture on unit 0, instanced. */
-  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGl2Backend): void {
+  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGl2Backend, nodeIndex: number): void {
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
     const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
@@ -282,11 +310,11 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     this._currentBaseTexture = texture;
 
     // textureSlot word is unused by custom fragments (base binds to unit 0).
-    this._packInstance(sprite, texture, 0);
+    this._packInstance(sprite, texture, 0, nodeIndex);
     this._instanceCount++;
   }
 
-  private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, slot: number): void {
+  private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, slot: number, nodeIndex: number): void {
     const offset = this._instanceCount * wordsPerInstance;
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
@@ -299,17 +327,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     f32[offset + 2] = bounds.right;
     f32[offset + 3] = bounds.bottom;
 
-    // transform rows (offset 4..6 = AB, 7..9 = CD)
-    const transform = sprite.getGlobalTransform();
-
-    f32[offset + 4] = transform.a;
-    f32[offset + 5] = transform.b;
-    f32[offset + 6] = transform.x;
-    f32[offset + 7] = transform.c;
-    f32[offset + 8] = transform.d;
-    f32[offset + 9] = transform.y;
-
-    // uvBounds at offset 10 — 8 bytes = 2 u32 slots, normalised u16x4.
+    // uvBounds at offset 4 — 8 bytes = 2 u32 slots, normalised u16x4.
     // Pack (uMin, vMin, uMax, vMax) into two uint32s, with flipY swap
     // applied at pack time so the shader can stay flip-agnostic.
     const frame = sprite.textureFrame;
@@ -323,14 +341,23 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     const vMin = texture.flipY ? vMaxRaw : vMinRaw;
     const vMax = texture.flipY ? vMinRaw : vMaxRaw;
 
-    u32[offset + 10] = uMin | (vMin << 16);
-    u32[offset + 11] = uMax | (vMax << 16);
+    u32[offset + 4] = uMin | (vMin << 16);
+    u32[offset + 5] = uMax | (vMax << 16);
 
-    // color (u8x4 packed) at word 12
-    u32[offset + 12] = sprite.tint.toRgba();
+    // color (u8x4 packed) at word 6
+    u32[offset + 6] = sprite.tint.toRgba();
 
-    // textureSlot (u32) at word 13
-    u32[offset + 13] = slot;
+    // textureSlot (u32) at word 7
+    u32[offset + 7] = slot;
+
+    // nodeIndex (u32) at word 8 — row into the shared transform buffer.
+    const node = nodeIndex >>> 0;
+
+    u32[offset + 8] = node;
+
+    if (node > this._maxNodeIndex) {
+      this._maxNodeIndex = node;
+    }
   }
 
   private _getOrCreateCustomShader(material: SpriteMaterial, gl: WebGL2RenderingContext): Shader {

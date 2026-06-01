@@ -13,12 +13,12 @@ const shaderSources = vi.hoisted(() => ({
   spriteVertexSource: `#version 300 es
 precision mediump float;
 in vec4 a_localBounds;
-in vec3 a_transformAB;
-in vec3 a_transformCD;
 in vec4 a_uvBounds;
 in vec4 a_color;
 in uint a_textureSlot;
+in uint a_nodeIndex;
 uniform mat3 u_projection;
+uniform sampler2D u_transforms;
 out vec2 v_uv;
 out vec4 v_color;
 flat out uint v_textureSlot;
@@ -33,7 +33,10 @@ void main() {
   else if (gl_VertexID == 1) uv = vec2(a_uvBounds.z, a_uvBounds.y);
   else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
   else uv = vec2(a_uvBounds.z, a_uvBounds.w);
-  vec2 world = vec2(dot(vec3(local, 1.0), a_transformAB), dot(vec3(local, 1.0), a_transformCD));
+  int row = int(a_nodeIndex);
+  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
+  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
   vec3 clip = u_projection * vec3(world, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
   v_uv = uv;
@@ -399,6 +402,7 @@ describe('RenderTo WebGL2 browser', () => {
       _beginDrawPlan(n: number): void;
       _endDrawPlan(): void;
       _prepareDrawCommand(cmd: { drawable: Sprite; nodeIndex: number }): void;
+      _writeTransformCommand(cmd: { drawable: Sprite; nodeIndex: number }): void;
     };
     const hooked = backend as HookedBackend;
 
@@ -410,7 +414,14 @@ describe('RenderTo WebGL2 browser', () => {
         backend.execute(
           new RenderTargetPass(
             passBackend => {
-              (passBackend as HookedBackend)._prepareDrawCommand({ drawable: captureSprite, nodeIndex: 0 });
+              const hookedPass = passBackend as HookedBackend;
+              const command = { drawable: captureSprite, nodeIndex: 0 };
+              // The real plan player packs each render group's transforms into
+              // the shared buffer at the group's upload boundary, before its
+              // draws. Mirror that here so the sprite's nodeIndex resolves to a
+              // populated transform row.
+              hookedPass._writeTransformCommand(command);
+              hookedPass._prepareDrawCommand(command);
               passBackend.draw(captureSprite);
             },
             { target: cacheTexture, view: captureView, clearColor: Color.transparentBlack },
@@ -450,6 +461,7 @@ describe('RenderTo WebGL2 browser', () => {
       _beginDrawPlan(n: number): void;
       _endDrawPlan(): void;
       _prepareDrawCommand(cmd: { drawable: Sprite; nodeIndex: number }): void;
+      _writeTransformCommand(cmd: { drawable: Sprite; nodeIndex: number }): void;
     };
     const hooked = backend as HookedBackend;
 
@@ -463,13 +475,21 @@ describe('RenderTo WebGL2 browser', () => {
         backend.execute(
           new RenderTargetPass(
             passBackend => {
-              (passBackend as HookedBackend)._prepareDrawCommand({ drawable: captureSprite, nodeIndex: 0 });
+              const hookedPass = passBackend as HookedBackend;
+              const command = { drawable: captureSprite, nodeIndex: 0 };
+              // Mirror the plan player's render-group upload: pack the capture
+              // sprite's transform before drawing so its nodeIndex resolves.
+              hookedPass._writeTransformCommand(command);
+              hookedPass._prepareDrawCommand(command);
               passBackend.draw(captureSprite);
             },
             { target: cacheTexture, view: captureView, clearColor: Color.transparentBlack },
           ),
         );
 
+        // No _prepareDrawCommand here: the composite draw is the synthetic,
+        // non-plan path (activeDrawCommand === null), where the sprite renderer
+        // pushes the transform into the shared buffer itself.
         backend.draw(cacheSpriteForComposite);
       } finally {
         hooked._endDrawPlan();
