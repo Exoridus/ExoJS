@@ -1,14 +1,14 @@
 import type { RenderBackend } from '@/rendering/RenderBackend';
 
-import type { DrawCommand } from './RenderCommand';
 import { RenderEntryKind } from './RenderCommand';
 import { RenderEffectExecutor } from './RenderEffectExecutor';
+import type { RenderInstruction } from './RenderInstruction';
 import type { RenderPlan } from './RenderPlan';
 import type { GroupScope, RenderScope } from './RenderScope';
 
 interface RenderPlanPlaybackHooks {
   _beginDrawPlan?(nodeCount: number): void;
-  _prepareDrawCommand?(command: DrawCommand): void;
+  _prepareDrawCommand?(instruction: RenderInstruction): void;
   _endDrawPlan?(): void;
 }
 
