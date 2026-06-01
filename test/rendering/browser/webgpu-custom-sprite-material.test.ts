@@ -4,9 +4,10 @@
  * Skips gracefully when WebGPU is unavailable (navigator.gpu absent or no
  * adapter), matching webgpu-smoke.test.ts. When WebGPU IS available it drives a
  * custom {@link SpriteMaterial} (user uniform) through the real
- * {@link WebGpuSpriteRenderer} and asserts the custom path (group 0 projection,
- * group 1 base texture, group 2 user UBO) issues an instanced draw without
- * raising a GPU validation error, while keeping the 56-byte instance buffer.
+ * {@link WebGpuSpriteRenderer} and asserts the custom path (group 0 projection +
+ * shared transform storage, group 1 base texture, group 2 user UBO) issues an
+ * instanced draw without raising a GPU validation error, while keeping the
+ * 36-byte instance buffer (transform fetched from storage by nodeIndex).
  *
  * Run via:  pnpm test:browser:webgpu
  */

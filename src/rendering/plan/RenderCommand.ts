@@ -64,6 +64,10 @@ interface BackendWithRendererRegistry {
   };
 }
 
+interface SharedTransformRenderer {
+  readonly _consumesSharedTransform?: boolean;
+}
+
 interface TextureCarrier {
   readonly texture?: Texture | RenderTexture | null;
 }
@@ -180,4 +184,40 @@ export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | nul
     pipelineKey,
     bindKey,
   };
+};
+
+/**
+ * Whether a draw command's renderer reads the shared {@link TransformBuffer} /
+ * transform storage. The render-group upload boundary packs each command's
+ * world transform (+ tint) keyed by its `nodeIndex`; only renderers that fetch
+ * those rows back from the buffer need a record written.
+ *
+ * Sprite and Mesh (and their subclasses — {@link AnimatedSprite}, Video,
+ * Graphics' meshes) fetch the transform via `nodeIndex` and therefore consume
+ * it. Text/BitmapText and particle renderers pack their own per-node data into
+ * a private data texture / uniforms and never touch the shared buffer, so they
+ * opt out via `_consumesSharedTransform === false` and their writes are skipped.
+ *
+ * Anything else — a custom renderer, or a drawable with no registered renderer
+ * (resolve throws) — defaults to writing, so behaviour is unchanged for any
+ * path that might still rely on the shared transform.
+ *
+ * @internal
+ */
+export const drawCommandUsesSharedTransform = (command: DrawCommand, backend: RenderBackend): boolean => {
+  const registry = (backend as BackendWithRendererRegistry).rendererRegistry;
+
+  if (!registry || typeof registry.resolve !== 'function') {
+    return true;
+  }
+
+  try {
+    const renderer = registry.resolve(command.drawable) as SharedTransformRenderer;
+
+    return renderer._consumesSharedTransform !== false;
+  } catch {
+    // No renderer registered for a custom drawable: keep the conservative
+    // write so any consumer of the shared transform keeps working.
+    return true;
+  }
 };

@@ -1,3 +1,4 @@
+import type { Drawable } from '@/rendering/Drawable';
 import type { DrawCommand } from '@/rendering/plan/RenderCommand';
 import { TransformBuffer } from '@/rendering/TransformBuffer';
 
@@ -19,6 +20,16 @@ export class WebGpuTransformStorage {
     const drawable = command.drawable;
 
     this._buffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
+  }
+
+  /**
+   * Append a drawable's world transform (+ tint) to the shared buffer and return
+   * the slot it was written to. Used for draws that arrive without a stable
+   * `nodeIndex` — a direct `backend.draw(drawable)` outside the plan player —
+   * so a batch of synthetic draws does not collide on a single row.
+   */
+  public push(drawable: Drawable): number {
+    return this._buffer.push(drawable.getGlobalTransform(), drawable.tint);
   }
 
   public getBuffer(device: GPUDevice, minCount: number): { readonly buffer: GPUBuffer; readonly count: number } {

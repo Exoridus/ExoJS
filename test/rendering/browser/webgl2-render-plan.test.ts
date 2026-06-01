@@ -14,12 +14,12 @@ const shaderSources = vi.hoisted(() => ({
   spriteVertexSource: `#version 300 es
 precision mediump float;
 in vec4 a_localBounds;
-in vec3 a_transformAB;
-in vec3 a_transformCD;
 in vec4 a_uvBounds;
 in vec4 a_color;
 in uint a_textureSlot;
+in uint a_nodeIndex;
 uniform mat3 u_projection;
+uniform sampler2D u_transforms;
 out vec2 v_uv;
 out vec4 v_color;
 flat out uint v_textureSlot;
@@ -36,7 +36,10 @@ void main() {
   else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
   else uv = vec2(a_uvBounds.z, a_uvBounds.w);
 
-  vec2 world = vec2(dot(vec3(local, 1.0), a_transformAB), dot(vec3(local, 1.0), a_transformCD));
+  int row = int(a_nodeIndex);
+  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
+  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
   vec3 clip = u_projection * vec3(world, 1.0);
 
   gl_Position = vec4(clip.xy, 0.0, 1.0);
@@ -404,6 +407,67 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
       expectPixelNear(spritePixel, [255, 0, 0, 255]);
       expect(drawCount).toBe(2);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('multiple sprites with distinct transforms batch into one draw, each at its own position', async () => {
+    const { backend } = await createBackend();
+    const texture = createSolidTexture('#ff0000', 8, 8);
+    const root = new Container();
+    const a = new Sprite(texture);
+    const b = new Sprite(texture);
+    const c = new Sprite(texture);
+
+    try {
+      // Same texture ⇒ one instanced batch; each sprite carries its own
+      // nodeIndex into the shared transform buffer.
+      a.setPosition(8, 8);
+      b.setPosition(28, 28);
+      c.setPosition(48, 48);
+      root.addChild(a, b, c);
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(1);
+      // Each instance resolves its own transform row, so all three land at
+      // their distinct positions instead of collapsing onto a single row.
+      expectPixelNear(readPixel(backend, 10, 10), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 30, 30), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 50, 50), [255, 0, 0, 255]);
+      // The gaps between them stay clear.
+      expectPixelNear(readPixel(backend, 20, 20), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a scaled sprite stretches to its scaled bounds via the buffer transform', async () => {
+    const { backend } = await createBackend();
+    const texture = createSolidTexture('#ff0000', 8, 8);
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      // 8×8 texture scaled 2× from a top-left origin at (10, 10) covers
+      // [10, 26]. A pixel at (24, 24) is red only if the non-identity scale
+      // reaches the GPU through the transform buffer (unscaled it would be
+      // bounded at [10, 18]).
+      sprite.setPosition(10, 10);
+      sprite.setScale(2, 2);
+      root.addChild(sprite);
+
+      render(backend, root);
+
+      expectPixelNear(readPixel(backend, 12, 12), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 30, 30), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();

@@ -14,12 +14,12 @@ const shaderSources = vi.hoisted(() => ({
   spriteVertexSource: `#version 300 es
 precision mediump float;
 in vec4 a_localBounds;
-in vec3 a_transformAB;
-in vec3 a_transformCD;
 in vec4 a_uvBounds;
 in vec4 a_color;
 in uint a_textureSlot;
+in uint a_nodeIndex;
 uniform mat3 u_projection;
+uniform sampler2D u_transforms;
 out vec2 v_uv;
 out vec4 v_color;
 flat out uint v_textureSlot;
@@ -36,7 +36,10 @@ void main() {
   else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
   else uv = vec2(a_uvBounds.z, a_uvBounds.w);
 
-  vec2 world = vec2(dot(vec3(local, 1.0), a_transformAB), dot(vec3(local, 1.0), a_transformCD));
+  int row = int(a_nodeIndex);
+  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
+  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
   vec3 clip = u_projection * vec3(world, 1.0);
 
   gl_Position = vec4(clip.xy, 0.0, 1.0);

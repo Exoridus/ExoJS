@@ -81,6 +81,14 @@ interface TextRendererConnection {
  * same shader type and atlas page are drawn in a single `drawElements` call.
  */
 export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText> {
+  /**
+   * Text packs its world transform into its own per-node data texture and never
+   * reads the shared {@link TransformBuffer}, so the render-group upload boundary
+   * skips writing transform records for text draws.
+   * @internal
+   */
+  public readonly _consumesSharedTransform = false;
+
   private readonly _sdfShader: Shader = new Shader(textVertSource, textSdfFragSource);
   private readonly _msdfShader: Shader = new Shader(textVertSource, textMsdfFragSource);
   private readonly _colorShader: Shader = new Shader(textVertSource, textColorFragSource);

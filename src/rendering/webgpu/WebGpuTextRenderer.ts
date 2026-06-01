@@ -239,6 +239,14 @@ fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
  * render pass.
  */
 export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText> {
+  /**
+   * Text packs its world transform into its own per-node data buffer and never
+   * reads the shared transform storage, so the plan player skips writing
+   * transform records for text draws.
+   * @internal
+   */
+  public readonly _consumesSharedTransform = false;
+
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
   private _frameBindGroupLayout: GPUBindGroupLayout | null = null;

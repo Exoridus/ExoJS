@@ -92,6 +92,14 @@ interface WebGpuParticleDrawCall {
 }
 
 export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSystem> {
+  /**
+   * The particle system's transform is bound as a uniform and each particle is
+   * positioned system-locally, so this renderer never reads the shared transform
+   * storage; the plan player skips writing transform records for particle draws.
+   * @internal
+   */
+  public readonly _consumesSharedTransform = false;
+
   private readonly _drawCalls: WebGpuParticleDrawCall[] = [];
   private _drawCallCount = 0;
   private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);

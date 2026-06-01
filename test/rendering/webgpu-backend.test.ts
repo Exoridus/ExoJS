@@ -1736,14 +1736,20 @@ describe('WebGpuBackend', () => {
       manager.flush();
       manager.destroy();
 
-      const vertexWrite = environment.queue.writeBuffer.mock.calls[environment.queue.writeBuffer.mock.calls.length - 1];
-      const data = new Uint32Array(vertexWrite[2] as ArrayBuffer);
+      // The sprite's world transform now lives in the shared transform storage
+      // buffer (uploaded as the last writeBuffer of the sprite flush), not inline
+      // in the instance buffer. Slot 0 = (a, b, c, d, tx, ty, 0, 0, tint…); an
+      // unrotated sprite at (24, 18) has b == 0 and carries that translation.
+      const transformWrite = environment.queue.writeBuffer.mock.calls[environment.queue.writeBuffer.mock.calls.length - 1];
+      const data = new Float32Array(transformWrite[2] as ArrayBuffer);
 
       expect(environment.encoder.beginRenderPass.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(environment.pass.drawIndexed).toHaveBeenCalled();
       expect(environment.queue.submit.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(environment.textures.length).toBeGreaterThan(0);
-      expect(data[5]).toBe(0);
+      expect(data[1]).toBe(0);
+      expect(data[4]).toBe(24);
+      expect(data[5]).toBe(18);
     } finally {
       environment.restore();
     }

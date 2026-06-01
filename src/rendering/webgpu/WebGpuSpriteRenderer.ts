@@ -18,8 +18,16 @@ struct ProjectionUniforms {
     matrix: mat4x4<f32>,
 };
 
+struct TransformSlot {
+    m0: vec4<f32>,
+    m1: vec4<f32>,
+    m2: vec4<f32>,
+};
+
 @group(0) @binding(0)
 var<uniform> projection: ProjectionUniforms;
+@group(0) @binding(1)
+var<storage, read> transforms: array<TransformSlot>;
 
 @group(1) @binding(0)
 var spriteTexture0: texture_2d<f32>;
@@ -55,16 +63,17 @@ var spriteSampler6: sampler;
 @group(1) @binding(15)
 var spriteSampler7: sampler;
 
-// Per-instance vertex layout (56 bytes per sprite). The four corners
+// Per-instance vertex layout (36 bytes per sprite). The four corners
 // of the quad are derived from @builtin(vertex_index) 0..3 inside the
-// vertex shader — there is no per-vertex stream.
+// vertex shader — there is no per-vertex stream. The world transform is
+// fetched from the shared transform storage buffer keyed by nodeIndex
+// instead of being packed inline.
 struct VertexInput {
     @location(0) localBounds: vec4<f32>,        // left, top, right, bottom (local space)
-    @location(1) transformAB: vec3<f32>,        // first  row of 2D affine
-    @location(2) transformCD: vec3<f32>,        // second row of 2D affine
     @location(3) uvBounds: vec4<f32>,           // uMin, vMin, uMax, vMax (CPU pre-swaps for flipY)
     @location(4) color: vec4<f32>,              // RGBA tint
     @location(5) packedSlotFlags: u32,          // bits 0..7 = slot, bit 8 = premultiply
+    @location(6) nodeIndex: u32,                // row into the shared transform storage buffer
 };
 
 struct VertexOutput {
@@ -87,8 +96,12 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
     let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
-    let worldX = input.transformAB.x * localX + input.transformAB.y * localY + input.transformAB.z;
-    let worldY = input.transformCD.x * localX + input.transformCD.y * localY + input.transformCD.z;
+    // Fetch this instance's world transform from the shared storage buffer,
+    // keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0). (m2 carries the
+    // node tint, unused here — the sprite keeps its own per-instance color.)
+    let slot = transforms[input.nodeIndex];
+    let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
+    let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
     output.position = projection.matrix * vec4<f32>(worldX, worldY, 0.0, 1.0);
 
@@ -149,7 +162,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-const instanceStrideBytes = 56;
+const instanceStrideBytes = 36;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const projectionByteLength = 64;
 const initialBatchCapacity = 32;
@@ -185,7 +198,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
   private _pipelineLayout: GPUPipelineLayout | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
-  private _uniformBindGroup: GPUBindGroup | null = null;
+  // group(0) bind group = projection UBO + shared transform storage buffer.
+  // Recreated whenever the storage buffer identity changes (capacity growth).
+  private _transformBindGroup: GPUBindGroup | null = null;
+  private _transformStorageBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
   private _instanceBuffer: GPUBuffer | null = null;
   private _instanceCapacity = 0;
@@ -198,6 +214,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private readonly _textureSlots = new Map<Texture | RenderTexture, number>();
   private _slotCount = 0;
   private _instanceCount = 0;
+  // Highest transform-storage row referenced by the pending batch; drives the
+  // minimum row count uploaded for the storage buffer at flush time.
+  private _maxNodeIndex = 0;
   private _currentBlendMode: BlendModes | null = null;
 
   // Custom-material state. Per-material pipelines/bind groups are cached; the
@@ -222,6 +241,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
           visibility: GPUShaderStage.VERTEX,
           buffer: {
             type: 'uniform',
+          },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: {
+            type: 'read-only-storage',
           },
         },
       ],
@@ -258,17 +284,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       size: projectionByteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    this._uniformBindGroup = this._device.createBindGroup({
-      layout: this._uniformBindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: {
-            buffer: this._uniformBuffer,
-          },
-        },
-      ],
-    });
+    // The group(0) bind group also binds the shared transform storage buffer,
+    // whose identity changes when its capacity grows — so it is built lazily in
+    // flush() once the active storage buffer is known.
 
     // Static index buffer for the quad. Allocated once at connect; its
     // contents never change.
@@ -295,7 +313,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._pipelines.clear();
     this._instanceBuffer = null;
     this._indexBuffer = null;
-    this._uniformBindGroup = null;
+    this._transformBindGroup = null;
+    this._transformStorageBuffer = null;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._customBaseTextureLayout = null;
@@ -309,6 +328,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);
     this._instanceCount = 0;
+    this._maxNodeIndex = 0;
     this._currentBlendMode = null;
     this._currentMaterial = null;
     this._currentBaseTexture = null;
@@ -332,15 +352,22 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     const material = sprite.material;
 
+    // The transform lives in the shared storage buffer, keyed by the draw
+    // command's stable nodeIndex (already packed at the draw-command boundary).
+    // A direct, non-plan `backend.draw(sprite)` has no command — push the
+    // sprite's transform into the buffer and use the freshly-allocated slot.
+    const command = backend.activeDrawCommand;
+    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+
     if (material === null) {
-      this._renderDefault(sprite, texture, backend);
+      this._renderDefault(sprite, texture, backend, nodeIndex);
     } else {
-      this._renderCustom(sprite, texture, material, backend);
+      this._renderCustom(sprite, texture, material, backend, nodeIndex);
     }
   }
 
   /** Default multi-texture path: rotate the base texture through 8 slots. */
-  private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGpuBackend): void {
+  private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGpuBackend, nodeIndex: number): void {
     const blendMode = sprite.blendMode;
 
     // Flush triggers: blend-mode change, texture-slot exhaustion, or a custom
@@ -373,12 +400,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // typed-array writes in _packInstance silently fall off the end of a
     // too-small buffer.
     this._ensureInstanceCapacity(this._instanceCount + 1);
-    this._packInstance(sprite, texture, packedSlotFlags);
+    this._packInstance(sprite, texture, packedSlotFlags, nodeIndex);
     this._instanceCount++;
   }
 
   /** Custom-material path: single base texture on group(1), instanced. */
-  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGpuBackend): void {
+  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGpuBackend, nodeIndex: number): void {
     if (material.shader.wgsl === null) {
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
@@ -402,7 +429,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     // textureSlot word is unused by custom fragments (base binds to group(1)).
     this._ensureInstanceCapacity(this._instanceCount + 1);
-    this._packInstance(sprite, texture, 0);
+    this._packInstance(sprite, texture, 0, nodeIndex);
     this._instanceCount++;
   }
 
@@ -410,9 +437,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     const backend = this._backend;
     const device = this._device;
     const uniformBuffer = this._uniformBuffer;
-    const uniformBindGroup = this._uniformBindGroup;
 
-    if (!backend || !device || !uniformBuffer || !uniformBindGroup) {
+    if (!backend || !device || !uniformBuffer) {
       return;
     }
 
@@ -437,6 +463,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     if (this._instanceCount > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null) {
       device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._instanceCount * instanceStrideBytes);
 
+      // Resolve the shared transform storage buffer (rows uploaded up to the
+      // max nodeIndex referenced by this batch) and bind it alongside the
+      // projection UBO on group(0). Both the default and custom programs fetch
+      // the world transform from it via nodeIndex.
+      const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
+      const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
+
       const material = this._currentMaterial;
       const stencil = backend._passCoordinator.stencilActive;
 
@@ -445,14 +478,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         const textureBindGroup = this._createTextureBindGroup(device, backend);
 
         pass.setPipeline(pipeline);
-        pass.setBindGroup(0, uniformBindGroup);
+        pass.setBindGroup(0, transformBindGroup);
         pass.setBindGroup(1, textureBindGroup);
         pass.setVertexBuffer(0, this._instanceBuffer);
         pass.setIndexBuffer(this._indexBuffer, 'uint16');
         pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
       } else {
         pass.pushDebugGroup('SpriteMaterial (custom)');
-        this._drawCustomBatch(pass, device, backend, material, uniformBindGroup, stencil);
+        this._drawCustomBatch(pass, device, backend, material, transformBindGroup, stencil);
         pass.popDebugGroup();
       }
 
@@ -463,10 +496,33 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     backend._passCoordinator.endPass();
 
     this._instanceCount = 0;
+    this._maxNodeIndex = 0;
     this._resetSlots();
     this._currentBlendMode = null;
     this._currentMaterial = null;
     this._currentBaseTexture = null;
+  }
+
+  /**
+   * Build (or reuse) the group(0) bind group pairing the fixed projection UBO
+   * with the shared transform storage buffer. Cached against the storage buffer
+   * identity, which changes only when its capacity grows.
+   */
+  private _getOrCreateTransformBindGroup(device: GPUDevice, uniformBuffer: GPUBuffer, storageBuffer: GPUBuffer): GPUBindGroup {
+    if (this._transformBindGroup !== null && this._transformStorageBuffer === storageBuffer) {
+      return this._transformBindGroup;
+    }
+
+    this._transformStorageBuffer = storageBuffer;
+    this._transformBindGroup = device.createBindGroup({
+      layout: this._uniformBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: { buffer: storageBuffer } },
+      ],
+    });
+
+    return this._transformBindGroup;
   }
 
   public destroy(): void {
@@ -526,11 +582,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     await Promise.all(promises);
   }
 
-  private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, packedSlotFlags: number): void {
+  private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, packedSlotFlags: number, nodeIndex: number): void {
     const offset = this._instanceCount * wordsPerInstance;
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
 
+    // localBounds: left, top, right, bottom (words 0..3, offset 0)
     const bounds = sprite.getLocalBounds();
 
     f32[offset + 0] = bounds.left;
@@ -538,17 +595,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     f32[offset + 2] = bounds.right;
     f32[offset + 3] = bounds.bottom;
 
-    const transform = sprite.getGlobalTransform();
-
-    f32[offset + 4] = transform.a;
-    f32[offset + 5] = transform.b;
-    f32[offset + 6] = transform.x;
-    f32[offset + 7] = transform.c;
-    f32[offset + 8] = transform.d;
-    f32[offset + 9] = transform.y;
-
-    // uvBounds: u16x4 normalised, packed into two u32 slots. The CPU
-    // applies the flipY swap so the shader stays orientation-agnostic.
+    // uvBounds: u16x4 normalised, packed into two u32 slots (words 4,5, offset
+    // 16). The CPU applies the flipY swap so the shader stays orientation-agnostic.
     const frame = sprite.textureFrame;
     const texWidth = texture.width;
     const texHeight = texture.height;
@@ -560,11 +608,23 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     const vMin = flipY ? vMaxRaw : vMinRaw;
     const vMax = flipY ? vMinRaw : vMaxRaw;
 
-    u32[offset + 10] = uMin | (vMin << 16);
-    u32[offset + 11] = uMax | (vMax << 16);
+    u32[offset + 4] = uMin | (vMin << 16);
+    u32[offset + 5] = uMax | (vMax << 16);
 
-    u32[offset + 12] = sprite.tint.toRgba();
-    u32[offset + 13] = packedSlotFlags;
+    // color (u8x4 packed) at word 6 (offset 24)
+    u32[offset + 6] = sprite.tint.toRgba();
+
+    // packedSlotFlags (u32) at word 7 (offset 28)
+    u32[offset + 7] = packedSlotFlags;
+
+    // nodeIndex (u32) at word 8 (offset 32) — row into the shared transform buffer.
+    const node = nodeIndex >>> 0;
+
+    u32[offset + 8] = node;
+
+    if (node > this._maxNodeIndex) {
+      this._maxNodeIndex = node;
+    }
   }
 
   private _ensureInstanceCapacity(instanceCount: number): void {
@@ -693,28 +753,23 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 format: 'float32x4',
               },
               {
-                shaderLocation: 1,
-                offset: 16,
-                format: 'float32x3',
-              },
-              {
-                shaderLocation: 2,
-                offset: 28,
-                format: 'float32x3',
-              },
-              {
                 shaderLocation: 3,
-                offset: 40,
+                offset: 16,
                 format: 'unorm16x4',
               },
               {
                 shaderLocation: 4,
-                offset: 48,
+                offset: 24,
                 format: 'unorm8x4',
               },
               {
                 shaderLocation: 5,
-                offset: 52,
+                offset: 28,
+                format: 'uint32',
+              },
+              {
+                shaderLocation: 6,
+                offset: 32,
                 format: 'uint32',
               },
             ],
@@ -753,7 +808,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     device: GPUDevice,
     backend: WebGpuBackend,
     material: SpriteMaterial,
-    projectionBindGroup: GPUBindGroup,
+    transformBindGroup: GPUBindGroup,
     stencil: boolean,
   ): void {
     const resources = this._getOrCreateCustomResources(material, device);
@@ -765,7 +820,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormat, stencil, device);
 
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, projectionBindGroup);
+    pass.setBindGroup(0, transformBindGroup);
     pass.setBindGroup(1, this._getCustomBaseTextureBindGroup(resources, backend, baseTexture, device));
     pass.setBindGroup(2, this._buildUserBindGroup(material, resources, backend, device));
     pass.setVertexBuffer(0, this._instanceBuffer);
@@ -787,8 +842,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     // The engine owns the vertex stage: prepend the canonical sprite vertex
-    // module (VertexInput/VertexOutput, group(0) projection, group(1) base
-    // texture + sampler) to the material's fragment WGSL.
+    // module (VertexInput/VertexOutput, group(0) projection + transform storage,
+    // group(1) base texture + sampler) to the material's fragment WGSL.
     const shaderModule = device.createShaderModule({ code: `${spriteVertexWgsl}\n${wgsl}` });
     const userLayout = this._buildUserBindGroupLayout(device, material);
     const pipelineLayout = device.createPipelineLayout({
@@ -844,11 +899,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             stepMode: 'instance',
             attributes: [
               { shaderLocation: 0, offset: 0, format: 'float32x4' },
-              { shaderLocation: 1, offset: 16, format: 'float32x3' },
-              { shaderLocation: 2, offset: 28, format: 'float32x3' },
-              { shaderLocation: 3, offset: 40, format: 'unorm16x4' },
-              { shaderLocation: 4, offset: 48, format: 'unorm8x4' },
-              { shaderLocation: 5, offset: 52, format: 'uint32' },
+              { shaderLocation: 3, offset: 16, format: 'unorm16x4' },
+              { shaderLocation: 4, offset: 24, format: 'unorm8x4' },
+              { shaderLocation: 5, offset: 28, format: 'uint32' },
+              { shaderLocation: 6, offset: 32, format: 'uint32' },
             ],
           },
         ],
