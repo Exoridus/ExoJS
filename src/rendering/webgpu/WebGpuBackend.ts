@@ -17,6 +17,7 @@ import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
 import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
+import type { RenderGroup } from '../plan/RenderInstruction';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
@@ -243,18 +244,35 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public _prepareDrawCommand(command: DrawCommand): void {
-    this._activeDrawCommand = command;
+  public _prepareRenderGroupUpload(group: RenderGroup): void {
+    // Pack the whole render group's world transforms (+ tint) into the shared
+    // transform storage at the group's upload boundary, keyed by each draw
+    // command's stable nodeIndex. Every draw the player will submit for this
+    // group is covered here, before the group's first draw.
+    //
+    // Renderers that pack their own per-node data (Text, Particle) never read
+    // the shared storage, so their commands are skipped — no consuming draw
+    // ever references their slots (nodeIndex is unique per command).
+    const storage = this._getTransformStorage();
+    const instructions = group.instructions;
 
-    // Skip the shared-transform write for renderers that pack their own per-node
-    // data (Text, Particle) and never read the shared storage. Sprite/Mesh (and
-    // their subclasses) keep writing; nodeIndex is unique per command, so a
-    // skipped slot is never read by a consuming draw.
-    if (drawCommandUsesSharedTransform(command, this)) {
-      this._getTransformStorage().writeCommand(command);
-    } else {
-      this._getTransformStorage().recordSkippedWrite();
+    for (let i = 0; i < instructions.length; i++) {
+      const command = instructions[i];
+
+      if (drawCommandUsesSharedTransform(command, this)) {
+        storage.writeCommand(command);
+      } else {
+        storage.recordSkippedWrite();
+      }
     }
+  }
+
+  /** @internal */
+  public _prepareDrawCommand(command: DrawCommand): void {
+    // Transform packing now happens at the render-group upload boundary
+    // (`_prepareRenderGroupUpload`); this hook only tracks the active draw so
+    // renderers can read the current command's nodeIndex.
+    this._activeDrawCommand = command;
   }
 
   /** @internal */

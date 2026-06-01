@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Sprite rendering now uses shared transform storage on WebGL2/WebGPU.
 - Transform writes are skipped for renderer paths that do not consume shared transform storage.
 - Internal transform write/upload counters and a micro-benchmark were added to guard the optimization.
+- WebGPU transform writes now use the same RenderGroup upload boundary as WebGL2: transforms are packed once per group before the first draw, instead of once per draw command.
 
 ## [0.10.0] - 2026-05-31
 
