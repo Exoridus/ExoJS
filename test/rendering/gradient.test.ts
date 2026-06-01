@@ -121,6 +121,99 @@ describe('Gradient toTexture()', () => {
   });
 });
 
+describe('Gradient value-object semantics', () => {
+  const makeLinear = (): LinearGradient =>
+    new LinearGradient(
+      [
+        { offset: 0, color: Color.red },
+        { offset: 1, color: Color.blue },
+      ],
+      [0, 0],
+      [1, 0],
+    );
+
+  test('exposes a type discriminant', () => {
+    expect(makeLinear().type).toBe('linear');
+    expect(new RadialGradient([{ offset: 0, color: Color.white }, { offset: 1, color: Color.black }]).type).toBe('radial');
+  });
+
+  test('rejects non-finite stop offsets', () => {
+    expect(() => new LinearGradient([{ offset: Number.NaN, color: Color.red }, { offset: 1, color: Color.blue }])).toThrow('Gradient stop offset must be a finite number.');
+    expect(() => new LinearGradient([{ offset: 0, color: Color.red }, { offset: Number.POSITIVE_INFINITY, color: Color.blue }])).toThrow('Gradient stop offset must be a finite number.');
+  });
+
+  test('geometry getters expose constructor values without leaking internals', () => {
+    const linear = makeLinear();
+
+    expect(linear.start).toEqual([0, 0]);
+    expect(linear.end).toEqual([1, 0]);
+
+    // Mutating a returned tuple must not affect the gradient.
+    linear.start[0] = 99;
+    expect(linear.start).toEqual([0, 0]);
+
+    const radial = new RadialGradient([{ offset: 0, color: Color.white }, { offset: 1, color: Color.black }], [0.25, 0.75], 0.4);
+
+    expect(radial.center).toEqual([0.25, 0.75]);
+    expect(radial.radius).toBe(0.4);
+  });
+
+  test('clone() produces an equal but independent copy', () => {
+    const original = makeLinear();
+    const copy = original.clone();
+
+    expect(copy).not.toBe(original);
+    expect(copy).toBeInstanceOf(LinearGradient);
+    expect(original.equals(copy)).toBe(true);
+
+    // Stops are deep-cloned (distinct Color instances).
+    expect(copy.stops[0].color).not.toBe(original.stops[0].color);
+    expect(copy.stops[0].color.equals(original.stops[0].color)).toBe(true);
+  });
+
+  test('copy() overwrites stops and geometry from a same-type source and returns this', () => {
+    const target = new LinearGradient(
+      [
+        { offset: 0, color: Color.green },
+        { offset: 1, color: Color.white },
+      ],
+      [0, 0],
+      [0, 1],
+    );
+    const source = makeLinear();
+
+    expect(target.copy(source)).toBe(target);
+    expect(target.equals(source)).toBe(true);
+    expect(target.end).toEqual([1, 0]);
+
+    // The copy is deep: mutating the source's stop color afterwards does not bleed in.
+    source.stops[0].color.r = 1;
+    expect(target.stops[0].color.r).toBe(255);
+  });
+
+  test('equals() compares type, stops, and geometry structurally', () => {
+    const base = makeLinear();
+
+    expect(base.equals(base)).toBe(true);
+    expect(base.equals(makeLinear())).toBe(true);
+
+    // Different stop color.
+    expect(base.equals(new LinearGradient([{ offset: 0, color: Color.red }, { offset: 1, color: Color.green }], [0, 0], [1, 0]))).toBe(false);
+
+    // Different stop offset.
+    expect(base.equals(new LinearGradient([{ offset: 0, color: Color.red }, { offset: 0.5, color: Color.blue }], [0, 0], [1, 0]))).toBe(false);
+
+    // Different geometry.
+    expect(base.equals(new LinearGradient([{ offset: 0, color: Color.red }, { offset: 1, color: Color.blue }], [0, 0], [0, 1]))).toBe(false);
+
+    // Different type.
+    const radial = new RadialGradient([{ offset: 0, color: Color.red }, { offset: 1, color: Color.blue }]);
+
+    expect(base.equals(radial)).toBe(false);
+    expect(radial.equals(base)).toBe(false);
+  });
+});
+
 const readPixel8 = (buffer: Uint8Array, index: number): readonly [number, number, number, number] => {
   const offset = index * 4;
 

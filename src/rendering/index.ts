@@ -17,7 +17,7 @@ export type { WebGpuShaderFilterOptions } from './filters/WebGpuShaderFilter';
 export { WebGpuShaderFilter } from './filters/WebGpuShaderFilter';
 export { Geometry } from './geometry/Geometry';
 export type { AttributeType, GeometryAttribute, GeometryOptions, GeometryUsage, Topology } from './geometry/GeometryAttribute';
-export type { GradientStop, GradientToTextureOptions } from './gradient/Gradient';
+export type { GradientStop, GradientToTextureOptions, GradientType } from './gradient/Gradient';
 export { Gradient } from './gradient/Gradient';
 export { LinearGradient } from './gradient/LinearGradient';
 export { RadialGradient } from './gradient/RadialGradient';
