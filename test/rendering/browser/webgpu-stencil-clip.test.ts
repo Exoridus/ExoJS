@@ -21,6 +21,7 @@
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
+import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Container } from '@/rendering/Container';
 import { Geometry } from '@/rendering/geometry/Geometry';
 import { MeshMaterial } from '@/rendering/material/MeshMaterial';
@@ -30,8 +31,12 @@ import { Mesh } from '@/rendering/mesh/Mesh';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { Sprite } from '@/rendering/sprite/Sprite';
+import { BitmapText, type BmFontData } from '@/rendering/text/BitmapText';
+import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+
+import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -90,6 +95,25 @@ const createQuadMesh = (size: number, color: Color): Mesh => {
   mesh.tint = color;
 
   return mesh;
+};
+
+// A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas page,
+// placed at the line origin so its quad covers (0,0)–(size,size). The atlas page
+// is a solid-colour texture, so the colour-atlas shader (msdf = false) emits that
+// colour over the default white fill tint — deterministic pixels with no runtime
+// font rasterisation or atlas-upload timing.
+const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
+  const texture = createSolidTexture(color, size);
+  const fontData: BmFontData = {
+    pages: ['atlas_0.png'],
+    chars: new Map([[65, { x: 0, y: 0, width: size, height: size, xOffset: 0, yOffset: 0, xAdvance: size, page: 0 }]]),
+    kernings: new Map(),
+    // base === lineHeight ⇒ yBearing 0 ⇒ the glyph top sits at the line origin.
+    lineHeight: size,
+    base: size,
+  };
+
+  return { text: new BitmapText('A', new BmFont(fontData, [texture])), texture };
 };
 
 // Custom MeshMaterial WGSL honouring the mesh contract: group(0) auto-bound mesh
@@ -208,15 +232,14 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12)
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
 // dropped mid-test ("Instance dropped in popErrorScope"). Treat that as an
 // unavailable-adapter skip rather than a failure, matching setupBackend().
-const isDeviceLoss = (error: unknown): boolean =>
-  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
-const renderClipped = async (
-  ctx: { skip: (reason: string) => void },
-  backend: WebGpuBackend,
-  root: RenderNode,
-): Promise<void> => {
-  const device = backend.device;
+const renderClipped = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<void> => {
+  const device = getBackendDeviceOrSkip(ctx, backend);
+
+  if (!device) {
+    return;
+  }
 
   device.pushErrorScope('validation');
 
@@ -728,6 +751,76 @@ describe('WebGPU geometric (stencil) clipping', () => {
       // logical x + y < 32 ⇒ physical px + py < 64.
       expectPixelNear(readPixel(10, 10), [255, 0, 0, 255]); // logical (5, 5): inside
       expectPixelNear(readPixel(54, 54), [0, 0, 0, 255]); // logical (27, 27): outside
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a BitmapText renders inside a Geometry stencil clip', async ctx => {
+    const backend = await setupBackend(ctx);
+    const root = new Container();
+    const clipped = new Container();
+    const { text, texture } = createSolidBitmapText('#ff0000', 64);
+
+    try {
+      text.setPosition(0, 0);
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(text);
+      root.addChild(clipped);
+
+      await renderClipped(ctx, backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Inside the triangle (x + y << 48): the red glyph survives.
+      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
+      // Outside the triangle (x + y >> 48): clipped to the black clear.
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      (clipped.clipShape as Geometry).destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a ParticleSystem renders inside a Geometry stencil clip', async ctx => {
+    const backend = await setupBackend(ctx);
+    const texture = createSolidTexture('#ffffff', 16);
+    const root = new Container();
+    const clipped = new Container();
+    const system = new ParticleSystem(texture);
+    const slot = system.spawn();
+
+    try {
+      // Deterministic single particle: a solid white texture tinted red, scaled
+      // to blanket the whole 64×64 canvas (local quad ±64 around the centre) so
+      // only the stencil clip — not the particle bounds — decides visibility.
+      system.posX[slot] = 64;
+      system.posY[slot] = 64;
+      system.scaleX[slot] = 16;
+      system.scaleY[slot] = 16;
+      system.rotations[slot] = 0;
+      system.color[slot] = Color.red.toRgba();
+      system.lifetime[slot] = 1;
+
+      clipped.clip = true;
+      clipped.clipShape = createRightTriangle(48);
+      clipped.addChild(system);
+      root.addChild(clipped);
+
+      await renderClipped(ctx, backend, root);
+
+      const readPixel = readCanvas(backend);
+
+      // Inside the triangle (x + y << 48): the red particle survives.
+      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
+      // Outside the triangle (x + y >> 48): clipped to the black clear.
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();

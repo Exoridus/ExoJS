@@ -21,6 +21,8 @@ import { Mesh } from '@/rendering/mesh/Mesh';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+
 // Custom WGSL honouring the mesh contract: group(0) auto-bound mesh uniforms,
 // group(1) the mesh's own texture+sampler, group(2) the user UBO followed by
 // the user texture+sampler (declaration order = bind order).
@@ -162,6 +164,14 @@ describe('custom MeshMaterial WebGPU browser', () => {
 
     await backend.initialize();
 
+    const device = getBackendDeviceOrSkip(ctx, backend);
+
+    if (!device) {
+      backend.destroy();
+
+      return;
+    }
+
     const pattern = createPatternTexture();
     const material = new MeshMaterial({
       shader: new ShaderSource({ wgsl: customWgsl }),
@@ -171,8 +181,6 @@ describe('custom MeshMaterial WebGPU browser', () => {
     const mesh = createQuadMesh(16, material);
 
     mesh.setPosition(24, 24);
-
-    const device = backend.device;
 
     device.pushErrorScope('validation');
 

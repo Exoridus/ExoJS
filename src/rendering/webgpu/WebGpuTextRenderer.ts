@@ -9,6 +9,7 @@ import { BlendModes } from '@/rendering/types';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 // ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
 //
@@ -281,15 +282,6 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   public render(node: Text | BitmapText): void {
     if (!this._device) throw new Error('WebGpuTextRenderer is not connected to a backend.');
 
-    if (this.getBackend()._passCoordinator.stencilActive) {
-      // MVP boundary: stencil clipping supports default-material Sprites, Meshes,
-      // and Graphics — not Text. Throw at collection time (inside the clip scope's
-      // try) so the push/pop balances.
-      throw new Error(
-        'WebGPU geometry stencil clipping currently supports default-material Sprites, Meshes, and Graphics. Text content under a Geometry clip (RenderNode.clip with a Geometry clipShape) is not supported yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend instead.',
-      );
-    }
-
     if (node instanceof Text) {
       this._collectText(node);
     } else {
@@ -411,6 +403,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     device.queue.writeBuffer(this._indexBuffer!, 0, this._indexData.buffer, 0, packedI * 2);
 
     const format = backend.renderTargetFormat;
+    const stencil = backend._passCoordinator.stencilActive;
     const frameBindGroup = this._getFrameBindGroup(device);
 
     // The coordinator owns the GPU pass (load/clear resolution, pass count and
@@ -425,7 +418,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     for (const batch of batches) {
       if (batch.shaderType !== lastShaderType) {
-        pass.setPipeline(this._getPipeline(batch.shaderType, format));
+        pass.setPipeline(this._getPipeline(batch.shaderType, format, stencil));
         pass.setBindGroup(0, frameBindGroup);
         lastShaderType = batch.shaderType;
       }
@@ -462,7 +455,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     for (const shaderType of shaderTypes) {
       for (const format of formats) {
-        const key = `${shaderType}:${format}`;
+        // Prewarm only the no-clip variant (matches the _getPipeline cache key
+        // for stencil = false); stencil variants compile lazily under a clip.
+        const key = `${shaderType}:${format}:n`;
         if (this._pipelines.has(key)) continue;
 
         promises.push(
@@ -781,17 +776,17 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   // ── Pipeline helpers ─────────────────────────────────────────────────────
 
-  private _getPipeline(shaderType: ShaderType, format: GPUTextureFormat): GPURenderPipeline {
-    const key = `${shaderType}:${format}`;
+  private _getPipeline(shaderType: ShaderType, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    const key = `${shaderType}:${format}:${stencil ? 's' : 'n'}`;
     const existing = this._pipelines.get(key);
     if (existing) return existing;
 
-    const pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(shaderType, format));
+    const pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(shaderType, format, stencil));
     this._pipelines.set(key, pipeline);
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(shaderType: ShaderType, format: GPUTextureFormat): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(shaderType: ShaderType, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
     let fragEntry: string;
     if (shaderType === 'sdf') {
       fragEntry = 'fragmentSdf';
@@ -801,7 +796,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       fragEntry = 'fragmentColor';
     }
 
-    return {
+    const descriptor: GPURenderPipelineDescriptor = {
       label: `WebGpuTextRenderer/${shaderType}`,
       layout: this._pipelineLayout!,
       vertex: {
@@ -832,6 +827,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       },
       primitive: { topology: 'triangle-list' },
     };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    return descriptor;
   }
 
   // ── Capacity helpers ─────────────────────────────────────────────────────

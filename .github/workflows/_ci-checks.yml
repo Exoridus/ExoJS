@@ -168,13 +168,13 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Browser tests (Chromium WebGL2, new headless)
-        run: pnpm test:browser:webgl:chromium
+        run: pnpm test:browser:webgl
 
   # Optional, non-blocking lane. Chromium WebGPU new-headless is real coverage
   # locally, but the GitHub-hosted runner currently drops the device on
   # custom-material tests; keep non-blocking until runner/driver stability is
   # solved. A failure here never blocks a merge — the lane still runs and
-  # reports. Run locally via `pnpm test:browser:webgpu:chromium`.
+  # reports. Run locally via `pnpm test:browser:webgpu`.
   browser-tests-webgpu-chromium:
     name: Browser Tests (Chromium WebGPU, experimental)
     runs-on: ubuntu-latest
@@ -215,13 +215,14 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Browser tests (Chromium WebGPU, new headless)
-        run: pnpm test:browser:webgpu:chromium
+        run: pnpm test:browser:webgpu
 
   # Optional, non-blocking lane. The Ubuntu CI runner does not give headless
-  # Firefox a usable WebGL2 context, and Firefox only exposes a WebGPU adapter
-  # in a headed session, so both Firefox lanes are kept out of the required
-  # gate: a failure here never blocks a merge. Real Firefox coverage runs
-  # locally via `pnpm test:browser:webgl:firefox` / `:webgpu:firefox`.
+  # Firefox a usable WebGL2 context, and Firefox WebGPU adapter availability
+  # varies by runner/display setup. Both Firefox lanes are experimental and
+  # kept out of the required gate: a failure here never blocks a merge.
+  # Real Firefox coverage runs locally via
+  # `pnpm test:browser:webgl:firefox` / `pnpm test:browser:webgpu:firefox`.
   browser-tests-firefox:
     name: Browser Tests (Firefox, experimental)
     runs-on: ubuntu-latest
@@ -261,16 +262,13 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps firefox
 
-      - name: Install Xvfb
-        run: sudo apt-get update && sudo apt-get install -y xvfb libxrender1 libxext6 libxtst6 libxi6 libxrandr2
-
       - name: Browser tests (Firefox WebGL2, headless)
         continue-on-error: true
         run: pnpm test:browser:webgl:firefox
 
       - name: Browser tests (Firefox WebGPU, headed)
         continue-on-error: true
-        run: xvfb-run -a pnpm test:browser:webgpu:firefox
+        run: pnpm test:browser:webgpu:firefox
 
   package-verify:
     name: Package Build + Verify
