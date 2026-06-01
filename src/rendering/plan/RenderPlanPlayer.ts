@@ -6,9 +6,20 @@ import { collectRenderGroups, type RenderGroup, type RenderInstruction } from '.
 import type { RenderPlan } from './RenderPlan';
 import type { GroupScope, RenderScope } from './RenderScope';
 
+interface RenderInstructionSlot {
+  readonly groupInstructionIndex: number;
+  readonly passInstructionIndex: number;
+}
+
+interface RenderPlanPlaybackContext {
+  readonly instructionSlots: WeakMap<RenderInstruction, RenderInstructionSlot>;
+  passInstructionIndex: number;
+}
+
 interface RenderPlanPlaybackHooks {
   _beginDrawPlan?(nodeCount: number): void;
   _beginRenderGroup?(group: RenderGroup): void;
+  _prepareRenderInstructionSlot?(instruction: RenderInstruction, slot: RenderInstructionSlot): void;
   _prepareDrawCommand?(instruction: RenderInstruction): void;
   _endRenderGroup?(group: RenderGroup): void;
   _endDrawPlan?(): void;
@@ -35,7 +46,7 @@ export class RenderPlanPlayer {
           backend.clear(pass.clearColor);
         }
 
-        this.playScope(pass.root, backend);
+        this._playScope(pass.root, backend, hooks, this._createPlaybackContext());
       }
     } finally {
       hooks._endDrawPlan?.();
@@ -43,19 +54,24 @@ export class RenderPlanPlayer {
   }
 
   public static playScope(scope: RenderScope, backend: RenderBackend): void {
+    const hooks = backend as RenderBackend & RenderPlanPlaybackHooks;
+
+    this._playScope(scope, backend, hooks, this._createPlaybackContext());
+  }
+
+  private static _playScope(scope: RenderScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
     if (scope.kind === RenderEntryKind.Barrier) {
       RenderEffectExecutor.play(scope, backend, childScope => {
-        this.playScope(childScope, backend);
+        this._playScope(childScope, backend, hooks, context);
       });
 
       return;
     }
 
-    this._playGroup(scope, backend);
+    this._playGroup(scope, backend, hooks, context);
   }
 
-  private static _playGroup(scope: GroupScope, backend: RenderBackend): void {
-    const hooks = backend as RenderBackend & RenderPlanPlaybackHooks;
+  private static _playGroup(scope: GroupScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
     const groups = collectRenderGroups(scope);
     let groupCursor = 0;
     let currentGroup: RenderGroup | null = null;
@@ -69,10 +85,15 @@ export class RenderPlanPlayer {
           hooks._beginRenderGroup?.(currentGroup);
         }
 
+        const slot = this._createRenderInstructionSlot(currentInstructionIndex, context.passInstructionIndex);
+
+        context.instructionSlots.set(entry.command, slot);
+        hooks._prepareRenderInstructionSlot?.(entry.command, slot);
         hooks._prepareDrawCommand?.(entry.command);
         backend.draw(entry.command.drawable);
 
         currentInstructionIndex++;
+        context.passInstructionIndex++;
 
         if (currentGroup !== null && currentInstructionIndex === currentGroup.instructions.length) {
           hooks._endRenderGroup?.(currentGroup);
@@ -81,12 +102,26 @@ export class RenderPlanPlayer {
           groupCursor++;
         }
       } else if (entry.kind === RenderEntryKind.Group) {
-        this._playGroup(entry.scope, backend);
+        this._playGroup(entry.scope, backend, hooks, context);
       } else {
         RenderEffectExecutor.play(entry.scope, backend, childScope => {
-          this.playScope(childScope, backend);
+          this._playScope(childScope, backend, hooks, context);
         });
       }
     }
+  }
+
+  private static _createPlaybackContext(): RenderPlanPlaybackContext {
+    return {
+      instructionSlots: new WeakMap<RenderInstruction, RenderInstructionSlot>(),
+      passInstructionIndex: 0,
+    };
+  }
+
+  private static _createRenderInstructionSlot(groupInstructionIndex: number, passInstructionIndex: number): RenderInstructionSlot {
+    return Object.freeze({
+      groupInstructionIndex,
+      passInstructionIndex,
+    });
   }
 }

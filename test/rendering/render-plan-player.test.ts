@@ -65,15 +65,20 @@ interface PlaybackSpy {
   readonly backend: RenderBackend;
   readonly events: string[];
   readonly draws: string[];
+  readonly slots: string[];
 }
 
 const createPlaybackSpy = (): PlaybackSpy => {
   const events: string[] = [];
   const draws: string[] = [];
+  const slots: string[] = [];
 
   const backend = {
     _beginRenderGroup(group: RenderGroup) {
       events.push(`begin:${group.instructions.map(command => (command.drawable as BoxDrawable).id).join(',')}`);
+    },
+    _prepareRenderInstructionSlot(command: DrawCommand, slot: { groupInstructionIndex: number; passInstructionIndex: number }) {
+      slots.push(`${(command.drawable as BoxDrawable).id}:${slot.groupInstructionIndex}:${slot.passInstructionIndex}`);
     },
     _prepareDrawCommand(command: DrawCommand) {
       events.push(`prepare:${(command.drawable as BoxDrawable).id}`);
@@ -91,7 +96,7 @@ const createPlaybackSpy = (): PlaybackSpy => {
     },
   } as unknown as RenderBackend;
 
-  return { backend, events, draws };
+  return { backend, events, draws, slots };
 };
 
 describe('render plan player', () => {
@@ -155,5 +160,34 @@ describe('render plan player', () => {
       'draw:b',
       'end:b',
     ]);
+    expect(spy.slots).toEqual(['a:0:0', 'b:0:1']);
+  });
+
+  test('instruction slot metadata follows draw traversal order across nested scopes', () => {
+    const a = new BoxDrawable('a');
+    const b = new BoxDrawable('b');
+    const c = new BoxDrawable('c');
+    const d = new BoxDrawable('d');
+    const e = new BoxDrawable('e');
+    const u = new BoxDrawable('u');
+    const v = new BoxDrawable('v');
+    const nested = groupScope([drawEntry(createDrawCommand(d, 3, 7, 7)), drawEntry(createDrawCommand(e, 4, 7, 7))]);
+    const root = groupScope([
+      drawEntry(createDrawCommand(a, 0, 1, 1)),
+      drawEntry(createDrawCommand(b, 1, 1, 1)),
+      groupEntry(nested, 2),
+      drawEntry(createDrawCommand(c, 5, 1, 1)),
+      drawEntry(createDrawCommand(u, 6, undefined, 1)),
+      drawEntry(createDrawCommand(v, 7, undefined, 1)),
+    ]);
+    const first = createPlaybackSpy();
+    const second = createPlaybackSpy();
+
+    RenderPlanPlayer.playScope(root, first.backend);
+    RenderPlanPlayer.playScope(root, second.backend);
+
+    expect(first.draws).toEqual(['a', 'b', 'd', 'e', 'c', 'u', 'v']);
+    expect(first.slots).toEqual(['a:0:0', 'b:1:1', 'd:0:2', 'e:1:3', 'c:0:4', 'u:0:5', 'v:0:6']);
+    expect(second.slots).toEqual(first.slots);
   });
 });
