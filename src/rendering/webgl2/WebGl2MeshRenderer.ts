@@ -266,9 +266,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     const nodeIndex = draw.command?.nodeIndex ?? 0;
 
     if (draw.command === null) {
-      backend._prepareDrawCommand({
-        ...this._createSyntheticCommand(draw.mesh, nodeIndex),
-      });
+      // The synthetic, non-plan path does not arrive through a render-group
+      // upload boundary, so write its transform into the shared buffer directly.
+      backend._writeTransformCommand(this._createSyntheticCommand(draw.mesh, nodeIndex));
     }
 
     this._nodeIndexData[0] = nodeIndex >>> 0;
