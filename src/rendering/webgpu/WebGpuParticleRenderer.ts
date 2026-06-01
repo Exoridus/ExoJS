@@ -7,6 +7,7 @@ import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRendere
 import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 const particleShaderSource = `
 struct ProjectionUniforms {
@@ -119,15 +120,6 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       return;
     }
 
-    if (backend._passCoordinator.stencilActive) {
-      // MVP boundary: stencil clipping supports default-material Sprites, Meshes,
-      // and Graphics — not ParticleSystems. Throw at collection time (inside the
-      // clip scope's try) so the push/pop balances.
-      throw new Error(
-        'WebGPU geometry stencil clipping currently supports default-material Sprites, Meshes, and Graphics. ParticleSystem content under a Geometry clip (RenderNode.clip with a Geometry clipShape) is not supported yet. Use a Rectangle clipShape (scissor) or the WebGL2 backend instead.',
-      );
-    }
-
     backend.setBlendMode(system.blendMode);
     const drawCallIndex = this._drawCallCount++;
     const drawCall = this._drawCalls[drawCallIndex];
@@ -194,7 +186,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         continue;
       }
 
-      const pipeline = this._getPipeline(drawCall.blendMode, backend.renderTargetFormat);
+      const pipeline = this._getPipeline(drawCall.blendMode, backend.renderTargetFormat, backend._passCoordinator.stencilActive);
       const textureBinding = backend.getTextureBinding(drawCall.texture);
       const textureBindGroup = device.createBindGroup({
         layout: this._textureBindGroupLayout!,
@@ -539,15 +531,15 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     return { uvMins: mins, uvMaxs: maxs };
   }
 
-  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
-    const pipelineKey = `${blendMode}:${format}`;
+  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    const pipelineKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
     const existingPipeline = this._pipelines.get(pipelineKey);
 
     if (existingPipeline) {
       return existingPipeline;
     }
 
-    const pipeline = this._device!.createRenderPipeline({
+    const descriptor: GPURenderPipelineDescriptor = {
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,
@@ -615,7 +607,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       primitive: {
         topology: 'triangle-list',
       },
-    });
+    };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    const pipeline = this._device!.createRenderPipeline(descriptor);
 
     this._pipelines.set(pipelineKey, pipeline);
 
