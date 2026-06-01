@@ -252,6 +252,8 @@ export class WebGpuBackend implements RenderBackend {
     // skipped slot is never read by a consuming draw.
     if (drawCommandUsesSharedTransform(command, this)) {
       this._getTransformStorage().writeCommand(command);
+    } else {
+      this._getTransformStorage().recordSkippedWrite();
     }
   }
 

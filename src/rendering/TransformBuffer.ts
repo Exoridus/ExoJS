@@ -34,9 +34,52 @@ export class TransformBuffer {
   private _frameHash = hashOffset >>> 0;
   private _lastCommittedHash = 0;
   private _lastCommittedCount = -1;
+  private _writeCount = 0;
+  private _skippedWriteCount = 0;
+  private _uploadCount = 0;
+  private _uploadedRecordCount = 0;
 
   public get count(): number {
     return this._count;
+  }
+
+  /**
+   * Number of transform rows written into the buffer (via {@link write} /
+   * {@link push}) since the last {@link begin}. Internal stat for profiling and
+   * regression guards; does not affect packing.
+   * @internal
+   */
+  public get writeCount(): number {
+    return this._writeCount;
+  }
+
+  /**
+   * Number of draw commands whose transform write was skipped since the last
+   * {@link begin} — recorded by the backend for renderers that opt out of the
+   * shared transform storage (`_consumesSharedTransform === false`).
+   * @internal
+   */
+  public get skippedWriteCount(): number {
+    return this._skippedWriteCount;
+  }
+
+  /**
+   * Number of GPU uploads (texture / storage writes) issued for this buffer
+   * since the last {@link begin}. Recorded by the backend at its upload
+   * boundary; an unchanged frame uploads zero times.
+   * @internal
+   */
+  public get uploadCount(): number {
+    return this._uploadCount;
+  }
+
+  /**
+   * Total transform rows pushed to the GPU across all uploads since the last
+   * {@link begin}.
+   * @internal
+   */
+  public get uploadedRecordCount(): number {
+    return this._uploadedRecordCount;
   }
 
   public get capacity(): number {
@@ -58,6 +101,10 @@ export class TransformBuffer {
 
     this._count = 0;
     this._frameHash = hashOffset >>> 0;
+    this._writeCount = 0;
+    this._skippedWriteCount = 0;
+    this._uploadCount = 0;
+    this._uploadedRecordCount = 0;
 
     return this;
   }
@@ -102,6 +149,32 @@ export class TransformBuffer {
     for (let i = 0; i < floatsPerSlot; i++) {
       this._frameHash = this._mix(this._frameHash, this._hashFloat(data[offset + i]));
     }
+
+    this._writeCount++;
+
+    return this;
+  }
+
+  /**
+   * Record that a draw command's transform write was intentionally skipped
+   * because its renderer opts out of the shared transform storage. Counts
+   * toward {@link skippedWriteCount} only — buffer contents are untouched.
+   * @internal
+   */
+  public recordSkippedWrite(): this {
+    this._skippedWriteCount++;
+
+    return this;
+  }
+
+  /**
+   * Record a GPU upload of `recordCount` transform rows. Called by the backend
+   * at its upload boundary after committing a snapshot; affects stats only.
+   * @internal
+   */
+  public recordUpload(recordCount: number): this {
+    this._uploadCount++;
+    this._uploadedRecordCount += recordCount;
 
     return this;
   }

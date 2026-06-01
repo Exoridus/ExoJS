@@ -71,6 +71,70 @@ describe('TransformBuffer', () => {
     expect(buffer.count).toBe(65);
   });
 
+  test('write and push increment the internal write count', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+
+    expect(buffer.writeCount).toBe(0);
+
+    buffer.write(0, identity, Color.white);
+    buffer.write(1, identity, Color.white);
+    buffer.push(identity, Color.white);
+
+    expect(buffer.writeCount).toBe(3);
+  });
+
+  test('recordSkippedWrite tracks skips without touching contents or count', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+    buffer.write(0, identity, new Color(10, 20, 30, 0.5));
+    buffer.recordSkippedWrite();
+    buffer.recordSkippedWrite();
+
+    expect(buffer.writeCount).toBe(1);
+    expect(buffer.skippedWriteCount).toBe(2);
+    // Skips never advance the slot count or write into the buffer.
+    expect(buffer.count).toBe(1);
+    expect(Array.from(buffer.data.subarray(12, 24))).toEqual(new Array(12).fill(0));
+  });
+
+  test('recordUpload accumulates upload count and uploaded record count', () => {
+    const buffer = new TransformBuffer();
+
+    buffer.begin();
+    buffer.recordUpload(4);
+    buffer.recordUpload(6);
+
+    expect(buffer.uploadCount).toBe(2);
+    expect(buffer.uploadedRecordCount).toBe(10);
+  });
+
+  test('begin resets all transform write/skip/upload counters', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+    buffer.write(0, identity, Color.white);
+    buffer.recordSkippedWrite();
+    buffer.recordUpload(8);
+
+    expect(buffer.writeCount).toBe(1);
+    expect(buffer.skippedWriteCount).toBe(1);
+    expect(buffer.uploadCount).toBe(1);
+    expect(buffer.uploadedRecordCount).toBe(8);
+
+    buffer.begin();
+
+    expect(buffer.writeCount).toBe(0);
+    expect(buffer.skippedWriteCount).toBe(0);
+    expect(buffer.uploadCount).toBe(0);
+    expect(buffer.uploadedRecordCount).toBe(0);
+  });
+
   test('matches nested getGlobalTransform output including skew and anchor semantics', () => {
     const buffer = new TransformBuffer();
     const parent = new Container();
