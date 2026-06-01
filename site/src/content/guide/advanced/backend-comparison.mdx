@@ -47,6 +47,8 @@ Where differences exist, they are performance characteristics or rendering-path 
 
 Both backends batch sprites from up to 8 different textures into a single draw call. For most projects with a single texture atlas, the batching difference is irrelevant — the practical distinction is only visible in multi-atlas scenes.
 
+Geometric clip parity is also aligned: `RenderNode.clip` with a `Geometry` `clipShape` works on both backends for `Sprite` (default/custom material), `Mesh` (default/custom material), `Graphics`, `Text` / `BitmapText`, and `ParticleSystem`. `Rectangle` / bounds clips remain on the scissor path.
+
 ## Particles and GPU
 
 Particle simulation (spawn, integration, module updates) runs on the CPU by default on both backends. On WebGPU, when every registered update module is GPU-eligible (implements `wgsl()`), the system compiles a composite WGSL compute shader and runs the full update pipeline on the GPU in one dispatch. This is the GPU path: simulation moves to the GPU, and the renderer reads instance data from a shared buffer — no CPU readback.

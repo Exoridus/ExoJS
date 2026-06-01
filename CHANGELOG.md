@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added / Improved
+
+- WebGPU geometric stencil clipping (`RenderNode.clip` with a `Geometry` `clipShape`) now covers custom-material `Sprite`, custom-material `Mesh`, `Text` / `BitmapText`, and `ParticleSystem`, in addition to the existing default-material `Sprite`, default-material `Mesh`, and `Graphics` paths.
+- Notes that still described those content types as unsupported under WebGPU geometry clips were updated to match the current renderer coverage.
+
 ## [0.10.0] - 2026-05-31
 
 ### Breaking — RenderingContext and Scene.draw migration
