@@ -50,6 +50,15 @@ interface ParticleRendererConnection {
 }
 
 export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSystem> {
+  /**
+   * The particle system's transform is bound as a `u_systemTransform` uniform and
+   * each particle is positioned system-locally, so this renderer never reads the
+   * shared {@link TransformBuffer}; the render-group upload boundary skips writing
+   * transform records for particle draws.
+   * @internal
+   */
+  public readonly _consumesSharedTransform = false;
+
   private readonly _shader: Shader;
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;

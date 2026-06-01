@@ -16,7 +16,7 @@ import { ScaleModes, WrapModes } from '@/rendering/types';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
-import type { DrawCommand } from '../plan/RenderCommand';
+import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
@@ -245,7 +245,14 @@ export class WebGpuBackend implements RenderBackend {
   /** @internal */
   public _prepareDrawCommand(command: DrawCommand): void {
     this._activeDrawCommand = command;
-    this._getTransformStorage().writeCommand(command);
+
+    // Skip the shared-transform write for renderers that pack their own per-node
+    // data (Text, Particle) and never read the shared storage. Sprite/Mesh (and
+    // their subclasses) keep writing; nodeIndex is unique per command, so a
+    // skipped slot is never read by a consuming draw.
+    if (drawCommandUsesSharedTransform(command, this)) {
+      this._getTransformStorage().writeCommand(command);
+    }
   }
 
   /** @internal */
