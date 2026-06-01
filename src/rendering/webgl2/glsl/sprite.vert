@@ -1,18 +1,18 @@
 #version 300 es
 precision lowp float;
-precision lowp int;
+precision highp int;
 
 // Per-instance attributes (divisor = 1). Each Sprite contributes one entry
 // to the per-instance buffer; gl_VertexID 0..3 selects which corner of the
 // quad this invocation is computing.
 layout(location = 0) in vec4 a_localBounds;     // left, top, right, bottom (local space)
-layout(location = 1) in vec3 a_transformAB;     // a, b, x — first row of 2D affine
-layout(location = 2) in vec3 a_transformCD;     // c, d, y — second row
 layout(location = 3) in vec4 a_uvBounds;        // uMin, vMin, uMax, vMax (normalised, already flipY-swapped)
 layout(location = 4) in vec4 a_color;           // RGBA tint
 layout(location = 5) in uint a_textureSlot;
+layout(location = 6) in uint a_nodeIndex;       // row into the shared transform buffer
 
 uniform mat3 u_projection;
+uniform sampler2D u_transforms;                 // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
 out vec4 v_color;
@@ -28,9 +28,17 @@ void main(void) {
     float localX = (cornerX == 0) ? a_localBounds.x : a_localBounds.z;
     float localY = (cornerY == 0) ? a_localBounds.y : a_localBounds.w;
 
-    // Apply the per-instance affine transform: world = M * (localX, localY, 1)
-    float worldX = (a_transformAB.x * localX) + (a_transformAB.y * localY) + a_transformAB.z;
-    float worldY = (a_transformCD.x * localX) + (a_transformCD.y * localY) + a_transformCD.z;
+    // Fetch the world transform for this instance from the shared buffer,
+    // keyed by a_nodeIndex. Row layout: texel 0 = (a, b, c, d),
+    // texel 1 = (tx, ty, 0, 0). (texel 2 carries tint, unused here — the
+    // sprite keeps its own per-instance a_color.)
+    int row = int(a_nodeIndex);
+    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
+    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, 0, 0
+
+    // world = M * (localX, localY, 1)
+    float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
+    float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
     gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
 

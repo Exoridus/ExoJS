@@ -12,7 +12,7 @@ import { BlendModes } from '@/rendering/types';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
-import type { DrawCommand } from '../plan/RenderCommand';
+import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
 import type { RenderGroup } from '../plan/RenderInstruction';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
@@ -290,10 +290,18 @@ export class WebGl2Backend implements RenderBackend {
     // group is covered here, before the group's first draw — so the per-draw
     // write previously done in `_prepareDrawCommand` is no longer needed and
     // the buffer is filled one contiguous group slice at a time.
+    //
+    // Renderers that pack their own per-node data (Text, Particle) never read
+    // the shared buffer, so their commands are skipped — no consuming draw ever
+    // references their slots (nodeIndex is unique per command).
     const instructions = group.instructions;
 
     for (let i = 0; i < instructions.length; i++) {
-      this._writeTransformCommand(instructions[i]);
+      const command = instructions[i];
+
+      if (drawCommandUsesSharedTransform(command, this)) {
+        this._writeTransformCommand(command);
+      }
     }
   }
 
@@ -316,6 +324,20 @@ export class WebGl2Backend implements RenderBackend {
     const drawable = command.drawable;
 
     this._transformBuffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
+  }
+
+  /**
+   * Append a drawable's world transform (+ tint) to the shared transform buffer
+   * and return the slot it was written to. Used by instanced renderers for draws
+   * that arrive without a render-group upload boundary — i.e. a direct
+   * `backend.draw(drawable)` outside the plan player (`activeDrawCommand === null`),
+   * where no stable `nodeIndex` was assigned. Unlike {@link _writeTransformCommand}
+   * (fixed slot) this allocates a fresh slot, so a batch of synthetic draws does
+   * not collide on a single row.
+   * @internal
+   */
+  public _pushTransform(drawable: Drawable): number {
+    return this._transformBuffer.push(drawable.getGlobalTransform(), drawable.tint);
   }
 
   /** @internal */

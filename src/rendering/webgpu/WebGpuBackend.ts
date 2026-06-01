@@ -16,7 +16,7 @@ import { ScaleModes, WrapModes } from '@/rendering/types';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
-import type { DrawCommand } from '../plan/RenderCommand';
+import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
@@ -245,7 +245,14 @@ export class WebGpuBackend implements RenderBackend {
   /** @internal */
   public _prepareDrawCommand(command: DrawCommand): void {
     this._activeDrawCommand = command;
-    this._getTransformStorage().writeCommand(command);
+
+    // Skip the shared-transform write for renderers that pack their own per-node
+    // data (Text, Particle) and never read the shared storage. Sprite/Mesh (and
+    // their subclasses) keep writing; nodeIndex is unique per command, so a
+    // skipped slot is never read by a consuming draw.
+    if (drawCommandUsesSharedTransform(command, this)) {
+      this._getTransformStorage().writeCommand(command);
+    }
   }
 
   /** @internal */
@@ -649,6 +656,19 @@ export class WebGpuBackend implements RenderBackend {
   /** @internal */
   public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly count: number } {
     return this._getTransformStorage().getBuffer(this.device, minCount);
+  }
+
+  /**
+   * Append a drawable's world transform (+ tint) to the shared transform storage
+   * and return the slot it was written to. Used by instanced renderers for draws
+   * that arrive without a render-group upload boundary — i.e. a direct
+   * `backend.draw(drawable)` outside the plan player (`activeDrawCommand === null`),
+   * where no stable `nodeIndex` was assigned. Each call allocates a fresh slot, so
+   * a batch of synthetic draws does not collide on a single row.
+   * @internal
+   */
+  public _pushTransform(drawable: Drawable): number {
+    return this._getTransformStorage().push(drawable);
   }
 
   private _setActiveRenderer(renderer: Renderer | null): void {
