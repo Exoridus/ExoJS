@@ -238,7 +238,18 @@ export class WebGpuBackend implements RenderBackend {
 
   /** @internal */
   public _beginDrawPlan(nodeCount: number): void {
-    this._getTransformStorage().begin(nodeCount);
+    const storage = this._getTransformStorage();
+
+    storage.begin(nodeCount);
+
+    // Pre-allocate the GPU storage buffer for the full plan before any group
+    // flush runs. Without this, a later flush with a higher maxNodeIndex would
+    // destroy and replace the buffer mid-frame while earlier command buffers
+    // may still reference the old allocation.
+    if (nodeCount > 0 && this._device !== null && !this._deviceLost) {
+      storage.reserve(this._device, nodeCount);
+    }
+
     this._activeDrawCommand = null;
     this._drawPlanDepth++;
   }
