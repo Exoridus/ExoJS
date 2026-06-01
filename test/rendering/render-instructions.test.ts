@@ -59,6 +59,37 @@ describe('render instructions', () => {
     expectTypeOf<RenderInstruction>().toEqualTypeOf<DrawCommand>();
   });
 
+  test('same-material sprites at different z-indices land in separate render groups', () => {
+    // The optimizer assigns different groupIndices when z differs, so the plan
+    // has two logical groups. However, the sprite renderer coalesces these into
+    // one GPU draw call because it tracks blend-mode/texture/material — not
+    // groupIndex. This test documents the logical split; draw-call coalescing
+    // is proven by the browser tests.
+    const { backend, destroy } = createBuildBackend();
+
+    try {
+      const root = new Container();
+      const a = new BoxDrawable();
+      const b = new BoxDrawable();
+
+      a.zIndex = 0;
+      b.zIndex = 5;
+      root.addChild(a, b);
+
+      const scope = buildOptimizedScope(root, backend);
+      const groups = collectRenderGroups(scope);
+
+      // Same type → same material key; but different z → two logical groups.
+      expect(groups).toHaveLength(2);
+      expect(groups[0].groupIndex).not.toBe(groups[1].groupIndex);
+      // Both groups carry the same pipeline/bind state.
+      expect(groups[0].material.pipelineKey).toBe(groups[1].material.pipelineKey);
+      expect(groups[0].material.bindKey).toBe(groups[1].material.bindKey);
+    } finally {
+      destroy();
+    }
+  });
+
   test('consecutive same-material draws coalesce into one render group', () => {
     const { backend, destroy } = createBuildBackend();
 
