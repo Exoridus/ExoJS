@@ -13,6 +13,7 @@ import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
 import type { DrawCommand } from '../plan/RenderCommand';
+import type { RenderGroup } from '../plan/RenderInstruction';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
@@ -282,9 +283,36 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _prepareDrawCommand(command: DrawCommand): void {
-    this._activeDrawCommand = command;
+  public _prepareRenderGroupUpload(group: RenderGroup): void {
+    // Pack the whole render group's world transforms (+ tint) into the shared
+    // transform buffer at the group's upload boundary, keyed by each draw
+    // command's stable nodeIndex. Every draw the player will submit for this
+    // group is covered here, before the group's first draw — so the per-draw
+    // write previously done in `_prepareDrawCommand` is no longer needed and
+    // the buffer is filled one contiguous group slice at a time.
+    const instructions = group.instructions;
 
+    for (let i = 0; i < instructions.length; i++) {
+      this._writeTransformCommand(instructions[i]);
+    }
+  }
+
+  /** @internal */
+  public _prepareDrawCommand(command: DrawCommand): void {
+    // Transform packing now happens at the render-group upload boundary
+    // (`_prepareRenderGroupUpload`); this hook only tracks the active draw so
+    // the mesh renderer can read the current command's nodeIndex.
+    this._activeDrawCommand = command;
+  }
+
+  /**
+   * Write a single draw command's world transform (+ tint) into the shared
+   * transform buffer at its `nodeIndex` slot. Used for draws that do not arrive
+   * through a render-group upload boundary — currently the mesh renderer's
+   * synthetic, non-plan instanced path.
+   * @internal
+   */
+  public _writeTransformCommand(command: DrawCommand): void {
     const drawable = command.drawable;
 
     this._transformBuffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
