@@ -16,6 +16,11 @@ let app = null;
 let overlay = null;
 let backendType = 'webgpu';
 
+class MovingSprite extends Sprite {
+    _vx = 0;
+    _vy = 0;
+}
+
 class DemoScene extends Scene {
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
@@ -23,7 +28,7 @@ class DemoScene extends Scene {
     init(loader) {
         this._sprites = [];
         for (let i = 0; i < 2200; i++) {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'));
+            const sprite = new MovingSprite(loader.get(Texture, 'bunny'));
             sprite.setAnchor(0.5);
             sprite.setScale(0.35);
             sprite.setPosition(Math.random() * 800, Math.random() * 600);

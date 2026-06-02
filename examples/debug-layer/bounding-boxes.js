@@ -17,6 +17,10 @@ document.body.append(app.canvas);
 const debug = new DebugOverlay(app);
 debug.layers.boundingBoxes.visible = true;
 
+class DriftingSprite extends Sprite {
+    _speed = 1;
+}
+
 app.start(
     new (class extends Scene {
         async load(loader) {
@@ -25,7 +29,7 @@ app.start(
         init(loader) {
             this._sprites = [];
             for (let i = 0; i < 7; i++) {
-                const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.8);
+                const sprite = new DriftingSprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.8);
                 sprite.setPosition(120 + i * 90, 300 + Math.sin(i) * 80);
                 sprite._speed = 0.8 + i * 0.14;
                 this._sprites.push(sprite);

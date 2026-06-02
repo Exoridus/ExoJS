@@ -19,7 +19,7 @@ app.start(
             await loader.load(Texture, { bunny: 'image/ship-a.png' });
         }
         init(loader) {
-            this._root = new Container();
+            this._group = new Container();
             this._label = new Text('Press 1, 2, 3', { fillColor: Color.white, fontSize: 18 });
             this._label.setPosition(18, 18);
 
@@ -30,7 +30,7 @@ app.start(
                     .setPosition(340 + index * 60, 300);
                 sprite.setTint([new Color(255, 120, 120), new Color(120, 255, 170), new Color(120, 170, 255)][index]);
                 sprite.zIndex = index;
-                this._root.addChild(sprite);
+                this._group.addChild(sprite);
                 return sprite;
             });
 
@@ -45,7 +45,7 @@ app.start(
         }
         draw(context) {
             context.backend.clear();
-            context.render(this._root);
+            context.render(this._group);
             context.render(this._label);
         }
     })()

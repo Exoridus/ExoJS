@@ -10,10 +10,12 @@ const repositoryRoot = path.resolve(projectRoot, '..');
 const sourceExamplesDir = path.resolve(repositoryRoot, 'examples');
 const sourceAssetsDir = path.resolve(sourceExamplesDir, 'assets');
 const sourceCatalogDemoDir = path.resolve(repositoryRoot, 'packages', 'assets', 'demo');
+const sourceCatalogTechnicalDir = path.resolve(repositoryRoot, 'packages', 'assets', 'technical');
 
 const targetExamplesDir = path.resolve(projectRoot, 'public', 'examples');
 const targetAssetsDir = path.resolve(projectRoot, 'public', 'assets');
 const targetCatalogDemoDir = path.resolve(targetAssetsDir, 'demo');
+const targetCatalogTechnicalDir = path.resolve(targetAssetsDir, 'technical');
 
 const ensureSource = (dirPath: string): void => {
     if (!fs.existsSync(dirPath)) {
@@ -34,6 +36,7 @@ const run = (): void => {
     ensureSource(sourceExamplesDir);
     ensureSource(sourceAssetsDir);
     ensureSource(sourceCatalogDemoDir);
+    ensureSource(sourceCatalogTechnicalDir);
 
     resetDir(targetExamplesDir);
     resetDir(targetAssetsDir);
@@ -41,6 +44,7 @@ const run = (): void => {
     copyRecursive(sourceExamplesDir, targetExamplesDir);
     copyRecursive(sourceAssetsDir, targetAssetsDir);
     copyRecursive(sourceCatalogDemoDir, targetCatalogDemoDir);
+    copyRecursive(sourceCatalogTechnicalDir, targetCatalogTechnicalDir);
 
     // Keep runtime serving deterministic: examples/assets is canonical source,
     // but the playground runtime expects /assets/* URLs.
@@ -49,6 +53,7 @@ const run = (): void => {
     console.log(`[examples:sync] Copied ${sourceExamplesDir} -> ${targetExamplesDir}`);
     console.log(`[examples:sync] Copied ${sourceAssetsDir} -> ${targetAssetsDir}`);
     console.log(`[examples:sync] Copied ${sourceCatalogDemoDir} -> ${targetCatalogDemoDir}`);
+    console.log(`[examples:sync] Copied ${sourceCatalogTechnicalDir} -> ${targetCatalogTechnicalDir}`);
 };
 
 run();

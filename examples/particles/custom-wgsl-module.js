@@ -24,6 +24,7 @@ class SwayModule extends UpdateModule {
             system.velX[i] += Math.sin(system.elapsed[i] * this.frequency) * this.amplitude * dt;
         }
     }
+    /** @returns {import('@codexo/exojs').WgslContribution} */
     wgsl() {
         return {
             key: 'SwayModule',

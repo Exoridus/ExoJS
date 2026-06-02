@@ -13,6 +13,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+/** @type {{ model: 'linear' | 'inverse' | 'exponential', x: number, y: number, color: Color }[]} */
 const SOURCES = [
     { model: 'linear', x: 180, y: 460, color: new Color(255, 140, 140) },
     { model: 'inverse', x: 400, y: 460, color: new Color(140, 200, 255) },

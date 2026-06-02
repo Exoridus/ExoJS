@@ -13,6 +13,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+/** @type {[string, (t: number) => number][]} */
 const easings = [
     ['linear', Ease.linear],
     ['quadIn', Ease.quadIn],

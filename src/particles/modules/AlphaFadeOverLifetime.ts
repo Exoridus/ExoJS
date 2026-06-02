@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import type { Curve } from '@/particles/distributions/Curve';
+import { Curve } from '@/particles/distributions/Curve';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
 
 import { UpdateModule } from './UpdateModule';
@@ -24,7 +24,12 @@ const lookupSize = 256;
 export class AlphaFadeOverLifetime extends UpdateModule {
   public curve: Curve;
 
-  public constructor(curve: Curve) {
+  public constructor(
+    curve: Curve = new Curve([
+      { t: 0, v: 1 },
+      { t: 1, v: 0 },
+    ]),
+  ) {
     super();
     this.curve = curve;
   }
