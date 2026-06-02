@@ -12,6 +12,6 @@ layout(location = 0) out vec4 fragColor;
 void main(void) {
   // texel 2: fillColor (tint multiplier; (1,1,1,1) = no tint)
   vec4 tint   = texelFetch(u_nodeData, ivec2(2, v_nodeIndex), 0);
-  vec4 sample = texture(u_texture, v_texcoord);
-  fragColor   = sample * tint;
+  vec4 texel  = texture(u_texture, v_texcoord);
+  fragColor   = texel * tint;
 }
