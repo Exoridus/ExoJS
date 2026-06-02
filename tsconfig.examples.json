@@ -13,9 +13,22 @@
   // `draw(context)` params, etc.) don't add noise — TypeScript's object-literal
   // excess-property check, which flags the stale style keys, runs regardless.
   //
-  // Scope: text-fonts only for now. The wider catalog still uses the legacy
-  // `fill` alias in ~40 unrelated examples; broaden `include` once those are
-  // migrated (tracked as a follow-up).
+  // Scope: the full example catalog. Every `.js` under `examples/` is
+  // type-checked against the engine source types, so stale TextStyle keys are
+  // caught catalog-wide. `examples/shared/runtime.d.ts` supplies the
+  // playground-only globals (`window.assets`, `__EXAMPLE_META__`).
+  //
+  // `examples/shared/editor-support.d.ts` is deliberately NOT included: it is a
+  // Monaco-only extra-lib that re-declares `Json`/`TextAsset`/etc. inside
+  // `declare module '@codexo/exojs'`, which collides with the real source
+  // exports here (duplicate-identifier). Its permissive Scene/Loader shims are
+  // unnecessary for `.js` sources — checked JS infers `this._x` fields directly.
+  //
+  // `exclude` carves out examples that currently fail the type-check for reasons
+  // unrelated to text styling (stale `Signal`/`Scene`/particle-module APIs,
+  // `Sprite` dynamic fields, `AudioAnalyser`, WGSL module types). These are
+  // tracked as follow-up batches; the TextStyle migration itself is already
+  // complete in every one of them.
   "compilerOptions": {
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -34,5 +47,26 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["examples/text-fonts/**/*.js", "src/typings.d.ts"]
+  "include": ["examples/**/*.js", "examples/shared/runtime.d.ts", "src/typings.d.ts"],
+  "exclude": [
+    "examples/application-scenes/hud-overlay-scene.js",
+    "examples/application-scenes/multiple-scenes.js",
+    "examples/beat-detection/beat-sync-pulse.js",
+    "examples/debug-layer/bounding-boxes.js",
+    "examples/debug-layer/performance-overlay.js",
+    "examples/particles/cursor-attractor-particles.js",
+    "examples/particles/custom-wgsl-module.js",
+    "examples/particles/emitter-basics.js",
+    "examples/particles/gpu-particles.js",
+    "examples/performance/backend-comparison.js",
+    "examples/scene-graph/z-ordering.js",
+    "examples/showcase/audio-reactive-particles.js",
+    "examples/showcase/audio-visualisation.js",
+    "examples/showcase/gamepad-spaceship.js",
+    "examples/showcase/pause-blur.js",
+    "examples/showcase/screen-shake-on-explosion.js",
+    "examples/spatial-audio/falloff-curves.js",
+    "examples/sprites-textures/blendmodes.js",
+    "examples/tweens-animation/easing-curves.js"
+  ]
 }

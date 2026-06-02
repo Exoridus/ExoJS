@@ -26,7 +26,7 @@ app.start(
             app.audio.listener.target = this._listener;
             this._angle = 0;
             this._graphics = new Graphics();
-            this._text = new Text('Auto-circling spatial source', { fill: 'white', fontSize: 20 });
+            this._text = new Text('Auto-circling spatial source', { fillColor: Color.white, fontSize: 20 });
             this._text.setPosition(230, 20);
         }
         update(delta) {

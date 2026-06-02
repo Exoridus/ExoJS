@@ -27,7 +27,7 @@ app.start(
             app.audio.listener.target = this._listener;
 
             this._graphics = new Graphics();
-            this._label = new Text('', { fill: 'white', fontSize: 17 });
+            this._label = new Text('', { fillColor: Color.white, fontSize: 17 });
             this._label.setPosition(20, 20);
 
             this.app.input.onPointerDown.add(pointer => {

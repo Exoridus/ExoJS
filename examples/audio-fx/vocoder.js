@@ -27,7 +27,7 @@ app.start(
             this._vocoder = new VocoderFilter({ modulator: this._modBus, numBands: 14, wet: 1.0 });
             app.audio.sound.addFilter(this._vocoder);
             this._active = false;
-            this._text = new Text('Click to toggle vocoder (voice mod + saw carrier)', { fill: 'white', fontSize: 22 });
+            this._text = new Text('Click to toggle vocoder (voice mod + saw carrier)', { fillColor: Color.white, fontSize: 22 });
             this._text.setPosition(120, 280);
 
             this.app.input.onPointerTap.add(() => {

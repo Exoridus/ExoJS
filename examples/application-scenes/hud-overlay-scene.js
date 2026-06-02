@@ -34,7 +34,7 @@ class GameScene extends Scene {
 class HudScene extends Scene {
     init() {
         this._bar = new Graphics();
-        this._text = new Text('HUD Overlay', { fill: 'white', fontSize: 22 });
+        this._text = new Text('HUD Overlay', { fillColor: Color.white, fontSize: 22 });
         this._text.setPosition(18, 14);
     }
     draw(context) {

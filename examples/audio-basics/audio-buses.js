@@ -30,7 +30,7 @@ app.start(
             this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.6).play();
             this._sfx = loader.get(Sound, 'sfx');
             this._graphics = new Graphics();
-            this._labels = rows.map(row => new Text('', { fill: 'white', fontSize: 18 }).setPosition(150, row.y - 34));
+            this._labels = rows.map(row => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(150, row.y - 34));
             this._drag = -1;
 
             this.app.input.onPointerDown.add(p => {

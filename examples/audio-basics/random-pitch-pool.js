@@ -21,7 +21,7 @@ app.start(
         init(loader) {
             this._sound = loader.get(Sound, 'blip');
             this._sound.poolSize = 20;
-            this._text = new Text('Hold Space for random pitch detune', { fill: 'white', fontSize: 24 });
+            this._text = new Text('Hold Space for random pitch detune', { fillColor: Color.white, fontSize: 24 });
             this._text.setPosition(170, 280);
             this._active = false;
             this._timer = 0;

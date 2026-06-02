@@ -22,7 +22,7 @@ app.start(
             this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
             this._detector = new BeatDetector();
             this._detector.source = this._music;
-            this._text = new Text('', { fill: 'white', fontSize: 28 });
+            this._text = new Text('', { fillColor: Color.white, fontSize: 28 });
             this._text.setPosition(280, 220);
             this._bar = new Graphics();
         }

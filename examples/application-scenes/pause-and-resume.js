@@ -25,7 +25,7 @@ app.start(
             this._sprite = new Sprite(loader.get(Texture, 'bunny'));
             this._sprite.setAnchor(0.5);
             this._sprite.setPosition(width / 2, height / 2);
-            this._label = new Text('Space: pause update', { fill: 'white', fontSize: 16, padding: 8 });
+            this._label = new Text('Space: pause update', { fillColor: Color.white, fontSize: 16 });
             this._label.setAnchor(0.5, 0);
             this._label.setPosition(width / 2, 16);
             this.inputs.onTrigger(Keyboard.Space, () => {

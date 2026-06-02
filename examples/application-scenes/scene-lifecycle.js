@@ -25,7 +25,7 @@ app.start(
             this._counter = 0;
             this._drawCount = 0;
             this._timer = new Timer(seconds(1), true);
-            this._text = new Text('', { fill: 'white', fontSize: 18, padding: 10 });
+            this._text = new Text('', { fillColor: Color.white, fontSize: 18 });
             this._text.setAnchor(0.5);
             this._text.setPosition(width / 2, height / 2);
         }

@@ -20,7 +20,7 @@ app.start(
         }
         init(loader) {
             this._sound = loader.get(Sound, 'click');
-            this._text = new Text('Click anywhere to play SFX', { fill: 'white', fontSize: 24 });
+            this._text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24 });
             this._text.setPosition(220, 280);
             this.app.input.onPointerTap.add(() => {
                 this._sound.play();

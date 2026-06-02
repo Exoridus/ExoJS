@@ -20,7 +20,7 @@ app.start(
         }
         init(loader) {
             this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
-            this._text = new Text('', { fill: 'white', fontSize: 18, lineHeight: 24, padding: 8 });
+            this._text = new Text('', { fillColor: Color.white, fontSize: 18, lineHeight: 24 });
             this._text.setPosition(20, 20);
             this._jumpChannel = Keyboard.Space;
             this._rebindRequested = false;

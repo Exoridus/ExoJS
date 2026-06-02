@@ -35,7 +35,7 @@ app.start(
         }
         init(loader) {
             this._progress = { v: 0 };
-            this._label = new Text('0%', { fill: 'white', fontSize: 42 });
+            this._label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
             this._label.setPosition(360, 410);
             this._ring = new Sprite(loader.get(Texture, 'uvGrid')).setScale(2.2).setPosition(310, 130);
             this._filter =

@@ -37,7 +37,7 @@ app.start(
                     .setAnchor(0.5)
                     .setScale(0.65)
                     .setPosition(90, y + 22);
-                const label = new Text(name, { fill: 'white', fontSize: 14 });
+                const label = new Text(name, { fillColor: Color.white, fontSize: 14 });
                 label.setPosition(18, y);
                 const tween = this.app.tweens.create(sprite.position).to({ x: 730 }, 1.5).easing(easing).yoyo(true).repeat(-1).start();
                 return { sprite, label, tween };

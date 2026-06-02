@@ -57,11 +57,11 @@ app.start(
 
             this._graphics = new Graphics();
             this._labels = SOURCES.map(({ model, x, y }) => {
-                const label = new Text(model, { fill: 'white', fontSize: 16 });
+                const label = new Text(model, { fillColor: Color.white, fontSize: 16 });
                 label.setPosition(x - 40, y + 30);
                 return label;
             });
-            this._hint = new Text('Move pointer to relocate listener', { fill: 'white', fontSize: 16 });
+            this._hint = new Text('Move pointer to relocate listener', { fillColor: Color.white, fontSize: 16 });
             this._hint.setPosition(20, 20);
 
             this.app.input.onPointerMove.add(pointer => {

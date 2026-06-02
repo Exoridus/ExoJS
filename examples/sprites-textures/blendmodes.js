@@ -54,8 +54,7 @@ app.start(
 
             this._info = new Text('Click to switch between blend modes', {
                 fontSize: 16,
-                padding: 10,
-                fill: '#fff',
+                fillColor: Color.white,
                 align: 'center',
             });
 

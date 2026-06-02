@@ -31,7 +31,7 @@ app.start(
             app.audio.sound.addFilter(this._reverb);
             app.audio.sound.addFilter(this._delay);
             this._gfx = new Graphics();
-            this._labels = sliders.map(() => new Text('', { fill: 'white', fontSize: 16 }));
+            this._labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));
             this._drag = -1;
             this.app.input.onPointerDown.add(p => {
                 this._drag = this._pick(p.y);

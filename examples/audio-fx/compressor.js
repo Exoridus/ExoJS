@@ -30,8 +30,8 @@ app.start(
             this._filter = new CompressorFilter();
             app.audio.music.addFilter(this._filter);
             this._gfx = new Graphics();
-            this._labels = sliders.map(() => new Text('', { fill: 'white', fontSize: 16 }));
-            this._meterLabel = new Text('', { fill: 'white', fontSize: 16 });
+            this._labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));
+            this._meterLabel = new Text('', { fillColor: Color.white, fontSize: 16 });
             this._meterLabel.setPosition(120, 478);
             this._drag = -1;
             this.app.input.onPointerDown.add(p => {

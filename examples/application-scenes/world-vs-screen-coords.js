@@ -20,7 +20,7 @@ app.start(
             this._view = new View(260, 160, width, height);
             this._grid = new Graphics();
             this._markers = new Graphics();
-            this._text = new Text('', { fill: 'white', fontSize: 16, padding: 8 });
+            this._text = new Text('', { fillColor: Color.white, fontSize: 16 });
 
             this._grid.lineWidth = 1;
             this._grid.lineColor = new Color(60, 60, 60);

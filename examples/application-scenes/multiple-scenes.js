@@ -16,7 +16,7 @@ document.body.append(app.canvas);
 class MenuScene extends Scene {
     init() {
         const { width, height } = this.app.canvas;
-        this._label = new Text('MENU\nClick to Start', { align: 'center', fill: 'white', fontSize: 34 });
+        this._label = new Text('MENU\nClick to Start', { align: 'center', fillColor: Color.white, fontSize: 34 });
         this._label.setAnchor(0.5);
         this._label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Space, () => {
@@ -40,7 +40,7 @@ class MenuScene extends Scene {
 class GameScene extends Scene {
     init() {
         const { width, height } = this.app.canvas;
-        this._label = new Text('GAME\nEsc to Menu', { align: 'center', fill: 'white', fontSize: 34 });
+        this._label = new Text('GAME\nEsc to Menu', { align: 'center', fillColor: Color.white, fontSize: 34 });
         this._label.setAnchor(0.5);
         this._label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Escape, () => {

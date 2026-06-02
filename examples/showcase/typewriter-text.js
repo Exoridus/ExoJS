@@ -22,7 +22,7 @@ app.start(
         }
         init(loader) {
             this._sound = loader.get(Sound, 'tick');
-            this._text = new Text('', { fill: 'white', fontSize: 30, wordWrap: true, wordWrapWidth: 720, lineHeight: 42 });
+            this._text = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 42 }, { maxWidth: 720 });
             this._text.setPosition(60, 190);
             this._state = { count: 0 };
             this._last = 0;

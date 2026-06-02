@@ -28,7 +28,7 @@ app.start(
         }
         init(loader) {
             this._portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(1.7).setPosition(170, 420);
-            this._box = new Text('', { fill: 'white', fontSize: 30, wordWrap: true, wordWrapWidth: 600, lineHeight: 40 });
+            this._box = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 40 }, { maxWidth: 600 });
             this._box.setPosition(270, 360);
             this._beep = loader.get(Sound, 'beep');
             this._lineIndex = 0;
