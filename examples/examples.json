@@ -534,6 +534,19 @@
             ]
         },
         {
+            "slug": "graphics-gradient",
+            "path": "geometry-graphics/graphics-gradient.js",
+            "title": "Graphics Gradient",
+            "description": "Paint Graphics shapes with gradients through the fillStyle / strokeStyle API: a linear-gradient rectangle, a radial-gradient circle, a radial-gradient stroked ring, and a spinning linear-gradient star.",
+            "backend": "core",
+            "tags": [
+                "graphics",
+                "gradient",
+                "fillStyle",
+                "strokeStyle"
+            ]
+        },
+        {
             "slug": "gradient",
             "path": "geometry-graphics/gradient.js",
             "title": "Gradient",
