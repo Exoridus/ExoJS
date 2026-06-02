@@ -25,6 +25,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - WebGPU mesh tint is now normalized to 0..1 before the shader multiply. The default- and custom-material mesh paths packed the per-mesh tint `Color`'s RGB in the 0..255 range while the WGSL shaders multiply `sample * color * tint` expecting 0..1; with the default white tint this scaled every sampled texel channel by 255 and clamped it, so textures with intermediate colors (gradients, grays, photos) rendered fully saturated while pure 0/255 colors looked correct. This makes WebGPU `DataTexture`-backed and canvas-sourced textured meshes — including rasterized `Gradient` fills — sample pixel-correct, matching WebGL2. The instanced mesh and sprite paths were already correct (they source the tint from the normalized shared `TransformBuffer`). No public API change.
 
+### Examples
+
+- New example `geometry-graphics/graphics-gradient.js`: paints `Graphics` shapes with gradients through the canonical `fillStyle` / `strokeStyle` API — a linear-gradient rectangle, a radial-gradient circle, a radial-gradient stroked ring, and a transformed, spinning linear-gradient star.
+
 ## [0.10.0] - 2026-05-31
 
 ### Breaking — RenderingContext and Scene.draw migration
