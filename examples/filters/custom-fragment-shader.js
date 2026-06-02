@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
@@ -10,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const HUE_RAMP = globalThis.assets?.technical?.color?.hueRamp ?? 'assets/technical/color/hue-ramp.png';
+const HUE_RAMP = technical.color.hueRamp;
 
 const glsl = `#version 300 es
 precision mediump float;

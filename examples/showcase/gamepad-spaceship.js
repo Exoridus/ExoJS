@@ -1,3 +1,4 @@
+import { textures } from '@assets';
 import {
     AlphaFadeOverLifetime,
     Application,
@@ -13,8 +14,6 @@ import {
     Vector,
 } from '@codexo/exojs';
 
-const assets = globalThis.assets;
-
 const app = new Application({
     canvas: {
         width: 800,
@@ -28,9 +27,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const shipUrl = assets?.textures?.shipA ?? 'assets/demo/textures/ship-a.png';
-            const sparkUrl = assets?.textures?.particleSpark ?? 'assets/demo/textures/particle-spark.png';
-            await loader.load(Texture, { ship: shipUrl, particle: sparkUrl });
+            await loader.load(Texture, { ship: textures.shipA, particle: textures.particleSpark });
         }
         init(loader) {
             this._ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(400, 300);

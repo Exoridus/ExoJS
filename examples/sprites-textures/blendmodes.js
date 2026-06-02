@@ -1,3 +1,4 @@
+import { technical, textures } from '@assets';
 import { Application, BlendModes, Color, ScaleModes, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -10,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const ALPHA_RINGS = globalThis.assets?.technical?.alpha?.alphaGradientRings ?? 'assets/technical/alpha/alpha-gradient-rings.png';
+const ALPHA_RINGS = technical.alpha.alphaGradientRings;
 
 app.start(
     new (class extends Scene {
@@ -19,7 +20,7 @@ app.start(
                 Texture,
                 {
                     background: ALPHA_RINGS,
-                    bunny: 'assets/image/ship-a.png',
+                    bunny: textures.shipA,
                 },
                 {
                     scaleMode: ScaleModes.Nearest,

@@ -1,3 +1,4 @@
+import { textures } from '@assets';
 import {
     AlphaFadeOverLifetime,
     Application,
@@ -17,8 +18,6 @@ import {
     Timer,
     Vector,
 } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -48,8 +47,7 @@ const fireworkColors = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const starUrl = assets?.textures?.particleStar ?? 'assets/demo/textures/particle-star.png';
-            await loader.load(Texture, { star: starUrl });
+            await loader.load(Texture, { star: textures.particleStar });
         }
         init(loader) {
             const { width, height } = this.app.canvas;

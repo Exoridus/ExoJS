@@ -44,9 +44,10 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@assets": ["./examples/shared/assets-catalog.d.ts"]
     }
   },
-  "include": ["examples/**/*.js", "examples/shared/runtime.d.ts", "src/typings.d.ts"],
+  "include": ["examples/**/*.js", "examples/shared/runtime.d.ts", "examples/shared/assets-catalog.d.ts", "src/typings.d.ts"],
   "exclude": []
 }

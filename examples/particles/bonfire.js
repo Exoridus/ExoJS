@@ -1,3 +1,4 @@
+import { textures } from '@assets';
 import {
     Application,
     BlendModes,
@@ -14,8 +15,6 @@ import {
     VectorRange,
 } from '@codexo/exojs';
 
-const assets = globalThis.assets;
-
 const app = new Application({
     canvas: {
         width: 800,
@@ -29,9 +28,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const flameUrl = assets?.textures?.particleFlame ?? 'assets/demo/textures/particle-flame.png';
-            const smokeUrl = assets?.textures?.particleSmoke ?? 'assets/demo/textures/particle-smoke.png';
-            await loader.load(Texture, { flame: flameUrl, smoke: smokeUrl });
+            await loader.load(Texture, { flame: textures.particleFlame, smoke: textures.particleSmoke });
         }
         init(loader) {
             const { width, height } = this.app.canvas;

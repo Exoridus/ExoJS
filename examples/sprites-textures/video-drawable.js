@@ -1,6 +1,7 @@
+import { video } from '@assets';
 import { Application, Color, Scene, Video } from '@codexo/exojs';
 
-const VIDEO_URL = globalThis.assets?.video?.demoLoop ?? 'assets/video/demo-loop.webm';
+const VIDEO_URL = video.demoLoop;
 
 const app = new Application({
     canvas: {

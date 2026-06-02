@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -69,7 +70,7 @@ const LOOKS = [
     },
 ];
 
-const PRIMARY_RAMP = globalThis.assets?.technical?.color?.primaryRamp ?? 'assets/technical/color/primary-ramp.png';
+const PRIMARY_RAMP = technical.color.primaryRamp;
 
 app.start(
     new (class extends Scene {

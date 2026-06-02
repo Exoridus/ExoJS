@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, Color, ColorFilter, Keyboard, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
@@ -25,7 +26,7 @@ void main(){ vec4 c=texture(uTexture,vUv); float l=dot(c.rgb,vec3(0.299,0.587,0.
 const grayWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); let l=dot(c.rgb,vec3<f32>(0.299,0.587,0.114)); return vec4<f32>(vec3<f32>(l),c.a); }`;
 const satWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); let l=dot(c.rgb,vec3<f32>(0.299,0.587,0.114)); return vec4<f32>(mix(vec3<f32>(l),c.rgb,1.8),c.a); }`;
 
-const HUE_RAMP = globalThis.assets?.technical?.color?.hueRamp ?? 'assets/technical/color/hue-ramp.png';
+const HUE_RAMP = technical.color.hueRamp;
 
 app.start(
     new (class extends Scene {

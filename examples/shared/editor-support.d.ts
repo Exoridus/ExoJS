@@ -75,6 +75,82 @@ declare module '@codexo/exojs' {
     }
 }
 
+declare module '@assets' {
+    export const textures: {
+        readonly particleFlame: string; readonly particleSmoke: string; readonly particleStar: string;
+        readonly particleSpark: string; readonly particleLight: string; readonly shipA: string;
+        readonly pixelWhite: string; readonly pixelBlack: string; readonly pixelTransparent: string;
+        readonly checkerboardTransparent: string; readonly kenneyUv: string;
+        readonly prototypeDark01: string; readonly prototypeLight01: string; readonly prototypeGrid: string;
+    };
+    export const sprites: { readonly buttons: { readonly image: string; readonly data: string; }; };
+    export const spritesheets: {
+        readonly buttons: { readonly image: string; readonly data: string; };
+        readonly platformerBackgrounds: { readonly image: string; readonly data: string; };
+        readonly platformerCharacters: { readonly image: string; readonly data: string; };
+        readonly platformerEnemies: { readonly image: string; readonly data: string; };
+        readonly platformerTiles: { readonly image: string; readonly data: string; };
+        readonly backgroundElements: { readonly image: string; readonly data: string; };
+        readonly mapPack: { readonly image: string; readonly data: string; };
+    };
+    export const audio: {
+        readonly uiClick: string; readonly uiConfirm: string; readonly uiBong: string;
+        readonly impactLight: string; readonly impactHeavy: string;
+        readonly musicA: string; readonly musicB: string; readonly musicLoop: string;
+    };
+    export const sound: {
+        readonly uiClick: string; readonly uiConfirm: string; readonly uiBong: string;
+        readonly back: string; readonly clickAlt: string; readonly switch: string;
+        readonly impactLight: string; readonly impactHeavy: string; readonly impactWood: string;
+        readonly jump: string; readonly coin: string; readonly hurt: string;
+        readonly powerUp: string; readonly laser: string;
+    };
+    export const music: {
+        readonly loopA: string; readonly loopB: string; readonly loopMain: string;
+        readonly jingleSuccess: string; readonly jingleFailure: string;
+        readonly jingleRetroA: string; readonly jingleRetroB: string;
+    };
+    export const soundSprites: {
+        readonly ui: { readonly audio: string; readonly data: string; };
+        readonly impacts: { readonly audio: string; readonly data: string; };
+        readonly digital: { readonly audio: string; readonly data: string; };
+    };
+    export const fonts: {
+        readonly kenneyFuture: string; readonly kenneyPixel: string;
+        readonly kenneyMini: string; readonly kenneyMiniSquareMono: string;
+    };
+    export const backgrounds: {
+        readonly platformerClouds: string; readonly platformerHills: string;
+        readonly castles: string; readonly forest: string;
+    };
+    export const cursors: {
+        readonly arrow: string; readonly pointer: string; readonly hand: string;
+        readonly busy: string; readonly cross: string;
+    };
+    export const svg: {
+        readonly play: string; readonly pause: string; readonly reset: string;
+        readonly arrowRight: string; readonly sparkle: string; readonly audioWave: string;
+        readonly imagePlaceholder: string; readonly runeMark: string;
+    };
+    export const video: {
+        readonly demoLoop: string; readonly highRes: string;
+        readonly highFps: string; readonly hdr10: string;
+    };
+    export const inputPrompts: {
+        readonly generic: { readonly image: string; readonly data: string; };
+        readonly xboxSeries: { readonly image: string; readonly data: string; };
+        readonly playstationSeries: { readonly image: string; readonly data: string; };
+        readonly nintendoSwitch: { readonly image: string; readonly data: string; };
+        readonly keyboardMouse: { readonly image: string; readonly data: string; };
+    };
+    export const technical: {
+        readonly alpha: { readonly alphaEdgeStraight: string; readonly alphaGradientRings: string; };
+        readonly filtering: { readonly checker256: string; readonly pixelGrid128: string; readonly uvGrid256: string; };
+        readonly color: { readonly srgbRamp: string; readonly hueRamp: string; readonly primaryRamp: string; };
+    };
+    export const vendor: { readonly kenneyManifest: string; };
+}
+
 declare module 'resources/Loader' {
     export interface Loader {
         load<T = unknown>(type: typeof import('@codexo/exojs').Json, path: string, options?: unknown): Promise<T>;

@@ -1,6 +1,5 @@
+import { audio } from '@assets';
 import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -15,8 +14,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const url = assets?.audio?.uiClick ?? 'assets/demo/audio/ui-click.ogg';
-            await loader.load(Sound, { click: url });
+            await loader.load(Sound, { click: audio.uiClick });
         }
         init(loader) {
             this._sound = loader.get(Sound, 'click');

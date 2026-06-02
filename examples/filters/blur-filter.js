@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, BlurFilter, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -10,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const PIXEL_GRID = globalThis.assets?.technical?.filtering?.pixelGrid128 ?? 'assets/technical/filtering/pixel-grid-128.png';
+const PIXEL_GRID = technical.filtering.pixelGrid128;
 
 app.start(
     new (class extends Scene {

@@ -1,3 +1,4 @@
+import { audio, textures } from '@assets';
 import {
     AlphaFadeOverLifetime,
     Application,
@@ -12,8 +13,6 @@ import {
     Texture,
     Vector,
 } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -30,10 +29,8 @@ const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(13
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const trackUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
-            const particleUrl = assets?.textures?.particleLight ?? 'assets/demo/textures/particle-light.png';
-            await loader.load(Music, { track: trackUrl });
-            await loader.load(Texture, { particle: particleUrl });
+            await loader.load(Music, { track: audio.musicLoop });
+            await loader.load(Texture, { particle: textures.particleLight });
         }
         init(loader) {
             this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();

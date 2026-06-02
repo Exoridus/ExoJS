@@ -1,6 +1,5 @@
+import { audio } from '@assets';
 import { Application, AudioBus, Color, DuckingFilter, Music, Scene, Sound, Text } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -15,10 +14,8 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const musicUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
-            const voiceUrl = assets?.audio?.uiConfirm ?? 'assets/demo/audio/ui-confirm.ogg';
-            await loader.load(Music, { music: musicUrl });
-            await loader.load(Sound, { voice: voiceUrl });
+            await loader.load(Music, { music: audio.musicLoop });
+            await loader.load(Sound, { voice: audio.uiConfirm });
         }
         init(loader) {
             this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.7).play();
