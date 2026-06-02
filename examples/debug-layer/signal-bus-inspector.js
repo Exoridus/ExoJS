@@ -44,9 +44,9 @@ app.start(
         }
         draw(context) {
             this._text.text =
-                `Manual Signal Inspector\n\nspawn listeners: ${this._signals.spawn.bindings.length}\n` +
-                    `damage listeners: ${this._signals.damage.bindings.length}\n` +
-                    `score listeners: ${this._signals.score.bindings.length}`;
+                `Manual Signal Inspector\n\nspawn listeners: ${this._signals.spawn.count}\n` +
+                    `damage listeners: ${this._signals.damage.count}\n` +
+                    `score listeners: ${this._signals.score.count}`;
             context.backend.clear();
             context.render(this._text);
         }

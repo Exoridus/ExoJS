@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FontAsset, Scene, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -16,7 +16,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(FontFace, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
+            await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
         }
         init() {
             this._default = new Text('Default Font', { fill: 'white', fontSize: 52 });

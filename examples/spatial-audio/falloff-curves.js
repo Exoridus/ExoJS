@@ -79,13 +79,13 @@ app.start(
             const plotW = 720;
             const plotX = 40;
             this._graphics.fillColor = new Color(40, 40, 50);
-            this._graphics.drawRect(plotX, plotY, plotW, plotH);
+            this._graphics.drawRectangle(plotX, plotY, plotW, plotH);
             for (const { model, color } of SOURCES) {
                 this._graphics.fillColor = color;
                 for (let i = 0; i < plotW; i += 2) {
                     const d = (i / plotW) * MAX_DISTANCE * 1.2;
                     const v = attenuation(model, d);
-                    this._graphics.drawRect(plotX + i, plotY + plotH - v * plotH, 2, 2);
+                    this._graphics.drawRectangle(plotX + i, plotY + plotH - v * plotH, 2, 2);
                 }
             }
 
