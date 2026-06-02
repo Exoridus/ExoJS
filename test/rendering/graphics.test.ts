@@ -38,24 +38,66 @@ describe('Graphics', () => {
     expect(graphics.currentPoint.y).toBeCloseTo(2, 4);
   });
 
-  describe('gradient paints', () => {
-    test('fillGradient defaults to null and is cloned on assignment', () => {
+  describe('fill and stroke styles', () => {
+    test('fillStyle defaults to the solid fill color slot', () => {
+      const graphics = new Graphics();
+
+      expect(graphics.fillStyle).toBeInstanceOf(Color);
+      expect(graphics.fillStyle).toBe(graphics.fillColor);
+    });
+
+    test('strokeStyle defaults to the solid line color slot', () => {
+      const graphics = new Graphics();
+
+      expect(graphics.strokeStyle).toBeInstanceOf(Color);
+      expect(graphics.strokeStyle).toBe(graphics.lineColor);
+    });
+
+    test('fillStyle = Color copies into the fillColor slot and fills solid', () => {
+      const graphics = new Graphics();
+
+      graphics.fillStyle = new Color(10, 20, 30);
+      graphics.drawRectangle(0, 0, 10, 10);
+
+      const mesh = graphics.getChildAt(0);
+
+      expect(graphics.fillColor.equals(new Color(10, 20, 30))).toBe(true);
+      expect(graphics.fillStyle).toBe(graphics.fillColor);
+      expect(mesh.texture).toBeNull();
+      expect(mesh.uvs).toBeNull();
+      expect(mesh.tint.equals(new Color(10, 20, 30))).toBe(true);
+    });
+
+    test('strokeStyle = Color copies into the lineColor slot and strokes solid', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 4;
+      graphics.strokeStyle = new Color(40, 50, 60);
+      graphics.drawLine(0, 0, 20, 0);
+
+      const mesh = graphics.getChildAt(0);
+
+      expect(graphics.lineColor.equals(new Color(40, 50, 60))).toBe(true);
+      expect(graphics.strokeStyle).toBe(graphics.lineColor);
+      expect(mesh.texture).toBeNull();
+      expect(mesh.tint.equals(new Color(40, 50, 60))).toBe(true);
+    });
+
+    test('fillStyle = Gradient is cloned on assignment', () => {
       const graphics = new Graphics();
       const gradient = createLinearGradient();
 
-      expect(graphics.fillGradient).toBeNull();
+      graphics.fillStyle = gradient;
 
-      graphics.fillGradient = gradient;
-
-      expect(graphics.fillGradient).not.toBeNull();
-      expect(graphics.fillGradient).not.toBe(gradient);
-      expect(graphics.fillGradient!.equals(gradient)).toBe(true);
+      expect(graphics.fillStyle).toBeInstanceOf(LinearGradient);
+      expect(graphics.fillStyle).not.toBe(gradient);
+      expect((graphics.fillStyle as LinearGradient).equals(gradient)).toBe(true);
     });
 
-    test('filling with a gradient builds a textured mesh with bounding-box UVs', () => {
+    test('filling with a gradient style builds a textured mesh with bounding-box UVs', () => {
       const graphics = new Graphics();
 
-      graphics.fillGradient = createLinearGradient();
+      graphics.fillStyle = createLinearGradient();
       graphics.drawRectangle(0, 0, 20, 10);
 
       const mesh = graphics.getChildAt(0);
@@ -68,40 +110,11 @@ describe('Graphics', () => {
       expect(mesh.tint.equals(Color.white)).toBe(true);
     });
 
-    test('repeated fills with the same gradient share one rasterized texture', () => {
-      const graphics = new Graphics();
-
-      graphics.fillGradient = createLinearGradient();
-      graphics.drawRectangle(0, 0, 10, 10);
-      graphics.drawCircle(40, 40, 8);
-
-      const first = graphics.getChildAt(0).texture;
-      const second = graphics.getChildAt(1).texture;
-
-      expect(first).toBeInstanceOf(DataTexture);
-      expect(second).toBe(first);
-    });
-
-    test('setting fillColor reverts to the solid-color path', () => {
-      const graphics = new Graphics();
-
-      graphics.fillGradient = createLinearGradient();
-      graphics.fillColor = new Color(10, 20, 30);
-      graphics.drawRectangle(0, 0, 10, 10);
-
-      const mesh = graphics.getChildAt(0);
-
-      expect(graphics.fillGradient).toBeNull();
-      expect(mesh.texture).toBeNull();
-      expect(mesh.uvs).toBeNull();
-      expect(mesh.tint.equals(new Color(10, 20, 30))).toBe(true);
-    });
-
-    test('lineGradient drives stroke draws through the texture path', () => {
+    test('strokeStyle = Gradient drives stroke draws through the texture path', () => {
       const graphics = new Graphics();
 
       graphics.lineWidth = 4;
-      graphics.lineGradient = new RadialGradient([
+      graphics.strokeStyle = new RadialGradient([
         { offset: 0, color: Color.white },
         { offset: 1, color: Color.black },
       ]);
@@ -113,10 +126,71 @@ describe('Graphics', () => {
       expect(mesh.uvs).not.toBeNull();
     });
 
-    test('clear() resets gradients and destroys owned textures', () => {
+    test('repeated fills with the same gradient style share one rasterized texture', () => {
       const graphics = new Graphics();
 
-      graphics.fillGradient = createLinearGradient();
+      graphics.fillStyle = createLinearGradient();
+      graphics.drawRectangle(0, 0, 10, 10);
+      graphics.drawCircle(40, 40, 8);
+
+      const first = graphics.getChildAt(0).texture;
+      const second = graphics.getChildAt(1).texture;
+
+      expect(first).toBeInstanceOf(DataTexture);
+      expect(second).toBe(first);
+    });
+
+    test('setting fillColor replaces a gradient fill style with a solid color', () => {
+      const graphics = new Graphics();
+
+      graphics.fillStyle = createLinearGradient();
+      graphics.fillColor = new Color(10, 20, 30);
+      graphics.drawRectangle(0, 0, 10, 10);
+
+      const mesh = graphics.getChildAt(0);
+
+      expect(graphics.fillStyle).toBeInstanceOf(Color);
+      expect(graphics.fillStyle).toBe(graphics.fillColor);
+      expect(mesh.texture).toBeNull();
+      expect(mesh.uvs).toBeNull();
+      expect(mesh.tint.equals(new Color(10, 20, 30))).toBe(true);
+    });
+
+    test('setting lineColor replaces a gradient stroke style with a solid color', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 4;
+      graphics.strokeStyle = createLinearGradient();
+      graphics.lineColor = new Color(1, 2, 3);
+      graphics.drawLine(0, 0, 20, 0);
+
+      const mesh = graphics.getChildAt(0);
+
+      expect(graphics.strokeStyle).toBeInstanceOf(Color);
+      expect(graphics.strokeStyle).toBe(graphics.lineColor);
+      expect(mesh.texture).toBeNull();
+      expect(mesh.tint.equals(new Color(1, 2, 3))).toBe(true);
+    });
+
+    test('fillStyle = null reverts to the solid fill color', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(7, 8, 9);
+      graphics.fillStyle = createLinearGradient();
+      graphics.fillStyle = null;
+      graphics.drawRectangle(0, 0, 10, 10);
+
+      const mesh = graphics.getChildAt(0);
+
+      expect(graphics.fillStyle).toBe(graphics.fillColor);
+      expect(mesh.texture).toBeNull();
+      expect(mesh.tint.equals(new Color(7, 8, 9))).toBe(true);
+    });
+
+    test('clear() resets styles and destroys owned textures', () => {
+      const graphics = new Graphics();
+
+      graphics.fillStyle = createLinearGradient();
       graphics.drawRectangle(0, 0, 10, 10);
 
       const texture = graphics.getChildAt(0).texture as DataTexture;
@@ -124,8 +198,9 @@ describe('Graphics', () => {
 
       graphics.clear();
 
-      expect(graphics.fillGradient).toBeNull();
-      expect(graphics.lineGradient).toBeNull();
+      expect(graphics.fillStyle).toBe(graphics.fillColor);
+      expect(graphics.strokeStyle).toBe(graphics.lineColor);
+      expect(graphics.fillStyle).toBeInstanceOf(Color);
       expect(graphics.children.length).toBe(0);
       expect(destroySpy).toHaveBeenCalledTimes(1);
     });
