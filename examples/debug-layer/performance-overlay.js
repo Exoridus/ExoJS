@@ -17,6 +17,11 @@ document.body.append(app.canvas);
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
 
+class MovingSprite extends Sprite {
+    _vx = 0;
+    _vy = 0;
+}
+
 app.start(
     new (class extends Scene {
         async load(loader) {
@@ -25,7 +30,7 @@ app.start(
         init(loader) {
             this._sprites = [];
             for (let i = 0; i < 1600; i++) {
-                const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.25);
+                const sprite = new MovingSprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.25);
                 sprite.setPosition(Math.random() * 800, Math.random() * 600);
                 sprite._vx = (Math.random() - 0.5) * 120;
                 sprite._vy = (Math.random() - 0.5) * 120;

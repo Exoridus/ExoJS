@@ -23,7 +23,7 @@ class GameScene extends Scene {
         this._time = 0;
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             if (pauseScene.app !== null) return;
-            await this.app.scene.pushScene(pauseScene, { mode: 'overlay', input: 'capture' });
+            await this.app.scene.pushScene(pauseScene, { mode: 'overlay' });
         });
     }
     update(delta) {

@@ -22,17 +22,17 @@ class MenuScene extends Scene {
         this.inputs.onTrigger(Keyboard.Space, () => {
             void this.app.scene.setScene(gameScene);
         });
-        this.app.input.onPointerTap.add(this._onTap, this);
-    }
-    _onTap() {
-        void this.app.scene.setScene(gameScene);
+        this._onTap = () => {
+            void this.app.scene.setScene(gameScene);
+        };
+        this.app.input.onPointerTap.add(this._onTap);
     }
     draw(context) {
         context.backend.clear(new Color(18, 38, 72, 1));
         context.render(this._label);
     }
     destroy() {
-        this.app.input.onPointerTap.remove(this._onTap, this);
+        this.app.input.onPointerTap.remove(this._onTap);
         super.destroy();
     }
 }

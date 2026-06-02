@@ -351,6 +351,32 @@ describe('UpdateModule', () => {
     expect(a).toBeLessThan(155);
   });
 
+  test('AlphaFadeOverLifetime defaults to a 1 → 0 linear fade when no curve is given', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const slot = system.spawn();
+
+    system.lifetime[slot] = 1;
+    // RGBA u32: 0xAABBGGRR — set RGB to mid-grey, alpha to 0xff.
+    system.color[slot] = 0xff808080;
+    // No curve argument: the documented default `1 → 0` linear fade-out applies.
+    system.addUpdateModule(new AlphaFadeOverLifetime());
+
+    system.update(tick(0.5));
+
+    const rgba = system.color[slot];
+    const r = rgba & 0xff;
+    const g = (rgba >>> 8) & 0xff;
+    const b = (rgba >>> 16) & 0xff;
+    const a = (rgba >>> 24) & 0xff;
+
+    expect(r).toBe(0x80);
+    expect(g).toBe(0x80);
+    expect(b).toBe(0x80);
+    // Default curve fades 1 → 0, so at half lifetime alpha ≈ 0.5 → ~127.
+    expect(a).toBeGreaterThan(100);
+    expect(a).toBeLessThan(155);
+  });
+
   test('VelocityOverLifetime scales velocity by curve ratio', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
     const slot = system.spawn();

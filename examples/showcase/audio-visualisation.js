@@ -23,12 +23,12 @@ app.start(
 
             this._music = loader.get(Music, 'example');
 
-            this._analyser = new AudioAnalyser(this._music);
+            this._analyser = new AudioAnalyser({ source: this._music });
 
             this._canvas = document.createElement('canvas');
             this._canvas.style.position = 'absolute';
             this._canvas.style.top = '12.5%';
-            this._canvas.style.left = 0;
+            this._canvas.style.left = '0';
             this._canvas.width = width;
             this._canvas.height = height;
 
@@ -72,7 +72,7 @@ app.start(
 
             this._time.addTime(delta);
 
-            const freqData = this._analyser.frequencyData,
+            const freqData = this._analyser.getSpectrum(),
                 len = freqData.length;
 
             let [average, low, mid, high] = [0, 0, 0, 0];
@@ -100,8 +100,8 @@ app.start(
             }
 
             const canvas = this._canvas,
-                freqData = this._analyser.frequencyData,
-                timeDomain = this._analyser.timeDomainData,
+                freqData = this._analyser.getSpectrum(),
+                timeDomain = this._analyser.getWaveform(),
                 width = canvas.width,
                 height = canvas.height,
                 length = freqData.length,

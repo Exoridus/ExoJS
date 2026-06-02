@@ -24,11 +24,11 @@
   // exports here (duplicate-identifier). Its permissive Scene/Loader shims are
   // unnecessary for `.js` sources — checked JS infers `this._x` fields directly.
   //
-  // `exclude` carves out examples that currently fail the type-check for reasons
-  // unrelated to text styling (stale `Signal`/`Scene`/particle-module APIs,
-  // `Sprite` dynamic fields, `AudioAnalyser`, WGSL module types). These are
-  // tracked as follow-up batches; the TextStyle migration itself is already
-  // complete in every one of them.
+  // The entire example catalog type-checks against the engine source types with
+  // zero per-example excludes. The former stale-API clusters (two-argument
+  // `Signal.add`, `PushSceneOptions.input`, `Sprite` dynamic instance fields,
+  // `AudioAnalyser` getters, WGSL module return types) were migrated to the
+  // current API in the example sources themselves.
   "compilerOptions": {
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -48,25 +48,5 @@
     }
   },
   "include": ["examples/**/*.js", "examples/shared/runtime.d.ts", "src/typings.d.ts"],
-  "exclude": [
-    "examples/application-scenes/hud-overlay-scene.js",
-    "examples/application-scenes/multiple-scenes.js",
-    "examples/beat-detection/beat-sync-pulse.js",
-    "examples/debug-layer/bounding-boxes.js",
-    "examples/debug-layer/performance-overlay.js",
-    "examples/particles/cursor-attractor-particles.js",
-    "examples/particles/custom-wgsl-module.js",
-    "examples/particles/emitter-basics.js",
-    "examples/particles/gpu-particles.js",
-    "examples/performance/backend-comparison.js",
-    "examples/scene-graph/z-ordering.js",
-    "examples/showcase/audio-reactive-particles.js",
-    "examples/showcase/audio-visualisation.js",
-    "examples/showcase/gamepad-spaceship.js",
-    "examples/showcase/pause-blur.js",
-    "examples/showcase/screen-shake-on-explosion.js",
-    "examples/spatial-audio/falloff-curves.js",
-    "examples/sprites-textures/blendmodes.js",
-    "examples/tweens-animation/easing-curves.js"
-  ]
+  "exclude": []
 }
