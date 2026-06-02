@@ -190,4 +190,46 @@ describe('layoutText', () => {
     expect(placements[5].y).toBeGreaterThan(0); // second line
     expect(placements[5].x).toBe(0); // starts at left
   });
+
+  test('no maxWidth keeps a long spaced string on a single line', () => {
+    const advance = 10;
+    const atlas = makeAtlas(advance);
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    const placements = layoutText('the quick brown fox', style, {}, atlas);
+
+    // Without a wrap width every glyph stays on line 0 and x increases
+    // monotonically — the canonical "no wrap" behaviour.
+    let prevX = -1;
+    for (const placement of placements) {
+      expect(placement.y).toBe(0);
+      expect(placement.x).toBeGreaterThan(prevX);
+      prevX = placement.x;
+    }
+  });
+
+  test('breakWords splits an unbreakable token across multiple lines', () => {
+    const advance = 10;
+    const atlas = makeAtlas(advance);
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    // 12-char token at advance 10 → 120px; maxWidth 50 → ~5 chars per line.
+    const placements = layoutText('ABCDEFGHIJKL', style, { maxWidth: 50, breakWords: true }, atlas);
+
+    const lineYs = [...new Set(placements.map(placement => placement.y))];
+    expect(lineYs.length).toBeGreaterThanOrEqual(2); // wrapped onto multiple lines
+    expect(Math.min(...placements.map(placement => placement.x))).toBe(0); // each line restarts at x = 0
+  });
+
+  test('without breakWords an overlong unbroken token stays on one line', () => {
+    const advance = 10;
+    const atlas = makeAtlas(advance);
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    // No spaces to break on and breakWords off → a single overflowing line.
+    const placements = layoutText('ABCDEFGHIJKL', style, { maxWidth: 50 }, atlas);
+
+    const lineYs = [...new Set(placements.map(placement => placement.y))];
+    expect(lineYs).toEqual([0]);
+  });
 });

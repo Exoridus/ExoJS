@@ -25,9 +25,9 @@ app.start(
 
             this._text = new Text('Hello World!', {
                 align: 'left',
-                fill: 'white',
-                stroke: 'black',
-                strokeThickness: 3,
+                fillColor: Color.white,
+                outlineColor: Color.black,
+                outlineWidth: 0.2,
                 fontSize: 25,
                 fontFamily: 'Kenney Future',
             });

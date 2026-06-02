@@ -16,24 +16,27 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         init() {
-            this._shadow = new Text('EXOJS', {
-                fill: 'rgba(0,0,0,0.5)',
-                fontSize: 120,
-                stroke: 'rgba(0,0,0,0.5)',
-                strokeThickness: 8,
-            });
-            this._shadow.setPosition(178, 210);
+            // TextStyle rasterizes glyphs as SDFs, so the outline (stroke) and
+            // drop shadow are produced natively in the shader — no need to stack
+            // a second offset Text behind the title.
+            //
+            // `outlineWidth` is measured in SDF units (0..0.5), not pixels.
+            // `shadowAlpha` > 0 enables the shadow; `shadowBlur` softens its edge.
             this._title = new Text('EXOJS', {
-                fill: 'rgb(230,240,255)',
+                fillColor: new Color(230, 240, 255),
                 fontSize: 120,
-                stroke: 'rgb(70,130,220)',
-                strokeThickness: 8,
+                outlineColor: new Color(70, 130, 220),
+                outlineWidth: 0.3,
+                shadowColor: Color.black,
+                shadowAlpha: 0.6,
+                shadowOffsetX: 6,
+                shadowOffsetY: 6,
+                shadowBlur: 0.4,
             });
-            this._title.setPosition(170, 200);
+            this._title.setPosition(180, 190);
         }
         draw(context) {
             context.backend.clear(new Color(24, 28, 42));
-            context.render(this._shadow);
             context.render(this._title);
         }
     })()
