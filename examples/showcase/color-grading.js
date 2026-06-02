@@ -88,9 +88,9 @@ app.start(
             this._sprite.setPosition(400, 320);
             this._sprite.filters = [this._filter];
 
-            this._label = new Text(LOOKS[0].name, { fill: 'white', fontSize: 22 });
+            this._label = new Text(LOOKS[0].name, { fillColor: Color.white, fontSize: 22 });
             this._label.setPosition(20, 20);
-            this._hint = new Text('Press SPACE to cycle looks', { fill: 'white', fontSize: 14 });
+            this._hint = new Text('Press SPACE to cycle looks', { fillColor: Color.white, fontSize: 14 });
             this._hint.setPosition(20, 560);
 
             this.inputs.onTrigger(Keyboard.Space, () => {

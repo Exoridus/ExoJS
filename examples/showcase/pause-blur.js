@@ -40,7 +40,7 @@ class PauseScene extends Scene {
     init() {
         this._blur = new BlurFilter({ radius: 5, quality: 2 });
         gameScene.root.filters = [this._blur];
-        this._text = new Text('PAUSED', { fill: 'white', fontSize: 64 });
+        this._text = new Text('PAUSED', { fillColor: Color.white, fontSize: 64 });
         this._text.setPosition(280, 250);
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             await this.app.scene.popScene();

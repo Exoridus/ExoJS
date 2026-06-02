@@ -21,7 +21,7 @@ app.start(
                 damage: new Signal(),
                 score: new Signal(),
             };
-            this._text = new Text('', { fill: 'white', fontSize: 19, lineHeight: 28 });
+            this._text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 28 });
             this._text.setPosition(40, 70);
             this._tick = new Timer(seconds(1), true);
             this._listenerA = () => undefined;

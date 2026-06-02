@@ -30,7 +30,7 @@ app.start(
                 this._world.drawLine(-1200, y, 1200, y);
             }
 
-            this._overlay = new Text('WASD pan, Q/E zoom', { fill: 'white', fontSize: 16, padding: 8 });
+            this._overlay = new Text('WASD pan, Q/E zoom', { fillColor: Color.white, fontSize: 16 });
             this._overlay.setPosition(12, 12);
 
             this._moveX = 0;

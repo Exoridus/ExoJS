@@ -25,7 +25,7 @@ app.start(
             this._silent.setVolume(0).setLoop(true).play();
 
             this._ui = new Graphics();
-            this._text = new Text('Click left: fade-in    Click right: fade-out', { fill: 'white', fontSize: 18 });
+            this._text = new Text('Click left: fade-in    Click right: fade-out', { fillColor: Color.white, fontSize: 18 });
             this._text.setPosition(160, 220);
             this.app.input.onPointerTap.add(pointer => {
                 if (pointer.x < 400) {

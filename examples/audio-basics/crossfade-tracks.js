@@ -23,7 +23,7 @@ app.start(
             this._trackA = loader.get(Music, 'a').setLoop(true).setVolume(0.7).play();
             this._trackB = loader.get(Music, 'b').setLoop(true).setVolume(0).play();
             this._toB = true;
-            this._text = new Text('Click to crossfade tracks over 2s', { fill: 'white', fontSize: 24 });
+            this._text = new Text('Click to crossfade tracks over 2s', { fillColor: Color.white, fontSize: 24 });
             this._text.setPosition(170, 280);
 
             this.app.input.onPointerTap.add(() => {

@@ -28,7 +28,7 @@ app.start(
             this._voice.bus = this._voiceBus;
             this._ducking = new DuckingFilter({ sidechain: this._voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
             app.audio.music.addFilter(this._ducking);
-            this._text = new Text('Click to play voice-over and duck music', { fill: 'white', fontSize: 24 });
+            this._text = new Text('Click to play voice-over and duck music', { fillColor: Color.white, fontSize: 24 });
             this._text.setPosition(140, 280);
             this.app.input.onPointerTap.add(() => {
                 this._voice.play({ replace: true });

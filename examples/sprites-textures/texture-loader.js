@@ -40,7 +40,7 @@ app.start(
             });
 
             this._bar = new Graphics();
-            this._label = new Text('', { fill: 'white', fontSize: 18 });
+            this._label = new Text('', { fillColor: Color.white, fontSize: 18 });
             this._label.setPosition(300, 190);
             this._width = width;
             this._progress = { loaded: 0, total: 3 };

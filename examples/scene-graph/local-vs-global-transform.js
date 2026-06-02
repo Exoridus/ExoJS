@@ -34,9 +34,9 @@ app.start(
                 .setTint(new Color(255, 190, 120));
             this._parent.addChild(this._localSprite);
 
-            this._localLabel = new Text('inherited rotation', { fill: 'white', fontSize: 16 });
+            this._localLabel = new Text('inherited rotation', { fillColor: Color.white, fontSize: 16 });
             this._localLabel.setPosition(180, 80);
-            this._globalLabel = new Text('screen-space', { fill: 'white', fontSize: 16 });
+            this._globalLabel = new Text('screen-space', { fillColor: Color.white, fontSize: 16 });
             this._globalLabel.setPosition(520, 80);
         }
         update(delta) {

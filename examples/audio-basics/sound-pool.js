@@ -21,7 +21,7 @@ app.start(
         init(loader) {
             this._sound = loader.get(Sound, 'shot');
             this._sound.poolSize = 24;
-            this._label = new Text('Hold Space to fire SFX rapidly', { fill: 'white', fontSize: 24 });
+            this._label = new Text('Hold Space to fire SFX rapidly', { fillColor: Color.white, fontSize: 24 });
             this._label.setPosition(190, 280);
             this._firing = false;
 

@@ -30,7 +30,7 @@ app.start(
         init(loader) {
             this._sprite = new Sprite(loader.get(Texture, 'bunny'));
             this._sprite.setAnchor(0.5);
-            this._info = new Text('', { fill: 'white', fontSize: 16, padding: 6 });
+            this._info = new Text('', { fillColor: Color.white, fontSize: 16 });
             this._info.setAnchor(0.5, 0);
             this._layout();
         }

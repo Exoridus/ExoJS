@@ -45,7 +45,7 @@ app.start(
             );
             this._system.addUpdateModule(new ApplyForce(0, 320));
             this._system.addUpdateModule(new AlphaFadeOverLifetime());
-            this._label = new Text('', { fill: 'white', fontSize: 16 });
+            this._label = new Text('', { fillColor: Color.white, fontSize: 16 });
             this._label.setPosition(16, 16);
         }
         update(delta) {

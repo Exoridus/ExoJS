@@ -27,7 +27,7 @@ app.start(
         init(loader) {
             this._sprite = new Sprite(loader.get(Texture, 'bunny')).setPosition(400, 300);
             this._pivotMarker = new Graphics();
-            this._label = new Text('', { fill: 'white', fontSize: 18 });
+            this._label = new Text('', { fillColor: Color.white, fontSize: 18 });
             this._label.setPosition(20, 20);
             this._mode = 0;
             this._timer = 0;

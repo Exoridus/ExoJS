@@ -20,7 +20,7 @@ app.start(
         }
         init(loader) {
             this._root = new Container();
-            this._label = new Text('Press 1, 2, 3', { fill: 'white', fontSize: 18 });
+            this._label = new Text('Press 1, 2, 3', { fillColor: Color.white, fontSize: 18 });
             this._label.setPosition(18, 18);
 
             this._sprites = [0, 1, 2].map(index => {
