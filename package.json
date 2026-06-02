@@ -78,6 +78,7 @@
     "site:install": "pnpm bootstrap",
     "site:build": "pnpm --filter @codexo/exojs-examples build",
     "site:build:api": "pnpm --filter @codexo/exojs-examples build:api",
+    "test:examples:smoke": "pnpm --filter @codexo/exojs-examples examples:smoke",
     "perf:bench:rendering": "tsx test/perf/rendering-benchmark.ts",
     "perf:bench:audio": "tsx test/perf/audio-benchmark.ts",
     "perf:bench:collision": "tsx test/perf/collision-benchmark.ts",
