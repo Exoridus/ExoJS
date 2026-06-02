@@ -44,7 +44,7 @@ fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
 app.start(
     new (class extends Scene {
         init() {
-            this._text = new Text('SIGNAL LOST', { fill: 'white', fontSize: 100 });
+            this._text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100 });
             this._text.setPosition(120, 220);
             this._filter =
                 app.backend.backendType === RenderBackendType.WebGpu

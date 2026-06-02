@@ -19,9 +19,9 @@ app.start(
             await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
         }
         init() {
-            this._default = new Text('Default Font', { fill: 'white', fontSize: 52 });
+            this._default = new Text('Default Font', { fillColor: Color.white, fontSize: 52 });
             this._default.setPosition(120, 200);
-            this._loaded = new Text('Kenney Future Font', { fill: 'white', fontFamily: 'Kenney Future', fontSize: 52 });
+            this._loaded = new Text('Kenney Future Font', { fillColor: Color.white, fontFamily: 'Kenney Future', fontSize: 52 });
             this._loaded.setPosition(120, 320);
         }
         draw(context) {
