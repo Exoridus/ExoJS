@@ -16,6 +16,17 @@
  *   pnpm --filter @codexo/exojs-examples examples:smoke      # from repo: pnpm test:examples:smoke
  *   ... --only camera-basic        # smoke a single example (path substring)
  *   ... --concurrency 4            # parallel pages (default 4)
+ *   ... --browser firefox          # run under Firefox headed (cross-browser)
+ *   ... --headed                   # force headed mode for any browser
+ *   ... --color-scheme dark        # emulate dark-mode OS preference
+ *
+ * Chromium (default): new headless, WebGPU via Dawn (SwiftShader backend).
+ *   WebGPU adapter is available without --use-angle=swiftshader, which would
+ *   block Dawn. The 7 WebGPU-capability examples run instead of being skipped.
+ *
+ * Firefox: non-headless by default (Firefox only exposes a WebGPU adapter in a
+ *   headed session, matching the browser-webgpu-firefox vitest project).
+ *   dom.webgpu.enabled is set via firefoxUserPrefs.
  *
  * Exit code is 1 when any example fails (errors). Capability/unsupported skips
  * and "no canvas" warnings do not fail the run.
@@ -27,7 +38,7 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-import { chromium, type Browser } from 'playwright';
+import { chromium, firefox, type Browser } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
@@ -65,14 +76,20 @@ const MIME: Record<string, string> = {
 // Mirrors EditorPreview._isRecoverablePreviewError: backend-unsupported
 // failures are environment limits, not example bugs — they are skipped.
 const RECOVERABLE = [
+    // WebGL unsupported (Chromium + Firefox variants)
     'does not support webgl',
     'failed to create a webgl',
     'webgl is not supported',
+    'webgl context could not be created',
+    // WebGPU unsupported
     'requires browser webgpu support',
     'requires advanced webgpu support',
     'webgpu unavailable',
     'could not acquire a webgpu adapter',
     'webgpu setup failed',
+    // Firefox-specific GPU error phrases
+    'context creation error',
+    'no webgl support',
 ];
 
 function isRecoverable(message: string): boolean {
@@ -161,9 +178,12 @@ function captureErrors(): void {
     });
 }
 
-async function detectWebGpu(browser: Browser): Promise<boolean> {
+async function detectWebGpu(browser: Browser, baseUrl: string): Promise<boolean> {
+    // Navigate to a real origin rather than about:blank — some Chromium builds
+    // refuse to expose navigator.gpu on opaque origins.
     const page = await browser.newPage();
     try {
+        await page.goto(`${baseUrl}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
         return await page.evaluate(async () => {
             try {
                 const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
@@ -186,7 +206,8 @@ async function runExample(
     entry: CatalogEntry & { category: string },
     index: number,
     webgpuAvailable: boolean,
-    timeoutMs: number
+    timeoutMs: number,
+    colorScheme: 'light' | 'dark' = 'light'
 ): Promise<Result> {
     const capabilities = entry.capabilities ?? [];
     const result: Result = {
@@ -213,7 +234,7 @@ async function runExample(
     }
     const source = readFileSync(sourcePath, 'utf8');
 
-    const context = await browser.newContext({ viewport: { width: 800, height: 600 } });
+    const context = await browser.newContext({ viewport: { width: 800, height: 600 }, colorScheme });
     await context.addInitScript(captureErrors);
     const page = await context.newPage();
     const pageErrors: string[] = [];
@@ -284,6 +305,9 @@ async function main(): Promise<void> {
             only: { type: 'string' },
             concurrency: { type: 'string' },
             'timeout-ms': { type: 'string' },
+            browser: { type: 'string' },       // 'chromium' (default) | 'firefox'
+            headed: { type: 'boolean' },       // force headed (any browser)
+            'color-scheme': { type: 'string' }, // 'light' (default) | 'dark'
         },
         allowPositionals: false,
     });
@@ -293,6 +317,11 @@ async function main(): Promise<void> {
         process.exitCode = 1;
         return;
     }
+
+    const browserName = values.browser === 'firefox' ? 'firefox' : 'chromium';
+    const colorScheme = values['color-scheme'] === 'dark' ? 'dark' : 'light';
+    // Firefox needs headed for WebGPU adapter (same constraint as browser-webgpu-firefox vitest project).
+    const headless = values.headed ? false : browserName !== 'firefox';
 
     const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as Record<string, CatalogEntry[]>;
     let entries = Object.entries(catalog).flatMap(([category, list]) => list.map(entry => ({ ...entry, category })));
@@ -306,13 +335,36 @@ async function main(): Promise<void> {
     const { port, server } = await startServer(distDir);
     const baseUrl = `http://127.0.0.1:${port}`;
 
-    const browser = await chromium.launch({
-        headless: true,
-        args: ['--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
-    });
+    let browser: Browser;
+    if (browserName === 'firefox') {
+        browser = await firefox.launch({
+            headless,
+            firefoxUserPrefs: {
+                // Enable WebGPU (off by default in most Firefox builds).
+                'dom.webgpu.enabled': true,
+                'dom.webgpu.workers-enabled': true,
+                // Ensure WebGL is available.
+                'webgl.disabled': false,
+            },
+        });
+    } else {
+        // Chromium new headless — WebGPU adapter is available via Dawn's
+        // SwiftShader backend when --enable-unsafe-webgpu is set. Crucially
+        // we do NOT add --use-angle=swiftshader here: that flag forces the
+        // ANGLE WebGL backend to SwiftShader, which conflicts with Dawn and
+        // prevents the WebGPU adapter from being acquired. The 7 WebGPU
+        // catalog examples can therefore run instead of being skipped.
+        browser = await chromium.launch({
+            headless,
+            args: ['--enable-webgl', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
+        });
+    }
 
-    const webgpuAvailable = await detectWebGpu(browser);
-    console.log(`[smoke] ${entries.length} example(s), concurrency ${concurrency}, WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'}`);
+    const webgpuAvailable = await detectWebGpu(browser, baseUrl);
+    console.log(
+        `[smoke] ${entries.length} example(s) · ${browserName} · ${headless ? 'headless' : 'headed'} · ` +
+        `color-scheme: ${colorScheme} · WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'} · concurrency ${concurrency}`
+    );
 
     const results: Result[] = new Array(entries.length);
     let cursor = 0;
@@ -324,7 +376,7 @@ async function main(): Promise<void> {
             if (index >= entries.length) return;
 
             const entry = entries[index];
-            const result = await runExample(browser, baseUrl, entry, index, webgpuAvailable, timeoutMs);
+            const result = await runExample(browser, baseUrl, entry, index, webgpuAvailable, timeoutMs, colorScheme);
             results[index] = result;
 
             const tag = result.status.toUpperCase().padEnd(7);
@@ -346,7 +398,7 @@ async function main(): Promise<void> {
         warned: results.filter(result => result.status === 'warned').length,
     };
 
-    await writeReport(results, counts, webgpuAvailable);
+    await writeReport(results, counts, webgpuAvailable, browserName, colorScheme, headless);
 
     console.log(`[smoke] passed ${counts.passed} · warned ${counts.warned} · skipped ${counts.skipped} · failed ${counts.failed}`);
     console.log(`[smoke] report: ${reportPath}`);
@@ -356,12 +408,24 @@ async function main(): Promise<void> {
     }
 }
 
-async function writeReport(results: Result[], counts: Record<string, number>, webgpuAvailable: boolean): Promise<void> {
+async function writeReport(
+    results: Result[],
+    counts: Record<string, number>,
+    webgpuAvailable: boolean,
+    browserName: string = 'chromium',
+    colorScheme: string = 'light',
+    headless: boolean = true,
+): Promise<void> {
     const icon: Record<Status, string> = { passed: '✅', failed: '❌', skipped: '⏭️', warned: '⚠️' };
     const lines: string[] = [];
+    const mode = headless ? 'headless' : 'headed';
 
     lines.push('# Playground Example Runtime Smoke', '');
-    lines.push(`_Generated ${new Date().toISOString()} · headless Chromium · WebGPU adapter: ${webgpuAvailable ? 'available' : 'unavailable'} · this file is gitignored._`, '');
+    lines.push(
+        `_Generated ${new Date().toISOString()} · ${browserName} ${mode} · color-scheme: ${colorScheme} · ` +
+        `WebGPU adapter: ${webgpuAvailable ? 'available' : 'unavailable'} · this file is gitignored._`,
+        '',
+    );
     lines.push('Each catalog example is loaded through `preview.html` (real import map) with its source injected as a module script; the run checks for uncaught errors and a mounted `<canvas>`.', '');
     lines.push('## Totals', '');
     lines.push(`| Total | ✅ Passed | ⚠️ Warned | ⏭️ Skipped | ❌ Failed |`);

@@ -125,6 +125,25 @@ export default defineConfig({
           },
         },
       },
+
+      // ── Project 6: browser-webgpu-firefox-dark — same as 5, dark mode ──
+      // Emulates a dark-mode OS preference so colour-scheme-sensitive rendering
+      // paths are exercised alongside the default light-mode session.
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        test: {
+          name: 'browser-webgpu-firefox-dark',
+          globals: true,
+          include: ['test/rendering/browser/webgpu-*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'firefox', contextOptions: { colorScheme: 'dark' } }],
+          },
+        },
+      },
     ],
   },
   benchmark: {
