@@ -1,4 +1,5 @@
-import { Application, Color, DebugOverlay, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { DebugOverlay } from '@codexo/exojs/debug';
 
 const options = {
     canvas: {
