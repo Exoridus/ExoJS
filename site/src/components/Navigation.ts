@@ -1,36 +1,17 @@
 import { LitElement, html, nothing, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { GUIDE_PARTS } from '../lib/guide-structure';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
 import type { VersionInfo } from '../lib/versions';
 import { buildExampleHref } from '../lib/url-state';
+import { buildPlaygroundNavModel, isExampleRouteActive, type PlaygroundNavCategory } from '../lib/playground-nav';
 import componentStyles from './Navigation.scss?inline';
 import './LoadingSpinner';
 import './NavigationLink';
 import './NavigationSection';
 
-interface ChapterGroup {
-    key: string;
-    title: string;
-    examples: Array<Example>;
-}
-
-interface PartGroup {
-    key: string;
-    title: string;
-    chapters: Array<ChapterGroup>;
-}
-
 const TAG_PRIORITY = ['scene', 'input', 'audio', 'fx', 'effects', 'particles', 'rendering', 'debug', 'advanced'] as const;
 const MAX_DEFAULT_TAGS = 9;
-
-function normalizeExampleRef(value: string): string {
-    return value
-        .trim()
-        .replace(/^\/+/, '')
-        .replace(/\.js$/i, '');
-}
 
 @customElement('exo-navigation')
 export class Navigation extends LitElement {
@@ -46,13 +27,11 @@ export class Navigation extends LitElement {
     @state() private _searchQuery = '';
     @state() private _activeTagFilter: string | null = null;
     @state() private _showAllTags = false;
-    @state() private _overriddenParts: Map<string, boolean> = new Map();
-    @state() private _overriddenChapters: Map<string, boolean> = new Map();
+    @state() private _overriddenCategories: Map<string, boolean> = new Map();
 
     protected override willUpdate(changedProperties: Map<PropertyKey, unknown>): void {
-        if (changedProperties.has('activeExample') && (this._overriddenParts.size > 0 || this._overriddenChapters.size > 0)) {
-            this._overriddenParts = new Map();
-            this._overriddenChapters = new Map();
+        if (changedProperties.has('activeExample') && this._overriddenCategories.size > 0) {
+            this._overriddenCategories = new Map();
         }
 
         if (changedProperties.has('availableTags')) {
@@ -166,96 +145,55 @@ export class Navigation extends LitElement {
         if (this.loadError) return html`<p class="error">${this.loadError}</p>`;
         if (!this.loaded) return html`<exo-spinner centered></exo-spinner>`;
 
-        const groups = this._buildGroups();
-        return html`${groups.map(group => this._renderPart(group))}`;
+        const categories = this._buildCategories();
+        return html`${categories.map(category => this._renderCategory(category))}`;
     }
 
-    private _buildGroups(): Array<PartGroup> {
-        const allExamples = Array.from(this.examples.values()).flat();
-        const examplesByPath = new Map<string, Example>();
-
-        for (const example of allExamples) {
-            examplesByPath.set(normalizeExampleRef(example.path), example);
-            examplesByPath.set(normalizeExampleRef(example.slug), example);
-        }
-
-        return GUIDE_PARTS.map(part => {
-            const chapters: Array<ChapterGroup> = part.chapters
-                .map(chapter => {
-                    const mapped = chapter.examples
-                        .map(path => examplesByPath.get(normalizeExampleRef(path)))
-                        .filter((example): example is Example => Boolean(example))
-                        .filter(example => (this._activeTagFilter ? (example.tags ?? []).includes(this._activeTagFilter) : true))
-                        .filter(example => {
-                            if (!this._searchQuery.trim()) return true;
-                            const query = this._searchQuery.trim().toLowerCase();
-                            return (
-                                example.title.toLowerCase().includes(query) ||
-                                example.path.toLowerCase().includes(query) ||
-                                example.description.toLowerCase().includes(query)
-                            );
-                        });
-
-                    return {
-                        key: chapter.path,
-                        title: chapter.title,
-                        examples: mapped,
-                    };
-                })
-                .filter(chapter => chapter.examples.length > 0);
-
-            return {
-                key: part.slug,
-                title: part.title,
-                chapters,
-            };
-        }).filter(part => part.chapters.length > 0);
+    // The playground sidenav is the flat catalog: one category level, examples
+    // directly underneath. Each example appears exactly once (under its own
+    // `section`), so the active-link state can never light up two links at once.
+    private _buildCategories(): Array<PlaygroundNavCategory> {
+        return buildPlaygroundNavModel(this._filterExamples(Array.from(this.examples.values()).flat()));
     }
 
-    private _isPartExpanded(group: PartGroup): boolean {
-        if (this._overriddenParts.has(group.key)) return this._overriddenParts.get(group.key)!;
-        return group.chapters.some(chapter => chapter.examples.some(example => example.path === this.activeExample?.path));
+    private _filterExamples(examples: Array<Example>): Array<Example> {
+        const query = this._searchQuery.trim().toLowerCase();
+
+        return examples.filter(example => {
+            if (this._activeTagFilter && !(example.tags ?? []).includes(this._activeTagFilter)) {
+                return false;
+            }
+
+            if (query) {
+                return (
+                    example.title.toLowerCase().includes(query) ||
+                    example.path.toLowerCase().includes(query) ||
+                    example.description.toLowerCase().includes(query)
+                );
+            }
+
+            return true;
+        });
     }
 
-    private _isChapterExpanded(chapter: ChapterGroup): boolean {
-        if (this._overriddenChapters.has(chapter.key)) return this._overriddenChapters.get(chapter.key)!;
-        return chapter.examples.some(example => example.path === this.activeExample?.path);
+    private _isCategoryExpanded(category: PlaygroundNavCategory): boolean {
+        if (this._overriddenCategories.has(category.slug)) return this._overriddenCategories.get(category.slug)!;
+        return category.examples.some(example => isExampleRouteActive(example.path, this.activeExample?.path));
     }
 
-    private _renderPart(group: PartGroup): ReturnType<LitElement['render']> {
-        const expanded = this._isPartExpanded(group);
-        const unavailableCount = group.chapters
-            .flatMap(chapter => chapter.examples)
-            .filter(example => !getExampleAvailability(example).available).length;
+    private _renderCategory(category: PlaygroundNavCategory): ReturnType<LitElement['render']> {
+        const expanded = this._isCategoryExpanded(category);
+        const unavailableCount = category.examples.filter(example => !getExampleAvailability(example).available).length;
 
         return html`
             <exo-nav-section
-                headline=${group.title}
+                headline=${category.title}
                 .expanded=${expanded}
                 .unavailableCount=${unavailableCount}
-                @toggle-section=${() => this._onTogglePart(group.key)}
+                @toggle-section=${() => this._onToggleCategory(category.slug)}
             >
-                ${group.chapters.map(chapter => this._renderChapter(chapter))}
+                ${category.examples.map(example => this._renderLink(example))}
             </exo-nav-section>
-        `;
-    }
-
-    private _renderChapter(chapter: ChapterGroup): ReturnType<LitElement['render']> {
-        const expanded = this._isChapterExpanded(chapter);
-        return html`
-            <section class="chapter">
-                <button class="chapter__toggle" type="button" aria-expanded=${String(expanded)} @click=${() => this._onToggleChapter(chapter.key)}>
-                    <span class="chapter__title">${chapter.title}</span>
-                    <span class="chapter__chevron" ?data-expanded=${expanded}></span>
-                </button>
-                ${expanded
-                    ? html`
-                          <div class="chapter__examples">
-                              ${chapter.examples.map(example => this._renderLink(example))}
-                          </div>
-                      `
-                    : nothing}
-            </section>
         `;
     }
 
@@ -269,7 +207,7 @@ export class Navigation extends LitElement {
                 path=${example.path}
                 title=${example.title}
                 description=${example.description}
-                ?active=${this.activeExample?.path === example.path}
+                ?active=${isExampleRouteActive(example.path, this.activeExample?.path)}
                 ?unavailable=${!availability.available}
                 unavailableReason=${availability.reason ?? ''}
             ></exo-nav-link>
@@ -288,23 +226,13 @@ export class Navigation extends LitElement {
         this._showAllTags = !this._showAllTags;
     }
 
-    private _onTogglePart(key: string): void {
-        const next = new Map(this._overriddenParts);
-        const group = this._buildGroups().find(entry => entry.key === key);
-        if (!group) return;
-        const current = next.get(key) ?? this._isPartExpanded(group);
-        next.set(key, !current);
-        this._overriddenParts = next;
-    }
-
-    private _onToggleChapter(key: string): void {
-        const next = new Map(this._overriddenChapters);
-        const groups = this._buildGroups();
-        const chapter = groups.flatMap(group => group.chapters).find(entry => entry.key === key);
-        if (!chapter) return;
-        const current = next.get(key) ?? this._isChapterExpanded(chapter);
-        next.set(key, !current);
-        this._overriddenChapters = next;
+    private _onToggleCategory(slug: string): void {
+        const next = new Map(this._overriddenCategories);
+        const category = this._buildCategories().find(entry => entry.slug === slug);
+        if (!category) return;
+        const current = next.get(slug) ?? this._isCategoryExpanded(category);
+        next.set(slug, !current);
+        this._overriddenCategories = next;
     }
 }
 

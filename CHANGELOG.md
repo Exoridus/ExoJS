@@ -28,6 +28,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Examples
 
 - New example `geometry-graphics/graphics-gradient.js`: paints `Graphics` shapes with gradients through the canonical `fillStyle` / `strokeStyle` API — a linear-gradient rectangle, a radial-gradient circle, a radial-gradient stroked ring, and a transformed, spinning linear-gradient star.
+- Fixed `performance/backend-comparison.js` importing `DebugOverlay` from the package root. `DebugOverlay` is only exported from `@codexo/exojs/debug`, so the named import was `undefined` and the example threw at runtime; it now imports from the `/debug` subpath like the other debug-layer examples.
+
+### Playground
+
+- The examples sidenav was flattened from the three-level guide structure (Part → Chapter → Example) to a single category level (Category → Example), driven directly by the flat example catalog. Each example now appears exactly once under its home category, ordered and titled by the chapter metadata. The guide/docs navigation is unchanged.
+- Active-link state is now exact and unambiguous. Previously the sidenav reused the guide structure, in which some examples are cross-referenced by multiple chapters (e.g. `getting-started/hello-world`); selecting such an example lit up every copy at once. Matching now runs through a canonical route helper (`isExampleRouteActive`) that ignores a `.js` suffix, leading/trailing slashes, and any query string or hash, so exactly one link is active per example route.
+- Added catalog and nav-model validation tests: catalog entries resolve to real source files, routes and per-category slugs are unique, the catalog category set matches the chapter metadata, the nav model is one level deep with no duplicated example, and active-link matching is exact (never prefix-based).
 
 ## [0.10.0] - 2026-05-31
 
