@@ -6,14 +6,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const PRIMARY_RAMP = globalThis.assets?.technical?.color?.primaryRamp ?? 'technical/color/primary-ramp.png';
+const PRIMARY_RAMP = globalThis.assets?.technical?.color?.primaryRamp ?? 'assets/technical/color/primary-ramp.png';
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;

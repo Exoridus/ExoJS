@@ -1,6 +1,6 @@
 import { Application, Color, Scene, Video } from '@codexo/exojs';
 
-const VIDEO_URL = globalThis.assets?.video?.demoLoop ?? 'video/demo-loop.webm';
+const VIDEO_URL = globalThis.assets?.video?.demoLoop ?? 'assets/video/demo-loop.webm';
 
 const app = new Application({
     canvas: {
@@ -8,9 +8,6 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);

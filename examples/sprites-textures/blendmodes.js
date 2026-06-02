@@ -6,14 +6,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const ALPHA_RINGS = globalThis.assets?.technical?.alpha?.alphaGradientRings ?? 'technical/alpha/alpha-gradient-rings.png';
+const ALPHA_RINGS = globalThis.assets?.technical?.alpha?.alphaGradientRings ?? 'assets/technical/alpha/alpha-gradient-rings.png';
 
 app.start(
     new (class extends Scene {
@@ -22,7 +19,7 @@ app.start(
                 Texture,
                 {
                     background: ALPHA_RINGS,
-                    bunny: 'image/ship-a.png',
+                    bunny: 'assets/image/ship-a.png',
                 },
                 {
                     scaleMode: ScaleModes.Nearest,

@@ -6,14 +6,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const HUE_RAMP = globalThis.assets?.technical?.color?.hueRamp ?? 'technical/color/hue-ramp.png';
+const HUE_RAMP = globalThis.assets?.technical?.color?.hueRamp ?? 'assets/technical/color/hue-ramp.png';
 
 const glsl = `#version 300 es
 precision mediump float;

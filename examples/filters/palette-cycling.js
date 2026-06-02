@@ -6,14 +6,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const PRIMARY_RAMP = globalThis.assets?.technical?.color?.primaryRamp ?? 'technical/color/primary-ramp.png';
+const PRIMARY_RAMP = globalThis.assets?.technical?.color?.primaryRamp ?? 'assets/technical/color/primary-ramp.png';
 
 const PALETTE_SIZE = 256;
 

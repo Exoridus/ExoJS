@@ -6,14 +6,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const PIXEL_GRID = globalThis.assets?.technical?.filtering?.pixelGrid128 ?? 'technical/filtering/pixel-grid-128.png';
+const PIXEL_GRID = globalThis.assets?.technical?.filtering?.pixelGrid128 ?? 'assets/technical/filtering/pixel-grid-128.png';
 
 app.start(
     new (class extends Scene {
