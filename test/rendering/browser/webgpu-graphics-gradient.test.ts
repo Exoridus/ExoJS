@@ -6,7 +6,7 @@
  * the existing default mesh texture path with no WebGpuMeshRenderer changes.
  * These tests assert that path issues valid GPU work on WebGPU — no validation
  * error, a draw call emitted — and that the presented pixels match the expected
- * gradient samples through the real Graphics `fillGradient` / `lineGradient`
+ * gradient samples through the real Graphics `fillStyle` / `strokeStyle`
  * API path.
  *
  * All tests skip gracefully when WebGPU is unavailable.
@@ -135,7 +135,7 @@ describe('WebGPU Graphics gradient fills', () => {
     const backend = await setupBackend(ctx);
     const graphics = new Graphics();
 
-    graphics.fillGradient = new LinearGradient(
+    graphics.fillStyle = new LinearGradient(
       [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },
@@ -178,7 +178,7 @@ describe('WebGPU Graphics gradient fills', () => {
     const backend = await setupBackend(ctx);
     const graphics = new Graphics();
 
-    graphics.fillGradient = new RadialGradient(
+    graphics.fillStyle = new RadialGradient(
       [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },
@@ -213,7 +213,7 @@ describe('WebGPU Graphics gradient fills', () => {
     const graphics = new Graphics();
 
     graphics.lineWidth = 8;
-    graphics.lineGradient = new LinearGradient(
+    graphics.strokeStyle = new LinearGradient(
       [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },
@@ -249,7 +249,7 @@ describe('WebGPU Graphics gradient fills', () => {
     const backend = await setupBackend(ctx);
     const graphics = new Graphics();
 
-    graphics.fillGradient = new LinearGradient(
+    graphics.fillStyle = new LinearGradient(
       [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },

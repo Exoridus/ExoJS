@@ -260,7 +260,7 @@ describe('Graphics gradient fills WebGL2 browser', () => {
     const backend = await createBackend();
     const graphics = new Graphics();
 
-    graphics.fillGradient = new LinearGradient(
+    graphics.fillStyle = new LinearGradient(
       [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },
@@ -297,7 +297,7 @@ describe('Graphics gradient fills WebGL2 browser', () => {
     const backend = await createBackend();
     const graphics = new Graphics();
 
-    graphics.fillGradient = new RadialGradient(
+    graphics.fillStyle = new RadialGradient(
       [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },
@@ -328,7 +328,7 @@ describe('Graphics gradient fills WebGL2 browser', () => {
     const backend = await createBackend();
     const graphics = new Graphics();
 
-    graphics.fillGradient = new LinearGradient(
+    graphics.fillStyle = new LinearGradient(
       [
         { offset: 0, color: Color.red },
         { offset: 1, color: Color.blue },

@@ -21,15 +21,15 @@ const gradientTextureSize = 256;
  * Immediate-mode 2D shape API backed by {@link Mesh} children.
  *
  * Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a
- * new {@link Mesh} child painted with the current fill or line paint. A paint
- * is either a solid {@link Color} ({@link fillColor} / {@link lineColor}) or a
- * {@link Gradient} ({@link fillGradient} / {@link lineGradient}); the most
- * recently assigned of the pair wins. The active `lineWidth` controls stroke
- * thickness for path and outline draws. Path commands (`moveTo`, `lineTo`,
- * `quadraticCurveTo`, etc.) track a cursor point and flush a Mesh on each
- * segment.
+ * new {@link Mesh} child painted with the active fill or stroke style. A style
+ * is either a solid {@link Color} or a {@link Gradient}, assigned through
+ * {@link fillStyle} / {@link strokeStyle}. The {@link fillColor} /
+ * {@link lineColor} accessors are color-only conveniences over those styles.
+ * The active `lineWidth` controls stroke thickness for path and outline draws.
+ * Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor
+ * point and flush a Mesh on each segment.
  *
- * Gradient paints are rasterized once to a {@link DataTexture} via
+ * Gradient styles are rasterized once to a {@link DataTexture} via
  * {@link Gradient.toTexture} and sampled across each shape's local bounding
  * box, so {@link LinearGradient} and {@link RadialGradient} render through the
  * same texture path as a textured Mesh. The textures are owned by the Graphics
@@ -41,12 +41,12 @@ const gradientTextureSize = 256;
  */
 export class Graphics extends Container {
   private _lineWidth = 0;
-  private _lineColor: Color = new Color();
-  private _fillColor: Color = new Color();
-  private _fillGradient: Gradient | null = null;
-  private _lineGradient: Gradient | null = null;
-  private _fillGradientTexture: DataTexture<'rgba8'> | null = null;
-  private _lineGradientTexture: DataTexture<'rgba8'> | null = null;
+  private readonly _fillColor: Color = new Color();
+  private readonly _lineColor: Color = new Color();
+  private _fillStyle: Color | Gradient = this._fillColor;
+  private _strokeStyle: Color | Gradient = this._lineColor;
+  private _fillStyleTexture: DataTexture<'rgba8'> | null = null;
+  private _strokeStyleTexture: DataTexture<'rgba8'> | null = null;
   private readonly _ownedTextures = new Set<DataTexture>();
   private _currentPoint: Vector = new Vector(0, 0);
 
@@ -58,58 +58,66 @@ export class Graphics extends Container {
     this._lineWidth = lineWidth;
   }
 
+  /** Solid stroke color slot: the last solid color assigned to the stroke. */
   public get lineColor(): Color {
     return this._lineColor;
   }
 
   /**
-   * Set the solid line paint. Switches stroke draws back to the solid-color
-   * path, clearing any active {@link lineGradient}.
+   * Convenience solid-color setter for the stroke. Copies `lineColor` into the
+   * color slot and makes it the active {@link strokeStyle}, replacing any
+   * gradient stroke style.
    */
   public set lineColor(lineColor: Color) {
-    this._lineColor.copy(lineColor);
-    this._setLineGradient(null);
+    this.strokeStyle = lineColor;
   }
 
+  /** Solid fill color slot: the last solid color assigned to the fill. */
   public get fillColor(): Color {
     return this._fillColor;
   }
 
   /**
-   * Set the solid fill paint. Switches fill draws back to the solid-color
-   * path, clearing any active {@link fillGradient}.
+   * Convenience solid-color setter for the fill. Copies `fillColor` into the
+   * color slot and makes it the active {@link fillStyle}, replacing any
+   * gradient fill style.
    */
   public set fillColor(fillColor: Color) {
-    this._fillColor.copy(fillColor);
-    this._setFillGradient(null);
+    this.fillStyle = fillColor;
   }
 
-  /** Active fill gradient, or `null` when fills use the solid {@link fillColor}. */
-  public get fillGradient(): Gradient | null {
-    return this._fillGradient;
-  }
-
-  /**
-   * Paint subsequent fills with a {@link Gradient} instead of a solid color.
-   * The gradient is cloned on assignment and rasterized lazily on first use;
-   * pass `null` to revert to the solid {@link fillColor}.
-   */
-  public set fillGradient(gradient: Gradient | null) {
-    this._setFillGradient(gradient);
-  }
-
-  /** Active line gradient, or `null` when strokes use the solid {@link lineColor}. */
-  public get lineGradient(): Gradient | null {
-    return this._lineGradient;
+  /** Active fill style: a solid {@link Color} or a {@link Gradient}. */
+  public get fillStyle(): Color | Gradient {
+    return this._fillStyle;
   }
 
   /**
-   * Paint subsequent strokes with a {@link Gradient} instead of a solid color.
-   * The gradient is cloned on assignment and rasterized lazily on first use;
-   * pass `null` to revert to the solid {@link lineColor}.
+   * Set the fill style. Accepts a solid {@link Color}, a {@link Gradient}
+   * (cloned on assignment and rasterized lazily on first fill), or `null` to
+   * revert to the solid color held by {@link fillColor}. A {@link Color} value
+   * is copied into the {@link fillColor} slot; the most recently assigned style
+   * wins.
    */
-  public set lineGradient(gradient: Gradient | null) {
-    this._setLineGradient(gradient);
+  public set fillStyle(style: Color | Gradient | null) {
+    this._fillStyle = this._resolveStyle(style, this._fillColor);
+    this._fillStyleTexture = null;
+  }
+
+  /** Active stroke style: a solid {@link Color} or a {@link Gradient}. */
+  public get strokeStyle(): Color | Gradient {
+    return this._strokeStyle;
+  }
+
+  /**
+   * Set the stroke style. Accepts a solid {@link Color}, a {@link Gradient}
+   * (cloned on assignment and rasterized lazily on first stroke), or `null` to
+   * revert to the solid color held by {@link lineColor}. A {@link Color} value
+   * is copied into the {@link lineColor} slot; the most recently assigned style
+   * wins.
+   */
+  public set strokeStyle(style: Color | Gradient | null) {
+    this._strokeStyle = this._resolveStyle(style, this._lineColor);
+    this._strokeStyleTexture = null;
   }
 
   public get currentPoint(): Vector {
@@ -354,17 +362,17 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Remove all child meshes and reset pen state (position, colors/gradients, line width). */
+  /** Remove all child meshes and reset pen state (position, fill/stroke styles, line width). */
   public clear(): this {
     this.removeChildren();
 
     this._lineWidth = 0;
-    this._lineColor.copy(Color.black);
     this._fillColor.copy(Color.black);
-    this._fillGradient = null;
-    this._lineGradient = null;
-    this._fillGradientTexture = null;
-    this._lineGradientTexture = null;
+    this._lineColor.copy(Color.black);
+    this._fillStyle = this._fillColor;
+    this._strokeStyle = this._lineColor;
+    this._fillStyleTexture = null;
+    this._strokeStyleTexture = null;
     this._destroyOwnedTextures();
     this._currentPoint.set(0, 0);
 
@@ -381,34 +389,45 @@ export class Graphics extends Container {
     this._currentPoint.destroy();
   }
 
-  private _setFillGradient(gradient: Gradient | null): void {
-    this._fillGradient = gradient === null ? null : gradient.clone();
-    this._fillGradientTexture = null;
-  }
+  /**
+   * Resolve an assigned style into the stored paint. A {@link Color} is copied
+   * into the solid `colorSlot` (keeping the {@link fillColor} / {@link lineColor}
+   * convenience getters in sync) and that slot is returned; `null` reverts to
+   * the slot; a {@link Gradient} is cloned so later external mutation cannot
+   * change the stored paint.
+   */
+  private _resolveStyle(style: Color | Gradient | null, colorSlot: Color): Color | Gradient {
+    if (style === null) {
+      return colorSlot;
+    }
 
-  private _setLineGradient(gradient: Gradient | null): void {
-    this._lineGradient = gradient === null ? null : gradient.clone();
-    this._lineGradientTexture = null;
+    if (style instanceof Color) {
+      colorSlot.copy(style);
+
+      return colorSlot;
+    }
+
+    return style.clone();
   }
 
   private _createFillMesh(data: MeshGeometryData): Mesh {
-    if (this._fillGradient === null) {
-      return this._createSolidMesh(data, this._fillColor);
+    if (this._fillStyle instanceof Color) {
+      return this._createSolidMesh(data, this._fillStyle);
     }
 
-    this._fillGradientTexture ??= this._rasterizeGradient(this._fillGradient);
+    this._fillStyleTexture ??= this._rasterizeGradient(this._fillStyle);
 
-    return this._createGradientMesh(data, this._fillGradientTexture);
+    return this._createGradientMesh(data, this._fillStyleTexture);
   }
 
   private _createStrokeMesh(data: MeshGeometryData): Mesh {
-    if (this._lineGradient === null) {
-      return this._createSolidMesh(data, this._lineColor);
+    if (this._strokeStyle instanceof Color) {
+      return this._createSolidMesh(data, this._strokeStyle);
     }
 
-    this._lineGradientTexture ??= this._rasterizeGradient(this._lineGradient);
+    this._strokeStyleTexture ??= this._rasterizeGradient(this._strokeStyle);
 
-    return this._createGradientMesh(data, this._lineGradientTexture);
+    return this._createGradientMesh(data, this._strokeStyleTexture);
   }
 
   private _createSolidMesh(data: MeshGeometryData, color: Color): Mesh {
