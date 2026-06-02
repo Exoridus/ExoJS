@@ -413,14 +413,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
           }
         }
 
-        // Pack tint+flags for default path.
+        // Pack tint+flags for default path. Color RGB channels are 0..255; the
+        // shader multiplies the sampled texel by this tint, so normalize to
+        // 0..1 (matching TransformBuffer and the WebGL2 mesh shader). Leaving
+        // them at 0..255 scales every non-zero texel channel past 1.0, which
+        // clamps intermediate colors (gradients, photos) to full saturation.
         if (defaultUniformF32 !== null) {
           const offsetWords = (defaultUniformIndex * this._uniformAlignment) / Float32Array.BYTES_PER_ELEMENT;
           const tint = dc.mesh.tint;
 
-          defaultUniformF32[offsetWords + 0] = tint.r;
-          defaultUniformF32[offsetWords + 1] = tint.g;
-          defaultUniformF32[offsetWords + 2] = tint.b;
+          defaultUniformF32[offsetWords + 0] = tint.r / 255;
+          defaultUniformF32[offsetWords + 1] = tint.g / 255;
+          defaultUniformF32[offsetWords + 2] = tint.b / 255;
           defaultUniformF32[offsetWords + 3] = tint.a;
           defaultUniformF32[offsetWords + 4] = dc.premultiplySample ? 1 : 0;
           defaultUniformF32[offsetWords + 5] = 0;
@@ -1495,11 +1499,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     data[off + 11] = 0;
     off += 12;
 
-    // tint (vec4)
+    // tint (vec4). RGB are 0..255; normalize to 0..1 for the shader multiply
+    // (u_mesh.tint is documented as 0..1, matching the default path above).
     const tint = mesh.tint;
-    data[off + 0] = tint.r;
-    data[off + 1] = tint.g;
-    data[off + 2] = tint.b;
+    data[off + 0] = tint.r / 255;
+    data[off + 1] = tint.g / 255;
+    data[off + 2] = tint.b / 255;
     data[off + 3] = tint.a;
 
     this._device!.queue.writeBuffer(resources.meshUniformBuffer!, drawCursor * slotBytes, data);

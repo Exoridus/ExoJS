@@ -20,6 +20,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `Gradient` (and `LinearGradient` / `RadialGradient`) are now full value objects alongside `Color`: they implement `Cloneable` (`clone()` / `copy()`), gained structural `equals()`, a `type` discriminant (`GradientType` `'linear' | 'radial'`), and read-only geometry getters (`start` / `end`, `center` / `radius`). Stop construction now rejects non-finite offsets. No rendering or Drawable behavior changed — these remain texture-first paint values consumed via `toTexture()`.
 - RenderPlanOptimizer grouping key audit: documented that optimizer group boundaries are already aligned with Sprite/Mesh renderer batch boundaries. Key findings: (1) Sprite renderers do not consume `groupIndex` — they batch via their own state machine; (2) Mesh static-batch uses `groupIndex` as a gate, and the optimizer's `pipelineKey:bindKey` grouping correctly covers all conditions the mesh renderer checks; (3) texture-slot coalescing for default-path sprites is correctly renderer-owned; (4) custom-sprite base texture and sprite-level blend-mode override are renderer-owned boundaries not captured in `groupIndex`. Tests were added to prove each invariant.
 
+### Fixed
+
+- WebGPU mesh tint is now normalized to 0..1 before the shader multiply. The default- and custom-material mesh paths packed the per-mesh tint `Color`'s RGB in the 0..255 range while the WGSL shaders multiply `sample * color * tint` expecting 0..1; with the default white tint this scaled every sampled texel channel by 255 and clamped it, so textures with intermediate colors (gradients, grays, photos) rendered fully saturated while pure 0/255 colors looked correct. This makes WebGPU `DataTexture`-backed and canvas-sourced textured meshes — including rasterized `Gradient` fills — sample pixel-correct, matching WebGL2. The instanced mesh and sprite paths were already correct (they source the tint from the normalized shared `TransformBuffer`). No public API change.
+
 ## [0.10.0] - 2026-05-31
 
 ### Breaking — RenderingContext and Scene.draw migration
