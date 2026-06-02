@@ -17,6 +17,7 @@
         "build": "pnpm vendor:sync && pnpm examples:sync && pnpm build:api && astro build",
         "preview": "astro preview",
         "check-ts": "astro check && tsc --noEmit --pretty",
+        "examples:smoke": "tsx scripts/smoke-examples.ts",
         "screenshots": "tsx scripts/capture-screenshots.ts",
         "screenshots:smoke": "tsx scripts/capture-screenshots.ts --base-url http://127.0.0.1:4321/ExoJS/ --label verify-mobile-phases-1-4-smoke --routes /en/,/en/guide/,/en/guide/introduction/what-is-exojs/,/en/api/,/en/api/all/,/en/api/application/,/en/api/scene/,/en/api/sprite/,/en/playground/ --themes dark,light --viewports 1440x1000,390x844 --concurrency 3"
     },

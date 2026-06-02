@@ -16,6 +16,21 @@
             ]
         },
         {
+            "slug": "camera-basic",
+            "path": "application-scenes/camera-basic.js",
+            "title": "Camera Basic",
+            "description": "High-level Camera facade: the camera follows the pointer, the mouse wheel zooms, the world slowly rotates, and a HUD bar is drawn in screen space through a per-render view override.",
+            "backend": "core",
+            "tags": [
+                "camera",
+                "view",
+                "pointer"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
+        },
+        {
             "slug": "hud-overlay-scene",
             "path": "application-scenes/hud-overlay-scene.js",
             "title": "Hud Overlay Scene",
