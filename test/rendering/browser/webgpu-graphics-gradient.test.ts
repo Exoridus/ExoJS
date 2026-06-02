@@ -1,20 +1,13 @@
 /**
- * WebGPU Graphics gradient-fill browser tests — opt-in, capability-aware.
+ * WebGPU Graphics gradient browser tests — opt-in, capability-aware.
  *
  * Graphics gradient paints rasterize the gradient to a {@link DataTexture} and
  * render each shape as a textured Mesh (bounding-box UVs, white tint), reusing
  * the existing default mesh texture path with no WebGpuMeshRenderer changes.
  * These tests assert that path issues valid GPU work on WebGPU — no validation
- * error, a draw call emitted — proving the gradient fill integrates structurally
- * with the WebGPU backend.
- *
- * Pixel colors are intentionally NOT asserted here: the WebGPU backend currently
- * samples `DataTexture` uploads (queue.writeTexture path) incorrectly — a fresh
- * gradient DataTexture reads back as a flat color where the identical mesh path
- * with a canvas-sourced Texture reads correctly. That is a pre-existing WebGPU
- * DataTexture limitation, independent of Graphics; pixel-correct WebGPU gradient
- * fills are a follow-up. WebGL2 gradient fills ARE pixel-tested (see
- * webgl2-graphics-gradient.test.ts).
+ * error, a draw call emitted — and that the presented pixels match the expected
+ * gradient samples through the real Graphics `fillGradient` / `lineGradient`
+ * API path.
  *
  * All tests skip gracefully when WebGPU is unavailable.
  *
@@ -30,6 +23,8 @@ import type { RenderNode } from '@/rendering/RenderNode';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+
+type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -105,8 +100,38 @@ const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backen
   return true;
 };
 
+// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
+// WebGPU-configured canvas as an image source, matching other WebGPU pixel tests.
+const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
+  const source = backend.context.canvas as HTMLCanvasElement;
+  const readback = document.createElement('canvas');
+
+  readback.width = canvasSize;
+  readback.height = canvasSize;
+
+  const ctx = readback.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('2D context is required for canvas readback.');
+  }
+
+  ctx.drawImage(source, 0, 0);
+
+  return (x: number, y: number): RgbaTuple => {
+    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
+
+    return [data[0], data[1], data[2], data[3]];
+  };
+};
+
+const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 4): void => {
+  for (let index = 0; index < 4; index++) {
+    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(tolerance);
+  }
+};
+
 describe('WebGPU Graphics gradient fills', () => {
-  test('a linear gradient fill issues a valid draw with no validation error', async ctx => {
+  test('linear gradient fill renders a red-to-blue ramp across the shape', async ctx => {
     const backend = await setupBackend(ctx);
     const graphics = new Graphics();
 
@@ -121,30 +146,138 @@ describe('WebGPU Graphics gradient fills', () => {
     graphics.drawRectangle(8, 8, 48, 48);
 
     try {
-      await renderAndValidate(ctx, backend, graphics);
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      const readPixel = readCanvas(backend);
+      const left = readPixel(10, 32);
+      const middle = readPixel(32, 32);
+      const right = readPixel(54, 32);
+
+      // Endpoints prove the gradient is sampled across the fill, while the
+      // middle allows the WebGPU texture-filtering quantization already covered
+      // in webgpu-mesh-tint.test.ts.
+      expect(left[0]).toBeGreaterThan(180);
+      expect(left[2]).toBeLessThan(70);
+      expectPixelNear(middle, [128, 0, 128, 255], 20);
+      expect(right[2]).toBeGreaterThan(180);
+      expect(right[0]).toBeLessThan(70);
+      expect(left[3]).toBeGreaterThanOrEqual(250);
+      expect(right[3]).toBeGreaterThanOrEqual(250);
+
+      // Outside the rectangle stays the clear color.
+      expectPixelNear(readPixel(2, 2), [0, 0, 0, 255]);
     } finally {
       graphics.destroy();
       backend.destroy();
     }
   });
 
-  test('a radial gradient stroke issues a valid draw with no validation error', async ctx => {
+  test('radial gradient fill distinguishes center from edge', async ctx => {
     const backend = await setupBackend(ctx);
     const graphics = new Graphics();
 
-    graphics.lineWidth = 6;
-    graphics.lineGradient = new RadialGradient(
+    graphics.fillGradient = new RadialGradient(
       [
-        { offset: 0, color: Color.white },
-        { offset: 1, color: Color.black },
+        { offset: 0, color: Color.red },
+        { offset: 1, color: Color.blue },
       ],
       [0.5, 0.5],
       0.5,
     );
-    graphics.drawCircle(32, 32, 20);
+    graphics.drawRectangle(8, 8, 48, 48);
 
     try {
-      await renderAndValidate(ctx, backend, graphics);
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      const readPixel = readCanvas(backend);
+      const center = readPixel(32, 32);
+      const edge = readPixel(10, 32);
+
+      // Center samples the inner (red) stop, the mid-left edge the outer (blue).
+      expect(center[0]).toBeGreaterThan(180);
+      expect(center[2]).toBeLessThan(70);
+      expect(edge[2]).toBeGreaterThan(150);
+      expect(edge[0]).toBeLessThan(100);
+    } finally {
+      graphics.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('linear gradient stroke renders a red-to-blue ramp across the line', async ctx => {
+    const backend = await setupBackend(ctx);
+    const graphics = new Graphics();
+
+    graphics.lineWidth = 8;
+    graphics.lineGradient = new LinearGradient(
+      [
+        { offset: 0, color: Color.red },
+        { offset: 1, color: Color.blue },
+      ],
+      [0, 0],
+      [1, 0],
+    );
+    graphics.drawLine(8, 32, 56, 32);
+
+    try {
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      const readPixel = readCanvas(backend);
+      const left = readPixel(10, 32);
+      const right = readPixel(54, 32);
+
+      expect(left[0]).toBeGreaterThan(180);
+      expect(left[2]).toBeLessThan(70);
+      expect(right[2]).toBeGreaterThan(180);
+      expect(right[0]).toBeLessThan(70);
+      expect(left[3]).toBeGreaterThanOrEqual(250);
+      expect(right[3]).toBeGreaterThanOrEqual(250);
+      expectPixelNear(readPixel(32, 20), [0, 0, 0, 255]);
+    } finally {
+      graphics.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('transformed Graphics gradient appears at the translated location', async ctx => {
+    const backend = await setupBackend(ctx);
+    const graphics = new Graphics();
+
+    graphics.fillGradient = new LinearGradient(
+      [
+        { offset: 0, color: Color.red },
+        { offset: 1, color: Color.blue },
+      ],
+      [0, 0],
+      [1, 0],
+    );
+    graphics.drawRectangle(0, 0, 24, 24);
+    graphics.setPosition(20, 20);
+
+    try {
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      const readPixel = readCanvas(backend);
+
+      // Untouched region before the translated rectangle stays clear.
+      expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
+
+      const left = readPixel(22, 30);
+      const right = readPixel(42, 30);
+
+      // The ramp still runs red-to-blue, now offset to world (20, 20)+.
+      expect(left[0]).toBeGreaterThan(left[2]);
+      expect(right[2]).toBeGreaterThan(right[0]);
+      expect(left[3]).toBeGreaterThanOrEqual(250);
+      expect(right[3]).toBeGreaterThanOrEqual(250);
     } finally {
       graphics.destroy();
       backend.destroy();
