@@ -348,13 +348,16 @@ async function main(): Promise<void> {
             },
         });
     } else {
-        // Chromium new headless — WebGPU adapter is available via Dawn's
-        // SwiftShader backend when --enable-unsafe-webgpu is set. Crucially
-        // we do NOT add --use-angle=swiftshader here: that flag forces the
-        // ANGLE WebGL backend to SwiftShader, which conflicts with Dawn and
-        // prevents the WebGPU adapter from being acquired. The 7 WebGPU
-        // catalog examples can therefore run instead of being skipped.
+        // channel:'chromium' is required for the WebGPU adapter to be
+        // available in headless mode — without it Chromium's GPU process
+        // does not initialize properly and requestAdapter() returns null.
+        // This mirrors the browser-webgpu vitest project's launchOptions.
+        //
+        // --use-angle=swiftshader is deliberately omitted: it forces ANGLE's
+        // WebGL backend to SwiftShader, which conflicts with Dawn's own
+        // SwiftShader path for WebGPU and prevents adapter acquisition.
         browser = await chromium.launch({
+            channel: 'chromium',
             headless,
             args: ['--enable-webgl', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
         });
