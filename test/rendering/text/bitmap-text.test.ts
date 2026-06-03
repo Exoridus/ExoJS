@@ -191,6 +191,39 @@ describe('BitmapText', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Dev assertions — BmFont and BmFontAdapter
+// ---------------------------------------------------------------------------
+
+describe('BmFont dev assertions', () => {
+  test('throws when texture count does not match page count', () => {
+    const fontData = makeFontData({ pages: ['page_0.png', 'page_1.png'] });
+    expect(() => new BmFont(fontData, [makeTex()])).toThrow('[ExoJS]');
+  });
+
+  test('does not throw when texture count matches page count', () => {
+    const fontData = makeFontData({ pages: ['page_0.png'] });
+    expect(() => new BmFont(fontData, [makeTex()])).not.toThrow();
+  });
+});
+
+describe('BmFontAdapter page index assertion', () => {
+  test('throws when a glyph references a page index beyond the texture array', () => {
+    const fontData: BmFontData = {
+      ...makeFontData(),
+      chars: new Map([[65, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 1 }]]),
+    };
+    // Only 1 texture provided, but glyph A references page index 1.
+    const adapter = new BmFontAdapter(fontData, [makeTex()], 1);
+    expect(() => adapter.getGlyph('A', 0)).toThrow('[ExoJS]');
+  });
+
+  test('does not throw when glyph page index is valid', () => {
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+    expect(() => adapter.getGlyph('A', 0)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Missing-glyph diagnostics
 // ---------------------------------------------------------------------------
 
