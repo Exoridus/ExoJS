@@ -1,7 +1,7 @@
 ---
 import type { Capability } from '../lib/examples-catalog';
 import { getExamplesForChapter } from '../lib/examples-catalog';
-import { getExampleSource } from '../lib/example-sources';
+import { getExampleExecutionSource, getExampleSource } from '../lib/example-sources';
 
 interface Props {
     chapter: string;
@@ -24,11 +24,13 @@ const CAPABILITY_LABELS: Record<Capability, string> = {
 
 const { chapter, slug } = Astro.props;
 const example = getExamplesForChapter(chapter).find(entry => entry.slug === slug);
-const sourceCode = getExampleSource(chapter, slug);
+const displaySource = getExampleSource(chapter, slug);
+const executionSource = getExampleExecutionSource(chapter, slug);
 const exampleTitle = example?.title ?? slug;
 const capabilities = example?.capabilities ?? [];
 const capabilitiesAttr = JSON.stringify(capabilities);
-const sourceHref = `${import.meta.env.BASE_URL}examples/${chapter}/${slug}.js`;
+const sourceExt = example?.language === 'typescript' ? 'ts' : 'js';
+const sourceHref = `${import.meta.env.BASE_URL}examples/${chapter}/${slug}.${sourceExt}`;
 const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
 ---
 
@@ -51,10 +53,10 @@ const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
     </header>
     <div class="embed-body">
         <div class="embed-preview">
-            <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={sourceCode} capabilities={capabilitiesAttr}></guide-example-preview>
+            <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={executionSource} capabilities={capabilitiesAttr}></guide-example-preview>
         </div>
         <div class="embed-source">
-            <pre><code>{sourceCode}</code></pre>
+            <pre><code>{displaySource}</code></pre>
         </div>
     </div>
 </section>
