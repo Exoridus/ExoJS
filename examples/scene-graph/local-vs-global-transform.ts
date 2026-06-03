@@ -1,5 +1,5 @@
-// Auto-generated from local-vs-global-transform.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,18 +10,23 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class LocalVsGlobalTransformScene extends Scene {
-    _parent;
-    _localSprite;
-    _globalSprite;
-    _localLabel;
-    _globalLabel;
-    async load(loader) {
+    private _parent!: Container;
+    private _localSprite!: Sprite;
+    private _globalSprite!: Sprite;
+    private _localLabel!: Text;
+    private _globalLabel!: Text;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         const texture = loader.get(Texture, 'bunny');
+
         this._parent = new Container().setPosition(250, 300);
         this._localSprite = new Sprite(texture)
             .setAnchor(0.5)
@@ -34,15 +39,18 @@ class LocalVsGlobalTransformScene extends Scene {
             .setPosition(580, 300)
             .setTint(new Color(255, 190, 120));
         this._parent.addChild(this._localSprite);
+
         this._localLabel = new Text('inherited rotation', { fillColor: Color.white, fontSize: 16 });
         this._localLabel.setPosition(180, 80);
         this._globalLabel = new Text('screen-space', { fillColor: Color.white, fontSize: 16 });
         this._globalLabel.setPosition(520, 80);
     }
-    update(delta) {
+
+    override update(delta): void {
         this._parent.rotate(delta.seconds * 60);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._parent);
         context.render(this._globalSprite);
@@ -50,4 +58,5 @@ class LocalVsGlobalTransformScene extends Scene {
         context.render(this._globalLabel);
     }
 }
+
 app.start(new LocalVsGlobalTransformScene());

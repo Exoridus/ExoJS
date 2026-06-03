@@ -1,5 +1,5 @@
-// Auto-generated from tween-with-yoyo.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,20 +10,26 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class TweenWithYoyoScene extends Scene {
-    _sprite;
-    async load(loader) {
+    private _sprite!: Sprite;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
         this.app.tweens.create(this._sprite.scale).to({ x: 1.5, y: 1.5 }, 0.8).yoyo(true).repeat(-1).start();
         this.app.tweens.create(this._sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
     }
 }
+
 app.start(new TweenWithYoyoScene());

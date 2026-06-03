@@ -1,5 +1,5 @@
-// Auto-generated from tween-from-array.ts — edit the .ts source, not this file.
-import { Application, Color, Ease, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Ease, Scene, Sprite, Texture, Tween } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,7 +10,9 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const waypoints = [
     { x: 120, y: 320 },
     { x: 220, y: 180 },
@@ -21,35 +23,39 @@ const waypoints = [
     { x: 400, y: 470 },
     { x: 220, y: 410 },
 ];
+
 class TweenFromArrayScene extends Scene {
-    _sprite;
-    async load(loader) {
+    private _sprite!: Sprite;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(waypoints[0].x, waypoints[0].y);
         this._buildPath();
     }
-    _buildPath() {
-        let first = null;
-        let prev = null;
+
+    private _buildPath(): void {
+        let first: Tween | null = null;
+        let prev: Tween | null = null;
         for (let i = 1; i < waypoints.length; i++) {
             const next = this.app.tweens.create(this._sprite.position).to(waypoints[i], 0.35).easing(Ease.sineInOut);
-            if (first === null)
-                first = next;
-            if (prev !== null)
-                prev.chain(next);
+            if (first === null) first = next;
+            if (prev !== null) prev.chain(next);
             prev = next;
         }
-        prev.onComplete(() => {
+        prev!.onComplete(() => {
             this._sprite.setPosition(waypoints[0].x, waypoints[0].y);
             this._buildPath();
         });
-        first.start();
+        first!.start();
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
     }
 }
+
 app.start(new TweenFromArrayScene());

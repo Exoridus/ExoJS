@@ -1,5 +1,5 @@
-// Auto-generated from z-ordering.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,18 +10,23 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class ZOrderingScene extends Scene {
-    _group;
-    _label;
-    _sprites;
-    async load(loader) {
+    private _group!: Container;
+    private _label!: Text;
+    private _sprites!: Sprite[];
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._group = new Container();
         this._label = new Text('Press 1, 2, 3', { fillColor: Color.white, fontSize: 18 });
         this._label.setPosition(18, 18);
+
         this._sprites = [0, 1, 2].map(index => {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
                 .setAnchor(0.5)
@@ -32,19 +37,23 @@ class ZOrderingScene extends Scene {
             this._group.addChild(sprite);
             return sprite;
         });
+
         this.inputs.onTrigger(Keyboard.One, () => this._setFront(0));
         this.inputs.onTrigger(Keyboard.Two, () => this._setFront(1));
         this.inputs.onTrigger(Keyboard.Three, () => this._setFront(2));
     }
-    _setFront(index) {
+
+    private _setFront(index: number): void {
         this._sprites.forEach((sprite, i) => {
             sprite.zIndex = i === index ? 3 : i;
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._group);
         context.render(this._label);
     }
 }
+
 app.start(new ZOrderingScene());
