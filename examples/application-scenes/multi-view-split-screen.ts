@@ -1,5 +1,5 @@
-// Auto-generated from multi-view-split-screen.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Sprite, Texture, View } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,15 +10,17 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class SplitScreenScene extends Scene {
-    _texture;
-    _leftView;
-    _rightView;
-    _divider;
-    _leftPlayer;
-    _rightPlayer;
-    _move = {
+    private _texture!: Texture;
+    private _leftView!: View;
+    private _rightView!: View;
+    private _divider!: Graphics;
+    private _leftPlayer!: Sprite;
+    private _rightPlayer!: Sprite;
+    private _move = {
         a: 0,
         d: 0,
         w: 0,
@@ -28,18 +30,23 @@ class SplitScreenScene extends Scene {
         up: 0,
         down: 0,
     };
-    async load(loader) {
+
+    override async load(loader): Promise<void> {
         this._texture = await loader.load(Texture, 'image/ship-a.png');
     }
-    init() {
+
+    override init(): void {
         const { width, height } = this.app.canvas;
+
         this._leftView = new View(0, 0, width / 2, height);
         this._leftView.viewport.set(0, 0, 0.5, 1);
         this._rightView = new View(0, 0, width / 2, height);
         this._rightView.viewport.set(0.5, 0, 0.5, 1);
+
         this._divider = new Graphics();
         this._divider.fillColor = Color.white;
         this._divider.drawRectangle(width / 2 - 1, 0, 2, height);
+
         this._leftPlayer = new Sprite(this._texture)
             .setAnchor(0.5)
             .setPosition(-160, 0)
@@ -48,6 +55,7 @@ class SplitScreenScene extends Scene {
             .setAnchor(0.5)
             .setPosition(160, 0)
             .setTint(new Color(255, 180, 120));
+
         this.inputs.onActive(Keyboard.A, () => {
             this._move.a = 1;
         });
@@ -97,14 +105,17 @@ class SplitScreenScene extends Scene {
             this._move.down = 0;
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         const speed = 300 * delta.seconds;
+
         this._leftPlayer.move((this._move.d - this._move.a) * speed, (this._move.s - this._move.w) * speed);
         this._rightPlayer.move((this._move.right - this._move.left) * speed, (this._move.down - this._move.up) * speed);
         this._leftView.setCenter(this._leftPlayer.position.x, this._leftPlayer.position.y);
         this._rightView.setCenter(this._rightPlayer.position.x, this._rightPlayer.position.y);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.backend.setView(this._leftView);
         context.render(this._leftPlayer);
@@ -116,4 +127,5 @@ class SplitScreenScene extends Scene {
         context.render(this._divider);
     }
 }
+
 app.start(new SplitScreenScene());

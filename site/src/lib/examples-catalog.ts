@@ -19,6 +19,7 @@ export interface CatalogEntry {
     title: string;
     description: string;
     backend: string;
+    language?: string;
     capabilities?: Array<Capability>;
     tags?: Array<string>;
 }

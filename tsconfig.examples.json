@@ -48,6 +48,6 @@
       "@assets": ["./examples/shared/assets-catalog.d.ts"]
     }
   },
-  "include": ["examples/**/*.js", "examples/shared/runtime.d.ts", "examples/shared/assets-catalog.d.ts", "src/typings.d.ts"],
-  "exclude": []
+  "include": ["examples/**/*.js", "examples/**/*.ts", "examples/shared/runtime.d.ts", "examples/shared/assets-catalog.d.ts", "src/typings.d.ts", "src/build-constants.d.ts"],
+  "exclude": ["examples/shared/editor-support.d.ts"]
 }

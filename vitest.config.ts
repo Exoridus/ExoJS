@@ -35,6 +35,7 @@ export default defineConfig({
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
         test: {
           name: 'exojs',
           environment: 'jsdom',
@@ -50,6 +51,7 @@ export default defineConfig({
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
         test: {
           name: 'browser-webgl-chromium',
           globals: true,
@@ -72,6 +74,7 @@ export default defineConfig({
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
         test: {
           name: 'browser-webgl-firefox',
           globals: true,
@@ -90,6 +93,7 @@ export default defineConfig({
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
         test: {
           name: 'browser-webgpu',
           globals: true,
@@ -113,6 +117,7 @@ export default defineConfig({
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
         test: {
           name: 'browser-webgpu-firefox',
           globals: true,
@@ -132,6 +137,7 @@ export default defineConfig({
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
         test: {
           name: 'browser-webgpu-firefox-dark',
           globals: true,

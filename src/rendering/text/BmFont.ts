@@ -1,3 +1,4 @@
+import { assert } from '@/core/dev';
 import type { Texture } from '@/rendering/texture/Texture';
 
 /** Per-character metrics from a BMFont descriptor. */
@@ -51,6 +52,10 @@ export class BmFont {
   public readonly textures: readonly Texture[];
 
   public constructor(fontData: BmFontData, textures: readonly Texture[]) {
+    assert(
+      textures.length === fontData.pages.length,
+      `BmFont: texture count (${textures.length}) must match page count (${fontData.pages.length})`,
+    );
     this.fontData = fontData;
     this.textures = textures;
   }

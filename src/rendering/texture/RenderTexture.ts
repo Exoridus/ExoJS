@@ -1,3 +1,4 @@
+import { assert } from '@/core/dev';
 import { isPowerOfTwo } from '@/math/utils';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import type { SamplerOptions } from '@/rendering/texture/Sampler';
@@ -32,6 +33,7 @@ export class RenderTexture extends RenderTarget {
   private _flipY: boolean;
 
   public constructor(width: number, height: number, options?: Partial<SamplerOptions>) {
+    assert(width > 0 && height > 0, `RenderTexture dimensions must be positive (got ${width}×${height})`);
     super(width, height, false);
 
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
@@ -151,6 +153,7 @@ export class RenderTexture extends RenderTarget {
   }
 
   public setSize(width: number, height: number): this {
+    assert(width > 0 && height > 0, `RenderTexture.setSize() dimensions must be positive (got ${width}×${height})`);
     if (!this._size.equals({ width, height })) {
       this._size.set(width, height);
       this._defaultView.resize(width, height);

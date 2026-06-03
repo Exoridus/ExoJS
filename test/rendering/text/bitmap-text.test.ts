@@ -3,6 +3,7 @@
  * (alignment, word-wrap, kerning, leading) and builds correct page quads.
  */
 
+import { _resetWarnOnce } from '@/core/dev';
 import type { BmFontData } from '@/rendering/text/BitmapText';
 import { BitmapText, BmFontAdapter } from '@/rendering/text/BitmapText';
 import { BmFont } from '@/rendering/text/BmFont';
@@ -186,5 +187,104 @@ describe('BitmapText', () => {
 
     // Kerning pulls B 1px closer to A.
     expect(withKernBx).toBe(noKernBx - 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dev assertions — BmFont and BmFontAdapter
+// ---------------------------------------------------------------------------
+
+describe('BmFont dev assertions', () => {
+  test('throws when texture count does not match page count', () => {
+    const fontData = makeFontData({ pages: ['page_0.png', 'page_1.png'] });
+    expect(() => new BmFont(fontData, [makeTex()])).toThrow('[ExoJS]');
+  });
+
+  test('does not throw when texture count matches page count', () => {
+    const fontData = makeFontData({ pages: ['page_0.png'] });
+    expect(() => new BmFont(fontData, [makeTex()])).not.toThrow();
+  });
+});
+
+describe('BmFontAdapter page index assertion', () => {
+  test('throws when a glyph references a page index beyond the texture array', () => {
+    const fontData: BmFontData = {
+      ...makeFontData(),
+      chars: new Map([[65, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 1 }]]),
+    };
+    // Only 1 texture provided, but glyph A references page index 1.
+    const adapter = new BmFontAdapter(fontData, [makeTex()], 1);
+    expect(() => adapter.getGlyph('A', 0)).toThrow('[ExoJS]');
+  });
+
+  test('does not throw when glyph page index is valid', () => {
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+    expect(() => adapter.getGlyph('A', 0)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Missing-glyph diagnostics
+// ---------------------------------------------------------------------------
+
+describe('BmFontAdapter missing-glyph warnings', () => {
+  beforeEach(() => {
+    _resetWarnOnce();
+  });
+
+  test('warns once when an unknown glyph is requested', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('Z', 0); // Z is not in the font fixture
+    adapter.getGlyph('Z', 0); // second call — must not warn again
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  test('warning message contains the codepoint in hex (U+005A for Z)', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('Z', 0);
+
+    expect(spy.mock.calls[0]?.[0]).toContain('U+005A');
+    spy.mockRestore();
+  });
+
+  test('does not warn for glyphs that are present in the font', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('A', 0);
+    adapter.getGlyph('B', 0);
+    adapter.getGlyph(' ', 0);
+
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  test('warns separately for each distinct missing glyph', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('Y', 0);
+    adapter.getGlyph('Z', 0);
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
+  });
+
+  test('BitmapText rebuild does not re-trigger warning for already-seen missing glyph', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const font = makeFont(); // font has A, B, space — not Z
+    const text = new BitmapText('AZB', font);
+
+    // Force a rebuild by changing the text (triggers _rebuild internally)
+    text.text = 'AZB';
+
+    expect(spy).toHaveBeenCalledTimes(1); // Z warned exactly once across both layouts
+    spy.mockRestore();
   });
 });

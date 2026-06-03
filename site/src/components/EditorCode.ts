@@ -13,6 +13,7 @@ import './LoadingSpinner';
 
 export interface UpdateCodeEvent {
     code: string;
+    executionCode?: string;
 }
 
 export interface ResetCodeEvent {
@@ -105,6 +106,7 @@ const _typingsCache = new Map<string, Promise<ReadonlyArray<ExtraLib>>>();
 
 let _monacoConfiguredPromise: Promise<void> | null = null;
 let _jsHoverProviderRegistered = false;
+let _tsHoverProviderRegistered = false;
 let _assetCompletionProviderRegistered = false;
 let _showInlineErrorCommandId: string | null = null;
 let _pendingViewErrorLine: number | null = null;
@@ -220,6 +222,7 @@ export class EditorCode extends LitElement {
 
     @property({ type: String }) public sourceCode: string | null = null;
     @property({ type: String }) public sourcePath: string | null = null;
+    @property({ type: String }) public language: 'javascript' | 'typescript' = 'javascript';
     @property({ type: Boolean }) public canReset = false;
     @property({ type: String }) public exampleTitle = 'Loading...';
     @property({ type: String }) public selectedVersionId = '';
@@ -427,7 +430,7 @@ export class EditorCode extends LitElement {
                 }
                 this._autoRefreshTimer = setTimeout(() => {
                     this._autoRefreshTimer = null;
-                    if (this._autoRefresh) this._triggerRefreshPreview();
+                    if (this._autoRefresh) void this._triggerRefreshPreview();
                 }, 800);
             }
         });
@@ -447,10 +450,10 @@ export class EditorCode extends LitElement {
 
         this._attachCtrlSHandler();
 
-        this.editorView.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => this._triggerRefreshPreview());
+        this.editorView.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => void this._triggerRefreshPreview());
 
         if (typeof monaco.KeyCode.KeyS === 'number') {
-            this.editorView.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => this._triggerRefreshPreview());
+            this.editorView.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => void this._triggerRefreshPreview());
         }
 
         // MONACO UPDATE CHECKLIST — verify all of the following after a version bump:
@@ -563,38 +566,45 @@ export class EditorCode extends LitElement {
                 }
             }) ?? null;
 
+        const buildInlineErrorHoverProvider = (): monaco.languages.HoverProvider => ({
+            provideHover: (model, position) => {
+                const cmdId = _showInlineErrorCommandId;
+                if (!cmdId) return null;
+
+                const markers = monaco.editor
+                    .getModelMarkers({ resource: model.uri })
+                    .filter(m => m.severity >= 4 && m.startLineNumber <= position.lineNumber && m.endLineNumber >= position.lineNumber);
+
+                if (!markers.length) return null;
+
+                _pendingViewErrorLine = position.lineNumber;
+                const m = markers[0];
+                return {
+                    contents: [
+                        {
+                            value: `[$(arrow-right) View Error Inline](command:${cmdId})`,
+                            isTrusted: true,
+                            supportThemeIcons: true,
+                        },
+                    ],
+                    range: {
+                        startLineNumber: m.startLineNumber,
+                        startColumn: m.startColumn,
+                        endLineNumber: m.endLineNumber,
+                        endColumn: m.endColumn,
+                    },
+                };
+            },
+        });
+
         if (!_jsHoverProviderRegistered) {
             _jsHoverProviderRegistered = true;
-            monaco.languages.registerHoverProvider('javascript', {
-                provideHover: (model, position) => {
-                    const cmdId = _showInlineErrorCommandId;
-                    if (!cmdId) return null;
+            monaco.languages.registerHoverProvider('javascript', buildInlineErrorHoverProvider());
+        }
 
-                    const markers = monaco.editor
-                        .getModelMarkers({ resource: model.uri })
-                        .filter(m => m.severity >= 4 && m.startLineNumber <= position.lineNumber && m.endLineNumber >= position.lineNumber);
-
-                    if (!markers.length) return null;
-
-                    _pendingViewErrorLine = position.lineNumber;
-                    const m = markers[0];
-                    return {
-                        contents: [
-                            {
-                                value: `[$(arrow-right) View Error Inline](command:${cmdId})`,
-                                isTrusted: true,
-                                supportThemeIcons: true,
-                            },
-                        ],
-                        range: {
-                            startLineNumber: m.startLineNumber,
-                            startColumn: m.startColumn,
-                            endLineNumber: m.endLineNumber,
-                            endColumn: m.endColumn,
-                        },
-                    };
-                },
-            });
+        if (!_tsHoverProviderRegistered) {
+            _tsHoverProviderRegistered = true;
+            monaco.languages.registerHoverProvider('typescript', buildInlineErrorHoverProvider());
         }
 
         this._remeasureEditorFonts();
@@ -637,7 +647,7 @@ export class EditorCode extends LitElement {
     }
 
     private _createModel(sourceCode: string, sourcePath: string | null): monaco.editor.ITextModel {
-        return monaco.editor.createModel(sourceCode, 'javascript', monaco.Uri.parse(this._getModelUrl(sourcePath)));
+        return monaco.editor.createModel(sourceCode, this.language, monaco.Uri.parse(this._getModelUrl(sourcePath)));
     }
 
     private _ensureMonacoStyles(): void {
@@ -835,7 +845,8 @@ export class EditorCode extends LitElement {
     }
 
     private _getModelUrl(sourcePath: string | null): string {
-        const normalizedPath = (sourcePath ?? 'examples/active-example.js').replace(/^\/+/, '');
+        const defaultExt = this.language === 'typescript' ? '.ts' : '.js';
+        const normalizedPath = (sourcePath ?? `examples/active-example${defaultExt}`).replace(/^\/+/, '');
         return `file:///${normalizedPath}`;
     }
 
@@ -1162,12 +1173,18 @@ export class EditorCode extends LitElement {
         api.remeasureFonts?.();
     }
 
-    private _triggerRefreshPreview(): void {
+    private async _triggerRefreshPreview(): Promise<void> {
         if (this.editorView === null) return;
+
+        const code = this.editorView.getValue();
+        const executionCode = await this._getExecutionCode(code);
 
         this.dispatchEvent(
             new CustomEvent<UpdateCodeEvent>('update-code', {
-                detail: { code: this.editorView.getValue() },
+                detail: {
+                    code,
+                    executionCode: this._isTypescriptModel() ? executionCode : undefined,
+                },
             })
         );
         this._setDirty(false);
@@ -1177,7 +1194,37 @@ export class EditorCode extends LitElement {
     // to route their Reload action through the same code path as the in-editor
     // Refresh button and the Ctrl+Enter / Ctrl+S keyboard shortcuts.
     public triggerRefresh(): void {
-        this._triggerRefreshPreview();
+        void this._triggerRefreshPreview();
+    }
+
+    private _isTypescriptModel(): boolean {
+        return this._editorModel?.getLanguageId() === 'typescript';
+    }
+
+    // For TypeScript models: asks Monaco's TypeScript language service worker
+    // to emit the current model source as JavaScript. Falls back to the raw
+    // source if the worker is unavailable or emit fails (e.g. network error).
+    private async _getExecutionCode(source: string): Promise<string> {
+        if (!this._isTypescriptModel() || !this._editorModel) return source;
+
+        try {
+            type TsWorkerClient = {
+                getEmitOutput(uri: string): Promise<{ outputFiles: Array<{ name: string; text: string }> }>;
+            };
+            type TsWorkerFactory = (...uris: monaco.Uri[]) => Promise<TsWorkerClient>;
+            type MonacoTs = { getTypeScriptWorker(): Promise<TsWorkerFactory> };
+
+            const monacoTs = (monaco.languages as unknown as { typescript: MonacoTs }).typescript;
+            const workerFactory = await monacoTs.getTypeScriptWorker();
+            const worker = await workerFactory(this._editorModel.uri);
+            const output = await worker.getEmitOutput(this._editorModel.uri.toString());
+            const jsFile = output.outputFiles.find(f => f.name.endsWith('.js'));
+            if (jsFile?.text) return jsFile.text;
+        } catch {
+            // Emit failed — return the raw source so the preview stays usable.
+        }
+
+        return source;
     }
 
     // Moves the caret to the requested position and reveals the line in view.
@@ -1348,7 +1395,7 @@ export class EditorCode extends LitElement {
         this._editorKeydownHandler = (event: KeyboardEvent) => {
             if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
             event.preventDefault();
-            this._triggerRefreshPreview();
+            void this._triggerRefreshPreview();
         };
         this._editorHostElement.addEventListener('keydown', this._editorKeydownHandler);
     }

@@ -1,5 +1,5 @@
-// Auto-generated from scene-lifecycle.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, seconds, Text, Timer } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,40 +10,51 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class LifecycleScene extends Scene {
-    _events;
-    _counter = 0;
-    _drawCount = 0;
-    _timer;
-    _text;
-    async load() {
+    private _events!: string[];
+    private _counter = 0;
+    private _drawCount = 0;
+    private _timer!: Timer;
+    private _text!: Text;
+
+    override async load(): Promise<void> {
         this._events = ['load'];
     }
-    init() {
+
+    override init(): void {
         const { width, height } = this.app.canvas;
+
         this._events.push('init');
+
         this._timer = new Timer(seconds(1), true);
+
         this._text = new Text('', { fillColor: Color.white, fontSize: 18 });
         this._text.setAnchor(0.5);
         this._text.setPosition(width / 2, height / 2);
     }
-    update() {
+
+    override update(): void {
         if (this._timer.expired) {
             this._counter++;
             this._events.push(`update ${this._counter}`);
             this._timer.restart();
         }
     }
-    draw(context) {
+
+    override draw(context): void {
         this._drawCount++;
         context.backend.clear();
         this._text.text = [...this._events.slice(-8), `draw ${this._drawCount}`].join('\n');
         context.render(this._text);
     }
-    destroy() {
+
+    override destroy(): void {
         this._events.push('destroy');
         super.destroy();
     }
 }
+
 app.start(new LifecycleScene());
