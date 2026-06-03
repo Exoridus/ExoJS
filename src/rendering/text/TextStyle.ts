@@ -69,6 +69,11 @@ export interface TextStyleOptions {
    */
   font?: FontFace;
   fontFamily?: FontFamily;
+  /**
+   * CSS font-weight. Defaults to `'normal'` so that single-weight custom fonts
+   * render without browser-synthesised bold artefacts. Set explicitly to
+   * `'bold'` for display / title text that intentionally requires bold.
+   */
   fontWeight?: FontWeight;
   fontStyle?: 'normal' | 'italic';
   fontSize?: number;
@@ -149,7 +154,7 @@ export class TextStyle {
 
     this._fontFamily = explicitFace ? explicitFace.family : (options.fontFamily ?? 'Arial');
 
-    this._fontWeight = options.fontWeight ?? 'bold';
+    this._fontWeight = options.fontWeight ?? 'normal';
     this._fontStyle = options.fontStyle ?? 'normal';
     this._fontSize = options.fontSize ?? 20;
     this._fillColor = options.fillColor ? options.fillColor.clone() : Color.white.clone();
