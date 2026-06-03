@@ -1,5 +1,5 @@
-// Auto-generated from parallax-starfield.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,14 +10,18 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const speeds = [0.15, 0.35, 0.6];
 const counts = [60, 40, 24];
 const colors = [new Color(120, 140, 200), new Color(170, 190, 255), new Color(255, 255, 255)];
+
 class ParallaxStarfieldScene extends Scene {
-    _layers;
-    _pointer = { x: 400, y: 300 };
-    init() {
+    private _layers!: Graphics[];
+    private _pointer = { x: 400, y: 300 };
+
+    override init(): void {
         this._layers = counts.map((count, index) => {
             const g = new Graphics();
             g.fillColor = colors[index];
@@ -29,11 +33,13 @@ class ParallaxStarfieldScene extends Scene {
             }
             return g;
         });
+
         this.app.input.onPointerMove.add(pointer => {
             this._pointer = { x: pointer.x, y: pointer.y };
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         for (let i = 0; i < this._layers.length; i++) {
             const layer = this._layers[i];
@@ -43,4 +49,5 @@ class ParallaxStarfieldScene extends Scene {
         }
     }
 }
+
 app.start(new ParallaxStarfieldScene());
