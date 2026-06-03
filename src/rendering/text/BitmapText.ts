@@ -1,4 +1,4 @@
-import { warnOnce } from '@/core/dev';
+import { assert, warnOnce } from '@/core/dev';
 import type { Texture } from '@/rendering/texture/Texture';
 
 import { AbstractText } from './AbstractText';
@@ -85,6 +85,10 @@ export class BmFontAdapter implements GlyphProvider {
       };
     }
 
+    assert(
+      g.page < this._textures.length,
+      `BitmapText: glyph page index ${g.page} is out of range — font "${this._fontId}" has ${this._textures.length} page(s)`,
+    );
     const texW = this._textures[g.page]?.width ?? 1;
     const texH = this._textures[g.page]?.height ?? 1;
 
