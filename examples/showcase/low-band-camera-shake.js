@@ -1,6 +1,5 @@
+import { audio, textures } from '@assets';
 import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Texture, View } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -15,10 +14,8 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const trackUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
-            const shipUrl = assets?.textures?.shipA ?? 'assets/demo/textures/ship-a.png';
-            await loader.load(Music, { track: trackUrl });
-            await loader.load(Texture, { ship: shipUrl });
+            await loader.load(Music, { track: audio.musicLoop });
+            await loader.load(Texture, { ship: textures.shipA });
         }
         init(loader) {
             this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();

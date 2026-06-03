@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
@@ -6,14 +7,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const PIXEL_GRID = globalThis.assets?.technical?.filtering?.pixelGrid128 ?? 'technical/filtering/pixel-grid-128.png';
+const PIXEL_GRID = technical.filtering.pixelGrid128;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;

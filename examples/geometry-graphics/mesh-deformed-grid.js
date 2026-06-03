@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -6,9 +7,6 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
@@ -55,7 +53,7 @@ function buildGrid() {
     return { vertices, uvs, indices };
 }
 
-const UV_GRID = globalThis.assets?.technical?.filtering?.uvGrid256 ?? 'technical/filtering/uv-grid-256.png';
+const UV_GRID = technical.filtering.uvGrid256;
 
 app.start(
     new (class extends Scene {

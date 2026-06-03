@@ -477,7 +477,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         0,
         resources.indexData.buffer,
         resources.indexData.byteOffset,
-        resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT,
+        ((resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3,
       );
 
       // Build/refresh user uniform UBO from the material (re-built every frame
@@ -493,7 +493,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         0,
         this._packedIndexData.buffer,
         this._packedIndexData.byteOffset,
-        defaultIndices * Uint16Array.BYTES_PER_ELEMENT,
+        ((defaultIndices * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3,
       );
     }
     if (defaultUniformData !== null) {
@@ -1152,7 +1152,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     this._writeMeshVerticesIntoBuffer(mesh, 0, vertexFloatView, vertexUintView);
 
-    const indexData = new Uint16Array(mesh.indexCount);
+    // Allocate one extra element when indexCount is odd so the GPU buffer and
+    // writeBuffer byte count can be rounded up to 4 without a buffer overread.
+    const indexData = new Uint16Array(mesh.indexCount + (mesh.indexCount & 1));
 
     if (mesh.indices !== null) {
       indexData.set(mesh.indices, 0);
@@ -1162,17 +1164,20 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       }
     }
 
+    const indexByteLen = mesh.indexCount * Uint16Array.BYTES_PER_ELEMENT;
+    const alignedIndexByteLen = (indexByteLen + 3) & ~3;
+
     const vertexBuffer = this._device!.createBuffer({
       size: vertexData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     const indexBuffer = this._device!.createBuffer({
-      size: indexData.byteLength,
+      size: alignedIndexByteLen,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
 
     this._device!.queue.writeBuffer(vertexBuffer, 0, vertexData, 0, vertexData.byteLength);
-    this._device!.queue.writeBuffer(indexBuffer, 0, indexData.buffer, indexData.byteOffset, indexData.byteLength);
+    this._device!.queue.writeBuffer(indexBuffer, 0, indexData.buffer, indexData.byteOffset, alignedIndexByteLen);
 
     const disposeListener = (): void => {
       const entry = this._staticGeometryCache.get(geometry);
@@ -1222,15 +1227,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 
   private _ensureIndexCapacity(indexCount: number): void {
-    const requiredBytes = indexCount * Uint16Array.BYTES_PER_ELEMENT;
+    // GPUQueue.writeBuffer requires the byte count to be a multiple of 4.
+    // Round up: odd Uint16 counts (e.g. a 3-index triangle) would otherwise
+    // produce 6-byte writes which the WebGPU validation layer rejects.
+    const requiredBytes = ((indexCount * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3;
 
-    if (this._packedIndexData.length < indexCount) {
-      this._packedIndexData = new Uint16Array(Math.max(indexCount, this._packedIndexData.length === 0 ? 1 : this._packedIndexData.length * 2));
+    if (this._packedIndexData.length * Uint16Array.BYTES_PER_ELEMENT < requiredBytes) {
+      this._packedIndexData = new Uint16Array(Math.max(requiredBytes / Uint16Array.BYTES_PER_ELEMENT, this._packedIndexData.length === 0 ? 2 : this._packedIndexData.length * 2));
     }
 
     if (requiredBytes > this._indexBufferCapacity) {
       this._indexBuffer?.destroy();
-      this._indexBufferCapacity = Math.max(requiredBytes, this._indexBufferCapacity === 0 ? Uint16Array.BYTES_PER_ELEMENT : this._indexBufferCapacity * 2);
+      this._indexBufferCapacity = Math.max(requiredBytes, this._indexBufferCapacity === 0 ? 4 : this._indexBufferCapacity * 2);
       this._indexBuffer = this._device!.createBuffer({
         size: this._indexBufferCapacity,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
@@ -1397,14 +1405,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       });
     }
 
-    // Index buffer
-    const indexBytes = resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT;
-    if (resources.indexData.length < resources.totalIndices) {
-      resources.indexData = new Uint16Array(Math.max(resources.totalIndices, resources.indexData.length * 2));
+    // Index buffer — capacity must be 4-byte aligned for GPUQueue.writeBuffer.
+    const indexBytes = ((resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3;
+    if (resources.indexData.length * Uint16Array.BYTES_PER_ELEMENT < indexBytes) {
+      resources.indexData = new Uint16Array(Math.max(indexBytes / Uint16Array.BYTES_PER_ELEMENT, resources.indexData.length * 2));
     }
     if (indexBytes > resources.indexBufferCapacity) {
       resources.indexBuffer?.destroy();
-      resources.indexBufferCapacity = Math.max(indexBytes, resources.indexBufferCapacity * 2 || Uint16Array.BYTES_PER_ELEMENT);
+      resources.indexBufferCapacity = Math.max(indexBytes, resources.indexBufferCapacity * 2 || 4);
       resources.indexBuffer = device.createBuffer({
         size: resources.indexBufferCapacity,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,

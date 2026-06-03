@@ -1,6 +1,5 @@
+import { audio } from '@assets';
 import { Application, Color, crossFade, Music, Scene, Text } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -15,9 +14,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const urlA = assets?.audio?.musicA ?? 'assets/demo/audio/ui-bong.ogg';
-            const urlB = assets?.audio?.musicB ?? 'assets/demo/audio/impact-heavy.ogg';
-            await loader.load(Music, { a: urlA, b: urlB });
+            await loader.load(Music, { a: audio.musicA, b: audio.musicB });
         }
         init(loader) {
             this._trackA = loader.get(Music, 'a').setLoop(true).setVolume(0.7).play();

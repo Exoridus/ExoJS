@@ -1,6 +1,5 @@
+import { audio } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -21,10 +20,8 @@ const rows = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const musicUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
-            const sfxUrl = assets?.audio?.uiClick ?? 'assets/demo/audio/ui-click.ogg';
-            await loader.load(Music, { music: musicUrl });
-            await loader.load(Sound, { sfx: sfxUrl });
+            await loader.load(Music, { music: audio.musicLoop });
+            await loader.load(Sound, { sfx: audio.uiClick });
         }
         init(loader) {
             this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.6).play();

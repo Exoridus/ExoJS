@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, Color, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -6,14 +7,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const ALPHA_RINGS = globalThis.assets?.technical?.alpha?.alphaGradientRings ?? 'technical/alpha/alpha-gradient-rings.png';
+const ALPHA_RINGS = technical.alpha.alphaGradientRings;
 
 app.start(
     new (class extends Scene {

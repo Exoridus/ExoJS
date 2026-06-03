@@ -1,6 +1,5 @@
+import { music,textures } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -17,10 +16,8 @@ const title = 'VOID EMPEROR';
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const bossUrl = assets?.textures?.shipA ?? 'assets/image/ship-a.png';
-            const trackUrl = assets?.music?.loopMain ?? 'assets/demo/music/demo-loop-main.ogg';
-            await loader.load(Texture, { boss: bossUrl });
-            await loader.load(Music, { track: trackUrl });
+            await loader.load(Texture, { boss: textures.shipA });
+            await loader.load(Music, { track: music.loopMain });
         }
         init(loader) {
             this._view = new View(220, 300, 800, 600);

@@ -1,6 +1,5 @@
+import { audio } from '@assets';
 import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Texture, Time } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -15,8 +14,7 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const trackUrl = assets?.audio?.musicLoop ?? 'assets/demo/audio/demo-loop-main.ogg';
-            await loader.load(Music, { example: trackUrl });
+            await loader.load(Music, { example: audio.musicLoop });
         }
         init(loader) {
             const { width, height } = this.app.canvas;

@@ -1,3 +1,4 @@
+import { technical } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
@@ -6,14 +7,11 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
 
 document.body.append(app.canvas);
 
-const CHECKER = globalThis.assets?.technical?.filtering?.checker256 ?? 'technical/filtering/checker-256.png';
+const CHECKER = technical.filtering.checker256;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;

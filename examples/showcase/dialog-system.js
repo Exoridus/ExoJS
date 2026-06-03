@@ -1,6 +1,5 @@
+import { sound,textures } from '@assets';
 import { Application, Color, Scene, Sound, Sprite, Text, Texture } from '@codexo/exojs';
-
-const assets = globalThis.assets;
 
 const app = new Application({
     canvas: {
@@ -21,10 +20,8 @@ const lines = [
 app.start(
     new (class extends Scene {
         async load(loader) {
-            const portraitUrl = assets?.textures?.shipA ?? 'assets/image/ship-a.png';
-            const beepUrl = assets?.sound?.uiConfirm ?? 'assets/demo/sound/ui-confirm.ogg';
-            await loader.load(Texture, { portrait: portraitUrl });
-            await loader.load(Sound, { beep: beepUrl });
+            await loader.load(Texture, { portrait: textures.shipA });
+            await loader.load(Sound, { beep: sound.uiConfirm });
         }
         init(loader) {
             this._portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(1.7).setPosition(170, 420);
