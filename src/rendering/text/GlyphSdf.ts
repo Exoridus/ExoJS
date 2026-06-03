@@ -117,11 +117,11 @@ export class GlyphSdf {
     if (typeof OffscreenCanvas !== 'undefined') {
       const c = new OffscreenCanvas(1, 1);
       this._canvas = c;
-      this._ctx = c.getContext('2d')!;
+      this._ctx = c.getContext('2d', { willReadFrequently: true })!;
     } else {
       const c = document.createElement('canvas');
       this._canvas = c;
-      this._ctx = c.getContext('2d')!;
+      this._ctx = c.getContext('2d', { willReadFrequently: true })!;
     }
   }
 
