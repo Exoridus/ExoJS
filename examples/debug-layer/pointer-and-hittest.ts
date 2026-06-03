@@ -1,6 +1,6 @@
-// Auto-generated from pointer-and-hittest.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -11,16 +11,21 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const debug = new DebugOverlay(app);
 debug.layers.hitTest.visible = true;
 debug.layers.pointerStack.visible = true;
+
 class PointerAndHittestScene extends Scene {
-    _sprites;
-    async load(loader) {
+    private _sprites!: Sprite[];
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._sprites = [];
         for (let i = 0; i < 5; i++) {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
@@ -30,14 +35,17 @@ class PointerAndHittestScene extends Scene {
             sprite.zIndex = i;
             sprite.interactive = true;
             sprite.draggable = true;
-            sprite.setTint([new Color(255, 130, 130), new Color(130, 255, 170), new Color(140, 190, 255), new Color(255, 230, 130), new Color(220, 140, 255)][i]);
+            sprite.setTint(
+                [new Color(255, 130, 130), new Color(130, 255, 170), new Color(140, 190, 255), new Color(255, 230, 130), new Color(220, 140, 255)][i],
+            );
             this._sprites.push(sprite);
         }
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
-        for (const sprite of this._sprites)
-            context.render(sprite);
+        for (const sprite of this._sprites) context.render(sprite);
     }
 }
+
 app.start(new PointerAndHittestScene());
