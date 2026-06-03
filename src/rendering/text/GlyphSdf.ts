@@ -80,6 +80,15 @@ export class GlyphSdf {
   private readonly _radius: number;
   private readonly _cutoff: number;
   private readonly _font: string;
+  private readonly _fontSize: number;
+
+  // Font-level ascent/descent — measured once from a reference string so that
+  // all glyph tiles share the same height and baseline position. This avoids
+  // the per-glyph actualBoundingBoxAscent variation that causes baseline jumps
+  // when fontBoundingBoxAscent is unavailable (common for loaded web fonts).
+  private _fontAscent = 0;
+  private _fontDescent = 0;
+  private _metricsReady = false;
 
   private _canvasW = 0;
   private _canvasH = 0;
@@ -99,6 +108,7 @@ export class GlyphSdf {
     this._buffer = options.buffer ?? 8;
     this._radius = options.radius ?? this._buffer;
     this._cutoff = options.cutoff ?? 0.5;
+    this._fontSize = options.fontSize;
 
     const stylePart = options.fontStyle && options.fontStyle !== 'normal' ? `${options.fontStyle} ` : '';
     const weight = options.fontWeight ?? 'normal';
@@ -107,11 +117,11 @@ export class GlyphSdf {
     if (typeof OffscreenCanvas !== 'undefined') {
       const c = new OffscreenCanvas(1, 1);
       this._canvas = c;
-      this._ctx = c.getContext('2d')!;
+      this._ctx = c.getContext('2d', { willReadFrequently: true })!;
     } else {
       const c = document.createElement('canvas');
       this._canvas = c;
-      this._ctx = c.getContext('2d')!;
+      this._ctx = c.getContext('2d', { willReadFrequently: true })!;
     }
   }
 
@@ -122,7 +132,30 @@ export class GlyphSdf {
    * fresh `Uint8ClampedArray`; the caller may hold a reference to it safely
    * across subsequent `draw()` calls.
    */
+  /**
+   * Ensure font-level ascent/descent are measured. Called once per GlyphSdf
+   * instance — deferred to the first draw() so the canvas context is ready.
+   * Uses `fontBoundingBoxAscent/Descent` when available; falls back to
+   * `actualBoundingBoxAscent/Descent` measured from a reference string that
+   * covers ascenders ('H'), descenders ('g'), and diacritics ('É').
+   * Either way the same values are used for EVERY glyph so all tiles share a
+   * consistent height and a consistent baseline position within the tile.
+   */
+  private _ensureFontMetrics(): void {
+    if (this._metricsReady) return;
+    const ctx = this._ctx;
+    ctx.font = this._font;
+    ctx.textBaseline = 'alphabetic';
+    const m = ctx.measureText('HgjpqyÉÅ');
+    type M = TextMetrics & { fontBoundingBoxAscent?: number; fontBoundingBoxDescent?: number; actualBoundingBoxAscent?: number; actualBoundingBoxDescent?: number };
+    this._fontAscent = Math.max(1, Math.ceil((m as M).fontBoundingBoxAscent ?? (m as M).actualBoundingBoxAscent ?? this._fontSize * 0.8));
+    this._fontDescent = Math.max(1, Math.ceil((m as M).fontBoundingBoxDescent ?? (m as M).actualBoundingBoxDescent ?? this._fontSize * 0.2));
+    this._metricsReady = true;
+  }
+
   public draw(char: string): GlyphSdfResult {
+    this._ensureFontMetrics();
+
     const ctx = this._ctx;
     const buf = this._buffer;
 
@@ -133,31 +166,21 @@ export class GlyphSdf {
     const m = ctx.measureText(char);
     const advance = m.width;
 
+    // Width uses per-glyph actual bounds — each glyph has a different width.
     // Canvas 2D `actualBoundingBoxLeft` is the distance from the text's
     // left-alignment point going LEFT to the left edge of the glyph bounding
     // box. For most LTR characters this is 0; italic fonts may have a small
     // positive value (left overhang).
     const bbLeft = Math.max(0, Math.ceil((m as TextMetrics & { actualBoundingBoxLeft?: number }).actualBoundingBoxLeft ?? 0));
     const bbRight = Math.max(0, Math.ceil((m as TextMetrics & { actualBoundingBoxRight?: number }).actualBoundingBoxRight ?? advance));
-    const bbAscent = Math.max(
-      0,
-      Math.ceil(
-        (m as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
-          (m as TextMetrics & { actualBoundingBoxAscent?: number }).actualBoundingBoxAscent ??
-          0,
-      ),
-    );
-    const bbDescent = Math.max(
-      0,
-      Math.ceil(
-        (m as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
-          (m as TextMetrics & { actualBoundingBoxDescent?: number }).actualBoundingBoxDescent ??
-          0,
-      ),
-    );
 
     const glyphWidth = Math.max(1, bbLeft + bbRight);
-    const glyphHeight = Math.max(1, bbAscent + bbDescent);
+    // Height uses font-level metrics — same for every glyph of this font/size
+    // so that all tiles are the same height and the baseline is always at
+    // buf + _fontAscent from the tile top. If per-glyph actualBoundingBoxAscent
+    // were used here instead, different glyphs would have their baselines at
+    // different positions in world space (the visual baseline-jump bug).
+    const glyphHeight = this._fontAscent + this._fontDescent;
     const tileW = glyphWidth + 2 * buf;
     const tileH = glyphHeight + 2 * buf;
 
@@ -172,8 +195,8 @@ export class GlyphSdf {
     // ── Rasterize white glyph on transparent background ───────────────────
     ctx.clearRect(0, 0, tileW, tileH);
     ctx.fillStyle = '#ffffff';
-    // Position so glyph's left edge lands at x = buf and baseline at y = buf + bbAscent.
-    ctx.fillText(char, buf + bbLeft, buf + bbAscent);
+    // Baseline at buf + _fontAscent — consistent across all glyphs.
+    ctx.fillText(char, buf + bbLeft, buf + this._fontAscent);
 
     const rgba = ctx.getImageData(0, 0, tileW, tileH).data;
     const n = tileW * tileH;
