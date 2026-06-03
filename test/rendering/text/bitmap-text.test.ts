@@ -3,6 +3,7 @@
  * (alignment, word-wrap, kerning, leading) and builds correct page quads.
  */
 
+import { _resetWarnOnce } from '@/core/dev';
 import type { BmFontData } from '@/rendering/text/BitmapText';
 import { BitmapText, BmFontAdapter } from '@/rendering/text/BitmapText';
 import { BmFont } from '@/rendering/text/BmFont';
@@ -186,5 +187,71 @@ describe('BitmapText', () => {
 
     // Kerning pulls B 1px closer to A.
     expect(withKernBx).toBe(noKernBx - 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Missing-glyph diagnostics
+// ---------------------------------------------------------------------------
+
+describe('BmFontAdapter missing-glyph warnings', () => {
+  beforeEach(() => {
+    _resetWarnOnce();
+  });
+
+  test('warns once when an unknown glyph is requested', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('Z', 0); // Z is not in the font fixture
+    adapter.getGlyph('Z', 0); // second call — must not warn again
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  test('warning message contains the codepoint in hex (U+005A for Z)', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('Z', 0);
+
+    expect(spy.mock.calls[0]?.[0]).toContain('U+005A');
+    spy.mockRestore();
+  });
+
+  test('does not warn for glyphs that are present in the font', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('A', 0);
+    adapter.getGlyph('B', 0);
+    adapter.getGlyph(' ', 0);
+
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  test('warns separately for each distinct missing glyph', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
+
+    adapter.getGlyph('Y', 0);
+    adapter.getGlyph('Z', 0);
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
+  });
+
+  test('BitmapText rebuild does not re-trigger warning for already-seen missing glyph', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const font = makeFont(); // font has A, B, space — not Z
+    const text = new BitmapText('AZB', font);
+
+    // Force a rebuild by changing the text (triggers _rebuild internally)
+    text.text = 'AZB';
+
+    expect(spy).toHaveBeenCalledTimes(1); // Z warned exactly once across both layouts
+    spy.mockRestore();
   });
 });
