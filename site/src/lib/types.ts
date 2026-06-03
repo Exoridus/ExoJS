@@ -12,6 +12,7 @@ export interface ExampleDefinition {
     title: string;
     description: string;
     backend: ExampleBackend;
+    language?: string;
     capabilities?: Array<Capability>;
     notes?: Array<string>;
     unsupportedNote?: string;

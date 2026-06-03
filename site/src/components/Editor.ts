@@ -28,6 +28,8 @@ export class Editor extends LitElement {
 
     @state() private _sourceCode: string | null = null;
     @state() private _originalSourceCode: string | null = null;
+    @state() private _executionCode: string | null = null;
+    @state() private _originalExecutionCode: string | null = null;
     @state() private _sourceLoadError: PreviewErrorEntry | null = null;
     @state() private _previewErrors: Array<PreviewErrorEntry> = [];
     @state() private _canvasWidth = 0;
@@ -71,6 +73,8 @@ export class Editor extends LitElement {
     private async _loadSourceCode(example: Example | null): Promise<void> {
         this._sourceCode = null;
         this._originalSourceCode = null;
+        this._executionCode = null;
+        this._originalExecutionCode = null;
         this._sourceLoadError = null;
         this._previewErrors = [];
         this._diagnostics = [];
@@ -85,9 +89,25 @@ export class Editor extends LitElement {
         }
 
         try {
-            const sourceCode = await loadExampleSource(this.selectedVersionId, example.path);
-            this._sourceCode = sourceCode;
-            this._originalSourceCode = sourceCode;
+            if (example.language === 'typescript') {
+                // Load TypeScript source for editor display and generated
+                // JavaScript for iframe execution separately.
+                const tsPath = example.path.replace(/\.js$/, '.ts');
+                const [tsSource, jsSource] = await Promise.all([
+                    loadExampleSource(this.selectedVersionId, tsPath),
+                    loadExampleSource(this.selectedVersionId, example.path),
+                ]);
+                this._sourceCode = tsSource;
+                this._originalSourceCode = tsSource;
+                this._executionCode = jsSource;
+                this._originalExecutionCode = jsSource;
+            } else {
+                const sourceCode = await loadExampleSource(this.selectedVersionId, example.path);
+                this._sourceCode = sourceCode;
+                this._originalSourceCode = sourceCode;
+                this._executionCode = null;
+                this._originalExecutionCode = null;
+            }
         } catch (error) {
             this._sourceLoadError = {
                 summary: 'Failed to load example source',
@@ -121,7 +141,7 @@ export class Editor extends LitElement {
                 ></exo-preview-toolbar>
                 <div class="preview-surface">
                     <exo-preview
-                        .sourceCode=${this._sourceCode}
+                        .sourceCode=${this._executionCode ?? this._sourceCode}
                         .exampleMeta=${activeExample}
                         .selectedVersionId=${this.selectedVersionId}
                         @preview-errors=${this._onPreviewErrors}
@@ -146,7 +166,8 @@ export class Editor extends LitElement {
             <section class="editor-frame" aria-label="Source editor">
                 <exo-code-editor
                     .sourceCode=${this._sourceCode}
-                    .sourcePath=${activeExample?.path ?? null}
+                    .sourcePath=${this._getDisplayPath(activeExample)}
+                    .language=${activeExample?.language === 'typescript' ? 'typescript' : 'javascript'}
                     .canReset=${!!this._originalSourceCode && this._sourceCode !== this._originalSourceCode}
                     .exampleTitle=${activeExample?.title ?? 'Loading...'}
                     .selectedVersionId=${this.selectedVersionId}
@@ -161,7 +182,7 @@ export class Editor extends LitElement {
                     .column=${this._cursorColumn}
                     .selectionLength=${this._selectionLength}
                     .dirty=${this._dirty}
-                    language="JavaScript"
+                    .language=${activeExample?.language === 'typescript' ? 'TypeScript' : 'JavaScript'}
                 ></exo-editor-status-bar>
             </section>
         `;
@@ -169,12 +190,26 @@ export class Editor extends LitElement {
 
     private _onUpdateCode(event: CustomEvent<UpdateCodeEvent>): void {
         this._sourceCode = event.detail.code;
+        if (event.detail.executionCode !== undefined) {
+            this._executionCode = event.detail.executionCode;
+        } else {
+            this._executionCode = null;
+        }
     }
 
     private _onResetCode(_event: CustomEvent<ResetCodeEvent>): void {
         if (this._originalSourceCode === null) return;
         this._previewErrors = [];
         this._sourceCode = this._originalSourceCode;
+        this._executionCode = this._originalExecutionCode;
+    }
+
+    private _getDisplayPath(example: Example | null): string | null {
+        if (!example) return null;
+        if (example.language === 'typescript') {
+            return example.path.replace(/\.js$/, '.ts');
+        }
+        return example.path;
     }
 
     private _onPreviewErrors(event: CustomEvent<{ errors: Array<PreviewErrorEntry> }>): void {

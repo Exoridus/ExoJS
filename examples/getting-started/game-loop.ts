@@ -1,5 +1,5 @@
-// Auto-generated from hello-world.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,20 +10,31 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
-class HelloWorldScene extends Scene {
-    _sprite;
-    async load(loader) {
+
+class GameLoopScene extends Scene {
+    private _sprite!: Sprite;
+
+    override async load(loader): Promise<void> {
         this._sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
     }
-    init() {
+
+    override init(): void {
         const { width, height } = this.app.canvas;
+
         this._sprite.setAnchor(0.5);
         this._sprite.setPosition(width / 2, height / 2);
     }
-    draw(context) {
+
+    override update(delta): void {
+        this._sprite.rotate(delta.seconds * 120);
+    }
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
     }
 }
-app.start(new HelloWorldScene());
+
+app.start(new GameLoopScene());

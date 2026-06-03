@@ -626,6 +626,7 @@
         {
             "slug": "game-loop",
             "path": "getting-started/game-loop.js",
+            "language": "typescript",
             "title": "Game Loop",
             "description": "Example: Game Loop.",
             "backend": "core",
@@ -637,6 +638,7 @@
         {
             "slug": "hello-world",
             "path": "getting-started/hello-world.js",
+            "language": "typescript",
             "title": "Hello World",
             "description": "Example: Hello World.",
             "backend": "core",
@@ -648,6 +650,7 @@
         {
             "slug": "resize-and-dpr",
             "path": "getting-started/resize-and-dpr.js",
+            "language": "typescript",
             "title": "Resize And Dpr",
             "description": "Example: Resize And Dpr.",
             "backend": "core",
