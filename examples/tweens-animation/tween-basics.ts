@@ -1,5 +1,5 @@
-// Auto-generated from tween-basics.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Text, Texture, Tween } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,16 +10,20 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class TweenBasicsScene extends Scene {
-    _sprite;
-    _text;
-    _forward;
-    _backward;
-    async load(loader) {
+    private _sprite!: Sprite;
+    private _text!: Text;
+    private _forward!: Tween;
+    private _backward!: Tween;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(120, 300);
         this._text = new Text('Tween running', { fillColor: Color.white, fontSize: 18 });
         this._text.setPosition(20, 20);
@@ -27,19 +31,21 @@ class TweenBasicsScene extends Scene {
         this._backward = this.app.tweens.create(this._sprite.position).to({ x: 120 }, 1.2);
         this._forward
             .onComplete(() => {
-            this._text.text = 'Completed -> reverse';
-            this._backward.start();
-        })
+                this._text.text = 'Completed -> reverse';
+                this._backward.start();
+            })
             .start();
         this._backward.onComplete(() => {
             this._text.text = 'Completed -> forward';
             this._forward.start();
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
         context.render(this._text);
     }
 }
+
 app.start(new TweenBasicsScene());

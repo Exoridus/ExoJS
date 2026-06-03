@@ -989,6 +989,7 @@
         {
             "slug": "containers",
             "path": "scene-graph/containers.js",
+            "language": "typescript",
             "title": "Containers",
             "description": "Example: Containers.",
             "backend": "core",
@@ -999,6 +1000,7 @@
         {
             "slug": "local-vs-global-transform",
             "path": "scene-graph/local-vs-global-transform.js",
+            "language": "typescript",
             "title": "Local Vs Global Transform",
             "description": "Example: Local Vs Global Transform.",
             "backend": "core",
@@ -1012,6 +1014,7 @@
         {
             "slug": "masks",
             "path": "scene-graph/masks.js",
+            "language": "typescript",
             "title": "Masks",
             "description": "Example: Masks.",
             "backend": "core",
@@ -1022,6 +1025,7 @@
         {
             "slug": "nested-transforms",
             "path": "scene-graph/nested-transforms.js",
+            "language": "typescript",
             "title": "Nested Transforms",
             "description": "Example: Nested Transforms.",
             "backend": "core",
@@ -1033,6 +1037,7 @@
         {
             "slug": "parallax-starfield",
             "path": "scene-graph/parallax-starfield.js",
+            "language": "typescript",
             "title": "Parallax Starfield",
             "description": "Example: Parallax Starfield.",
             "backend": "core",
@@ -1047,6 +1052,7 @@
         {
             "slug": "pivot-and-anchor",
             "path": "scene-graph/pivot-and-anchor.js",
+            "language": "typescript",
             "title": "Pivot And Anchor",
             "description": "Example: Pivot And Anchor.",
             "backend": "core",
@@ -1059,6 +1065,7 @@
         {
             "slug": "z-ordering",
             "path": "scene-graph/z-ordering.js",
+            "language": "typescript",
             "title": "Z Ordering",
             "description": "Example: Z Ordering.",
             "backend": "core",
@@ -1501,6 +1508,7 @@
         {
             "slug": "easing-curves",
             "path": "tweens-animation/easing-curves.js",
+            "language": "typescript",
             "title": "Easing Curves",
             "description": "Example: Easing Curves.",
             "backend": "core",
@@ -1512,6 +1520,7 @@
         {
             "slug": "frame-animation",
             "path": "tweens-animation/frame-animation.js",
+            "language": "typescript",
             "title": "Frame Animation",
             "description": "Example: Frame Animation.",
             "backend": "core",
@@ -1523,6 +1532,7 @@
         {
             "slug": "interrupt-and-replace",
             "path": "tweens-animation/interrupt-and-replace.js",
+            "language": "typescript",
             "title": "Interrupt And Replace",
             "description": "Example: Interrupt And Replace.",
             "backend": "core",
@@ -1538,6 +1548,7 @@
         {
             "slug": "tween-basics",
             "path": "tweens-animation/tween-basics.js",
+            "language": "typescript",
             "title": "Tween Basics",
             "description": "Example: Tween Basics.",
             "backend": "core",
@@ -1549,6 +1560,7 @@
         {
             "slug": "tween-chains",
             "path": "tweens-animation/tween-chains.js",
+            "language": "typescript",
             "title": "Tween Chains",
             "description": "Example: Tween Chains.",
             "backend": "core",
@@ -1560,6 +1572,7 @@
         {
             "slug": "tween-from-array",
             "path": "tweens-animation/tween-from-array.js",
+            "language": "typescript",
             "title": "Tween From Array",
             "description": "Example: Tween From Array.",
             "backend": "core",
@@ -1572,6 +1585,7 @@
         {
             "slug": "tween-with-yoyo",
             "path": "tweens-animation/tween-with-yoyo.js",
+            "language": "typescript",
             "title": "Tween With Yoyo",
             "description": "Example: Tween With Yoyo.",
             "backend": "core",

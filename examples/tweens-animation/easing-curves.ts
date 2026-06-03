@@ -1,5 +1,5 @@
-// Auto-generated from easing-curves.ts — edit the .ts source, not this file.
 import { Application, Color, Ease, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,8 +10,10 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
-const easings = [
+
+const easings: [string, (t: number) => number][] = [
     ['linear', Ease.linear],
     ['quadIn', Ease.quadIn],
     ['quadOut', Ease.quadOut],
@@ -21,12 +23,15 @@ const easings = [
     ['bounceOut', Ease.bounceOut],
     ['elasticOut', Ease.elasticOut],
 ];
+
 class EasingCurvesScene extends Scene {
-    _rows;
-    async load(loader) {
+    private _rows!: { sprite: Sprite; label: Text; tween: object }[];
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         const texture = loader.get(Texture, 'bunny');
         this._rows = easings.map(([name, easing], index) => {
             const y = 70 + index * 64;
@@ -40,7 +45,8 @@ class EasingCurvesScene extends Scene {
             return { sprite, label, tween };
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         for (const row of this._rows) {
             context.render(row.sprite);
@@ -48,4 +54,5 @@ class EasingCurvesScene extends Scene {
         }
     }
 }
+
 app.start(new EasingCurvesScene());
