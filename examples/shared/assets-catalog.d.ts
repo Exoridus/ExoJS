@@ -86,6 +86,8 @@ export declare const fonts: {
     readonly kenneyPixel: string;
     readonly kenneyMini: string;
     readonly kenneyMiniSquareMono: string;
+    readonly kenneyBlocksFnt: string;
+    readonly kenneyBlocksPng: string;
 };
 
 export declare const backgrounds: {

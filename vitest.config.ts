@@ -35,6 +35,7 @@ export default defineConfig({
       {
         resolve: { alias: aliasConfig },
         plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
         test: {
           name: 'exojs',
           environment: 'jsdom',

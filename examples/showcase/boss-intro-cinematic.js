@@ -24,7 +24,7 @@ app.start(
             this._bg = new Graphics();
             this._bars = new Graphics();
             this._barSize = { v: 0 };
-            this._title = new Text('', { fillColor: Color.white, fontSize: 56 });
+            this._title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
             this._title.setPosition(150, 120);
             this._titleState = { count: 0 };
             this._boss = new Sprite(loader.get(Texture, 'boss'))

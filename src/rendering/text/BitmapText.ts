@@ -1,3 +1,4 @@
+import { warnOnce } from '@/core/dev';
 import type { Texture } from '@/rendering/texture/Texture';
 
 import { AbstractText } from './AbstractText';
@@ -44,12 +45,15 @@ export class BmFontAdapter implements GlyphProvider {
   private readonly _scale: number;
   /** Fallback advance for characters not present in the font (≈ ½ line height). */
   private readonly _fallbackAdvance: number;
+  /** Identifier used as part of the warnOnce key — derived from the first page filename. */
+  private readonly _fontId: string;
 
   public constructor(fontData: BmFontData, textures: readonly Texture[], scale: number) {
     this._fontData = fontData;
     this._textures = textures;
     this._scale = scale;
     this._fallbackAdvance = fontData.lineHeight * scale * 0.5;
+    this._fontId = fontData.pages[0] ?? 'unknown';
   }
 
   public getGlyph(char: string, _fontSize: number): GlyphInfo {
@@ -60,7 +64,12 @@ export class BmFontAdapter implements GlyphProvider {
     const base = this._fontData.base;
 
     if (g === undefined) {
-      // Unknown glyph — return an invisible placeholder with a cursor advance.
+      // Unknown glyph — warn once per font + codepoint, then return an invisible
+      // placeholder with a cursor advance so layout still makes progress.
+      warnOnce(
+        `bitmaptext:${this._fontId}:${cp}`,
+        `BitmapText: missing glyph U+${cp.toString(16).toUpperCase().padStart(4, '0')} ('${char}') in "${this._fontId}"`,
+      );
       return {
         x: 0,
         y: 0,

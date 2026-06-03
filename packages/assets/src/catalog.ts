@@ -118,6 +118,8 @@ export const rawAssets = {
         kenneyPixel: 'demo/fonts/Kenney Pixel.ttf',
         kenneyMini: 'demo/fonts/Kenney Mini.ttf',
         kenneyMiniSquareMono: 'demo/fonts/Kenney Mini Square Mono.ttf',
+        kenneyBlocksFnt: 'demo/fonts/kenney-blocks-32.fnt',
+        kenneyBlocksPng: 'demo/fonts/kenney-blocks-32.png',
     },
     backgrounds: {
         platformerClouds: 'demo/backgrounds/platformer-clouds.png',

@@ -1416,6 +1416,18 @@
     ],
     "text-fonts": [
         {
+            "slug": "bitmap-text-basic",
+            "path": "text-fonts/bitmap-text-basic.js",
+            "title": "Bitmap Text Basic",
+            "description": "BitmapText rendered from an AngelCode .fnt atlas (Kenney Blocks, CC0). Demonstrates pre-built atlas rendering, word wrap, and live text updates without Canvas 2D rasterisation.",
+            "backend": "core",
+            "tags": [
+                "bitmap",
+                "text",
+                "bmfont"
+            ]
+        },
+        {
             "slug": "basic-text",
             "path": "text-fonts/basic-text.js",
             "title": "Basic Text",
