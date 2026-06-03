@@ -17,10 +17,12 @@ document.body.append(app.canvas);
 app.start(
     new (class extends Scene {
         async load(loader) {
-            await loader.load(BmFont, { blocks: fonts.kenneyBlocksFnt });
+            // Store the result directly so this._font is inferred as BmFont —
+            // no stringly-typed loader.get(BmFont, 'key') lookup needed.
+            this._font = await loader.load(BmFont, fonts.kenneyBlocksFnt);
         }
-        init(loader) {
-            const font = loader.get(BmFont, 'blocks');
+        init() {
+            const font = this._font;
 
             // Title — 1.5× scale
             this._title = new BitmapText('BITMAP TEXT', font, { scale: 1.5 });
