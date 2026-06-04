@@ -97,7 +97,9 @@ const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTupl
 
 const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 4): void => {
   for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(tolerance);
+    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
+      tolerance,
+    );
   }
 };
 

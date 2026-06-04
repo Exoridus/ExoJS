@@ -1660,12 +1660,7 @@ export class Loader {
   }
 
   private _resolveUrl(path: string): string {
-    if (
-      path.startsWith('http://') ||
-      path.startsWith('https://') ||
-      path.startsWith('//') ||
-      path.startsWith('/')
-    ) {
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//') || path.startsWith('/')) {
       return path;
     }
 

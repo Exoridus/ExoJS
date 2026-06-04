@@ -477,7 +477,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         0,
         resources.indexData.buffer,
         resources.indexData.byteOffset,
-        ((resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3,
+        (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
       );
 
       // Build/refresh user uniform UBO from the material (re-built every frame
@@ -493,7 +493,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         0,
         this._packedIndexData.buffer,
         this._packedIndexData.byteOffset,
-        ((defaultIndices * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3,
+        (defaultIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
       );
     }
     if (defaultUniformData !== null) {
@@ -1230,10 +1230,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     // GPUQueue.writeBuffer requires the byte count to be a multiple of 4.
     // Round up: odd Uint16 counts (e.g. a 3-index triangle) would otherwise
     // produce 6-byte writes which the WebGPU validation layer rejects.
-    const requiredBytes = ((indexCount * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3;
+    const requiredBytes = (indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
 
     if (this._packedIndexData.length * Uint16Array.BYTES_PER_ELEMENT < requiredBytes) {
-      this._packedIndexData = new Uint16Array(Math.max(requiredBytes / Uint16Array.BYTES_PER_ELEMENT, this._packedIndexData.length === 0 ? 2 : this._packedIndexData.length * 2));
+      this._packedIndexData = new Uint16Array(
+        Math.max(requiredBytes / Uint16Array.BYTES_PER_ELEMENT, this._packedIndexData.length === 0 ? 2 : this._packedIndexData.length * 2),
+      );
     }
 
     if (requiredBytes > this._indexBufferCapacity) {
@@ -1406,7 +1408,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     // Index buffer — capacity must be 4-byte aligned for GPUQueue.writeBuffer.
-    const indexBytes = ((resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT) + 3) & ~3;
+    const indexBytes = (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
     if (resources.indexData.length * Uint16Array.BYTES_PER_ELEMENT < indexBytes) {
       resources.indexData = new Uint16Array(Math.max(indexBytes / Uint16Array.BYTES_PER_ELEMENT, resources.indexData.length * 2));
     }

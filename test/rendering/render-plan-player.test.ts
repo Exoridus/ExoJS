@@ -21,12 +21,7 @@ const material = (id: number): MaterialKey => ({
   bindKey: id,
 });
 
-const createDrawCommand = (
-  drawable: Drawable,
-  seq: number,
-  groupIndex: number | undefined,
-  key: number,
-): DrawCommand => ({
+const createDrawCommand = (drawable: Drawable, seq: number, groupIndex: number | undefined, key: number): DrawCommand => ({
   kind: RenderEntryKind.Draw,
   drawable,
   nodeIndex: seq,
@@ -158,26 +153,12 @@ describe('render plan player', () => {
   test('undefined groupIndex draws remain singleton groups', () => {
     const a = new BoxDrawable('a');
     const b = new BoxDrawable('b');
-    const root = groupScope([
-      drawEntry(createDrawCommand(a, 0, undefined, 1)),
-      drawEntry(createDrawCommand(b, 1, undefined, 1)),
-    ]);
+    const root = groupScope([drawEntry(createDrawCommand(a, 0, undefined, 1)), drawEntry(createDrawCommand(b, 1, undefined, 1))]);
     const spy = createPlaybackSpy();
 
     RenderPlanPlayer.playScope(root, spy.backend);
 
-    expect(spy.events).toEqual([
-      'begin:a',
-      'upload:a:1:0:0:0',
-      'prepare:a',
-      'draw:a',
-      'end:a',
-      'begin:b',
-      'upload:b:1:1:1:1',
-      'prepare:b',
-      'draw:b',
-      'end:b',
-    ]);
+    expect(spy.events).toEqual(['begin:a', 'upload:a:1:0:0:0', 'prepare:a', 'draw:a', 'end:a', 'begin:b', 'upload:b:1:1:1:1', 'prepare:b', 'draw:b', 'end:b']);
     expect(spy.slots).toEqual(['a:0:0', 'b:0:1']);
     expect(spy.uploads).toEqual(['a:1:0:0:0', 'b:1:1:1:1']);
   });

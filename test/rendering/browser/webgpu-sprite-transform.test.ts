@@ -347,5 +347,4 @@ describe('WebGPU sprite transform storage', () => {
       backend.destroy();
     }
   });
-
 });

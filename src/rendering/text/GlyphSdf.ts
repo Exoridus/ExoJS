@@ -147,7 +147,12 @@ export class GlyphSdf {
     ctx.font = this._font;
     ctx.textBaseline = 'alphabetic';
     const m = ctx.measureText('HgjpqyÉÅ');
-    type M = TextMetrics & { fontBoundingBoxAscent?: number; fontBoundingBoxDescent?: number; actualBoundingBoxAscent?: number; actualBoundingBoxDescent?: number };
+    type M = TextMetrics & {
+      fontBoundingBoxAscent?: number;
+      fontBoundingBoxDescent?: number;
+      actualBoundingBoxAscent?: number;
+      actualBoundingBoxDescent?: number;
+    };
     this._fontAscent = Math.max(1, Math.ceil((m as M).fontBoundingBoxAscent ?? (m as M).actualBoundingBoxAscent ?? this._fontSize * 0.8));
     this._fontDescent = Math.max(1, Math.ceil((m as M).fontBoundingBoxDescent ?? (m as M).actualBoundingBoxDescent ?? this._fontSize * 0.2));
     this._metricsReady = true;
