@@ -61,6 +61,24 @@ const bundled: RollupOptions = {
   ],
 };
 
+const debugBundled: RollupOptions = {
+  input: 'src/debug/index.ts',
+  output: {
+    file: 'dist/exo.debug.esm.js',
+    format: 'es',
+    sourcemap: true,
+  },
+  plugins: [
+    constantReplacementPlugin,
+    resolve({ mainFields: ['browser', 'module', 'main'] }),
+    glslPlugin,
+    typescript({
+      compilerOptions: { incremental: false },
+      outputToFilesystem: false,
+    }),
+  ],
+};
+
 const modules: RollupOptions = {
   input: ['src/index.ts', 'src/debug/index.ts'],
   output: {
@@ -85,4 +103,4 @@ const modules: RollupOptions = {
   ],
 };
 
-export default [bundled, modules];
+export default [bundled, debugBundled, modules];

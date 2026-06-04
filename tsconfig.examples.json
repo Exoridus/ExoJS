@@ -44,6 +44,7 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
+      "@codexo/exojs/debug": ["./src/debug/index.ts"],
       "@/*": ["./src/*"],
       "@assets": ["./examples/shared/assets-catalog.d.ts"]
     }

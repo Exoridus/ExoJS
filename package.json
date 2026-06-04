@@ -8,6 +8,8 @@
     "dist/esm/",
     "dist/exo.esm.js",
     "dist/exo.esm.js.map",
+    "dist/exo.debug.esm.js",
+    "dist/exo.debug.esm.js.map",
     "README.md",
     "CHANGELOG.md"
   ],
