@@ -1,5 +1,5 @@
-// Auto-generated from multi-texture-stress.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const GRID_COLUMNS = 32;
 const GRID_ROWS = 18;
 const app = new Application({
@@ -10,18 +10,30 @@ const app = new Application({
     clearColor: new Color(0.018, 0.02, 0.04, 1),
     backend: { type: 'webgpu' },
 });
+
 document.body.append(app.canvas);
+
+interface TextureInfo {
+    texture: Texture;
+    frames: Rectangle[];
+    palette: Color[];
+}
+
 class MultiTextureStressScene extends Scene {
-    _sprites;
-    _spriteLayer;
-    _textureInfos;
-    init() {
+    private _sprites!: { sprite: Sprite; offsetX: number; offsetY: number; phase: number; baseScale: number; driftX: number; driftY: number; rotationSpeed: number }[];
+    private _spriteLayer!: Container;
+    private _textureInfos!: TextureInfo[];
+
+    override init(): void {
         const { width, height } = this.app.canvas;
+
         this._sprites = [];
         this._spriteLayer = new Container();
         this._spriteLayer.setPosition(width / 2, height / 2);
         this._textureInfos = createTextureInfos();
+
         let index = 0;
+
         for (let row = 0; row < GRID_ROWS; row++) {
             for (let column = 0; column < GRID_COLUMNS; column++) {
                 const textureInfo = this._textureInfos[index % this._textureInfos.length];
@@ -32,11 +44,13 @@ class MultiTextureStressScene extends Scene {
                 const phase = index * 0.11;
                 const baseScale = 0.56 + (index % 4) * 0.09;
                 const tint = textureInfo.palette[index % textureInfo.palette.length];
+
                 sprite.setTextureFrame(frame);
                 sprite.setAnchor(0.5);
                 sprite.setPosition(offsetX, offsetY);
                 sprite.setScale(baseScale);
                 sprite.setTint(tint);
+
                 this._sprites.push({
                     sprite,
                     offsetX,
@@ -47,39 +61,49 @@ class MultiTextureStressScene extends Scene {
                     driftY: 5 + (index % 5) * 2,
                     rotationSpeed: (index % 2 === 0 ? 1 : -1) * (18 + (index % 7) * 6),
                 });
+
                 this._spriteLayer.addChild(sprite);
                 index++;
             }
         }
     }
-    update(delta) {
+
+    override update(delta): void {
         const time = this.app.activeTime.seconds;
+
         this._spriteLayer.rotation = Math.sin(time * 0.45) * 5;
+
         for (const entry of this._sprites) {
             const localPhase = time + entry.phase;
             const scale = entry.baseScale + Math.sin(localPhase * 1.9) * 0.09;
+
             entry.sprite.x = entry.offsetX + Math.sin(localPhase * 1.35) * entry.driftX;
             entry.sprite.y = entry.offsetY + Math.cos(localPhase * 1.55) * entry.driftY;
             entry.sprite.rotation += delta.seconds * entry.rotationSpeed;
             entry.sprite.setScale(scale);
         }
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._spriteLayer);
     }
-    unload() {
+
+    override unload(): void {
         this._spriteLayer?.destroy();
     }
-    destroy() {
+
+    override destroy(): void {
         this._spriteLayer?.destroy();
     }
 }
+
 app.start(new MultiTextureStressScene()).catch(() => {
     app.canvas.remove();
     app.destroy();
 });
-function createTextureInfos() {
+
+function createTextureInfos(): TextureInfo[] {
     return [
         createTextureInfo('#10213a', '#ffd166', '#fff3c4', 'circle', [Color.white, Color.gold, Color.khaki, Color.orange]),
         createTextureInfo('#1f1632', '#ff6b9a', '#ffd3ea', 'diamond', [Color.white, Color.hotPink, Color.violet, Color.plum]),
@@ -87,39 +111,46 @@ function createTextureInfos() {
         createTextureInfo('#112744', '#7dd3fc', '#e7f9ff', 'triangle', [Color.white, Color.skyBlue, Color.deepSkyBlue, Color.cornflowerBlue]),
     ];
 }
-function createTextureInfo(background, accent, detail, shape, palette) {
+
+function createTextureInfo(background: string, accent: string, detail: string, shape: string, palette: Color[]): TextureInfo {
     const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext('2d')!;
+
     canvas.width = 128;
     canvas.height = 64;
+
     drawAtlasCell(context, 0, background, accent, detail, shape, false);
     drawAtlasCell(context, 64, background, accent, detail, shape, true);
+
     return {
         texture: new Texture(canvas),
         frames: [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64)],
         palette,
     };
 }
-function drawAtlasCell(context, x, background, accent, detail, shape, mirrored) {
+
+function drawAtlasCell(context: CanvasRenderingContext2D, x: number, background: string, accent: string, detail: string, shape: string, mirrored: boolean): void {
     context.fillStyle = background;
     context.fillRect(x, 0, 64, 64);
+
     context.fillStyle = 'rgba(255, 255, 255, 0.07)';
     context.fillRect(x + 4, 4, 56, 56);
+
     context.fillStyle = accent;
     context.beginPath();
+
     if (shape === 'circle') {
         context.arc(x + 32, 32, mirrored ? 14 : 18, 0, Math.PI * 2);
-    }
-    else if (shape === 'diamond') {
+    } else if (shape === 'diamond') {
         context.moveTo(x + 32, mirrored ? 12 : 8);
         context.lineTo(x + 52, 32);
         context.lineTo(x + 32, mirrored ? 52 : 56);
         context.lineTo(x + 12, 32);
         context.closePath();
-    }
-    else if (shape === 'star') {
+    } else if (shape === 'star') {
         const outerRadius = mirrored ? 16 : 20;
         const innerRadius = mirrored ? 7 : 9;
+
         for (let i = 0; i < 5; i++) {
             const outerAngle = -Math.PI / 2 + (i * Math.PI * 2) / 5;
             const innerAngle = outerAngle + Math.PI / 5;
@@ -127,23 +158,26 @@ function drawAtlasCell(context, x, background, accent, detail, shape, mirrored) 
             const outerY = 32 + Math.sin(outerAngle) * outerRadius;
             const innerX = x + 32 + Math.cos(innerAngle) * innerRadius;
             const innerY = 32 + Math.sin(innerAngle) * innerRadius;
+
             if (i === 0) {
                 context.moveTo(outerX, outerY);
-            }
-            else {
+            } else {
                 context.lineTo(outerX, outerY);
             }
+
             context.lineTo(innerX, innerY);
         }
+
         context.closePath();
-    }
-    else {
+    } else {
         context.moveTo(x + 32, mirrored ? 14 : 8);
         context.lineTo(x + 54, mirrored ? 50 : 54);
         context.lineTo(x + 10, mirrored ? 50 : 54);
         context.closePath();
     }
+
     context.fill();
+
     context.fillStyle = detail;
     context.beginPath();
     context.arc(x + (mirrored ? 24 : 40), mirrored ? 24 : 42, mirrored ? 6 : 8, 0, Math.PI * 2);

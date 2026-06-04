@@ -803,6 +803,7 @@
         {
             "slug": "bonfire",
             "path": "particles/bonfire.js",
+            "language": "typescript",
             "title": "Bonfire",
             "description": "Example: Bonfire.",
             "backend": "core",
@@ -813,6 +814,7 @@
         {
             "slug": "cursor-attractor-particles",
             "path": "particles/cursor-attractor-particles.js",
+            "language": "typescript",
             "title": "Cursor Attractor Particles",
             "description": "Example: Cursor Attractor Particles.",
             "backend": "core",
@@ -828,6 +830,7 @@
         {
             "slug": "custom-wgsl-module",
             "path": "particles/custom-wgsl-module.js",
+            "language": "typescript",
             "title": "Custom Wgsl Module",
             "description": "Example: Custom Wgsl Module.",
             "backend": "core",
@@ -840,6 +843,7 @@
         {
             "slug": "emitter-basics",
             "path": "particles/emitter-basics.js",
+            "language": "typescript",
             "title": "Emitter Basics",
             "description": "Example: Emitter Basics.",
             "backend": "core",
@@ -851,6 +855,7 @@
         {
             "slug": "fireworks",
             "path": "particles/fireworks.js",
+            "language": "typescript",
             "title": "Fireworks",
             "description": "Example: Fireworks.",
             "backend": "core",
@@ -861,6 +866,7 @@
         {
             "slug": "gpu-particles",
             "path": "particles/gpu-particles.js",
+            "language": "typescript",
             "title": "Gpu Particles",
             "description": "Example: Gpu Particles.",
             "backend": "core",
@@ -874,6 +880,7 @@
         {
             "slug": "backend-comparison",
             "path": "performance/backend-comparison.js",
+            "language": "typescript",
             "title": "Backend Comparison",
             "description": "Example: Backend Comparison.",
             "backend": "core",
@@ -888,6 +895,7 @@
         {
             "slug": "multi-texture-stress",
             "path": "performance/multi-texture-stress.js",
+            "language": "typescript",
             "title": "Multi Texture Stress",
             "description": "Example: Multi Texture Stress.",
             "backend": "core",
@@ -903,6 +911,7 @@
         {
             "slug": "particle-stress",
             "path": "performance/particle-stress.js",
+            "language": "typescript",
             "title": "Particle Stress",
             "description": "Example: Particle Stress.",
             "backend": "core",
@@ -917,6 +926,7 @@
         {
             "slug": "sprite-stress",
             "path": "performance/sprite-stress.js",
+            "language": "typescript",
             "title": "Sprite Stress",
             "description": "Example: Sprite Stress.",
             "backend": "core",
