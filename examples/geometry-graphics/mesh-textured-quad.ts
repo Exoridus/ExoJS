@@ -1,6 +1,6 @@
-// Auto-generated from mesh-textured-quad.ts — edit the .ts source, not this file.
 import { technical } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,16 +8,22 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const UV_GRID = technical.filtering.uvGrid256;
 const HALF = 240;
+
 class MeshTexturedQuadScene extends Scene {
-    _quad;
-    async load(loader) {
+    private _quad!: Mesh;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: UV_GRID });
     }
-    init(loader) {
+
+    override init(loader): void {
         const { width, height } = this.app.canvas;
+
         this._quad = new Mesh({
             vertices: new Float32Array([
                 -HALF,
@@ -33,14 +39,18 @@ class MeshTexturedQuadScene extends Scene {
             indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
             texture: loader.get(Texture, 'uvGrid'),
         });
+
         this._quad.setPosition((width / 2) | 0, (height / 2) | 0);
     }
-    update(delta) {
+
+    override update(delta): void {
         this._quad.rotate(delta.seconds * 30);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._quad);
     }
 }
+
 app.start(new MeshTexturedQuadScene());

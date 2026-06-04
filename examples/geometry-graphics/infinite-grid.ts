@@ -1,5 +1,5 @@
-// Auto-generated from infinite-grid.ts — edit the .ts source, not this file.
 import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, Texture, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,7 +10,9 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const glsl = `#version 300 es
 precision mediump float;
 uniform vec2 uCenter;
@@ -33,6 +35,7 @@ void main() {
     if (abs(world.y) < 1.0) col = vec3(0.42, 0.95, 0.42);
     fragColor = vec4(col, 1.0);
 }`;
+
 const wgsl = `
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
@@ -52,15 +55,18 @@ fn gridLine(p: vec2<f32>, s: f32, w: f32) -> f32 {
     if (abs(world.y) < 1.0) { col = vec3<f32>(0.42, 0.95, 0.42); }
     return vec4<f32>(col, 1.0);
 }`;
+
 class InfiniteGridScene extends Scene {
-    _view;
-    _move = { x: 0, y: 0, zoom: 0 };
-    _sprite;
-    _filter;
-    async load(loader) {
+    private _view!: View;
+    private _move = { x: 0, y: 0, zoom: 0 };
+    private _sprite!: Sprite;
+    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._view = new View(0, 0, 800, 600);
         this._sprite = new Sprite(loader.get(Texture, 'uvGrid'));
         this._sprite.width = 800;
@@ -71,33 +77,30 @@ class InfiniteGridScene extends Scene {
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uCenter: [0, 0], uViewSize: [800, 600] } });
         this._sprite.filters = [this._filter];
         this.inputs.onActive(Keyboard.A, () => { this._move.x = -1; });
-        this.inputs.onStop(Keyboard.A, () => { if (this._move.x < 0)
-            this._move.x = 0; });
+        this.inputs.onStop(Keyboard.A, () => { if (this._move.x < 0) this._move.x = 0; });
         this.inputs.onActive(Keyboard.D, () => { this._move.x = 1; });
-        this.inputs.onStop(Keyboard.D, () => { if (this._move.x > 0)
-            this._move.x = 0; });
+        this.inputs.onStop(Keyboard.D, () => { if (this._move.x > 0) this._move.x = 0; });
         this.inputs.onActive(Keyboard.W, () => { this._move.y = -1; });
-        this.inputs.onStop(Keyboard.W, () => { if (this._move.y < 0)
-            this._move.y = 0; });
+        this.inputs.onStop(Keyboard.W, () => { if (this._move.y < 0) this._move.y = 0; });
         this.inputs.onActive(Keyboard.S, () => { this._move.y = 1; });
-        this.inputs.onStop(Keyboard.S, () => { if (this._move.y > 0)
-            this._move.y = 0; });
+        this.inputs.onStop(Keyboard.S, () => { if (this._move.y > 0) this._move.y = 0; });
         this.inputs.onActive(Keyboard.Q, () => { this._move.zoom = -1; });
-        this.inputs.onStop(Keyboard.Q, () => { if (this._move.zoom < 0)
-            this._move.zoom = 0; });
+        this.inputs.onStop(Keyboard.Q, () => { if (this._move.zoom < 0) this._move.zoom = 0; });
         this.inputs.onActive(Keyboard.E, () => { this._move.zoom = 1; });
-        this.inputs.onStop(Keyboard.E, () => { if (this._move.zoom > 0)
-            this._move.zoom = 0; });
+        this.inputs.onStop(Keyboard.E, () => { if (this._move.zoom > 0) this._move.zoom = 0; });
     }
-    update(delta) {
+
+    override update(delta): void {
         this._view.move(this._move.x * 340 * delta.seconds, this._move.y * 340 * delta.seconds);
         this._view.setZoom(Math.max(0.2, this._view.zoomLevel + this._move.zoom * delta.seconds));
         this._filter.uniforms.uCenter = [this._view.center.x, this._view.center.y];
         this._filter.uniforms.uViewSize = [this._view.width, this._view.height];
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
     }
 }
+
 app.start(new InfiniteGridScene());

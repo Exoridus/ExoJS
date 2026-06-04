@@ -1,6 +1,6 @@
-// Auto-generated from mesh-deformed-grid.ts — edit the .ts source, not this file.
 import { technical } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,17 +8,21 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const COLS = 16;
 const ROWS = 16;
 const SIZE = 360;
-function buildGrid() {
+
+function buildGrid(): { vertices: Float32Array; uvs: Float32Array; indices: Uint16Array } {
     const half = SIZE / 2;
     const stepX = SIZE / COLS;
     const stepY = SIZE / ROWS;
     const vertices = new Float32Array((COLS + 1) * (ROWS + 1) * 2);
     const uvs = new Float32Array(vertices.length);
     const indices = new Uint16Array(COLS * ROWS * 6);
+
     let v = 0;
     let u = 0;
     for (let r = 0; r <= ROWS; r++) {
@@ -29,6 +33,7 @@ function buildGrid() {
             uvs[u++] = r / ROWS;
         }
     }
+
     let i = 0;
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
@@ -44,19 +49,25 @@ function buildGrid() {
             indices[i++] = bl;
         }
     }
+
     return { vertices, uvs, indices };
 }
+
 const UV_GRID = technical.filtering.uvGrid256;
+
 class MeshDeformedGridScene extends Scene {
-    _restVertices;
-    _mesh;
-    _time = 0;
-    async load(loader) {
+    private _restVertices!: Float32Array;
+    private _mesh!: Mesh;
+    private _time = 0;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: UV_GRID });
     }
-    init(loader) {
+
+    override init(loader): void {
         const { width, height } = this.app.canvas;
         const grid = buildGrid();
+
         this._restVertices = grid.vertices.slice();
         this._mesh = new Mesh({
             vertices: grid.vertices,
@@ -66,22 +77,27 @@ class MeshDeformedGridScene extends Scene {
         });
         this._mesh.setPosition((width / 2) | 0, (height / 2) | 0);
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time += delta.seconds;
         const verts = this._mesh.vertices;
         const rest = this._restVertices;
         const t = this._time;
+
         for (let i = 0; i < verts.length; i += 2) {
             const rx = rest[i];
             const ry = rest[i + 1];
             verts[i] = rx + Math.sin(t * 2 + ry * 0.04) * 14;
             verts[i + 1] = ry + Math.cos(t * 1.6 + rx * 0.03) * 10;
         }
+
         this._mesh.recomputeLocalBounds();
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._mesh);
     }
 }
+
 app.start(new MeshDeformedGridScene());

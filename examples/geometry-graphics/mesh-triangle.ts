@@ -1,5 +1,5 @@
-// Auto-generated from mesh-triangle.ts — edit the .ts source, not this file.
 import { Application, Color, Mesh, Scene } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -7,11 +7,15 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 class MeshTriangleScene extends Scene {
-    _triangle;
-    init() {
+    private _triangle!: Mesh;
+
+    override init(): void {
         const { width, height } = this.app.canvas;
+
         this._triangle = new Mesh({
             vertices: new Float32Array([0, -100, 100, 100, -100, 100]),
             colors: new Uint32Array([
@@ -20,14 +24,18 @@ class MeshTriangleScene extends Scene {
                 0xffff0000,
             ]),
         });
+
         this._triangle.setPosition((width / 2) | 0, (height / 2) | 0);
     }
-    update(delta) {
+
+    override update(delta): void {
         this._triangle.rotate(delta.seconds * 60);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._triangle);
     }
 }
+
 app.start(new MeshTriangleScene());
