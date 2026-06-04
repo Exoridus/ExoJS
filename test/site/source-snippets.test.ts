@@ -1,13 +1,12 @@
 /**
  * Tests for site/src/lib/source-snippets.ts
  *
- * Uses real temporary files (via os.tmpdir) so the extractor exercises the
+ * Uses real temporary files so the extractor exercises the
  * actual readFileSync path without touching any checked-in source files.
  */
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 
 // We test the module via a dynamic import so we can override import.meta.dirname
 // to point at our temp directory. Instead, we directly import the function and
@@ -18,7 +17,6 @@ import { tmpdir } from 'node:os';
 // Actually: extractSnippetRegion joins repoRoot() + filePath. In vitest the
 // cwd is the repo root, so we can create real fixture files under a temp
 // sub-folder and pass relative paths.
-
 import { extractSnippetRegion } from '../../site/src/lib/source-snippets';
 
 // ---------------------------------------------------------------------------
