@@ -12,6 +12,81 @@ merged pull requests and commits since the previous tag (each with its commit /
 PR link); `pnpm release:notes` then renders that section into the published
 GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
 
+## [0.11.0] - 2026-06-04
+
+### Added
+
+- **WebGPU geometry stencil completion.** WebGPU now supports geometric stencil
+  clipping across custom-material pipelines (Sprite, Mesh, Graphics), reaching
+  pixel parity with WebGL2 for all default and custom material paths. (#41, #43)
+
+- **Graphics gradient fills.** `Graphics` primitives now accept `LinearGradient`
+  and `RadialGradient` fills via `fillGradient` and `strokeGradient` style
+  properties. `Gradient` was promoted to a `Color`-like value object with
+  `lerp()` and `toArray()` methods. A `graphics-gradient` example demonstrates
+  cross-backend gradient rendering with pixel-validated test coverage.
+  (#52, #53, #55, #56, #57)
+
+- **`BitmapText` diagnostics and demo.** Added `BitmapText` rendering with BMFont
+  diagnostics utilities and a `bitmap-text-basic` example demonstrating bitmap
+  font rendering, character set inspection, and layout options. (#66)
+
+- **`assert()` dev diagnostics.** Added a lightweight assertion utility
+  (`assert(condition, message)`) for development-time invariant checking.
+  Assertions are stripped in production builds. (#67)
+
+- **TypeScript-first examples migration.** All 117 example files converted from
+  JavaScript to TypeScript across the full examples tree: application-scenes,
+  sprites-textures, input, text-fonts, scene-graph, tweens-animation, filters,
+  debug-layer, audio-basics, audio-fx, beat-detection, particles, performance,
+  geometry-graphics, render-targets, custom-renderers, and showcase. The
+  playground example pilot added type-safe example loading.
+  (#68, #69, #70, #71, #72, #73, #74, #75, #76, #77, #78, #79)
+
+- **`@assets` import-map module.** Examples can now reference bundled assets via
+  `@assets/...` import paths, with the `Loader` supporting absolute-path
+  resolution for this scheme. (#65)
+
+- **Multi-browser + dark-mode smoke support.** The example smoke test runner now
+  supports dark color-scheme canvases and resolves a WebGPU feature-flag conflict
+  during multi-browser runs.
+
+### Performance
+
+- **Render pipeline hot-path profiling.** Instrumented the render-plan path to
+  identify and eliminate bottlenecks in render command processing and group
+  compaction. (#80)
+
+- **Batched transform storage writes.** `TransformBuffer` uploads are now batched
+  by render group, reducing per-node `device.writeBuffer` calls and improving
+  render-plan playback throughput. WebGPU transform storage is pre-reserved
+  before playback to eliminate mid-frame reallocation. (#44, #45, #46, #48, #50)
+
+### Fixed
+
+- **GLSL reserved word.** Fixed a WebGL2 text shader that used `text` as a
+  variable name (a reserved word in GLSL ES 3.00), resolving compilation failures
+  on strict drivers. (#60)
+
+- **SDF text baseline alignment.** Corrected SDF tile height computation to use
+  font-level metrics, fixing vertical misalignment in multi-font and mixed-size
+  text layouts. (#62, #63)
+
+- **WebGPU mesh tint normalisation.** Mesh tint values on the WebGPU path are now
+  normalised to the 0-1 range before upload, matching WebGL2 behaviour. (#54)
+
+- **WebGPU Uint16 index-buffer alignment.** `Uint16` index-buffer writes are now
+  aligned to 4-byte boundaries on WebGPU, preventing alignment violations on
+  hardware that enforces `COPY_DST` buffer offset restrictions.
+
+- **Loader `@assets/` absolute-path resolution.** The `Loader` now correctly
+  resolves absolute paths when using the `@assets/` import-map scheme, fixing
+  failed asset loads in playground and bundled example deployments. (#65)
+
+- **Example runtime health.** Repaired broken examples across the catalog
+  including text layout rendering, playground navigation stability, style option
+  migration, and smoke test failures. (#58, #59, #61, #64)
+
 ## [0.10.0] - 2026-05-31
 
 ### Breaking — RenderingContext and Scene.draw migration
