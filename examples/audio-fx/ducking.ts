@@ -1,6 +1,6 @@
-// Auto-generated from ducking.ts — edit the .ts source, not this file.
 import { audio } from '@assets';
 import { Application, AudioBus, Color, DuckingFilter, Music, Scene, Sound, Text } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,18 +8,22 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 class DuckingScene extends Scene {
-    _music;
-    _voice;
-    _voiceBus;
-    _ducking;
-    _text;
-    async load(loader) {
+    private _music!: Music;
+    private _voice!: Sound;
+    private _voiceBus!: AudioBus;
+    private _ducking!: DuckingFilter;
+    private _text!: Text;
+
+    override async load(loader): Promise<void> {
         await loader.load(Music, { music: audio.musicLoop });
         await loader.load(Sound, { voice: audio.uiConfirm });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.7).play();
         this._voice = loader.get(Sound, 'voice');
         this._voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
@@ -33,9 +37,11 @@ class DuckingScene extends Scene {
             this._voice.play({ replace: true });
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._text);
     }
 }
+
 app.start(new DuckingScene());

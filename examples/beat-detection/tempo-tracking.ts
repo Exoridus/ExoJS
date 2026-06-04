@@ -1,5 +1,5 @@
-// Auto-generated from tempo-tracking.ts — edit the .ts source, not this file.
 import { Application, BeatDetector, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,16 +10,20 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class TempoTrackingScene extends Scene {
-    _music;
-    _detector;
-    _text;
-    _bar;
-    async load(loader) {
+    private _music!: Music;
+    private _detector!: BeatDetector;
+    private _text!: Text;
+    private _bar!: Graphics;
+
+    override async load(loader): Promise<void> {
         await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
         this._detector = new BeatDetector();
         this._detector.source = this._music;
@@ -27,7 +31,8 @@ class TempoTrackingScene extends Scene {
         this._text.setPosition(280, 220);
         this._bar = new Graphics();
     }
-    draw(context) {
+
+    override draw(context): void {
         const bpm = this._detector.tempo;
         const confidence = this._detector.confidence;
         this._text.text = `BPM ${bpm.toFixed(1)}\nconfidence ${confidence.toFixed(2)}`;
@@ -41,4 +46,5 @@ class TempoTrackingScene extends Scene {
         context.render(this._text);
     }
 }
+
 app.start(new TempoTrackingScene());

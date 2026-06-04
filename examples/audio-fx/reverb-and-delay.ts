@@ -1,5 +1,5 @@
-// Auto-generated from reverb-and-delay.ts — edit the .ts source, not this file.
 import { Application, Color, DelayFilter, Graphics, ReverbFilter, Scene, Sound, Text } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 860,
@@ -10,23 +10,28 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const sliders = [
     { key: 'reverbWet', y: 210 },
     { key: 'delayWet', y: 280 },
     { key: 'delayTime', y: 350 },
 ];
+
 class ReverbAndDelayScene extends Scene {
-    _sound;
-    _reverb;
-    _delay;
-    _gfx;
-    _labels;
-    _drag = -1;
-    async load(loader) {
+    private _sound!: Sound;
+    private _reverb!: ReverbFilter;
+    private _delay!: DelayFilter;
+    private _gfx!: Graphics;
+    private _labels!: Text[];
+    private _drag = -1;
+
+    override async load(loader): Promise<void> {
         await loader.load(Sound, { sfx: 'audio/impact-light.ogg' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._sound = loader.get(Sound, 'sfx');
         this._reverb = new ReverbFilter({ wet: 0.4 });
         this._delay = new DelayFilter({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });
@@ -45,28 +50,24 @@ class ReverbAndDelayScene extends Scene {
             this._drag = -1;
         });
         this.app.input.onPointerTap.add(p => {
-            if (p.y > 470)
-                this._sound.play({ replace: true });
+            if (p.y > 470) this._sound.play({ replace: true });
         });
     }
-    _pick(y) {
-        for (let i = 0; i < sliders.length; i++)
-            if (Math.abs(y - sliders[i].y) <= 14)
-                return i;
+
+    private _pick(y: number): number {
+        for (let i = 0; i < sliders.length; i++) if (Math.abs(y - sliders[i].y) <= 14) return i;
         return -1;
     }
-    _set(x) {
-        if (this._drag < 0)
-            return;
+
+    private _set(x: number): void {
+        if (this._drag < 0) return;
         const t = Math.max(0, Math.min(1, (x - 260) / 420));
-        if (this._drag === 0)
-            this._reverb.wet = t;
-        if (this._drag === 1)
-            this._delay.wet = t;
-        if (this._drag === 2)
-            this._delay.delaySeconds = 0.02 + t * 0.8;
+        if (this._drag === 0) this._reverb.wet = t;
+        if (this._drag === 1) this._delay.wet = t;
+        if (this._drag === 2) this._delay.delaySeconds = 0.02 + t * 0.8;
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         this._gfx.clear();
         const values = [this._reverb.wet, this._delay.wet, this._delay.delaySeconds / 0.82];
@@ -89,4 +90,5 @@ class ReverbAndDelayScene extends Scene {
         context.render(this._gfx);
     }
 }
+
 app.start(new ReverbAndDelayScene());
