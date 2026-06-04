@@ -15,7 +15,7 @@
  * a header comment that maps back to the original guide location.
  */
 
-import { mkdirSync, readdirSync, rmSync, statSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const GUIDE_DIR = join(import.meta.dirname, '..', 'site', 'src', 'content', 'guide');
