@@ -1,5 +1,5 @@
-// Auto-generated from multi-gamepad.ts — edit the .ts source, not this file.
 import { Application, Color, GamepadAxis, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,14 +10,19 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
+
 class MultiGamepadScene extends Scene {
-    _players;
-    async load(loader) {
+    private _players!: { pad: any; sprite: Sprite; move: { x: number; y: number } }[];
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._players = app.input.gamepads.map((pad, index) => {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
                 .setAnchor(0.5)
@@ -25,13 +30,13 @@ class MultiGamepadScene extends Scene {
                 .setPosition(160 + index * 160, 300)
                 .setTint(tints[index]);
             const move = { x: 0, y: 0 };
-            pad.onActive(GamepadAxis.LeftStickX, (value) => {
+            pad.onActive(GamepadAxis.LeftStickX, (value: number) => {
                 move.x = value;
             });
             pad.onStop(GamepadAxis.LeftStickX, () => {
                 move.x = 0;
             });
-            pad.onActive(GamepadAxis.LeftStickY, (value) => {
+            pad.onActive(GamepadAxis.LeftStickY, (value: number) => {
                 move.y = value;
             });
             pad.onStop(GamepadAxis.LeftStickY, () => {
@@ -40,18 +45,20 @@ class MultiGamepadScene extends Scene {
             return { pad, sprite, move };
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         for (const player of this._players) {
-            if (!player.pad.connected)
-                continue;
+            if (!player.pad.connected) continue;
             player.sprite.move(player.move.x * 260 * delta.seconds, player.move.y * 260 * delta.seconds);
         }
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         for (const player of this._players) {
             context.render(player.sprite);
         }
     }
 }
+
 app.start(new MultiGamepadScene());

@@ -1,5 +1,5 @@
-// Auto-generated from pointer-to-world.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, View } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,39 +10,45 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class PointerToWorldScene extends Scene {
-    _view;
-    _grid;
-    _markers;
-    init() {
+    private _view!: View;
+    private _grid!: Graphics;
+    private _markers!: Graphics;
+
+    override init(): void {
         this._view = new View(260, 180, 800, 600);
         this._grid = new Graphics();
         this._markers = new Graphics();
+
         this._grid.lineWidth = 1;
         this._grid.lineColor = new Color(70, 70, 70);
-        for (let x = -400; x <= 1200; x += 80)
-            this._grid.drawLine(x, -300, x, 1000);
-        for (let y = -300; y <= 1000; y += 80)
-            this._grid.drawLine(-400, y, 1200, y);
+        for (let x = -400; x <= 1200; x += 80) this._grid.drawLine(x, -300, x, 1000);
+        for (let y = -300; y <= 1000; y += 80) this._grid.drawLine(-400, y, 1200, y);
+
         this.app.input.onPointerTap.add(pointer => {
             const world = this._toWorld(pointer.x, pointer.y);
             this._markers.fillColor = new Color(255, 160, 80);
             this._markers.drawCircle(world.x, world.y, 6);
         });
     }
-    _toWorld(screenX, screenY) {
+
+    private _toWorld(screenX: number, screenY: number): { x: number; y: number } {
         const width = this.app.canvas.width;
         const height = this.app.canvas.height;
         const clipX = (screenX / width) * 2 - 1;
         const clipY = 1 - (screenY / height) * 2;
         const matrix = this._view.getInverseTransform();
+
         return {
             x: matrix.a * clipX + matrix.b * clipY + matrix.x,
             y: matrix.c * clipX + matrix.d * clipY + matrix.y,
         };
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.backend.setView(this._view);
         context.render(this._grid);
@@ -50,4 +56,5 @@ class PointerToWorldScene extends Scene {
         context.backend.setView(null);
     }
 }
+
 app.start(new PointerToWorldScene());

@@ -688,6 +688,7 @@
         {
             "slug": "action-mapping",
             "path": "input/action-mapping.js",
+            "language": "typescript",
             "title": "Action Mapping",
             "description": "Example: Action Mapping.",
             "backend": "core",
@@ -703,6 +704,7 @@
         {
             "slug": "gamepad",
             "path": "input/gamepad.js",
+            "language": "typescript",
             "title": "Gamepad",
             "description": "Example: Gamepad.",
             "backend": "core",
@@ -716,6 +718,7 @@
         {
             "slug": "key-rebinding",
             "path": "input/key-rebinding.js",
+            "language": "typescript",
             "title": "Key Rebinding",
             "description": "Example: Key Rebinding.",
             "backend": "core",
@@ -730,6 +733,7 @@
         {
             "slug": "keyboard",
             "path": "input/keyboard.js",
+            "language": "typescript",
             "title": "Keyboard",
             "description": "Example: Keyboard.",
             "backend": "core",
@@ -743,6 +747,7 @@
         {
             "slug": "mouse-and-pointer",
             "path": "input/mouse-and-pointer.js",
+            "language": "typescript",
             "title": "Mouse And Pointer",
             "description": "Example: Mouse And Pointer.",
             "backend": "core",
@@ -758,6 +763,7 @@
         {
             "slug": "multi-gamepad",
             "path": "input/multi-gamepad.js",
+            "language": "typescript",
             "title": "Multi Gamepad",
             "description": "Example: Multi Gamepad.",
             "backend": "core",
@@ -772,6 +778,7 @@
         {
             "slug": "multitouch",
             "path": "input/multitouch.js",
+            "language": "typescript",
             "title": "Multitouch",
             "description": "Example: Multitouch.",
             "backend": "core",
@@ -786,6 +793,7 @@
         {
             "slug": "pointer-to-world",
             "path": "input/pointer-to-world.js",
+            "language": "typescript",
             "title": "Pointer To World",
             "description": "Example: Pointer To World.",
             "backend": "core",
