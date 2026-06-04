@@ -1,5 +1,5 @@
+// Auto-generated from web-fonts.ts — edit the .ts source, not this file.
 import { Application, Color, FontAsset, Scene, Text } from '@codexo/exojs';
-
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,24 +10,23 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
-
 document.body.append(app.canvas);
-
-app.start(
-    new (class extends Scene {
-        async load(loader) {
-            await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
-        }
-        init() {
-            this._default = new Text('Default Font', { fillColor: Color.white, fontSize: 52 });
-            this._default.setPosition(120, 200);
-            this._loaded = new Text('Kenney Future Font', { fillColor: Color.white, fontFamily: 'Kenney Future', fontSize: 52 });
-            this._loaded.setPosition(120, 320);
-        }
-        draw(context) {
-            context.backend.clear();
-            context.render(this._default);
-            context.render(this._loaded);
-        }
-    })()
-);
+class WebFontsScene extends Scene {
+    _default;
+    _loaded;
+    async load(loader) {
+        await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
+    }
+    init() {
+        this._default = new Text('Default Font', { fillColor: Color.white, fontSize: 52 });
+        this._default.setPosition(120, 200);
+        this._loaded = new Text('Kenney Future Font', { fillColor: Color.white, fontFamily: 'Kenney Future', fontSize: 52 });
+        this._loaded.setPosition(120, 320);
+    }
+    draw(context) {
+        context.backend.clear();
+        context.render(this._default);
+        context.render(this._loaded);
+    }
+}
+app.start(new WebFontsScene());

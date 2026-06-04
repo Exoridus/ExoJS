@@ -141,6 +141,7 @@
         {
             "slug": "audio-buses",
             "path": "audio-basics/audio-buses.js",
+            "language": "typescript",
             "title": "Audio Buses",
             "description": "Example: Audio Buses.",
             "backend": "core",
@@ -156,6 +157,7 @@
         {
             "slug": "crossfade-tracks",
             "path": "audio-basics/crossfade-tracks.js",
+            "language": "typescript",
             "title": "Crossfade Tracks",
             "description": "Example: Crossfade Tracks.",
             "backend": "core",
@@ -171,6 +173,7 @@
         {
             "slug": "music-loop",
             "path": "audio-basics/music-loop.js",
+            "language": "typescript",
             "title": "Music Loop",
             "description": "Example: Music Loop.",
             "backend": "core",
@@ -186,6 +189,7 @@
         {
             "slug": "play-sound",
             "path": "audio-basics/play-sound.js",
+            "language": "typescript",
             "title": "Play Sound",
             "description": "Example: Play Sound.",
             "backend": "core",
@@ -201,6 +205,7 @@
         {
             "slug": "random-pitch-pool",
             "path": "audio-basics/random-pitch-pool.js",
+            "language": "typescript",
             "title": "Random Pitch Pool",
             "description": "Example: Random Pitch Pool.",
             "backend": "core",
@@ -217,6 +222,7 @@
         {
             "slug": "sound-pool",
             "path": "audio-basics/sound-pool.js",
+            "language": "typescript",
             "title": "Sound Pool",
             "description": "Example: Sound Pool.",
             "backend": "core",
@@ -688,6 +694,7 @@
         {
             "slug": "action-mapping",
             "path": "input/action-mapping.js",
+            "language": "typescript",
             "title": "Action Mapping",
             "description": "Example: Action Mapping.",
             "backend": "core",
@@ -703,6 +710,7 @@
         {
             "slug": "gamepad",
             "path": "input/gamepad.js",
+            "language": "typescript",
             "title": "Gamepad",
             "description": "Example: Gamepad.",
             "backend": "core",
@@ -716,6 +724,7 @@
         {
             "slug": "key-rebinding",
             "path": "input/key-rebinding.js",
+            "language": "typescript",
             "title": "Key Rebinding",
             "description": "Example: Key Rebinding.",
             "backend": "core",
@@ -730,6 +739,7 @@
         {
             "slug": "keyboard",
             "path": "input/keyboard.js",
+            "language": "typescript",
             "title": "Keyboard",
             "description": "Example: Keyboard.",
             "backend": "core",
@@ -743,6 +753,7 @@
         {
             "slug": "mouse-and-pointer",
             "path": "input/mouse-and-pointer.js",
+            "language": "typescript",
             "title": "Mouse And Pointer",
             "description": "Example: Mouse And Pointer.",
             "backend": "core",
@@ -758,6 +769,7 @@
         {
             "slug": "multi-gamepad",
             "path": "input/multi-gamepad.js",
+            "language": "typescript",
             "title": "Multi Gamepad",
             "description": "Example: Multi Gamepad.",
             "backend": "core",
@@ -772,6 +784,7 @@
         {
             "slug": "multitouch",
             "path": "input/multitouch.js",
+            "language": "typescript",
             "title": "Multitouch",
             "description": "Example: Multitouch.",
             "backend": "core",
@@ -786,6 +799,7 @@
         {
             "slug": "pointer-to-world",
             "path": "input/pointer-to-world.js",
+            "language": "typescript",
             "title": "Pointer To World",
             "description": "Example: Pointer To World.",
             "backend": "core",
@@ -803,6 +817,7 @@
         {
             "slug": "bonfire",
             "path": "particles/bonfire.js",
+            "language": "typescript",
             "title": "Bonfire",
             "description": "Example: Bonfire.",
             "backend": "core",
@@ -813,6 +828,7 @@
         {
             "slug": "cursor-attractor-particles",
             "path": "particles/cursor-attractor-particles.js",
+            "language": "typescript",
             "title": "Cursor Attractor Particles",
             "description": "Example: Cursor Attractor Particles.",
             "backend": "core",
@@ -828,6 +844,7 @@
         {
             "slug": "custom-wgsl-module",
             "path": "particles/custom-wgsl-module.js",
+            "language": "typescript",
             "title": "Custom Wgsl Module",
             "description": "Example: Custom Wgsl Module.",
             "backend": "core",
@@ -840,6 +857,7 @@
         {
             "slug": "emitter-basics",
             "path": "particles/emitter-basics.js",
+            "language": "typescript",
             "title": "Emitter Basics",
             "description": "Example: Emitter Basics.",
             "backend": "core",
@@ -851,6 +869,7 @@
         {
             "slug": "fireworks",
             "path": "particles/fireworks.js",
+            "language": "typescript",
             "title": "Fireworks",
             "description": "Example: Fireworks.",
             "backend": "core",
@@ -861,6 +880,7 @@
         {
             "slug": "gpu-particles",
             "path": "particles/gpu-particles.js",
+            "language": "typescript",
             "title": "Gpu Particles",
             "description": "Example: Gpu Particles.",
             "backend": "core",
@@ -874,6 +894,7 @@
         {
             "slug": "backend-comparison",
             "path": "performance/backend-comparison.js",
+            "language": "typescript",
             "title": "Backend Comparison",
             "description": "Example: Backend Comparison.",
             "backend": "core",
@@ -888,6 +909,7 @@
         {
             "slug": "multi-texture-stress",
             "path": "performance/multi-texture-stress.js",
+            "language": "typescript",
             "title": "Multi Texture Stress",
             "description": "Example: Multi Texture Stress.",
             "backend": "core",
@@ -903,6 +925,7 @@
         {
             "slug": "particle-stress",
             "path": "performance/particle-stress.js",
+            "language": "typescript",
             "title": "Particle Stress",
             "description": "Example: Particle Stress.",
             "backend": "core",
@@ -917,6 +940,7 @@
         {
             "slug": "sprite-stress",
             "path": "performance/sprite-stress.js",
+            "language": "typescript",
             "title": "Sprite Stress",
             "description": "Example: Sprite Stress.",
             "backend": "core",
@@ -1378,6 +1402,7 @@
         {
             "slug": "blendmodes",
             "path": "sprites-textures/blendmodes.js",
+            "language": "typescript",
             "title": "Blendmodes",
             "description": "Example: Blendmodes.",
             "backend": "core",
@@ -1391,6 +1416,7 @@
         {
             "slug": "sprite-basics",
             "path": "sprites-textures/sprite-basics.js",
+            "language": "typescript",
             "title": "Sprite Basics",
             "description": "Example: Sprite Basics.",
             "backend": "core",
@@ -1402,6 +1428,7 @@
         {
             "slug": "spritesheet-frames",
             "path": "sprites-textures/spritesheet-frames.js",
+            "language": "typescript",
             "title": "Spritesheet Frames",
             "description": "Example: Spritesheet Frames.",
             "backend": "core",
@@ -1413,6 +1440,7 @@
         {
             "slug": "svg-drawable",
             "path": "sprites-textures/svg-drawable.js",
+            "language": "typescript",
             "title": "Svg Drawable",
             "description": "Example: Svg Drawable.",
             "backend": "core",
@@ -1424,6 +1452,7 @@
         {
             "slug": "texture-loader",
             "path": "sprites-textures/texture-loader.js",
+            "language": "typescript",
             "title": "Texture Loader",
             "description": "Example: Texture Loader.",
             "backend": "core",
@@ -1435,6 +1464,7 @@
         {
             "slug": "video-drawable",
             "path": "sprites-textures/video-drawable.js",
+            "language": "typescript",
             "title": "Video Drawable",
             "description": "Example: Video Drawable.",
             "backend": "core",
@@ -1451,6 +1481,7 @@
         {
             "slug": "bitmap-text-basic",
             "path": "text-fonts/bitmap-text-basic.js",
+            "language": "typescript",
             "title": "Bitmap Text Basic",
             "description": "BitmapText rendered from an AngelCode .fnt atlas (Kenney Blocks, CC0). Demonstrates pre-built atlas rendering, word wrap, and live text updates without Canvas 2D rasterisation.",
             "backend": "core",
@@ -1463,6 +1494,7 @@
         {
             "slug": "basic-text",
             "path": "text-fonts/basic-text.js",
+            "language": "typescript",
             "title": "Basic Text",
             "description": "Example: Basic Text.",
             "backend": "core",
@@ -1474,6 +1506,7 @@
         {
             "slug": "multiline-and-wrap",
             "path": "text-fonts/multiline-and-wrap.js",
+            "language": "typescript",
             "title": "Multiline And Wrap",
             "description": "Example: Multiline And Wrap.",
             "backend": "core",
@@ -1486,6 +1519,7 @@
         {
             "slug": "stroke-and-shadow",
             "path": "text-fonts/stroke-and-shadow.js",
+            "language": "typescript",
             "title": "Stroke And Shadow",
             "description": "Example: Stroke And Shadow.",
             "backend": "core",
@@ -1498,6 +1532,7 @@
         {
             "slug": "text-glitch",
             "path": "text-fonts/text-glitch.js",
+            "language": "typescript",
             "title": "Text Glitch",
             "description": "Example: Text Glitch.",
             "backend": "core",
@@ -1509,6 +1544,7 @@
         {
             "slug": "web-fonts",
             "path": "text-fonts/web-fonts.js",
+            "language": "typescript",
             "title": "Web Fonts",
             "description": "Example: Web Fonts.",
             "backend": "core",
