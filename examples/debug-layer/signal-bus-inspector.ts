@@ -37,7 +37,7 @@ class SignalBusInspectorScene extends Scene {
         this._signals.score.add(this._listenerA);
     }
 
-    override update(_delta): void {
+    override update(): void {
         if (this._tick.expired) {
             if (Math.random() > 0.5) this._signals.spawn.add(this._listenerB);
             else this._signals.spawn.remove(this._listenerB);

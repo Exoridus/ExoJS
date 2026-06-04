@@ -196,8 +196,8 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * Internal render-pass coordinator. Owns the clear-vs-load decision and (from
-   * phase 12D) the active render pass; not part of the public
+   * Internal render-pass coordinator. Owns the clear-vs-load decision and the
+   * active render pass; not part of the public
    * {@link RenderBackend} surface.
    * @internal
    */

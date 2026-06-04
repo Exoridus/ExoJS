@@ -70,8 +70,8 @@ export interface WebGpuPassBackend {
  * WebGPU implementation of {@link RenderPassCoordinator}.
  *
  * Owns the GPU render-pass mechanics (acquire/end the active
- * `GPURenderPassEncoder`), the clear-vs-load decision, and — from phase 12E —
- * geometric stencil clipping: a per-target `depth24plus-stencil8` attachment
+ * `GPURenderPassEncoder`), the clear-vs-load decision, and geometric stencil
+ * clipping: a per-target `depth24plus-stencil8` attachment
  * shared across the multiple submits of a clip scope (via `stencilLoadOp:'load'`)
  * plus a position-only stencil-write pipeline. Renderers select stencil-enabled
  * content pipelines while {@link stencilActive} is true.
