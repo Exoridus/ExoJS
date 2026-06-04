@@ -1,5 +1,5 @@
-// Auto-generated from frequency-bands.ts — edit the .ts source, not this file.
 import { Application, AudioAnalyser, Color, Graphics, Music, Scene } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,28 +10,34 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class FrequencyBandsScene extends Scene {
-    _music;
-    _analyser;
-    _bars;
-    _levels = { low: 0, mid: 0, high: 0 };
-    async load(loader) {
+    private _music!: Music;
+    private _analyser!: AudioAnalyser;
+    private _bars!: Graphics;
+    private _levels = { low: 0, mid: 0, high: 0 };
+
+    override async load(loader): Promise<void> {
         await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
         this._analyser = new AudioAnalyser({ fftSize: 1024 });
         this._analyser.source = this._music;
         this._bars = new Graphics();
     }
-    update() {
+
+    override update(): void {
         const v = this._analyser.getLowMidHigh();
         this._levels.low = v.low;
         this._levels.mid = v.mid;
         this._levels.high = v.high;
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         this._bars.clear();
         const values = [this._levels.low, this._levels.mid, this._levels.high];
@@ -45,4 +51,5 @@ class FrequencyBandsScene extends Scene {
         context.render(this._bars);
     }
 }
+
 app.start(new FrequencyBandsScene());

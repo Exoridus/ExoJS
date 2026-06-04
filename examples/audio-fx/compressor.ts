@@ -1,5 +1,5 @@
-// Auto-generated from compressor.ts — edit the .ts source, not this file.
 import { Application, Color, CompressorFilter, Graphics, Music, Scene, Text } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 860,
@@ -10,24 +10,29 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const sliders = [
     { key: 'threshold', min: -60, max: 0, y: 190 },
     { key: 'ratio', min: 1, max: 16, y: 260 },
     { key: 'attack', min: 0.001, max: 0.2, y: 330 },
     { key: 'release', min: 0.02, max: 0.8, y: 400 },
 ];
+
 class CompressorScene extends Scene {
-    _music;
-    _filter;
-    _gfx;
-    _labels;
-    _meterLabel;
-    _drag = -1;
-    async load(loader) {
+    private _music!: Music;
+    private _filter!: CompressorFilter;
+    private _gfx!: Graphics;
+    private _labels!: Text[];
+    private _meterLabel!: Text;
+    private _drag = -1;
+
+    override async load(loader): Promise<void> {
         await loader.load(Music, { music: 'audio/demo-loop-main.ogg' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.8).play();
         this._filter = new CompressorFilter();
         app.audio.music.addFilter(this._filter);
@@ -46,23 +51,24 @@ class CompressorScene extends Scene {
             this._drag = -1;
         });
     }
-    _sliderAt(y) {
-        for (let i = 0; i < sliders.length; i++)
-            if (Math.abs(y - sliders[i].y) <= 16)
-                return i;
+
+    private _sliderAt(y: number): number {
+        for (let i = 0; i < sliders.length; i++) if (Math.abs(y - sliders[i].y) <= 16) return i;
         return -1;
     }
-    _apply(x) {
-        if (this._drag < 0)
-            return;
+
+    private _apply(x: number): void {
+        if (this._drag < 0) return;
         const def = sliders[this._drag];
         const t = Math.max(0, Math.min(1, (x - 260) / 420));
-        this._filter[def.key] = def.min + (def.max - def.min) * t;
+        (this._filter as any)[def.key] = def.min + (def.max - def.min) * t;
     }
-    _value(def) {
-        return this._filter[def.key];
+
+    private _value(def: { key: string }): number {
+        return (this._filter as any)[def.key];
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         this._gfx.clear();
         for (let i = 0; i < sliders.length; i++) {
@@ -77,6 +83,7 @@ class CompressorScene extends Scene {
             this._labels[i].setPosition(120, def.y - 12);
             context.render(this._labels[i]);
         }
+
         const reduction = this._filter.reduction;
         const meterT = Math.max(0, Math.min(1, -reduction / 24));
         this._gfx.fillColor = new Color(70, 70, 70);
@@ -85,7 +92,9 @@ class CompressorScene extends Scene {
         this._gfx.drawRectangle(260, 484, 420 * meterT, 12);
         this._meterLabel.text = `gain reduction: ${reduction.toFixed(1)} dB`;
         context.render(this._meterLabel);
+
         context.render(this._gfx);
     }
 }
+
 app.start(new CompressorScene());

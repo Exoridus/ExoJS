@@ -240,6 +240,7 @@
         {
             "slug": "compressor",
             "path": "audio-fx/compressor.js",
+            "language": "typescript",
             "title": "Compressor",
             "description": "Example: Compressor.",
             "backend": "core",
@@ -254,6 +255,7 @@
         {
             "slug": "ducking",
             "path": "audio-fx/ducking.js",
+            "language": "typescript",
             "title": "Ducking",
             "description": "Example: Ducking.",
             "backend": "core",
@@ -268,6 +270,7 @@
         {
             "slug": "reverb-and-delay",
             "path": "audio-fx/reverb-and-delay.js",
+            "language": "typescript",
             "title": "Reverb And Delay",
             "description": "Example: Reverb And Delay.",
             "backend": "core",
@@ -284,6 +287,7 @@
         {
             "slug": "vocoder",
             "path": "audio-fx/vocoder.js",
+            "language": "typescript",
             "title": "Vocoder",
             "description": "Example: Vocoder.",
             "backend": "core",
@@ -300,6 +304,7 @@
         {
             "slug": "beat-sync-pulse",
             "path": "beat-detection/beat-sync-pulse.js",
+            "language": "typescript",
             "title": "Beat Sync Pulse",
             "description": "Example: Beat Sync Pulse.",
             "backend": "core",
@@ -315,6 +320,7 @@
         {
             "slug": "frequency-bands",
             "path": "beat-detection/frequency-bands.js",
+            "language": "typescript",
             "title": "Frequency Bands",
             "description": "Example: Frequency Bands.",
             "backend": "core",
@@ -329,6 +335,7 @@
         {
             "slug": "tempo-tracking",
             "path": "beat-detection/tempo-tracking.js",
+            "language": "typescript",
             "title": "Tempo Tracking",
             "description": "Example: Tempo Tracking.",
             "backend": "core",
