@@ -1,5 +1,5 @@
-// Auto-generated from stroke-and-shadow.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 900,
@@ -10,10 +10,13 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class StrokeAndShadowScene extends Scene {
-    _title;
-    init() {
+    private _title!: Text;
+
+    override init(): void {
         this._title = new Text('EXOJS', {
             fillColor: new Color(230, 240, 255),
             fontSize: 120,
@@ -27,9 +30,11 @@ class StrokeAndShadowScene extends Scene {
         });
         this._title.setPosition(180, 190);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear(new Color(24, 28, 42));
         context.render(this._title);
     }
 }
+
 app.start(new StrokeAndShadowScene());

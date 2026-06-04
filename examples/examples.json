@@ -1451,6 +1451,7 @@
         {
             "slug": "bitmap-text-basic",
             "path": "text-fonts/bitmap-text-basic.js",
+            "language": "typescript",
             "title": "Bitmap Text Basic",
             "description": "BitmapText rendered from an AngelCode .fnt atlas (Kenney Blocks, CC0). Demonstrates pre-built atlas rendering, word wrap, and live text updates without Canvas 2D rasterisation.",
             "backend": "core",
@@ -1463,6 +1464,7 @@
         {
             "slug": "basic-text",
             "path": "text-fonts/basic-text.js",
+            "language": "typescript",
             "title": "Basic Text",
             "description": "Example: Basic Text.",
             "backend": "core",
@@ -1474,6 +1476,7 @@
         {
             "slug": "multiline-and-wrap",
             "path": "text-fonts/multiline-and-wrap.js",
+            "language": "typescript",
             "title": "Multiline And Wrap",
             "description": "Example: Multiline And Wrap.",
             "backend": "core",
@@ -1486,6 +1489,7 @@
         {
             "slug": "stroke-and-shadow",
             "path": "text-fonts/stroke-and-shadow.js",
+            "language": "typescript",
             "title": "Stroke And Shadow",
             "description": "Example: Stroke And Shadow.",
             "backend": "core",
@@ -1498,6 +1502,7 @@
         {
             "slug": "text-glitch",
             "path": "text-fonts/text-glitch.js",
+            "language": "typescript",
             "title": "Text Glitch",
             "description": "Example: Text Glitch.",
             "backend": "core",
@@ -1509,6 +1514,7 @@
         {
             "slug": "web-fonts",
             "path": "text-fonts/web-fonts.js",
+            "language": "typescript",
             "title": "Web Fonts",
             "description": "Example: Web Fonts.",
             "backend": "core",
