@@ -1,0 +1,185 @@
+---
+title: '10.1 Troubleshooting'
+description: 'Diagnose and fix the most common ExoJS problems: blank canvas, API errors, missing assets, audio, input, and performance.'
+part: 10
+chapter: 1
+examples:
+  - debug-layer/performance-overlay
+  - input/keyboard
+  - input/gamepad
+  - audio-basics/play-sound
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 10.1 Troubleshooting
+
+This chapter covers the issues that come up most often when starting with ExoJS or upgrading from an older snippet. Work through the relevant section, check the linked guides for more detail, and open the playground examples to see the correct pattern in action.
+
+## Canvas shows nothing
+
+A blank or black canvas usually means one of the following:
+
+**The application is not started.** Call `app.start(scene)` after creating the application.
+
+**The scene is not set.** `app.start()` expects a `Scene` instance. Without one, nothing draws.
+
+**The canvas is not visible.** Check that `app.canvas` is mounted in the DOM and has non-zero dimensions. If the canvas element is in a `display: none` container or has zero width/height via CSS, nothing renders.
+
+**`context.render()` is missing from `draw`.** Every frame you need to both clear the backend and explicitly render your scene graph root:
+
+```js
+draw(context) {
+    context.backend.clear();
+    context.render(this.root);
+}
+```
+
+Without `context.render(this.root)`, the frame is cleared but no nodes are drawn. Without `context.backend.clear()`, the previous frame is never painted over.
+
+**Objects are not added to the root.** Sprites and containers only appear if they are part of the rendered tree. Add them to `this.root` or to a container that is itself in the root.
+
+**Objects are outside the visible area.** The default view maps world coordinates to the canvas. A sprite at `(10000, 10000)` on a 800×600 canvas is off-screen. Check position, scale, and anchor values.
+
+See [Your first scene](/ExoJS/en/guide/introduction/your-first-scene/) for a minimal working example.
+
+## Old API errors from older snippets
+
+Pre-0.9 ExoJS snippets commonly use an older draw signature. If you copied code from an older tutorial or GitHub issue, it may look like this:
+
+```js no-check
+// old (0.8.x and earlier) — do not use
+draw(backend) {
+    backend.clear();
+    sprite.render(backend);
+}
+```
+
+The current API passes a render context, not a bare backend, and renders nodes through the context rather than calling `render` on the node itself:
+
+```js
+draw(context) {
+    context.backend.clear();
+    context.render(sprite);
+}
+```
+
+The `Application` constructor options also changed shape in 0.9.0. See the [v0.8.x to v0.9.0 migration guide](/ExoJS/en/guide/migration/v0-8-x-to-v0-9-0/) for a complete list of renamed options and removed aliases.
+
+## WebGPU unavailable
+
+WebGPU is not available in all environments. Availability depends on the browser, OS, GPU driver, and whether the hardware accelerated path is enabled.
+
+Current availability (as of 2025):
+- **Chrome / Edge 113+ on Windows and macOS**: Generally available on hardware with recent GPU drivers.
+- **Firefox**: Behind a flag as of 2025; not shipped by default.
+- **Safari**: Available on macOS 14+ and iOS 17+, with some API gaps.
+- **Linux**: Requires Vulkan support; coverage varies widely.
+
+If WebGPU is unavailable, ExoJS falls back to WebGL2. Most visual features work identically across both backends; particle GPU compute requires WebGPU. See [Backend comparison](/ExoJS/en/guide/advanced/backend-comparison/) for a full feature-parity table.
+
+To check which backend is active at runtime, enable the performance overlay from `@codexo/exojs/debug` — it displays the active backend in the overlay header. You can also inspect `app.backend.backendType` directly: it returns `RenderBackendType.WebGpu` or `RenderBackendType.WebGl2`.
+
+If you need WebGPU specifically:
+1. Test in a recent Chrome or Edge release.
+2. Make sure hardware acceleration is enabled in browser settings.
+3. Update your GPU driver.
+4. Open `chrome://gpu` (Chrome) or `about:support` (Firefox) to see the active graphics backend.
+
+## Assets not loading
+
+Asset load failures typically produce network errors in the browser's developer console. Common causes:
+
+**Wrong relative path.** Paths are resolved relative to the page URL, not the source file. If your page is at `http://localhost:5173/` and you load `'assets/image.png'`, the browser requests `http://localhost:5173/assets/image.png`.
+
+**Vite `public/` path confusion.** Files in `public/` are served from the site root. A file at `public/assets/bunny.png` is available at `/assets/bunny.png`, not `public/assets/bunny.png`. Reference it without the `public/` prefix:
+
+```js no-check
+await loader.load(Texture, { bunny: 'assets/bunny.png' }); // correct
+await loader.load(Texture, { bunny: 'public/assets/bunny.png' }); // wrong
+```
+
+**Files not included in the build.** Only files in `public/` or explicitly imported by source code are copied to `dist/`. Assets referenced by path string (not `import`) must live in `public/`.
+
+**Case-sensitivity.** Linux servers and most hosting providers are case-sensitive. `bunny.PNG` and `bunny.png` are different files. Match the exact casing on disk.
+
+**`file://` execution.** Never open `index.html` directly in the browser with `file://`. Use `npm run dev` or `npm run preview` to serve through a local HTTP server. Many browser security restrictions block resource loads from `file://` origins.
+
+**CORS on a different origin.** If assets are on a different domain, the server must send appropriate `Access-Control-Allow-Origin` headers.
+
+See [Loading and resources](/ExoJS/en/guide/core-concepts/loading-and-resources/) for the full loader API.
+
+## Audio does not start
+
+Modern browsers require a user gesture before audio can play. Any attempt to start an `AudioContext` before the first user interaction is silently blocked.
+
+The symptom: audio code runs without errors, but nothing is audible. Often the browser console shows a warning about `AudioContext` being suspended.
+
+The fix: start audio in response to a click, tap, or keypress:
+
+```js no-check
+button.addEventListener('click', () => {
+    app.audio.resume(); // or play your first sound here
+    mySound.play();
+});
+```
+
+If you're using the `audio-reactive` template from `create-exo-app`, it already handles this with a start button. The [Audio basics](/ExoJS/en/guide/audio/audio-basics/) guide has a full walkthrough.
+
+<ExamplePreview chapter="audio-basics" slug="play-sound" />
+
+## Input does not respond
+
+**Canvas focus.** ExoJS keyboard and gamepad input requires the canvas to have focus. Click the canvas once to give it focus. If your page has other focusable elements that steal focus, keyboard input stops until the canvas is clicked again.
+
+**Key name mismatch.** ExoJS uses the `Keyboard` enum. `Keyboard.Space`, `Keyboard.A`, `Keyboard.ArrowLeft` — the names match the Web `KeyboardEvent.code` values but mapped to numeric channels. Check the [Keyboard guide](/ExoJS/en/guide/input/keyboard/) for the full enum.
+
+**Input not polled in `update`.** Keyboard held-key state (`isActive`) and gamepad axis values are sampled per-frame inside `update`. Reading them in `init` or outside the frame loop gives stale results.
+
+**Gamepad requires a button press to activate.** Browsers only expose a connected gamepad after the user presses at least one button. Plug in and press any button once; then the gamepad appears in the `Gamepad` API and ExoJS can read it.
+
+<ExamplePreview chapter="input" slug="keyboard" />
+
+<ExamplePreview chapter="input" slug="gamepad" />
+
+## Text or fonts look wrong
+
+**Font not loaded.** Fonts loaded via `@font-face` or a web font URL must finish loading before ExoJS renders text using them. Load the font explicitly (e.g., via the FontFace API or CSS) and wait for the promise before starting the scene, or load it through ExoJS's asset loader if supported.
+
+**Wrong font path.** The same path rules as assets apply. Check case, public/ prefix rules, and whether the font file is in `public/`.
+
+**Wrong style property name.** The current `TextStyle` API uses:
+- `fillColor` — not `fill`, not `color`
+
+Using an old property name silently produces no error but the style is ignored. Check the [Text guide](/ExoJS/en/guide/drawing/text/) for the current `TextStyle` keys.
+
+**DPI / DevicePixelRatio scaling.** At high DPI (e.g., Retina displays), text may look blurry if the canvas is not scaled correctly. ExoJS handles DPR scaling automatically when you pass `dpr: 'auto'` to the canvas options. If you're managing canvas dimensions manually, account for `window.devicePixelRatio`.
+
+## Performance problems
+
+If your scene runs slowly, measure first before guessing. The [`DebugOverlay`](/ExoJS/en/api/debug-overlay/) from `@codexo/exojs/debug` shows FPS, frame time, and draw-call count in real time:
+
+```js
+import { DebugOverlay } from '@codexo/exojs/debug';
+
+const debug = new DebugOverlay(app);
+debug.layers.performance.visible = true;
+```
+
+Common causes of poor performance:
+
+**Too many drawables.** Each sprite, container, and text node that is visible adds render work. For large counts, use a sprite atlas (single texture, many frames) so the renderer can batch them into fewer draw calls.
+
+**Expensive filters.** Each filter on a node adds a GPU render pass. A container with three filters costs three extra passes every frame. Remove filters you aren't using, or set `cacheAsBitmap = true` on filtered content that doesn't change.
+
+**Large or unnecessary render targets.** `RenderTexture` allocates GPU memory proportional to its dimensions. Keep sizes matched to their actual use.
+
+**Per-frame allocations.** Creating objects inside `update` or `draw` (e.g., `new Color(...)`, `new Vec2(...)`) each frame causes garbage collector pressure. Allocate once in `init` and mutate in-place.
+
+See [Performance](/ExoJS/en/guide/advanced/performance/) and [Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/) for detailed analysis strategies.
+
+<ExamplePreview chapter="debug-layer" slug="performance-overlay" />
+
+## Where to go next
+
+The next chapter, [Deployment](/ExoJS/en/guide/reference/deployment/), covers building and hosting an ExoJS app for production.

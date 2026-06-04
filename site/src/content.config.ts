@@ -6,7 +6,7 @@ const guide = defineCollection({
     schema: z.object({
         title: z.string(),
         description: z.string(),
-        part: z.number().int().min(1).max(9),
+        part: z.number().int().min(1).max(10),
         chapter: z.number().int().positive(),
         examples: z.array(z.string()).default([]),
     }),

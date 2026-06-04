@@ -739,6 +739,43 @@ const PARTS: ReadonlyArray<GuidePartMeta> = [
                 examples: []
             }
         ]
+    },
+    {
+        part: 10,
+        slug: "reference",
+        title: "10 Reference",
+        description: "Practical guides for diagnosing problems and shipping ExoJS apps to production.",
+        chapters: [
+            {
+                part: 10,
+                chapter: 1,
+                partSlug: "reference",
+                partTitle: "10 Reference",
+                partDescription: "Practical guides for diagnosing problems and shipping ExoJS apps to production.",
+                slug: "troubleshooting",
+                title: "10.1 Troubleshooting",
+                description: "Diagnose and fix the most common ExoJS problems: blank canvas, API errors, missing assets, audio, input, and performance.",
+                path: "reference/troubleshooting",
+                examples: [
+                    "debug-layer/performance-overlay",
+                    "input/keyboard",
+                    "input/gamepad",
+                    "audio-basics/play-sound"
+                ]
+            },
+            {
+                part: 10,
+                chapter: 2,
+                partSlug: "reference",
+                partTitle: "10 Reference",
+                partDescription: "Practical guides for diagnosing problems and shipping ExoJS apps to production.",
+                slug: "deployment",
+                title: "10.2 Deployment",
+                description: "Build and host an ExoJS app: local production build, Vite base path, static hosting, assets, CDN bundles, and browser support.",
+                path: "reference/deployment",
+                examples: []
+            }
+        ]
     }
 ];
 
