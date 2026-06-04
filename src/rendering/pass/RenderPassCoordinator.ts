@@ -8,8 +8,8 @@ import type { RenderPassDescriptor, RenderPassLoad } from './RenderPassDescripto
 
 /**
  * Internal, backend-owned owner of render-pass lifecycle: target / view / clear
- * orchestration, the scissor and stencil-clip stacks, and — on WebGPU, from
- * phase 12D — the active `GPURenderPassEncoder`.
+ * orchestration, the scissor and stencil-clip stacks, and — on WebGPU — the
+ * active `GPURenderPassEncoder`.
  *
  * There is no public RenderPass API. This abstraction exists so the WebGL2 and
  * WebGPU backends can share the orchestration shape that geometric stencil

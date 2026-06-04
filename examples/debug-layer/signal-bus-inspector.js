@@ -33,7 +33,7 @@ class SignalBusInspectorScene extends Scene {
         this._signals.damage.add(this._listenerB);
         this._signals.score.add(this._listenerA);
     }
-    update(_delta) {
+    update() {
         if (this._tick.expired) {
             if (Math.random() > 0.5)
                 this._signals.spawn.add(this._listenerB);

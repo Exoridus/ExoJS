@@ -26,8 +26,8 @@ export const enum RenderEntryKind {
  *   group / texture-slot state.
  *
  * When the drawable carries a {@link Material}, both keys are taken
- * directly from `material.pipelineKey` and `material.bindKey` (Phase 4+
- * Material system). When the drawable uses its default path (no material),
+ * directly from `material.pipelineKey` and `material.bindKey` (the Material
+ * system). When the drawable uses its default path (no material),
  * the keys are derived conservatively from renderer identity, blend mode,
  * and texture identity so grouping never accidentally merges draws with
  * incompatible state.

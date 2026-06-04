@@ -7,7 +7,7 @@ import type { View } from '../View';
  * Whether a render pass carries a stencil attachment.
  *
  * WebGL2 stencil is ambient per-target GL state, so this flag is largely
- * informational there; the WebGPU backend (from phase 12D onwards) uses it to
+ * informational there; the WebGPU backend uses it to
  * decide whether a pass descriptor needs a `depthStencilAttachment`.
  * @internal
  */
@@ -25,7 +25,7 @@ export type RenderPassLoad = 'clear' | 'load';
  * it carries a stencil attachment.
  *
  * WebGL2 maps this onto ambient framebuffer / viewport / scissor / stencil
- * state; WebGPU (phase 12D onwards) maps it onto a `GPURenderPassEncoder`.
+ * state; WebGPU maps it onto a `GPURenderPassEncoder`.
  * @internal
  */
 export interface RenderPassDescriptor {
