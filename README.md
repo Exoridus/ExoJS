@@ -25,6 +25,30 @@ ExoJS is **pre-1.0**. The public API is still under active design — scene grap
 - Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, visual masks, cache-as-bitmap)
 - Render stats (`submittedNodes`, `culledNodes`, `drawCalls`, `batches`, `renderPasses`, ...)
 
+## Getting Started
+
+Scaffold a new project with one command:
+
+```bash
+npm create exo-app@latest my-game
+```
+
+Or pick a template explicitly:
+
+```bash
+npm create exo-app@latest my-game -- --template minimal
+npm create exo-app@latest my-game -- --template game-starter
+npm create exo-app@latest my-game -- --template audio-reactive
+```
+
+Then:
+
+```bash
+cd my-game
+npm install
+npm run dev
+```
+
 ## Installation
 
 ```bash
