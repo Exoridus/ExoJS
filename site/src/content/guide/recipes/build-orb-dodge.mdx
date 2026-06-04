@@ -1,0 +1,306 @@
+---
+title: '8.9 Build Orb Dodge'
+description: 'Build a complete small game from scratch: player movement, spawning orbs, collision, scoring, a HUD, and a game-over screen — all without external assets.'
+part: 8
+chapter: 9
+examples:
+  - showcase/orb-dodge
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 8.9 Build Orb Dodge
+
+This chapter builds a small, complete game end-to-end. You will see how several ExoJS concepts fit together in one project: a scene that runs every frame, keyboard input, `Graphics` primitives for all visuals, a HUD with live score and time, and a separate game-over scene that transitions back into the game on restart.
+
+No external assets are needed. Every shape is drawn in code.
+
+The finished result is playable in the playground at the bottom of this page.
+
+## What you need
+
+Start from a `create-exo-app` project using the `game-starter` or `minimal` template:
+
+```bash
+npx create-exo-app my-orb-dodge
+```
+
+If you already have a project, the only package you need is `@codexo/exojs`.
+
+## Application setup
+
+Every ExoJS project starts with an `Application`. For a fixed-size game canvas:
+
+```ts
+import { Application, Color } from '@codexo/exojs';
+
+const app = new Application({
+    canvas: {
+        width: 800,
+        height: 600,
+    },
+    clearColor: new Color(10, 14, 26),
+});
+
+document.body.append(app.canvas);
+```
+
+`clearColor` sets the background that `context.backend.clear()` paints at the start of each frame. A dark near-black makes the colored orbs stand out clearly.
+
+## Scene structure
+
+The game uses two scenes: `PlayScene` drives the active game loop, `GameOverScene` shows the result and offers a restart.
+
+Define a constant set for canvas dimensions and game parameters at the top so both scenes can reference them:
+
+```ts no-check
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 600;
+const PLAYER_RADIUS = 18;
+const PLAYER_SPEED = 260;
+const ORB_RADIUS = 14;
+const SPAWN_INTERVAL = 1.2;
+```
+
+A scene has four lifecycle hooks — override the ones you need:
+
+- `init()` — set up state; called once per activation
+- `update(delta)` — per-frame logic; `delta.seconds` carries elapsed time
+- `draw(context)` — per-frame rendering; start with `context.backend.clear()`
+
+## Player and keyboard movement
+
+The player is a filled circle drawn with `Graphics`. Keyboard movement uses `this.inputs.onActive` (fires every frame while the key is held) and `this.inputs.onStop` (fires when the key is released) to track a directional velocity:
+
+```js
+init() {
+    this._world = new Container();
+
+    this._player = new Graphics();
+    this._player.fillColor = new Color(80, 160, 255);
+    this._player.drawCircle(0, 0, PLAYER_RADIUS);
+    this._player.setPosition(this._px, this._py);
+    this._world.addChild(this._player);
+
+    this.inputs.onActive(Keyboard.W, () => { this._dy = -1; });
+    this.inputs.onStop(Keyboard.W,  () => { if (this._dy < 0) this._dy = 0; });
+    this.inputs.onActive(Keyboard.Up, () => { this._dy = -1; });
+    this.inputs.onStop(Keyboard.Up,  () => { if (this._dy < 0) this._dy = 0; });
+    // ... A/D and Left/Right similarly
+}
+```
+
+In `update`, normalize the direction vector so diagonal movement is not faster than cardinal movement, then clamp the position inside the canvas:
+
+```js
+update(delta) {
+    const mag = Math.hypot(this._dx, this._dy) || 1;
+    if (this._dx !== 0 || this._dy !== 0) {
+        this._px += (this._dx / mag) * PLAYER_SPEED * delta.seconds;
+        this._py += (this._dy / mag) * PLAYER_SPEED * delta.seconds;
+    }
+    this._px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this._px));
+    this._py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this._py));
+    this._player.setPosition(this._px, this._py);
+}
+```
+
+`this.inputs` is scene-bound: all bindings registered through it are automatically released when the scene is destroyed. No manual cleanup is needed.
+
+## Spawning orbs
+
+Orbs are created dynamically during `update` on a timer. Each orb spawns just outside one of the four edges and moves toward the center area with a small random offset:
+
+```js
+_spawnOrb() {
+    const danger = Math.random() < 0.4;
+    // pick a random edge (0=top, 1=right, 2=bottom, 3=left)
+    const side = Math.floor(Math.random() * 4);
+    let ox, oy;
+    switch (side) {
+        case 0: ox = Math.random() * CANVAS_WIDTH; oy = -ORB_RADIUS;              break;
+        case 1: ox = CANVAS_WIDTH + ORB_RADIUS;    oy = Math.random() * CANVAS_HEIGHT; break;
+        case 2: ox = Math.random() * CANVAS_WIDTH; oy = CANVAS_HEIGHT + ORB_RADIUS; break;
+        default: ox = -ORB_RADIUS;                 oy = Math.random() * CANVAS_HEIGHT; break;
+    }
+    // aim at a random point near center
+    const tx = CANVAS_WIDTH / 2  + (Math.random() - 0.5) * 300;
+    const ty = CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 300;
+    const dist = Math.hypot(tx - ox, ty - oy) || 1;
+    const speed = 80 + Math.random() * 120;
+
+    const gfx = new Graphics();
+    gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
+    gfx.drawCircle(0, 0, ORB_RADIUS);
+    gfx.setPosition(ox, oy);
+    this._world.addChild(gfx);
+    this._orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
+}
+```
+
+Orbs are stored in an array of `{ gfx, vx, vy, danger }` objects. Danger orbs are red; collectible orbs are green.
+
+## Collision and scoring
+
+Each frame, move every orb and check its distance to the player. Distance collision is reliable for circles because it captures overlap without axis-aligned assumptions:
+
+```js
+const dist = Math.hypot(ox - this._px, oy - this._py);
+if (dist < PLAYER_RADIUS + ORB_RADIUS) {
+    this._world.removeChild(orb.gfx);
+    orb.gfx.destroy();
+    if (orb.danger) {
+        // clean up remaining orbs, switch to game over
+        for (const o of survived) {
+            this._world.removeChild(o.gfx);
+            o.gfx.destroy();
+        }
+        gameEnded = true;
+        continue;
+    }
+    this._score++;
+    this._scoreText.text = `Score: ${this._score}`;
+    continue;
+}
+```
+
+Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is true, call `setScene` to switch to the game-over screen. Use a flag instead of breaking early so all remaining orbs are cleaned up in the same loop pass.
+
+## HUD text
+
+Score and elapsed time sit on top of the world as plain `Text` nodes — rendered after `context.render(this._world)` so they always appear in front:
+
+```js
+draw(context) {
+    context.backend.clear();
+    context.render(this._world);
+    context.render(this._scoreText);
+    context.render(this._timeText);
+}
+```
+
+`Text` content is updated by assigning to `.text`:
+
+```js
+this._scoreText.text = `Score: ${this._score}`;
+this._timeText.text  = `${this._elapsed.toFixed(1)} s`;
+```
+
+## Game-over scene and restart
+
+`GameOverScene` receives the final score and time via a `setResult` method called just before `setScene`. This decouples data transfer from scene initialization — `init` always reads from `_finalScore` / `_finalTime`, whatever they were set to:
+
+```ts
+import { Application, Color, Keyboard, Scene, Text } from '@codexo/exojs';
+
+const app = new Application({
+    canvas: { width: 800, height: 600 },
+    clearColor: new Color(10, 14, 26),
+});
+
+document.body.append(app.canvas);
+
+class GameOverScene extends Scene {
+    private _title!: Text;
+    private _stats!: Text;
+    private _hint!: Text;
+    private _finalScore = 0;
+    private _finalTime = 0;
+
+    setResult(score: number, time: number): void {
+        this._finalScore = score;
+        this._finalTime = time;
+    }
+
+    override init(): void {
+        this._title = new Text('GAME OVER', {
+            align: 'center',
+            fillColor: new Color(255, 80, 80),
+            fontSize: 52,
+            fontWeight: 'bold',
+        });
+        this._title.setAnchor(0.5);
+        this._title.setPosition(400, 230);
+
+        this._stats = new Text(
+            `Score: ${this._finalScore}   Time: ${this._finalTime.toFixed(1)} s`,
+            { align: 'center', fillColor: Color.white, fontSize: 26 },
+        );
+        this._stats.setAnchor(0.5);
+        this._stats.setPosition(400, 300);
+
+        this._hint = new Text('Press Space or R to play again', {
+            align: 'center',
+            fillColor: new Color(160, 160, 160),
+            fontSize: 18,
+        });
+        this._hint.setAnchor(0.5);
+        this._hint.setPosition(400, 370);
+
+        const restart = (): void => {
+            void this.app.scene.setScene(play);
+        };
+        this.inputs.onTrigger(Keyboard.Space, restart);
+        this.inputs.onTrigger(Keyboard.R, restart);
+    }
+
+    override draw(context): void {
+        context.backend.clear();
+        context.render(this._title);
+        context.render(this._stats);
+        context.render(this._hint);
+    }
+}
+
+// Forward declarations so both scenes can reference each other.
+declare const play: Scene;
+
+const gameOver = new GameOverScene();
+```
+
+When the player restarts, `setScene(play)` switches back to `PlayScene`. `SceneManager` calls `init()` on `play` again — the scene reinitializes from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
+
+## How scenes reference each other
+
+Both scenes reference the same two instances at module level:
+
+```js
+const play     = new PlayScene();
+const gameOver = new GameOverScene();
+
+app.start(play);
+```
+
+`PlayScene` calls `gameOver.setResult(...)` then `void this.app.scene.setScene(gameOver)`. `GameOverScene` calls `void this.app.scene.setScene(play)`. The forward reference is safe because both scenes exist before `app.start` is called.
+
+## Cleanup in destroy
+
+When `SceneManager` switches scenes it calls `destroy()` on the outgoing scene. For `PlayScene`, override it to release orb graphics that were created dynamically:
+
+```js
+override destroy() {
+    for (const orb of this._orbs) {
+        orb.gfx.destroy();
+    }
+    this._world?.destroy();
+    super.destroy();
+}
+```
+
+Static nodes created in `init` are recreated on every activation, so they are always fresh when `init` is called again.
+
+## Complete example
+
+The full, playable game is in the playground. Open it to read the complete source, run it, or fork it as a starting point:
+
+<ExamplePreview chapter="showcase" slug="orb-dodge" />
+
+## Where to go next
+
+From here you can extend Orb Dodge in several directions:
+
+- **Keyboard guide** — [4.1 Keyboard](/ExoJS/en/guide/input/keyboard/) — rebindable actions, action mapping
+- **HUD overlay** — [8.1 HUD overlay](/ExoJS/en/guide/recipes/hud-overlay/) — push a dedicated overlay scene on top instead of rendering HUD inside the game scene
+- **Game feel** — [8.6 Game feel](/ExoJS/en/guide/recipes/game-feel/) — add a screen shake or color flash when a danger orb is collected
+- **Deployment** — [10.2 Deployment](/ExoJS/en/guide/reference/deployment/) — build and host the finished game
+- **Troubleshooting** — [10.1 Troubleshooting](/ExoJS/en/guide/reference/troubleshooting/) — blank canvas, input not firing, and other common issues

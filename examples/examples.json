@@ -1441,6 +1441,25 @@
             "capabilities": [
                 "audio"
             ]
+        },
+        {
+            "slug": "orb-dodge",
+            "path": "showcase/orb-dodge.js",
+            "language": "typescript",
+            "title": "Orb Dodge",
+            "description": "A complete dodge-and-collect loop: move with WASD or arrow keys, collect green orbs for points, avoid red orbs, and restart from the game-over screen.",
+            "backend": "core",
+            "featured": true,
+            "level": "intermediate",
+            "tags": [
+                "game",
+                "input",
+                "collision",
+                "hud"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         }
     ],
     "spatial-audio": [
@@ -1737,4 +1756,3 @@
         }
     ]
 }
-
