@@ -14,6 +14,7 @@
   "scripts": {
     "build": "tsc && node --input-type=module --eval \"import{readFileSync,writeFileSync}from'node:fs';const f='dist/index.js';writeFileSync(f,'#!/usr/bin/env node\\n'+readFileSync(f,'utf-8'));\"",
     "dev": "tsc --watch",
+    "prepack": "pnpm build",
     "start": "tsx src/index.ts"
   },
   "publishConfig": {
