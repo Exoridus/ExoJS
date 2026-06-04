@@ -31,11 +31,9 @@ update(delta) {
     this._view.setCenter(this.player.position.x, this.player.position.y);
 }
 
-draw(backend) {
-    backend.clear();
-    backend.setView(this._view);
-    this.worldLayer.render(backend);
-    backend.setView(null);
+draw(context) {
+    context.backend.clear();
+    context.render(this.worldLayer, { view: this._view });
 }
 ```
 
@@ -68,13 +66,13 @@ init(loader) {
     });
 }
 
-draw(backend) {
-    backend.clear();
+draw(context) {
+    context.backend.clear();
     for (const layer of this._layers) {
         const offsetX = (400 - this._pointer.x) * layer.speed;
         const offsetY = (300 - this._pointer.y) * layer.speed;
         layer.graphics.setPosition(offsetX, offsetY);
-        layer.graphics.render(backend);
+        context.render(layer.graphics);
     }
 }
 ```
@@ -86,28 +84,25 @@ The speed multiplier per layer creates the illusion of depth. A background layer
 For side-scrolling games, offset background layers relative to the camera position rather than the pointer:
 
 ```js
-draw(backend) {
-    backend.clear();
-    backend.setView(this._view);
+draw(context) {
+    context.backend.clear();
 
     // Background — moves at 30% of camera speed
     this._skyLayer.setPosition(
         this._view.center.x * 0.3,
         0
     );
-    this._skyLayer.render(backend);
+    context.render(this._skyLayer, { view: this._view });
 
     // Midground — moves at 60%
     this._hillsLayer.setPosition(
         this._view.center.x * 0.6,
         0
     );
-    this._hillsLayer.render(backend);
+    context.render(this._hillsLayer, { view: this._view });
 
     // Foreground — moves 1:1 with camera (no parallax)
-    this._worldLayer.render(backend);
-
-    backend.setView(null);
+    context.render(this._worldLayer, { view: this._view });
 }
 ```
 

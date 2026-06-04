@@ -25,7 +25,7 @@ The first time a scene starts:
 Then, every frame while the scene is active:
 
 3. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
-4. `draw(backend)` — render the current state.
+4. `draw(context)` — render the current state.
 
 When the scene is removed from the stack:
 
@@ -85,28 +85,28 @@ Multiplying by `delta.seconds` keeps motion frame-rate independent. The same cod
 This is the hook with the most surprising default: **`draw` does nothing if you don't override it.** The engine never auto-traverses the scene graph for you.
 
 ```js
-draw(backend) {
-    backend.clear();
-    this.root.render(backend);
+draw(context) {
+    context.backend.clear();
+    context.render(this.root);
 }
 ```
 
-The `this.root` container is the scene's structural anchor — every node you add via `this.addChild(...)` is reachable from there. Calling `this.root.render(backend)` walks the tree and draws every visible node in order.
+The `this.root` container is the scene's structural anchor — every node you add via `this.addChild(...)` is reachable from there. Calling `context.render(this.root)` walks the tree and draws every visible node in order.
 
 The trade-off is that you can render selectively when you need to:
 
 ```js
-draw(backend) {
-    backend.clear();
-    this.world.render(backend);
+draw(context) {
+    context.backend.clear();
+    context.render(this.world);
 
     if (this.showHud) {
-        this.hud.render(backend);
+        context.render(this.hud);
     }
 }
 ```
 
-For most scenes, one `this.root.render(backend)` after `clear` is the right pattern. Reach for selective rendering when you have a reason — debug overlays you toggle, layers that sometimes skip a frame, render-to-texture targets.
+For most scenes, one `context.render(this.root)` after `clear` is the right pattern. Reach for selective rendering when you have a reason — debug overlays you toggle, layers that sometimes skip a frame, render-to-texture targets.
 
 ## Input
 

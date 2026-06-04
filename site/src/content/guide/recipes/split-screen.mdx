@@ -53,24 +53,21 @@ update(delta) {
     this._rightView.setCenter(this._rightPlayer.position.x, this._rightPlayer.position.y);
 }
 
-draw(backend) {
-    backend.clear();
+draw(context) {
+    context.backend.clear();
 
     // Render left view
-    backend.setView(this._leftView);
-    this._leftPlayer.render(backend);
-    this._rightPlayer.render(backend);
+    context.render(this._leftPlayer, { view: this._leftView });
+    context.render(this._rightPlayer, { view: this._leftView });
     // ... world objects ...
 
     // Render right view
-    backend.setView(this._rightView);
-    this._leftPlayer.render(backend);
-    this._rightPlayer.render(backend);
+    context.render(this._leftPlayer, { view: this._rightView });
+    context.render(this._rightPlayer, { view: this._rightView });
     // ... same world objects ...
 
-    // Restore default view for the divider (screen space)
-    backend.setView(null);
-    this._divider.render(backend);
+    // Divider renders in default camera space
+    context.render(this._divider);
 }
 ```
 
@@ -78,7 +75,7 @@ The viewport values are normalised 0..1 fractions of the render target size. `vi
 
 ## Shared scene, multiple views
 
-The scene renders twice — once per view. Sprite positions are in world space; changing the view changes which portion of world space is visible on screen. The same `this._leftPlayer.render(backend)` call produces different on-screen positions in each view because the view transform differs.
+The scene renders twice — once per view. Sprite positions are in world space; changing the view changes which portion of world space is visible on screen. The same `context.render(this._leftPlayer, { view })` call produces different on-screen positions in each view because the view transform differs.
 
 This means you can have objects visible in both views (a shared flag, a power-up both players compete for) or objects only rendered in one view (a minimap as a child of one player's container). The choice is per-object and per-draw call.
 
@@ -100,7 +97,7 @@ Four split-screen views with four gamepad slots is the same pattern extended —
 
 - Each additional view doubles the per-frame render cost for the shared scene. Two views = two full scene renders. Four views = four. The viewport scissor prevents pixel work outside each region, but the draw calls and vertex processing still happen.
 - Scissor rects are set automatically from the view's viewport. Objects partially crossing the divider line are clipped correctly — the left view clips its right edge, the right view clips its left edge.
-- The divider is drawn after `backend.setView(null)` to render in screen space, not world space.
+- The divider is drawn without a view override to render in the default camera space, not any player's world view.
 
 ## Examples
 

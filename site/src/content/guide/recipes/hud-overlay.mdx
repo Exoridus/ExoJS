@@ -27,8 +27,8 @@ class GameScene extends Scene {
         this._angle += delta.seconds * 90;
     }
 
-    draw(backend) {
-        backend.clear(new Color(20, 32, 58));
+    draw(context) {
+        context.backend.clear(new Color(20, 32, 58));
         // ... draw game world ...
     }
 }
@@ -40,13 +40,13 @@ class HudScene extends Scene {
         this._text.setPosition(18, 14);
     }
 
-    draw(backend) {
+    draw(context) {
         this._bar.clear();
         this._bar.fillColor = new Color(0, 0, 0, 0.45);
         this._bar.drawRectangle(0, 0, 800, 56);
         this._bar.drawRectangle(18, 40, 220, 8); // health bar
-        this._bar.render(backend);
-        this._text.render(backend);
+        context.render(this._bar);
+        context.render(this._text);
     }
 }
 ```
@@ -72,13 +72,13 @@ The alternative — rendering HUD elements after the world in a single scene's `
 A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD scene:
 
 ```js
-// In GameScene.init or draw:
+// In GameScene.draw:
 const miniRt = new RenderTexture(260, 260);
-backend.execute(new RenderTargetPass(
+context.backend.execute(new RenderTargetPass(
     () => {
-        backend.clear();
+        context.backend.clear();
         // Render world from a wide view into miniRt
-        this.drawWorld(backend);
+        this.drawWorld(context.backend);
     },
     { target: miniRt, view: miniRt.view }
 ));

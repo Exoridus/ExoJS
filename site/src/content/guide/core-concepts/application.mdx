@@ -47,7 +47,7 @@ Options are organised into groups:
 - `loader` — base path, fetch options, caching. See [`LoaderOptions`](/ExoJS/en/api/loader-options/).
 - `rendering` — WebGL2 debug, context attributes, batch sizes. See [`RenderingApplicationOptions`](/ExoJS/en/api/rendering-application-options/).
 - `input` — gamepad definitions, slot strategy, pointer threshold. See [`InputApplicationOptions`](/ExoJS/en/api/input-application-options/).
-- `clearColor` — what `backend.clear()` paints each frame.
+- `clearColor` — what `context.backend.clear()` paints each frame.
 - `backend` — `{ type: 'auto' }` (default), or pin to `'webgl2'` / `'webgpu'`.
 
 ## Choosing the canvas
@@ -115,8 +115,8 @@ The frame loop only runs once you give the application a scene to run:
 import { Application, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-    draw(backend) {
-        backend.clear();
+    draw(context) {
+        context.backend.clear();
     }
 }
 

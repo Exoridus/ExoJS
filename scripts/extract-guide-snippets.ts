@@ -88,12 +88,18 @@ function isStandaloneSnippet(body: string): boolean {
 
   // Uses a common lifecycle / context variable that isn't declared within the
   // snippet itself (e.g. `loader.get(...)` without a `const loader = ...`).
+  // Skip this check for full-module snippets that contain a class body:
+  // method parameters (e.g. `init(loader)`, `update(delta)`) are scoped
+  // inside methods and are not external context variables.
   // Important: do NOT use CONTEXT_VAR_RE.test() + matchAll() on the same
   // regex instance — the /g flag's lastIndex state causes missed matches.
   // body.matchAll() always starts from position 0 on a fresh copy.
-  const declared = topLevelDeclaredNames(body);
-  for (const m of body.matchAll(CONTEXT_VAR_RE)) {
-    if (!declared.has(m[1])) return false;
+  const hasClassBody = /\bclass\s+\w/.test(body);
+  if (!hasClassBody) {
+    const declared = topLevelDeclaredNames(body);
+    for (const m of body.matchAll(CONTEXT_VAR_RE)) {
+      if (!declared.has(m[1])) return false;
+    }
   }
 
   return true;

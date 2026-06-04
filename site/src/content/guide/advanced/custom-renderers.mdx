@@ -17,7 +17,7 @@ The distinction: a custom renderer controls *when* and *how* things are drawn. A
 
 ## CallbackRenderPass
 
-[`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) wraps an arbitrary draw callback and lets you execute it via `backend.execute()`. The callback receives the active `RenderBackend`, same as your scene's `draw` method:
+[`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) wraps an arbitrary draw callback and lets you execute it via `context.backend.execute()`. The callback receives the active `RenderBackend` directly — your scene's `draw` method receives a `RenderingContext`, but the pass callback is a lower-level escape hatch that works directly with the backend:
 
 ```js
 import { CallbackRenderPass } from '@codexo/exojs';
@@ -39,11 +39,11 @@ update(delta) {
     this._angle += delta.seconds * 2.2;
 }
 
-draw(backend) {
-    backend.clear();
-    this._backSprite.render(backend);    // draws behind the pass
-    backend.execute(this._pass);          // draws between sprites
-    this._frontSprite.render(backend);   // draws on top
+draw(context) {
+    context.backend.clear();
+    context.render(this._backSprite);           // draws behind the pass
+    context.backend.execute(this._pass);        // draws between sprites
+    context.render(this._frontSprite);          // draws on top
 }
 ```
 
@@ -89,7 +89,7 @@ class CustomTriangleRenderer {
 }
 ```
 
-The scene's `draw` method would call `this._triangleRenderer.draw()` instead of `backend.clear()` / `sprite.render()`. The custom renderer owns the entire render pass and does not interact with ExoJS drawables.
+The scene's `draw` method would call `this._triangleRenderer.draw()` instead of `context.backend.clear()` / `context.render(sprite)`. The custom renderer owns the entire render pass and does not interact with ExoJS drawables.
 
 Direct backend access is deliberately unabstracted — you are writing raw WebGPU code. On WebGL2 backends, a different renderer class would use `backend.context` (`WebGL2RenderingContext`) and branch by `backend.backendType`. For most projects, `MeshShader` + `CallbackRenderPass` + custom shader filters (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) cover custom rendering needs without reaching for raw GPU APIs.
 

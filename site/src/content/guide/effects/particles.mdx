@@ -160,16 +160,16 @@ system.addDeathModule(new SpawnOnDeath(
 
 ## Per-frame loop
 
-`ParticleSystem` is a `Drawable` — it renders itself when you call `system.render(backend)` in `draw`. Call `system.update(delta)` in your scene's `update`:
+`ParticleSystem` is a `Drawable` — it renders itself when you call `context.render(system)` in `draw`. Call `system.update(delta)` in your scene's `update`:
 
 ```js
 update(delta) {
     this.system.update(delta);
 }
 
-draw(backend) {
-    backend.clear();
-    this.system.render(backend);
+draw(context) {
+    context.backend.clear();
+    context.render(this.system);
 }
 ```
 

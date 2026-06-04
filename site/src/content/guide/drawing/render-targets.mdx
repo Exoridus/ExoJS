@@ -12,7 +12,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 3.5 Render targets
 
-The canvas is the default render target — every `backend.clear()` and `sprite.render(backend)` goes there. A [`RenderTexture`](/ExoJS/en/api/render-texture/) is a second target: an off-screen surface you can draw into and then sample as a texture on a sprite, apply filters to, or composite back into the main scene.
+The canvas is the default render target — every `context.backend.clear()` and `context.render(sprite)` goes there. A [`RenderTexture`](/ExoJS/en/api/render-texture/) is a second target: an off-screen surface you can draw into and then sample as a texture on a sprite, apply filters to, or composite back into the main scene.
 
 This is the foundation of multi-pass rendering in ExoJS: render-to-texture for caching, minimaps, picture-in-picture views, reflection maps, and as a staging area before post-processing.
 
@@ -81,17 +81,17 @@ The sprite displays the off-screen render as its texture. You can position, scal
 The render-to-texture step typically happens once during `init` for static content, or inside `draw` for content that changes per frame:
 
 ```js
-draw(backend) {
+draw(context) {
     // 1. Draw game world into the off-screen target
-    backend.setRenderTarget(this.offscreen);
-    backend.clear();
-    this.worldLayer.render(backend);
-    backend.setRenderTarget(null);
+    context.backend.setRenderTarget(this.offscreen);
+    context.backend.clear();
+    this.worldLayer.render(context.backend);
+    context.backend.setRenderTarget(null);
 
     // 2. Draw the main scene — the off-screen result is now a texture
-    backend.clear();
-    this.display.render(backend);
-    this.hud.render(backend);
+    context.backend.clear();
+    context.render(this.display);
+    context.render(this.hud);
 }
 ```
 
@@ -136,9 +136,9 @@ init(loader) {
     this.staticLayer.visible = false;
 }
 
-draw(backend) {
-    backend.clear();
-    this.cachedSprite.render(backend);
+draw(context) {
+    context.backend.clear();
+    context.render(this.cachedSprite);
     // ... dynamic content on top ...
 }
 ```
