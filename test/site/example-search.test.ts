@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterExamples, FEATURED_FILTER } from '../../site/src/lib/example-search';
+import { FEATURED_FILTER,filterExamples } from '../../site/src/lib/example-search';
 import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
 import type { Example } from '../../site/src/lib/types';
 
