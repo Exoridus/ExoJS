@@ -1,0 +1,83 @@
+---
+/**
+ * SourceSnippet — renders a named region from a real source file.
+ *
+ * Regions are delimited in the source file with:
+ *   // #region guide:<name>
+ *   ...
+ *   // #endregion guide:<name>
+ *
+ * Example MDX usage:
+ *   import SourceSnippet from '../../../components/SourceSnippet.astro';
+ *
+ *   <SourceSnippet
+ *     source="examples/showcase/orb-dodge.ts"
+ *     region="application-setup"
+ *     language="ts"
+ *     title="Application Setup"
+ *   />
+ *
+ * `source` is relative to the repo root.
+ * Build fails with a clear error on missing file, missing region, empty
+ * region, or duplicate region names in the same file.
+ */
+
+import { Code } from 'astro:components';
+import { extractSnippetRegion } from '../lib/source-snippets';
+
+interface Props {
+    /** Path to the source file, relative to the repo root. */
+    source: string;
+    /** Name of the region to extract (without the "guide:" prefix). */
+    region: string;
+    /** Language for syntax highlighting. Defaults to "ts". */
+    language?: string;
+    /** Optional caption shown above the code block. */
+    title?: string;
+}
+
+const { source, region, language = 'ts', title } = Astro.props;
+
+let code: string;
+try {
+    code = extractSnippetRegion(source, region);
+} catch (err) {
+    // Re-throw with additional context so Astro reports the source MDX file too.
+    throw new Error(
+        `SourceSnippet build error in ${Astro.self.moduleId ?? 'unknown'}\n` +
+        String(err instanceof Error ? err.message : err),
+    );
+}
+---
+
+<figure class="source-snippet">
+    {title && <figcaption class="source-snippet__title">{title}</figcaption>}
+    <Code code={code} lang={language} themes={{ light: 'github-light', dark: 'github-dark' }} />
+</figure>
+
+<style>
+    .source-snippet {
+        margin: var(--s-5, 1.25rem) 0;
+    }
+
+    .source-snippet__title {
+        display: block;
+        font-family: var(--f-mono, monospace);
+        font-size: 12px;
+        color: var(--fg-muted, #6e7781);
+        padding: 6px 14px 0;
+        margin-bottom: -6px;
+        /* Visually connects the caption to the code block below it. */
+        border: 1px solid var(--line-soft, #d0d7de);
+        border-bottom: none;
+        border-radius: var(--r-4, 6px) var(--r-4, 6px) 0 0;
+        background: var(--bg-canvas, #fff);
+    }
+
+    /* When a title is present, remove the top border-radius of the code block
+       rendered by the <Code> component so it merges visually. */
+    .source-snippet:has(.source-snippet__title) :global(pre) {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+</style>

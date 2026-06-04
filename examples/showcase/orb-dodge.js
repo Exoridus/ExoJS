@@ -8,6 +8,7 @@ const ORB_RADIUS = 14;
 const SPAWN_INTERVAL = 1.2;
 const ORB_SPEED_MIN = 80;
 const ORB_SPEED_MAX = 200;
+// #region guide:application-setup
 const app = new Application({
     canvas: {
         width: CANVAS_WIDTH,
@@ -178,6 +179,7 @@ class PlayScene extends Scene {
         super.destroy();
     }
 }
+// #region guide:game-over-scene
 class GameOverScene extends Scene {
     _title;
     _stats;
@@ -224,6 +226,7 @@ class GameOverScene extends Scene {
         context.render(this._hint);
     }
 }
+// #endregion guide:game-over-scene
 const play = new PlayScene();
 const gameOver = new GameOverScene();
 app.start(play);

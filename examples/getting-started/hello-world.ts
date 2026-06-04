@@ -13,6 +13,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+// #region guide:first-scene
 class HelloWorldScene extends Scene {
     private _sprite!: Sprite;
 
@@ -32,5 +33,6 @@ class HelloWorldScene extends Scene {
         context.render(this._sprite);
     }
 }
+// #endregion guide:first-scene
 
 app.start(new HelloWorldScene());
