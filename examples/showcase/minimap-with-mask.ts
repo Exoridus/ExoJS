@@ -1,5 +1,5 @@
-// Auto-generated from minimap-with-mask.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, RenderTargetPass, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,16 +10,19 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class MinimapWithMaskScene extends Scene {
-    _world;
-    _player;
-    _rt;
-    _mini;
-    _mask;
-    _frame;
-    _time = 0;
-    init() {
+    private _world!: Graphics;
+    private _player!: Graphics;
+    private _rt!: RenderTexture;
+    private _mini!: Sprite;
+    private _mask!: Graphics;
+    private _frame!: Graphics;
+    private _time = 0;
+
+    override init(): void {
         this._world = new Graphics();
         this._player = new Graphics();
         this._rt = new RenderTexture(260, 260);
@@ -30,28 +33,34 @@ class MinimapWithMaskScene extends Scene {
         this._mini.mask = this._mask;
         this._frame = new Graphics();
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time += delta.seconds;
     }
-    _drawWorld(backend) {
+
+    private _drawWorld(backend): void {
         this._world.clear();
         this._world.lineWidth = 2;
         this._world.lineColor = new Color(60, 70, 90);
-        for (let x = 80; x <= 720; x += 80)
-            this._world.drawLine(x, 60, x, 540);
-        for (let y = 60; y <= 540; y += 80)
-            this._world.drawLine(80, y, 720, y);
+        for (let x = 80; x <= 720; x += 80) this._world.drawLine(x, 60, x, 540);
+        for (let y = 60; y <= 540; y += 80) this._world.drawLine(80, y, 720, y);
         this._world.render(backend);
         this._player.clear();
         this._player.fillColor = new Color(255, 170, 110);
         this._player.drawCircle(400 + Math.cos(this._time) * 230, 300 + Math.sin(this._time * 1.2) * 170, 18);
         this._player.render(backend);
     }
-    draw(context) {
-        context.backend.execute(new RenderTargetPass(() => {
-            context.backend.clear();
-            this._drawWorld(context.backend);
-        }, { target: this._rt, view: this._rt.view }));
+
+    override draw(context): void {
+        context.backend.execute(
+            new RenderTargetPass(
+                () => {
+                    context.backend.clear();
+                    this._drawWorld(context.backend);
+                },
+                { target: this._rt, view: this._rt.view },
+            ),
+        );
         context.backend.clear();
         this._drawWorld(context.backend);
         context.render(this._mini);
@@ -62,4 +71,5 @@ class MinimapWithMaskScene extends Scene {
         context.render(this._frame);
     }
 }
+
 app.start(new MinimapWithMaskScene());

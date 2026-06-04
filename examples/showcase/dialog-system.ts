@@ -1,6 +1,6 @@
-// Auto-generated from dialog-system.ts — edit the .ts source, not this file.
 import { sound, textures } from '@assets';
 import { Application, Color, Scene, Sound, Sprite, Text, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 900,
@@ -8,25 +8,30 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const lines = [
     'Commander, the anomaly has entered low orbit.',
     'All wings hold formation and await my signal.',
     'If this goes wrong, burn every gate behind us.',
 ];
+
 class DialogSystemScene extends Scene {
-    _portrait;
-    _box;
-    _beep;
-    _lineIndex = 0;
-    _chars = 0;
-    _timer = 0;
-    _done = false;
-    async load(loader) {
+    private _portrait!: Sprite;
+    private _box!: Text;
+    private _beep!: Sound;
+    private _lineIndex = 0;
+    private _chars = 0;
+    private _timer = 0;
+    private _done = false;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { portrait: textures.shipA });
         await loader.load(Sound, { beep: sound.uiConfirm });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(1.7).setPosition(170, 420);
         this._box = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 40 }, { maxWidth: 600 });
         this._box.setPosition(270, 360);
@@ -42,7 +47,8 @@ class DialogSystemScene extends Scene {
             this._done = false;
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         if (!this._done) {
             this._timer += delta.seconds;
             while (this._timer > 0.035 && this._chars < lines[this._lineIndex].length) {
@@ -54,10 +60,12 @@ class DialogSystemScene extends Scene {
         }
         this._box.text = lines[this._lineIndex].slice(0, this._chars);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear(new Color(20, 24, 34));
         context.render(this._portrait);
         context.render(this._box);
     }
 }
+
 app.start(new DialogSystemScene());

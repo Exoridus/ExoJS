@@ -1,5 +1,5 @@
-// Auto-generated from loading-progress-with-shader.ts — edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Sprite, Text, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,7 +10,9 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 p=vUv-0.5; float r=length(p); float a=atan(p.y,p.x); float t=(a+3.1415926)/(6.2831852);
@@ -25,15 +27,18 @@ struct Uniforms { uProgress:f32, _pad0:vec3<f32> };
     let ring=smoothstep(0.18,0.19,r)-smoothstep(0.24,0.25,r); let fill=select(0.0,1.0,t<=uniforms.uProgress);
     let col=mix(vec3<f32>(0.2),vec3<f32>(0.3,0.8,1.0),fill); return vec4<f32>(col*ring,ring);
 }`;
+
 class LoadingProgressWithShaderScene extends Scene {
-    _progress;
-    _label;
-    _ring;
-    _filter;
-    async load(loader) {
+    private _progress!: { v: number };
+    private _label!: Text;
+    private _ring!: Sprite;
+    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._progress = { v: 0 };
         this._label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
         this._label.setPosition(360, 410);
@@ -45,14 +50,17 @@ class LoadingProgressWithShaderScene extends Scene {
         this._ring.filters = [this._filter];
         this.app.tweens.create(this._progress).to({ v: 1 }, 2.4).start();
     }
-    update() {
+
+    override update(): void {
         this._filter.uniforms.uProgress = this._progress.v;
         this._label.text = `${(this._progress.v * 100) | 0}%`;
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear(new Color(14, 18, 28));
         context.render(this._ring);
         context.render(this._label);
     }
 }
+
 app.start(new LoadingProgressWithShaderScene());

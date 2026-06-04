@@ -1,5 +1,5 @@
-// Auto-generated from screen-shake-on-explosion.ts — edit the .ts source, not this file.
 import { AlphaFadeOverLifetime, Application, BurstSpawn, Color, ConeDirection, Constant, ParticleSystem, Scene, Texture, Vector, View } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,16 +10,20 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class ScreenShakeOnExplosionScene extends Scene {
-    _view;
-    _ps;
-    _burstPos;
-    _burst;
-    async load(loader) {
+    private _view!: View;
+    private _ps!: ParticleSystem;
+    private _burstPos!: Vector;
+    private _burst!: BurstSpawn;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._view = new View(400, 300, 800, 600);
         this._ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
         this._ps.setPosition(400, 300);
@@ -39,14 +43,17 @@ class ScreenShakeOnExplosionScene extends Scene {
             this._view.shake(22, 280, { frequency: 26, decay: true });
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         this._ps.update(delta);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.backend.setView(this._view);
         context.render(this._ps);
         context.backend.setView(null);
     }
 }
+
 app.start(new ScreenShakeOnExplosionScene());

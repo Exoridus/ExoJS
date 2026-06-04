@@ -1,6 +1,6 @@
-// Auto-generated from vinyl-record.ts — edit the .ts source, not this file.
 import { audio } from '@assets';
 import { Application, AudioAnalyser, BeatDetector, Color, Graphics, Music, Scene } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,18 +8,22 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 class VinylRecordScene extends Scene {
-    _music;
-    _beat;
-    _analyser;
-    _disc;
-    _bars;
-    _angle = 0;
-    async load(loader) {
+    private _music!: Music;
+    private _beat!: BeatDetector;
+    private _analyser!: AudioAnalyser;
+    private _disc!: Graphics;
+    private _bars!: Graphics;
+    private _angle = 0;
+
+    override async load(loader): Promise<void> {
         await loader.load(Music, { track: audio.musicLoop });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
         this._beat = new BeatDetector();
         this._beat.source = this._music;
@@ -28,11 +32,13 @@ class VinylRecordScene extends Scene {
         this._disc = new Graphics();
         this._bars = new Graphics();
     }
-    update(delta) {
+
+    override update(delta): void {
         const bpm = this._beat.tempo > 0 ? this._beat.tempo : 120;
         this._angle += delta.seconds * (bpm / 60) * 360;
     }
-    draw(context) {
+
+    override draw(context): void {
         const spectrum = this._analyser.getSpectrum();
         context.backend.clear(new Color(16, 18, 26));
         this._disc.clear();
@@ -42,9 +48,9 @@ class VinylRecordScene extends Scene {
         this._disc.drawCircle(400, 300, 32);
         this._disc.lineWidth = 2;
         this._disc.lineColor = new Color(80, 80, 84);
-        for (let r = 45; r <= 140; r += 14)
-            this._disc.drawArc(400, 300, r, 0, Math.PI * 2);
+        for (let r = 45; r <= 140; r += 14) this._disc.drawArc(400, 300, r, 0, Math.PI * 2);
         context.render(this._disc);
+
         this._bars.clear();
         for (let i = 0; i < 36; i++) {
             const a = (i / 36) * Math.PI * 2 + (this._angle * Math.PI) / 180;
@@ -61,4 +67,5 @@ class VinylRecordScene extends Scene {
         context.render(this._bars);
     }
 }
+
 app.start(new VinylRecordScene());

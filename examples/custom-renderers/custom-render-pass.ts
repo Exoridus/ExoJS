@@ -1,5 +1,5 @@
-// Auto-generated from custom-render-pass.ts — edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,17 +10,21 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class CustomRenderPassScene extends Scene {
-    _back;
-    _front;
-    _between;
-    _angle = 0;
-    _pass;
-    async load(loader) {
+    private _back!: Sprite;
+    private _front!: Sprite;
+    private _between!: Graphics;
+    private _angle = 0;
+    private _pass!: CallbackRenderPass;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._back = new Sprite(loader.get(Texture, 'bunny'))
             .setAnchor(0.5)
             .setPosition(280, 300)
@@ -40,14 +44,17 @@ class CustomRenderPassScene extends Scene {
             this._between.render(backend);
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         this._angle += delta.seconds * 2.2;
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._back);
         context.backend.execute(this._pass);
         context.render(this._front);
     }
 }
+
 app.start(new CustomRenderPassScene());

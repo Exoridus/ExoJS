@@ -1,5 +1,5 @@
-// Auto-generated from mouse-parallax.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,19 +10,22 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const scales = [0.03, 0.06, 0.1];
 const colors = [new Color(70, 90, 140), new Color(100, 140, 220), new Color(180, 220, 255)];
+
 class MouseParallaxScene extends Scene {
-    _layers;
-    _pointer = { x: 400, y: 300 };
-    init() {
+    private _layers!: Container[];
+    private _pointer = { x: 400, y: 300 };
+
+    override init(): void {
         this._layers = scales.map((_, i) => {
             const layer = new Container();
             const shape = new Graphics();
             shape.fillColor = colors[i];
-            for (let n = 0; n < 10; n++)
-                shape.drawCircle(80 + n * 80, 170 + (n % 3) * 120, 28 + i * 8);
+            for (let n = 0; n < 10; n++) shape.drawCircle(80 + n * 80, 170 + (n % 3) * 120, 28 + i * 8);
             layer.addChild(shape);
             return layer;
         });
@@ -30,7 +33,8 @@ class MouseParallaxScene extends Scene {
             this._pointer = { x: p.x, y: p.y };
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear(new Color(18, 22, 34));
         for (let i = 0; i < this._layers.length; i++) {
             const layer = this._layers[i];
@@ -39,4 +43,5 @@ class MouseParallaxScene extends Scene {
         }
     }
 }
+
 app.start(new MouseParallaxScene());

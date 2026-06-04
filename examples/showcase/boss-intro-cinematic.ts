@@ -1,6 +1,6 @@
-// Auto-generated from boss-intro-cinematic.ts — edit the .ts source, not this file.
 import { music, textures } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,22 +8,27 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const title = 'VOID EMPEROR';
+
 class BossIntroCinematicScene extends Scene {
-    _view;
-    _bg;
-    _bars;
-    _barSize;
-    _title;
-    _titleState;
-    _boss;
-    _music;
-    async load(loader) {
+    private _view!: View;
+    private _bg!: Graphics;
+    private _bars!: Graphics;
+    private _barSize!: { v: number };
+    private _title!: Text;
+    private _titleState!: { count: number };
+    private _boss!: Sprite;
+    private _music!: Music;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { boss: textures.shipA });
         await loader.load(Music, { track: music.loopMain });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._view = new View(220, 300, 800, 600);
         this._bg = new Graphics();
         this._bars = new Graphics();
@@ -37,6 +42,7 @@ class BossIntroCinematicScene extends Scene {
             .setPosition(560, 320)
             .setTint(new Color(255, 130, 130));
         this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.2).play();
+
         this.app.tweens.create(this._barSize).to({ v: 70 }, 0.6).start();
         this.app.tweens.create(this._view.center).to({ x: 520, y: 300 }, 2.0).start();
         this.app.tweens.create(this._boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
@@ -45,12 +51,13 @@ class BossIntroCinematicScene extends Scene {
             .to({ count: title.length }, 1.0)
             .delay(1.6)
             .onUpdate(() => {
-            this._title.text = title.slice(0, this._titleState.count | 0);
-        })
+                this._title.text = title.slice(0, this._titleState.count | 0);
+            })
             .start();
         this.app.tweens.create(this._music).to({ volume: 0.85 }, 2.0).start();
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear(new Color(16, 16, 24));
         this._bg.clear();
         this._bg.fillColor = new Color(36, 42, 70);
@@ -67,4 +74,5 @@ class BossIntroCinematicScene extends Scene {
         context.render(this._bars);
     }
 }
+
 app.start(new BossIntroCinematicScene());

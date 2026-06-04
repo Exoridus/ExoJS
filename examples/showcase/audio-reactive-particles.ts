@@ -1,6 +1,19 @@
-// Auto-generated from audio-reactive-particles.ts — edit the .ts source, not this file.
 import { audio, textures } from '@assets';
-import { AlphaFadeOverLifetime, Application, BeatDetector, BurstSpawn, Color, ConeDirection, Constant, Music, ParticleSystem, Scene, Texture, Vector, } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    Application,
+    BeatDetector,
+    BurstSpawn,
+    Color,
+    ConeDirection,
+    Constant,
+    Music,
+    ParticleSystem,
+    Scene,
+    Texture,
+    Vector,
+} from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,18 +21,23 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
+
 class AudioReactiveParticlesScene extends Scene {
-    _music;
-    _detector;
-    _ps;
-    _burst;
-    async load(loader) {
+    private _music!: Music;
+    private _detector!: BeatDetector;
+    private _ps!: ParticleSystem;
+    private _burst!: BurstSpawn;
+
+    override async load(loader): Promise<void> {
         await loader.load(Music, { track: audio.musicLoop });
         await loader.load(Texture, { particle: textures.particleLight });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
         this._detector = new BeatDetector();
         this._detector.source = this._music;
@@ -40,12 +58,15 @@ class AudioReactiveParticlesScene extends Scene {
             this._burst.reset();
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         this._ps.update(delta);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._ps);
     }
 }
+
 app.start(new AudioReactiveParticlesScene());

@@ -1,6 +1,6 @@
-// Auto-generated from color-grading.ts — edit the .ts source, not this file.
 import { technical } from '@assets';
 import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,14 +8,19 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const LUT_SIZE = 17;
-function buildLut3D(transform) {
+
+type TransformFn = (r: number, g: number, b: number) => [number, number, number];
+
+function buildLut3D(transform: TransformFn): HTMLCanvasElement {
     const width = LUT_SIZE * LUT_SIZE;
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = LUT_SIZE;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d')!;
     const image = ctx.createImageData(width, LUT_SIZE);
     const max = LUT_SIZE - 1;
     for (let bIdx = 0; bIdx < LUT_SIZE; bIdx++) {
@@ -34,67 +39,77 @@ function buildLut3D(transform) {
     ctx.putImageData(image, 0, 0);
     return canvas;
 }
+
 const LOOKS = [
-    { name: 'Identity', transform: (r, g, b) => [r, g, b] },
+    { name: 'Identity', transform: (r: number, g: number, b: number): [number, number, number] => [r, g, b] },
     {
         name: 'Sepia',
-        transform: (r, g, b) => {
+        transform: (r: number, g: number, b: number): [number, number, number] => {
             const lum = 0.299 * r + 0.587 * g + 0.114 * b;
             return [Math.min(1, lum * 1.2), Math.min(1, lum * 1.0), Math.min(1, lum * 0.6)];
         },
     },
     {
         name: 'Cool Cinematic',
-        transform: (r, g, b) => [r * 0.85, g * 0.95, Math.min(1, b * 1.15 + 0.05)],
+        transform: (r: number, g: number, b: number): [number, number, number] => [r * 0.85, g * 0.95, Math.min(1, b * 1.15 + 0.05)],
     },
     {
         name: 'Warm Sunset',
-        transform: (r, g, b) => [Math.min(1, r * 1.15 + 0.05), g * 0.95, b * 0.75],
+        transform: (r: number, g: number, b: number): [number, number, number] => [Math.min(1, r * 1.15 + 0.05), g * 0.95, b * 0.75],
     },
     {
         name: 'Bleach Bypass',
-        transform: (r, g, b) => {
+        transform: (r: number, g: number, b: number): [number, number, number] => {
             const lum = 0.299 * r + 0.587 * g + 0.114 * b;
             return [Math.min(1, r * 0.6 + lum * 0.6), Math.min(1, g * 0.6 + lum * 0.6), Math.min(1, b * 0.6 + lum * 0.6)];
         },
     },
     {
         name: 'Protanopia (red-blind)',
-        transform: (r, g, b) => [0.567 * r + 0.433 * g, 0.558 * r + 0.442 * g, 0.242 * g + 0.758 * b],
+        transform: (r: number, g: number, b: number): [number, number, number] => [0.567 * r + 0.433 * g, 0.558 * r + 0.442 * g, 0.242 * g + 0.758 * b],
     },
 ];
+
 const PRIMARY_RAMP = technical.color.primaryRamp;
+
 class ColorGradingScene extends Scene {
-    _luts;
-    _filter;
-    _index = 0;
-    _sprite;
-    _label;
-    _hint;
-    async load(loader) {
+    private _luts!: Texture[];
+    private _filter!: LutFilter;
+    private _index = 0;
+    private _sprite!: Sprite;
+    private _label!: Text;
+    private _hint!: Text;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { ramp: PRIMARY_RAMP });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
         this._filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this._luts[0]);
+
         this._sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(2.5);
         this._sprite.setPosition(400, 320);
         this._sprite.filters = [this._filter];
+
         this._label = new Text(LOOKS[0].name, { fillColor: Color.white, fontSize: 22 });
         this._label.setPosition(20, 20);
         this._hint = new Text('Press SPACE to cycle looks', { fillColor: Color.white, fontSize: 14 });
         this._hint.setPosition(20, 560);
+
         this.inputs.onTrigger(Keyboard.Space, () => {
             this._index = (this._index + 1) % LOOKS.length;
             this._filter.setLut(this._luts[this._index]);
             this._label.text = LOOKS[this._index].name;
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
         context.render(this._label);
         context.render(this._hint);
     }
 }
+
 app.start(new ColorGradingScene());
