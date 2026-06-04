@@ -63,10 +63,15 @@ const bundled: RollupOptions = {
 
 const debugBundled: RollupOptions = {
   input: 'src/debug/index.ts',
+  // All @/ imports are core dependencies — mark them external so the debug
+  // bundle contains only debug code and imports from @codexo/exojs at runtime.
+  external: (id) => id.startsWith('@/'),
   output: {
     file: 'dist/exo.debug.esm.js',
     format: 'es',
     sourcemap: true,
+    // Remap all @/ external IDs to the package name in the output.
+    paths: (id) => (id.startsWith('@/') ? '@codexo/exojs' : id),
   },
   plugins: [
     constantReplacementPlugin,
