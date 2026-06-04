@@ -1,5 +1,5 @@
-// Auto-generated from signal-bus-inspector.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, seconds, Signal, Text, Timer } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 820,
@@ -10,14 +10,17 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class SignalBusInspectorScene extends Scene {
-    _signals;
-    _text;
-    _tick;
-    _listenerA;
-    _listenerB;
-    init() {
+    private _signals!: { spawn: Signal; damage: Signal; score: Signal };
+    private _text!: Text;
+    private _tick!: Timer;
+    private _listenerA!: () => void;
+    private _listenerB!: () => void;
+
+    override init(): void {
         this._signals = {
             spawn: new Signal(),
             damage: new Signal(),
@@ -33,19 +36,19 @@ class SignalBusInspectorScene extends Scene {
         this._signals.damage.add(this._listenerB);
         this._signals.score.add(this._listenerA);
     }
-    update(_delta) {
+
+    override update(_delta): void {
         if (this._tick.expired) {
-            if (Math.random() > 0.5)
-                this._signals.spawn.add(this._listenerB);
-            else
-                this._signals.spawn.remove(this._listenerB);
+            if (Math.random() > 0.5) this._signals.spawn.add(this._listenerB);
+            else this._signals.spawn.remove(this._listenerB);
             this._signals.spawn.dispatch();
             this._signals.damage.dispatch();
             this._signals.score.dispatch();
             this._tick.restart();
         }
     }
-    draw(context) {
+
+    override draw(context): void {
         this._text.text =
             `Manual Signal Inspector\n\nspawn listeners: ${this._signals.spawn.count}\n` +
                 `damage listeners: ${this._signals.damage.count}\n` +
@@ -54,4 +57,5 @@ class SignalBusInspectorScene extends Scene {
         context.render(this._text);
     }
 }
+
 app.start(new SignalBusInspectorScene());

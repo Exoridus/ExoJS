@@ -1,6 +1,6 @@
-// Auto-generated from chromatic-aberration.ts — edit the .ts source, not this file.
 import { technical } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,8 +8,11 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const CHECKER = technical.filtering.checker256;
+
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 o=vec2(uOffset,0.0); float r=texture(uTexture,vUv+o).r; float g=texture(uTexture,vUv).g; float b=texture(uTexture,vUv-o).b; float a=texture(uTexture,vUv).a; fragColor=vec4(r,g,b,a);} `;
@@ -26,13 +29,16 @@ struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
     let a=textureSample(uTexture,uSampler,vUv).a;
     return vec4<f32>(r,g,b,a);
 }`;
+
 class ChromaticAberrationScene extends Scene {
-    _filter;
-    _sprite;
-    async load(loader) {
+    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private _sprite!: Sprite;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { checker: CHECKER });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
@@ -44,9 +50,11 @@ class ChromaticAberrationScene extends Scene {
             this._filter.uniforms.uOffset = (t - 0.5) * 0.03;
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
     }
 }
+
 app.start(new ChromaticAberrationScene());

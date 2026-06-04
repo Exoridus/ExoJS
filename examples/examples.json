@@ -368,6 +368,7 @@
         {
             "slug": "asset-browser",
             "path": "debug-layer/asset-browser.js",
+            "language": "typescript",
             "title": "Asset Browser",
             "description": "Interactive browser for the injected globalThis.assets catalog — inspect textures, sprites, audio, SVG, fonts, video, and input-prompt sheets with per-type previews.",
             "backend": "core",
@@ -384,6 +385,7 @@
         {
             "slug": "bounding-boxes",
             "path": "debug-layer/bounding-boxes.js",
+            "language": "typescript",
             "title": "Bounding Boxes",
             "description": "Example: Bounding Boxes.",
             "backend": "core",
@@ -395,6 +397,7 @@
         {
             "slug": "performance-overlay",
             "path": "debug-layer/performance-overlay.js",
+            "language": "typescript",
             "title": "Performance Overlay",
             "description": "Example: Performance Overlay.",
             "backend": "core",
@@ -409,6 +412,7 @@
         {
             "slug": "pointer-and-hittest",
             "path": "debug-layer/pointer-and-hittest.js",
+            "language": "typescript",
             "title": "Pointer And Hittest",
             "description": "Example: Pointer And Hittest.",
             "backend": "core",
@@ -421,6 +425,7 @@
         {
             "slug": "signal-bus-inspector",
             "path": "debug-layer/signal-bus-inspector.js",
+            "language": "typescript",
             "title": "Signal Bus Inspector",
             "description": "Example: Signal Bus Inspector.",
             "backend": "core",
@@ -435,6 +440,7 @@
         {
             "slug": "blur-filter",
             "path": "filters/blur-filter.js",
+            "language": "typescript",
             "title": "Blur Filter",
             "description": "Example: Blur Filter.",
             "backend": "core",
@@ -449,6 +455,7 @@
         {
             "slug": "chromatic-aberration",
             "path": "filters/chromatic-aberration.js",
+            "language": "typescript",
             "title": "Chromatic Aberration",
             "description": "Example: Chromatic Aberration.",
             "backend": "core",
@@ -463,6 +470,7 @@
         {
             "slug": "color-filter",
             "path": "filters/color-filter.js",
+            "language": "typescript",
             "title": "Color Filter",
             "description": "Example: Color Filter.",
             "backend": "core",
@@ -477,6 +485,7 @@
         {
             "slug": "crt-scanlines",
             "path": "filters/crt-scanlines.js",
+            "language": "typescript",
             "title": "Crt Scanlines",
             "description": "Example: Crt Scanlines.",
             "backend": "core",
@@ -488,6 +497,7 @@
         {
             "slug": "custom-fragment-shader",
             "path": "filters/custom-fragment-shader.js",
+            "language": "typescript",
             "title": "Custom Fragment Shader",
             "description": "Example: Custom Fragment Shader.",
             "backend": "core",
@@ -500,6 +510,7 @@
         {
             "slug": "filter-stack",
             "path": "filters/filter-stack.js",
+            "language": "typescript",
             "title": "Filter Stack",
             "description": "Example: Filter Stack.",
             "backend": "core",
@@ -511,6 +522,7 @@
         {
             "slug": "metaballs",
             "path": "filters/metaballs.js",
+            "language": "typescript",
             "title": "Metaballs",
             "description": "Example: Metaballs.",
             "backend": "core",
@@ -521,6 +533,7 @@
         {
             "slug": "noise-vignette",
             "path": "filters/noise-vignette.js",
+            "language": "typescript",
             "title": "Noise Vignette",
             "description": "Example: Noise Vignette.",
             "backend": "core",
@@ -532,6 +545,7 @@
         {
             "slug": "palette-cycling",
             "path": "filters/palette-cycling.js",
+            "language": "typescript",
             "title": "Palette Cycling",
             "description": "Animate a 1D LUT each frame to recolour a sprite — classic indexed-colour palette-cycling effect (DOS-demo style).",
             "backend": "core",
