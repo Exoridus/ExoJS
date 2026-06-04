@@ -13,6 +13,8 @@ export type Capability =
     | 'offscreenCanvas'
     | 'webWorkers';
 
+export type ExampleLevel = 'intro' | 'intermediate' | 'advanced';
+
 export interface CatalogEntry {
     slug: string;
     path: string;
@@ -22,6 +24,8 @@ export interface CatalogEntry {
     language?: string;
     capabilities?: Array<Capability>;
     tags?: Array<string>;
+    featured?: boolean;
+    level?: ExampleLevel;
 }
 
 export type ExamplesCatalog = Record<string, Array<CatalogEntry>>;

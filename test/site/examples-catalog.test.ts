@@ -47,4 +47,16 @@ describe('examples catalog integrity', () => {
     const orphaned = entries.filter(entry => !known.has(entry.category));
     expect(orphaned.map(entry => entry.path)).toEqual([]);
   });
+
+  it('every featured entry points at a source file that exists', () => {
+    const featured = entries.filter(entry => entry.featured === true);
+    const missing = featured.filter(entry => !existsSync(join(examplesDir, entry.path)));
+    expect(missing.map(entry => entry.path)).toEqual([]);
+  });
+
+  it('every entry with a level field uses a valid level value', () => {
+    const valid = new Set(['intro', 'intermediate', 'advanced']);
+    const invalid = entries.filter(entry => entry.level !== undefined && !valid.has(entry.level));
+    expect(invalid.map(entry => entry.path)).toEqual([]);
+  });
 });

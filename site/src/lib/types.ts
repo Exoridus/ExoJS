@@ -6,6 +6,8 @@ export interface UrlParams {
 
 export type ExampleBackend = 'core' | 'webgl2' | 'webgpu' | 'advanced';
 
+export type ExampleLevel = 'intro' | 'intermediate' | 'advanced';
+
 export interface ExampleDefinition {
     slug: string;
     path: string;
@@ -19,6 +21,8 @@ export interface ExampleDefinition {
     tags?: Array<string>;
     order?: number;
     status?: string;
+    featured?: boolean;
+    level?: ExampleLevel;
 }
 
 export interface Example extends ExampleDefinition {

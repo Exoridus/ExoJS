@@ -5,6 +5,7 @@ import type { Example, ExamplesMap } from '../lib/types';
 import type { VersionInfo } from '../lib/versions';
 import { buildExampleHref } from '../lib/url-state';
 import { buildPlaygroundNavModel, isExampleRouteActive, type PlaygroundNavCategory } from '../lib/playground-nav';
+import { filterExamples, FEATURED_FILTER } from '../lib/example-search';
 import componentStyles from './Navigation.scss?inline';
 import './LoadingSpinner';
 import './NavigationLink';
@@ -69,6 +70,15 @@ export class Navigation extends LitElement {
                     <kbd>Ctrl+K</kbd>
                 </label>
                 <div class="tag-row" ?data-expanded=${this._showAllTags} aria-label="Filter examples by tag">
+                    <button
+                        class="tag-button tag-button--featured"
+                        type="button"
+                        ?data-active=${activeTag === FEATURED_FILTER}
+                        aria-pressed=${String(activeTag === FEATURED_FILTER)}
+                        @click=${() => this._onSelectTag(FEATURED_FILTER)}
+                    >
+                        Start here
+                    </button>
                     ${visibleTags.map(tag => {
                         const selected = activeTag === tag;
                         return html`
@@ -145,8 +155,43 @@ export class Navigation extends LitElement {
         if (this.loadError) return html`<p class="error">${this.loadError}</p>`;
         if (!this.loaded) return html`<exo-spinner centered></exo-spinner>`;
 
-        const categories = this._buildCategories();
-        return html`${categories.map(category => this._renderCategory(category))}`;
+        const allExamples = Array.from(this.examples.values()).flat();
+        const filtered = filterExamples(allExamples, {
+            query: this._searchQuery,
+            activeFilter: this._activeTagFilter,
+        });
+
+        if (filtered.length === 0) {
+            return html`
+                <p class="empty-state">
+                    No examples match your search.<br />
+                    <span class="empty-hint">Try a broader term like "sprite", "audio", "input", or "debug".</span>
+                </p>
+            `;
+        }
+
+        const showFeatured =
+            !this._searchQuery.trim() &&
+            (this._activeTagFilter === null || this._activeTagFilter === 'all');
+
+        const categories = buildPlaygroundNavModel(filtered);
+
+        return html`
+            ${showFeatured ? this._renderFeaturedSection(allExamples) : nothing}
+            ${categories.map(category => this._renderCategory(category))}
+        `;
+    }
+
+    private _renderFeaturedSection(allExamples: Array<Example>): ReturnType<LitElement['render']> {
+        const featured = filterExamples(allExamples, { query: '', activeFilter: FEATURED_FILTER });
+        if (featured.length === 0) return nothing;
+
+        return html`
+            <div class="featured-section" aria-label="Start here">
+                <span class="featured-label">Start here</span>
+                ${featured.map(example => this._renderLink(example))}
+            </div>
+        `;
     }
 
     // The playground sidenav is the flat catalog: one category level, examples
@@ -157,22 +202,9 @@ export class Navigation extends LitElement {
     }
 
     private _filterExamples(examples: Array<Example>): Array<Example> {
-        const query = this._searchQuery.trim().toLowerCase();
-
-        return examples.filter(example => {
-            if (this._activeTagFilter && !(example.tags ?? []).includes(this._activeTagFilter)) {
-                return false;
-            }
-
-            if (query) {
-                return (
-                    example.title.toLowerCase().includes(query) ||
-                    example.path.toLowerCase().includes(query) ||
-                    example.description.toLowerCase().includes(query)
-                );
-            }
-
-            return true;
+        return filterExamples(examples, {
+            query: this._searchQuery,
+            activeFilter: this._activeTagFilter,
         });
     }
 
