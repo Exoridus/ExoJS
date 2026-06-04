@@ -19,7 +19,6 @@ interface RenderGroupPlaybackContext {
 }
 
 interface RenderPlanPlaybackContext {
-  readonly instructionSlots: WeakMap<RenderInstruction, RenderInstructionSlot>;
   passInstructionIndex: number;
   passGroupIndex: number;
 }
@@ -100,10 +99,16 @@ export class RenderPlanPlayer {
           context.passGroupIndex++;
         }
 
-        const slot = this._createRenderInstructionSlot(currentInstructionIndex, context.passInstructionIndex);
+        // Allocate the per-draw instruction slot only when a backend consumes
+        // it. No shipped backend implements `_prepareRenderInstructionSlot`, so
+        // skipping the `Object.freeze` slot allocation removes per-draw garbage
+        // from the playback hot path while preserving the extension point.
+        if (hooks._prepareRenderInstructionSlot !== undefined) {
+          const slot = this._createRenderInstructionSlot(currentInstructionIndex, context.passInstructionIndex);
 
-        context.instructionSlots.set(entry.command, slot);
-        hooks._prepareRenderInstructionSlot?.(entry.command, slot);
+          hooks._prepareRenderInstructionSlot(entry.command, slot);
+        }
+
         hooks._prepareDrawCommand?.(entry.command);
         backend.draw(entry.command.drawable);
 
@@ -128,7 +133,6 @@ export class RenderPlanPlayer {
 
   private static _createPlaybackContext(): RenderPlanPlaybackContext {
     return {
-      instructionSlots: new WeakMap<RenderInstruction, RenderInstructionSlot>(),
       passInstructionIndex: 0,
       passGroupIndex: 0,
     };
