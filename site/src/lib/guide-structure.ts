@@ -717,6 +717,20 @@ const PARTS: ReadonlyArray<GuidePartMeta> = [
                 examples: [
                     "showcase/boss-intro-cinematic"
                 ]
+            },
+            {
+                part: 8,
+                chapter: 9,
+                partSlug: "recipes",
+                partTitle: "08 Recipes",
+                partDescription: "Use practical scene patterns you can adapt directly in production.",
+                slug: "build-orb-dodge",
+                title: "8.9 Build Orb Dodge",
+                description: "Build a complete small game: player movement, orb spawning, collision, scoring, HUD, and a game-over scene.",
+                path: "recipes/build-orb-dodge",
+                examples: [
+                    "showcase/orb-dodge"
+                ]
             }
         ]
     },
