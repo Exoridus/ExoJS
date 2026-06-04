@@ -573,6 +573,7 @@
         {
             "slug": "graphics-primitives",
             "path": "geometry-graphics/graphics-primitives.js",
+            "language": "typescript",
             "title": "Graphics Primitives",
             "description": "Example: Graphics Primitives.",
             "backend": "core",
@@ -587,6 +588,7 @@
         {
             "slug": "graphics-gradient",
             "path": "geometry-graphics/graphics-gradient.js",
+            "language": "typescript",
             "title": "Graphics Gradient",
             "description": "Paint Graphics shapes with gradients through the fillStyle / strokeStyle API: a linear-gradient rectangle, a radial-gradient circle, a radial-gradient stroked ring, and a spinning linear-gradient star.",
             "backend": "core",
@@ -600,6 +602,7 @@
         {
             "slug": "gradient",
             "path": "geometry-graphics/gradient.js",
+            "language": "typescript",
             "title": "Gradient",
             "description": "Example: Gradient.",
             "backend": "core",
@@ -611,6 +614,7 @@
         {
             "slug": "infinite-grid",
             "path": "geometry-graphics/infinite-grid.js",
+            "language": "typescript",
             "title": "Infinite Grid",
             "description": "Example: Infinite Grid.",
             "backend": "core",
@@ -625,6 +629,7 @@
         {
             "slug": "mesh-deformed-grid",
             "path": "geometry-graphics/mesh-deformed-grid.js",
+            "language": "typescript",
             "title": "Mesh Deformed Grid",
             "description": "Example: Mesh Deformed Grid.",
             "backend": "core",
@@ -637,6 +642,7 @@
         {
             "slug": "mesh-textured-quad",
             "path": "geometry-graphics/mesh-textured-quad.js",
+            "language": "typescript",
             "title": "Mesh Textured Quad",
             "description": "Example: Mesh Textured Quad.",
             "backend": "core",
@@ -649,6 +655,7 @@
         {
             "slug": "mesh-triangle",
             "path": "geometry-graphics/mesh-triangle.js",
+            "language": "typescript",
             "title": "Mesh Triangle",
             "description": "Example: Mesh Triangle.",
             "backend": "core",
@@ -964,6 +971,7 @@
         {
             "slug": "bloom-lite",
             "path": "render-targets/bloom-lite.js",
+            "language": "typescript",
             "title": "Bloom Lite",
             "description": "Example: Bloom Lite.",
             "backend": "core",
@@ -975,6 +983,7 @@
         {
             "slug": "mini-map",
             "path": "render-targets/mini-map.js",
+            "language": "typescript",
             "title": "Mini Map",
             "description": "Example: Mini Map.",
             "backend": "core",
@@ -986,6 +995,7 @@
         {
             "slug": "post-processing-chain",
             "path": "render-targets/post-processing-chain.js",
+            "language": "typescript",
             "title": "Post Processing Chain",
             "description": "Example: Post Processing Chain.",
             "backend": "core",
@@ -998,6 +1008,7 @@
         {
             "slug": "render-to-texture",
             "path": "render-targets/render-to-texture.js",
+            "language": "typescript",
             "title": "Render To Texture",
             "description": "Example: Render To Texture.",
             "backend": "core",
@@ -1010,6 +1021,7 @@
         {
             "slug": "trail-feedback",
             "path": "render-targets/trail-feedback.js",
+            "language": "typescript",
             "title": "Trail Feedback",
             "description": "Example: Trail Feedback.",
             "backend": "core",
@@ -1021,6 +1033,7 @@
         {
             "slug": "water-mirror",
             "path": "render-targets/water-mirror.js",
+            "language": "typescript",
             "title": "Water Mirror",
             "description": "Example: Water Mirror.",
             "backend": "core",

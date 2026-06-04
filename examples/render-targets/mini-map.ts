@@ -1,5 +1,5 @@
-// Auto-generated from mini-map.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, RenderTargetPass, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,33 +10,37 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class MiniMapScene extends Scene {
-    _world;
-    _player;
-    _miniRt;
-    _miniSprite;
-    _miniFrame;
-    _time = 0;
-    init() {
+    private _world!: Graphics;
+    private _player!: Graphics;
+    private _miniRt!: RenderTexture;
+    private _miniSprite!: Sprite;
+    private _miniFrame!: Graphics;
+    private _time = 0;
+
+    override init(): void {
         this._world = new Graphics();
         this._player = new Graphics();
         this._miniRt = new RenderTexture(220, 160);
         this._miniSprite = new Sprite(this._miniRt).setPosition(560, 20);
         this._miniFrame = new Graphics();
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time += delta.seconds;
     }
-    _renderWorld(backend) {
+
+    private _renderWorld(backend): void {
         this._world.clear();
         this._world.lineWidth = 2;
         this._world.lineColor = new Color(60, 70, 90);
-        for (let x = 80; x <= 720; x += 80)
-            this._world.drawLine(x, 60, x, 540);
-        for (let y = 60; y <= 540; y += 80)
-            this._world.drawLine(80, y, 720, y);
+        for (let x = 80; x <= 720; x += 80) this._world.drawLine(x, 60, x, 540);
+        for (let y = 60; y <= 540; y += 80) this._world.drawLine(80, y, 720, y);
         this._world.render(backend);
+
         const x = 400 + Math.cos(this._time) * 250;
         const y = 300 + Math.sin(this._time * 1.3) * 180;
         this._player.clear();
@@ -44,11 +48,17 @@ class MiniMapScene extends Scene {
         this._player.drawCircle(x, y, 18);
         this._player.render(backend);
     }
-    draw(context) {
-        context.backend.execute(new RenderTargetPass(() => {
-            context.backend.clear();
-            this._renderWorld(context.backend);
-        }, { target: this._miniRt, view: this._miniRt.view }));
+
+    override draw(context): void {
+        context.backend.execute(
+            new RenderTargetPass(
+                () => {
+                    context.backend.clear();
+                    this._renderWorld(context.backend);
+                },
+                { target: this._miniRt, view: this._miniRt.view },
+            ),
+        );
         context.backend.clear();
         this._renderWorld(context.backend);
         context.render(this._miniSprite);
@@ -59,4 +69,5 @@ class MiniMapScene extends Scene {
         context.render(this._miniFrame);
     }
 }
+
 app.start(new MiniMapScene());

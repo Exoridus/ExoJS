@@ -1,5 +1,16 @@
-// Auto-generated from water-mirror.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, RenderTargetPass, RenderTexture, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter, } from '@codexo/exojs';
+import {
+    Application,
+    Color,
+    RenderBackendType,
+    RenderTargetPass,
+    RenderTexture,
+    Scene,
+    Sprite,
+    Texture,
+    WebGl2ShaderFilter,
+    WebGpuShaderFilter,
+} from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,7 +21,9 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 uv=vUv; uv.y += sin(uv.x*18.0+uTime*2.8)*0.025; vec4 c=texture(uTexture,uv); fragColor=vec4(c.rgb*vec3(0.72,0.85,1.0),c.a*0.85); }`;
@@ -23,16 +36,19 @@ struct Uniforms { uTime:f32, _pad0:vec3<f32> };
     var uv=vUv; uv.y = uv.y + sin(uv.x*18.0+uniforms.uTime*2.8)*0.025;
     let c=textureSample(uTexture,uSampler,uv); return vec4<f32>(c.rgb*vec3<f32>(0.72,0.85,1.0),c.a*0.85);
 }`;
+
 class WaterMirrorScene extends Scene {
-    _rt;
-    _source;
-    _mirror;
-    _filter;
-    _time = 0;
-    async load(loader) {
+    private _rt!: RenderTexture;
+    private _source!: Sprite;
+    private _mirror!: Sprite;
+    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private _time = 0;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._rt = new RenderTexture(800, 280);
         this._source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 180).setScale(2);
         this._mirror = new Sprite(this._rt).setPosition(0, 320).setScale(1, -1);
@@ -42,19 +58,27 @@ class WaterMirrorScene extends Scene {
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
         this._mirror.filters = [this._filter];
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time += delta.seconds;
         this._source.setPosition(400 + Math.cos(this._time * 1.7) * 170, 180 + Math.sin(this._time * 1.3) * 60);
         this._filter.uniforms.uTime = this._time;
     }
-    draw(context) {
-        context.backend.execute(new RenderTargetPass(() => {
-            context.backend.clear();
-            context.render(this._source);
-        }, { target: this._rt, view: this._rt.view, clearColor: Color.transparentBlack }));
+
+    override draw(context): void {
+        context.backend.execute(
+            new RenderTargetPass(
+                () => {
+                    context.backend.clear();
+                    context.render(this._source);
+                },
+                { target: this._rt, view: this._rt.view, clearColor: Color.transparentBlack },
+            ),
+        );
         context.backend.clear(new Color(18, 24, 36));
         context.render(this._source);
         context.render(this._mirror);
     }
 }
+
 app.start(new WaterMirrorScene());

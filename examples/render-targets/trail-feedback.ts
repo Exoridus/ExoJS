@@ -1,5 +1,5 @@
-// Auto-generated from trail-feedback.ts — edit the .ts source, not this file.
 import { Application, Color, RenderTargetPass, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,33 +10,45 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class TrailFeedbackScene extends Scene {
-    _rt;
-    _decay;
-    _bunny;
-    _final;
-    _time = 0;
-    async load(loader) {
+    private _rt!: RenderTexture;
+    private _decay!: Sprite;
+    private _bunny!: Sprite;
+    private _final!: Sprite;
+    private _time = 0;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._rt = new RenderTexture(800, 600);
         this._decay = new Sprite(this._rt).setTint(new Color(255, 255, 255, 0.93));
         this._bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
         this._final = new Sprite(this._rt);
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time += delta.seconds;
         this._bunny.setPosition(400 + Math.cos(this._time * 2.0) * 230, 300 + Math.sin(this._time * 2.7) * 170);
     }
-    draw(context) {
-        context.backend.execute(new RenderTargetPass(() => {
-            context.render(this._decay);
-            context.render(this._bunny);
-        }, { target: this._rt, view: this._rt.view }));
+
+    override draw(context): void {
+        context.backend.execute(
+            new RenderTargetPass(
+                () => {
+                    context.render(this._decay);
+                    context.render(this._bunny);
+                },
+                { target: this._rt, view: this._rt.view },
+            ),
+        );
         context.backend.clear();
         context.render(this._final);
     }
 }
+
 app.start(new TrailFeedbackScene());

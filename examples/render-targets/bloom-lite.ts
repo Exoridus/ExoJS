@@ -1,5 +1,5 @@
-// Auto-generated from bloom-lite.ts — edit the .ts source, not this file.
 import { Application, BlendModes, BlurFilter, Color, RenderTargetPass, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,20 +10,24 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class BloomLiteScene extends Scene {
-    _baseRt;
-    _glowRt;
-    _blurredRt;
-    _bunny;
-    _baseSprite;
-    _glowSprite;
-    _blur;
-    _time = 0;
-    async load(loader) {
+    private _baseRt!: RenderTexture;
+    private _glowRt!: RenderTexture;
+    private _blurredRt!: RenderTexture;
+    private _bunny!: Sprite;
+    private _baseSprite!: Sprite;
+    private _glowSprite!: Sprite;
+    private _blur!: BlurFilter;
+    private _time = 0;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._baseRt = new RenderTexture(800, 600);
         this._glowRt = new RenderTexture(800, 600);
         this._blurredRt = new RenderTexture(800, 600);
@@ -32,25 +36,38 @@ class BloomLiteScene extends Scene {
         this._glowSprite = new Sprite(this._blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
         this._blur = new BlurFilter({ radius: 10, quality: 2 });
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time += delta.seconds;
         this._bunny.setPosition(400 + Math.cos(this._time * 1.7) * 190, 300 + Math.sin(this._time * 1.2) * 160);
     }
-    draw(context) {
-        context.backend.execute(new RenderTargetPass(() => {
-            context.backend.clear();
-            this._bunny.setTint(Color.white);
-            context.render(this._bunny);
-        }, { target: this._baseRt, view: this._baseRt.view }));
-        context.backend.execute(new RenderTargetPass(() => {
-            context.backend.clear();
-            this._bunny.setTint(new Color(255, 230, 190));
-            context.render(this._bunny);
-        }, { target: this._glowRt, view: this._glowRt.view }));
+
+    override draw(context): void {
+        context.backend.execute(
+            new RenderTargetPass(
+                () => {
+                    context.backend.clear();
+                    this._bunny.setTint(Color.white);
+                    context.render(this._bunny);
+                },
+                { target: this._baseRt, view: this._baseRt.view },
+            ),
+        );
+        context.backend.execute(
+            new RenderTargetPass(
+                () => {
+                    context.backend.clear();
+                    this._bunny.setTint(new Color(255, 230, 190));
+                    context.render(this._bunny);
+                },
+                { target: this._glowRt, view: this._glowRt.view },
+            ),
+        );
         this._blur.apply(context.backend, this._glowRt, this._blurredRt);
         context.backend.clear();
         context.render(this._baseSprite);
         context.render(this._glowSprite);
     }
 }
+
 app.start(new BloomLiteScene());
