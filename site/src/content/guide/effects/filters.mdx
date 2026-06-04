@@ -69,7 +69,7 @@ Maps every pixel through a Look-Up Table texture. Two modes:
 - **1D LUT** (palette): `N×1` texture, indexed by a single channel. Palette cycling, posterisation, indexed-color effects.
 - **3D LUT** (color grading): `N²×N` unwrapped cube texture with trilinear interpolation. Cinematic color grading, film stock emulation, tone mapping.
 
-```js
+```js no-check
 import { LutFilter } from '@codexo/exojs';
 
 // From a DaVinci/OBS/Photoshop-exported PNG strip
@@ -87,7 +87,7 @@ filter.setLut(differentLutTexture);
 
 `WebGl2ShaderFilter` and `WebGpuShaderFilter` accept a fragment shader source and an optional uniforms map. They render a fullscreen quad and execute the shader against the filter input texture:
 
-```js
+```js no-check
 import { WebGl2ShaderFilter } from '@codexo/exojs';
 
 const waveFilter = new WebGl2ShaderFilter({

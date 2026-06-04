@@ -56,6 +56,7 @@
     "prepack": "pnpm build",
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
+    "typecheck:guides": "tsx scripts/extract-guide-snippets.ts && tsc --noEmit -p tsconfig.guides.json",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.js\"",
     "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.js\"",
     "lint:strict": "eslint --max-warnings=0 \"src/**/*.ts\"",

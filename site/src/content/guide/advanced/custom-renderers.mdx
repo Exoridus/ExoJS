@@ -53,7 +53,7 @@ The pass's callback runs at the point you call `backend.execute()`, so you contr
 
 When you need full GPU control — raw pipeline creation, custom vertex buffers, compute dispatches — access `WebGpuBackend` directly through `app.backend`. This is the escape hatch: you bypass ExoJS drawable types and renderer pipelines entirely, working at the WebGPU API level:
 
-```js
+```js no-check
 import { WebGpuBackend } from '@codexo/exojs';
 
 class CustomTriangleRenderer {

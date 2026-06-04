@@ -23,12 +23,12 @@ The smallest viable scene has just a `draw` method. The application calls it eve
 import { Application, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-    draw(backend) {
-        backend.clear();
+    draw(context) {
+        context.backend.clear();
     }
 }
 
-const app = new Application({ width: 800, height: 600 });
+const app = new Application({ canvas: { width: 800, height: 600 } });
 app.start(new HelloScene());
 ```
 

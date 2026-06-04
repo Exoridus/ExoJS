@@ -60,6 +60,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Typecheck guides
+        run: pnpm typecheck:guides
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

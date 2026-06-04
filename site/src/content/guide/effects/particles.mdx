@@ -45,7 +45,7 @@ A spawn module creates new particles each frame. Two built-in spawners cover the
 
 **`RateSpawn`** — continuous emission at a configurable rate (particles per second):
 
-```js
+```js no-check
 import { ConeDirection, Constant, RateSpawn, Range, Vector } from '@codexo/exojs';
 
 system.addSpawnModule(new RateSpawn({
@@ -58,7 +58,7 @@ system.addSpawnModule(new RateSpawn({
 
 **`BurstSpawn`** — named bursts at scheduled times, with optional looping:
 
-```js
+```js no-check
 import { BurstSpawn, ConeDirection, Constant, Range, Vector } from '@codexo/exojs';
 
 const burst = new BurstSpawn({
@@ -97,7 +97,7 @@ Update modules mutate particle state each frame. Every built-in update module th
 
 The frequently-used update modules:
 
-```js
+```js no-check
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -146,7 +146,7 @@ Other available update modules: `RotateOverLifetime`, `VelocityOverLifetime`, `A
 
 A death module fires once per particle when its lifetime expires. The only built-in death module is `SpawnOnDeath`:
 
-```js
+```js no-check
 import { SpawnOnDeath } from '@codexo/exojs';
 
 system.addDeathModule(new SpawnOnDeath(

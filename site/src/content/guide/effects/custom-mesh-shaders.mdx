@@ -25,7 +25,7 @@ A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filt
 
 At least one language source is required. Pass `glsl` for WebGL2, `wgsl` for WebGPU, or both for cross-backend meshes:
 
-```js
+```js no-check
 import { MeshShader } from '@codexo/exojs';
 
 const waveShader = new MeshShader({
@@ -182,7 +182,7 @@ In WGSL, user uniforms belong to `@group(2)`. Scalar/vector/matrix uniforms decl
 
 Pass a `MeshShader` in the mesh constructor's `shader` option:
 
-```js
+```js no-check
 import { Mesh, MeshShader } from '@codexo/exojs';
 
 const shader = new MeshShader({
@@ -228,7 +228,7 @@ const drift = shader.detectUniformDrift();
 
 Auto-bound uniforms (`u_projection`, `u_translation`, `u_tint`, `u_texture`, `u_mesh`) are excluded from the comparison — they are intentionally declared differently across languages. Use `detectUniformDrift` in a CI check to catch typos and mismatches:
 
-```js
+```js no-check
 import assert from 'node:assert';
 
 const drift = shader.detectUniformDrift();
