@@ -1,5 +1,5 @@
-// Auto-generated from mouse-and-pointer.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,24 +10,30 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class MouseAndPointerScene extends Scene {
-    _sprite;
-    _crosshair;
-    _pointer = { x: 400, y: 300 };
-    async load(loader) {
+    private _sprite!: Sprite;
+    private _crosshair!: Graphics;
+    private _pointer = { x: 400, y: 300 };
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
         this._sprite.interactive = true;
         this._sprite.draggable = true;
         this._crosshair = new Graphics();
+
         this.app.input.onPointerMove.add(pointer => {
             this._pointer = { x: pointer.x, y: pointer.y };
         });
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
         this._crosshair.clear();
@@ -38,4 +44,5 @@ class MouseAndPointerScene extends Scene {
         context.render(this._crosshair);
     }
 }
+
 app.start(new MouseAndPointerScene());

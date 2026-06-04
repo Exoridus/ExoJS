@@ -1,5 +1,5 @@
-// Auto-generated from keyboard.ts — edit the .ts source, not this file.
 import { Application, Color, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,15 +10,20 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class KeyboardScene extends Scene {
-    _sprite;
-    _move = { w: 0, a: 0, s: 0, d: 0 };
-    async load(loader) {
+    private _sprite!: Sprite;
+    private _move = { w: 0, a: 0, s: 0, d: 0 };
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
+
         this.inputs.onActive(Keyboard.W, () => {
             this._move.w = 1;
         });
@@ -47,13 +52,16 @@ class KeyboardScene extends Scene {
             this._sprite.setPosition(400, 300);
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         const speed = 280 * delta.seconds;
         this._sprite.move((this._move.d - this._move.a) * speed, (this._move.s - this._move.w) * speed);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
     }
 }
+
 app.start(new KeyboardScene());
