@@ -42,27 +42,27 @@ Every render backend exposes a `view` property. The view defines how world space
 Set the center to `(400, 300)` and the size to `(800, 600)`, and the canvas shows the world from `(0, 0)` to `(800, 600)`. Move the center to `(400, 600)` and the camera scrolls down by 300 pixels' worth of world.
 
 ```js
-draw(backend) {
-    backend.view.setCenter(400, 300);
-    backend.view.resize(800, 600);
+draw(context) {
+    context.camera.setCenter(400, 300);
+    context.camera.resize(800, 600);
 
-    backend.clear();
-    this.world.render(backend);
+    context.backend.clear();
+    context.render(this.world);
 }
 ```
 
-You don't usually configure the view by hand — it tracks the canvas size automatically. Reach for `setCenter`, `move`, `setZoom`, and `setRotation` when you need camera behavior. Configure the view through the `backend` passed to `draw`, which is the public rendering surface already available to the scene.
+You don't usually configure the view by hand — it tracks the canvas size automatically. Reach for `setCenter`, `move`, `setZoom`, and `setRotation` when you need camera behavior. Configure the camera through the `context` passed to `draw`, using `context.camera`.
 
 ## Following an object
 
 The view supports following a target. The target can be any object with `x` and `y` properties — typically a scene node, but a plain `{x, y}` object works too:
 
 ```js
-draw(backend) {
-    backend.view.follow(this.player);
+draw(context) {
+    context.camera.follow(this.player);
 
-    backend.clear();
-    this.world.render(backend);
+    context.backend.clear();
+    context.render(this.world);
 }
 ```
 
@@ -81,11 +81,11 @@ init() {
     });
 }
 
-draw(backend) {
-    backend.view.setZoom(this.zoom);
+draw(context) {
+    context.camera.setZoom(this.zoom);
 
-    backend.clear();
-    this.world.render(backend);
+    context.backend.clear();
+    context.render(this.world);
 }
 ```
 
@@ -96,23 +96,23 @@ A handful of misalignments come up regularly:
 - **Hardcoded canvas-relative positions.** Setting a sprite to `(400, 300)` because that "looks centered for an 800×600 canvas" breaks the moment the canvas resizes. Use the active view's center, the canvas size at runtime, or anchor-aware containers instead.
 - **Anchor confusion.** A sprite's position is the world-space location of its anchor. The default anchor is the top-left, so `setPosition(400, 300)` puts the top-left of the sprite at `(400, 300)`, not its middle. Call `setAnchor(0.5)` to pivot at the center.
 - **Pointer events without view conversion.** Pointer events arrive in canvas space. If your camera has moved, you need to convert them back to world space before testing whether the click hit a world-space object. The world-vs-screen-coords example below shows the conversion.
-- **HUD inside the world.** A health bar should not move when the camera moves. Put HUD elements in a separate container that you render *after* `world.render(backend)`, with their positions in canvas space.
+- **HUD inside the world.** A health bar should not move when the camera moves. Put HUD elements in a separate container that you render *after* `context.render(world)`, with their positions in canvas space.
 
 ## Multiple views
 
 The active view can be swapped on every frame. Used together with viewports, this gives you split-screen, picture-in-picture, and minimap rendering — render the world once with one view configuration into one viewport, then again with a different configuration into another:
 
 ```js
-draw(backend) {
-    backend.clear();
+draw(context) {
+    context.backend.clear();
 
-    backend.view.viewport = this.leftHalf;
-    backend.view.setCenter(this.player1.x, this.player1.y);
-    this.world.render(backend);
+    context.camera.viewport = this.leftHalf;
+    context.camera.setCenter(this.player1.x, this.player1.y);
+    context.render(this.world);
 
-    backend.view.viewport = this.rightHalf;
-    backend.view.setCenter(this.player2.x, this.player2.y);
-    this.world.render(backend);
+    context.camera.viewport = this.rightHalf;
+    context.camera.setCenter(this.player2.x, this.player2.y);
+    context.render(this.world);
 }
 ```
 

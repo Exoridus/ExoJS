@@ -104,9 +104,9 @@ class PlayerScene extends Scene {
         this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta.seconds);
     }
 
-    draw(backend) {
-        backend.clear();
-        this.sprite.render(backend);
+    draw(context) {
+        context.backend.clear();
+        context.render(this.sprite);
     }
 }
 ```

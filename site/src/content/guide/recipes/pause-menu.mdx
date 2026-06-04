@@ -36,9 +36,9 @@ class GameScene extends Scene {
         // but you can gate it on a flag if you prefer to freeze.
     }
 
-    draw(backend) {
-        backend.clear(new Color(20, 24, 34));
-        this.root.render(backend);
+    draw(context) {
+        context.backend.clear(new Color(20, 24, 34));
+        context.render(this.root);
     }
 }
 

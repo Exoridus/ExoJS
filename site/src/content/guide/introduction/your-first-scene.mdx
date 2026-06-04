@@ -23,16 +23,16 @@ The smallest viable scene has just a `draw` method. The application calls it eve
 import { Application, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-    draw(backend) {
-        backend.clear();
+    draw(context) {
+        context.backend.clear();
     }
 }
 
-const app = new Application({ width: 800, height: 600 });
+const app = new Application({ canvas: { width: 800, height: 600 } });
 app.start(new HelloScene());
 ```
 
-The `backend.clear()` call paints the canvas with the application's `clearColor` (default black). Start each frame with `clear` unless you specifically want the previous frame to remain.
+The `context.backend.clear()` call paints the canvas with the application's `clearColor` (default black). Start each frame with `clear` unless you specifically want the previous frame to remain.
 
 There's nothing visible yet because the scene doesn't render anything beyond the clear. Add a sprite next.
 
@@ -43,7 +43,7 @@ Scenes have four lifecycle hooks. You override the ones you need:
 - `async load(loader)` — declare assets. Resolves before `init` runs.
 - `init(loader)` — set up state. The assets you declared during `load` are available via `loader.get(...)`.
 - `update(delta)` — per-frame logic.
-- `draw(backend)` — per-frame rendering.
+- `draw(context)` — per-frame rendering.
 
 Adding a single sprite means using `load` to declare a texture, `init` to construct the sprite, and `draw` to render it:
 
@@ -61,9 +61,9 @@ class HelloScene extends Scene {
         this.bunny.setPosition(this.app.canvas.width / 2, this.app.canvas.height / 2);
     }
 
-    draw(backend) {
-        backend.clear();
-        this.bunny.render(backend);
+    draw(context) {
+        context.backend.clear();
+        context.render(this.bunny);
     }
 }
 ```

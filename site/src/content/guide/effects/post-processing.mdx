@@ -30,22 +30,22 @@ init(loader) {
     this.final = new Sprite(this.blurredRt);
 }
 
-draw(backend) {
+draw(context) {
     // 1. Render the full scene into sceneRt
-    backend.execute(new RenderTargetPass(
+    context.backend.execute(new RenderTargetPass(
         () => {
-            backend.clear();
-            this.worldLayer.render(backend);
+            context.backend.clear();
+            this.worldLayer.render(context.backend);
         },
         { target: this.sceneRt, view: this.sceneRt.view }
     ));
 
     // 2. Apply blur: sceneRt → filter → blurredRt
-    this.blur.apply(backend, this.sceneRt, this.blurredRt);
+    this.blur.apply(context.backend, this.sceneRt, this.blurredRt);
 
     // 3. Display the result on the canvas
-    backend.clear();
-    this.final.render(backend);
+    context.backend.clear();
+    context.render(this.final);
 }
 ```
 
@@ -69,34 +69,34 @@ init(loader) {
     this.blur = new BlurFilter({ radius: 10, quality: 2 });
 }
 
-draw(backend) {
+draw(context) {
     // Pass 1: base scene at normal tint
-    backend.execute(new RenderTargetPass(
+    context.backend.execute(new RenderTargetPass(
         () => {
-            backend.clear();
+            context.backend.clear();
             this.bunny.setTint(Color.white);
-            this.bunny.render(backend);
+            this.bunny.render(context.backend);
         },
         { target: this.baseRt, view: this.baseRt.view }
     ));
 
     // Pass 2: glow scene — same geometry, bright warm tint
-    backend.execute(new RenderTargetPass(
+    context.backend.execute(new RenderTargetPass(
         () => {
-            backend.clear();
+            context.backend.clear();
             this.bunny.setTint(new Color(255, 230, 190));
-            this.bunny.render(backend);
+            this.bunny.render(context.backend);
         },
         { target: this.glowRt, view: this.glowRt.view }
     ));
 
     // Pass 3: blur the glow
-    this.blur.apply(backend, this.glowRt, this.blurredRt);
+    this.blur.apply(context.backend, this.glowRt, this.blurredRt);
 
     // Composite: base + blurred glow (additive)
-    backend.clear();
-    this.baseSprite.render(backend);
-    this.glowSprite.render(backend);
+    context.backend.clear();
+    context.render(this.baseSprite);
+    context.render(this.glowSprite);
 }
 ```
 
@@ -111,20 +111,20 @@ const blur = new BlurFilter({ radius: 6, quality: 2 });
 const color = new ColorFilter(new Color(140, 190, 255));
 
 // Render scene → sceneRt
-backend.execute(new RenderTargetPass(
-    () => { backend.clear(); this.scene.render(backend); },
+context.backend.execute(new RenderTargetPass(
+    () => { context.backend.clear(); this.scene.render(context.backend); },
     { target: this.sceneRt, view: this.sceneRt.view }
 ));
 
 // sceneRt → blur → tmpRt
-blur.apply(backend, this.sceneRt, this.tmpRt);
+blur.apply(context.backend, this.sceneRt, this.tmpRt);
 
 // tmpRt → color → outRt
-color.apply(backend, this.tmpRt, this.outRt);
+color.apply(context.backend, this.tmpRt, this.outRt);
 
 // Display outRt
-backend.clear();
-this.final.render(backend);
+context.backend.clear();
+context.render(this.final);
 ```
 
 Each `filter.apply()` call is one additional render pass. For a chain of N filters you need N `RenderTexture` instances (or fewer if you reuse them for subsequent steps — the engine reuses render target memory across filter passes internally when filters are on a `RenderNode`, but explicit `filter.apply()` calls require explicit texture management).
@@ -142,19 +142,19 @@ init(loader) {
     this.final = new Sprite(this.feedbackRt);
 }
 
-draw(backend) {
+draw(context) {
     // Draw the previous frame (at 93% opacity) plus the hero on top
-    backend.execute(new RenderTargetPass(
+    context.backend.execute(new RenderTargetPass(
         () => {
-            this.decay.render(backend);
-            this.hero.render(backend);
+            this.decay.render(context.backend);
+            this.hero.render(context.backend);
         },
         { target: this.feedbackRt, view: this.feedbackRt.view }
     ));
 
     // Display the result
-    backend.clear();
-    this.final.render(backend);
+    context.backend.clear();
+    context.render(this.final);
 }
 ```
 
@@ -166,8 +166,8 @@ Two ways to write into a `RenderTexture`:
 
 | Method | What it does |
 |---|---|
-| `backend.execute(RenderTargetPass)` | Runs a draw callback with the target set as active render target. Used for *scene rendering*. |
-| `filter.apply(backend, inputRt, outputRt)` | Runs the filter shader/program on an input texture, producing filtered output. Used for *post-render passes*. |
+| `context.backend.execute(RenderTargetPass)` | Runs a draw callback with the target set as active render target. Used for *scene rendering*. |
+| `filter.apply(context.backend, inputRt, outputRt)` | Runs the filter shader/program on an input texture, producing filtered output. Used for *post-render passes*. |
 
 You compose them: render scenes with `RenderTargetPass`, apply filters with `filter.apply`, display the final result with a sprite.
 

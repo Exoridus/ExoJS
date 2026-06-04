@@ -82,11 +82,9 @@ class AudioReactiveScene extends Scene {
         );
     }
 
-    draw(backend) {
-        backend.clear(this._bg);
-        backend.setView(this.view);
-        this.particles.render(backend);
-        backend.setView(null);
+    draw(context) {
+        context.backend.clear(this._bg);
+        context.render(this.particles, { view: this.view });
     }
 }
 ```

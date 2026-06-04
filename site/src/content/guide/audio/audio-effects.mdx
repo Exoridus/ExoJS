@@ -134,7 +134,7 @@ All parameters on these filters are live get/set. The [`EqualizerFilter` API ref
 
 Three filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletFilter`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
 
-```js
+```js no-check
 import { GranularFilter, PitchShiftFilter, VocoderFilter } from '@codexo/exojs';
 
 // Granular pitch shifting (0.25x to 4x)

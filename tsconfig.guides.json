@@ -1,0 +1,45 @@
+{
+  // Typecheck for TypeScript/JavaScript code blocks extracted from guide MDX files.
+  //
+  // The extractor (scripts/extract-guide-snippets.ts) pulls import-containing
+  // fenced blocks into .workspace/generated/guide-typecheck/ and this config
+  // type-checks them against the engine source (no build required).
+  //
+  // `strict` is off so untyped guide parameters (draw(context), update(delta))
+  // do not add noise. The gate reliably catches:
+  //   - removed/renamed exports:  import { MeshShader } → module error
+  //   - stale constructor options: new Application({ width }) → excess-property error
+  //   - stale TextStyle keys:  { fill: 'white' } → excess-property error
+  //   - .ts blocks get full type checking (contextual override types, etc.)
+  //
+  // Blocks intentionally excluded from typechecking must carry the `no-check`
+  // fence meta in the MDX source:  ```ts no-check
+  //
+  // Scope: all import-containing TS/JS snippets in site/src/content/guide/**
+  // extracted by `pnpm typecheck:guides` (which runs the extractor first).
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": [],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@codexo/exojs": ["./src/index.ts"],
+      "@codexo/exojs/debug": ["./src/debug/index.ts"],
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    ".workspace/generated/guide-typecheck/**/*.ts",
+    ".workspace/generated/guide-typecheck/**/*.js",
+    "src/typings.d.ts",
+    "src/build-constants.d.ts"
+  ]
+}

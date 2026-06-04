@@ -56,7 +56,7 @@ If your page already has a canvas, pass it into `Application` when you create th
 import { Application } from '@codexo/exojs';
 
 const canvas = document.querySelector<HTMLCanvasElement>('canvas')!;
-const app = new Application({ canvas });
+const app = new Application({ canvas: { element: canvas } });
 ```
 
 The `app.canvas` property is the active `HTMLCanvasElement` the runtime renders into.
@@ -75,12 +75,12 @@ if (!(canvas instanceof HTMLCanvasElement)) {
 }
 
 class BlankScene extends Scene {
-    draw(backend) {
-        backend.clear();
+    draw(context) {
+        context.backend.clear();
     }
 }
 
-const app = new Application({ canvas, clearColor: Color.midnightBlue });
+const app = new Application({ canvas: { element: canvas }, clearColor: Color.midnightBlue });
 app.start(new BlankScene());
 ```
 

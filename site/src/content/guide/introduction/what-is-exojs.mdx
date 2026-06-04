@@ -28,8 +28,8 @@ The application owns the runtime configuration — render backend, canvas size, 
 import { Application, Scene } from '@codexo/exojs';
 
 class MyScene extends Scene {
-    draw(backend) {
-        backend.clear();
+    draw(context) {
+        context.backend.clear();
     }
 }
 

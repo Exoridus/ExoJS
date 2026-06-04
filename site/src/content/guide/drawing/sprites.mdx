@@ -34,9 +34,9 @@ class MyScene extends Scene {
         this.addChild(this.hero);
     }
 
-    draw(backend) {
-        backend.clear();
-        this.root.render(backend);
+    draw(context) {
+        context.backend.clear();
+        context.render(this.root);
     }
 }
 ```

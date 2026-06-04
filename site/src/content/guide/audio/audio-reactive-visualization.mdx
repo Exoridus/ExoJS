@@ -189,7 +189,7 @@ import {
     Color, Graphics, Music, Scene,
 } from '@codexo/exojs';
 
-const app = new Application({ width: 800, height: 600 });
+const app = new Application({ canvas: { width: 800, height: 600 } });
 document.body.append(app.canvas);
 
 class AudioReactiveScene extends Scene {
@@ -207,6 +207,7 @@ class AudioReactiveScene extends Scene {
 
         this.bars = new Graphics();
         this.addChild(this.bars);
+        this._bg = new Color(20, 24, 30, 1);
     }
 
     update(delta) {
@@ -231,13 +232,12 @@ class AudioReactiveScene extends Scene {
         }
 
         // Pulse the background on beat
-        const bg = new Color(20, 24, Math.round(30 + this.detector.pulse * 60), 1);
-        this.app.clearColor = bg;
+        this._bg = new Color(20, 24, Math.round(30 + this.detector.pulse * 60), 1);
     }
 
-    draw(backend) {
-        backend.clear();
-        this.bars.render(backend);
+    draw(context) {
+        context.backend.clear(this._bg);
+        context.render(this.bars);
     }
 }
 

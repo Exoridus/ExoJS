@@ -75,21 +75,19 @@ class CinematicScene extends Scene {
             .start();
     }
 
-    draw(backend) {
-        backend.clear(new Color(16, 16, 24));
+    draw(context) {
+        context.backend.clear(new Color(16, 16, 24));
 
-        backend.setView(this.view);
-        this.boss.render(backend);
-        backend.setView(null);
+        context.render(this.boss, { view: this.view });
 
-        this.titleText.render(backend);
+        context.render(this.titleText);
 
         // Screen-space shutter bars
         this.bars.clear();
         this.bars.fillColor = Color.black;
         this.bars.drawRectangle(0, 0, 800, this.barSize.v);
         this.bars.drawRectangle(0, 600 - this.barSize.v, 800, this.barSize.v);
-        this.bars.render(backend);
+        context.render(this.bars);
     }
 }
 ```
