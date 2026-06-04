@@ -1378,6 +1378,7 @@
         {
             "slug": "blendmodes",
             "path": "sprites-textures/blendmodes.js",
+            "language": "typescript",
             "title": "Blendmodes",
             "description": "Example: Blendmodes.",
             "backend": "core",
@@ -1391,6 +1392,7 @@
         {
             "slug": "sprite-basics",
             "path": "sprites-textures/sprite-basics.js",
+            "language": "typescript",
             "title": "Sprite Basics",
             "description": "Example: Sprite Basics.",
             "backend": "core",
@@ -1402,6 +1404,7 @@
         {
             "slug": "spritesheet-frames",
             "path": "sprites-textures/spritesheet-frames.js",
+            "language": "typescript",
             "title": "Spritesheet Frames",
             "description": "Example: Spritesheet Frames.",
             "backend": "core",
@@ -1413,6 +1416,7 @@
         {
             "slug": "svg-drawable",
             "path": "sprites-textures/svg-drawable.js",
+            "language": "typescript",
             "title": "Svg Drawable",
             "description": "Example: Svg Drawable.",
             "backend": "core",
@@ -1424,6 +1428,7 @@
         {
             "slug": "texture-loader",
             "path": "sprites-textures/texture-loader.js",
+            "language": "typescript",
             "title": "Texture Loader",
             "description": "Example: Texture Loader.",
             "backend": "core",
@@ -1435,6 +1440,7 @@
         {
             "slug": "video-drawable",
             "path": "sprites-textures/video-drawable.js",
+            "language": "typescript",
             "title": "Video Drawable",
             "description": "Example: Video Drawable.",
             "backend": "core",
