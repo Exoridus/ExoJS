@@ -1,5 +1,5 @@
-// Auto-generated from noise-vignette.ts — edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,7 +10,9 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;
 float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
@@ -27,14 +29,17 @@ fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))
     let vig=1.0-smoothstep(0.35,0.85,length(vUv-vec2<f32>(0.5)));
     return vec4<f32>((c.rgb+vec3<f32>(n))*vig,c.a);
 }`;
+
 class NoiseVignetteScene extends Scene {
-    _time = 0;
-    _filter;
-    _sprite;
-    async load(loader) {
+    private _time = 0;
+    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private _sprite!: Sprite;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
@@ -42,13 +47,16 @@ class NoiseVignetteScene extends Scene {
         this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
         this._sprite.filters = [this._filter];
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time += delta.seconds;
         this._filter.uniforms.uTime = this._time;
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
     }
 }
+
 app.start(new NoiseVignetteScene());

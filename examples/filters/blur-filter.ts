@@ -1,6 +1,6 @@
-// Auto-generated from blur-filter.ts — edit the .ts source, not this file.
 import { technical } from '@assets';
 import { Application, BlurFilter, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,21 +8,27 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const PIXEL_GRID = technical.filtering.pixelGrid128;
+
 class BlurFilterScene extends Scene {
-    _blur;
-    _sprite;
-    _ui;
-    _drag = false;
-    async load(loader) {
+    private _blur!: BlurFilter;
+    private _sprite!: Sprite;
+    private _ui!: Graphics;
+    private _drag = false;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { grid: PIXEL_GRID });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._blur = new BlurFilter({ radius: 2, quality: 2 });
         this._sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(3.5).setPosition(400, 280);
         this._sprite.filters = [this._blur];
         this._ui = new Graphics();
+
         this.app.input.onPointerDown.add(p => {
             this._drag = p.y > 500;
             this._setBlurFromX(p.x);
@@ -34,13 +40,14 @@ class BlurFilterScene extends Scene {
             this._drag = false;
         });
     }
-    _setBlurFromX(x) {
-        if (!this._drag)
-            return;
+
+    private _setBlurFromX(x: number): void {
+        if (!this._drag) return;
         const t = Math.max(0, Math.min(1, (x - 180) / 440));
         this._blur.radius = t * 14;
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._sprite);
         this._ui.clear();
@@ -51,4 +58,5 @@ class BlurFilterScene extends Scene {
         context.render(this._ui);
     }
 }
+
 app.start(new BlurFilterScene());
