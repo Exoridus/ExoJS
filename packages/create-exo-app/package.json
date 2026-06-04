@@ -1,0 +1,32 @@
+{
+  "name": "create-exo-app",
+  "version": "0.1.0",
+  "description": "Official starter for ExoJS — scaffold a new app with npm create exo-app",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "create-exo-app": "./dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "templates/"
+  ],
+  "scripts": {
+    "build": "tsc && node --input-type=module --eval \"import{readFileSync,writeFileSync}from'node:fs';const f='dist/index.js';writeFileSync(f,'#!/usr/bin/env node\\n'+readFileSync(f,'utf-8'));\"",
+    "dev": "tsc --watch",
+    "start": "tsx src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/Exoridus/ExoJS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

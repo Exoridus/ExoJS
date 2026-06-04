@@ -107,6 +107,18 @@ importers:
 
   packages/assets: {}
 
+  packages/create-exo-app:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.9.1
+      tsx:
+        specifier: ^4.21.0
+        version: 4.22.3
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   site:
     dependencies:
       '@astrojs/mdx':
