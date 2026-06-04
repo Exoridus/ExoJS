@@ -11,7 +11,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 Every filter attached to a drawable costs at least one extra render pass. A stack of three filters on a container means the container renders to an off-screen target, the first filter reads and writes a target, the second does the same, and the third composites the result — four passes for one element. When your frame budget tightens, knowing who is adding passes and why matters.
 
-[`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) shows you that information live, in a compact text panel overlaid on the canvas. It ships in the `@codexo/exojs/debug` subpath alongside the other debug layers.
+[`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) shows you that information live, in a compact text panel overlaid on the canvas. It ships in the `@codexo/exojs/debug` optional entrypoint alongside the other debug layers.
 
 ## What the layer reveals
 
@@ -28,7 +28,7 @@ The panel does not show drawables with zero filters — they are invisible to th
 
 `RenderPassInspectorLayer` extends `DebugLayer` and is designed to be driven via `app.onFrame` — the same pattern used by `DebugOverlay` for the other debug layers. It is not pushed onto the scene stack. The inspector walks `scene.currentScene?.root` each frame, so it sees whichever scene is currently active.
 
-Import from the debug subpath, construct against the application, subscribe to `app.onFrame`, and toggle visibility:
+Import from the debug entrypoint, construct against the application, subscribe to `app.onFrame`, and toggle visibility:
 
 ```js
 import { Scene, View } from '@codexo/exojs';
@@ -142,7 +142,7 @@ These labels are visible in tools that surface WebGPU pass labels (for example, 
 - **During profiling** — when a scene's frame time is higher than expected, enable the inspector to rule out (or confirm) filter pass overhead as the cause.
 - **In CI** — snapshot `inspector.entries` and `inspector.totalPasses` on a known scene to catch regressions. A PR that accidentally enables `cacheAsBitmap: false` or adds an unintended filter won't change visual output but will show up as a pass-count increase.
 
-For live FPS, frame time, and draw call counts, use [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) from the same debug subpath. For bounding-box and transform visualization, use [`BoundingBoxesLayer`](/ExoJS/en/api/bounding-boxes-layer/).
+For live FPS, frame time, and draw call counts, use [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) from the same `@codexo/exojs/debug` entrypoint. For bounding-box and transform visualization, use [`BoundingBoxesLayer`](/ExoJS/en/api/bounding-boxes-layer/).
 
 ## Where to go next
 
