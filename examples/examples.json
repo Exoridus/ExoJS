@@ -141,6 +141,7 @@
         {
             "slug": "audio-buses",
             "path": "audio-basics/audio-buses.js",
+            "language": "typescript",
             "title": "Audio Buses",
             "description": "Example: Audio Buses.",
             "backend": "core",
@@ -156,6 +157,7 @@
         {
             "slug": "crossfade-tracks",
             "path": "audio-basics/crossfade-tracks.js",
+            "language": "typescript",
             "title": "Crossfade Tracks",
             "description": "Example: Crossfade Tracks.",
             "backend": "core",
@@ -171,6 +173,7 @@
         {
             "slug": "music-loop",
             "path": "audio-basics/music-loop.js",
+            "language": "typescript",
             "title": "Music Loop",
             "description": "Example: Music Loop.",
             "backend": "core",
@@ -186,6 +189,7 @@
         {
             "slug": "play-sound",
             "path": "audio-basics/play-sound.js",
+            "language": "typescript",
             "title": "Play Sound",
             "description": "Example: Play Sound.",
             "backend": "core",
@@ -201,6 +205,7 @@
         {
             "slug": "random-pitch-pool",
             "path": "audio-basics/random-pitch-pool.js",
+            "language": "typescript",
             "title": "Random Pitch Pool",
             "description": "Example: Random Pitch Pool.",
             "backend": "core",
@@ -217,6 +222,7 @@
         {
             "slug": "sound-pool",
             "path": "audio-basics/sound-pool.js",
+            "language": "typescript",
             "title": "Sound Pool",
             "description": "Example: Sound Pool.",
             "backend": "core",
