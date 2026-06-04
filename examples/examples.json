@@ -345,6 +345,7 @@
         {
             "slug": "custom-render-pass",
             "path": "custom-renderers/custom-render-pass.js",
+            "language": "typescript",
             "title": "Custom Render Pass",
             "description": "Example: Custom Render Pass.",
             "backend": "advanced",
@@ -357,6 +358,7 @@
         {
             "slug": "custom-triangle-renderer",
             "path": "custom-renderers/custom-triangle-renderer.js",
+            "language": "typescript",
             "title": "Custom Triangle Renderer",
             "description": "Example: Custom Triangle Renderer.",
             "backend": "advanced",
@@ -1120,6 +1122,7 @@
         {
             "slug": "audio-reactive-particles",
             "path": "showcase/audio-reactive-particles.js",
+            "language": "typescript",
             "title": "Audio Reactive Particles",
             "description": "Example: Audio Reactive Particles.",
             "backend": "core",
@@ -1135,6 +1138,7 @@
         {
             "slug": "audio-visualisation",
             "path": "showcase/audio-visualisation.js",
+            "language": "typescript",
             "title": "Audio Visualisation",
             "description": "Example: Audio Visualisation.",
             "backend": "core",
@@ -1150,6 +1154,7 @@
         {
             "slug": "boss-intro-cinematic",
             "path": "showcase/boss-intro-cinematic.js",
+            "language": "typescript",
             "title": "Boss Intro Cinematic",
             "description": "Example: Boss Intro Cinematic.",
             "backend": "core",
@@ -1165,6 +1170,7 @@
         {
             "slug": "color-grading",
             "path": "showcase/color-grading.js",
+            "language": "typescript",
             "title": "Color Grading",
             "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) on a single sprite.",
             "backend": "core",
@@ -1180,6 +1186,7 @@
         {
             "slug": "damage-flash",
             "path": "showcase/damage-flash.js",
+            "language": "typescript",
             "title": "Damage Flash",
             "description": "Example: Damage Flash.",
             "backend": "core",
@@ -1194,6 +1201,7 @@
         {
             "slug": "dialog-system",
             "path": "showcase/dialog-system.js",
+            "language": "typescript",
             "title": "Dialog System",
             "description": "Example: Dialog System.",
             "backend": "core",
@@ -1209,6 +1217,7 @@
         {
             "slug": "gamepad-spaceship",
             "path": "showcase/gamepad-spaceship.js",
+            "language": "typescript",
             "title": "Gamepad Spaceship",
             "description": "Example: Gamepad Spaceship.",
             "backend": "core",
@@ -1224,6 +1233,7 @@
         {
             "slug": "loading-progress-with-shader",
             "path": "showcase/loading-progress-with-shader.js",
+            "language": "typescript",
             "title": "Loading Progress With Shader",
             "description": "Example: Loading Progress With Shader.",
             "backend": "core",
@@ -1237,6 +1247,7 @@
         {
             "slug": "low-band-camera-shake",
             "path": "showcase/low-band-camera-shake.js",
+            "language": "typescript",
             "title": "Low Band Camera Shake",
             "description": "Example: Low Band Camera Shake.",
             "backend": "core",
@@ -1253,6 +1264,7 @@
         {
             "slug": "minimap-with-mask",
             "path": "showcase/minimap-with-mask.js",
+            "language": "typescript",
             "title": "Minimap With Mask",
             "description": "Example: Minimap With Mask.",
             "backend": "core",
@@ -1265,6 +1277,7 @@
         {
             "slug": "mouse-parallax",
             "path": "showcase/mouse-parallax.js",
+            "language": "typescript",
             "title": "Mouse Parallax",
             "description": "Example: Mouse Parallax.",
             "backend": "core",
@@ -1279,6 +1292,7 @@
         {
             "slug": "pause-blur",
             "path": "showcase/pause-blur.js",
+            "language": "typescript",
             "title": "Pause Blur",
             "description": "Example: Pause Blur.",
             "backend": "core",
@@ -1293,6 +1307,7 @@
         {
             "slug": "rectangles-collision",
             "path": "showcase/rectangles-collision.js",
+            "language": "typescript",
             "title": "Rectangles Collision",
             "description": "Example: Rectangles Collision.",
             "backend": "core",
@@ -1307,6 +1322,7 @@
         {
             "slug": "screen-shake-on-explosion",
             "path": "showcase/screen-shake-on-explosion.js",
+            "language": "typescript",
             "title": "Screen Shake On Explosion",
             "description": "Example: Screen Shake On Explosion.",
             "backend": "core",
@@ -1323,6 +1339,7 @@
         {
             "slug": "typewriter-text",
             "path": "showcase/typewriter-text.js",
+            "language": "typescript",
             "title": "Typewriter Text",
             "description": "Example: Typewriter Text.",
             "backend": "core",
@@ -1337,6 +1354,7 @@
         {
             "slug": "vinyl-record",
             "path": "showcase/vinyl-record.js",
+            "language": "typescript",
             "title": "Vinyl Record",
             "description": "Example: Vinyl Record.",
             "backend": "core",
@@ -1647,3 +1665,4 @@
         }
     ]
 }
+

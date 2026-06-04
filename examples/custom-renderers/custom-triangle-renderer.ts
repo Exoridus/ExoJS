@@ -1,6 +1,7 @@
-// Auto-generated from custom-triangle-renderer.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, WebGpuBackend } from '@codexo/exojs';
+
 const TRIANGLE_VERTICES = new Float32Array([0.0, 0.72, 1.0, 0.38, 0.23, -0.72, -0.52, 0.18, 0.77, 0.98, 0.72, -0.52, 0.95, 0.85, 0.24]);
+
 const SHADER_SOURCE = `
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
@@ -25,21 +26,25 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(input.color, 1.0);
 }
 `;
+
 class CustomTriangleRenderer {
-    _renderManager;
-    _device;
-    _pipeline;
-    _vertexBuffer;
-    constructor(backend) {
+    private _renderManager: any;
+    private _device: any;
+    private _pipeline: any;
+    private _vertexBuffer: any;
+
+    constructor(backend: any) {
         if (!(backend instanceof WebGpuBackend)) {
             throw new Error('This example requires ExoJS to provide a WebGpuBackend.');
         }
+
         this._renderManager = backend;
         this._device = backend.device;
         this._pipeline = this._createPipeline();
         this._vertexBuffer = this._createVertexBuffer();
     }
-    draw() {
+
+    draw(): this {
         const encoder = this._device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
             colorAttachments: [
@@ -56,21 +61,27 @@ class CustomTriangleRenderer {
                 },
             ],
         });
+
         pass.setPipeline(this._pipeline);
         pass.setVertexBuffer(0, this._vertexBuffer);
         pass.draw(3);
         pass.end();
+
         this._device.queue.submit([encoder.finish()]);
+
         return this;
     }
-    destroy() {
+
+    destroy(): void {
         this._vertexBuffer?.destroy();
         this._pipeline = null;
     }
-    _createPipeline() {
+
+    private _createPipeline(): any {
         const shaderModule = this._device.createShaderModule({
             code: SHADER_SOURCE,
         });
+
         return this._device.createRenderPipeline({
             layout: 'auto',
             vertex: {
@@ -108,17 +119,21 @@ class CustomTriangleRenderer {
             },
         });
     }
-    _createVertexBuffer() {
+
+    private _createVertexBuffer(): any {
         const buffer = this._device.createBuffer({
             size: TRIANGLE_VERTICES.byteLength,
             usage: GPUBufferUsage.VERTEX,
             mappedAtCreation: true,
         });
+
         new Float32Array(buffer.getMappedRange()).set(TRIANGLE_VERTICES);
         buffer.unmap();
+
         return buffer;
     }
 }
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -127,22 +142,29 @@ const app = new Application({
     clearColor: Color.black,
     backend: { type: 'webgpu' },
 });
+
 document.body.append(app.canvas);
+
 class CustomTriangleRendererScene extends Scene {
-    _triangleRenderer;
-    init() {
+    private _triangleRenderer!: CustomTriangleRenderer;
+
+    override init(): void {
         this._triangleRenderer = new CustomTriangleRenderer(this.app.backend);
     }
-    draw() {
+
+    override draw(): void {
         this._triangleRenderer.draw();
     }
-    unload() {
+
+    override unload(): void {
         this._triangleRenderer?.destroy();
     }
-    destroy() {
+
+    override destroy(): void {
         this._triangleRenderer?.destroy();
     }
 }
+
 app.start(new CustomTriangleRendererScene()).catch(() => {
     app.canvas.remove();
     app.destroy();

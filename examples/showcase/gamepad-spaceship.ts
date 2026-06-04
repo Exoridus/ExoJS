@@ -1,6 +1,19 @@
-// Auto-generated from gamepad-spaceship.ts — edit the .ts source, not this file.
 import { textures } from '@assets';
-import { AlphaFadeOverLifetime, Application, Color, Constant, GamepadAxis, OscillatorSound, ParticleSystem, RateSpawn, Scene, Sprite, Texture, Vector, } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    Application,
+    Color,
+    Constant,
+    GamepadAxis,
+    OscillatorSound,
+    ParticleSystem,
+    RateSpawn,
+    Scene,
+    Sprite,
+    Texture,
+    Vector,
+} from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -8,39 +21,48 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 class GamepadSpaceshipScene extends Scene {
-    _ship;
-    _velocity;
-    _thrust;
-    _engine;
-    _rate;
-    _particles;
-    async load(loader) {
+    private _ship!: Sprite;
+    private _velocity!: Vector;
+    private _thrust!: Vector;
+    private _engine!: OscillatorSound;
+    private _rate!: any;
+    private _particles!: ParticleSystem;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { ship: textures.shipA, particle: textures.particleSpark });
     }
-    init(loader) {
+
+    override init(loader): void {
         this._ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(400, 300);
         this._velocity = new Vector(0, 0);
         this._thrust = new Vector(0, 0);
         this._engine = new OscillatorSound({ type: 'sawtooth', frequency: 90, volume: 0 }).play();
-        this._rate = new Constant(0);
+
+        this._rate = new Constant(0) as any;
         this._particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 8000 });
-        this._particles.addSpawnModule(new RateSpawn({
-            rate: this._rate,
-            lifetime: new Constant(0.6),
-            position: new Constant(new Vector(0, 0)),
-            velocity: new Constant(new Vector(0, 0)),
-            scale: new Constant(new Vector(0.16, 0.16)),
-        }));
+        this._particles.addSpawnModule(
+            new RateSpawn({
+                rate: this._rate,
+                lifetime: new Constant(0.6),
+                position: new Constant(new Vector(0, 0)),
+                velocity: new Constant(new Vector(0, 0)),
+                scale: new Constant(new Vector(0.16, 0.16)),
+            }),
+        );
         this._particles.addUpdateModule(new AlphaFadeOverLifetime());
+
         const pad = this.app.input.getGamepad(0);
-        pad.onActive(GamepadAxis.LeftStickX, (v) => { this._thrust.x = v; });
+        pad.onActive(GamepadAxis.LeftStickX, (v: number) => { this._thrust.x = v; });
         pad.onStop(GamepadAxis.LeftStickX, () => { this._thrust.x = 0; });
-        pad.onActive(GamepadAxis.LeftStickY, (v) => { this._thrust.y = v; });
+        pad.onActive(GamepadAxis.LeftStickY, (v: number) => { this._thrust.y = v; });
         pad.onStop(GamepadAxis.LeftStickY, () => { this._thrust.y = 0; });
     }
-    update(delta) {
+
+    override update(delta): void {
         const mag = Math.min(1, Math.hypot(this._thrust.x, this._thrust.y));
         if (mag > 0.05) {
             const angle = Math.atan2(this._thrust.y, this._thrust.x);
@@ -50,8 +72,7 @@ class GamepadSpaceshipScene extends Scene {
             this._rate.value = 900 * mag;
             this._engine.volume = 0.08 + mag * 0.32;
             this._particles.setPosition(this._ship.position.x - Math.cos(angle) * 28, this._ship.position.y - Math.sin(angle) * 28);
-        }
-        else {
+        } else {
             this._rate.value = 0;
             this._engine.volume = 0;
         }
@@ -60,10 +81,12 @@ class GamepadSpaceshipScene extends Scene {
         this._velocity.y *= 0.985;
         this._particles.update(delta);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._particles);
         context.render(this._ship);
     }
 }
+
 app.start(new GamepadSpaceshipScene());

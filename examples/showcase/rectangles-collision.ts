@@ -1,5 +1,5 @@
-// Auto-generated from rectangles-collision.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Texture, Time } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,51 +10,70 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 const collisionRed = new Color(255, 0, 0);
+
 class RectanglesCollisionScene extends Scene {
-    _time;
-    _boxA;
-    _boxB;
-    async load(loader) {
+    private _time!: Time;
+    private _boxA!: Sprite;
+    private _boxB!: Sprite;
+
+    override async load(loader): Promise<void> {
         await loader.load(Texture, { gradient: 'image/hue-ramp.png' });
     }
-    init(loader) {
+
+    override init(loader): void {
         const { width, height } = this.app.canvas;
+
         this._time = new Time();
+
         this._boxA = new Sprite(loader.get(Texture, 'gradient'));
         this._boxA.setPosition(width / 2, height / 2);
         this._boxA.setAnchor(0.5, 0.5);
+
         this._boxB = new Sprite(loader.get(Texture, 'gradient'));
         this._boxB.setPosition(width / 2, height / 2);
         this._boxB.setAnchor(0.5, 0.5);
+
         this.app.input.onPointerMove.add(pointer => {
             this._boxB.setPosition(pointer.x, pointer.y);
         });
     }
-    update(delta) {
+
+    override update(delta): void {
         this._time.addTime(delta);
+
         this._boxA.setScale(0.25 + (Math.cos(this._time.seconds) * 0.5 + 0.5));
         this._boxB.setScale(0.25 + (Math.sin(this._time.seconds - Math.PI / 2) * 0.5 + 0.5));
+
         this._boxA.setRotation(this._time.seconds * 25);
         this._boxB.setRotation(this._time.seconds * -100);
+
         this._boxA.setTint(Color.white);
         this._boxB.setTint(Color.white);
+
         if (this._boxA.intersectsWith(this._boxB)) {
             const collision = this._boxA.collidesWith(this._boxB);
+
             if (!collision) {
                 return;
             }
+
             const { shapeAinB, shapeBinA } = collision;
+
             this._boxA.setTint(shapeAinB ? Color.cyan : collisionRed);
             this._boxB.setTint(shapeBinA ? Color.cyan : collisionRed);
             this._boxB.tint.a = 0.5;
         }
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._boxA);
         context.render(this._boxB);
     }
 }
+
 app.start(new RectanglesCollisionScene());
