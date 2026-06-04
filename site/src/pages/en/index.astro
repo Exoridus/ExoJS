@@ -37,9 +37,9 @@ class PlayerScene extends Scene {
     );
   }
 
-  draw(backend) {
-    backend.clear();
-    this.hero.render(backend);
+  draw(context) {
+    context.backend.clear();
+    context.render(this.hero);
   }
 }
 
@@ -56,12 +56,12 @@ await app.start(new PlayerScene());`;
 const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-  draw(backend) {
-    backend.clear();
+  draw(context) {
+    context.backend.clear();
   }
 }
 
-const app = new Application();
+const app = new Application({ canvas: { width: 800, height: 600 } });
 app.start(new HelloScene());`;
 
 const examples = [
