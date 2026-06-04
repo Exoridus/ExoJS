@@ -1,5 +1,5 @@
-// Auto-generated from multiline-and-wrap.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 980,
@@ -7,32 +7,40 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+
 document.body.append(app.canvas);
+
 const paragraph = 'ExoJS text layout can render multiline content with configurable wrapping behavior and style.';
 const longToken = 'ExoJStextlayoutrendersaverylongunbrokentokenwithoutanyspacestobreakon';
+
 const titleColor = new Color(140, 170, 210);
+
 class MultilineAndWrapScene extends Scene {
-    _titleA;
-    _textA;
-    _titleB;
-    _textB;
-    _titleC;
-    _textC;
-    init() {
+    private _titleA!: Text;
+    private _textA!: Text;
+    private _titleB!: Text;
+    private _textB!: Text;
+    private _titleC!: Text;
+    private _textC!: Text;
+
+    override init(): void {
         this._titleA = new Text('No wrap — single line overflows the bounds', { fillColor: titleColor, fontSize: 16 });
         this._titleA.setPosition(40, 50);
         this._textA = new Text(paragraph, { fillColor: Color.white, fontSize: 22 });
         this._textA.setPosition(40, 80);
+
         this._titleB = new Text('Word wrap @ 360px — breaks at word boundaries', { fillColor: titleColor, fontSize: 16 });
         this._titleB.setPosition(40, 210);
         this._textB = new Text(paragraph, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 360 });
         this._textB.setPosition(40, 240);
+
         this._titleC = new Text('Break words @ 280px — splits a long token', { fillColor: titleColor, fontSize: 16 });
         this._titleC.setPosition(40, 430);
         this._textC = new Text(longToken, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 280, breakWords: true });
         this._textC.setPosition(40, 460);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._titleA);
         context.render(this._titleB);
@@ -42,4 +50,5 @@ class MultilineAndWrapScene extends Scene {
         context.render(this._textC);
     }
 }
+
 app.start(new MultilineAndWrapScene());

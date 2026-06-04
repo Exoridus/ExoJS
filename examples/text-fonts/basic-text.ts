@@ -1,5 +1,5 @@
-// Auto-generated from basic-text.ts — edit the .ts source, not this file.
 import { Application, Color, FontAsset, Scene, Text, Time } from '@codexo/exojs';
+
 const app = new Application({
     canvas: {
         width: 800,
@@ -10,16 +10,22 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+
 document.body.append(app.canvas);
+
 class BasicTextScene extends Scene {
-    _time;
-    _text;
-    async load(loader) {
+    private _time!: Time;
+    private _text!: Text;
+
+    override async load(loader): Promise<void> {
         await loader.load(FontAsset, { example: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
     }
-    init() {
+
+    override init(): void {
         const { width, height } = this.app.canvas;
+
         this._time = new Time();
+
         this._text = new Text('Hello World!', {
             align: 'left',
             fillColor: Color.white,
@@ -28,16 +34,20 @@ class BasicTextScene extends Scene {
             fontSize: 25,
             fontFamily: 'Kenney Future',
         });
+
         this._text.setPosition(width / 2, height / 2);
         this._text.setAnchor(0.5, 0.5);
     }
-    update(delta) {
+
+    override update(delta): void {
         this._text.text = `Hello World! ${this._time.addTime(delta).seconds | 0}`;
         this._text.rotate(delta.seconds * 36);
     }
-    draw(context) {
+
+    override draw(context): void {
         context.backend.clear();
         context.render(this._text);
     }
 }
+
 app.start(new BasicTextScene());
