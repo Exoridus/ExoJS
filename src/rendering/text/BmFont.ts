@@ -52,10 +52,7 @@ export class BmFont {
   public readonly textures: readonly Texture[];
 
   public constructor(fontData: BmFontData, textures: readonly Texture[]) {
-    assert(
-      textures.length === fontData.pages.length,
-      `BmFont: texture count (${textures.length}) must match page count (${fontData.pages.length})`,
-    );
+    assert(textures.length === fontData.pages.length, `BmFont: texture count (${textures.length}) must match page count (${fontData.pages.length})`);
     this.fontData = fontData;
     this.textures = textures;
   }

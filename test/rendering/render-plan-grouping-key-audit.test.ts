@@ -176,9 +176,9 @@ const createPlan = (entries: object[]) => {
 };
 
 const getGroupIndices = (plan: ReturnType<typeof createPlan>) =>
-  plan.passes[0].root.entries.filter((e: unknown) => (e as { kind: RenderEntryKind }).kind === RenderEntryKind.Draw).map(
-    (e: unknown) => ((e as { command: DrawCommand }).command.groupIndex ?? 0),
-  );
+  plan.passes[0].root.entries
+    .filter((e: unknown) => (e as { kind: RenderEntryKind }).kind === RenderEntryKind.Draw)
+    .map((e: unknown) => (e as { command: DrawCommand }).command.groupIndex ?? 0);
 
 const minimalGlsl = {
   vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
@@ -217,10 +217,7 @@ describe('render plan grouping key audit', () => {
       const a = new AuditDrawable();
       const b = new AuditDrawable();
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200),
-        createDrawEntry(b, 999, 200),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200), createDrawEntry(b, 999, 200)]);
 
       RenderPlanOptimizer.optimize(plan);
 
@@ -233,10 +230,7 @@ describe('render plan grouping key audit', () => {
       const a = new AuditDrawable();
       const b = new AuditDrawable();
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200),
-        createDrawEntry(b, 100, 999),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200), createDrawEntry(b, 100, 999)]);
 
       RenderPlanOptimizer.optimize(plan);
 
@@ -543,10 +537,7 @@ describe('render plan grouping key audit', () => {
       const a = new AuditDrawable();
       const b = new AuditDrawable();
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200, { zIndex: 0 }),
-        createDrawEntry(b, 100, 200, { zIndex: 5 }),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200, { zIndex: 0 }), createDrawEntry(b, 100, 200, { zIndex: 5 })]);
 
       RenderPlanOptimizer.optimize(plan);
 
@@ -559,10 +550,7 @@ describe('render plan grouping key audit', () => {
       const a = new AuditDrawable();
       const b = new AuditDrawable();
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200, { zIndex: 3 }),
-        createDrawEntry(b, 100, 200, { zIndex: 3 }),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200, { zIndex: 3 }), createDrawEntry(b, 100, 200, { zIndex: 3 })]);
 
       RenderPlanOptimizer.optimize(plan);
 
@@ -597,11 +585,7 @@ describe('render plan grouping key audit', () => {
         },
       };
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200),
-        barrier,
-        createDrawEntry(b, 100, 200),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200), barrier, createDrawEntry(b, 100, 200)]);
 
       RenderPlanOptimizer.optimize(plan);
 
@@ -609,8 +593,8 @@ describe('render plan grouping key audit', () => {
 
       expect(drawEntries).toHaveLength(2);
 
-      const gi0 = ((drawEntries[0] as { command: DrawCommand }).command).groupIndex;
-      const gi1 = ((drawEntries[1] as { command: DrawCommand }).command).groupIndex;
+      const gi0 = (drawEntries[0] as { command: DrawCommand }).command.groupIndex;
+      const gi1 = (drawEntries[1] as { command: DrawCommand }).command.groupIndex;
 
       // Barrier separates the two segments; neither is undefined.
       expect(gi0).toBeDefined();
@@ -635,11 +619,7 @@ describe('render plan grouping key audit', () => {
         },
       };
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200),
-        groupEntry,
-        createDrawEntry(b, 100, 200),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200), groupEntry, createDrawEntry(b, 100, 200)]);
 
       RenderPlanOptimizer.optimize(plan);
 
@@ -678,10 +658,7 @@ describe('render plan grouping key audit', () => {
       const a = new AuditDrawable();
       const b = new AuditDrawable();
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200),
-        createDrawEntry(b, 100, 200),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200), createDrawEntry(b, 100, 200)]);
 
       RenderPlanOptimizer.optimize(plan);
 

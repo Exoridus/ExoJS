@@ -134,12 +134,29 @@ describe('Gradient value-object semantics', () => {
 
   test('exposes a type discriminant', () => {
     expect(makeLinear().type).toBe('linear');
-    expect(new RadialGradient([{ offset: 0, color: Color.white }, { offset: 1, color: Color.black }]).type).toBe('radial');
+    expect(
+      new RadialGradient([
+        { offset: 0, color: Color.white },
+        { offset: 1, color: Color.black },
+      ]).type,
+    ).toBe('radial');
   });
 
   test('rejects non-finite stop offsets', () => {
-    expect(() => new LinearGradient([{ offset: Number.NaN, color: Color.red }, { offset: 1, color: Color.blue }])).toThrow('Gradient stop offset must be a finite number.');
-    expect(() => new LinearGradient([{ offset: 0, color: Color.red }, { offset: Number.POSITIVE_INFINITY, color: Color.blue }])).toThrow('Gradient stop offset must be a finite number.');
+    expect(
+      () =>
+        new LinearGradient([
+          { offset: Number.NaN, color: Color.red },
+          { offset: 1, color: Color.blue },
+        ]),
+    ).toThrow('Gradient stop offset must be a finite number.');
+    expect(
+      () =>
+        new LinearGradient([
+          { offset: 0, color: Color.red },
+          { offset: Number.POSITIVE_INFINITY, color: Color.blue },
+        ]),
+    ).toThrow('Gradient stop offset must be a finite number.');
   });
 
   test('geometry getters expose constructor values without leaking internals', () => {
@@ -152,7 +169,14 @@ describe('Gradient value-object semantics', () => {
     linear.start[0] = 99;
     expect(linear.start).toEqual([0, 0]);
 
-    const radial = new RadialGradient([{ offset: 0, color: Color.white }, { offset: 1, color: Color.black }], [0.25, 0.75], 0.4);
+    const radial = new RadialGradient(
+      [
+        { offset: 0, color: Color.white },
+        { offset: 1, color: Color.black },
+      ],
+      [0.25, 0.75],
+      0.4,
+    );
 
     expect(radial.center).toEqual([0.25, 0.75]);
     expect(radial.radius).toBe(0.4);
@@ -198,16 +222,52 @@ describe('Gradient value-object semantics', () => {
     expect(base.equals(makeLinear())).toBe(true);
 
     // Different stop color.
-    expect(base.equals(new LinearGradient([{ offset: 0, color: Color.red }, { offset: 1, color: Color.green }], [0, 0], [1, 0]))).toBe(false);
+    expect(
+      base.equals(
+        new LinearGradient(
+          [
+            { offset: 0, color: Color.red },
+            { offset: 1, color: Color.green },
+          ],
+          [0, 0],
+          [1, 0],
+        ),
+      ),
+    ).toBe(false);
 
     // Different stop offset.
-    expect(base.equals(new LinearGradient([{ offset: 0, color: Color.red }, { offset: 0.5, color: Color.blue }], [0, 0], [1, 0]))).toBe(false);
+    expect(
+      base.equals(
+        new LinearGradient(
+          [
+            { offset: 0, color: Color.red },
+            { offset: 0.5, color: Color.blue },
+          ],
+          [0, 0],
+          [1, 0],
+        ),
+      ),
+    ).toBe(false);
 
     // Different geometry.
-    expect(base.equals(new LinearGradient([{ offset: 0, color: Color.red }, { offset: 1, color: Color.blue }], [0, 0], [0, 1]))).toBe(false);
+    expect(
+      base.equals(
+        new LinearGradient(
+          [
+            { offset: 0, color: Color.red },
+            { offset: 1, color: Color.blue },
+          ],
+          [0, 0],
+          [0, 1],
+        ),
+      ),
+    ).toBe(false);
 
     // Different type.
-    const radial = new RadialGradient([{ offset: 0, color: Color.red }, { offset: 1, color: Color.blue }]);
+    const radial = new RadialGradient([
+      { offset: 0, color: Color.red },
+      { offset: 1, color: Color.blue },
+    ]);
 
     expect(base.equals(radial)).toBe(false);
     expect(radial.equals(base)).toBe(false);
