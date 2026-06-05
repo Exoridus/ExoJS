@@ -11,7 +11,7 @@ A scene's drawables form a tree: every renderable node has zero or one parent an
 
 ## Containers and nodes
 
-Two key types: [`RenderNode`](/ExoJS/en/api/rendernode/) is the abstract base for everything that can be drawn. [`Container`](/ExoJS/en/api/container/) is a `RenderNode` that holds children. Sprites, text, graphics, and meshes are all render nodes; containers are how you group them.
+Two key types: [`RenderNode`](/ExoJS/en/api/render-node/) is the abstract base for everything that can be drawn. [`Container`](/ExoJS/en/api/container/) is a `RenderNode` that holds children. Sprites, text, graphics, and meshes are all render nodes; containers are how you group them.
 
 Every scene starts with one container already in place — `this.root`. Adding a node via `this.addChild(...)` is shorthand for `this.root.addChild(...)`:
 

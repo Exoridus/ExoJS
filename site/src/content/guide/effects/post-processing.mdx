@@ -172,7 +172,7 @@ You compose them: render scenes with `RenderTargetPass`, apply filters with `fil
 - Post-processing: Filter affects the entire scene rendered into a target. Good for screen-wide effects — bloom, color grading, CRT simulation.
 - Both together: Per-node filters for individual effects, post-processing chain for scene-wide compositing.
 
-The cost is in passes. A post-processing chain with 3 RTS and 2 filters costs at least 4 passes (scene render + filter A + filter B + final composite). Per-node filters cost 1 pass per filtered node per frame. The render pipeline debugger ([7.6 Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/)) helps you count these.
+The cost is in passes. A post-processing chain with 3 RTS and 2 filters costs at least 4 passes (scene render + filter A + filter B + final composite). Per-node filters cost 1 pass per filtered node per frame. The render pipeline debugger ([Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/)) helps you count these.
 
 ## Examples
 
