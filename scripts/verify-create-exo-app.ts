@@ -9,18 +9,14 @@ const tmpRoot = join(rootDir, '.workspace', 'tmp', 'create-exo-app');
 const cliSrc = join(rootDir, 'packages', 'create-exo-app', 'src', 'index.ts');
 const templatesDir = join(rootDir, 'packages', 'create-exo-app', 'templates');
 
+const rootPkg = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf-8')) as { version: string };
+const EXPECTED_EXOJS_VERSION = `^${rootPkg.version}`;
+
 const TEMPLATES = ['minimal', 'game-starter', 'audio-reactive'] as const;
 type TemplateName = (typeof TEMPLATES)[number];
 
 const EXPECTED_FILES: Record<TemplateName, string[]> = {
-  'minimal': [
-    'index.html',
-    'package.json',
-    'tsconfig.json',
-    'vite.config.ts',
-    'src/main.ts',
-    'src/scenes/MainScene.ts',
-  ],
+  minimal: ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/MainScene.ts'],
   'game-starter': [
     'index.html',
     'package.json',
@@ -31,14 +27,7 @@ const EXPECTED_FILES: Record<TemplateName, string[]> = {
     'src/scenes/GameOverScene.ts',
     'src/objects/Player.ts',
   ],
-  'audio-reactive': [
-    'index.html',
-    'package.json',
-    'tsconfig.json',
-    'vite.config.ts',
-    'src/main.ts',
-    'src/scenes/AudioReactiveScene.ts',
-  ],
+  'audio-reactive': ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/AudioReactiveScene.ts'],
 };
 
 // Patterns that indicate stale API usage
@@ -80,11 +69,7 @@ check(existsSync(cliSrc), 'src/index.ts found', 'src/index.ts missing');
 // 2. All templates present
 console.log('\n2. Template directories');
 for (const t of TEMPLATES) {
-  check(
-    existsSync(join(templatesDir, t)),
-    `templates/${t}/ exists`,
-    `templates/${t}/ missing`,
-  );
+  check(existsSync(join(templatesDir, t)), `templates/${t}/ exists`, `templates/${t}/ missing`);
 }
 
 // 3. Scaffold each template
@@ -96,10 +81,7 @@ for (const t of TEMPLATES) {
   }
 
   try {
-    execSync(
-      `node --import tsx/esm "${cliSrc}" "${destDir}" --template ${t} --force`,
-      { stdio: 'pipe', env: { ...process.env, FORCE_COLOR: '0' } },
-    );
+    execSync(`node --import tsx/esm "${cliSrc}" "${destDir}" --template ${t} --force`, { stdio: 'pipe', env: { ...process.env, FORCE_COLOR: '0' } });
     ok(`scaffold ${t} → .workspace/tmp/create-exo-app/${t}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -112,11 +94,7 @@ console.log('\n4. Expected files in scaffolded projects');
 for (const t of TEMPLATES) {
   const destDir = join(tmpRoot, t);
   for (const file of EXPECTED_FILES[t]) {
-    check(
-      existsSync(join(destDir, file)),
-      `${t}/${file}`,
-      `${t}/${file} missing`,
-    );
+    check(existsSync(join(destDir, file)), `${t}/${file}`, `${t}/${file} missing`);
   }
 }
 
@@ -169,6 +147,26 @@ for (const t of TEMPLATES) {
     } catch {
       ok(`${t}: no "${label}"`);
     }
+  }
+}
+
+// 7. Template ExoJS dependency version
+console.log('\n7. Template ExoJS dependency versions');
+for (const t of TEMPLATES) {
+  const pkgPath = join(templatesDir, t, 'package.json');
+  try {
+    const raw = readFileSync(pkgPath, 'utf-8');
+    const pkg = JSON.parse(raw) as { dependencies?: Record<string, string> };
+    const actual = pkg.dependencies?.['@codexo/exojs'];
+    check(
+      actual === EXPECTED_EXOJS_VERSION,
+      `${t}: @codexo/exojs="${actual}" matches expected "${EXPECTED_EXOJS_VERSION}"`,
+      `${t}: @codexo/exojs="${actual ?? '(missing)'}" — expected "${EXPECTED_EXOJS_VERSION}"`,
+    );
+    const hasWorkspaceDep = Object.values(pkg.dependencies ?? {}).some(v => v.startsWith('workspace:'));
+    check(!hasWorkspaceDep, `${t}: no workspace: dependency`, `${t}: contains a workspace: dependency — templates must not reference workspace packages`);
+  } catch {
+    fail(`${t}/package.json could not be read for version check`);
   }
 }
 

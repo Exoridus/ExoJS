@@ -12,6 +12,77 @@ merged pull requests and commits since the previous tag (each with its commit /
 PR link); `pnpm release:notes` then renders that section into the published
 GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
 
+## [0.12.0] - 2026-06-05
+
+This release has no new engine features. The focus is entirely on developer
+experience, onboarding, documentation, and the playground.
+
+### Onboarding
+
+- **`create-exo-app` scaffolding CLI.** `npm create exo-app@latest` scaffolds a
+  new ExoJS project in one command. Supports three starter templates: `minimal`,
+  `game-starter`, and `audio-reactive`. (#86, #87, #91)
+
+- **`minimal` template.** A bare-bones Vite + TypeScript project with a single
+  `MainScene`, ready to run with `npm run dev`. (#86)
+
+- **`game-starter` template.** A structured starter with `GameScene`,
+  `GameOverScene`, and a `Player` object — a solid foundation for a game loop.
+  (#86)
+
+- **`audio-reactive` template.** A starter wired for beat-detection and
+  audio-driven visuals via `AudioReactiveScene`. (#86)
+
+### Guides
+
+- **Rendering API resync.** All guide code blocks updated to the current
+  `RenderingContext` API introduced in 0.10: `context.render()`, `app.rendering`,
+  and `Application.renderTo()`. (#83)
+
+- **Guide code typecheck gate.** All guide code snippets are extracted and
+  type-checked via `pnpm typecheck:guides`. Snippets that intentionally opt out
+  of type-checking use the `// no-check` convention. (#91)
+
+- **Source-backed guide snippets.** Key snippets in the introduction and Orb
+  Dodge walkthrough are now rendered from live source files (`examples/`) via
+  `<SourceSnippet>`, eliminating drift between guide prose and tested code. (#92)
+
+- **Troubleshooting guide.** New guide covering common setup issues, WebGL2/WebGPU
+  fallback behaviour, asset loading pitfalls, and performance gotchas. (#89)
+
+- **Deployment guide.** New guide covering Vite-based production builds, static
+  hosting (GitHub Pages, Netlify, Vercel), base-path configuration, and
+  import-map requirements for direct CDN usage. (#89)
+
+- **Orb Dodge sample game walkthrough.** Step-by-step guide through the complete
+  `orb-dodge` showcase example: scene setup, player movement, collision detection,
+  game-over flow, and score display. (#90)
+
+### Playground
+
+- **Start Here and Featured sections.** The playground landing page now surfaces
+  a curated "Start Here" category for first-time visitors and a "Featured" section
+  highlighting high-quality showcase examples. (#88)
+
+- **Search and filter.** The playground supports full-text search across example
+  titles and descriptions, plus category filtering. (#88)
+
+- **Improved catalog descriptions.** All 100+ example entries were reviewed and
+  updated with accurate, concise descriptions to improve discoverability. (#88)
+
+### Distribution / Debug
+
+- **Official `@codexo/exojs/debug` entrypoint.** The debug subpath is now the
+  supported way to access debug utilities:
+  `import { ... } from '@codexo/exojs/debug'`. The former
+  `@codexo/exojs-debug` package name is not supported. (#85)
+
+- **`dist/exo.debug.esm.js` external-core bundle.** A pre-built debug bundle
+  is distributed alongside the main bundle. It imports its core from
+  `@codexo/exojs` via an import map, so no second copy of the runtime is
+  included. Direct CDN/bundle usage requires an import map that resolves
+  `@codexo/exojs`. (#85)
+
 ## [0.11.0] - 2026-06-04
 
 ### Added

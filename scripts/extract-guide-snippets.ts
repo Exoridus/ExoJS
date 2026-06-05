@@ -156,9 +156,7 @@ for (const file of files) {
 
     // Derive a unique output file name from the guide path and block index.
     // Double underscores separate path segments.
-    const slug = rel
-      .replace(/\.(mdx?|tsx?)$/, '')
-      .replaceAll('/', '__');
+    const slug = rel.replace(/\.(mdx?|tsx?)$/, '').replaceAll('/', '__');
     // ts/typescript/tsx blocks → .ts (full TypeScript syntax allowed).
     // js/javascript blocks    → .js (allowJs mode; class properties inferred
     //                               from assignments, no false positives).
@@ -174,6 +172,4 @@ for (const file of files) {
 }
 
 const total = extracted + skippedMeta + skippedPartial;
-console.log(
-  `guide-snippets: ${extracted} extracted, ${skippedMeta} no-check, ${skippedPartial} partial (${total} total blocks)`
-);
+console.log(`guide-snippets: ${extracted} extracted, ${skippedMeta} no-check, ${skippedPartial} partial (${total} total blocks)`);
