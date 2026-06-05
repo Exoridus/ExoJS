@@ -81,6 +81,7 @@ class HelloScene extends Scene {
   }
 
   public override draw(context: RenderingContext): void {
+    context.backend.clear();
     context.render(this.root);
   }
 }
