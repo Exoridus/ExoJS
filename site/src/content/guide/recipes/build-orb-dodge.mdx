@@ -8,6 +8,7 @@ examples:
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # 8.9 Build Orb Dodge
 
@@ -31,19 +32,12 @@ If you already have a project, the only package you need is `@codexo/exojs`.
 
 Every ExoJS project starts with an `Application`. For a fixed-size game canvas:
 
-```ts
-import { Application, Color } from '@codexo/exojs';
-
-const app = new Application({
-    canvas: {
-        width: 800,
-        height: 600,
-    },
-    clearColor: new Color(10, 14, 26),
-});
-
-document.body.append(app.canvas);
-```
+<SourceSnippet
+  source="examples/showcase/orb-dodge.ts"
+  region="application-setup"
+  language="ts"
+  title="examples/showcase/orb-dodge.ts"
+/>
 
 `clearColor` sets the background that `context.backend.clear()` paints at the start of each frame. A dark near-black makes the colored orbs stand out clearly.
 
@@ -190,73 +184,12 @@ this._timeText.text  = `${this._elapsed.toFixed(1)} s`;
 
 `GameOverScene` receives the final score and time via a `setResult` method called just before `setScene`. This decouples data transfer from scene initialization — `init` always reads from `_finalScore` / `_finalTime`, whatever they were set to:
 
-```ts
-import { Application, Color, Keyboard, Scene, Text } from '@codexo/exojs';
-
-const app = new Application({
-    canvas: { width: 800, height: 600 },
-    clearColor: new Color(10, 14, 26),
-});
-
-document.body.append(app.canvas);
-
-class GameOverScene extends Scene {
-    private _title!: Text;
-    private _stats!: Text;
-    private _hint!: Text;
-    private _finalScore = 0;
-    private _finalTime = 0;
-
-    setResult(score: number, time: number): void {
-        this._finalScore = score;
-        this._finalTime = time;
-    }
-
-    override init(): void {
-        this._title = new Text('GAME OVER', {
-            align: 'center',
-            fillColor: new Color(255, 80, 80),
-            fontSize: 52,
-            fontWeight: 'bold',
-        });
-        this._title.setAnchor(0.5);
-        this._title.setPosition(400, 230);
-
-        this._stats = new Text(
-            `Score: ${this._finalScore}   Time: ${this._finalTime.toFixed(1)} s`,
-            { align: 'center', fillColor: Color.white, fontSize: 26 },
-        );
-        this._stats.setAnchor(0.5);
-        this._stats.setPosition(400, 300);
-
-        this._hint = new Text('Press Space or R to play again', {
-            align: 'center',
-            fillColor: new Color(160, 160, 160),
-            fontSize: 18,
-        });
-        this._hint.setAnchor(0.5);
-        this._hint.setPosition(400, 370);
-
-        const restart = (): void => {
-            void this.app.scene.setScene(play);
-        };
-        this.inputs.onTrigger(Keyboard.Space, restart);
-        this.inputs.onTrigger(Keyboard.R, restart);
-    }
-
-    override draw(context): void {
-        context.backend.clear();
-        context.render(this._title);
-        context.render(this._stats);
-        context.render(this._hint);
-    }
-}
-
-// Forward declarations so both scenes can reference each other.
-declare const play: Scene;
-
-const gameOver = new GameOverScene();
-```
+<SourceSnippet
+  source="examples/showcase/orb-dodge.ts"
+  region="game-over-scene"
+  language="ts"
+  title="examples/showcase/orb-dodge.ts — GameOverScene"
+/>
 
 When the player restarts, `setScene(play)` switches back to `PlayScene`. `SceneManager` calls `init()` on `play` again — the scene reinitializes from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
 

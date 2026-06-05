@@ -8,6 +8,7 @@ examples:
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Your first scene
 
@@ -47,26 +48,12 @@ Scenes have four lifecycle hooks. You override the ones you need:
 
 Adding a single sprite means using `load` to declare a texture, `init` to construct the sprite, and `draw` to render it:
 
-```js
-import { Application, Scene, Sprite, Texture } from '@codexo/exojs';
-
-class HelloScene extends Scene {
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/bunny.png' });
-    }
-
-    init(loader) {
-        this.bunny = new Sprite(loader.get(Texture, 'bunny'));
-        this.bunny.setAnchor(0.5);
-        this.bunny.setPosition(this.app.canvas.width / 2, this.app.canvas.height / 2);
-    }
-
-    draw(context) {
-        context.backend.clear();
-        context.render(this.bunny);
-    }
-}
-```
+<SourceSnippet
+  source="examples/getting-started/hello-world.ts"
+  region="first-scene"
+  language="ts"
+  title="examples/getting-started/hello-world.ts"
+/>
 
 A few things worth pointing out:
 

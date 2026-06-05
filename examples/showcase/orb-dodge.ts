@@ -9,6 +9,7 @@ const SPAWN_INTERVAL = 1.2;
 const ORB_SPEED_MIN = 80;
 const ORB_SPEED_MAX = 200;
 
+// #region guide:application-setup
 const app = new Application({
     canvas: {
         width: CANVAS_WIDTH,
@@ -18,6 +19,7 @@ const app = new Application({
 });
 
 document.body.append(app.canvas);
+// #endregion guide:application-setup
 
 interface OrbData {
     gfx: Graphics;
@@ -195,6 +197,7 @@ class PlayScene extends Scene {
     }
 }
 
+// #region guide:game-over-scene
 class GameOverScene extends Scene {
     private _title!: Text;
     private _stats!: Text;
@@ -247,6 +250,7 @@ class GameOverScene extends Scene {
         context.render(this._hint);
     }
 }
+// #endregion guide:game-over-scene
 
 const play = new PlayScene();
 const gameOver = new GameOverScene();
