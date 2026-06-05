@@ -1,16 +1,13 @@
 ---
-title: '8.9 Build Orb Dodge'
+title: 'Build Orb Dodge'
 description: 'Build a complete small game from scratch: player movement, spawning orbs, collision, scoring, a HUD, and a game-over screen — all without external assets.'
-part: 8
-chapter: 9
-examples:
-  - showcase/orb-dodge
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 8.9 Build Orb Dodge
+# Build Orb Dodge
 
 This chapter builds a small, complete game end-to-end. You will see how several ExoJS concepts fit together in one project: a scene that runs every frame, keyboard input, `Graphics` primitives for all visuals, a HUD with live score and time, and a separate game-over scene that transitions back into the game on restart.
 
@@ -23,7 +20,7 @@ The finished result is playable in the playground at the bottom of this page.
 Start from a `create-exo-app` project using the `game-starter` or `minimal` template:
 
 ```bash
-npx create-exo-app my-orb-dodge
+npm create exo-app@latest my-orb-dodge
 ```
 
 If you already have a project, the only package you need is `@codexo/exojs`.
@@ -228,12 +225,17 @@ The full, playable game is in the playground. Open it to read the complete sourc
 
 <ExamplePreview chapter="showcase" slug="orb-dodge" />
 
+<TryIt
+  examples={['showcase/orb-dodge']}
+  api={['scene', 'graphics', 'keyboard', 'text']}
+/>
+
 ## Where to go next
 
 From here you can extend Orb Dodge in several directions:
 
-- **Keyboard guide** — [4.1 Keyboard](/ExoJS/en/guide/input/keyboard/) — rebindable actions, action mapping
-- **HUD overlay** — [8.1 HUD overlay](/ExoJS/en/guide/recipes/hud-overlay/) — push a dedicated overlay scene on top instead of rendering HUD inside the game scene
-- **Game feel** — [8.6 Game feel](/ExoJS/en/guide/recipes/game-feel/) — add a screen shake or color flash when a danger orb is collected
-- **Deployment** — [10.2 Deployment](/ExoJS/en/guide/reference/deployment/) — build and host the finished game
-- **Troubleshooting** — [10.1 Troubleshooting](/ExoJS/en/guide/reference/troubleshooting/) — blank canvas, input not firing, and other common issues
+- **Keyboard** — [Keyboard](/ExoJS/en/guide/input/keyboard/) — rebindable actions, action mapping
+- **HUD overlay** — [HUD overlay](/ExoJS/en/guide/recipes/hud-overlay/) — push a dedicated overlay scene on top instead of rendering HUD inside the game scene
+- **Game feel** — [Game feel](/ExoJS/en/guide/recipes/game-feel/) — add a screen shake or color flash when a danger orb is collected
+- **Deployment** — [Deployment](/ExoJS/en/guide/reference/deployment/) — build and host the finished game
+- **Troubleshooting** — [Troubleshooting](/ExoJS/en/guide/reference/troubleshooting/) — blank canvas, input not firing, and other common issues

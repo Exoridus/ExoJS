@@ -1,4 +1,6 @@
 ---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../../../../layouts/DocsLayout.astro';
 import TranslationNotice from '../../../../../components/TranslationNotice.astro';
 import { GUIDE_PARTS, GUIDE_CHAPTER_BY_PATH } from '../../../../../lib/guide-structure';
@@ -22,11 +24,15 @@ const chapterMeta = GUIDE_CHAPTER_BY_PATH.get(chapterPath);
 if (!chapterMeta) {
     throw new Error(`Unknown guide chapter: ${chapterPath}`);
 }
+
+const guideEntries = await getCollection('guide');
+const entry = guideEntries.find((item: CollectionEntry<'guide'>) => item.id.replace(/\.(md|mdx)$/, '') === chapterPath);
+const chapterTitle = entry?.data.title ?? chapterSlug;
 ---
 
-<DocsLayout title={`${chapterMeta.title} (DE)`} description="German localization placeholder for this guide chapter.">
+<DocsLayout title={`${chapterTitle} (DE)`} description="German localization placeholder for this guide chapter.">
     <section class="de-guide-chapter">
-        <h1>{chapterMeta.title}</h1>
+        <h1>{chapterTitle}</h1>
         <p>This chapter is not translated to German yet.</p>
         <TranslationNotice englishHref={`${import.meta.env.BASE_URL}en/guide/${partSlug}/${chapterSlug}/`} />
     </section>

@@ -1,3 +1,4 @@
+// #region guide:minimal-scene
 import { Color, Graphics, Scene } from '@codexo/exojs';
 import type { RenderingContext, Time } from '@codexo/exojs';
 
@@ -23,3 +24,4 @@ export class MainScene extends Scene {
     context.render(this.root);
   }
 }
+// #endregion guide:minimal-scene

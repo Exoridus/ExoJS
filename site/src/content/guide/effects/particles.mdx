@@ -1,16 +1,11 @@
 ---
-title: '6.2 Particles'
+title: 'Particles'
 description: 'Spawn and tune particle systems for environmental and reactive effects.'
-part: 6
-chapter: 2
-examples:
-  - particles/emitter-basics
-  - particles/bonfire
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 6.2 Particles
+# Particles
 
 A [`ParticleSystem`](/ExoJS/en/api/particle-system/) is a `Drawable` that manages thousands of animated sprites with data-oriented performance. Instead of creating and destroying individual `Sprite` instances per particle, the system stores particle state in parallel typed arrays (Struct-of-Arrays) and mutates them in bulk. This keeps the work per-particle extremely lean — no allocations, no GC pressure, no per-sprite transform tree overhead.
 

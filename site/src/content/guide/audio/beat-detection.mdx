@@ -1,18 +1,13 @@
 ---
-title: '5.4 Beat detection'
+title: 'Beat detection'
 description: 'Drive visuals from beat and frequency information.'
-part: 5
-chapter: 4
-examples:
-  - beat-detection/beat-sync-pulse
-  - beat-detection/tempo-tracking
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 5.4 Beat detection
+# Beat detection
 
-The [`BeatDetector`](/ExoJS/en/api/beat-detector/) analyses an audio signal in real time using a self-contained `AudioWorkletProcessor`. It detects tempo, beat positions, and bar/downbeat structure, then reports results back to the main thread as both discrete events (`onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange`) and per-frame polling getters. You use the events for one-shot triggers and the getters for continuous animation — both are covered in detail in [5.5 Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/).
+The [`BeatDetector`](/ExoJS/en/api/beat-detector/) analyses an audio signal in real time using a self-contained `AudioWorkletProcessor`. It detects tempo, beat positions, and bar/downbeat structure, then reports results back to the main thread as both discrete events (`onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange`) and per-frame polling getters. You use the events for one-shot triggers and the getters for continuous animation — both are covered in detail in [Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/).
 
 This chapter covers what the detector does and the events it fires. The next chapter covers what you do with that information.
 
@@ -133,7 +128,7 @@ const detector = new BeatDetector({
 
 `BeatDetector` uses an `AudioWorkletProcessor` that runs entirely in the Web Audio rendering thread. It applies a Hann window, runs a radix-2 FFT, computes mel-band energies, detects onsets via spectral flux, builds a tempogram with autocorrelation, and tracks beat phase with a dynamic-programming grid. All of this is internal — the public API is the events and getters listed above.
 
-Beat/state messages are posted from the worklet and handled asynchronously on the main thread. They are not locked to your scene's `update` timing, and worklet timing can be finer than `requestAnimationFrame`. For frame-stable visual animation, prefer polling getters in `update` (see [5.5 Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/)).
+Beat/state messages are posted from the worklet and handled asynchronously on the main thread. They are not locked to your scene's `update` timing, and worklet timing can be finer than `requestAnimationFrame`. For frame-stable visual animation, prefer polling getters in `update` (see [Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/)).
 
 ## Configuring the detector
 

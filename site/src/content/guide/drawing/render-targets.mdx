@@ -1,16 +1,11 @@
 ---
-title: '3.5 Render targets'
+title: 'Render targets'
 description: 'Render into intermediate textures and reuse those outputs in scene composition.'
-part: 3
-chapter: 5
-examples:
-  - render-targets/render-to-texture
-  - render-targets/mini-map
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 3.5 Render targets
+# Render targets
 
 The canvas is the default render target — every `context.backend.clear()` and `context.render(sprite)` goes there. A [`RenderTexture`](/ExoJS/en/api/render-texture/) is a second target: an off-screen surface you can draw into and then sample as a texture on a sprite, apply filters to, or composite back into the main scene.
 

@@ -1,0 +1,180 @@
+---
+/**
+ * TryIt — the Guide → Playground → API bridge.
+ *
+ * Renders a compact "Try it" panel that turns a concept into action: open the
+ * runnable example in the playground, then jump to the API it uses.
+ *
+ * Usage in MDX:
+ *   import TryIt from '../../../components/TryIt.astro';
+ *
+ *   <TryIt
+ *     examples={['input/keyboard', 'input/key-rebinding']}
+ *     api={['keyboard', 'input-manager']}
+ *   />
+ *
+ * `examples` are "<category>/<slug>" playground refs; `api` are content slugs
+ * under site/src/content/api. Both are resolved at build time — an unknown ref
+ * fails the build with a clear message rather than shipping a dead link.
+ */
+
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import { getExamplesForChapter } from '../lib/examples-catalog';
+import { toApiHref } from '../lib/api-reference';
+
+interface Props {
+    examples?: ReadonlyArray<string>;
+    api?: ReadonlyArray<string>;
+    title?: string;
+}
+
+const { examples = [], api = [], title = 'Try it' } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
+
+const exampleLinks = examples.map(ref => {
+    const slash = ref.indexOf('/');
+    const category = ref.slice(0, slash);
+    const slug = ref.slice(slash + 1);
+    const entry = getExamplesForChapter(category).find(item => item.slug === slug);
+    if (!entry) {
+        throw new Error(`[TryIt] Unknown playground example "${ref}" — no matching entry in examples.json`);
+    }
+    return {
+        label: entry.title,
+        href: `${base}${locale}/playground/?example=${category}/${slug}`,
+    };
+});
+
+let apiLinks: Array<{ label: string; href: string }> = [];
+if (api.length > 0) {
+    const apiEntries = await getCollection('api');
+    const byId = new Map<string, CollectionEntry<'api'>>(
+        apiEntries.map((entry: CollectionEntry<'api'>) => [entry.id, entry] as [string, CollectionEntry<'api'>]),
+    );
+    apiLinks = api.map(slug => {
+        const entry = byId.get(slug);
+        if (!entry) {
+            throw new Error(`[TryIt] Unknown API page "${slug}" — no matching page under src/content/api`);
+        }
+        return { label: entry.data.symbol || entry.data.title, href: toApiHref(base, slug) };
+    });
+}
+---
+
+<aside class="tryit" aria-label={title}>
+    <p class="tryit__title">{title}</p>
+    <div class="tryit__cols">
+        {exampleLinks.length > 0 && (
+            <div class="tryit__col">
+                <p class="tryit__heading">Playground</p>
+                <ul>
+                    {exampleLinks.map(link => (
+                        <li>
+                            <a href={link.href}>{link.label}</a>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        )}
+        {apiLinks.length > 0 && (
+            <div class="tryit__col">
+                <p class="tryit__heading">API</p>
+                <ul>
+                    {apiLinks.map(link => (
+                        <li>
+                            <a href={link.href}><code>{link.label}</code></a>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        )}
+    </div>
+</aside>
+
+<style>
+    .tryit {
+        margin: var(--s-6) 0;
+        padding: var(--s-4) var(--s-5);
+        border: 1px solid var(--accent-line);
+        border-radius: var(--r-4);
+        background: var(--accent-soft);
+    }
+
+    .tryit__title {
+        margin: 0 0 var(--s-3);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent);
+    }
+
+    .tryit__cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--s-5);
+    }
+
+    .tryit__heading {
+        margin: 0 0 var(--s-2);
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .tryit ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-1);
+    }
+
+    .tryit li {
+        margin: 0;
+    }
+
+    .tryit a {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        color: var(--fg);
+        text-decoration: none;
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    .tryit a::before {
+        content: '→';
+        color: var(--accent);
+    }
+
+    .tryit a:hover {
+        color: var(--accent);
+    }
+
+    .tryit a:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+        border-radius: var(--r-1);
+    }
+
+    .tryit code {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font-size: 13px;
+    }
+
+    @media (max-width: 560px) {
+        .tryit__cols {
+            grid-template-columns: 1fr;
+            gap: var(--s-4);
+        }
+    }
+</style>

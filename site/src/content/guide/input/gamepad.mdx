@@ -1,16 +1,12 @@
 ---
-title: '4.3 Gamepad'
+title: 'Gamepad'
 description: 'Read controller input and support multiple connected gamepads.'
-part: 4
-chapter: 3
-examples:
-  - input/gamepad
-  - input/multi-gamepad
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 4.3 Gamepad
+# Gamepad
 
 ExoJS manages gamepads through four stable slot mailboxes. Each slot is a [`Gamepad`](/ExoJS/en/api/gamepad/) instance that lives for the application's full lifetime — a physical controller moves in when connected, moves out when disconnected, and your listeners stay attached through both transitions. Address pads by slot (0–3, stable across reconnect) rather than by browser index (which the browser may reassign).
 
@@ -235,6 +231,11 @@ Visual gamepad state display: buttons, sticks, D-pad, and triggers mapped to on-
 <ExamplePreview chapter="input" slug="multi-gamepad" />
 
 Four sprites, each controlled by a separate gamepad slot via aggregate signed stick axes.
+
+<TryIt
+  examples={['input/gamepad', 'input/multi-gamepad']}
+  api={['gamepad', 'input-manager']}
+/>
 
 ## Where to go next
 

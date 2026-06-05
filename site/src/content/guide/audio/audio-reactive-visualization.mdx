@@ -1,16 +1,11 @@
 ---
-title: '5.5 Audio-reactive visualization'
+title: 'Audio-reactive visualization'
 description: 'Bridge audio analysis and beat-detection state into the render pipeline via DataTexture and BeatDetector polling.'
-part: 5
-chapter: 5
-examples:
-  - showcase/audio-visualisation
-  - beat-detection/beat-sync-pulse
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 5.5 Audio-reactive visualization
+# Audio-reactive visualization
 
 An audio-reactive scene is one where visuals move, change color, or trigger effects in response to the music or sound currently playing. ExoJS gives you two building blocks for this: [`AudioAnalyser`](/ExoJS/en/api/audio-analyser/) for per-frame spectrum data, and [`BeatDetector`](/ExoJS/en/api/beat-detector/) for rhythmic timing. You combine them inside `update` — sample what you need, map it to visual properties, and let the renderer handle the rest.
 

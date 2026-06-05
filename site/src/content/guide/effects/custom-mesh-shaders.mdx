@@ -1,13 +1,11 @@
 ---
-title: '6.4 Custom mesh shaders'
+title: 'Custom mesh shaders'
 description: 'Attach custom GLSL or WGSL shaders to a Mesh for backend-portable visual effects.'
-part: 6
-chapter: 4
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 6.4 Custom mesh shaders
+# Custom mesh shaders
 
 A [`Mesh`](/ExoJS/en/api/mesh/) normally renders with the engine's built-in batch shader — textured or untextured, vertex-colored or uniform-tinted, lit with the mesh's own tint and blend mode. That covers most use cases. When you need something the default shader does not do — procedural displacement, custom lighting, multi-texture mixing, a Shadertoy-style effect mapped onto geometry — you attach a [`MeshShader`](/ExoJS/en/api/mesh-shader/).
 

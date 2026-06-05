@@ -1,14 +1,13 @@
 ---
-title: '1.3 Your first scene'
+title: 'Your first scene'
 description: 'Build a working scene from scratch — load a texture, position a sprite, draw it, and animate it across frames.'
-part: 1
-chapter: 3
-examples:
-  - getting-started/hello-world
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
+import Callout from '../../../components/Callout.astro';
+import TryIt from '../../../components/TryIt.astro';
+import NextStep from '../../../components/NextStep.astro';
 
 # Your first scene
 
@@ -60,6 +59,10 @@ A few things worth pointing out:
 - `loader.load(Texture, { bunny: 'image/bunny.png' })` declares one asset under the name `bunny`. Inside `init`, `loader.get(Texture, 'bunny')` returns the loaded texture instance. Names are stable; paths can change later without touching the rest of the code.
 - The default sprite anchor is `(0, 0)` — the top-left. With `setAnchor(0.5)`, the sprite's center becomes its pivot point, so `setPosition(width / 2, height / 2)` places the sprite at the canvas center rather than offset to one corner.
 
+<Callout type="common-mistake" title="A sprite that won't center">
+A sprite's default anchor is its top-left corner. `setPosition(width / 2, height / 2)` then places the corner — not the center — at the middle of the canvas. Call `setAnchor(0.5)` first.
+</Callout>
+
 ## Adding motion
 
 Override `update` to advance state once per frame. The `delta` argument carries the elapsed time since the previous frame; multiplying transforms by `delta.seconds` makes motion frame-rate independent:
@@ -86,8 +89,15 @@ For the smallest possible test page, appending to `document.body` is fine. Eithe
 
 <ExamplePreview chapter="getting-started" slug="hello-world" />
 
+<TryIt
+  examples={['getting-started/hello-world']}
+  api={['scene', 'sprite', 'texture', 'loader']}
+/>
+
 ## Where to go next
 
-The pieces shown here — `Application`, `Scene`, `Loader`, `Sprite`, `Texture` — each have their own chapter. [Core Concepts](/ExoJS/en/guide/core-concepts/application/) walks through the engine plumbing in order: how applications and scenes fit together, how the scene graph composes drawables, how the view transform handles cameras and resolutions.
+The pieces shown here — `Application`, `Scene`, `Loader`, `Sprite`, `Texture` — each have their own chapter. [Core Concepts](/ExoJS/en/guide/core-concepts/application/) walks through the runtime model in order: how applications and scenes fit together, how the scene graph composes drawables, and how the view transform handles cameras and resolutions.
 
-If you'd rather poke at the live example first, the playground link above opens it in an editable editor.
+<NextStep href="/ExoJS/en/guide/core-concepts/scene-lifecycle/" label="Understand the scene lifecycle">
+See how load, init, update, and draw work together as one repeatable loop.
+</NextStep>

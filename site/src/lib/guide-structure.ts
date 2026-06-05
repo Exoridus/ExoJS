@@ -1,14 +1,67 @@
+/**
+ * Guide information architecture — the single source of truth for guide
+ * ordering, grouping, learning metadata, and cross-references (playground
+ * examples and API pages).
+ *
+ * Per-chapter prose (title, description) lives in the MDX frontmatter so it
+ * stays next to the content it describes. This module owns everything that the
+ * navigation, landing page, and learning path need without parsing MDX:
+ *   - part grouping and order
+ *   - chapter order within a part (chapter numbers are positional)
+ *   - level, learning goals, and prerequisites
+ *   - related playground examples ("<category>/<slug>")
+ *   - related API pages (API slugs, resolved against site/src/content/api)
+ *
+ * Chapter numbers are derived from array position, so reordering a part never
+ * requires renumbering titles by hand. A node test reconciles this module with
+ * the MDX files (every chapter has a file, no orphans) and validates every
+ * cross-reference, so a typo fails the test suite rather than shipping a dead
+ * link.
+ */
+
+export type GuideLevel = 'intro' | 'intermediate' | 'advanced';
+
+export const GUIDE_LEVELS: ReadonlyArray<GuideLevel> = ['intro', 'intermediate', 'advanced'];
+
+export const GUIDE_LEVEL_LABEL: Record<GuideLevel, string> = {
+    intro: 'Intro',
+    intermediate: 'Intermediate',
+    advanced: 'Advanced',
+};
+
+/** Authoring shape — only the fields a chapter actually sets. */
+interface RawChapter {
+    slug: string;
+    level: GuideLevel;
+    /** Concrete, scannable outcomes. Set on the core onboarding chapters. */
+    learningGoals?: ReadonlyArray<string>;
+    /** Guide paths ("<partSlug>/<chapterSlug>") the reader should do first. */
+    prerequisites?: ReadonlyArray<string>;
+    /** Related playground examples as "<category>/<slug>". */
+    examples?: ReadonlyArray<string>;
+    /** Related API pages as content slugs under site/src/content/api. */
+    apiLinks?: ReadonlyArray<string>;
+}
+
+interface RawPart {
+    slug: string;
+    title: string;
+    description: string;
+    chapters: ReadonlyArray<RawChapter>;
+}
+
 export interface GuideChapterMeta {
     part: number;
     chapter: number;
     partSlug: string;
     partTitle: string;
-    partDescription: string;
     slug: string;
-    title: string;
-    description: string;
     path: string;
+    level: GuideLevel;
+    learningGoals: ReadonlyArray<string>;
+    prerequisites: ReadonlyArray<string>;
     examples: ReadonlyArray<string>;
+    apiLinks: ReadonlyArray<string>;
 }
 
 export interface GuidePartMeta {
@@ -19,779 +72,573 @@ export interface GuidePartMeta {
     chapters: ReadonlyArray<GuideChapterMeta>;
 }
 
-const PARTS: ReadonlyArray<GuidePartMeta> = [
+const RAW_PARTS: ReadonlyArray<RawPart> = [
     {
-        part: 1,
-        slug: "introduction",
-        title: "01 Introduction",
-        description: "Start here to understand what ExoJS is and how to move through this guide.",
+        slug: 'introduction',
+        title: 'Getting Started',
+        description: 'Understand what ExoJS is, create a project, and render your first scene.',
         chapters: [
             {
-                part: 1,
-                chapter: 1,
-                partSlug: "introduction",
-                partTitle: "01 Introduction",
-                partDescription: "Start here to understand what ExoJS is and how to move through this guide.",
-                slug: "what-is-exojs",
-                title: "1.1 What is ExoJS?",
-                description: "Understand where ExoJS fits and what kind of projects it is built for.",
-                path: "introduction/what-is-exojs",
-                examples: []
+                slug: 'what-is-exojs',
+                level: 'intro',
+                learningGoals: [
+                    'know what ExoJS is and the kind of projects it targets',
+                    'recognise where ExoJS fits next to your UI framework',
+                    'know how the guide, playground, and API reference work together',
+                ],
+                apiLinks: ['application', 'scene'],
             },
             {
-                part: 1,
-                chapter: 2,
-                partSlug: "introduction",
-                partTitle: "01 Introduction",
-                partDescription: "Start here to understand what ExoJS is and how to move through this guide.",
-                slug: "setup",
-                title: "1.2 Setup",
-                description: "Install ExoJS, create an application, choose a canvas, and verify the runtime before writing scene code.",
-                path: "introduction/setup",
-                examples: []
+                slug: 'setup',
+                level: 'intro',
+                learningGoals: [
+                    'create a typed project with create-exo-app',
+                    'choose between the minimal, game-starter, and audio-reactive templates',
+                    'run the dev server and a production build',
+                ],
+                prerequisites: ['introduction/what-is-exojs'],
+                apiLinks: ['application'],
             },
             {
-                part: 1,
-                chapter: 3,
-                partSlug: "introduction",
-                partTitle: "01 Introduction",
-                partDescription: "Start here to understand what ExoJS is and how to move through this guide.",
-                slug: "your-first-scene",
-                title: "1.3 Your first scene",
-                description: "Build a first scene and see the frame loop in action.",
-                path: "introduction/your-first-scene",
-                examples: [
-                    "getting-started/hello-world"
-                ]
-            }
-        ]
+                slug: 'project-structure',
+                level: 'intro',
+                learningGoals: [
+                    'find your way around a create-exo-app project',
+                    'know where the entry point, scenes, and assets live',
+                    'understand how main.ts wires an Application to a Scene',
+                ],
+                prerequisites: ['introduction/setup'],
+                examples: ['getting-started/hello-world'],
+                apiLinks: ['application', 'scene'],
+            },
+            {
+                slug: 'your-first-scene',
+                level: 'intro',
+                learningGoals: [
+                    'load a texture and draw a sprite',
+                    'center a sprite with an anchor',
+                    'animate state each frame with delta time',
+                ],
+                prerequisites: ['introduction/setup'],
+                examples: ['getting-started/hello-world'],
+                apiLinks: ['application', 'scene', 'sprite', 'texture', 'loader'],
+            },
+        ],
     },
     {
-        part: 2,
-        slug: "core-concepts",
-        title: "02 Core Concepts",
-        description: "These chapters explain the runtime model that most ExoJS projects rely on.",
+        slug: 'core-concepts',
+        title: 'Core Concepts',
+        description: 'The runtime model most ExoJS projects rely on: applications, scenes, the frame loop, and coordinates.',
         chapters: [
             {
-                part: 2,
-                chapter: 1,
-                partSlug: "core-concepts",
-                partTitle: "02 Core Concepts",
-                partDescription: "These chapters explain the runtime model that most ExoJS projects rely on.",
-                slug: "application",
-                title: "2.1 Application",
-                description: "How the application owns canvas lifecycle, sizing, and startup.",
-                path: "core-concepts/application",
-                examples: [
-                    "getting-started/hello-world",
-                    "getting-started/resize-and-dpr"
-                ]
+                slug: 'application',
+                level: 'intro',
+                learningGoals: [
+                    'create and configure an Application',
+                    'understand how the application owns canvas, sizing, and the frame loop',
+                ],
+                prerequisites: ['introduction/your-first-scene'],
+                examples: ['getting-started/hello-world', 'getting-started/resize-and-dpr'],
+                apiLinks: ['application'],
             },
             {
-                part: 2,
-                chapter: 2,
-                partSlug: "core-concepts",
-                partTitle: "02 Core Concepts",
-                partDescription: "These chapters explain the runtime model that most ExoJS projects rely on.",
-                slug: "scenes",
-                title: "2.2 Scenes",
-                description: "How scenes split responsibilities and keep projects composable.",
-                path: "core-concepts/scenes",
-                examples: [
-                    "application-scenes/multiple-scenes"
-                ]
+                slug: 'scenes',
+                level: 'intro',
+                learningGoals: [
+                    'split a project into focused scenes',
+                    'switch between scenes at runtime',
+                ],
+                prerequisites: ['introduction/your-first-scene'],
+                examples: ['application-scenes/multiple-scenes'],
+                apiLinks: ['scene'],
             },
             {
-                part: 2,
-                chapter: 3,
-                partSlug: "core-concepts",
-                partTitle: "02 Core Concepts",
-                partDescription: "These chapters explain the runtime model that most ExoJS projects rely on.",
-                slug: "scene-lifecycle",
-                title: "2.3 Scene lifecycle",
-                description: "How load, init, update, and draw work together as one repeatable loop.",
-                path: "core-concepts/scene-lifecycle",
-                examples: [
-                    "application-scenes/scene-lifecycle",
-                    "application-scenes/pause-and-resume",
-                    "getting-started/game-loop"
-                ]
+                slug: 'scene-lifecycle',
+                level: 'intro',
+                learningGoals: [
+                    'order work across load, init, update, and draw',
+                    'separate state updates from rendering',
+                    'release resources in destroy',
+                ],
+                prerequisites: ['core-concepts/scenes'],
+                examples: ['application-scenes/scene-lifecycle', 'application-scenes/pause-and-resume', 'getting-started/game-loop'],
+                apiLinks: ['scene', 'loader', 'time'],
             },
             {
-                part: 2,
-                chapter: 4,
-                partSlug: "core-concepts",
-                partTitle: "02 Core Concepts",
-                partDescription: "These chapters explain the runtime model that most ExoJS projects rely on.",
-                slug: "scene-graph",
-                title: "2.4 Scene graph",
-                description: "How transforms, hierarchy, masks, and draw order shape what you see.",
-                path: "core-concepts/scene-graph",
+                slug: 'scene-graph',
+                level: 'intermediate',
+                learningGoals: [
+                    'compose drawables with containers',
+                    'reason about transforms, draw order, and masks',
+                ],
+                prerequisites: ['core-concepts/scenes'],
                 examples: [
-                    "scene-graph/containers",
-                    "scene-graph/nested-transforms",
-                    "scene-graph/local-vs-global-transform",
-                    "scene-graph/pivot-and-anchor",
-                    "scene-graph/z-ordering",
-                    "scene-graph/masks"
-                ]
+                    'scene-graph/containers',
+                    'scene-graph/nested-transforms',
+                    'scene-graph/local-vs-global-transform',
+                    'scene-graph/pivot-and-anchor',
+                    'scene-graph/z-ordering',
+                    'scene-graph/masks',
+                ],
+                apiLinks: ['container', 'drawable'],
             },
             {
-                part: 2,
-                chapter: 5,
-                partSlug: "core-concepts",
-                partTitle: "02 Core Concepts",
-                partDescription: "These chapters explain the runtime model that most ExoJS projects rely on.",
-                slug: "coordinates-and-views",
-                title: "2.5 Coordinates and views",
-                description: "How world space, screen space, and camera views map onto each other.",
-                path: "core-concepts/coordinates-and-views",
+                slug: 'coordinates-and-views',
+                level: 'intermediate',
+                learningGoals: [
+                    'map world space to screen space',
+                    'move and zoom a camera view',
+                ],
+                prerequisites: ['core-concepts/scene-graph'],
                 examples: [
-                    "application-scenes/camera-and-view",
-                    "application-scenes/multi-view-split-screen",
-                    "application-scenes/picture-in-picture",
-                    "application-scenes/world-vs-screen-coords"
-                ]
+                    'application-scenes/camera-and-view',
+                    'application-scenes/multi-view-split-screen',
+                    'application-scenes/picture-in-picture',
+                    'application-scenes/world-vs-screen-coords',
+                ],
+                apiLinks: ['view', 'camera'],
             },
             {
-                part: 2,
-                chapter: 6,
-                partSlug: "core-concepts",
-                partTitle: "02 Core Concepts",
-                partDescription: "These chapters explain the runtime model that most ExoJS projects rely on.",
-                slug: "loading-and-resources",
-                title: "2.6 Loading and resources",
-                description: "How to load resources predictably and keep asset access consistent.",
-                path: "core-concepts/loading-and-resources",
-                examples: [
-                    "sprites-textures/texture-loader"
-                ]
-            }
-        ]
+                slug: 'loading-and-resources',
+                level: 'intermediate',
+                learningGoals: [
+                    'declare and load assets predictably',
+                    'access loaded resources by name',
+                ],
+                prerequisites: ['core-concepts/scene-lifecycle'],
+                examples: ['sprites-textures/texture-loader'],
+                apiLinks: ['loader', 'texture'],
+            },
+        ],
     },
     {
-        part: 3,
-        slug: "drawing",
-        title: "03 Drawing",
-        description: "Use ExoJS drawing primitives, sprites, text, and animation to build a scene.",
+        slug: 'drawing',
+        title: 'Drawing',
+        description: 'Build a scene with shapes, sprites, text, and animation.',
         chapters: [
             {
-                part: 3,
-                chapter: 1,
-                partSlug: "drawing",
-                partTitle: "03 Drawing",
-                partDescription: "Use ExoJS drawing primitives, sprites, text, and animation to build a scene.",
-                slug: "graphics",
-                title: "3.1 Graphics",
-                description: "Draw procedural shapes and mesh-based geometry.",
-                path: "drawing/graphics",
+                slug: 'graphics',
+                level: 'intro',
+                learningGoals: [
+                    'draw procedural shapes with Graphics',
+                    'fill, stroke, and position drawn geometry',
+                ],
+                prerequisites: ['introduction/your-first-scene'],
                 examples: [
-                    "geometry-graphics/graphics-primitives",
-                    "geometry-graphics/infinite-grid",
-                    "geometry-graphics/mesh-triangle",
-                    "geometry-graphics/mesh-textured-quad",
-                    "geometry-graphics/mesh-deformed-grid"
-                ]
+                    'geometry-graphics/graphics-primitives',
+                    'geometry-graphics/infinite-grid',
+                    'geometry-graphics/mesh-triangle',
+                    'geometry-graphics/mesh-textured-quad',
+                    'geometry-graphics/mesh-deformed-grid',
+                ],
+                apiLinks: ['graphics', 'color'],
             },
             {
-                part: 3,
-                chapter: 2,
-                partSlug: "drawing",
-                partTitle: "03 Drawing",
-                partDescription: "Use ExoJS drawing primitives, sprites, text, and animation to build a scene.",
-                slug: "sprites",
-                title: "3.2 Sprites",
-                description: "Render image-based content from textures, sheets, SVG, and video.",
-                path: "drawing/sprites",
+                slug: 'sprites',
+                level: 'intro',
+                learningGoals: [
+                    'render textures, sheets, SVG, and video as sprites',
+                    'control anchor, blend mode, and frames',
+                ],
+                prerequisites: ['introduction/your-first-scene'],
                 examples: [
-                    "sprites-textures/sprite-basics",
-                    "sprites-textures/blendmodes",
-                    "sprites-textures/spritesheet-frames",
-                    "sprites-textures/svg-drawable",
-                    "sprites-textures/video-drawable"
-                ]
+                    'sprites-textures/sprite-basics',
+                    'sprites-textures/blendmodes',
+                    'sprites-textures/spritesheet-frames',
+                    'sprites-textures/svg-drawable',
+                    'sprites-textures/video-drawable',
+                ],
+                apiLinks: ['sprite', 'spritesheet', 'texture'],
             },
             {
-                part: 3,
-                chapter: 3,
-                partSlug: "drawing",
-                partTitle: "03 Drawing",
-                partDescription: "Use ExoJS drawing primitives, sprites, text, and animation to build a scene.",
-                slug: "text",
-                title: "3.3 Text",
-                description: "Control layout, styling, and visual effects for runtime text.",
-                path: "drawing/text",
+                slug: 'text',
+                level: 'intro',
+                learningGoals: [
+                    'render and style runtime text',
+                    'lay out multiline and wrapped text',
+                ],
                 examples: [
-                    "text-fonts/basic-text",
-                    "text-fonts/multiline-and-wrap",
-                    "text-fonts/stroke-and-shadow",
-                    "text-fonts/web-fonts",
-                    "text-fonts/text-glitch"
-                ]
+                    'text-fonts/basic-text',
+                    'text-fonts/multiline-and-wrap',
+                    'text-fonts/stroke-and-shadow',
+                    'text-fonts/web-fonts',
+                    'text-fonts/text-glitch',
+                ],
+                apiLinks: ['text', 'bitmap-text', 'text-style'],
             },
             {
-                part: 3,
-                chapter: 4,
-                partSlug: "drawing",
-                partTitle: "03 Drawing",
-                partDescription: "Use ExoJS drawing primitives, sprites, text, and animation to build a scene.",
-                slug: "animation",
-                title: "3.4 Animation",
-                description: "Animate transforms and values with tweens and frame updates.",
-                path: "drawing/animation",
+                slug: 'animation',
+                level: 'intermediate',
+                learningGoals: [
+                    'tween transforms and values over time',
+                    'chain, yoyo, and interrupt tweens',
+                ],
                 examples: [
-                    "tweens-animation/easing-curves",
-                    "tweens-animation/frame-animation",
-                    "tweens-animation/interrupt-and-replace",
-                    "tweens-animation/tween-basics",
-                    "tweens-animation/tween-chains",
-                    "tweens-animation/tween-from-array",
-                    "tweens-animation/tween-with-yoyo"
-                ]
+                    'tweens-animation/easing-curves',
+                    'tweens-animation/frame-animation',
+                    'tweens-animation/interrupt-and-replace',
+                    'tweens-animation/tween-basics',
+                    'tweens-animation/tween-chains',
+                    'tweens-animation/tween-from-array',
+                    'tweens-animation/tween-with-yoyo',
+                ],
+                apiLinks: ['tween', 'tween-manager', 'animated-sprite'],
             },
             {
-                part: 3,
-                chapter: 5,
-                partSlug: "drawing",
-                partTitle: "03 Drawing",
-                partDescription: "Use ExoJS drawing primitives, sprites, text, and animation to build a scene.",
-                slug: "render-targets",
-                title: "3.5 Render targets",
-                description: "Render into intermediate textures and reuse those outputs in scene composition.",
-                path: "drawing/render-targets",
-                examples: [
-                    "render-targets/render-to-texture",
-                    "render-targets/mini-map"
-                ]
-            }
-        ]
+                slug: 'render-targets',
+                level: 'advanced',
+                learningGoals: [
+                    'render a scene into an intermediate texture',
+                    'reuse render-target output in composition',
+                ],
+                prerequisites: ['drawing/sprites'],
+                examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
+                apiLinks: ['render-target', 'render-texture'],
+            },
+        ],
     },
     {
-        part: 4,
-        slug: "input",
-        title: "04 Input",
-        description: "Handle keyboard, pointer, touch, and gamepad with predictable input flow.",
+        slug: 'input',
+        title: 'Input',
+        description: 'Handle keyboard, pointer, touch, and gamepad with predictable input flow.',
         chapters: [
             {
-                part: 4,
-                chapter: 1,
-                partSlug: "input",
-                partTitle: "04 Input",
-                partDescription: "Handle keyboard, pointer, touch, and gamepad with predictable input flow.",
-                slug: "keyboard",
-                title: "4.1 Keyboard",
-                description: "Capture keys and support configurable bindings.",
-                path: "input/keyboard",
-                examples: [
-                    "input/keyboard",
-                    "input/key-rebinding"
-                ]
+                slug: 'keyboard',
+                level: 'intro',
+                learningGoals: [
+                    'capture keys with scene-scoped bindings',
+                    'handle taps, holds, and rebinding',
+                ],
+                prerequisites: ['introduction/your-first-scene'],
+                examples: ['input/keyboard', 'input/key-rebinding'],
+                apiLinks: ['keyboard', 'input-manager'],
             },
             {
-                part: 4,
-                chapter: 2,
-                partSlug: "input",
-                partTitle: "04 Input",
-                partDescription: "Handle keyboard, pointer, touch, and gamepad with predictable input flow.",
-                slug: "mouse-and-pointer",
-                title: "4.2 Mouse and pointer",
-                description: "Work with pointer events across mouse and touch-compatible devices.",
-                path: "input/mouse-and-pointer",
-                examples: [
-                    "input/mouse-and-pointer",
-                    "input/multitouch",
-                    "input/pointer-to-world"
-                ]
+                slug: 'mouse-and-pointer',
+                level: 'intro',
+                learningGoals: [
+                    'read unified pointer events across mouse and touch',
+                    'translate pointer position into world space',
+                ],
+                prerequisites: ['input/keyboard'],
+                examples: ['input/mouse-and-pointer', 'input/multitouch', 'input/pointer-to-world'],
+                apiLinks: ['pointer', 'input-manager'],
             },
             {
-                part: 4,
-                chapter: 3,
-                partSlug: "input",
-                partTitle: "04 Input",
-                partDescription: "Handle keyboard, pointer, touch, and gamepad with predictable input flow.",
-                slug: "gamepad",
-                title: "4.3 Gamepad",
-                description: "Read controller input and support multiple connected gamepads.",
-                path: "input/gamepad",
-                examples: [
-                    "input/gamepad",
-                    "input/multi-gamepad"
-                ]
+                slug: 'gamepad',
+                level: 'intermediate',
+                learningGoals: [
+                    'read controller buttons and axes',
+                    'support multiple connected gamepads',
+                ],
+                prerequisites: ['input/keyboard'],
+                examples: ['input/gamepad', 'input/multi-gamepad'],
+                apiLinks: ['gamepad', 'input-manager'],
             },
             {
-                part: 4,
-                chapter: 4,
-                partSlug: "input",
-                partTitle: "04 Input",
-                partDescription: "Handle keyboard, pointer, touch, and gamepad with predictable input flow.",
-                slug: "action-mapping",
-                title: "4.4 Action mapping",
-                description: "Map multiple devices to the same intent-driven input actions.",
-                path: "input/action-mapping",
-                examples: [
-                    "input/action-mapping"
-                ]
-            }
-        ]
+                slug: 'action-mapping',
+                level: 'intermediate',
+                learningGoals: [
+                    'map several devices to one intent',
+                    'keep gameplay code device-agnostic',
+                ],
+                prerequisites: ['input/keyboard'],
+                examples: ['input/action-mapping'],
+                apiLinks: ['input-manager'],
+            },
+        ],
     },
     {
-        part: 5,
-        slug: "audio",
-        title: "05 Audio",
-        description: "Build complete audio behavior from playback to effects and analysis.",
+        slug: 'audio',
+        title: 'Audio',
+        description: 'Play sound and music, place it in space, shape it with effects, and react to it.',
         chapters: [
             {
-                part: 5,
-                chapter: 1,
-                partSlug: "audio",
-                partTitle: "05 Audio",
-                partDescription: "Build complete audio behavior from playback to effects and analysis.",
-                slug: "audio-basics",
-                title: "5.1 Audio basics",
-                description: "Play sounds and music with reliable runtime controls.",
-                path: "audio/audio-basics",
+                slug: 'audio-basics',
+                level: 'intro',
+                learningGoals: [
+                    'load and play Sound and Music',
+                    'control volume, looping, and fades',
+                    'handle the browser autoplay gesture',
+                ],
+                prerequisites: ['introduction/your-first-scene'],
                 examples: [
-                    "audio-basics/audio-buses",
-                    "audio-basics/crossfade-tracks",
-                    "audio-basics/music-loop",
-                    "audio-basics/play-sound",
-                    "audio-basics/random-pitch-pool",
-                    "audio-basics/sound-pool"
-                ]
+                    'audio-basics/play-sound',
+                    'audio-basics/music-loop',
+                    'audio-basics/crossfade-tracks',
+                    'audio-basics/sound-pool',
+                    'audio-basics/random-pitch-pool',
+                    'audio-basics/audio-buses',
+                ],
+                apiLinks: ['sound', 'music', 'audio-manager'],
             },
             {
-                part: 5,
-                chapter: 2,
-                partSlug: "audio",
-                partTitle: "05 Audio",
-                partDescription: "Build complete audio behavior from playback to effects and analysis.",
-                slug: "spatial-audio",
-                title: "5.2 Spatial audio",
-                description: "Place listener and sources in space for directional sound behavior.",
-                path: "audio/spatial-audio",
-                examples: [
-                    "spatial-audio/listener-and-source",
-                    "spatial-audio/moving-source",
-                    "spatial-audio/falloff-curves"
-                ]
+                slug: 'spatial-audio',
+                level: 'intermediate',
+                learningGoals: [
+                    'place a listener and sources in space',
+                    'tune directional falloff',
+                ],
+                prerequisites: ['audio/audio-basics'],
+                examples: ['spatial-audio/listener-and-source', 'spatial-audio/moving-source', 'spatial-audio/falloff-curves'],
+                apiLinks: ['audio-listener', 'audio-manager'],
             },
             {
-                part: 5,
-                chapter: 3,
-                partSlug: "audio",
-                partTitle: "05 Audio",
-                partDescription: "Build complete audio behavior from playback to effects and analysis.",
-                slug: "audio-effects",
-                title: "5.3 Audio effects",
-                description: "Shape sound with filters and bus-level processing.",
-                path: "audio/audio-effects",
-                examples: [
-                    "audio-fx/compressor",
-                    "audio-fx/ducking",
-                    "audio-fx/reverb-and-delay",
-                    "audio-fx/vocoder"
-                ]
+                slug: 'audio-effects',
+                level: 'intermediate',
+                learningGoals: [
+                    'shape sound with bus filters',
+                    'apply reverb, delay, and ducking',
+                ],
+                prerequisites: ['audio/audio-basics'],
+                examples: ['audio-fx/compressor', 'audio-fx/ducking', 'audio-fx/reverb-and-delay', 'audio-fx/vocoder'],
+                apiLinks: ['audio-bus', 'audio-filter'],
             },
             {
-                part: 5,
-                chapter: 4,
-                partSlug: "audio",
-                partTitle: "05 Audio",
-                partDescription: "Build complete audio behavior from playback to effects and analysis.",
-                slug: "beat-detection",
-                title: "5.4 Beat detection",
-                description: "Drive visuals from beat and frequency information.",
-                path: "audio/beat-detection",
-                examples: [
-                    "beat-detection/beat-sync-pulse",
-                    "beat-detection/frequency-bands",
-                    "beat-detection/tempo-tracking"
-                ]
-            }
-        ]
+                slug: 'beat-detection',
+                level: 'intermediate',
+                learningGoals: [
+                    'read beat and frequency information',
+                    'drive timing from audio analysis',
+                ],
+                prerequisites: ['audio/audio-basics'],
+                examples: ['beat-detection/beat-sync-pulse', 'beat-detection/frequency-bands', 'beat-detection/tempo-tracking'],
+                apiLinks: ['beat-detector', 'audio-analyser'],
+            },
+            {
+                slug: 'audio-reactive-visualization',
+                level: 'intermediate',
+                learningGoals: [
+                    'map audio analysis to visuals',
+                    'build a responsive audio-reactive scene',
+                ],
+                prerequisites: ['audio/beat-detection'],
+                examples: ['showcase/audio-visualisation', 'showcase/audio-reactive-particles'],
+                apiLinks: ['audio-analyser', 'beat-detector'],
+            },
+        ],
     },
     {
-        part: 6,
-        slug: "effects",
-        title: "06 Effects",
-        description: "Layer visual effects to build mood, motion, and feedback.",
+        slug: 'effects',
+        title: 'Effects',
+        description: 'Layer filters, particles, post-processing, and custom shaders for mood and motion.',
         chapters: [
             {
-                part: 6,
-                chapter: 1,
-                partSlug: "effects",
-                partTitle: "06 Effects",
-                partDescription: "Layer visual effects to build mood, motion, and feedback.",
-                slug: "filters",
-                title: "6.1 Filters",
-                description: "Stack shader and color effects to control final image style.",
-                path: "effects/filters",
+                slug: 'filters',
+                level: 'intermediate',
                 examples: [
-                    "filters/blur-filter",
-                    "filters/chromatic-aberration",
-                    "filters/color-filter",
-                    "filters/crt-scanlines",
-                    "filters/custom-fragment-shader",
-                    "filters/filter-stack",
-                    "filters/metaballs",
-                    "filters/noise-vignette",
-                    "filters/palette-cycling",
-                    "showcase/color-grading"
-                ]
+                    'filters/blur-filter',
+                    'filters/chromatic-aberration',
+                    'filters/color-filter',
+                    'filters/crt-scanlines',
+                    'filters/custom-fragment-shader',
+                    'filters/filter-stack',
+                    'filters/metaballs',
+                    'filters/noise-vignette',
+                    'filters/palette-cycling',
+                    'showcase/color-grading',
+                ],
+                apiLinks: ['filter', 'color-filter', 'blur-filter'],
             },
             {
-                part: 6,
-                chapter: 2,
-                partSlug: "effects",
-                partTitle: "06 Effects",
-                partDescription: "Layer visual effects to build mood, motion, and feedback.",
-                slug: "particles",
-                title: "6.2 Particles",
-                description: "Spawn and tune particle systems for environmental and reactive effects.",
-                path: "effects/particles",
+                slug: 'particles',
+                level: 'intermediate',
                 examples: [
-                    "particles/bonfire",
-                    "particles/cursor-attractor-particles",
-                    "particles/custom-wgsl-module",
-                    "particles/emitter-basics",
-                    "particles/fireworks",
-                    "particles/gpu-particles"
-                ]
+                    'particles/emitter-basics',
+                    'particles/bonfire',
+                    'particles/fireworks',
+                    'particles/cursor-attractor-particles',
+                    'particles/gpu-particles',
+                    'particles/custom-wgsl-module',
+                ],
+                apiLinks: ['particle-system'],
             },
             {
-                part: 6,
-                chapter: 3,
-                partSlug: "effects",
-                partTitle: "06 Effects",
-                partDescription: "Layer visual effects to build mood, motion, and feedback.",
-                slug: "post-processing",
-                title: "6.3 Post-processing",
-                description: "Build multi-pass render flows for bloom, trails, and mirror effects.",
-                path: "effects/post-processing",
+                slug: 'post-processing',
+                level: 'advanced',
+                prerequisites: ['drawing/render-targets'],
                 examples: [
-                    "render-targets/bloom-lite",
-                    "render-targets/post-processing-chain",
-                    "render-targets/trail-feedback",
-                    "render-targets/water-mirror"
-                ]
+                    'render-targets/bloom-lite',
+                    'render-targets/post-processing-chain',
+                    'render-targets/trail-feedback',
+                    'render-targets/water-mirror',
+                ],
+                apiLinks: ['render-target', 'filter'],
             },
             {
-                part: 6,
-                chapter: 4,
-                partSlug: "effects",
-                partTitle: "06 Effects",
-                partDescription: "Layer visual effects to build mood, motion, and feedback.",
-                slug: "custom-mesh-shaders",
-                title: "6.4 Custom mesh shaders",
-                description: "Attach custom GLSL or WGSL programs to meshes for geometry-space effects.",
-                path: "effects/custom-mesh-shaders",
-                examples: [
-                    "geometry-graphics/mesh-triangle",
-                    "geometry-graphics/mesh-textured-quad",
-                    "geometry-graphics/mesh-deformed-grid"
-                ]
-            }
-        ]
+                slug: 'custom-mesh-shaders',
+                level: 'advanced',
+                prerequisites: ['drawing/graphics'],
+                examples: ['geometry-graphics/mesh-triangle', 'geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
+                apiLinks: ['mesh'],
+            },
+        ],
     },
     {
-        part: 7,
-        slug: "advanced",
-        title: "07 Advanced",
-        description: "Go deeper when you need custom pipelines, tooling, and profiling data.",
+        slug: 'advanced',
+        title: 'Debugging & Performance',
+        description: 'Inspect a running scene, profile it, debug the render pipeline, and choose a backend.',
         chapters: [
             {
-                part: 7,
-                chapter: 1,
-                partSlug: "advanced",
-                partTitle: "07 Advanced",
-                partDescription: "Go deeper when you need custom pipelines, tooling, and profiling data.",
-                slug: "custom-renderers",
-                title: "7.1 Custom renderers",
-                description: "Extend rendering with custom passes and backend-specific logic.",
-                path: "advanced/custom-renderers",
-                examples: [
-                    "custom-renderers/custom-render-pass",
-                    "custom-renderers/custom-triangle-renderer"
-                ]
+                slug: 'debug-layer',
+                level: 'intermediate',
+                learningGoals: [
+                    'overlay performance, bounds, and hit-test layers',
+                    'toggle debug layers without changing scene code',
+                ],
+                prerequisites: ['introduction/your-first-scene'],
+                examples: ['debug-layer/performance-overlay', 'debug-layer/bounding-boxes', 'debug-layer/pointer-and-hittest', 'debug-layer/signal-bus-inspector'],
+                apiLinks: ['debug-overlay', 'performance-layer', 'bounding-boxes-layer', 'hit-test-layer'],
             },
             {
-                part: 7,
-                chapter: 2,
-                partSlug: "advanced",
-                partTitle: "07 Advanced",
-                partDescription: "Go deeper when you need custom pipelines, tooling, and profiling data.",
-                slug: "debug-layer",
-                title: "7.2 Debug layer",
-                description: "Inspect scene state and runtime behavior while a scene is running.",
-                path: "advanced/debug-layer",
-                examples: [
-                    "debug-layer/bounding-boxes",
-                    "debug-layer/performance-overlay",
-                    "debug-layer/pointer-and-hittest",
-                    "debug-layer/signal-bus-inspector"
-                ]
+                slug: 'performance',
+                level: 'intermediate',
+                learningGoals: [
+                    'measure scene limits with stress examples',
+                    'read the performance overlay to find bottlenecks',
+                ],
+                prerequisites: ['advanced/debug-layer'],
+                examples: ['performance/sprite-stress', 'performance/multi-texture-stress', 'performance/particle-stress'],
+                apiLinks: ['performance-layer'],
             },
             {
-                part: 7,
-                chapter: 3,
-                partSlug: "advanced",
-                partTitle: "07 Advanced",
-                partDescription: "Go deeper when you need custom pipelines, tooling, and profiling data.",
-                slug: "performance",
-                title: "7.3 Performance",
-                description: "Measure scene limits with focused stress examples.",
-                path: "advanced/performance",
-                examples: [
-                    "performance/sprite-stress",
-                    "performance/multi-texture-stress",
-                    "performance/particle-stress"
-                ]
+                slug: 'render-pipeline-debugging',
+                level: 'advanced',
+                prerequisites: ['advanced/debug-layer'],
+                examples: ['render-targets/post-processing-chain', 'render-targets/bloom-lite'],
+                apiLinks: ['render-pass-inspector-layer'],
             },
             {
-                part: 7,
-                chapter: 4,
-                partSlug: "advanced",
-                partTitle: "07 Advanced",
-                partDescription: "Go deeper when you need custom pipelines, tooling, and profiling data.",
-                slug: "backend-comparison",
-                title: "7.4 Backend comparison",
-                description: "Compare backend behavior and decide what to ship.",
-                path: "advanced/backend-comparison",
-                examples: [
-                    "performance/backend-comparison"
-                ]
+                slug: 'backend-comparison',
+                level: 'advanced',
+                examples: ['performance/backend-comparison'],
+                apiLinks: ['capabilities'],
             },
             {
-                part: 7,
-                chapter: 5,
-                partSlug: "advanced",
-                partTitle: "07 Advanced",
-                partDescription: "Go deeper when you need custom pipelines, tooling, and profiling data.",
-                slug: "collision-detection",
-                title: "7.5 Collision detection",
-                description: "Validate collision flow and response with interactive shapes.",
-                path: "advanced/collision-detection",
-                examples: [
-                    "showcase/rectangles-collision"
-                ]
+                slug: 'custom-renderers',
+                level: 'advanced',
+                examples: ['custom-renderers/custom-render-pass', 'custom-renderers/custom-triangle-renderer'],
             },
             {
-                part: 7,
-                chapter: 6,
-                partSlug: "advanced",
-                partTitle: "07 Advanced",
-                partDescription: "Go deeper when you need custom pipelines, tooling, and profiling data.",
-                slug: "render-pipeline-debugging",
-                title: "7.6 Render pipeline debugging",
-                description: "Inspect filter chains and pass counts with the render-pass inspector.",
-                path: "advanced/render-pipeline-debugging",
-                examples: [
-                    "render-targets/post-processing-chain",
-                    "render-targets/bloom-lite"
-                ]
-            }
-        ]
+                slug: 'collision-detection',
+                level: 'advanced',
+                examples: ['showcase/rectangles-collision'],
+                apiLinks: ['bounds', 'circle'],
+            },
+        ],
     },
     {
-        part: 8,
-        slug: "recipes",
-        title: "08 Recipes",
-        description: "Use practical scene patterns you can adapt directly in production.",
+        slug: 'recipes',
+        title: 'Recipes',
+        description: 'Practical scene patterns you can adapt directly, ending with a complete small game.',
         chapters: [
             {
-                part: 8,
-                chapter: 1,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "hud-overlay",
-                title: "8.1 HUD overlay",
-                description: "Compose gameplay and UI layers without coupling scene logic.",
-                path: "recipes/hud-overlay",
-                examples: [
-                    "application-scenes/hud-overlay-scene",
-                    "showcase/minimap-with-mask"
-                ]
+                slug: 'hud-overlay',
+                level: 'intermediate',
+                examples: ['application-scenes/hud-overlay-scene', 'showcase/minimap-with-mask'],
             },
             {
-                part: 8,
-                chapter: 2,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "camera-follow-and-parallax",
-                title: "8.2 Camera follow & parallax",
-                description: "Create depth and motion parallax from camera and pointer movement.",
-                path: "recipes/camera-follow-and-parallax",
-                examples: [
-                    "showcase/mouse-parallax",
-                    "scene-graph/parallax-starfield"
-                ]
+                slug: 'camera-follow-and-parallax',
+                level: 'intermediate',
+                examples: ['showcase/mouse-parallax', 'scene-graph/parallax-starfield'],
             },
             {
-                part: 8,
-                chapter: 3,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "pause-menu",
-                title: "8.3 Pause menu",
-                description: "Pause scene updates while keeping clear visual context for players.",
-                path: "recipes/pause-menu",
-                examples: [
-                    "showcase/pause-blur"
-                ]
+                slug: 'pause-menu',
+                level: 'intermediate',
+                examples: ['showcase/pause-blur'],
             },
             {
-                part: 8,
-                chapter: 4,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "split-screen",
-                title: "8.4 Split screen",
-                description: "Render multiple viewpoints in a shared scene timeline.",
-                path: "recipes/split-screen",
-                examples: [
-                    "application-scenes/multi-view-split-screen"
-                ]
+                slug: 'split-screen',
+                level: 'intermediate',
+                examples: ['application-scenes/multi-view-split-screen'],
             },
             {
-                part: 8,
-                chapter: 5,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "audio-reactive-scene",
-                title: "8.5 Audio reactive scene",
-                description: "Map audio analysis to movement, particles, and camera response.",
-                path: "recipes/audio-reactive-scene",
-                examples: [
-                    "showcase/audio-reactive-particles",
-                    "showcase/audio-visualisation",
-                    "showcase/low-band-camera-shake",
-                    "showcase/vinyl-record"
-                ]
+                slug: 'audio-reactive-scene',
+                level: 'intermediate',
+                examples: ['showcase/audio-reactive-particles', 'showcase/audio-visualisation', 'showcase/low-band-camera-shake', 'showcase/vinyl-record'],
             },
             {
-                part: 8,
-                chapter: 6,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "game-feel",
-                title: "8.6 Game feel",
-                description: "Add feedback cues that make interaction feel responsive.",
-                path: "recipes/game-feel",
-                examples: [
-                    "showcase/damage-flash",
-                    "showcase/screen-shake-on-explosion",
-                    "showcase/gamepad-spaceship"
-                ]
+                slug: 'game-feel',
+                level: 'intermediate',
+                examples: ['showcase/damage-flash', 'showcase/screen-shake-on-explosion', 'showcase/gamepad-spaceship'],
             },
             {
-                part: 8,
-                chapter: 7,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "ui-patterns",
-                title: "8.7 UI patterns",
-                description: "Build reusable dialog and text-flow UI behavior in-scene.",
-                path: "recipes/ui-patterns",
-                examples: [
-                    "showcase/dialog-system",
-                    "showcase/typewriter-text"
-                ]
+                slug: 'ui-patterns',
+                level: 'intermediate',
+                examples: ['showcase/dialog-system', 'showcase/typewriter-text'],
             },
             {
-                part: 8,
-                chapter: 8,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "cinematics",
-                title: "8.8 Cinematics",
-                description: "Coordinate timing, camera, and audio for scripted scene beats.",
-                path: "recipes/cinematics",
-                examples: [
-                    "showcase/boss-intro-cinematic"
-                ]
+                slug: 'cinematics',
+                level: 'intermediate',
+                examples: ['showcase/boss-intro-cinematic'],
             },
             {
-                part: 8,
-                chapter: 9,
-                partSlug: "recipes",
-                partTitle: "08 Recipes",
-                partDescription: "Use practical scene patterns you can adapt directly in production.",
-                slug: "build-orb-dodge",
-                title: "8.9 Build Orb Dodge",
-                description: "Build a complete small game: player movement, orb spawning, collision, scoring, HUD, and a game-over scene.",
-                path: "recipes/build-orb-dodge",
-                examples: [
-                    "showcase/orb-dodge"
-                ]
-            }
-        ]
+                slug: 'build-orb-dodge',
+                level: 'intermediate',
+                learningGoals: [
+                    'wire a complete game from scenes, input, and graphics',
+                    'spawn, move, and collide objects each frame',
+                    'transition to a game-over scene and restart',
+                ],
+                prerequisites: ['core-concepts/scene-lifecycle', 'input/keyboard', 'drawing/graphics'],
+                examples: ['showcase/orb-dodge'],
+                apiLinks: ['scene', 'graphics', 'keyboard', 'text', 'color'],
+            },
+        ],
     },
     {
-        part: 9,
-        slug: "migration",
-        title: "09 Migration",
-        description: "Upgrade guidance for pre-1.0 API changes between ExoJS minor versions.",
+        slug: 'migration',
+        title: 'Migration',
+        description: 'Upgrade guidance for pre-1.0 API changes between ExoJS minor versions.',
         chapters: [
             {
-                part: 9,
-                chapter: 1,
-                partSlug: "migration",
-                partTitle: "09 Migration",
-                partDescription: "Upgrade guidance for pre-1.0 API changes between ExoJS minor versions.",
-                slug: "v0-8-x-to-v0-9-0",
-                title: "9.1 v0.8.x to v0.9.0",
-                description: "Mechanical migration steps for the v0.9.0 API consolidation release.",
-                path: "migration/v0-8-x-to-v0-9-0",
-                examples: []
-            }
-        ]
+                slug: 'v0-8-x-to-v0-9-0',
+                level: 'intermediate',
+            },
+        ],
     },
     {
-        part: 10,
-        slug: "reference",
-        title: "10 Reference",
-        description: "Practical guides for diagnosing problems and shipping ExoJS apps to production.",
+        slug: 'reference',
+        title: 'Reference & Deployment',
+        description: 'Diagnose common problems and ship an ExoJS app to production.',
         chapters: [
             {
-                part: 10,
-                chapter: 1,
-                partSlug: "reference",
-                partTitle: "10 Reference",
-                partDescription: "Practical guides for diagnosing problems and shipping ExoJS apps to production.",
-                slug: "troubleshooting",
-                title: "10.1 Troubleshooting",
-                description: "Diagnose and fix the most common ExoJS problems: blank canvas, API errors, missing assets, audio, input, and performance.",
-                path: "reference/troubleshooting",
-                examples: [
-                    "debug-layer/performance-overlay",
-                    "input/keyboard",
-                    "input/gamepad",
-                    "audio-basics/play-sound"
-                ]
+                slug: 'troubleshooting',
+                level: 'intro',
+                examples: ['debug-layer/performance-overlay', 'input/keyboard', 'input/gamepad', 'audio-basics/play-sound'],
             },
             {
-                part: 10,
-                chapter: 2,
-                partSlug: "reference",
-                partTitle: "10 Reference",
-                partDescription: "Practical guides for diagnosing problems and shipping ExoJS apps to production.",
-                slug: "deployment",
-                title: "10.2 Deployment",
-                description: "Build and host an ExoJS app: local production build, Vite base path, static hosting, assets, CDN bundles, and browser support.",
-                path: "reference/deployment",
-                examples: []
-            }
-        ]
-    }
+                slug: 'deployment',
+                level: 'intermediate',
+                prerequisites: ['recipes/build-orb-dodge'],
+            },
+        ],
+    },
 ];
+
+const PARTS: ReadonlyArray<GuidePartMeta> = RAW_PARTS.map((rawPart, partIndex) => {
+    const part = partIndex + 1;
+    const partMeta: GuidePartMeta = {
+        part,
+        slug: rawPart.slug,
+        title: rawPart.title,
+        description: rawPart.description,
+        chapters: rawPart.chapters.map((rawChapter, chapterIndex) => ({
+            part,
+            chapter: chapterIndex + 1,
+            partSlug: rawPart.slug,
+            partTitle: rawPart.title,
+            slug: rawChapter.slug,
+            path: `${rawPart.slug}/${rawChapter.slug}`,
+            level: rawChapter.level,
+            learningGoals: rawChapter.learningGoals ?? [],
+            prerequisites: rawChapter.prerequisites ?? [],
+            examples: rawChapter.examples ?? [],
+            apiLinks: rawChapter.apiLinks ?? [],
+        })),
+    };
+    return partMeta;
+});
 
 export const GUIDE_PARTS: ReadonlyArray<GuidePartMeta> = PARTS;
 
@@ -799,3 +646,74 @@ export const GUIDE_CHAPTERS: ReadonlyArray<GuideChapterMeta> = PARTS.flatMap(par
 
 export const GUIDE_CHAPTER_BY_PATH = new Map(GUIDE_CHAPTERS.map(chapter => [chapter.path, chapter]));
 
+export const GUIDE_PART_BY_SLUG = new Map(GUIDE_PARTS.map(part => [part.slug, part]));
+
+export interface LearningPathStep {
+    /** Guide chapter path ("<partSlug>/<chapterSlug>"). */
+    path: string;
+    /** One concrete outcome for this step. */
+    goal: string;
+    /** Optional related playground example ("<category>/<slug>"). */
+    example?: string;
+}
+
+/**
+ * The recommended onboarding journey, shown on the guide landing page. Each step
+ * links to a real chapter; the landing reconciliation test keeps every path and
+ * example valid.
+ */
+export const GUIDE_LEARNING_PATH: ReadonlyArray<LearningPathStep> = [
+    { path: 'introduction/what-is-exojs', goal: 'See what ExoJS is and how its pieces fit together.' },
+    { path: 'introduction/setup', goal: 'Scaffold a typed project and run the dev server.' },
+    { path: 'introduction/your-first-scene', goal: 'Load a texture, draw a sprite, and animate it.', example: 'getting-started/hello-world' },
+    { path: 'core-concepts/scene-lifecycle', goal: 'Update state and render each frame.', example: 'getting-started/game-loop' },
+    { path: 'input/keyboard', goal: 'Move something in response to key presses.', example: 'input/keyboard' },
+    { path: 'audio/audio-basics', goal: 'Play sound and music with reliable controls.', example: 'audio-basics/play-sound' },
+    { path: 'recipes/build-orb-dodge', goal: 'Combine it all into a complete small game.', example: 'showcase/orb-dodge' },
+    { path: 'reference/deployment', goal: 'Build and host the finished project.' },
+];
+
+export interface GuideTopic {
+    title: string;
+    description: string;
+    /** Guide chapter path the topic opens. */
+    path: string;
+}
+
+/** Topic-based entry points on the guide landing page. */
+export const GUIDE_TOPICS: ReadonlyArray<GuideTopic> = [
+    { title: 'Build games', description: 'Scenes, input, collision, and a full game walkthrough.', path: 'recipes/build-orb-dodge' },
+    { title: 'Create visuals', description: 'Graphics, sprites, text, filters, and particles.', path: 'drawing/graphics' },
+    { title: 'Work with audio', description: 'Playback, spatial audio, effects, and beat detection.', path: 'audio/audio-basics' },
+    { title: 'Debug & optimize', description: 'Overlays, profiling, and render-pipeline inspection.', path: 'advanced/debug-layer' },
+];
+
+/** The core onboarding chapters that must carry full pedagogical metadata. */
+export const CORE_ONBOARDING_PATHS: ReadonlyArray<string> = [
+    'introduction/what-is-exojs',
+    'introduction/setup',
+    'introduction/project-structure',
+    'introduction/your-first-scene',
+    'core-concepts/scene-lifecycle',
+    'input/keyboard',
+    'audio/audio-basics',
+    'recipes/build-orb-dodge',
+];
+
+/** Returns the chapters immediately before and after the given guide path. */
+export function getAdjacentChapters(path: string): {
+    previous: GuideChapterMeta | null;
+    next: GuideChapterMeta | null;
+} {
+    const index = GUIDE_CHAPTERS.findIndex(chapter => chapter.path === path);
+    if (index === -1) return { previous: null, next: null };
+    return {
+        previous: index > 0 ? GUIDE_CHAPTERS[index - 1] : null,
+        next: index < GUIDE_CHAPTERS.length - 1 ? GUIDE_CHAPTERS[index + 1] : null,
+    };
+}
+
+/** True when the value matches a known guide chapter path. */
+export function isGuidePath(path: string): boolean {
+    return GUIDE_CHAPTER_BY_PATH.has(path);
+}

@@ -1,16 +1,11 @@
 ---
-title: '5.3 Audio effects'
+title: 'Audio effects'
 description: 'Shape sound with filters and bus-level processing.'
-part: 5
-chapter: 3
-examples:
-  - audio-fx/compressor
-  - audio-fx/reverb-and-delay
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 5.3 Audio effects
+# Audio effects
 
 Every bus in ExoJS carries a filter chain — an ordered list of [`AudioFilter`](/ExoJS/en/api/audio-filter/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every `Music` instance routing through the music bus. You can also create custom buses for isolated effect chains.
 

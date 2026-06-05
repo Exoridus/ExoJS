@@ -1,16 +1,12 @@
 ---
-title: '7.2 Debug layer'
+title: 'Debug layer'
 description: 'Inspect scene state and runtime behavior while a scene is running.'
-part: 7
-chapter: 2
-examples:
-  - debug-layer/bounding-boxes
-  - debug-layer/performance-overlay
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 7.2 Debug layer
+# Debug layer
 
 ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` optional entrypoint. Four are managed by `DebugOverlay` (performance, bounding boxes, hit-test, pointer stack), and `RenderPassInspectorLayer` is a standalone layer covered below. These tools render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags.
 
@@ -76,7 +72,7 @@ The pointer-stack panel shows up to 10 nodes under the cursor sorted by `zIndex`
 
 ## Render-pass inspector
 
-The [`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) (added in v0.8.3) is covered in detail in [7.6 Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/). It lists every `RenderNode` with an active filter chain each frame, showing total pass count, per-drawable filter sequences, bounding-box dimensions, and mask/cache flags.
+The [`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) (added in v0.8.3) is covered in detail in [Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/). It lists every `RenderNode` with an active filter chain each frame, showing total pass count, per-drawable filter sequences, bounding-box dimensions, and mask/cache flags.
 
 ## Lifecycle
 
@@ -95,6 +91,11 @@ Rotating sprites with bounding-box outlines — the fastest way to check that tr
 <ExamplePreview chapter="debug-layer" slug="performance-overlay" />
 
 1600 bouncing sprites with live FPS, frame time, draw-call count, and sparkline.
+
+<TryIt
+  examples={['debug-layer/performance-overlay', 'debug-layer/bounding-boxes']}
+  api={['debug-overlay', 'performance-layer']}
+/>
 
 ## Where to go next
 

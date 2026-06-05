@@ -1,0 +1,129 @@
+---
+/**
+ * Callout — a labelled aside for notes, tips, warnings, and platform hints.
+ *
+ * Usage in MDX:
+ *   import Callout from '../../../components/Callout.astro';
+ *
+ *   <Callout type="tip">
+ *   Start each frame with `context.backend.clear()`.
+ *   </Callout>
+ *
+ *   <Callout type="common-mistake" title="Forgetting the anchor">
+ *   A sprite's default anchor is the top-left corner, not its center.
+ *   </Callout>
+ *
+ * The type is conveyed by a text label and a glyph, never colour alone, so the
+ * meaning survives for colour-blind readers and in high-contrast modes.
+ */
+
+type CalloutType = 'note' | 'tip' | 'important' | 'common-mistake' | 'webgpu' | 'browser';
+
+interface Props {
+    type?: CalloutType;
+    /** Optional heading. Falls back to the type's default label. */
+    title?: string;
+}
+
+const META: Record<CalloutType, { label: string; glyph: string }> = {
+    'note': { label: 'Note', glyph: 'i' },
+    'tip': { label: 'Tip', glyph: '+' },
+    'important': { label: 'Important', glyph: '!' },
+    'common-mistake': { label: 'Common mistake', glyph: '×' },
+    'webgpu': { label: 'WebGPU', glyph: '◆' },
+    'browser': { label: 'Browser behavior', glyph: '◐' },
+};
+
+const { type = 'note', title } = Astro.props;
+const meta = META[type];
+const heading = title ?? meta.label;
+---
+
+<aside class="callout" data-callout={type} role="note">
+    <p class="callout__head">
+        <span class="callout__glyph" aria-hidden="true">{meta.glyph}</span>
+        <span class="callout__label">{heading}</span>
+    </p>
+    <div class="callout__body">
+        <slot />
+    </div>
+</aside>
+
+<style>
+    .callout {
+        --callout-accent: var(--fg-muted);
+        --callout-bg: color-mix(in oklab, var(--bg-elevated), transparent 0%);
+        margin: var(--s-5) 0;
+        padding: var(--s-3) var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-left: 3px solid var(--callout-accent);
+        border-radius: var(--r-3);
+        background: var(--callout-bg);
+    }
+
+    .callout__head {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        margin: 0 0 var(--s-1);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--callout-accent);
+    }
+
+    .callout__glyph {
+        display: inline-grid;
+        place-items: center;
+        width: 18px;
+        height: 18px;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--callout-accent);
+        font-size: 11px;
+        line-height: 1;
+        font-family: var(--f-mono);
+    }
+
+    .callout__body :global(p) {
+        margin: var(--s-2) 0;
+    }
+
+    .callout__body :global(p:first-child) {
+        margin-top: 0;
+    }
+
+    .callout__body :global(p:last-child) {
+        margin-bottom: 0;
+    }
+
+    .callout[data-callout='note'] {
+        --callout-accent: var(--color-text-muted);
+        --callout-bg: color-mix(in oklab, var(--color-text-muted), transparent 94%);
+    }
+
+    .callout[data-callout='tip'] {
+        --callout-accent: var(--accent);
+        --callout-bg: var(--accent-soft);
+    }
+
+    .callout[data-callout='important'] {
+        --callout-accent: oklch(80% 0.13 85);
+        --callout-bg: color-mix(in oklab, oklch(80% 0.13 85), transparent 90%);
+    }
+
+    .callout[data-callout='common-mistake'] {
+        --callout-accent: oklch(72% 0.16 25);
+        --callout-bg: color-mix(in oklab, oklch(72% 0.16 25), transparent 90%);
+    }
+
+    .callout[data-callout='webgpu'] {
+        --callout-accent: oklch(72% 0.15 290);
+        --callout-bg: color-mix(in oklab, oklch(72% 0.15 290), transparent 90%);
+    }
+
+    .callout[data-callout='browser'] {
+        --callout-accent: oklch(74% 0.12 230);
+        --callout-bg: color-mix(in oklab, oklch(74% 0.12 230), transparent 90%);
+    }
+</style>

@@ -1,19 +1,12 @@
 ---
-title: '3.1 Graphics'
+title: 'Graphics'
 description: 'Draw procedural shapes and mesh-based geometry.'
-part: 3
-chapter: 1
-examples:
-  - geometry-graphics/graphics-primitives
-  - geometry-graphics/infinite-grid
-  - geometry-graphics/mesh-triangle
-  - geometry-graphics/mesh-textured-quad
-  - geometry-graphics/mesh-deformed-grid
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 3.1 Graphics
+# Graphics
 
 [`Graphics`](/ExoJS/en/api/graphics/) is a `Container` that builds vector shapes and filled meshes procedurally at runtime. Each call to `drawCircle`, `drawRectangle`, `drawLine`, or any of the path commands appends a new colored [`Mesh`](/ExoJS/en/api/mesh/) child. `Graphics` inherits full filter, blend, tint, and mask support from `Container`, so every shape you draw participates in the scene graph the same way a `Sprite` would.
 
@@ -167,6 +160,11 @@ All seven shape primitives on one canvas, each animated differently.
 <ExamplePreview chapter="geometry-graphics" slug="mesh-deformed-grid" />
 
 Animated vertex deformation on a `Mesh` — the lower-level primitive `Graphics` builds on.
+
+<TryIt
+  examples={['geometry-graphics/graphics-primitives', 'geometry-graphics/mesh-deformed-grid']}
+  api={['graphics', 'color']}
+/>
 
 ## Where to go next
 

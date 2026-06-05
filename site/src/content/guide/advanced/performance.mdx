@@ -1,16 +1,12 @@
 ---
-title: '7.3 Performance'
+title: 'Performance'
 description: 'Measure scene limits with focused stress examples.'
-part: 7
-chapter: 3
-examples:
-  - performance/sprite-stress
-  - performance/particle-stress
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 7.3 Performance
+# Performance
 
 Performance in ExoJS is about three things: how many drawables you push per frame, how many render passes they cost, and how much state change happens between draws. The engine does a lot automatically — batching sprites that share a texture, reusing render-target memory across filter passes, culling nodes outside the view — but the decisions that matter most are yours: how many sprites, how many textures, how many filters, how many particle systems.
 
@@ -91,6 +87,11 @@ A 34×20 grid of sprites (680 total) from a single texture atlas, each with anim
 <ExamplePreview chapter="performance" slug="particle-stress" />
 
 Three particle systems emitting 240–320 particles per second each, with custom tint-cycling, scale-over-lifetime, alpha-fade, and force-based velocity. Demonstrates particle system throughput with a non-GPU-eligible custom update module.
+
+<TryIt
+  examples={['performance/sprite-stress', 'performance/particle-stress']}
+  api={['performance-layer']}
+/>
 
 ## Where to go next
 

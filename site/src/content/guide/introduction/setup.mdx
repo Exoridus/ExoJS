@@ -1,91 +1,84 @@
 ---
 title: 'Setup'
-description: 'Install ExoJS, create an application, choose a canvas, and verify the runtime before writing scene code.'
-part: 1
-chapter: 2
-examples: []
+description: 'Create a typed ExoJS project with create-exo-app, run the dev server, and produce a production build.'
 ---
+
+import Callout from '../../../components/Callout.astro';
+import NextStep from '../../../components/NextStep.astro';
 
 # Setup
 
-This page covers the practical setup before writing scene code: installing the runtime, creating an app, choosing a canvas, and confirming everything works.
+The fastest way to start is `create-exo-app`. It scaffolds a Vite + TypeScript project that already imports `@codexo/exojs`, runs a scene, and is ready for `dev` and `build`.
 
-## Install
+## Create a project
+
+Run the scaffolder and follow the prompts:
+
+```sh
+npm create exo-app@latest my-game
+```
+
+Then install dependencies and start the dev server:
+
+```sh
+cd my-game
+npm install
+npm run dev
+```
+
+The dev server prints a local URL. Open it and you'll see a running scene with hot reload.
+
+## Choose a template
+
+`create-exo-app` ships three templates. Pass one with `--template`, or pick it interactively:
+
+| Template | Starts with |
+|----------|-------------|
+| `minimal` | One scene drawing and animating a single shape — the smallest real project. |
+| `game-starter` | A player object, a game scene, and a game-over scene with restart. |
+| `audio-reactive` | An analyser-driven scene that turns sound into a live spectrum. |
+
+```sh
+npm create exo-app@latest my-game -- --template game-starter
+```
+
+The [Project structure](/ExoJS/en/guide/introduction/project-structure/) chapter walks through what each file does.
+
+## Build for production
+
+Vite produces a static bundle you can host anywhere:
+
+```sh
+npm run build     # output in dist/
+npm run preview   # serve the production build locally
+```
+
+The [Deployment](/ExoJS/en/guide/reference/deployment/) chapter covers hosting, base paths, and assets.
+
+## Add ExoJS to an existing project
+
+If you already have a bundler-based project, install the runtime directly:
 
 ```sh
 npm install @codexo/exojs
 ```
 
-The package ships as ESM with TypeScript declarations. Any modern bundler (Vite, esbuild, Rollup, webpack, Parcel, …) picks both up automatically.
-
-## A minimal HTML page
-
-ExoJS renders into a regular `HTMLCanvasElement`. For a small test page, defining one canvas in the page is enough:
-
-```html
-<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <title>ExoJS</title>
-        <style>
-            body { margin: 0; }
-            #scene { display: block; }
-        </style>
-    </head>
-    <body>
-        <canvas id="scene" width="800" height="600"></canvas>
-        <script type="module" src="./main.js"></script>
-    </body>
-</html>
-```
-
-## Create the application
-
-The `Application` can create a canvas automatically:
-
-```js
-import { Application } from '@codexo/exojs';
-
-const app = new Application();
-```
-
-If your page already has a canvas, pass it into `Application` when you create the app:
+The package ships as ESM with TypeScript declarations, so any modern bundler (Vite, esbuild, Rollup, webpack, Parcel) picks up both the code and the types. ExoJS renders into a regular `HTMLCanvasElement`; create one yourself or let `Application` create it for you:
 
 ```ts
 import { Application } from '@codexo/exojs';
 
-const canvas = document.querySelector<HTMLCanvasElement>('canvas')!;
+// Pass an existing canvas...
+const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
 const app = new Application({ canvas: { element: canvas } });
+
+// ...or let the application create one and mount app.canvas yourself.
 ```
 
-The `app.canvas` property is the active `HTMLCanvasElement` the runtime renders into.
+<Callout type="tip">
+`app.canvas` is the active `HTMLCanvasElement` the runtime renders into. Append it wherever your layout needs it.
+</Callout>
 
-## Verify the runtime
-
-Before adding game logic, confirm the runtime starts cleanly:
-
-```js
-import { Application, Color, Scene } from '@codexo/exojs';
-
-const canvas = document.querySelector('#scene');
-
-if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error('Expected #scene canvas element.');
-}
-
-class BlankScene extends Scene {
-    draw(context) {
-        context.backend.clear();
-    }
-}
-
-const app = new Application({ canvas: { element: canvas }, clearColor: Color.midnightBlue });
-app.start(new BlankScene());
-```
-
-Open the page; the canvas paints solid midnight blue every frame. If you see that, the runtime is wired correctly.
-
-## Where to go next
-
-You have a working page with a running app. The next chapter, [Your first scene](/ExoJS/en/guide/introduction/your-first-scene/), builds on this scaffold to load assets, position a sprite, and animate it.
+<NextStep href="/ExoJS/en/guide/introduction/project-structure/" label="Tour the project structure">
+See where the entry point, scenes, and assets live in a generated project.
+</NextStep>

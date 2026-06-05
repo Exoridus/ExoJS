@@ -1,14 +1,15 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
+// Guide ordering, grouping, and learning metadata live in
+// src/lib/guide-structure.ts (the single source of truth, reconciled with these
+// files by test/site/guide-structure.test.ts). Frontmatter only carries the
+// prose that belongs next to the content: a title and a one-line description.
 const guide = defineCollection({
     loader: glob({ base: './src/content/guide', pattern: '**/*.{md,mdx}' }),
     schema: z.object({
-        title: z.string(),
-        description: z.string(),
-        part: z.number().int().min(1).max(10),
-        chapter: z.number().int().positive(),
-        examples: z.array(z.string()).default([]),
+        title: z.string().min(1),
+        description: z.string().min(1),
     }),
 });
 

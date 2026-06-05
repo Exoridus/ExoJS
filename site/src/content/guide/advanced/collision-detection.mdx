@@ -1,15 +1,11 @@
 ---
-title: '7.5 Collision detection'
+title: 'Collision detection'
 description: 'Validate collision flow and response with interactive shapes.'
-part: 7
-chapter: 5
-examples:
-  - showcase/rectangles-collision
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 7.5 Collision detection
+# Collision detection
 
 ExoJS provides a geometry-based collision system built on shape primitives and the Separating Axis Theorem (SAT). Every shape implements the `Collidable` interface, giving you three levels of collision query: boolean overlap (`intersectsWith`), penetration response (`collidesWith`), and point containment (`contains`). A [`Quadtree`](/ExoJS/en/api/quadtree/) provides spatial partitioning for broad-phase culling when you have many objects.
 

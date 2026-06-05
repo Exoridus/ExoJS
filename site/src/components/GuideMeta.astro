@@ -1,0 +1,149 @@
+---
+/**
+ * GuideMeta — the metadata block under a chapter's title.
+ *
+ * Rendered by the chapter layout from guide-structure metadata, not authored in
+ * MDX. Shows only the fields that are present: a level badge, an estimated read
+ * time, "What you'll learn", and "Before you start". Nothing renders for an
+ * empty field, so chapters without goals or prerequisites stay clean.
+ */
+
+import type { GuideLevel } from '../lib/guide-structure';
+import { GUIDE_LEVEL_LABEL } from '../lib/guide-structure';
+
+interface Props {
+    level: GuideLevel;
+    readingMinutes?: number;
+    learningGoals?: ReadonlyArray<string>;
+    prerequisites?: ReadonlyArray<{ label: string; href: string }>;
+}
+
+const { level, readingMinutes, learningGoals = [], prerequisites = [] } = Astro.props;
+const hasGoals = learningGoals.length > 0;
+const hasPrerequisites = prerequisites.length > 0;
+---
+
+<div class="guide-meta">
+    <p class="guide-meta__row">
+        <span class="guide-meta__badge" data-level={level}>
+            <span class="guide-meta__badge-dot" aria-hidden="true"></span>
+            {GUIDE_LEVEL_LABEL[level]}
+        </span>
+        {readingMinutes && readingMinutes > 0 && (
+            <span class="guide-meta__read">~{readingMinutes} min read</span>
+        )}
+    </p>
+
+    {hasGoals && (
+        <section class="guide-meta__block" aria-label="What you will learn">
+            <h2 class="guide-meta__heading">What you'll learn</h2>
+            <ul class="guide-meta__goals">
+                {learningGoals.map(goal => (
+                    <li>{goal}</li>
+                ))}
+            </ul>
+        </section>
+    )}
+
+    {hasPrerequisites && (
+        <section class="guide-meta__block" aria-label="Before you start">
+            <h2 class="guide-meta__heading">Before you start</h2>
+            <ul class="guide-meta__prereqs">
+                {prerequisites.map(item => (
+                    <li>
+                        <a href={item.href}>{item.label}</a>
+                    </li>
+                ))}
+            </ul>
+        </section>
+    )}
+</div>
+
+<style>
+    .guide-meta {
+        margin: 0 0 var(--s-7);
+    }
+
+    .guide-meta__row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--s-3);
+        margin: 0;
+    }
+
+    .guide-meta__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--line-soft);
+        background: var(--bg-elevated);
+        padding: 0.18rem 0.6rem;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+    }
+
+    .guide-meta__badge-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: var(--r-pill);
+        background: var(--fg-faint);
+    }
+
+    .guide-meta__badge[data-level='intro'] .guide-meta__badge-dot {
+        background: oklch(80% 0.14 142);
+    }
+
+    .guide-meta__badge[data-level='intermediate'] .guide-meta__badge-dot {
+        background: oklch(80% 0.13 85);
+    }
+
+    .guide-meta__badge[data-level='advanced'] .guide-meta__badge-dot {
+        background: oklch(72% 0.16 25);
+    }
+
+    .guide-meta__read {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--fg-faint);
+    }
+
+    .guide-meta__block {
+        margin-top: var(--s-4);
+        padding: var(--s-3) var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: color-mix(in oklab, var(--bg-elevated), transparent 35%);
+    }
+
+    .guide-meta__heading {
+        margin: 0 0 var(--s-2);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+        border: 0;
+        padding: 0;
+    }
+
+    .guide-meta__goals,
+    .guide-meta__prereqs {
+        margin: 0;
+        padding-left: var(--s-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-1);
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--fg);
+    }
+
+    .guide-meta__goals li::marker {
+        color: var(--accent);
+    }
+</style>
