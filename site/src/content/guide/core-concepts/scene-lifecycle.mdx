@@ -1,15 +1,10 @@
 ---
-title: '2.3 Scene lifecycle'
+title: 'Scene lifecycle'
 description: 'The order scene hooks run in, what each one is for, and the rule about explicit drawing.'
-part: 2
-chapter: 3
-examples:
-  - application-scenes/scene-lifecycle
-  - application-scenes/pause-and-resume
-  - getting-started/game-loop
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
 # Scene lifecycle
 
@@ -147,6 +142,11 @@ The `update` hook is gated; `draw` keeps running. Demonstrates that the loop con
 <ExamplePreview chapter="getting-started" slug="game-loop" />
 
 The minimum lifecycle that produces motion: `init` builds the sprite, `update` rotates it, `draw` renders.
+
+<TryIt
+  examples={['application-scenes/scene-lifecycle', 'getting-started/game-loop']}
+  api={['scene', 'loader']}
+/>
 
 ## Where to go next
 

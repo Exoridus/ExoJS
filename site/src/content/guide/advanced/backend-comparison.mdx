@@ -1,15 +1,11 @@
 ---
-title: '7.4 Backend comparison'
+title: 'Backend comparison'
 description: 'Compare backend behavior and decide what to ship.'
-part: 7
-chapter: 4
-examples:
-  - performance/backend-comparison
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 7.4 Backend comparison
+# Backend comparison
 
 ExoJS renders through one of two backends: WebGL2 or WebGPU. The choice is automatic by default — the engine picks WebGPU when `navigator.gpu` is available, WebGL2 otherwise. You can override this with `backend: { type: 'webgpu' }` or `backend: { type: 'webgl2' }` in `ApplicationOptions`.
 

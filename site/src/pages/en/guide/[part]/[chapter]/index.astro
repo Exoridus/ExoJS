@@ -3,7 +3,9 @@ import { getCollection, render } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../../../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../../../../components/DocsSidebar.astro';
-import { GUIDE_PARTS, GUIDE_CHAPTER_BY_PATH } from '../../../../../lib/guide-structure';
+import GuideMeta from '../../../../../components/GuideMeta.astro';
+import GuidePager from '../../../../../components/GuidePager.astro';
+import { GUIDE_PARTS, GUIDE_CHAPTER_BY_PATH, getAdjacentChapters } from '../../../../../lib/guide-structure';
 
 export function getStaticPaths() {
     return GUIDE_PARTS.flatMap(part =>
@@ -20,11 +22,6 @@ const partSlug = (Astro.params as Record<string, string | undefined>).part ?? ''
 const chapterSlug = (Astro.params as Record<string, string | undefined>).chapter ?? '';
 const chapterPath = `${partSlug}/${chapterSlug}`;
 const chapterMeta = GUIDE_CHAPTER_BY_PATH.get(chapterPath);
-const parseIndexedLabel = (value: string) => {
-    const match = /^([0-9]+(?:\.[0-9]+)?)\s+(.+)$/.exec(value.trim());
-    if (!match) return { index: null, label: value };
-    return { index: match[1], label: match[2] };
-};
 
 if (!chapterMeta) {
     throw new Error(`Unknown guide chapter: ${chapterPath}`);
@@ -40,12 +37,40 @@ if (!entry) {
     throw new Error(`Missing guide content entry: ${chapterPath}`);
 }
 
+const titleByPath = (path: string): string => entryByPath.get(path)?.data.title ?? path;
+const guideHref = (path: string): string => `${import.meta.env.BASE_URL}en/guide/${path}/`;
+
+// Reading-time estimate from the prose: strip code fences and component tags so
+// the number reflects what a reader actually reads, then 200 words/minute.
+const proseWords = entry.body
+    ? entry.body
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/[#>*_`|-]/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean).length
+    : 0;
+const readingMinutes = proseWords > 0 ? Math.max(1, Math.round(proseWords / 200)) : undefined;
+
+const prerequisites = chapterMeta.prerequisites.map(path => ({
+    label: titleByPath(path),
+    href: guideHref(path),
+}));
+
 type TocHeading = { depth: number; slug: string; text: string };
 const { Content, headings } = await render(entry);
 const tocItems = (headings as TocHeading[]).filter((heading: TocHeading) => heading.depth >= 2 && heading.depth <= 3);
 const primaryExample = chapterMeta.examples[0] ?? null;
-const partLabel = parseIndexedLabel(chapterMeta.partTitle).label;
-const chapterLabel = parseIndexedLabel(chapterMeta.title).label;
+const partTitle = chapterMeta.partTitle;
+const chapterTitle = entry.data.title;
+
+const { previous, next } = getAdjacentChapters(chapterPath);
+const previousLink = previous
+    ? { label: titleByPath(previous.path), href: guideHref(previous.path), context: previous.partTitle }
+    : null;
+const nextLink = next
+    ? { label: titleByPath(next.path), href: guideHref(next.path), context: next.partTitle }
+    : null;
 
 const getFirstChapterHref = (part: (typeof GUIDE_PARTS)[number]) => {
     const firstChapter = part.chapters[0];
@@ -60,13 +85,13 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
     baseHref: `${import.meta.env.BASE_URL}en/guide/${part.slug}/`,
     chapters: part.chapters.map(chapter => ({
         slug: chapter.slug,
-        title: chapter.title,
+        title: titleByPath(chapter.path),
         href: `${import.meta.env.BASE_URL}en/guide/${part.slug}/${chapter.slug}/`,
     })),
 }));
 ---
 
-<DocsLayout title={`${chapterLabel} | ExoJS Guide`} description={chapterMeta.description} variant="guide">
+<DocsLayout title={`${chapterTitle} | ExoJS Guide`} description={entry.data.description} variant="guide">
     <DocsSidebar slot="sidebar" parts={sidebarParts} />
     <aside slot="rail" class="toc" aria-label="On this page">
         <h6>On this page</h6>
@@ -100,14 +125,25 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         <div class="crumbs">
                 <a href={`${import.meta.env.BASE_URL}en/guide/`}>Guide</a>
                 <span class="sep" aria-hidden="true">/</span>
-                <a href={`${import.meta.env.BASE_URL}en/guide/${chapterMeta.partSlug}/`}>{partLabel}</a>
+                <a href={`${import.meta.env.BASE_URL}en/guide/${chapterMeta.partSlug}/`}>{partTitle}</a>
                 <span class="sep" aria-hidden="true">/</span>
-                <span>{chapterLabel}</span>
+                <span>{chapterTitle}</span>
         </div>
-        <h1>{chapterLabel}</h1>
-        <p class="lead">{chapterMeta.description}</p>
+        <h1>{chapterTitle}</h1>
+        <p class="lead">{entry.data.description}</p>
 
-        <Content />
+        <GuideMeta
+            level={chapterMeta.level}
+            readingMinutes={readingMinutes}
+            learningGoals={chapterMeta.learningGoals}
+            prerequisites={prerequisites}
+        />
+
+        <div class="chapter-content">
+            <Content />
+        </div>
+
+        <GuidePager previous={previousLink} next={nextLink} />
     </article>
 </DocsLayout>
 
@@ -166,6 +202,7 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         font-size: 12.5px;
         color: var(--fg-faint);
         font-family: var(--f-mono);
+        flex-wrap: wrap;
     }
 
     .chapter-prose .crumbs .sep {
@@ -185,14 +222,16 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
     }
 
     .chapter-prose .lead {
-        margin: 0 0 var(--s-7);
+        margin: 0 0 var(--s-6);
         font-size: 17px;
         color: var(--fg-muted);
         line-height: 1.55;
         text-wrap: pretty;
     }
 
-    .chapter-prose :global(h1:first-child) {
+    /* The MDX body repeats the title as a leading H1; the layout already renders
+       the title above, so hide the in-content one. */
+    .chapter-prose :global(.chapter-content > h1:first-child) {
         display: none;
     }
 
@@ -254,13 +293,20 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         margin: var(--s-9) 0;
     }
 
-    .chapter-prose :global(a) {
+    /* Underline prose links only — component links (TryIt, NextStep, pager,
+       example/source embeds) keep their own styling. */
+    .chapter-prose :global(p a),
+    .chapter-prose :global(li a) {
         color: var(--fg);
-        text-decoration: none;
+        text-decoration: underline;
+        text-decoration-color: color-mix(in oklab, var(--accent), transparent 55%);
+        text-underline-offset: 0.2em;
     }
 
-    .chapter-prose :global(a:hover) {
+    .chapter-prose :global(p a:hover),
+    .chapter-prose :global(li a:hover) {
         color: var(--accent);
+        text-decoration-color: var(--accent);
     }
 
     .toc h6 {

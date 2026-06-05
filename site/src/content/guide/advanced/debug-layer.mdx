@@ -1,16 +1,12 @@
 ---
-title: '7.2 Debug layer'
+title: 'Debug layer'
 description: 'Inspect scene state and runtime behavior while a scene is running.'
-part: 7
-chapter: 2
-examples:
-  - debug-layer/bounding-boxes
-  - debug-layer/performance-overlay
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 7.2 Debug layer
+# Debug layer
 
 ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` optional entrypoint. Four are managed by `DebugOverlay` (performance, bounding boxes, hit-test, pointer stack), and `RenderPassInspectorLayer` is a standalone layer covered below. These tools render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags.
 
@@ -95,6 +91,11 @@ Rotating sprites with bounding-box outlines — the fastest way to check that tr
 <ExamplePreview chapter="debug-layer" slug="performance-overlay" />
 
 1600 bouncing sprites with live FPS, frame time, draw-call count, and sparkline.
+
+<TryIt
+  examples={['debug-layer/performance-overlay', 'debug-layer/bounding-boxes']}
+  api={['debug-overlay', 'performance-layer']}
+/>
 
 ## Where to go next
 

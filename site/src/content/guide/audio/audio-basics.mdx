@@ -1,16 +1,13 @@
 ---
-title: '5.1 Audio basics'
+title: 'Audio basics'
 description: 'Play sounds and music with reliable runtime controls.'
-part: 5
-chapter: 1
-examples:
-  - audio-basics/play-sound
-  - audio-basics/crossfade-tracks
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
-# 5.1 Audio basics
+# Audio basics
 
 ExoJS audio is built on two media types: [`Sound`](/ExoJS/en/api/sound/) for short, pooled, decoded-buffer playback and [`Music`](/ExoJS/en/api/music/) for long, streamed, seekable tracks. Both extend `AbstractMedia` and share the same volume, loop, playback rate, mute, bus, and fade controls. The difference is how the browser handles the underlying data.
 
@@ -57,6 +54,10 @@ Browsers require a user gesture before Web Audio starts. ExoJS handles this auto
 For `Sound`, `play()` requests queue until the context is ready. `Music` uses `HTMLAudioElement` playback and is still subject to browser autoplay policy, so starting music from a user gesture remains the safest pattern.
 
 If you need to know when the context is ready, import `isAudioContextReady` from `@codexo/exojs` and poll it.
+
+<Callout type="browser" title="Audio needs a user gesture">
+Browsers won't start audio until the user interacts with the page. Trigger the first sound or music from a click, tap, or key press — the embedded examples below ask for a click for exactly this reason.
+</Callout>
 
 ## Playback controls
 
@@ -171,6 +172,11 @@ Click the canvas to play a loaded `Sound` — the minimal audio example.
 <ExamplePreview chapter="audio-basics" slug="crossfade-tracks" />
 
 Two looping music tracks crossfading back and forth with `crossFade()`.
+
+<TryIt
+  examples={['audio-basics/play-sound', 'audio-basics/crossfade-tracks']}
+  api={['sound', 'music', 'audio-manager']}
+/>
 
 ## Where to go next
 

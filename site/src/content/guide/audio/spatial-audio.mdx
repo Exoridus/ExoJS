@@ -1,16 +1,11 @@
 ---
-title: '5.2 Spatial audio'
+title: 'Spatial audio'
 description: 'Place listener and sources in space for directional sound behavior.'
-part: 5
-chapter: 2
-examples:
-  - spatial-audio/listener-and-source
-  - spatial-audio/falloff-curves
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 5.2 Spatial audio
+# Spatial audio
 
 Spatial audio in ExoJS is 2D: a single shared listener and any number of sound sources, each with a world-space position. The engine maps the 2D coordinates to the Web Audio API's 3D panner behind the scenes — you work in the same pixel coordinates your sprites and containers use, and the audio system pans and attenuates accordingly.
 

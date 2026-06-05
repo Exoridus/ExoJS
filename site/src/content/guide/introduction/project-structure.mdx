@@ -1,0 +1,73 @@
+---
+title: 'Project structure'
+description: 'Find your way around a create-exo-app project: the entry point, scenes, assets, and how main.ts wires an Application to a Scene.'
+---
+
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+import NextStep from '../../../components/NextStep.astro';
+
+# Project structure
+
+A `create-exo-app` project is a standard Vite + TypeScript app. The `minimal` template gives you the smallest layout that still separates startup from scene code:
+
+```txt
+my-game/
+├─ index.html          # mounts the app, loads src/main.ts
+├─ package.json        # @codexo/exojs + Vite scripts
+├─ tsconfig.json       # strict TypeScript config
+├─ vite.config.ts      # dev server and build config
+├─ public/
+│  └─ assets/          # static files served as-is (images, audio, fonts)
+└─ src/
+   ├─ main.ts          # entry point: create the Application, start a Scene
+   └─ scenes/
+      └─ MainScene.ts  # your first scene
+```
+
+Two files hold the code you will edit most: `main.ts` and the scene under `src/scenes/`.
+
+## The entry point
+
+`src/main.ts` is where the app starts. It creates one [`Application`](/ExoJS/en/api/application/), mounts its canvas, and starts a [`Scene`](/ExoJS/en/api/scene/):
+
+<SourceSnippet
+  source="packages/create-exo-app/templates/minimal/src/main.ts"
+  region="minimal-main"
+  language="ts"
+  title="src/main.ts"
+/>
+
+The application owns runtime configuration — canvas size, clear color, render backend, and the frame loop. `app.start(scene)` hands control to a scene and begins ticking. `document.body.append(app.canvas)` mounts the canvas; in a real layout you place it wherever your page needs it.
+
+## The scene
+
+`src/scenes/MainScene.ts` is the scene `main.ts` starts. It sets up state in its constructor, updates it each frame, and draws it:
+
+<SourceSnippet
+  source="packages/create-exo-app/templates/minimal/src/scenes/MainScene.ts"
+  region="minimal-scene"
+  language="ts"
+  title="src/scenes/MainScene.ts"
+/>
+
+`update(delta)` advances state — here, rotating a box — and `draw(context)` renders it. `delta.seconds` carries the elapsed time since the last frame, so motion stays frame-rate independent. The [Your first scene](/ExoJS/en/guide/introduction/your-first-scene/) chapter builds a scene like this from scratch.
+
+## Where assets go
+
+Files under `public/assets/` are served as-is and addressed by path at runtime — for example `loader.load(Texture, { hero: 'assets/hero.png' })`. The [Loading and resources](/ExoJS/en/guide/core-concepts/loading-and-resources/) chapter covers the loader in detail.
+
+## Scripts
+
+The template's `package.json` defines the standard Vite scripts:
+
+```sh
+npm run dev      # start the dev server with hot reload
+npm run build    # produce a production build in dist/
+npm run preview  # serve the production build locally
+```
+
+The other templates add more structure on top of this same shape: `game-starter` splits player logic into `src/objects/` and adds a game-over scene, and `audio-reactive` adds an analyser-driven scene. The entry point and scene model stay the same.
+
+<NextStep href="/ExoJS/en/guide/introduction/your-first-scene/" label="Build your first scene">
+Start from an empty scene and add a texture, a sprite, and per-frame motion.
+</NextStep>

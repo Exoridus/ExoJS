@@ -1,19 +1,12 @@
 ---
-title: '3.2 Sprites'
+title: 'Sprites'
 description: 'Render image-based content from textures, sheets, SVG, and video.'
-part: 3
-chapter: 2
-examples:
-  - sprites-textures/sprite-basics
-  - sprites-textures/blendmodes
-  - sprites-textures/spritesheet-frames
-  - sprites-textures/svg-drawable
-  - sprites-textures/video-drawable
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 3.2 Sprites
+# Sprites
 
 A [`Sprite`](/ExoJS/en/api/sprite/) is the primary drawable for textured quads — rectangles that display an image, a sub-region of an image, or a rendered-to-texture surface. Most visible content in a 2D scene passes through sprites.
 
@@ -177,6 +170,11 @@ A single sprite in the center of the canvas, rotating and cycling through tints.
 <ExamplePreview chapter="sprites-textures" slug="spritesheet-frames" />
 
 Navigating a spritesheet's frames by name — the texture-frame mechanism in practice.
+
+<TryIt
+  examples={['sprites-textures/sprite-basics', 'sprites-textures/spritesheet-frames']}
+  api={['sprite', 'spritesheet', 'texture']}
+/>
 
 ## Where to go next
 

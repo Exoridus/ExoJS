@@ -1,15 +1,11 @@
 ---
-title: '7.1 Custom renderers'
+title: 'Custom renderers'
 description: 'Extend rendering with custom passes and backend-specific logic.'
-part: 7
-chapter: 1
-examples:
-  - custom-renderers/custom-render-pass
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 7.1 Custom renderers
+# Custom renderers
 
 "Custom rendering" in ExoJS means inserting your own draw logic into the frame — either as a pass between normal draws, or as direct GPU work that bypasses the engine's renderer system entirely. The extension surface is intentionally small: two public mechanisms, plus the existing `Mesh`/`MeshShader`/custom shader filter primitives covered in earlier chapters.
 

@@ -1,19 +1,11 @@
 ---
-title: '3.3 Text'
+title: 'Text'
 description: 'Control layout, styling, and visual effects for runtime text.'
-part: 3
-chapter: 3
-examples:
-  - text-fonts/basic-text
-  - text-fonts/multiline-and-wrap
-  - text-fonts/stroke-and-shadow
-  - text-fonts/web-fonts
-  - text-fonts/text-glitch
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 3.3 Text
+# Text
 
 [`Text`](/ExoJS/en/api/text/) renders GPU-accelerated text strings as nodes in the scene graph. Each `Text` instance rasterizes its glyphs into the engine's shared glyph atlas and draws them as a single `Mesh` — one draw call per text node, regardless of string length. The node extends `Container` and inherits full transform, filter, blend, and mask support.
 

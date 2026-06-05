@@ -1,16 +1,12 @@
 ---
-title: '4.1 Keyboard'
+title: 'Keyboard'
 description: 'Capture keys and support configurable bindings.'
-part: 4
-chapter: 1
-examples:
-  - input/keyboard
-  - input/key-rebinding
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
-# 4.1 Keyboard
+# Keyboard
 
 ExoJS maps keys to numeric channels via the [`Keyboard`](/ExoJS/en/api/keyboard/) enum. `Keyboard.Space` is channel 32, `Keyboard.A` is 65, `Keyboard.Left` is 37. Values follow the browser's legacy `KeyboardEvent.keyCode` mapping. Keys only fire while the canvas has focus; when focus leaves, all held keys are released automatically.
 
@@ -174,6 +170,11 @@ WASD movement with `onActive`/`onStop` — the standard held-key pattern.
 <ExamplePreview chapter="input" slug="key-rebinding" />
 
 Press J to enter rebind mode, then press any key to reassign the jump action.
+
+<TryIt
+  examples={['input/keyboard', 'input/key-rebinding']}
+  api={['keyboard', 'input-manager']}
+/>
 
 ## Where to go next
 

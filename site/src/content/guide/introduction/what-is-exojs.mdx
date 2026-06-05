@@ -1,10 +1,10 @@
 ---
-title: '1.1 What is ExoJS?'
+title: 'What is ExoJS?'
 description: 'A short tour of what ExoJS is, where it fits, how a project is shaped, and how to read this guide.'
-part: 1
-chapter: 1
-examples: []
 ---
+
+import Callout from '../../../components/Callout.astro';
+import NextStep from '../../../components/NextStep.astro';
 
 # What is ExoJS?
 
@@ -45,14 +45,18 @@ ExoJS ships as ESM with TypeScript declarations. JavaScript projects can use the
 
 ## Browser support
 
-ExoJS targets evergreen browsers: current Chrome, Firefox, Edge, and Safari. On startup, the runtime auto-selects the strongest available render backend (WebGPU when present, WebGL2 otherwise).
+ExoJS targets evergreen browsers: current Chrome, Firefox, Edge, and Safari. Some examples in this guide need browser features beyond rendering — audio playback, gamepad APIs, or multi-touch input. Capability badges above each example list what it expects; when a feature is missing, the embedded preview shows a clear overlay instead of failing silently.
 
-Some examples in this guide require browser features beyond rendering, such as audio playback, gamepad APIs, or multi-touch input. Capability badges above each example list what it expects; when a feature is missing, the embedded preview shows a clear overlay instead of failing silently.
+<Callout type="browser">
+On startup the runtime auto-selects the strongest available backend — WebGPU when present, WebGL2 otherwise. You write the same scene code either way.
+</Callout>
 
 ## How to read this guide
 
-Read the first two parts in order — Introduction and Core Concepts. They build the mental model the rest of the guide assumes. After that, jump by topic.
+Read Getting Started and Core Concepts in order — they build the mental model the rest of the guide assumes. After that, jump by topic.
 
-The [API reference](/ExoJS/en/api/) covers exact constructor options, method signatures, and return types. The [playground](/ExoJS/en/playground/) lets you change any embedded example and see what happens.
+Three resources work together: the **guide** explains concepts and workflows, the [**playground**](/ExoJS/en/playground/) runs and edits every example live, and the [**API reference**](/ExoJS/en/api/) documents exact constructor options, method signatures, and return types.
 
-Capability badges over each example show which browser features it expects (audio, gamepad, WebGPU, …). When a feature is unavailable in the current browser, the preview shows an overlay listing what's missing rather than silently breaking.
+<NextStep href="/ExoJS/en/guide/introduction/setup/" label="Create a project">
+Scaffold a typed project with create-exo-app and run it in the browser.
+</NextStep>

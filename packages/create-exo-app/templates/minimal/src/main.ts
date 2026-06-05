@@ -1,3 +1,4 @@
+// #region guide:minimal-main
 import { Application, Color } from '@codexo/exojs';
 import { MainScene } from './scenes/MainScene';
 
@@ -12,3 +13,4 @@ const app = new Application({
 document.body.append(app.canvas);
 
 app.start(new MainScene());
+// #endregion guide:minimal-main

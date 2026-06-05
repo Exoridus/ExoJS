@@ -1,13 +1,10 @@
 ---
-title: '2.2 Scenes'
+title: 'Scenes'
 description: 'How scenes split runtime work, hold game state, and compose into a stack via the scene manager.'
-part: 2
-chapter: 2
-examples:
-  - application-scenes/multiple-scenes
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
 
 # Scenes
 
@@ -93,6 +90,11 @@ await app.scene.pushScene(pause);
 <ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
 
 Switching between two scenes — a menu and a game — using the scene manager.
+
+<TryIt
+  examples={['application-scenes/multiple-scenes']}
+  api={['scene']}
+/>
 
 ## Where to go next
 

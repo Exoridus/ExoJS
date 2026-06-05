@@ -1,16 +1,11 @@
 ---
-title: '4.2 Mouse and pointer'
+title: 'Mouse and pointer'
 description: 'Work with pointer events across mouse and touch-compatible devices.'
-part: 4
-chapter: 2
-examples:
-  - input/mouse-and-pointer
-  - input/pointer-to-world
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 4.2 Mouse and pointer
+# Mouse and pointer
 
 ExoJS unifies mouse, touch, and pen input under a single pointer system built on the browser's Pointer Events API. Every pointer is represented by a [`Pointer`](/ExoJS/en/api/pointer/) instance with a canvas-pixel position, button state, pressure, tilt, and a slot index. The [`InputManager`](/ExoJS/en/api/input-manager/) tracks up to 16 simultaneous pointers — enough for ten-finger multitouch, plus a mouse, plus a pen — with no additional configuration.
 

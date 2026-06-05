@@ -1,16 +1,11 @@
 ---
-title: '6.3 Post-processing'
+title: 'Post-processing'
 description: 'Build multi-pass render flows for bloom, trails, and mirror effects.'
-part: 6
-chapter: 3
-examples:
-  - render-targets/bloom-lite
-  - render-targets/post-processing-chain
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 6.3 Post-processing
+# Post-processing
 
 Post-processing means rendering a scene — or parts of one — into off-screen [`RenderTexture`](/ExoJS/en/api/render-texture/) targets, running filters on those targets, and compositing the results back onto the canvas. This is the pattern behind bloom, color grading, motion trails, screen-wide shader effects, and any multi-pass render flow where a filter treats the whole scene as one image.
 
