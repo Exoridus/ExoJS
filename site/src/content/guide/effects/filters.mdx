@@ -131,15 +131,15 @@ Filters on individual children inside an unfiltered container each get their own
 
 For static subtrees that don't change every frame, set `container.cacheAsBitmap = true`. The filter chain bakes once and subsequent frames skip the per-frame re-rendering — one texture draw instead of the full subtree + filters.
 
-## Filters vs. MeshShader
+## Filters vs. mesh materials
 
-A filter transforms a drawable's rendered pixels — it operates on the 2D output, in screen texture space. A `MeshShader` replaces the drawable's vertex and fragment stages entirely — it operates in geometry space. The distinction matters:
+A filter transforms a drawable's rendered pixels — it operates on the 2D output, in screen texture space. A `MeshMaterial` replaces the drawable's vertex and fragment stages entirely — it operates in geometry space. The distinction matters:
 
 - Use a filter for post-render effects: blur, tint, color grade, CRT scanlines, vignette.
-- Use a `MeshShader` for per-vertex effects: displacement, custom lighting, procedural geometry.
-- Use both together: a `MeshShader` on the mesh, plus a filter on the mesh's parent container.
+- Use a `MeshMaterial` for per-vertex effects: displacement, custom lighting, procedural geometry.
+- Use both together: a `MeshMaterial` on the mesh, plus a filter on the mesh's parent container.
 
-The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/), covers `MeshShader` in detail.
+The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/), covers attaching a `MeshMaterial` in detail.
 
 ## Examples
 

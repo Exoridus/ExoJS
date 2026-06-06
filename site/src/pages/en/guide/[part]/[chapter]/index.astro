@@ -6,6 +6,7 @@ import DocsSidebar from '../../../../../components/DocsSidebar.astro';
 import GuideMeta from '../../../../../components/GuideMeta.astro';
 import GuidePager from '../../../../../components/GuidePager.astro';
 import { GUIDE_PARTS, GUIDE_CHAPTER_BY_PATH, getAdjacentChapters } from '../../../../../lib/guide-structure';
+import { toApiHref } from '../../../../../lib/api-reference';
 
 export function getStaticPaths() {
     return GUIDE_PARTS.flatMap(part =>
@@ -71,6 +72,22 @@ const previousLink = previous
 const nextLink = next
     ? { label: titleByPath(next.path), href: guideHref(next.path), context: next.partTitle }
     : null;
+
+// Surface the chapter's curated spine apiLinks as a compact "Related API"
+// section. Slugs resolve against the generated api collection, so a stale slug
+// fails the build (and the guide-structure test) rather than shipping a dead
+// link — the same contract TryIt uses.
+const apiEntries = await getCollection('api');
+const apiEntryById = new Map<string, CollectionEntry<'api'>>(
+    apiEntries.map((item: CollectionEntry<'api'>) => [item.id, item] as [string, CollectionEntry<'api'>]),
+);
+const relatedApi = chapterMeta.apiLinks.map(slug => {
+    const apiEntry = apiEntryById.get(slug);
+    if (!apiEntry) {
+        throw new Error(`Unknown API page "${slug}" referenced by guide chapter ${chapterPath}`);
+    }
+    return { label: apiEntry.data.symbol || apiEntry.data.title, href: toApiHref(import.meta.env.BASE_URL, slug) };
+});
 
 const getFirstChapterHref = (part: (typeof GUIDE_PARTS)[number]) => {
     const firstChapter = part.chapters[0];
@@ -142,6 +159,19 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         <div class="chapter-content">
             <Content />
         </div>
+
+        {relatedApi.length > 0 && (
+            <nav class="related-api" aria-label="Related API">
+                <p class="related-api__heading">Related API</p>
+                <ul class="related-api__list">
+                    {relatedApi.map(link => (
+                        <li>
+                            <a href={link.href}><code>{link.label}</code></a>
+                        </li>
+                    ))}
+                </ul>
+            </nav>
+        )}
 
         <GuidePager previous={previousLink} next={nextLink} />
     </article>
@@ -359,5 +389,83 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         margin-top: 1.5rem;
         padding-top: 0.75rem;
         border-top: 1px solid var(--line-soft);
+    }
+
+    /* Spine-curated apiLinks, surfaced as a compact chip row below the chapter
+       body. Selectors are nested under .related-api so the prose link/code rules
+       above do not bleed in. */
+    .related-api {
+        margin: var(--s-9) 0 0;
+        padding-top: var(--s-5);
+        border-top: 1px solid var(--line-soft);
+    }
+
+    .related-api .related-api__heading {
+        margin: 0 0 var(--s-3);
+        padding: 0;
+        border: 0;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .related-api .related-api__list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+    }
+
+    .related-api .related-api__list li {
+        margin: 0;
+    }
+
+    .related-api .related-api__list a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.65rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        background: var(--bg-elevated);
+        color: var(--fg-muted);
+        text-decoration: none;
+        font-size: 13px;
+        line-height: 1.4;
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .related-api .related-api__list a::before {
+        content: '↗';
+        color: var(--fg-faint);
+        font-size: 11px;
+    }
+
+    .related-api .related-api__list a:hover {
+        color: var(--accent);
+        border-color: var(--accent-line);
+    }
+
+    .related-api .related-api__list a:hover::before {
+        color: var(--accent);
+    }
+
+    .related-api .related-api__list a:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+        color: var(--accent);
+    }
+
+    .related-api .related-api__list code {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font-size: 13px;
+        color: inherit;
     }
 </style>
