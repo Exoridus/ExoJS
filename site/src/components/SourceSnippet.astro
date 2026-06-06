@@ -25,13 +25,16 @@
 import { Code } from 'astro:components';
 import { extractSnippetRegion } from '../lib/source-snippets';
 
+/** The syntax-highlighting language union accepted by Astro's <Code> component. */
+type CodeLang = NonNullable<Parameters<typeof Code>[0]['lang']>;
+
 interface Props {
     /** Path to the source file, relative to the repo root. */
     source: string;
     /** Name of the region to extract (without the "guide:" prefix). */
     region: string;
     /** Language for syntax highlighting. Defaults to "ts". */
-    language?: string;
+    language?: CodeLang;
     /** Optional caption shown above the code block. */
     title?: string;
 }
@@ -42,9 +45,9 @@ let code: string;
 try {
     code = extractSnippetRegion(source, region);
 } catch (err) {
-    // Re-throw with additional context so Astro reports the source MDX file too.
+    // Re-throw with additional context so Astro reports the consuming page too.
     throw new Error(
-        `SourceSnippet build error in ${Astro.self.moduleId ?? 'unknown'}\n` +
+        `SourceSnippet build error while rendering ${Astro.url.pathname}\n` +
         String(err instanceof Error ? err.message : err),
     );
 }

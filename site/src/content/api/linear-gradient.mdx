@@ -5,7 +5,7 @@ symbol: "LinearGradient"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 6
+memberCount: 14
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/gradient/LinearGradient.ts"
@@ -23,7 +23,12 @@ Linear gradient in UV space projected from `start` to `end`.
 
 ## Methods
 
+- `_copyGeometry(source: LinearGradient): void`
+- `_geometryEquals(other: Gradient): boolean`
+- `clone(): this`
+- `copy(source: this): this`
 - `destroy(): void`
+- `equals(other: Gradient): boolean`
 - `resolveT(u: number, v: number): number`
 - `sampleAt(t: number, out: Float32Array): void`
 - `toTexture(width: number, height: number, options?: GradientToTextureOptions & object): DataTexture<"rgba8">`
@@ -31,6 +36,9 @@ Linear gradient in UV space projected from `start` to `end`.
 
 ## Properties
 
+- `type: GradientType`
+- `end: readonly [number, number]`
+- `start: readonly [number, number]`
 - `stops: readonly GradientStop[]`
 
 ## Source

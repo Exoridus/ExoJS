@@ -36,7 +36,7 @@ Where differences exist, they are performance characteristics or rendering-path 
 |------|--------|--------|
 | Sprite batching | Multi-texture batched (up to 8) | Multi-texture batched (up to 8) |
 | Particle simulation | CPU | CPU (default); optional GPU compute update path when all update modules implement `wgsl()` |
-| MeshShader | GLSL ES 3.00 | WGSL |
+| MeshMaterial | GLSL ES 3.00 | WGSL |
 | ShaderFilter | `WebGl2ShaderFilter` (GLSL) | `WebGpuShaderFilter` (WGSL) |
 | GPU compute | Not available | Raw `backend.device` access for compute + custom pipelines |
 | Engine-emitted debug pass labels | Not currently emitted | Emitted on key passes (e.g. `WebGpuShaderFilter pass`) |
@@ -53,7 +53,7 @@ On WebGL2, or when any update module lacks `wgsl()`, the system runs on CPU. The
 
 ## Custom shaders
 
-`MeshShader` accepts both `glsl: { vertex, fragment }` and `wgsl` source. The renderer picks the appropriate language for the active backend. Provide both for cross-backend portability. [`detectUniformDrift()`](/ExoJS/en/api/mesh-shader/#detectuniformdrift) compares declared uniforms across languages for CI-style verification.
+A [`ShaderSource`](/ExoJS/en/api/shader-source/) accepts both `glsl: { vertex, fragment }` and `wgsl` source; wrap it in a [`MeshMaterial`](/ExoJS/en/api/mesh-material/) to bind uniforms and attach it to a `Mesh`. The renderer picks the appropriate language for the active backend. Provide both for cross-backend portability. [`ShaderSource.detectUniformDrift()`](/ExoJS/en/api/shader-source/#methods) compares declared uniforms across languages for CI-style verification.
 
 For screen-space effects, use `WebGl2ShaderFilter` on WebGL2 and `WebGpuShaderFilter` on WebGPU. Both accept the same uniform-value types — only the shader language differs. For cross-backend filters, construct the appropriate variant based on `app.backend.backendType` at init time.
 

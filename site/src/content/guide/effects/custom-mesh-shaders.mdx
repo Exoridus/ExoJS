@@ -1,120 +1,122 @@
 ---
 title: 'Custom mesh shaders'
-description: 'Attach custom GLSL or WGSL shaders to a Mesh for backend-portable visual effects.'
+description: 'Attach a custom GLSL or WGSL shader to a Mesh through a MeshMaterial for backend-portable visual effects.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Custom mesh shaders
 
-A [`Mesh`](/ExoJS/en/api/mesh/) normally renders with the engine's built-in batch shader — textured or untextured, vertex-colored or uniform-tinted, lit with the mesh's own tint and blend mode. That covers most use cases. When you need something the default shader does not do — procedural displacement, custom lighting, multi-texture mixing, a Shadertoy-style effect mapped onto geometry — you attach a [`MeshShader`](/ExoJS/en/api/mesh-shader/).
+A [`Mesh`](/ExoJS/en/api/mesh/) normally renders with the engine's built-in batch shader — textured or untextured, vertex-colored or uniform-tinted, lit with the mesh's own tint and blend mode. That covers most use cases. When you need something the default shader does not do — procedural displacement, custom lighting, multi-texture mixing, a Shadertoy-style effect mapped onto geometry — you attach a custom [`MeshMaterial`](/ExoJS/en/api/mesh-material/).
 
-`MeshShader` holds a pair of shader programs (one for WebGL2, one for WebGPU) and a map of uniform values. One `MeshShader` instance can be shared across multiple meshes; the renderer caches compiled programs and pipelines per-instance.
+A custom look is two objects. A [`ShaderSource`](/ExoJS/en/api/shader-source/) holds the immutable shader text — one program for WebGL2 (GLSL), one for WebGPU (WGSL). A `MeshMaterial` wraps that `ShaderSource` together with a map of uniform values, extra textures, and a blend mode. One `ShaderSource` can back many materials, and one `MeshMaterial` can be shared across multiple meshes; the renderer caches the compiled program/pipeline per shader source and reuses it for every material that references it.
 
-## When to use a MeshShader vs. a filter
+## When to use a mesh material vs. a filter
 
-A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filter/) or [`WebGpuShaderFilter`](/ExoJS/en/api/web-gpu-shader-filter/)) applies a post-processing effect to a drawable's final rendered output — it works in screen space on the full viewport or on the drawable's rendered texture. A `MeshShader` replaces the drawable's vertex and fragment stages entirely. The distinction matters:
+A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filter/) or [`WebGpuShaderFilter`](/ExoJS/en/api/web-gpu-shader-filter/)) applies a post-processing effect to a drawable's final rendered output — it works in screen space on the full viewport or on the drawable's rendered texture. A `MeshMaterial` replaces the drawable's vertex and fragment stages entirely. The distinction matters:
 
 - Use a filter when the effect is screen-space — blur, color grade, CRT scanlines, vignette.
-- Use a `MeshShader` when the effect is geometry-space — vertex displacement, per-vertex animation, custom UV mapping, or when the fragment shader needs to compute its own world position from interpolated attributes.
-- Use both together: a `MeshShader` on the mesh for geometry effects, plus a filter on its parent container for post-processing.
+- Use a `MeshMaterial` when the effect is geometry-space — vertex displacement, per-vertex animation, custom UV mapping, or when the fragment shader needs to compute its own world position from interpolated attributes.
+- Use both together: a `MeshMaterial` on the mesh for geometry effects, plus a filter on its parent container for post-processing.
 
 ## Construction
 
-At least one language source is required. Pass `glsl` for WebGL2, `wgsl` for WebGPU, or both for cross-backend meshes:
+Build a `ShaderSource` from the shader text, then wrap it in a `MeshMaterial` with the initial uniform values. At least one language source is required on the `ShaderSource`. Pass `glsl` for WebGL2, `wgsl` for WebGPU, or both for cross-backend meshes:
 
-```js no-check
-import { MeshShader } from '@codexo/exojs';
+```js
+import { MeshMaterial, ShaderSource } from '@codexo/exojs';
 
-const waveShader = new MeshShader({
-    glsl: {
-        vertex: `
-            #version 300 es
-            layout(location = 0) in vec2 a_position;
-            layout(location = 1) in vec2 a_texcoord;
-            layout(location = 2) in vec4 a_color;
+const waveMaterial = new MeshMaterial({
+    shader: new ShaderSource({
+        glsl: {
+            vertex: `
+                #version 300 es
+                layout(location = 0) in vec2 a_position;
+                layout(location = 1) in vec2 a_texcoord;
+                layout(location = 2) in vec4 a_color;
 
-            uniform mat3 u_projection;
-            uniform mat3 u_translation;
-            uniform float u_time;
+                uniform mat3 u_projection;
+                uniform mat3 u_translation;
+                uniform float u_time;
 
-            out vec2 v_texcoord;
-            out vec4 v_color;
+                out vec2 v_texcoord;
+                out vec4 v_color;
 
-            void main() {
-                vec2 pos = a_position;
-                pos.y += sin(pos.x * 0.05 + u_time) * 10.0;
+                void main() {
+                    vec2 pos = a_position;
+                    pos.y += sin(pos.x * 0.05 + u_time) * 10.0;
 
-                gl_Position = vec4((u_projection * u_translation * vec3(pos, 1.0)).xy, 0.0, 1.0);
-                v_texcoord = a_texcoord;
-                v_color = a_color;
+                    gl_Position = vec4((u_projection * u_translation * vec3(pos, 1.0)).xy, 0.0, 1.0);
+                    v_texcoord = a_texcoord;
+                    v_color = a_color;
+                }
+            `,
+            fragment: `
+                #version 300 es
+                precision mediump float;
+
+                in vec2 v_texcoord;
+                in vec4 v_color;
+
+                uniform vec4 u_tint;
+                uniform sampler2D u_texture;
+
+                out vec4 fragColor;
+
+                void main() {
+                    vec4 texColor = texture(u_texture, v_texcoord);
+                    fragColor = texColor * v_color * u_tint;
+                }
+            `,
+        },
+        wgsl: `
+            struct VertexInput {
+                @location(0) position: vec2<f32>,
+                @location(1) texcoord: vec2<f32>,
+                @location(2) color: vec4<f32>,
+            };
+
+            struct VertexOutput {
+                @builtin(position) position: vec4<f32>,
+                @location(0) texcoord: vec2<f32>,
+                @location(1) color: vec4<f32>,
+            };
+
+            struct MeshUniforms {
+                projection: mat3x3<f32>,
+                translation: mat3x3<f32>,
+                tint: vec4<f32>,
+            };
+
+            struct UserUniforms {
+                time: f32,
+            };
+
+            @group(0) @binding(0) var<uniform> u_mesh: MeshUniforms;
+            @group(1) @binding(0) var u_texture: texture_2d<f32>;
+            @group(1) @binding(1) var u_sampler: sampler;
+            @group(2) @binding(0) var<uniform> u_user: UserUniforms;
+
+            @vertex
+            fn vertexMain(in: VertexInput) -> VertexOutput {
+                var out: VertexOutput;
+                var pos = in.position;
+                pos.y += sin(pos.x * 0.05 + u_user.time) * 10.0;
+
+                let clip = u_mesh.projection * u_mesh.translation * vec3<f32>(pos, 1.0);
+                out.position = vec4<f32>(clip.xy, 0.0, 1.0);
+                out.texcoord = in.texcoord;
+                out.color = in.color;
+                return out;
+            }
+
+            @fragment
+            fn fragmentMain(in: VertexOutput) -> @location(0) vec4<f32> {
+                let tex = textureSample(u_texture, u_sampler, in.texcoord);
+                return tex * in.color * u_mesh.tint;
             }
         `,
-        fragment: `
-            #version 300 es
-            precision mediump float;
-
-            in vec2 v_texcoord;
-            in vec4 v_color;
-
-            uniform vec4 u_tint;
-            uniform sampler2D u_texture;
-
-            out vec4 fragColor;
-
-            void main() {
-                vec4 texColor = texture(u_texture, v_texcoord);
-                fragColor = texColor * v_color * u_tint;
-            }
-        `,
-    },
-    wgsl: `
-        struct VertexInput {
-            @location(0) position: vec2<f32>,
-            @location(1) texcoord: vec2<f32>,
-            @location(2) color: vec4<f32>,
-        };
-
-        struct VertexOutput {
-            @builtin(position) position: vec4<f32>,
-            @location(0) texcoord: vec2<f32>,
-            @location(1) color: vec4<f32>,
-        };
-
-        struct MeshUniforms {
-            projection: mat3x3<f32>,
-            translation: mat3x3<f32>,
-            tint: vec4<f32>,
-        };
-
-        struct UserUniforms {
-            time: f32,
-        };
-
-        @group(0) @binding(0) var<uniform> u_mesh: MeshUniforms;
-        @group(1) @binding(0) var u_texture: texture_2d<f32>;
-        @group(1) @binding(1) var u_sampler: sampler;
-        @group(2) @binding(0) var<uniform> u_user: UserUniforms;
-
-        @vertex
-        fn vertexMain(in: VertexInput) -> VertexOutput {
-            var out: VertexOutput;
-            var pos = in.position;
-            pos.y += sin(pos.x * 0.05 + u_user.time) * 10.0;
-
-            let clip = u_mesh.projection * u_mesh.translation * vec3<f32>(pos, 1.0);
-            out.position = vec4<f32>(clip.xy, 0.0, 1.0);
-            out.texcoord = in.texcoord;
-            out.color = in.color;
-            return out;
-        }
-
-        @fragment
-        fn fragmentMain(in: VertexOutput) -> @location(0) vec4<f32> {
-            let tex = textureSample(u_texture, u_sampler, in.texcoord);
-            return tex * in.color * u_mesh.tint;
-        }
-    `,
+    }),
     uniforms: { u_time: 0 },
 });
 ```
@@ -145,7 +147,7 @@ The renderer supplies the vertex stream from `mesh.vertices`, `mesh.uvs`, and `m
 
 ## Auto-bound uniforms
 
-The renderer automatically sets four uniforms when the shader declares them. You do not need to supply them in `MeshShader.uniforms`:
+The renderer automatically sets four uniforms when the shader declares them. You do not need to supply them in `MeshMaterial.uniforms`:
 
 | Uniform | GLSL declaration | WGSL binding | Source |
 |---------|------------------|--------------|--------|
@@ -158,12 +160,12 @@ You can omit any of them. If your fragment shader ignores the texture and sample
 
 ## User uniforms
 
-Anything you put in `MeshShader.uniforms` is set after the auto-binds. Mutate the `uniforms` map between frames to drive animated effects:
+Anything you put in `MeshMaterial.uniforms` is set after the auto-binds. Mutate the `uniforms` map between frames to drive animated effects:
 
 ```js
 update(delta) {
-    this.waveShader.uniforms.u_time = this.clock.elapsedSeconds;
-    this.waveShader.uniforms.u_waveAmp = 10 + this.detector.pulse * 15;
+    this.waveMaterial.uniforms.u_time = this.clock.elapsedSeconds;
+    this.waveMaterial.uniforms.u_waveAmp = 10 + this.detector.pulse * 15;
 }
 ```
 
@@ -178,18 +180,39 @@ In WGSL, user uniforms belong to `@group(2)`. Scalar/vector/matrix uniforms decl
 
 ## Attaching to a Mesh
 
-Pass a `MeshShader` in the mesh constructor's `shader` option:
+Pass a `MeshMaterial` in the mesh constructor's `material` option:
 
-```js no-check
-import { Mesh, MeshShader } from '@codexo/exojs';
+```js
+import { Mesh, MeshMaterial, ShaderSource } from '@codexo/exojs';
 
-const shader = new MeshShader({
-    glsl: { vertex: vertSrc, fragment: fragSrc },
+// A minimal stand-in material — see the Construction section for the full
+// cross-backend shader. Only the wiring into `Mesh` matters here.
+const material = new MeshMaterial({
+    shader: new ShaderSource({
+        glsl: {
+            vertex: `
+                #version 300 es
+                layout(location = 0) in vec2 a_position;
+                uniform mat3 u_projection;
+                uniform mat3 u_translation;
+                void main() {
+                    gl_Position = vec4((u_projection * u_translation * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+                }
+            `,
+            fragment: `
+                #version 300 es
+                precision mediump float;
+                uniform vec4 u_tint;
+                out vec4 fragColor;
+                void main() { fragColor = u_tint; }
+            `,
+        },
+    }),
     uniforms: { u_time: 0 },
 });
 
 const mesh = new Mesh({
-    shader,
+    material,
     vertices: new Float32Array([
          0,   0,
        100,   0,
@@ -200,26 +223,25 @@ const mesh = new Mesh({
         1, 0,
         0, 1,
     ]),
-    texture: myTexture,
 });
 ```
 
-The mesh renders with the same transform, tint, blend mode, filters, masks, and `cacheAsBitmap` behavior as a default mesh. Only the GPU program changes.
+The mesh's `material` is set at construction and is read-only afterward. It renders with the same transform, tint, blend mode, filters, masks, and `cacheAsBitmap` behavior as a default mesh. Only the GPU program changes.
 
 ## Sharing and lifecycle
 
-One `MeshShader` can be attached to many meshes. The renderer compiles one program (WebGL2) or pipeline (WebGPU) per unique `MeshShader` instance, then reuses it across all meshes that reference it.
+One `MeshMaterial` can be attached to many meshes, and one `ShaderSource` can back many materials. The renderer compiles one program (WebGL2) or pipeline (WebGPU) per unique `ShaderSource`, then reuses it across every material that references that source.
 
-Call `shader.destroy()` to release cached GPU resources on every backend the shader was used on. After `destroy`, the shader can still be reused — renderers will recompile on the next draw — but the typical pattern is to drop the reference.
+Call `material.destroy()` to release cached GPU resources on every backend the material was used on. After `destroy`, the material can still be reused — renderers will recompile on the next draw — but the typical pattern is to drop the reference.
 
-When a mesh is destroyed, its `MeshShader` is left untouched. The shader outlives the mesh unless you destroy it explicitly. This means a single shader can survive scene transitions.
+When a mesh is destroyed, its `MeshMaterial` is left untouched. The material outlives the mesh unless you destroy it explicitly. This means a single material can survive scene transitions.
 
 ## Detecting uniform drift
 
-When you write shaders for both GLSL and WGSL, keeping uniform names synchronized across languages becomes a manual task. `getDeclaredUniforms()` reflects uniform declarations from each language's source via lightweight regex parsing. Companion method `detectUniformDrift()` compares the two and reports names that appear in only one language:
+When you write shaders for both GLSL and WGSL, keeping uniform names synchronized across languages becomes a manual task. The reflection helpers live on the `ShaderSource`, reachable through `material.shader`. `getDeclaredUniforms()` reflects uniform declarations from each language's source via lightweight regex parsing. Companion method `detectUniformDrift()` compares the two and reports names that appear in only one language:
 
 ```js
-const drift = shader.detectUniformDrift();
+const drift = waveMaterial.shader.detectUniformDrift();
 // drift.onlyInGlsl → ['u_waveAmp']
 // drift.onlyInWgsl → ['u_displacement']
 ```
@@ -229,7 +251,7 @@ Auto-bound uniforms (`u_projection`, `u_translation`, `u_tint`, `u_texture`, `u_
 ```js no-check
 import assert from 'node:assert';
 
-const drift = shader.detectUniformDrift();
+const drift = waveMaterial.shader.detectUniformDrift();
 assert.deepStrictEqual(drift.onlyInGlsl, [], 'GLSL-only uniforms found');
 assert.deepStrictEqual(drift.onlyInWgsl, [], 'WGSL-only uniforms found');
 ```

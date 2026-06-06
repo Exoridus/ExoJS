@@ -7,9 +7,9 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Custom renderers
 
-"Custom rendering" in ExoJS means inserting your own draw logic into the frame — either as a pass between normal draws, or as direct GPU work that bypasses the engine's renderer system entirely. The extension surface is intentionally small: two public mechanisms, plus the existing `Mesh`/`MeshShader`/custom shader filter primitives covered in earlier chapters.
+"Custom rendering" in ExoJS means inserting your own draw logic into the frame — either as a pass between normal draws, or as direct GPU work that bypasses the engine's renderer system entirely. The extension surface is intentionally small: two public mechanisms, plus the existing `Mesh`/`MeshMaterial`/custom shader filter primitives covered in earlier chapters.
 
-The distinction: a custom renderer controls *when* and *how* things are drawn. A [`MeshShader`](/ExoJS/en/api/mesh-shader/) controls *what shader* an existing `Mesh` uses. A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filter/) or [`WebGpuShaderFilter`](/ExoJS/en/api/web-gpu-shader-filter/)) controls a screen-space post-render effect on a drawable's output. You reach for custom renderers when none of those primitives fit — you need to issue draw calls at a specific point in the frame, or you need to bypass ExoJS drawable types entirely.
+The distinction: a custom renderer controls *when* and *how* things are drawn. A [`MeshMaterial`](/ExoJS/en/api/mesh-material/) controls *what shader* an existing `Mesh` uses. A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filter/) or [`WebGpuShaderFilter`](/ExoJS/en/api/web-gpu-shader-filter/)) controls a screen-space post-render effect on a drawable's output. You reach for custom renderers when none of those primitives fit — you need to issue draw calls at a specific point in the frame, or you need to bypass ExoJS drawable types entirely.
 
 ## CallbackRenderPass
 
@@ -87,7 +87,7 @@ class CustomTriangleRenderer {
 
 The scene's `draw` method would call `this._triangleRenderer.draw()` instead of `context.backend.clear()` / `context.render(sprite)`. The custom renderer owns the entire render pass and does not interact with ExoJS drawables.
 
-Direct backend access is deliberately unabstracted — you are writing raw WebGPU code. On WebGL2 backends, a different renderer class would use `backend.context` (`WebGL2RenderingContext`) and branch by `backend.backendType`. For most projects, `MeshShader` + `CallbackRenderPass` + custom shader filters (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) cover custom rendering needs without reaching for raw GPU APIs.
+Direct backend access is deliberately unabstracted — you are writing raw WebGPU code. On WebGL2 backends, a different renderer class would use `backend.context` (`WebGL2RenderingContext`) and branch by `backend.backendType`. For most projects, `MeshMaterial` + `CallbackRenderPass` + custom shader filters (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) cover custom rendering needs without reaching for raw GPU APIs.
 
 ## Renderer registration
 
@@ -100,7 +100,7 @@ Registering a custom renderer is an advanced extension point. For most custom re
 | Mechanism | Use when |
 |---|---|
 | [`Mesh`](/ExoJS/en/api/mesh/) | You need custom vertex geometry with the standard pipeline |
-| [`MeshShader`](/ExoJS/en/api/mesh-shader/) | You need a custom vertex/fragment shader on a `Mesh` |
+| [`MeshMaterial`](/ExoJS/en/api/mesh-material/) | You need a custom vertex/fragment shader on a `Mesh` |
 | Custom shader filter (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) | You need a screen-space post-render effect on a drawable |
 | `CallbackRenderPass` | You need to issue draw calls at a specific point in the frame between other draws |
 | Direct backend access | You need to bypass ExoJS entirely and work at the GPU API level |

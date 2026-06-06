@@ -1,21 +1,28 @@
 ---
 title: "Gradient"
-description: "CPU-rasterized gradient base that can be converted into a DataTexture."
+description: "CPU-rasterized gradient base. A Color-like paint value (not a Drawable): it owns a normalized list of color stops plus subclass geometry and supports the value-object contract — Gradient.clone, Gradient.copy, and Gradient.equals. Stops are cloned on the way in, clamped to `0..1`, and kept sorted by offset. Convert a gradient into a sampleable DataTexture with Gradient.toTexture; wrap that texture in a `Sprite`/`Mesh` to draw it."
 symbol: "Gradient"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 6
+memberCount: 12
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/gradient/Gradient.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts#L26"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts#L37"
 ---
 ## Import
 
 `import { Gradient } from '@codexo/exojs'`
 
-CPU-rasterized gradient base that can be converted into a DataTexture.
+CPU-rasterized gradient base. A Color-like paint value (not a
+Drawable): it owns a normalized list of color stops plus subclass
+geometry and supports the value-object contract — Gradient.clone,
+Gradient.copy, and Gradient.equals. Stops are cloned on the
+way in, clamped to `0..1`, and kept sorted by offset.
+
+Convert a gradient into a sampleable DataTexture with
+Gradient.toTexture; wrap that texture in a `Sprite`/`Mesh` to draw it.
 
 ## Constructors
 
@@ -23,7 +30,12 @@ CPU-rasterized gradient base that can be converted into a DataTexture.
 
 ## Methods
 
+- `_copyGeometry(source: this): void`
+- `_geometryEquals(other: Gradient): boolean`
+- `clone(): this`
+- `copy(source: this): this`
 - `destroy(): void`
+- `equals(other: Gradient): boolean`
 - `resolveT(u: number, v: number): number`
 - `sampleAt(t: number, out: Float32Array): void`
 - `toTexture(width: number, height: number, options?: GradientToTextureOptions & object): DataTexture<"rgba8">`
@@ -31,8 +43,9 @@ CPU-rasterized gradient base that can be converted into a DataTexture.
 
 ## Properties
 
+- `type: GradientType`
 - `stops: readonly GradientStop[]`
 
 ## Source
 
-[src/rendering/gradient/Gradient.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts#L26)
+[src/rendering/gradient/Gradient.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts#L37)

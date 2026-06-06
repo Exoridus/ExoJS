@@ -1,15 +1,15 @@
 ---
 title: "Graphics"
-description: "Immediate-mode 2D shape API backed by Mesh children. Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a new Mesh child colored with the current `fillColor` or `lineColor`. The active `lineWidth` controls stroke thickness for path and outline draws. Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor point and flush a Mesh on each segment. Call clear to remove all child meshes and reset pen state. Because each shape is a separate Mesh, `Graphics` inherits full filter, blend, tint, and mask support from Container."
+description: "Immediate-mode 2D shape API backed by Mesh children. Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a new Mesh child painted with the active fill or stroke style. A style is either a solid Color or a Gradient, assigned through fillStyle / strokeStyle. The fillColor / lineColor accessors are color-only conveniences over those styles. The active `lineWidth` controls stroke thickness for path and outline draws. Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor point and flush a Mesh on each segment. Gradient styles are rasterized once to a DataTexture via Gradient.toTexture and sampled across each shape's local bounding box, so LinearGradient and RadialGradient render through the same texture path as a textured Mesh. The textures are owned by the Graphics and released on clear / destroy. Call clear to remove all child meshes and reset pen state. Because each shape is a separate Mesh, `Graphics` inherits full filter, blend, tint, and mask support from Container."
 symbol: "Graphics"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 100
+memberCount: 102
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/primitives/Graphics.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L23"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L42"
 ---
 ## Import
 
@@ -18,10 +18,19 @@ sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives
 Immediate-mode 2D shape API backed by Mesh children.
 
 Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a
-new Mesh child colored with the current `fillColor` or `lineColor`.
+new Mesh child painted with the active fill or stroke style. A style
+is either a solid Color or a Gradient, assigned through
+fillStyle / strokeStyle. The fillColor /
+lineColor accessors are color-only conveniences over those styles.
 The active `lineWidth` controls stroke thickness for path and outline draws.
 Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor
 point and flush a Mesh on each segment.
+
+Gradient styles are rasterized once to a DataTexture via
+Gradient.toTexture and sampled across each shape's local bounding
+box, so LinearGradient and RadialGradient render through the
+same texture path as a textured Mesh. The textures are owned by the Graphics
+and released on clear / destroy.
 
 Call clear to remove all child meshes and reset pen state. Because
 each shape is a separate Mesh, `Graphics` inherits full filter, blend,
@@ -104,6 +113,7 @@ tint, and mask support from Container.
 - `cullable: boolean`
 - `currentPoint: Vector`
 - `fillColor: Color`
+- `fillStyle: Color | Gradient`
 - `filters: readonly Filter[]`
 - `height: number`
 - `interactive: boolean`
@@ -120,6 +130,7 @@ tint, and mask support from Container.
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
+- `strokeStyle: Color | Gradient`
 - `top: number`
 - `visible: boolean`
 - `width: number`
@@ -141,4 +152,4 @@ tint, and mask support from Container.
 
 ## Source
 
-[src/rendering/primitives/Graphics.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L23)
+[src/rendering/primitives/Graphics.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L42)
