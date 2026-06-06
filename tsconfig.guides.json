@@ -36,10 +36,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": [
-    ".workspace/generated/guide-typecheck/**/*.ts",
-    ".workspace/generated/guide-typecheck/**/*.js",
-    "src/typings.d.ts",
-    "src/build-constants.d.ts"
-  ]
+  "include": [".workspace/generated/guide-typecheck/**/*.ts", ".workspace/generated/guide-typecheck/**/*.js", "src/typings.d.ts", "src/build-constants.d.ts"]
 }

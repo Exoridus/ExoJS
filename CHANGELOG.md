@@ -12,6 +12,57 @@ merged pull requests and commits since the previous tag (each with its commit /
 PR link); `pnpm release:notes` then renders that section into the published
 GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
 
+## [0.12.0] - 2026-06-06
+
+A developer-experience release: a rebuilt guide, a `create-exo-app` scaffolder, a
+more navigable playground, and more reliable docs and published types. No new
+engine features — the runtime API is unchanged from 0.11.0.
+
+### Added
+
+- **Rebuilt guide experience.** A new information architecture with a "Start
+  Here" learning path, per-chapter learning goals and prerequisites,
+  Previous/Next navigation, and a Guide → Playground → API flow that links each
+  concept to a runnable example and its API page. New Project Structure,
+  Troubleshooting, and Deployment chapters, an Orb Dodge build walkthrough, and
+  source-backed snippets that render real, type-checked code straight from the
+  example sources.
+
+- **`create-exo-app` scaffolder.** Start a typed project with
+  `npm create exo-app`, choosing from three templates — `minimal`,
+  `game-starter`, and `audio-reactive`. An interactive prompt guides template
+  selection in a TTY;
+  non-interactive environments default to `minimal`. This is the first public
+  `create-exo-app` release (`0.1.0`), versioned independently of the engine.
+
+- **Playground navigation.** A "Start Here" featured set, full-text search,
+  category filtering, concrete per-example descriptions, and the Orb Dodge
+  sample turn the example catalog into something browsable rather than a flat
+  list.
+
+- **`@codexo/exojs/debug` entry point.** Debug layers and overlays ship under a
+  dedicated `@codexo/exojs/debug` subpath, bundled as an external-core
+  `dist/exo.debug.esm.js` that imports the engine at runtime rather than
+  duplicating it — ready for import-map consumption alongside the core.
+
+### Changed
+
+- **Docs track the real API.** Guide code blocks are type-checked against the
+  engine in CI, the guides teach the current `RenderingContext` draw API, and
+  the custom-shader chapter was corrected to the real `ShaderSource` +
+  `MeshMaterial` model. Internal guide and API prose links are validated, and
+  the API reference is regenerated deterministically so the committed pages stay
+  in sync with the source. `astro check` is clean.
+
+### Fixed
+
+- **Published TypeScript declarations resolve for consumers.** The emitted
+  `.d.ts` files shipped internal `@/…` path aliases that a consumer's TypeScript
+  could not resolve, which silently dropped inherited members from the public
+  types (for example, `Graphics` lost `Drawable` methods like `setPosition` and
+  `rotate`). Declarations now use relative specifiers, so `tsc` resolves the
+  full type surface and the starter templates type-check and build.
+
 ## [0.11.0] - 2026-06-04
 
 ### Added

@@ -9,18 +9,17 @@ const tmpRoot = join(rootDir, '.workspace', 'tmp', 'create-exo-app');
 const cliSrc = join(rootDir, 'packages', 'create-exo-app', 'src', 'index.ts');
 const templatesDir = join(rootDir, 'packages', 'create-exo-app', 'templates');
 
+// Templates must pin the current root core version with a caret, so a freshly
+// scaffolded app resolves the just-released `@codexo/exojs`. Read it live so a
+// version bump never needs a manual edit here.
+const rootVersion = (JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf-8')) as { version: string }).version;
+const expectedCoreRange = `^${rootVersion}`;
+
 const TEMPLATES = ['minimal', 'game-starter', 'audio-reactive'] as const;
 type TemplateName = (typeof TEMPLATES)[number];
 
 const EXPECTED_FILES: Record<TemplateName, string[]> = {
-  'minimal': [
-    'index.html',
-    'package.json',
-    'tsconfig.json',
-    'vite.config.ts',
-    'src/main.ts',
-    'src/scenes/MainScene.ts',
-  ],
+  minimal: ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/MainScene.ts'],
   'game-starter': [
     'index.html',
     'package.json',
@@ -31,14 +30,7 @@ const EXPECTED_FILES: Record<TemplateName, string[]> = {
     'src/scenes/GameOverScene.ts',
     'src/objects/Player.ts',
   ],
-  'audio-reactive': [
-    'index.html',
-    'package.json',
-    'tsconfig.json',
-    'vite.config.ts',
-    'src/main.ts',
-    'src/scenes/AudioReactiveScene.ts',
-  ],
+  'audio-reactive': ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/AudioReactiveScene.ts'],
 };
 
 // Patterns that indicate stale API usage
@@ -80,11 +72,7 @@ check(existsSync(cliSrc), 'src/index.ts found', 'src/index.ts missing');
 // 2. All templates present
 console.log('\n2. Template directories');
 for (const t of TEMPLATES) {
-  check(
-    existsSync(join(templatesDir, t)),
-    `templates/${t}/ exists`,
-    `templates/${t}/ missing`,
-  );
+  check(existsSync(join(templatesDir, t)), `templates/${t}/ exists`, `templates/${t}/ missing`);
 }
 
 // 3. Scaffold each template
@@ -96,10 +84,7 @@ for (const t of TEMPLATES) {
   }
 
   try {
-    execSync(
-      `node --import tsx/esm "${cliSrc}" "${destDir}" --template ${t} --force`,
-      { stdio: 'pipe', env: { ...process.env, FORCE_COLOR: '0' } },
-    );
+    execSync(`node --import tsx/esm "${cliSrc}" "${destDir}" --template ${t} --force`, { stdio: 'pipe', env: { ...process.env, FORCE_COLOR: '0' } });
     ok(`scaffold ${t} → .workspace/tmp/create-exo-app/${t}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -112,11 +97,7 @@ console.log('\n4. Expected files in scaffolded projects');
 for (const t of TEMPLATES) {
   const destDir = join(tmpRoot, t);
   for (const file of EXPECTED_FILES[t]) {
-    check(
-      existsSync(join(destDir, file)),
-      `${t}/${file}`,
-      `${t}/${file} missing`,
-    );
+    check(existsSync(join(destDir, file)), `${t}/${file}`, `${t}/${file} missing`);
   }
 }
 
@@ -171,6 +152,35 @@ for (const t of TEMPLATES) {
     }
   }
 }
+
+// 7. Template @codexo/exojs dependency pins the current root version
+console.log('\n7. Template @codexo/exojs dependency');
+const seenCoreRanges = new Set<string>();
+for (const t of TEMPLATES) {
+  const pkgPath = join(tmpRoot, t, 'package.json');
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { dependencies?: Record<string, string> };
+    const range = pkg.dependencies?.['@codexo/exojs'];
+    if (range === undefined) {
+      fail(`${t}: missing @codexo/exojs dependency`);
+      continue;
+    }
+    seenCoreRanges.add(range);
+    check(
+      range === expectedCoreRange,
+      `${t}: @codexo/exojs "${range}" matches root (${expectedCoreRange})`,
+      `${t}: @codexo/exojs "${range}" does not match root (${expectedCoreRange}) — stale or wrong pin`,
+    );
+    check(!range.startsWith('workspace:'), `${t}: no workspace: protocol`, `${t}: uses workspace: protocol ("${range}") — not publishable`);
+  } catch {
+    fail(`${t}: could not read scaffolded package.json dependency`);
+  }
+}
+check(
+  seenCoreRanges.size === 1,
+  `all templates agree on one core version (${[...seenCoreRanges].join(', ')})`,
+  `templates disagree on core version: ${[...seenCoreRanges].join(', ')}`,
+);
 
 // Summary
 console.log(`\n=== Result: ${passed} passed, ${failed} failed ===\n`);

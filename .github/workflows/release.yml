@@ -119,5 +119,34 @@ jobs:
           tag_name: ${{ env.TARGET_TAG }}
           files: exojs-${{ env.TARGET_TAG }}.zip
 
-      - name: Publish to npm
-        run: npm publish --provenance --access public
+      # Publish order matters: the core ships first because the create-exo-app
+      # templates depend on `^<this version>`. Each publish is idempotent — a
+      # workflow re-run (or a re-triggered tag) skips a version that is already
+      # on npm instead of failing.
+      - name: Publish @codexo/exojs to npm
+        run: |
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
+            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
+          else
+            npm publish --provenance --access public
+            echo "::notice::Published ${PKG}@${VER}."
+          fi
+
+      # create-exo-app is versioned independently (0.1.x) and lives in its own
+      # workspace package. `npm publish` runs its `prepack` (pnpm build → tsc +
+      # shebang), so dist/index.js is built from source at publish time; a build
+      # failure surfaces before anything is uploaded. Same OIDC provenance and
+      # public access as the core — no extra secrets.
+      - name: Publish create-exo-app to npm
+        working-directory: packages/create-exo-app
+        run: |
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
+            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
+          else
+            npm publish --provenance --access public
+            echo "::notice::Published ${PKG}@${VER}."
+          fi
