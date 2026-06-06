@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { FEATURED_FILTER,filterExamples } from '../../site/src/lib/example-search';
+import { FEATURED_FILTER, filterExamples } from '../../site/src/lib/example-search';
 import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
 import type { Example } from '../../site/src/lib/types';
 
@@ -167,9 +167,7 @@ describe('filterExamples', () => {
 // ---------------------------------------------------------------------------
 
 describe('catalog featured metadata', () => {
-  const entries = Object.entries(EXAMPLES_CATALOG).flatMap(([section, list]) =>
-    list.map(entry => ({ ...entry, section })),
-  );
+  const entries = Object.entries(EXAMPLES_CATALOG).flatMap(([section, list]) => list.map(entry => ({ ...entry, section })));
 
   it('has at least one featured example', () => {
     const featured = entries.filter(e => e.featured === true);
@@ -190,9 +188,7 @@ describe('catalog featured metadata', () => {
   });
 
   it('start-here examples cover getting-started, sprites, input, audio, debug, and performance', () => {
-    const featuredSections = new Set(
-      entries.filter(e => e.featured === true).map(e => e.section),
-    );
+    const featuredSections = new Set(entries.filter(e => e.featured === true).map(e => e.section));
     // These are the key sections we promised to cover.
     for (const section of ['getting-started', 'sprites-textures', 'input', 'audio-basics', 'debug-layer']) {
       expect(featuredSections.has(section), `expected a featured example in "${section}"`).toBe(true);
