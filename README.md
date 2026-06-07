@@ -127,12 +127,6 @@ new Application({ backend: { type: 'auto' } });
 
 The runnable live site (Astro + Lit + Monaco preview) lives in [`examples/`](examples/README.md) and is deployed as the repository's GitHub Pages site at <https://exoridus.github.io/ExoJS/>.
 
-## Migrating to v0.9.0
-
-ExoJS `v0.9.0` includes pre-1.0 API consolidation changes. See the migration guide for before/after examples:
-
-- <https://exoridus.github.io/ExoJS/en/guide/migration/v0-8-x-to-v0-9-0/>
-
 ## Development
 
 ```bash
