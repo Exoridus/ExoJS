@@ -7,7 +7,6 @@ import { buildExampleHref } from '../lib/url-state';
 import { buildPlaygroundNavModel, isExampleRouteActive, type PlaygroundNavCategory } from '../lib/playground-nav';
 import { filterExamples, FEATURED_FILTER } from '../lib/example-search';
 import componentStyles from './Navigation.scss?inline';
-import './LoadingSpinner';
 import './NavigationLink';
 import './NavigationSection';
 
@@ -153,7 +152,10 @@ export class Navigation extends LitElement {
 
     private _renderContent(): ReturnType<LitElement['render']> {
         if (this.loadError) return html`<p class="error">${this.loadError}</p>`;
-        if (!this.loaded) return html`<exo-spinner centered></exo-spinner>`;
+        // While the catalog loads, stay quiet rather than showing a spinner here:
+        // the preview already renders the single app-loading indicator, so a second
+        // one in the sidebar would just be redundant noise.
+        if (!this.loaded) return nothing;
 
         const allExamples = Array.from(this.examples.values()).flat();
         const filtered = filterExamples(allExamples, {
@@ -170,28 +172,13 @@ export class Navigation extends LitElement {
             `;
         }
 
-        const showFeatured =
-            !this._searchQuery.trim() &&
-            (this._activeTagFilter === null || this._activeTagFilter === 'all');
-
+        // Each example appears exactly once, under its own category — never also in a
+        // separate "featured" list at the top. Duplicating featured examples there lit
+        // up two active links at once; featured ones stay discoverable via the
+        // "Start here" tag filter in the header instead.
         const categories = buildPlaygroundNavModel(filtered);
 
-        return html`
-            ${showFeatured ? this._renderFeaturedSection(allExamples) : nothing}
-            ${categories.map(category => this._renderCategory(category))}
-        `;
-    }
-
-    private _renderFeaturedSection(allExamples: Array<Example>): ReturnType<LitElement['render']> {
-        const featured = filterExamples(allExamples, { query: '', activeFilter: FEATURED_FILTER });
-        if (featured.length === 0) return nothing;
-
-        return html`
-            <div class="featured-section" aria-label="Start here">
-                <span class="featured-label">Start here</span>
-                ${featured.map(example => this._renderLink(example))}
-            </div>
-        `;
+        return html`${categories.map(category => this._renderCategory(category))}`;
     }
 
     // The playground sidenav is the flat catalog: one category level, examples

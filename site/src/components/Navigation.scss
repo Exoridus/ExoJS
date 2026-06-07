@@ -169,22 +169,6 @@ nav {
     border-color: var(--accent);
 }
 
-.featured-section {
-    padding: 0.3rem 0 0.1rem;
-    margin-bottom: 0.25rem;
-    border-bottom: 1px solid var(--line-soft);
-}
-
-.featured-label {
-    display: block;
-    padding: 0.3rem 0.6rem 0.18rem;
-    font-family: var(--f-mono);
-    font-size: 0.6rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--fg-faint);
-}
-
 .empty-state {
     margin: 0;
     padding: 1.2rem 1rem;

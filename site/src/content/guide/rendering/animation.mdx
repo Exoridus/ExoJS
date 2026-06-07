@@ -9,7 +9,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 ExoJS gives you three layers of animation control, each suited to a different kind of motion:
 
-1. **Manual frame-loop animation** — you write `update(delta)` logic that mutates transforms or values directly. Covered in [Core Concepts](/ExoJS/en/guide/core-concepts/scene-lifecycle/).
+1. **Manual frame-loop animation** — you write `update(delta)` logic that mutates transforms or values directly. Covered in [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/).
 2. **Tweens** — automated interpolation of numeric properties over time, with easing, delay, repeat, yoyo, chaining, and lifecycle callbacks. Driven by the application's `TweenManager` (`app.tweens`).
 3. **Animated sprites** — frame-based sprite animation from named clips (`AnimatedSprite`), optionally sourced from a `Spritesheet`.
 
@@ -250,4 +250,4 @@ Manual frame-loop animation without tweens — comparing delta-based vs. fixed-s
 
 ## Where to go next
 
-The next chapter, [Render targets](/ExoJS/en/guide/drawing/render-targets/), covers off-screen rendering — how to draw into a `RenderTexture` and reuse it as a sprite texture for compositing, caching, or post-processing.
+The next chapter, [Render targets](/ExoJS/en/guide/rendering/render-targets/), covers off-screen rendering — how to draw into a `RenderTexture` and reuse it as a sprite texture for compositing, caching, or post-processing.

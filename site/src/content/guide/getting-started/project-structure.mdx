@@ -50,11 +50,11 @@ The application owns runtime configuration — canvas size, clear color, render 
   title="src/scenes/MainScene.ts"
 />
 
-`update(delta)` advances state — here, rotating a box — and `draw(context)` renders it. `delta.seconds` carries the elapsed time since the last frame, so motion stays frame-rate independent. The [Your first scene](/ExoJS/en/guide/introduction/your-first-scene/) chapter builds a scene like this from scratch.
+`update(delta)` advances state — here, rotating a box — and `draw(context)` renders it. `delta.seconds` carries the elapsed time since the last frame, so motion stays frame-rate independent. The [Your first scene](/ExoJS/en/guide/getting-started/your-first-scene/) chapter builds a scene like this from scratch.
 
 ## Where assets go
 
-Files under `public/assets/` are served as-is and addressed by path at runtime — for example `loader.load(Texture, { hero: 'assets/hero.png' })`. The [Loading and resources](/ExoJS/en/guide/core-concepts/loading-and-resources/) chapter covers the loader in detail.
+Files under `public/assets/` are served as-is and addressed by path at runtime — for example `loader.load(Texture, { hero: 'assets/hero.png' })`. The [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) chapter covers the loader in detail.
 
 ## Scripts
 
@@ -68,6 +68,6 @@ npm run preview  # serve the production build locally
 
 The other templates add more structure on top of this same shape: `game-starter` splits player logic into `src/objects/` and adds a game-over scene, and `audio-reactive` adds an analyser-driven scene. The entry point and scene model stay the same.
 
-<NextStep href="/ExoJS/en/guide/introduction/your-first-scene/" label="Build your first scene">
+<NextStep href="/ExoJS/en/guide/getting-started/your-first-scene/" label="Build your first scene">
 Start from an empty scene and add a texture, a sprite, and per-frame motion.
 </NextStep>

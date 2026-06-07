@@ -30,6 +30,71 @@ env:
   CI: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      engine: ${{ steps.decide.outputs.engine }}
+      site: ${{ steps.decide.outputs.site }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      # Path filtering only narrows pull-request runs. Pushes to main, tag
+      # releases (via release.yml), and manual dispatches skip this step and
+      # fall through to the "run everything" branch below, so a release is
+      # never partially checked.
+      - name: Filter changed paths
+        id: filter
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            engine:
+              - 'src/**'
+              - 'test/**'
+              - 'scripts/**'
+              - 'rollup.config.ts'
+              - 'vitest.config.ts'
+              - 'tsconfig.json'
+              - 'tsconfig.test.json'
+              - 'tsconfig.eslint.json'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/**'
+            site:
+              - 'site/**'
+              - 'examples/**'
+              - 'packages/**'
+              - 'tsconfig.guides.json'
+              - 'tsconfig.examples.json'
+              - 'tsconfig.eslint.json'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/**'
+
+      - name: Decide effective lanes
+        id: decide
+        env:
+          FILTER_OUTCOME: ${{ steps.filter.outcome }}
+          FILTER_ENGINE: ${{ steps.filter.outputs.engine }}
+          FILTER_SITE: ${{ steps.filter.outputs.site }}
+        run: |
+          if [ "$FILTER_OUTCOME" = "success" ]; then
+            engine="$FILTER_ENGINE"
+            site="$FILTER_SITE"
+          else
+            # Not a pull request (push to main, tag release, dispatch): run all lanes.
+            engine=true
+            site=true
+          fi
+          echo "engine=$engine" >> "$GITHUB_OUTPUT"
+          echo "site=$site" >> "$GITHUB_OUTPUT"
+          echo "Effective lanes — engine=$engine site=$site"
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
@@ -95,6 +160,8 @@ jobs:
 
   unit-tests:
     name: Unit Tests (Coverage)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -134,6 +201,8 @@ jobs:
 
   browser-tests:
     name: Browser Tests
+    needs: [changes]
+    if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -180,6 +249,8 @@ jobs:
   # reports. Run locally via `pnpm test:browser:webgpu`.
   browser-tests-webgpu-chromium:
     name: Browser Tests (Chromium WebGPU, experimental)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true
@@ -228,6 +299,8 @@ jobs:
   # `pnpm test:browser:webgl:firefox` / `pnpm test:browser:webgpu:firefox`.
   browser-tests-firefox:
     name: Browser Tests (Firefox, experimental)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true
@@ -275,7 +348,8 @@ jobs:
 
   package-verify:
     name: Package Build + Verify
-    needs: [typecheck, lint]
+    needs: [changes, typecheck, lint]
+    if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -312,7 +386,12 @@ jobs:
 
   site-build:
     name: Site build
-    needs: [unit-tests, browser-tests, package-verify]
+    # Runs whenever site/examples/packages changed. Still ordered after
+    # package-verify so a site-only change skips it (package-verify is then
+    # "skipped", not "failure"), while a combined change won't waste a site
+    # build if the engine package failed to build.
+    needs: [changes, package-verify]
+    if: ${{ !cancelled() && needs.changes.outputs.site == 'true' && needs.package-verify.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -352,12 +431,13 @@ jobs:
   required-ci:
     name: Required CI
     if: ${{ always() }}
-    needs: [typecheck, lint, unit-tests, browser-tests, package-verify, site-build]
+    needs: [changes, typecheck, lint, unit-tests, browser-tests, package-verify, site-build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Evaluate required job results
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           UNIT_TESTS_RESULT: ${{ needs['unit-tests'].result }}
@@ -365,6 +445,7 @@ jobs:
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
         run: |
+          echo "changes: $CHANGES_RESULT"
           echo "typecheck: $TYPECHECK_RESULT"
           echo "lint: $LINT_RESULT"
           echo "unit-tests: $UNIT_TESTS_RESULT"
@@ -372,7 +453,15 @@ jobs:
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
 
+          # Path filtering can legitimately skip whole lanes (e.g. a docs-only
+          # PR skips the engine lanes; an engine-only PR skips the site build),
+          # so "skipped" is an acceptable result. Only a real "failure" or
+          # "cancelled" fails the gate. The changes job must not be skipped — a
+          # skipped detector would silently skip everything and false-green.
           failed=0
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            failed=1
+          fi
           for result in \
             "$TYPECHECK_RESULT" \
             "$LINT_RESULT" \
@@ -380,12 +469,12 @@ jobs:
             "$BROWSER_TESTS_RESULT" \
             "$PACKAGE_VERIFY_RESULT" \
             "$SITE_BUILD_RESULT"; do
-            if [ "$result" != "success" ]; then
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
               failed=1
             fi
           done
 
           if [ "$failed" -ne 0 ]; then
-            echo "::error::At least one required CI job did not succeed."
+            echo "::error::At least one required CI job failed or was cancelled."
             exit 1
           fi

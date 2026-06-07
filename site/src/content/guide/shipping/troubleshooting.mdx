@@ -9,6 +9,21 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 This chapter covers the issues that come up most often when starting with ExoJS or upgrading from an older snippet. Work through the relevant section, check the linked guides for more detail, and open the playground examples to see the correct pattern in action.
 
+## Symptom → cause → fix
+
+Start here. Find the symptom that matches what you see, then jump to the section with the full explanation and fix.
+
+| Symptom | Likely cause | Section |
+|---|---|---|
+| Blank or black canvas | App not started, missing `context.render`, or content off-screen | [Canvas shows nothing](#canvas-shows-nothing) |
+| `… is not a function` from copied code | Pre-0.9 API in an old snippet | [Old API errors](#old-api-errors-from-older-snippets) |
+| Runs on WebGL2, never WebGPU | WebGPU unavailable in this browser/OS/GPU | [WebGPU unavailable](#webgpu-unavailable) |
+| Asset 404s or never appears | Wrong path, `public/` prefix, or case mismatch | [Assets not loading](#assets-not-loading) |
+| Code runs but no sound | Audio started before a user gesture | [Audio does not start](#audio-does-not-start) |
+| Keys or gamepad ignored | Canvas not focused, or input read outside `update` | [Input does not respond](#input-does-not-respond) |
+| Text blurry, missing, or unstyled | Font not loaded, wrong style key, or DPR scaling | [Text or fonts look wrong](#text-or-fonts-look-wrong) |
+| Low FPS or stutter | Too many drawables, filters, or per-frame allocations | [Performance problems](#performance-problems) |
+
 ## Canvas shows nothing
 
 A blank or black canvas usually means one of the following:
@@ -34,7 +49,7 @@ Without `context.render(this.root)`, the frame is cleared but no nodes are drawn
 
 **Objects are outside the visible area.** The default view maps world coordinates to the canvas. A sprite at `(10000, 10000)` on a 800×600 canvas is off-screen. Check position, scale, and anchor values.
 
-See [Your first scene](/ExoJS/en/guide/introduction/your-first-scene/) for a minimal working example.
+See [Your first scene](/ExoJS/en/guide/getting-started/your-first-scene/) for a minimal working example.
 
 ## Old API errors from older snippets
 
@@ -57,7 +72,7 @@ draw(context) {
 }
 ```
 
-The `Application` constructor options also changed shape in 0.9.0. See the [v0.8.x to v0.9.0 migration guide](/ExoJS/en/guide/migration/v0-8-x-to-v0-9-0/) for a complete list of renamed options and removed aliases.
+The `Application` constructor options also changed shape in 0.9.0. See the [v0.8.x to v0.9.0 migration guide](/ExoJS/en/guide/shipping/v0-8-x-to-v0-9-0/) for a complete list of renamed options and removed aliases.
 
 ## WebGPU unavailable
 
@@ -69,7 +84,7 @@ Current availability (as of 2025):
 - **Safari**: Available on macOS 14+ and iOS 17+, with some API gaps.
 - **Linux**: Requires Vulkan support; coverage varies widely.
 
-If WebGPU is unavailable, ExoJS falls back to WebGL2. Most visual features work identically across both backends; particle GPU compute requires WebGPU. See [Backend comparison](/ExoJS/en/guide/advanced/backend-comparison/) for a full feature-parity table.
+If WebGPU is unavailable, ExoJS falls back to WebGL2. Most visual features work identically across both backends; particle GPU compute requires WebGPU. See [Backend comparison](/ExoJS/en/guide/debugging/backend-comparison/) for a full feature-parity table.
 
 To check which backend is active at runtime, enable the performance overlay from `@codexo/exojs/debug` — it displays the active backend in the overlay header. You can also inspect `app.backend.backendType` directly: it returns `RenderBackendType.WebGpu` or `RenderBackendType.WebGl2`.
 
@@ -100,7 +115,7 @@ await loader.load(Texture, { bunny: 'public/assets/bunny.png' }); // wrong
 
 **CORS on a different origin.** If assets are on a different domain, the server must send appropriate `Access-Control-Allow-Origin` headers.
 
-See [Loading and resources](/ExoJS/en/guide/core-concepts/loading-and-resources/) for the full loader API.
+See [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) for the full loader API.
 
 ## Audio does not start
 
@@ -125,7 +140,7 @@ If you're using the `audio-reactive` template from `create-exo-app`, it already 
 
 **Canvas focus.** ExoJS keyboard and gamepad input requires the canvas to have focus. Click the canvas once to give it focus. If your page has other focusable elements that steal focus, keyboard input stops until the canvas is clicked again.
 
-**Key name mismatch.** ExoJS uses the `Keyboard` enum. `Keyboard.Space`, `Keyboard.A`, `Keyboard.ArrowLeft` — the names match the Web `KeyboardEvent.code` values but mapped to numeric channels. Check the [Keyboard guide](/ExoJS/en/guide/input/keyboard/) for the full enum.
+**Key name mismatch.** ExoJS uses the `Keyboard` enum. `Keyboard.Space`, `Keyboard.A`, `Keyboard.ArrowLeft` — the names match the Web `KeyboardEvent.code` values but mapped to numeric channels. Check the [Keyboard guide](/ExoJS/en/guide/input/keyboard-and-actions/) for the full enum.
 
 **Input not polled in `update`.** Keyboard held-key state (`isActive`) and gamepad axis values are sampled per-frame inside `update`. Reading them in `init` or outside the frame loop gives stale results.
 
@@ -144,9 +159,9 @@ If you're using the `audio-reactive` template from `create-exo-app`, it already 
 **Wrong style property name.** The current `TextStyle` API uses:
 - `fillColor` — not `fill`, not `color`
 
-Using an old property name silently produces no error but the style is ignored. Check the [Text guide](/ExoJS/en/guide/drawing/text/) for the current `TextStyle` keys.
+Using an old property name silently produces no error but the style is ignored. Check the [Text guide](/ExoJS/en/guide/rendering/text/) for the current `TextStyle` keys.
 
-**DPI / DevicePixelRatio scaling.** At high DPI (e.g., Retina displays), text may look blurry if the canvas is not scaled correctly. ExoJS handles DPR scaling automatically when you pass `dpr: 'auto'` to the canvas options. If you're managing canvas dimensions manually, account for `window.devicePixelRatio`.
+**DPI / DevicePixelRatio scaling.** At high DPI (e.g., Retina displays), text and sprites look soft if the canvas backing store matches the CSS size. Set the `pixelRatio` canvas option to the display's `window.devicePixelRatio` so the canvas renders at native resolution. It defaults to `1`, so crisp HiDPI output is opt-in — see [Resize, DPR & the canvas](/ExoJS/en/guide/getting-started/resize-dpr-and-canvas/) for the full pattern.
 
 ## Performance problems
 
@@ -169,10 +184,10 @@ Common causes of poor performance:
 
 **Per-frame allocations.** Creating objects inside `update` or `draw` (e.g., `new Color(...)`, `new Vec2(...)`) each frame causes garbage collector pressure. Allocate once in `init` and mutate in-place.
 
-See [Performance](/ExoJS/en/guide/advanced/performance/) and [Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/) for detailed analysis strategies.
+See [Performance](/ExoJS/en/guide/debugging/performance/) and [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/) for detailed analysis strategies.
 
 <ExamplePreview chapter="debug-layer" slug="performance-overlay" />
 
 ## Where to go next
 
-The next chapter, [Deployment](/ExoJS/en/guide/reference/deployment/), covers building and hosting an ExoJS app for production.
+The next chapter, [Deployment](/ExoJS/en/guide/shipping/deployment/), covers building and hosting an ExoJS app for production.

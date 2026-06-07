@@ -57,6 +57,55 @@ An ExoJS app is a static site: plain HTML, JavaScript, and assets. Any host that
 
 For all targets: make sure the server is reachable over HTTPS if you need clipboard access, Web Crypto, or other APIs that require a secure context. Modern hosting providers enable HTTPS by default.
 
+## GitHub Pages with GitHub Actions
+
+For a hands-off GitHub Pages deploy, let an Actions workflow build and publish on every push. Add `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+Two one-time settings make this work:
+
+1. In the repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
+2. Set `base: '/repo-name/'` in `vite.config.ts` (see [Vite base path](#vite-base-path) above) so asset URLs resolve under the project subpath. A project site is served from `https://username.github.io/repo-name/`, not the domain root.
+
+After the first successful run, every push to `main` rebuilds and republishes automatically.
+
 ## Assets in production
 
 Files placed in `public/` are copied verbatim to `dist/` during the build. A file at `public/assets/bunny.png` appears at `dist/assets/bunny.png` and is served at `/assets/bunny.png` (or `/<base>/assets/bunny.png` when `base` is set).
@@ -118,15 +167,15 @@ If you encounter errors like `Failed to load module script: Expected a JavaScrip
 
 ExoJS targets modern browsers. The minimum supported environments are those with full ES2022 support, `WebGL2`, and `requestAnimationFrame`.
 
-**WebGPU** is used when available and provides higher throughput for particle compute and certain rendering paths. It is not required — ExoJS falls back to WebGL2 automatically. See [Backend comparison](/ExoJS/en/guide/advanced/backend-comparison/) for the feature-parity breakdown.
+**WebGPU** is used when available and provides higher throughput for particle compute and certain rendering paths. It is not required — ExoJS falls back to WebGL2 automatically. See [Backend comparison](/ExoJS/en/guide/debugging/backend-comparison/) for the feature-parity breakdown.
 
 **HTTPS** is required by some browser APIs. The Web Crypto API, certain sensor APIs, and clipboard access all require a secure context. Standard hosting on any modern provider (Netlify, Vercel, GitHub Pages) includes HTTPS by default.
 
 **Mobile browsers** work with ExoJS, but be aware:
-- Autoplay audio restrictions apply on all mobile browsers (see [Audio does not start](/ExoJS/en/guide/reference/troubleshooting/#audio-does-not-start) in the Troubleshooting guide).
+- Autoplay audio restrictions apply on all mobile browsers (see [Audio does not start](/ExoJS/en/guide/shipping/troubleshooting/#audio-does-not-start) in the Troubleshooting guide).
 - WebGPU is available on Safari on iOS 17+ but not on Android Chrome as of 2025.
 - Canvas performance on low-end devices varies; test on representative hardware.
 
 ## Where to go next
 
-If something is not working after deployment, the [Troubleshooting](/ExoJS/en/guide/reference/troubleshooting/) guide covers the most common runtime and setup problems. For performance analysis tools, see [Performance](/ExoJS/en/guide/advanced/performance/) and [Debug layer](/ExoJS/en/guide/advanced/debug-layer/).
+If something is not working after deployment, the [Troubleshooting](/ExoJS/en/guide/shipping/troubleshooting/) guide covers the most common runtime and setup problems. For performance analysis tools, see [Performance](/ExoJS/en/guide/debugging/performance/) and [Debug layer](/ExoJS/en/guide/debugging/debugging-and-inspection/).

@@ -1,5 +1,6 @@
 // Auto-generated from resize-and-dpr.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+// #region guide:app-setup
 const app = new Application({
     canvas: {
         width: 800,
@@ -11,12 +12,15 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+// #endregion guide:app-setup
 document.body.style.margin = '0';
 document.body.append(app.canvas);
+// #region guide:resize
 window.addEventListener('resize', () => {
     app.resize(window.innerWidth, window.innerHeight);
 });
 app.resize(window.innerWidth, window.innerHeight);
+// #endregion guide:resize
 class ResizeScene extends Scene {
     sprite;
     info;
@@ -37,6 +41,7 @@ class ResizeScene extends Scene {
         context.render(this.sprite);
         context.render(this.info);
     }
+    // #region guide:layout
     layout() {
         const { width, height } = this.app.canvas;
         const dpr = Math.max(1, window.devicePixelRatio || 1);
