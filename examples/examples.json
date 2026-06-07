@@ -1466,13 +1466,14 @@
         {
             "slug": "listener-and-source",
             "path": "spatial-audio/listener-and-source.js",
+            "language": "typescript",
             "title": "Listener and Source",
-            "description": "Example: Listener and Source.",
+            "description": "Drag a sound source around a fixed listener and watch distance-based spatial attenuation update live.",
             "backend": "core",
             "tags": [
                 "listener",
-                "and",
-                "source"
+                "source",
+                "spatial"
             ],
             "capabilities": [
                 "pointer",
@@ -1482,12 +1483,14 @@
         {
             "slug": "moving-source",
             "path": "spatial-audio/moving-source.js",
+            "language": "typescript",
             "title": "Moving Source",
-            "description": "Example: Moving Source.",
+            "description": "An automatically circling spatial source orbits a fixed listener to demonstrate continuous panning and attenuation.",
             "backend": "core",
             "tags": [
                 "moving",
-                "source"
+                "source",
+                "spatial"
             ],
             "capabilities": [
                 "audio"
@@ -1496,6 +1499,7 @@
         {
             "slug": "falloff-curves",
             "path": "spatial-audio/falloff-curves.js",
+            "language": "typescript",
             "title": "Falloff Curves",
             "description": "Compare linear, inverse, and exponential distance attenuation models on three sources around a draggable listener.",
             "backend": "core",
