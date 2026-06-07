@@ -97,6 +97,7 @@ interface MonacoTypeScriptApi {
 const SHARED_LIB_FILES = [
     { path: 'examples/shared/runtime.d.ts', virtualPath: 'file:///node_modules/@examples/runtime/index.d.ts' },
     { path: 'examples/shared/editor-support.d.ts', virtualPath: 'file:///node_modules/@examples/editor-support/index.d.ts' },
+    { path: 'examples/shared/assets-catalog.d.ts', virtualPath: 'file:///node_modules/@assets/index.d.ts' },
 ] as const;
 
 // Module-level typings cache. Once a version's `.d.ts` set has been fetched
