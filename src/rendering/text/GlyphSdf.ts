@@ -199,6 +199,13 @@ export class GlyphSdf {
 
     // ── Rasterize white glyph on transparent background ───────────────────
     ctx.clearRect(0, 0, tileW, tileH);
+    // Re-apply font + baseline here: assigning canvas.width/height above (on a
+    // tile-size change) resets the 2D context to its defaults, including
+    // `font = "10px sans-serif"`. Since font/baseline are otherwise only set
+    // before measureText (above the resize), every glyph that triggered a resize
+    // would otherwise rasterize at 10px — far too small for the tile.
+    ctx.font = this._font;
+    ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#ffffff';
     // Baseline at buf + _fontAscent — consistent across all glyphs.
     ctx.fillText(char, buf + bbLeft, buf + this._fontAscent);
