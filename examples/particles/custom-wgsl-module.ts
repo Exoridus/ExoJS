@@ -1,4 +1,4 @@
-import { Application, Color, Constant, ParticleSystem, RateSpawn, Scene, Texture, UpdateModule, Vector } from '@codexo/exojs';
+import { Application, Color, Constant, ParticleSystem, RateSpawn, Scene, Texture, UpdateModule, Vector, type WgslContribution } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -29,7 +29,7 @@ class SwayModule extends UpdateModule {
         }
     }
 
-    wgsl(): import('@codexo/exojs').WgslContribution {
+    wgsl(): WgslContribution {
         return {
             key: 'SwayModule',
             uniforms: [

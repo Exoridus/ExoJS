@@ -1,4 +1,4 @@
-import { Application, Color, Json, Scene, Spritesheet, Texture } from '@codexo/exojs';
+import { Application, Color, Json, Scene, Spritesheet, type SpritesheetData, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -26,7 +26,7 @@ class SpritesheetFramesScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'characters');
-        const data = loader.get(Json, 'characters') as import('@codexo/exojs').SpritesheetData;
+        const data = loader.get(Json, 'characters') as SpritesheetData;
 
         this._spritesheet = new Spritesheet(texture, data);
         this._frameNames = Array.from(this._spritesheet.frames.keys());

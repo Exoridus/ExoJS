@@ -61,7 +61,7 @@ CommonJS `require()` usage is not part of the supported contract for this pre-1.
 ## Quickstart
 
 ```ts
-import { Application, Scene, Graphics, Color, type RenderingContext } from '@codexo/exojs';
+import { Application, Scene, Graphics, Color, type RenderingContext, type Time } from '@codexo/exojs';
 
 class HelloScene extends Scene {
   private readonly box = new Graphics();
@@ -76,7 +76,7 @@ class HelloScene extends Scene {
     this.addChild(this.box);
   }
 
-  public override update(delta: import('@codexo/exojs').Time): void {
+  public override update(delta: Time): void {
     this.box.rotation += delta.seconds * 45;
   }
 
