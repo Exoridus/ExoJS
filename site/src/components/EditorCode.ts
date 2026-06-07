@@ -9,7 +9,6 @@ import { CURRENT_VERSION_ID } from '../lib/versions';
 import componentStyles from './EditorCode.scss?inline';
 import './Toolbar';
 import './Button';
-import './LoadingSpinner';
 
 export interface UpdateCodeEvent {
     code: string;
@@ -296,7 +295,6 @@ export class EditorCode extends LitElement {
             <input class="file-input" type="file" accept=".js" @change=${this._onFileImport} />
             <div class="editor-shell">
                 <div class="editor-host"></div>
-                ${!this.sourceCode ? html`<div class="loading-overlay"><exo-spinner centered></exo-spinner></div>` : nothing}
             </div>
         `;
     }
