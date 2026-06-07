@@ -24,37 +24,37 @@ struct Uniforms { uTime:f32, _pad0:vec3<f32> };
     let c=textureSample(uTexture,uSampler,uv); return vec4<f32>(c.rgb*vec3<f32>(0.72,0.85,1.0),c.a*0.85);
 }`;
 class WaterMirrorScene extends Scene {
-    _rt;
-    _source;
-    _mirror;
-    _filter;
-    _time = 0;
+    rt;
+    source;
+    mirror;
+    filter;
+    time = 0;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._rt = new RenderTexture(800, 280);
-        this._source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 180).setScale(2);
-        this._mirror = new Sprite(this._rt).setPosition(0, 320).setScale(1, -1);
-        this._filter =
+        this.rt = new RenderTexture(800, 280);
+        this.source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 180).setScale(2);
+        this.mirror = new Sprite(this.rt).setPosition(0, 320).setScale(1, -1);
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
-        this._mirror.filters = [this._filter];
+        this.mirror.filters = [this.filter];
     }
     update(delta) {
-        this._time += delta.seconds;
-        this._source.setPosition(400 + Math.cos(this._time * 1.7) * 170, 180 + Math.sin(this._time * 1.3) * 60);
-        this._filter.uniforms.uTime = this._time;
+        this.time += delta.seconds;
+        this.source.setPosition(400 + Math.cos(this.time * 1.7) * 170, 180 + Math.sin(this.time * 1.3) * 60);
+        this.filter.uniforms.uTime = this.time;
     }
     draw(context) {
         context.backend.execute(new RenderTargetPass(() => {
             context.backend.clear();
-            context.render(this._source);
-        }, { target: this._rt, view: this._rt.view, clearColor: Color.transparentBlack }));
+            context.render(this.source);
+        }, { target: this.rt, view: this.rt.view, clearColor: Color.transparentBlack }));
         context.backend.clear(new Color(18, 24, 36));
-        context.render(this._source);
-        context.render(this._mirror);
+        context.render(this.source);
+        context.render(this.mirror);
     }
 }
 app.start(new WaterMirrorScene());

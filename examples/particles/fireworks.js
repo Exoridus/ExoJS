@@ -24,54 +24,54 @@ const fireworkColors = [
     new Color(245, 215, 80),
 ];
 class FireworksScene extends Scene {
-    _canvasSize;
-    _particleSystem;
-    _burstPosition;
-    _burst;
-    _explosionTimer;
+    canvasSize;
+    particleSystem;
+    burstPosition;
+    burst;
+    explosionTimer;
     async load(loader) {
         await loader.load(Texture, { star: textures.particleStar });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this._canvasSize = new Size(width, height);
-        this._particleSystem = new ParticleSystem(loader.get(Texture, 'star'), { capacity: 8192 });
-        this._burstPosition = new Vector(0, 0);
-        this._burst = new BurstSpawn({
+        this.canvasSize = new Size(width, height);
+        this.particleSystem = new ParticleSystem(loader.get(Texture, 'star'), { capacity: 8192 });
+        this.burstPosition = new Vector(0, 0);
+        this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: particlesPerExplosion }],
             lifetime: new Range(tailDuration * 0.7, tailDuration),
-            position: new Constant(this._burstPosition),
+            position: new Constant(this.burstPosition),
             velocity: ConeDirection.omni(20, 70),
             scale: new Constant(new Vector(0.95, 0.95)),
             tint: new Constant(fireworkColors[0]),
         });
-        this._particleSystem.addSpawnModule(this._burst);
-        this._particleSystem.addUpdateModule(new ApplyForce(0, 30));
-        this._particleSystem.addUpdateModule(new AlphaFadeOverLifetime(new Curve([
+        this.particleSystem.addSpawnModule(this.burst);
+        this.particleSystem.addUpdateModule(new ApplyForce(0, 30));
+        this.particleSystem.addUpdateModule(new AlphaFadeOverLifetime(new Curve([
             { t: 0, v: 1 },
             { t: 1, v: 0 },
         ])));
-        this._explosionTimer = new Timer(explosionInterval, true);
-        this._scheduleNextExplosion();
+        this.explosionTimer = new Timer(explosionInterval, true);
+        this.scheduleNextExplosion();
     }
-    _scheduleNextExplosion() {
-        const x = rand(80, this._canvasSize.width - 80);
-        const y = rand(80, this._canvasSize.height - 80);
+    scheduleNextExplosion() {
+        const x = rand(80, this.canvasSize.width - 80);
+        const y = rand(80, this.canvasSize.height - 80);
         const tint = fireworkColors[rand(0, fireworkColors.length - 1) | 0];
-        this._burstPosition.set(x, y);
-        this._burst.config.tint = new Constant(tint);
-        this._burst.reset();
+        this.burstPosition.set(x, y);
+        this.burst.config.tint = new Constant(tint);
+        this.burst.reset();
     }
     update(delta) {
-        if (this._explosionTimer.expired) {
-            this._scheduleNextExplosion();
-            this._explosionTimer.restart();
+        if (this.explosionTimer.expired) {
+            this.scheduleNextExplosion();
+            this.explosionTimer.restart();
         }
-        this._particleSystem.update(delta);
+        this.particleSystem.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._particleSystem);
+        context.render(this.particleSystem);
     }
 }
 app.start(new FireworksScene());

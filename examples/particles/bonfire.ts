@@ -26,8 +26,8 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class BonfireScene extends Scene {
-    private _fireSystem!: ParticleSystem;
-    private _smokeSystem!: ParticleSystem;
+    private fireSystem!: ParticleSystem;
+    private smokeSystem!: ParticleSystem;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { flame: textures.particleFlame, smoke: textures.particleSmoke });
@@ -36,11 +36,11 @@ class BonfireScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this._fireSystem = new ParticleSystem(loader.get(Texture, 'flame'));
-        this._fireSystem.setPosition(width * 0.5, height * 0.75);
-        this._fireSystem.setBlendMode(BlendModes.Additive);
+        this.fireSystem = new ParticleSystem(loader.get(Texture, 'flame'));
+        this.fireSystem.setPosition(width * 0.5, height * 0.75);
+        this.fireSystem.setBlendMode(BlendModes.Additive);
 
-        this._fireSystem.addSpawnModule(
+        this.fireSystem.addSpawnModule(
             new RateSpawn({
                 rate: new Constant(50),
                 lifetime: new Range(5, 10),
@@ -49,7 +49,7 @@ class BonfireScene extends Scene {
             }),
         );
 
-        this._fireSystem.addUpdateModule(
+        this.fireSystem.addUpdateModule(
             new ColorOverLifetime(
                 new ColorGradient([
                     { t: 0, color: new Color(194, 64, 30, 1) },
@@ -58,11 +58,11 @@ class BonfireScene extends Scene {
             ),
         );
 
-        this._smokeSystem = new ParticleSystem(loader.get(Texture, 'smoke'));
-        this._smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
-        this._smokeSystem.setBlendMode(BlendModes.Normal);
+        this.smokeSystem = new ParticleSystem(loader.get(Texture, 'smoke'));
+        this.smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
+        this.smokeSystem.setBlendMode(BlendModes.Normal);
 
-        this._smokeSystem.addSpawnModule(
+        this.smokeSystem.addSpawnModule(
             new RateSpawn({
                 rate: new Constant(8),
                 lifetime: new Range(8, 14),
@@ -71,7 +71,7 @@ class BonfireScene extends Scene {
             }),
         );
 
-        this._smokeSystem.addUpdateModule(
+        this.smokeSystem.addUpdateModule(
             new ColorOverLifetime(
                 new ColorGradient([
                     { t: 0, color: new Color(120, 100, 80, 0.4) },
@@ -82,14 +82,14 @@ class BonfireScene extends Scene {
     }
 
     override update(delta): void {
-        this._fireSystem.update(delta);
-        this._smokeSystem.update(delta);
+        this.fireSystem.update(delta);
+        this.smokeSystem.update(delta);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._smokeSystem);
-        context.render(this._fireSystem);
+        context.render(this.smokeSystem);
+        context.render(this.fireSystem);
     }
 }
 

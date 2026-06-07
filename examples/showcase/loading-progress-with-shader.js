@@ -26,33 +26,33 @@ struct Uniforms { uProgress:f32, _pad0:vec3<f32> };
     let col=mix(vec3<f32>(0.2),vec3<f32>(0.3,0.8,1.0),fill); return vec4<f32>(col*ring,ring);
 }`;
 class LoadingProgressWithShaderScene extends Scene {
-    _progress;
-    _label;
-    _ring;
-    _filter;
+    progress;
+    label;
+    ring;
+    filter;
     async load(loader) {
         await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
     }
     init(loader) {
-        this._progress = { v: 0 };
-        this._label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
-        this._label.setPosition(360, 410);
-        this._ring = new Sprite(loader.get(Texture, 'uvGrid')).setScale(2.2).setPosition(310, 130);
-        this._filter =
+        this.progress = { v: 0 };
+        this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
+        this.label.setPosition(360, 410);
+        this.ring = new Sprite(loader.get(Texture, 'uvGrid')).setScale(2.2).setPosition(310, 130);
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uProgress: 0 } });
-        this._ring.filters = [this._filter];
-        this.app.tweens.create(this._progress).to({ v: 1 }, 2.4).start();
+        this.ring.filters = [this.filter];
+        this.app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
     }
     update() {
-        this._filter.uniforms.uProgress = this._progress.v;
-        this._label.text = `${(this._progress.v * 100) | 0}%`;
+        this.filter.uniforms.uProgress = this.progress.v;
+        this.label.text = `${(this.progress.v * 100) | 0}%`;
     }
     draw(context) {
         context.backend.clear(new Color(14, 18, 28));
-        context.render(this._ring);
-        context.render(this._label);
+        context.render(this.ring);
+        context.render(this.label);
     }
 }
 app.start(new LoadingProgressWithShaderScene());

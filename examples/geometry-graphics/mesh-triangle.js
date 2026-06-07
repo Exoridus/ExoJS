@@ -9,10 +9,10 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class MeshTriangleScene extends Scene {
-    _triangle;
+    triangle;
     init() {
         const { width, height } = this.app.canvas;
-        this._triangle = new Mesh({
+        this.triangle = new Mesh({
             vertices: new Float32Array([0, -100, 100, 100, -100, 100]),
             colors: new Uint32Array([
                 0xff0000ff,
@@ -20,14 +20,14 @@ class MeshTriangleScene extends Scene {
                 0xffff0000,
             ]),
         });
-        this._triangle.setPosition((width / 2) | 0, (height / 2) | 0);
+        this.triangle.setPosition((width / 2) | 0, (height / 2) | 0);
     }
     update(delta) {
-        this._triangle.rotate(delta.seconds * 60);
+        this.triangle.rotate(delta.seconds * 60);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._triangle);
+        context.render(this.triangle);
     }
 }
 app.start(new MeshTriangleScene());

@@ -12,19 +12,19 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class RenderToTextureScene extends Scene {
-    _container;
-    _renderTexture;
-    _renderSprite;
+    container;
+    renderTexture;
+    renderSprite;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this._container = this.createBunnyContainer(loader.get(Texture, 'bunny'));
-        this._renderTexture = this.createRenderTexture(this._container);
-        this._renderSprite = new Sprite(this._renderTexture);
-        this._renderSprite.setPosition(width, height);
-        this._renderSprite.setAnchor(1, 1);
+        this.container = this.createBunnyContainer(loader.get(Texture, 'bunny'));
+        this.renderTexture = this.createRenderTexture(this.container);
+        this.renderSprite = new Sprite(this.renderTexture);
+        this.renderSprite.setPosition(width, height);
+        this.renderSprite.setAnchor(1, 1);
     }
     createBunnyContainer(texture) {
         const container = new Container();
@@ -48,8 +48,8 @@ class RenderToTextureScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._container);
-        context.render(this._renderSprite);
+        context.render(this.container);
+        context.render(this.renderSprite);
     }
 }
 app.start(new RenderToTextureScene());

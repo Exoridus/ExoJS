@@ -14,40 +14,40 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class TrailFeedbackScene extends Scene {
-    private _rt!: RenderTexture;
-    private _decay!: Sprite;
-    private _bunny!: Sprite;
-    private _final!: Sprite;
-    private _time = 0;
+    private rt!: RenderTexture;
+    private decay!: Sprite;
+    private bunny!: Sprite;
+    private final!: Sprite;
+    private time = 0;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
 
     override init(loader): void {
-        this._rt = new RenderTexture(800, 600);
-        this._decay = new Sprite(this._rt).setTint(new Color(255, 255, 255, 0.93));
-        this._bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
-        this._final = new Sprite(this._rt);
+        this.rt = new RenderTexture(800, 600);
+        this.decay = new Sprite(this.rt).setTint(new Color(255, 255, 255, 0.93));
+        this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
+        this.final = new Sprite(this.rt);
     }
 
     override update(delta): void {
-        this._time += delta.seconds;
-        this._bunny.setPosition(400 + Math.cos(this._time * 2.0) * 230, 300 + Math.sin(this._time * 2.7) * 170);
+        this.time += delta.seconds;
+        this.bunny.setPosition(400 + Math.cos(this.time * 2.0) * 230, 300 + Math.sin(this.time * 2.7) * 170);
     }
 
     override draw(context): void {
         context.backend.execute(
             new RenderTargetPass(
                 () => {
-                    context.render(this._decay);
-                    context.render(this._bunny);
+                    context.render(this.decay);
+                    context.render(this.bunny);
                 },
-                { target: this._rt, view: this._rt.view },
+                { target: this.rt, view: this.rt.view },
             ),
         );
         context.backend.clear();
-        context.render(this._final);
+        context.render(this.final);
     }
 }
 

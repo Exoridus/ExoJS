@@ -13,12 +13,12 @@ const app = new Application({
 document.body.append(app.canvas);
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
 class MultiGamepadScene extends Scene {
-    _players;
+    players;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._players = app.input.gamepads.map((pad, index) => {
+        this.players = app.input.gamepads.map((pad, index) => {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
                 .setAnchor(0.5)
                 .setScale(0.6)
@@ -41,7 +41,7 @@ class MultiGamepadScene extends Scene {
         });
     }
     update(delta) {
-        for (const player of this._players) {
+        for (const player of this.players) {
             if (!player.pad.connected)
                 continue;
             player.sprite.move(player.move.x * 260 * delta.seconds, player.move.y * 260 * delta.seconds);
@@ -49,7 +49,7 @@ class MultiGamepadScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        for (const player of this._players) {
+        for (const player of this.players) {
             context.render(player.sprite);
         }
     }

@@ -14,8 +14,8 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class BasicTextScene extends Scene {
-    private _time!: Time;
-    private _text!: Text;
+    private time!: Time;
+    private text!: Text;
 
     override async load(loader): Promise<void> {
         await loader.load(FontAsset, { example: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
@@ -24,9 +24,9 @@ class BasicTextScene extends Scene {
     override init(): void {
         const { width, height } = this.app.canvas;
 
-        this._time = new Time();
+        this.time = new Time();
 
-        this._text = new Text('Hello World!', {
+        this.text = new Text('Hello World!', {
             align: 'left',
             fillColor: Color.white,
             outlineColor: Color.black,
@@ -35,18 +35,18 @@ class BasicTextScene extends Scene {
             fontFamily: 'Kenney Future',
         });
 
-        this._text.setPosition(width / 2, height / 2);
-        this._text.setAnchor(0.5, 0.5);
+        this.text.setPosition(width / 2, height / 2);
+        this.text.setAnchor(0.5, 0.5);
     }
 
     override update(delta): void {
-        this._text.text = `Hello World! ${this._time.addTime(delta).seconds | 0}`;
-        this._text.rotate(delta.seconds * 36);
+        this.text.text = `Hello World! ${this.time.addTime(delta).seconds | 0}`;
+        this.text.rotate(delta.seconds * 36);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 

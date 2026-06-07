@@ -22,13 +22,13 @@ const easings = [
     ['elasticOut', Ease.elasticOut],
 ];
 class EasingCurvesScene extends Scene {
-    _rows;
+    rows;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
         const texture = loader.get(Texture, 'bunny');
-        this._rows = easings.map(([name, easing], index) => {
+        this.rows = easings.map(([name, easing], index) => {
             const y = 70 + index * 64;
             const sprite = new Sprite(texture)
                 .setAnchor(0.5)
@@ -42,7 +42,7 @@ class EasingCurvesScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        for (const row of this._rows) {
+        for (const row of this.rows) {
             context.render(row.sprite);
             context.render(row.label);
         }

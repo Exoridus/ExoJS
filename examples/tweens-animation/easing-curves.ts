@@ -25,7 +25,7 @@ const easings: [string, (t: number) => number][] = [
 ];
 
 class EasingCurvesScene extends Scene {
-    private _rows!: { sprite: Sprite; label: Text; tween: object }[];
+    private rows!: { sprite: Sprite; label: Text; tween: object }[];
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
@@ -33,7 +33,7 @@ class EasingCurvesScene extends Scene {
 
     override init(loader): void {
         const texture = loader.get(Texture, 'bunny');
-        this._rows = easings.map(([name, easing], index) => {
+        this.rows = easings.map(([name, easing], index) => {
             const y = 70 + index * 64;
             const sprite = new Sprite(texture)
                 .setAnchor(0.5)
@@ -48,7 +48,7 @@ class EasingCurvesScene extends Scene {
 
     override draw(context): void {
         context.backend.clear();
-        for (const row of this._rows) {
+        for (const row of this.rows) {
             context.render(row.sprite);
             context.render(row.label);
         }

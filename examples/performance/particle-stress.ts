@@ -27,36 +27,36 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class TintCycle extends UpdateModule {
-    private _palette: Color[];
-    private _next = 0;
+    private palette: Color[];
+    private next = 0;
 
     constructor(palette: Color[]) {
         super();
-        this._palette = palette;
+        this.palette = palette;
     }
 
     apply(system): void {
         const { color, liveCount, elapsed } = system;
         for (let i = 0; i < liveCount; i++) {
             if (elapsed[i] === 0) {
-                color[i] = this._palette[this._next++ % this._palette.length].toRgba();
+                color[i] = this.palette[this.next++ % this.palette.length].toRgba();
             }
         }
     }
 }
 
 class ParticleStressScene extends Scene {
-    private _sharedTexture!: Texture;
-    private _particleSystems!: { instance: ParticleSystem; baseX: number; baseY: number }[];
+    private sharedTexture!: Texture;
+    private particleSystems!: { instance: ParticleSystem; baseX: number; baseY: number }[];
 
     override init(): void {
         const { width, height } = this.app.canvas;
 
-        this._sharedTexture = createParticleTexture();
-        this._particleSystems = [];
+        this.sharedTexture = createParticleTexture();
+        this.particleSystems = [];
 
-        this._particleSystems.push(
-            this._buildSystem({
+        this.particleSystems.push(
+            this.buildSystem({
                 x: width * 0.24,
                 y: height * 0.78,
                 rate: 240,
@@ -75,8 +75,8 @@ class ParticleStressScene extends Scene {
             }),
         );
 
-        this._particleSystems.push(
-            this._buildSystem({
+        this.particleSystems.push(
+            this.buildSystem({
                 x: width * 0.5,
                 y: height * 0.82,
                 rate: 320,
@@ -95,8 +95,8 @@ class ParticleStressScene extends Scene {
             }),
         );
 
-        this._particleSystems.push(
-            this._buildSystem({
+        this.particleSystems.push(
+            this.buildSystem({
                 x: width * 0.76,
                 y: height * 0.76,
                 rate: 240,
@@ -116,8 +116,8 @@ class ParticleStressScene extends Scene {
         );
     }
 
-    private _buildSystem(config: any): { instance: ParticleSystem; baseX: number; baseY: number } {
-        const system = new ParticleSystem(this._sharedTexture, { capacity: 4096 });
+    private buildSystem(config: any): { instance: ParticleSystem; baseX: number; baseY: number } {
+        const system = new ParticleSystem(this.sharedTexture, { capacity: 4096 });
 
         system.setPosition(config.x, config.y);
 
@@ -156,8 +156,8 @@ class ParticleStressScene extends Scene {
     override update(delta): void {
         const time = this.app.activeTime.seconds;
 
-        for (let i = 0; i < this._particleSystems.length; i++) {
-            const entry = this._particleSystems[i];
+        for (let i = 0; i < this.particleSystems.length; i++) {
+            const entry = this.particleSystems[i];
             const wave = time + i * 1.2;
 
             entry.instance.setPosition(entry.baseX + Math.sin(wave * 1.4) * 18, entry.baseY + Math.cos(wave * 1.7) * 10);
@@ -169,23 +169,23 @@ class ParticleStressScene extends Scene {
     override draw(context): void {
         context.backend.clear();
 
-        for (const entry of this._particleSystems) {
+        for (const entry of this.particleSystems) {
             context.render(entry.instance);
         }
     }
 
     override unload(): void {
-        this._destroySystems();
+        this.destroySystems();
     }
 
     override destroy(): void {
-        this._destroySystems();
+        this.destroySystems();
     }
 
-    private _destroySystems(): void {
-        for (const entry of this._particleSystems) entry.instance?.destroy();
-        this._particleSystems = null!;
-        this._sharedTexture = null!;
+    private destroySystems(): void {
+        for (const entry of this.particleSystems) entry.instance?.destroy();
+        this.particleSystems = null!;
+        this.sharedTexture = null!;
     }
 }
 

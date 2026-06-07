@@ -12,14 +12,14 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class SpriteStressScene extends Scene {
-    _sprites;
-    _spriteLayer;
+    sprites;
+    spriteLayer;
     init() {
         const { width, height } = this.app.canvas;
         const atlasTexture = createAtlasTexture();
-        this._sprites = [];
-        this._spriteLayer = new Container();
-        this._spriteLayer.setPosition(width / 2, height / 2);
+        this.sprites = [];
+        this.spriteLayer = new Container();
+        this.spriteLayer.setPosition(width / 2, height / 2);
         const frameChoices = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
         const tintPalette = [Color.white, Color.skyBlue, Color.gold, Color.hotPink, Color.mediumSpringGreen, Color.orange];
         let index = 0;
@@ -36,7 +36,7 @@ class SpriteStressScene extends Scene {
                 sprite.setPosition(offsetX, offsetY);
                 sprite.setScale(baseScale);
                 sprite.setTint(tintPalette[index % tintPalette.length]);
-                this._sprites.push({
+                this.sprites.push({
                     sprite,
                     offsetX,
                     offsetY,
@@ -46,15 +46,15 @@ class SpriteStressScene extends Scene {
                     driftY: 4 + (index % 5) * 2,
                     rotationSpeed: (index % 2 === 0 ? 1 : -1) * (14 + (index % 6) * 7),
                 });
-                this._spriteLayer.addChild(sprite);
+                this.spriteLayer.addChild(sprite);
                 index++;
             }
         }
     }
     update(delta) {
         const time = this.app.activeTime.seconds;
-        this._spriteLayer.rotate(delta.seconds * 2.5);
-        for (const entry of this._sprites) {
+        this.spriteLayer.rotate(delta.seconds * 2.5);
+        for (const entry of this.sprites) {
             const localPhase = time + entry.phase;
             const scale = entry.baseScale + Math.sin(localPhase * 1.8) * 0.08;
             entry.sprite.x = entry.offsetX + Math.sin(localPhase * 1.4) * entry.driftX;
@@ -65,13 +65,13 @@ class SpriteStressScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._spriteLayer);
+        context.render(this.spriteLayer);
     }
     unload() {
-        this._spriteLayer?.destroy();
+        this.spriteLayer?.destroy();
     }
     destroy() {
-        this._spriteLayer?.destroy();
+        this.spriteLayer?.destroy();
     }
 }
 app.start(new SpriteStressScene()).catch(() => {

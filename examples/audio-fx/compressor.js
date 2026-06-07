@@ -18,74 +18,74 @@ const sliders = [
     { key: 'release', min: 0.02, max: 0.8, y: 400 },
 ];
 class CompressorScene extends Scene {
-    _music;
-    _filter;
-    _gfx;
-    _labels;
-    _meterLabel;
-    _drag = -1;
+    music;
+    filter;
+    gfx;
+    labels;
+    meterLabel;
+    drag = -1;
     async load(loader) {
         await loader.load(Music, { music: 'audio/demo-loop-main.ogg' });
     }
     init(loader) {
-        this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.8).play();
-        this._filter = new CompressorFilter();
-        app.audio.music.addFilter(this._filter);
-        this._gfx = new Graphics();
-        this._labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));
-        this._meterLabel = new Text('', { fillColor: Color.white, fontSize: 16 });
-        this._meterLabel.setPosition(120, 478);
+        this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.8).play();
+        this.filter = new CompressorFilter();
+        app.audio.music.addFilter(this.filter);
+        this.gfx = new Graphics();
+        this.labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));
+        this.meterLabel = new Text('', { fillColor: Color.white, fontSize: 16 });
+        this.meterLabel.setPosition(120, 478);
         this.app.input.onPointerDown.add(p => {
-            this._drag = this._sliderAt(p.y);
-            this._apply(p.x);
+            this.drag = this.sliderAt(p.y);
+            this.apply(p.x);
         });
         this.app.input.onPointerMove.add(p => {
-            this._apply(p.x);
+            this.apply(p.x);
         });
         this.app.input.onPointerUp.add(() => {
-            this._drag = -1;
+            this.drag = -1;
         });
     }
-    _sliderAt(y) {
+    sliderAt(y) {
         for (let i = 0; i < sliders.length; i++)
             if (Math.abs(y - sliders[i].y) <= 16)
                 return i;
         return -1;
     }
-    _apply(x) {
-        if (this._drag < 0)
+    apply(x) {
+        if (this.drag < 0)
             return;
-        const def = sliders[this._drag];
+        const def = sliders[this.drag];
         const t = Math.max(0, Math.min(1, (x - 260) / 420));
-        this._filter[def.key] = def.min + (def.max - def.min) * t;
+        this.filter[def.key] = def.min + (def.max - def.min) * t;
     }
-    _value(def) {
-        return this._filter[def.key];
+    value(def) {
+        return this.filter[def.key];
     }
     draw(context) {
         context.backend.clear();
-        this._gfx.clear();
+        this.gfx.clear();
         for (let i = 0; i < sliders.length; i++) {
             const def = sliders[i];
-            const val = this._value(def);
+            const val = this.value(def);
             const t = (val - def.min) / (def.max - def.min);
-            this._gfx.fillColor = new Color(70, 70, 70);
-            this._gfx.drawRectangle(260, def.y - 6, 420, 12);
-            this._gfx.fillColor = new Color(120, 200, 255);
-            this._gfx.drawRectangle(260, def.y - 6, 420 * t, 12);
-            this._labels[i].text = `${def.key}: ${val.toFixed(def.key === 'ratio' ? 2 : 3)}`;
-            this._labels[i].setPosition(120, def.y - 12);
-            context.render(this._labels[i]);
+            this.gfx.fillColor = new Color(70, 70, 70);
+            this.gfx.drawRectangle(260, def.y - 6, 420, 12);
+            this.gfx.fillColor = new Color(120, 200, 255);
+            this.gfx.drawRectangle(260, def.y - 6, 420 * t, 12);
+            this.labels[i].text = `${def.key}: ${val.toFixed(def.key === 'ratio' ? 2 : 3)}`;
+            this.labels[i].setPosition(120, def.y - 12);
+            context.render(this.labels[i]);
         }
-        const reduction = this._filter.reduction;
+        const reduction = this.filter.reduction;
         const meterT = Math.max(0, Math.min(1, -reduction / 24));
-        this._gfx.fillColor = new Color(70, 70, 70);
-        this._gfx.drawRectangle(260, 484, 420, 12);
-        this._gfx.fillColor = new Color(255, 140, 140);
-        this._gfx.drawRectangle(260, 484, 420 * meterT, 12);
-        this._meterLabel.text = `gain reduction: ${reduction.toFixed(1)} dB`;
-        context.render(this._meterLabel);
-        context.render(this._gfx);
+        this.gfx.fillColor = new Color(70, 70, 70);
+        this.gfx.drawRectangle(260, 484, 420, 12);
+        this.gfx.fillColor = new Color(255, 140, 140);
+        this.gfx.drawRectangle(260, 484, 420 * meterT, 12);
+        this.meterLabel.text = `gain reduction: ${reduction.toFixed(1)} dB`;
+        context.render(this.meterLabel);
+        context.render(this.gfx);
     }
 }
 app.start(new CompressorScene());

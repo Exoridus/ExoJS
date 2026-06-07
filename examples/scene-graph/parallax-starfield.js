@@ -15,10 +15,10 @@ const speeds = [0.15, 0.35, 0.6];
 const counts = [60, 40, 24];
 const colors = [new Color(120, 140, 200), new Color(170, 190, 255), new Color(255, 255, 255)];
 class ParallaxStarfieldScene extends Scene {
-    _layers;
-    _pointer = { x: 400, y: 300 };
+    layers;
+    pointer = { x: 400, y: 300 };
     init() {
-        this._layers = counts.map((count, index) => {
+        this.layers = counts.map((count, index) => {
             const g = new Graphics();
             g.fillColor = colors[index];
             for (let i = 0; i < count; i++) {
@@ -30,15 +30,15 @@ class ParallaxStarfieldScene extends Scene {
             return g;
         });
         this.app.input.onPointerMove.add(pointer => {
-            this._pointer = { x: pointer.x, y: pointer.y };
+            this.pointer = { x: pointer.x, y: pointer.y };
         });
     }
     draw(context) {
         context.backend.clear();
-        for (let i = 0; i < this._layers.length; i++) {
-            const layer = this._layers[i];
+        for (let i = 0; i < this.layers.length; i++) {
+            const layer = this.layers[i];
             const factor = speeds[i];
-            layer.setPosition((400 - this._pointer.x) * factor, (300 - this._pointer.y) * factor);
+            layer.setPosition((400 - this.pointer.x) * factor, (300 - this.pointer.y) * factor);
             context.render(layer);
         }
     }

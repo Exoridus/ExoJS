@@ -13,18 +13,18 @@ const app = new Application({
 document.body.append(app.canvas);
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
-    _sprite;
+    sprite;
     async load(loader) {
-        this._sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
     }
     init() {
         const { width, height } = this.app.canvas;
-        this._sprite.setAnchor(0.5);
-        this._sprite.setPosition(width / 2, height / 2);
+        this.sprite.setAnchor(0.5);
+        this.sprite.setPosition(width / 2, height / 2);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 // #endregion guide:first-scene

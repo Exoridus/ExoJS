@@ -29,49 +29,49 @@ const satWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @
 const HUE_RAMP = technical.color.hueRamp;
 
 class ColorFilterScene extends Scene {
-    private _sprite!: Sprite;
-    private _tint!: ColorFilter;
-    private _gray!: WebGl2ShaderFilter | WebGpuShaderFilter;
-    private _sat!: WebGl2ShaderFilter | WebGpuShaderFilter;
-    private _mode = 0;
+    private sprite!: Sprite;
+    private tint!: ColorFilter;
+    private gray!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private sat!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private mode = 0;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { hueRamp: HUE_RAMP });
     }
 
     override init(loader): void {
-        this._sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(3).setPosition(400, 300);
-        this._tint = new ColorFilter(new Color(255, 160, 120));
-        this._gray =
+        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(3).setPosition(400, 300);
+        this.tint = new ColorFilter(new Color(255, 160, 120));
+        this.gray =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: grayWgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: grayGlsl });
-        this._sat =
+        this.sat =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: satWgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: satGlsl });
-        this._applyMode();
+        this.applyMode();
         this.inputs.onTrigger(Keyboard.One, () => {
-            this._mode = 0;
-            this._applyMode();
+            this.mode = 0;
+            this.applyMode();
         });
         this.inputs.onTrigger(Keyboard.Two, () => {
-            this._mode = 1;
-            this._applyMode();
+            this.mode = 1;
+            this.applyMode();
         });
         this.inputs.onTrigger(Keyboard.Three, () => {
-            this._mode = 2;
-            this._applyMode();
+            this.mode = 2;
+            this.applyMode();
         });
     }
 
-    private _applyMode(): void {
-        this._sprite.filters = [this._mode === 0 ? this._tint : this._mode === 1 ? this._gray : this._sat];
+    private applyMode(): void {
+        this.sprite.filters = [this.mode === 0 ? this.tint : this.mode === 1 ? this.gray : this.sat];
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 

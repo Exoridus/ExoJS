@@ -15,28 +15,28 @@ document.body.append(app.canvas);
 const debug = new DebugOverlay(app);
 debug.layers.boundingBoxes.visible = true;
 class BoundingBoxesScene extends Scene {
-    _sprites;
-    _time = 0;
+    sprites;
+    time = 0;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._sprites = Array.from({ length: 7 }, (_, i) => {
+        this.sprites = Array.from({ length: 7 }, (_, i) => {
             const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.8);
             sprite.setPosition(120 + i * 90, 300 + Math.sin(i) * 80);
             return { sprite, speed: 0.8 + i * 0.14 };
         });
     }
     update(delta) {
-        this._time += delta.seconds;
-        for (const { sprite, speed } of this._sprites) {
-            sprite.setRotation(this._time * 35 * speed);
-            sprite.setPosition(sprite.position.x, 300 + Math.sin(this._time * speed) * 100);
+        this.time += delta.seconds;
+        for (const { sprite, speed } of this.sprites) {
+            sprite.setRotation(this.time * 35 * speed);
+            sprite.setPosition(sprite.position.x, 300 + Math.sin(this.time * speed) * 100);
         }
     }
     draw(context) {
         context.backend.clear();
-        for (const { sprite } of this._sprites)
+        for (const { sprite } of this.sprites)
             context.render(sprite);
     }
 }

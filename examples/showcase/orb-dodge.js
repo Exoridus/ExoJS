@@ -18,63 +18,63 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class PlayScene extends Scene {
-    _world;
-    _player;
-    _orbs = [];
-    _px = CANVAS_WIDTH / 2;
-    _py = CANVAS_HEIGHT / 2;
-    _dx = 0;
-    _dy = 0;
-    _score = 0;
-    _elapsed = 0;
-    _spawnTimer = 0;
-    _scoreText;
-    _timeText;
+    world;
+    player;
+    orbs = [];
+    px = CANVAS_WIDTH / 2;
+    py = CANVAS_HEIGHT / 2;
+    dx = 0;
+    dy = 0;
+    score = 0;
+    elapsed = 0;
+    spawnTimer = 0;
+    scoreText;
+    timeText;
     init() {
-        this._px = CANVAS_WIDTH / 2;
-        this._py = CANVAS_HEIGHT / 2;
-        this._score = 0;
-        this._elapsed = 0;
-        this._spawnTimer = 0;
-        this._dx = 0;
-        this._dy = 0;
-        this._orbs = [];
-        this._world = new Container();
-        this._player = new Graphics();
-        this._player.fillColor = new Color(80, 160, 255);
-        this._player.drawCircle(0, 0, PLAYER_RADIUS);
-        this._player.setPosition(this._px, this._py);
-        this._world.addChild(this._player);
-        this._scoreText = new Text('Score: 0', { fillColor: Color.white, fontSize: 20 });
-        this._scoreText.setPosition(16, 14);
-        this._timeText = new Text('0.0 s', { fillColor: Color.white, fontSize: 20 });
-        this._timeText.setPosition(CANVAS_WIDTH - 90, 14);
-        this.inputs.onActive(Keyboard.W, () => { this._dy = -1; });
-        this.inputs.onStop(Keyboard.W, () => { if (this._dy < 0)
-            this._dy = 0; });
-        this.inputs.onActive(Keyboard.Up, () => { this._dy = -1; });
-        this.inputs.onStop(Keyboard.Up, () => { if (this._dy < 0)
-            this._dy = 0; });
-        this.inputs.onActive(Keyboard.S, () => { this._dy = 1; });
-        this.inputs.onStop(Keyboard.S, () => { if (this._dy > 0)
-            this._dy = 0; });
-        this.inputs.onActive(Keyboard.Down, () => { this._dy = 1; });
-        this.inputs.onStop(Keyboard.Down, () => { if (this._dy > 0)
-            this._dy = 0; });
-        this.inputs.onActive(Keyboard.A, () => { this._dx = -1; });
-        this.inputs.onStop(Keyboard.A, () => { if (this._dx < 0)
-            this._dx = 0; });
-        this.inputs.onActive(Keyboard.Left, () => { this._dx = -1; });
-        this.inputs.onStop(Keyboard.Left, () => { if (this._dx < 0)
-            this._dx = 0; });
-        this.inputs.onActive(Keyboard.D, () => { this._dx = 1; });
-        this.inputs.onStop(Keyboard.D, () => { if (this._dx > 0)
-            this._dx = 0; });
-        this.inputs.onActive(Keyboard.Right, () => { this._dx = 1; });
-        this.inputs.onStop(Keyboard.Right, () => { if (this._dx > 0)
-            this._dx = 0; });
+        this.px = CANVAS_WIDTH / 2;
+        this.py = CANVAS_HEIGHT / 2;
+        this.score = 0;
+        this.elapsed = 0;
+        this.spawnTimer = 0;
+        this.dx = 0;
+        this.dy = 0;
+        this.orbs = [];
+        this.world = new Container();
+        this.player = new Graphics();
+        this.player.fillColor = new Color(80, 160, 255);
+        this.player.drawCircle(0, 0, PLAYER_RADIUS);
+        this.player.setPosition(this.px, this.py);
+        this.world.addChild(this.player);
+        this.scoreText = new Text('Score: 0', { fillColor: Color.white, fontSize: 20 });
+        this.scoreText.setPosition(16, 14);
+        this.timeText = new Text('0.0 s', { fillColor: Color.white, fontSize: 20 });
+        this.timeText.setPosition(CANVAS_WIDTH - 90, 14);
+        this.inputs.onActive(Keyboard.W, () => { this.dy = -1; });
+        this.inputs.onStop(Keyboard.W, () => { if (this.dy < 0)
+            this.dy = 0; });
+        this.inputs.onActive(Keyboard.Up, () => { this.dy = -1; });
+        this.inputs.onStop(Keyboard.Up, () => { if (this.dy < 0)
+            this.dy = 0; });
+        this.inputs.onActive(Keyboard.S, () => { this.dy = 1; });
+        this.inputs.onStop(Keyboard.S, () => { if (this.dy > 0)
+            this.dy = 0; });
+        this.inputs.onActive(Keyboard.Down, () => { this.dy = 1; });
+        this.inputs.onStop(Keyboard.Down, () => { if (this.dy > 0)
+            this.dy = 0; });
+        this.inputs.onActive(Keyboard.A, () => { this.dx = -1; });
+        this.inputs.onStop(Keyboard.A, () => { if (this.dx < 0)
+            this.dx = 0; });
+        this.inputs.onActive(Keyboard.Left, () => { this.dx = -1; });
+        this.inputs.onStop(Keyboard.Left, () => { if (this.dx < 0)
+            this.dx = 0; });
+        this.inputs.onActive(Keyboard.D, () => { this.dx = 1; });
+        this.inputs.onStop(Keyboard.D, () => { if (this.dx > 0)
+            this.dx = 0; });
+        this.inputs.onActive(Keyboard.Right, () => { this.dx = 1; });
+        this.inputs.onStop(Keyboard.Right, () => { if (this.dx > 0)
+            this.dx = 0; });
     }
-    _spawnOrb() {
+    spawnOrb() {
         const danger = Math.random() < 0.4;
         const side = Math.floor(Math.random() * 4);
         let ox;
@@ -105,114 +105,114 @@ class PlayScene extends Scene {
         gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
         gfx.drawCircle(0, 0, ORB_RADIUS);
         gfx.setPosition(ox, oy);
-        this._world.addChild(gfx);
-        this._orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
+        this.world.addChild(gfx);
+        this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
     }
     update(delta) {
-        this._elapsed += delta.seconds;
-        this._spawnTimer += delta.seconds;
-        if (this._spawnTimer >= SPAWN_INTERVAL) {
-            this._spawnTimer -= SPAWN_INTERVAL;
-            this._spawnOrb();
+        this.elapsed += delta.seconds;
+        this.spawnTimer += delta.seconds;
+        if (this.spawnTimer >= SPAWN_INTERVAL) {
+            this.spawnTimer -= SPAWN_INTERVAL;
+            this.spawnOrb();
         }
-        const mag = Math.hypot(this._dx, this._dy) || 1;
-        if (this._dx !== 0 || this._dy !== 0) {
-            this._px += (this._dx / mag) * PLAYER_SPEED * delta.seconds;
-            this._py += (this._dy / mag) * PLAYER_SPEED * delta.seconds;
+        const mag = Math.hypot(this.dx, this.dy) || 1;
+        if (this.dx !== 0 || this.dy !== 0) {
+            this.px += (this.dx / mag) * PLAYER_SPEED * delta.seconds;
+            this.py += (this.dy / mag) * PLAYER_SPEED * delta.seconds;
         }
-        this._px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this._px));
-        this._py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this._py));
-        this._player.setPosition(this._px, this._py);
+        this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
+        this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
+        this.player.setPosition(this.px, this.py);
         let gameEnded = false;
         const survived = [];
-        for (const orb of this._orbs) {
+        for (const orb of this.orbs) {
             orb.gfx.move(orb.vx * delta.seconds, orb.vy * delta.seconds);
             if (gameEnded) {
-                this._world.removeChild(orb.gfx);
+                this.world.removeChild(orb.gfx);
                 orb.gfx.destroy();
                 continue;
             }
             const ox = orb.gfx.x;
             const oy = orb.gfx.y;
             if (ox < -80 || ox > CANVAS_WIDTH + 80 || oy < -80 || oy > CANVAS_HEIGHT + 80) {
-                this._world.removeChild(orb.gfx);
+                this.world.removeChild(orb.gfx);
                 orb.gfx.destroy();
                 continue;
             }
-            const dist = Math.hypot(ox - this._px, oy - this._py);
+            const dist = Math.hypot(ox - this.px, oy - this.py);
             if (dist < PLAYER_RADIUS + ORB_RADIUS) {
-                this._world.removeChild(orb.gfx);
+                this.world.removeChild(orb.gfx);
                 orb.gfx.destroy();
                 if (orb.danger) {
                     for (const o of survived) {
-                        this._world.removeChild(o.gfx);
+                        this.world.removeChild(o.gfx);
                         o.gfx.destroy();
                     }
                     gameEnded = true;
                     continue;
                 }
-                this._score++;
-                this._scoreText.text = `Score: ${this._score}`;
+                this.score++;
+                this.scoreText.text = `Score: ${this.score}`;
                 continue;
             }
             survived.push(orb);
         }
-        this._orbs = gameEnded ? [] : survived;
+        this.orbs = gameEnded ? [] : survived;
         if (gameEnded) {
-            gameOver.setResult(this._score, this._elapsed);
+            gameOver.setResult(this.score, this.elapsed);
             void this.app.scene.setScene(gameOver);
             return;
         }
-        this._timeText.text = `${this._elapsed.toFixed(1)} s`;
+        this.timeText.text = `${this.elapsed.toFixed(1)} s`;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._world);
-        context.render(this._scoreText);
-        context.render(this._timeText);
+        context.render(this.world);
+        context.render(this.scoreText);
+        context.render(this.timeText);
     }
     destroy() {
-        for (const orb of this._orbs) {
+        for (const orb of this.orbs) {
             orb.gfx.destroy();
         }
-        this._world?.destroy();
+        this.world?.destroy();
         super.destroy();
     }
 }
 // #region guide:game-over-scene
 class GameOverScene extends Scene {
-    _title;
-    _stats;
-    _hint;
-    _finalScore = 0;
-    _finalTime = 0;
+    title;
+    stats;
+    hint;
+    finalScore = 0;
+    finalTime = 0;
     setResult(score, time) {
-        this._finalScore = score;
-        this._finalTime = time;
+        this.finalScore = score;
+        this.finalTime = time;
     }
     init() {
-        this._title = new Text('GAME OVER', {
+        this.title = new Text('GAME OVER', {
             align: 'center',
             fillColor: new Color(255, 80, 80),
             fontSize: 52,
             fontWeight: 'bold',
         });
-        this._title.setAnchor(0.5);
-        this._title.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 70);
-        this._stats = new Text(`Score: ${this._finalScore}   Time: ${this._finalTime.toFixed(1)} s`, {
+        this.title.setAnchor(0.5);
+        this.title.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 70);
+        this.stats = new Text(`Score: ${this.finalScore}   Time: ${this.finalTime.toFixed(1)} s`, {
             align: 'center',
             fillColor: Color.white,
             fontSize: 26,
         });
-        this._stats.setAnchor(0.5);
-        this._stats.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
-        this._hint = new Text('Press Space or R to play again', {
+        this.stats.setAnchor(0.5);
+        this.stats.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+        this.hint = new Text('Press Space or R to play again', {
             align: 'center',
             fillColor: new Color(160, 160, 160),
             fontSize: 18,
         });
-        this._hint.setAnchor(0.5);
-        this._hint.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
+        this.hint.setAnchor(0.5);
+        this.hint.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
         const restart = () => {
             void this.app.scene.setScene(play);
         };
@@ -221,9 +221,9 @@ class GameOverScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._title);
-        context.render(this._stats);
-        context.render(this._hint);
+        context.render(this.title);
+        context.render(this.stats);
+        context.render(this.hint);
     }
 }
 // #endregion guide:game-over-scene

@@ -17,30 +17,30 @@ void main(){ float l=texture(uTexture,vUv).r; float m=smoothstep(0.2,0.35,l); fr
 const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler;
 @fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let l=textureSample(uTexture,uSampler,vUv).r; let m=smoothstep(0.2,0.35,l); return vec4<f32>(vec3<f32>(0.2,0.9,1.0)*m,m);} `;
 class MetaballsScene extends Scene {
-    _balls;
-    _points;
-    _filter;
+    balls;
+    points;
+    filter;
     init() {
-        this._balls = new Graphics();
-        this._points = Array.from({ length: 8 }, (_, i) => ({ a: (i / 8) * Math.PI * 2, r: 90 + (i % 3) * 35 }));
-        this._filter =
+        this.balls = new Graphics();
+        this.points = Array.from({ length: 8 }, (_, i) => ({ a: (i / 8) * Math.PI * 2, r: 90 + (i % 3) * 35 }));
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl });
-        this._balls.filters = [this._filter];
+        this.balls.filters = [this.filter];
     }
     update(delta) {
-        for (const point of this._points)
+        for (const point of this.points)
             point.a += delta.seconds * (0.8 + point.r / 200);
-        this._balls.clear();
-        this._balls.fillColor = Color.white;
-        for (const point of this._points) {
-            this._balls.drawCircle(400 + Math.cos(point.a) * point.r, 300 + Math.sin(point.a * 1.4) * point.r * 0.6, 36);
+        this.balls.clear();
+        this.balls.fillColor = Color.white;
+        for (const point of this.points) {
+            this.balls.drawCircle(400 + Math.cos(point.a) * point.r, 300 + Math.sin(point.a * 1.4) * point.r * 0.6, 36);
         }
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._balls);
+        context.render(this.balls);
     }
 }
 app.start(new MetaballsScene());

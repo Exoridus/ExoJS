@@ -15,12 +15,12 @@ document.body.append(app.canvas);
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
 class PerformanceOverlayScene extends Scene {
-    _sprites;
+    sprites;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._sprites = Array.from({ length: 1600 }, () => {
+        this.sprites = Array.from({ length: 1600 }, () => {
             const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.25);
             sprite.setPosition(Math.random() * 800, Math.random() * 600);
             return {
@@ -34,7 +34,7 @@ class PerformanceOverlayScene extends Scene {
         });
     }
     update(delta) {
-        for (const item of this._sprites) {
+        for (const item of this.sprites) {
             item.sprite.move(item.vx * delta.seconds, item.vy * delta.seconds);
             if (item.sprite.position.x < 0 || item.sprite.position.x > 800)
                 item.vx *= -1;
@@ -44,7 +44,7 @@ class PerformanceOverlayScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        for (const { sprite } of this._sprites)
+        for (const { sprite } of this.sprites)
             context.render(sprite);
     }
 }

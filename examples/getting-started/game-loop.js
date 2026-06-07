@@ -12,21 +12,21 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class GameLoopScene extends Scene {
-    _sprite;
+    sprite;
     async load(loader) {
-        this._sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
     }
     init() {
         const { width, height } = this.app.canvas;
-        this._sprite.setAnchor(0.5);
-        this._sprite.setPosition(width / 2, height / 2);
+        this.sprite.setAnchor(0.5);
+        this.sprite.setPosition(width / 2, height / 2);
     }
     update(delta) {
-        this._sprite.rotate(delta.seconds * 120);
+        this.sprite.rotate(delta.seconds * 120);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 app.start(new GameLoopScene());

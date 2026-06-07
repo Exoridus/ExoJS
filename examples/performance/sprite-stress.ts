@@ -14,16 +14,16 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class SpriteStressScene extends Scene {
-    private _sprites!: { sprite: Sprite; offsetX: number; offsetY: number; phase: number; baseScale: number; driftX: number; driftY: number; rotationSpeed: number }[];
-    private _spriteLayer!: Container;
+    private sprites!: { sprite: Sprite; offsetX: number; offsetY: number; phase: number; baseScale: number; driftX: number; driftY: number; rotationSpeed: number }[];
+    private spriteLayer!: Container;
 
     override init(): void {
         const { width, height } = this.app.canvas;
         const atlasTexture = createAtlasTexture();
 
-        this._sprites = [];
-        this._spriteLayer = new Container();
-        this._spriteLayer.setPosition(width / 2, height / 2);
+        this.sprites = [];
+        this.spriteLayer = new Container();
+        this.spriteLayer.setPosition(width / 2, height / 2);
 
         const frameChoices = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
         const tintPalette = [Color.white, Color.skyBlue, Color.gold, Color.hotPink, Color.mediumSpringGreen, Color.orange];
@@ -45,7 +45,7 @@ class SpriteStressScene extends Scene {
                 sprite.setScale(baseScale);
                 sprite.setTint(tintPalette[index % tintPalette.length]);
 
-                this._sprites.push({
+                this.sprites.push({
                     sprite,
                     offsetX,
                     offsetY,
@@ -56,7 +56,7 @@ class SpriteStressScene extends Scene {
                     rotationSpeed: (index % 2 === 0 ? 1 : -1) * (14 + (index % 6) * 7),
                 });
 
-                this._spriteLayer.addChild(sprite);
+                this.spriteLayer.addChild(sprite);
                 index++;
             }
         }
@@ -65,9 +65,9 @@ class SpriteStressScene extends Scene {
     override update(delta): void {
         const time = this.app.activeTime.seconds;
 
-        this._spriteLayer.rotate(delta.seconds * 2.5);
+        this.spriteLayer.rotate(delta.seconds * 2.5);
 
-        for (const entry of this._sprites) {
+        for (const entry of this.sprites) {
             const localPhase = time + entry.phase;
             const scale = entry.baseScale + Math.sin(localPhase * 1.8) * 0.08;
 
@@ -80,15 +80,15 @@ class SpriteStressScene extends Scene {
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._spriteLayer);
+        context.render(this.spriteLayer);
     }
 
     override unload(): void {
-        this._spriteLayer?.destroy();
+        this.spriteLayer?.destroy();
     }
 
     override destroy(): void {
-        this._spriteLayer?.destroy();
+        this.spriteLayer?.destroy();
     }
 }
 

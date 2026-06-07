@@ -14,82 +14,82 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class CameraViewScene extends Scene {
-    private _camera!: View;
-    private _world!: Graphics;
-    private _overlay!: Text;
-    private _moveX = 0;
-    private _moveY = 0;
-    private _zoom = 0;
+    private camera!: View;
+    private world!: Graphics;
+    private overlay!: Text;
+    private moveX = 0;
+    private moveY = 0;
+    private zoom = 0;
 
     override init(): void {
         const { width, height } = this.app.canvas;
 
-        this._camera = new View(0, 0, width, height);
+        this.camera = new View(0, 0, width, height);
 
-        this._world = new Graphics();
-        this._world.lineWidth = 2;
-        this._world.lineColor = Color.darkGray;
+        this.world = new Graphics();
+        this.world.lineWidth = 2;
+        this.world.lineColor = Color.darkGray;
 
         for (let x = -1200; x <= 1200; x += 120) {
-            this._world.drawLine(x, -900, x, 900);
+            this.world.drawLine(x, -900, x, 900);
         }
 
         for (let y = -900; y <= 900; y += 120) {
-            this._world.drawLine(-1200, y, 1200, y);
+            this.world.drawLine(-1200, y, 1200, y);
         }
 
-        this._overlay = new Text('WASD pan, Q/E zoom', { fillColor: Color.white, fontSize: 16 });
-        this._overlay.setPosition(12, 12);
+        this.overlay = new Text('WASD pan, Q/E zoom', { fillColor: Color.white, fontSize: 16 });
+        this.overlay.setPosition(12, 12);
 
         this.inputs.onActive(Keyboard.A, () => {
-            this._moveX = -1;
+            this.moveX = -1;
         });
         this.inputs.onStop(Keyboard.A, () => {
-            if (this._moveX < 0) this._moveX = 0;
+            if (this.moveX < 0) this.moveX = 0;
         });
         this.inputs.onActive(Keyboard.D, () => {
-            this._moveX = 1;
+            this.moveX = 1;
         });
         this.inputs.onStop(Keyboard.D, () => {
-            if (this._moveX > 0) this._moveX = 0;
+            if (this.moveX > 0) this.moveX = 0;
         });
         this.inputs.onActive(Keyboard.W, () => {
-            this._moveY = -1;
+            this.moveY = -1;
         });
         this.inputs.onStop(Keyboard.W, () => {
-            if (this._moveY < 0) this._moveY = 0;
+            if (this.moveY < 0) this.moveY = 0;
         });
         this.inputs.onActive(Keyboard.S, () => {
-            this._moveY = 1;
+            this.moveY = 1;
         });
         this.inputs.onStop(Keyboard.S, () => {
-            if (this._moveY > 0) this._moveY = 0;
+            if (this.moveY > 0) this.moveY = 0;
         });
         this.inputs.onActive(Keyboard.Q, () => {
-            this._zoom = 1;
+            this.zoom = 1;
         });
         this.inputs.onStop(Keyboard.Q, () => {
-            if (this._zoom > 0) this._zoom = 0;
+            if (this.zoom > 0) this.zoom = 0;
         });
         this.inputs.onActive(Keyboard.E, () => {
-            this._zoom = -1;
+            this.zoom = -1;
         });
         this.inputs.onStop(Keyboard.E, () => {
-            if (this._zoom < 0) this._zoom = 0;
+            if (this.zoom < 0) this.zoom = 0;
         });
     }
 
     override update(delta): void {
-        this._camera.move(this._moveX * 420 * delta.seconds, this._moveY * 420 * delta.seconds);
-        this._camera.setZoom(Math.max(0.25, this._camera.zoomLevel + this._zoom * 0.75 * delta.seconds));
+        this.camera.move(this.moveX * 420 * delta.seconds, this.moveY * 420 * delta.seconds);
+        this.camera.setZoom(Math.max(0.25, this.camera.zoomLevel + this.zoom * 0.75 * delta.seconds));
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.backend.setView(this._camera);
-        context.render(this._world);
+        context.backend.setView(this.camera);
+        context.render(this.world);
         context.backend.setView(null);
-        context.render(this._overlay);
+        context.render(this.overlay);
     }
 }
 

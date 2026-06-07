@@ -57,49 +57,49 @@ fn gridLine(p: vec2<f32>, s: f32, w: f32) -> f32 {
 }`;
 
 class InfiniteGridScene extends Scene {
-    private _view!: View;
-    private _move = { x: 0, y: 0, zoom: 0 };
-    private _sprite!: Sprite;
-    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private view!: View;
+    private move = { x: 0, y: 0, zoom: 0 };
+    private sprite!: Sprite;
+    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
     }
 
     override init(loader): void {
-        this._view = new View(0, 0, 800, 600);
-        this._sprite = new Sprite(loader.get(Texture, 'uvGrid'));
-        this._sprite.width = 800;
-        this._sprite.height = 600;
-        this._filter =
+        this.view = new View(0, 0, 800, 600);
+        this.sprite = new Sprite(loader.get(Texture, 'uvGrid'));
+        this.sprite.width = 800;
+        this.sprite.height = 600;
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uCenter: [0, 0], uViewSize: [800, 600] } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uCenter: [0, 0], uViewSize: [800, 600] } });
-        this._sprite.filters = [this._filter];
-        this.inputs.onActive(Keyboard.A, () => { this._move.x = -1; });
-        this.inputs.onStop(Keyboard.A, () => { if (this._move.x < 0) this._move.x = 0; });
-        this.inputs.onActive(Keyboard.D, () => { this._move.x = 1; });
-        this.inputs.onStop(Keyboard.D, () => { if (this._move.x > 0) this._move.x = 0; });
-        this.inputs.onActive(Keyboard.W, () => { this._move.y = -1; });
-        this.inputs.onStop(Keyboard.W, () => { if (this._move.y < 0) this._move.y = 0; });
-        this.inputs.onActive(Keyboard.S, () => { this._move.y = 1; });
-        this.inputs.onStop(Keyboard.S, () => { if (this._move.y > 0) this._move.y = 0; });
-        this.inputs.onActive(Keyboard.Q, () => { this._move.zoom = -1; });
-        this.inputs.onStop(Keyboard.Q, () => { if (this._move.zoom < 0) this._move.zoom = 0; });
-        this.inputs.onActive(Keyboard.E, () => { this._move.zoom = 1; });
-        this.inputs.onStop(Keyboard.E, () => { if (this._move.zoom > 0) this._move.zoom = 0; });
+        this.sprite.filters = [this.filter];
+        this.inputs.onActive(Keyboard.A, () => { this.move.x = -1; });
+        this.inputs.onStop(Keyboard.A, () => { if (this.move.x < 0) this.move.x = 0; });
+        this.inputs.onActive(Keyboard.D, () => { this.move.x = 1; });
+        this.inputs.onStop(Keyboard.D, () => { if (this.move.x > 0) this.move.x = 0; });
+        this.inputs.onActive(Keyboard.W, () => { this.move.y = -1; });
+        this.inputs.onStop(Keyboard.W, () => { if (this.move.y < 0) this.move.y = 0; });
+        this.inputs.onActive(Keyboard.S, () => { this.move.y = 1; });
+        this.inputs.onStop(Keyboard.S, () => { if (this.move.y > 0) this.move.y = 0; });
+        this.inputs.onActive(Keyboard.Q, () => { this.move.zoom = -1; });
+        this.inputs.onStop(Keyboard.Q, () => { if (this.move.zoom < 0) this.move.zoom = 0; });
+        this.inputs.onActive(Keyboard.E, () => { this.move.zoom = 1; });
+        this.inputs.onStop(Keyboard.E, () => { if (this.move.zoom > 0) this.move.zoom = 0; });
     }
 
     override update(delta): void {
-        this._view.move(this._move.x * 340 * delta.seconds, this._move.y * 340 * delta.seconds);
-        this._view.setZoom(Math.max(0.2, this._view.zoomLevel + this._move.zoom * delta.seconds));
-        this._filter.uniforms.uCenter = [this._view.center.x, this._view.center.y];
-        this._filter.uniforms.uViewSize = [this._view.width, this._view.height];
+        this.view.move(this.move.x * 340 * delta.seconds, this.move.y * 340 * delta.seconds);
+        this.view.setZoom(Math.max(0.2, this.view.zoomLevel + this.move.zoom * delta.seconds));
+        this.filter.uniforms.uCenter = [this.view.center.x, this.view.center.y];
+        this.filter.uniforms.uViewSize = [this.view.width, this.view.height];
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 

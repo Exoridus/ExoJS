@@ -40,27 +40,27 @@ class SwayModule extends UpdateModule {
     }
 }
 class CustomWgslModuleScene extends Scene {
-    _system;
+    system;
     async load(loader) {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
     init(loader) {
-        this._system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 26000 });
-        this._system.setPosition(400, 540);
-        this._system.addSpawnModule(new RateSpawn({
+        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 26000 });
+        this.system.setPosition(400, 540);
+        this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(1800),
             lifetime: new Constant(2.0),
             velocity: new Constant(new Vector(0, -130)),
             scale: new Constant(new Vector(0.2, 0.2)),
         }));
-        this._system.addUpdateModule(new SwayModule(250, 8));
+        this.system.addUpdateModule(new SwayModule(250, 8));
     }
     update(delta) {
-        this._system.update(delta);
+        this.system.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._system);
+        context.render(this.system);
     }
 }
 app.start(new CustomWgslModuleScene());

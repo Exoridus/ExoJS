@@ -15,64 +15,64 @@ const rows = [
     { name: 'SFX', y: 380, color: new Color(130, 255, 170), bus: () => app.audio.sound },
 ];
 class AudioBusesScene extends Scene {
-    _music;
-    _sfx;
-    _graphics;
-    _labels;
-    _drag = -1;
+    music;
+    sfx;
+    graphics;
+    labels;
+    drag = -1;
     async load(loader) {
         await loader.load(Music, { music: audio.musicLoop });
         await loader.load(Sound, { sfx: audio.uiClick });
     }
     init(loader) {
-        this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.6).play();
-        this._sfx = loader.get(Sound, 'sfx');
-        this._graphics = new Graphics();
-        this._labels = rows.map(row => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(150, row.y - 34));
+        this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.6).play();
+        this.sfx = loader.get(Sound, 'sfx');
+        this.graphics = new Graphics();
+        this.labels = rows.map(row => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(150, row.y - 34));
         this.app.input.onPointerDown.add(p => {
-            this._drag = this._rowFromY(p.y);
-            this._updateSlider(p.x);
+            this.drag = this.rowFromY(p.y);
+            this.updateSlider(p.x);
         });
         this.app.input.onPointerMove.add(p => {
-            this._updateSlider(p.x);
+            this.updateSlider(p.x);
         });
         this.app.input.onPointerUp.add(() => {
-            this._drag = -1;
+            this.drag = -1;
         });
         this.app.input.onPointerTap.add(p => {
             if (p.y > 460)
-                this._sfx.play();
+                this.sfx.play();
         });
     }
-    _rowFromY(y) {
+    rowFromY(y) {
         for (let i = 0; i < rows.length; i++) {
             if (Math.abs(y - rows[i].y) <= 24)
                 return i;
         }
         return -1;
     }
-    _updateSlider(x) {
-        if (this._drag < 0)
+    updateSlider(x) {
+        if (this.drag < 0)
             return;
         const t = Math.max(0, Math.min(1, (x - 200) / 420));
-        rows[this._drag].bus().volume = t;
+        rows[this.drag].bus().volume = t;
     }
     draw(context) {
         context.backend.clear();
-        this._graphics.clear();
+        this.graphics.clear();
         rows.forEach((row, index) => {
             const value = row.bus().volume;
             const db = 20 * Math.log10(Math.max(0.0001, value));
-            this._labels[index].text = `${row.name}: ${db.toFixed(1)} dB`;
-            this._graphics.fillColor = new Color(55, 55, 55);
-            this._graphics.drawRectangle(200, row.y - 8, 420, 16);
-            this._graphics.fillColor = row.color;
-            this._graphics.drawRectangle(200, row.y - 8, 420 * value, 16);
+            this.labels[index].text = `${row.name}: ${db.toFixed(1)} dB`;
+            this.graphics.fillColor = new Color(55, 55, 55);
+            this.graphics.drawRectangle(200, row.y - 8, 420, 16);
+            this.graphics.fillColor = row.color;
+            this.graphics.drawRectangle(200, row.y - 8, 420 * value, 16);
         });
-        this._graphics.fillColor = new Color(200, 200, 200);
-        this._graphics.drawRectangle(250, 485, 300, 36);
-        context.render(this._graphics);
-        for (const label of this._labels)
+        this.graphics.fillColor = new Color(200, 200, 200);
+        this.graphics.drawRectangle(250, 485, 300, 36);
+        context.render(this.graphics);
+        for (const label of this.labels)
             context.render(label);
     }
 }

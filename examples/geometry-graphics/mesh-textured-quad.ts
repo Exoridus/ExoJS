@@ -15,7 +15,7 @@ const UV_GRID = technical.filtering.uvGrid256;
 const HALF = 240;
 
 class MeshTexturedQuadScene extends Scene {
-    private _quad!: Mesh;
+    private quad!: Mesh;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: UV_GRID });
@@ -24,7 +24,7 @@ class MeshTexturedQuadScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this._quad = new Mesh({
+        this.quad = new Mesh({
             vertices: new Float32Array([
                 -HALF,
                 -HALF,
@@ -40,16 +40,16 @@ class MeshTexturedQuadScene extends Scene {
             texture: loader.get(Texture, 'uvGrid'),
         });
 
-        this._quad.setPosition((width / 2) | 0, (height / 2) | 0);
+        this.quad.setPosition((width / 2) | 0, (height / 2) | 0);
     }
 
     override update(delta): void {
-        this._quad.rotate(delta.seconds * 30);
+        this.quad.rotate(delta.seconds * 30);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._quad);
+        context.render(this.quad);
     }
 }
 

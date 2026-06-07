@@ -12,45 +12,45 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class BloomLiteScene extends Scene {
-    _baseRt;
-    _glowRt;
-    _blurredRt;
-    _bunny;
-    _baseSprite;
-    _glowSprite;
-    _blur;
-    _time = 0;
+    baseRt;
+    glowRt;
+    blurredRt;
+    bunny;
+    baseSprite;
+    glowSprite;
+    blur;
+    time = 0;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._baseRt = new RenderTexture(800, 600);
-        this._glowRt = new RenderTexture(800, 600);
-        this._blurredRt = new RenderTexture(800, 600);
-        this._bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(1.9);
-        this._baseSprite = new Sprite(this._baseRt);
-        this._glowSprite = new Sprite(this._blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
-        this._blur = new BlurFilter({ radius: 10, quality: 2 });
+        this.baseRt = new RenderTexture(800, 600);
+        this.glowRt = new RenderTexture(800, 600);
+        this.blurredRt = new RenderTexture(800, 600);
+        this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(1.9);
+        this.baseSprite = new Sprite(this.baseRt);
+        this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
+        this.blur = new BlurFilter({ radius: 10, quality: 2 });
     }
     update(delta) {
-        this._time += delta.seconds;
-        this._bunny.setPosition(400 + Math.cos(this._time * 1.7) * 190, 300 + Math.sin(this._time * 1.2) * 160);
+        this.time += delta.seconds;
+        this.bunny.setPosition(400 + Math.cos(this.time * 1.7) * 190, 300 + Math.sin(this.time * 1.2) * 160);
     }
     draw(context) {
         context.backend.execute(new RenderTargetPass(() => {
             context.backend.clear();
-            this._bunny.setTint(Color.white);
-            context.render(this._bunny);
-        }, { target: this._baseRt, view: this._baseRt.view }));
+            this.bunny.setTint(Color.white);
+            context.render(this.bunny);
+        }, { target: this.baseRt, view: this.baseRt.view }));
         context.backend.execute(new RenderTargetPass(() => {
             context.backend.clear();
-            this._bunny.setTint(new Color(255, 230, 190));
-            context.render(this._bunny);
-        }, { target: this._glowRt, view: this._glowRt.view }));
-        this._blur.apply(context.backend, this._glowRt, this._blurredRt);
+            this.bunny.setTint(new Color(255, 230, 190));
+            context.render(this.bunny);
+        }, { target: this.glowRt, view: this.glowRt.view }));
+        this.blur.apply(context.backend, this.glowRt, this.blurredRt);
         context.backend.clear();
-        context.render(this._baseSprite);
-        context.render(this._glowSprite);
+        context.render(this.baseSprite);
+        context.render(this.glowSprite);
     }
 }
 app.start(new BloomLiteScene());

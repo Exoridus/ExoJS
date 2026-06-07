@@ -15,12 +15,12 @@ let app = null;
 let overlay = null;
 let backendType = 'webgpu';
 class DemoScene extends Scene {
-    _sprites;
+    sprites;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._sprites = Array.from({ length: 2200 }, () => {
+        this.sprites = Array.from({ length: 2200 }, () => {
             const sprite = new Sprite(loader.get(Texture, 'bunny'));
             sprite.setAnchor(0.5);
             sprite.setScale(0.35);
@@ -37,7 +37,7 @@ class DemoScene extends Scene {
         });
     }
     update(delta) {
-        for (const item of this._sprites) {
+        for (const item of this.sprites) {
             item.sprite.move(item.vx * delta.seconds, item.vy * delta.seconds);
             if (item.sprite.position.x < 0 || item.sprite.position.x > 800)
                 item.vx *= -1;
@@ -47,7 +47,7 @@ class DemoScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        for (const { sprite } of this._sprites)
+        for (const { sprite } of this.sprites)
             context.render(sprite);
     }
 }

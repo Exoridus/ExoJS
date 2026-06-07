@@ -32,27 +32,27 @@ function buildPaletteCanvas(offset) {
     return canvas;
 }
 class PaletteCyclingScene extends Scene {
-    _palette;
-    _filter;
-    _sprite;
-    _offset = 0;
+    palette;
+    filter;
+    sprite;
+    offset = 0;
     async load(loader) {
         await loader.load(Texture, { ramp: PRIMARY_RAMP });
     }
     init(loader) {
-        this._palette = LutFilter.fromImage(buildPaletteCanvas(0));
-        this._filter = new LutFilter({ mode: '1d' }).setLut(this._palette);
-        this._sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3);
-        this._sprite.setPosition(400, 300);
-        this._sprite.filters = [this._filter];
+        this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
+        this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
+        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3);
+        this.sprite.setPosition(400, 300);
+        this.sprite.filters = [this.filter];
     }
     update(delta) {
-        this._offset = (this._offset + delta.seconds * 80) % PALETTE_SIZE;
-        this._palette.source = buildPaletteCanvas(Math.floor(this._offset));
+        this.offset = (this.offset + delta.seconds * 80) % PALETTE_SIZE;
+        this.palette.source = buildPaletteCanvas(Math.floor(this.offset));
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 app.start(new PaletteCyclingScene());

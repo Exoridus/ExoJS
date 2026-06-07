@@ -38,23 +38,23 @@ fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     return vec4(r, g, b, a);
 }`;
 class TextGlitchScene extends Scene {
-    _text;
-    _filter;
+    text;
+    filter;
     init() {
-        this._text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100 });
-        this._text.setPosition(120, 220);
-        this._filter =
+        this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100 });
+        this.text.setPosition(120, 220);
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uShift: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uShift: 0 } });
-        this._text.filters = [this._filter];
+        this.text.filters = [this.filter];
     }
     update() {
-        this._filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
+        this.filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 app.start(new TextGlitchScene());

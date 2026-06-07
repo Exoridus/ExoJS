@@ -10,22 +10,22 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class PlaySoundScene extends Scene {
-    _sound;
-    _text;
+    sound;
+    text;
     async load(loader) {
         await loader.load(Sound, { click: audio.uiClick });
     }
     init(loader) {
-        this._sound = loader.get(Sound, 'click');
-        this._text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24 });
-        this._text.setPosition(220, 280);
+        this.sound = loader.get(Sound, 'click');
+        this.text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24 });
+        this.text.setPosition(220, 280);
         this.app.input.onPointerTap.add(() => {
-            this._sound.play();
+            this.sound.play();
         });
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 app.start(new PlaySoundScene());

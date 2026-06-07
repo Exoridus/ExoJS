@@ -28,28 +28,28 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 `;
 
 class CustomTriangleRenderer {
-    private _renderManager: any;
-    private _device: any;
-    private _pipeline: any;
-    private _vertexBuffer: any;
+    private renderManager: any;
+    private device: any;
+    private pipeline: any;
+    private vertexBuffer: any;
 
     constructor(backend: any) {
         if (!(backend instanceof WebGpuBackend)) {
             throw new Error('This example requires ExoJS to provide a WebGpuBackend.');
         }
 
-        this._renderManager = backend;
-        this._device = backend.device;
-        this._pipeline = this._createPipeline();
-        this._vertexBuffer = this._createVertexBuffer();
+        this.renderManager = backend;
+        this.device = backend.device;
+        this.pipeline = this.createPipeline();
+        this.vertexBuffer = this.createVertexBuffer();
     }
 
     draw(): this {
-        const encoder = this._device.createCommandEncoder();
+        const encoder = this.device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
             colorAttachments: [
                 {
-                    view: this._renderManager.context.getCurrentTexture().createView(),
+                    view: this.renderManager.context.getCurrentTexture().createView(),
                     clearValue: {
                         r: 0.05,
                         g: 0.06,
@@ -62,27 +62,27 @@ class CustomTriangleRenderer {
             ],
         });
 
-        pass.setPipeline(this._pipeline);
-        pass.setVertexBuffer(0, this._vertexBuffer);
+        pass.setPipeline(this.pipeline);
+        pass.setVertexBuffer(0, this.vertexBuffer);
         pass.draw(3);
         pass.end();
 
-        this._device.queue.submit([encoder.finish()]);
+        this.device.queue.submit([encoder.finish()]);
 
         return this;
     }
 
     destroy(): void {
-        this._vertexBuffer?.destroy();
-        this._pipeline = null;
+        this.vertexBuffer?.destroy();
+        this.pipeline = null;
     }
 
-    private _createPipeline(): any {
-        const shaderModule = this._device.createShaderModule({
+    private createPipeline(): any {
+        const shaderModule = this.device.createShaderModule({
             code: SHADER_SOURCE,
         });
 
-        return this._device.createRenderPipeline({
+        return this.device.createRenderPipeline({
             layout: 'auto',
             vertex: {
                 module: shaderModule,
@@ -110,7 +110,7 @@ class CustomTriangleRenderer {
                 entryPoint: 'fragmentMain',
                 targets: [
                     {
-                        format: this._renderManager.format,
+                        format: this.renderManager.format,
                     },
                 ],
             },
@@ -120,8 +120,8 @@ class CustomTriangleRenderer {
         });
     }
 
-    private _createVertexBuffer(): any {
-        const buffer = this._device.createBuffer({
+    private createVertexBuffer(): any {
+        const buffer = this.device.createBuffer({
             size: TRIANGLE_VERTICES.byteLength,
             usage: GPUBufferUsage.VERTEX,
             mappedAtCreation: true,
@@ -146,22 +146,22 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class CustomTriangleRendererScene extends Scene {
-    private _triangleRenderer!: CustomTriangleRenderer;
+    private triangleRenderer!: CustomTriangleRenderer;
 
     override init(): void {
-        this._triangleRenderer = new CustomTriangleRenderer(this.app.backend);
+        this.triangleRenderer = new CustomTriangleRenderer(this.app.backend);
     }
 
     override draw(): void {
-        this._triangleRenderer.draw();
+        this.triangleRenderer.draw();
     }
 
     override unload(): void {
-        this._triangleRenderer?.destroy();
+        this.triangleRenderer?.destroy();
     }
 
     override destroy(): void {
-        this._triangleRenderer?.destroy();
+        this.triangleRenderer?.destroy();
     }
 }
 

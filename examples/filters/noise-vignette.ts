@@ -31,31 +31,31 @@ fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))
 }`;
 
 class NoiseVignetteScene extends Scene {
-    private _time = 0;
-    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
-    private _sprite!: Sprite;
+    private time = 0;
+    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private sprite!: Sprite;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
 
     override init(loader): void {
-        this._filter =
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
-        this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
-        this._sprite.filters = [this._filter];
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
+        this.sprite.filters = [this.filter];
     }
 
     override update(delta): void {
-        this._time += delta.seconds;
-        this._filter.uniforms.uTime = this._time;
+        this.time += delta.seconds;
+        this.filter.uniforms.uTime = this.time;
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 

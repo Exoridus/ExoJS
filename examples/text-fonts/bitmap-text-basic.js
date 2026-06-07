@@ -10,37 +10,37 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class BitmapTextBasicScene extends Scene {
-    _font;
-    _title;
-    _info;
-    _wrapped;
-    _counter;
-    _frame = 0;
+    font;
+    title;
+    info;
+    wrapped;
+    counter;
+    frame = 0;
     async load(loader) {
-        this._font = await loader.load(BmFont, fonts.kenneyBlocksFnt);
+        this.font = await loader.load(BmFont, fonts.kenneyBlocksFnt);
     }
     init() {
-        const font = this._font;
-        this._title = new BitmapText('BITMAP TEXT', font, { scale: 1.5 });
-        this._title.tint = new Color(255, 220, 80);
-        this._title.setPosition(80, 70);
-        this._info = new BitmapText('AngelCode .fnt   no Canvas 2D rasterisation', font);
-        this._info.setPosition(80, 180);
-        this._wrapped = new BitmapText('Word wrap, per-glyph kerning, and all standard ASCII chars are supported.', font, { scale: 0.85, layout: { maxWidth: 620 } });
-        this._wrapped.setPosition(80, 270);
-        this._counter = new BitmapText('Frame: 0', font);
-        this._counter.tint = new Color(160, 210, 160);
-        this._counter.setPosition(80, 500);
+        const font = this.font;
+        this.title = new BitmapText('BITMAP TEXT', font, { scale: 1.5 });
+        this.title.tint = new Color(255, 220, 80);
+        this.title.setPosition(80, 70);
+        this.info = new BitmapText('AngelCode .fnt   no Canvas 2D rasterisation', font);
+        this.info.setPosition(80, 180);
+        this.wrapped = new BitmapText('Word wrap, per-glyph kerning, and all standard ASCII chars are supported.', font, { scale: 0.85, layout: { maxWidth: 620 } });
+        this.wrapped.setPosition(80, 270);
+        this.counter = new BitmapText('Frame: 0', font);
+        this.counter.tint = new Color(160, 210, 160);
+        this.counter.setPosition(80, 500);
     }
     update() {
-        this._counter.text = `Frame: ${++this._frame}`;
+        this.counter.text = `Frame: ${++this.frame}`;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._title);
-        context.render(this._info);
-        context.render(this._wrapped);
-        context.render(this._counter);
+        context.render(this.title);
+        context.render(this.info);
+        context.render(this.wrapped);
+        context.render(this.counter);
     }
 }
 app.start(new BitmapTextBasicScene());

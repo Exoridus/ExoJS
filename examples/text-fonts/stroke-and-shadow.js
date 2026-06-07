@@ -12,9 +12,9 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class StrokeAndShadowScene extends Scene {
-    _title;
+    title;
     init() {
-        this._title = new Text('EXOJS', {
+        this.title = new Text('EXOJS', {
             fillColor: new Color(230, 240, 255),
             fontSize: 120,
             outlineColor: new Color(70, 130, 220),
@@ -25,11 +25,11 @@ class StrokeAndShadowScene extends Scene {
             shadowOffsetY: 6,
             shadowBlur: 0.4,
         });
-        this._title.setPosition(180, 190);
+        this.title.setPosition(180, 190);
     }
     draw(context) {
         context.backend.clear(new Color(24, 28, 42));
-        context.render(this._title);
+        context.render(this.title);
     }
 }
 app.start(new StrokeAndShadowScene());

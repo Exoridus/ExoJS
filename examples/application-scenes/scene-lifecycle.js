@@ -12,37 +12,37 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class LifecycleScene extends Scene {
-    _events;
-    _counter = 0;
-    _drawCount = 0;
-    _timer;
-    _text;
+    events;
+    counter = 0;
+    drawCount = 0;
+    timer;
+    text;
     async load() {
-        this._events = ['load'];
+        this.events = ['load'];
     }
     init() {
         const { width, height } = this.app.canvas;
-        this._events.push('init');
-        this._timer = new Timer(seconds(1), true);
-        this._text = new Text('', { fillColor: Color.white, fontSize: 18 });
-        this._text.setAnchor(0.5);
-        this._text.setPosition(width / 2, height / 2);
+        this.events.push('init');
+        this.timer = new Timer(seconds(1), true);
+        this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
+        this.text.setAnchor(0.5);
+        this.text.setPosition(width / 2, height / 2);
     }
     update() {
-        if (this._timer.expired) {
-            this._counter++;
-            this._events.push(`update ${this._counter}`);
-            this._timer.restart();
+        if (this.timer.expired) {
+            this.counter++;
+            this.events.push(`update ${this.counter}`);
+            this.timer.restart();
         }
     }
     draw(context) {
-        this._drawCount++;
+        this.drawCount++;
         context.backend.clear();
-        this._text.text = [...this._events.slice(-8), `draw ${this._drawCount}`].join('\n');
-        context.render(this._text);
+        this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');
+        context.render(this.text);
     }
     destroy() {
-        this._events.push('destroy');
+        this.events.push('destroy');
         super.destroy();
     }
 }

@@ -42,26 +42,26 @@ fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
 }`;
 
 class TextGlitchScene extends Scene {
-    private _text!: Text;
-    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private text!: Text;
+    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
     override init(): void {
-        this._text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100 });
-        this._text.setPosition(120, 220);
-        this._filter =
+        this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100 });
+        this.text.setPosition(120, 220);
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uShift: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uShift: 0 } });
-        this._text.filters = [this._filter];
+        this.text.filters = [this.filter];
     }
 
     override update(): void {
-        this._filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
+        this.filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 

@@ -12,14 +12,14 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class GameScene extends Scene {
-    _sprite;
-    _time = 0;
+    sprite;
+    time = 0;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
-        this.addChild(this._sprite);
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
+        this.addChild(this.sprite);
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             if (pauseScene.app !== null)
                 return;
@@ -27,8 +27,8 @@ class GameScene extends Scene {
         });
     }
     update(delta) {
-        this._time += delta.seconds;
-        this._sprite.setRotation(this._time * 80);
+        this.time += delta.seconds;
+        this.sprite.setRotation(this.time * 80);
     }
     draw(context) {
         context.backend.clear(new Color(20, 24, 34));
@@ -36,19 +36,19 @@ class GameScene extends Scene {
     }
 }
 class PauseScene extends Scene {
-    _blur;
-    _text;
+    blur;
+    text;
     init() {
-        this._blur = new BlurFilter({ radius: 5, quality: 2 });
-        gameScene.root.filters = [this._blur];
-        this._text = new Text('PAUSED', { fillColor: Color.white, fontSize: 64, fontWeight: 'bold' });
-        this._text.setPosition(280, 250);
+        this.blur = new BlurFilter({ radius: 5, quality: 2 });
+        gameScene.root.filters = [this.blur];
+        this.text = new Text('PAUSED', { fillColor: Color.white, fontSize: 64, fontWeight: 'bold' });
+        this.text.setPosition(280, 250);
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             await this.app.scene.popScene();
         });
     }
     draw(context) {
-        context.render(this._text);
+        context.render(this.text);
     }
     destroy() {
         gameScene.root.clearFilters();

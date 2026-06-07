@@ -56,9 +56,9 @@ function buildGrid(): { vertices: Float32Array; uvs: Float32Array; indices: Uint
 const UV_GRID = technical.filtering.uvGrid256;
 
 class MeshDeformedGridScene extends Scene {
-    private _restVertices!: Float32Array;
-    private _mesh!: Mesh;
-    private _time = 0;
+    private restVertices!: Float32Array;
+    private mesh!: Mesh;
+    private time = 0;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: UV_GRID });
@@ -68,21 +68,21 @@ class MeshDeformedGridScene extends Scene {
         const { width, height } = this.app.canvas;
         const grid = buildGrid();
 
-        this._restVertices = grid.vertices.slice();
-        this._mesh = new Mesh({
+        this.restVertices = grid.vertices.slice();
+        this.mesh = new Mesh({
             vertices: grid.vertices,
             uvs: grid.uvs,
             indices: grid.indices,
             texture: loader.get(Texture, 'uvGrid'),
         });
-        this._mesh.setPosition((width / 2) | 0, (height / 2) | 0);
+        this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
     }
 
     override update(delta): void {
-        this._time += delta.seconds;
-        const verts = this._mesh.vertices;
-        const rest = this._restVertices;
-        const t = this._time;
+        this.time += delta.seconds;
+        const verts = this.mesh.vertices;
+        const rest = this.restVertices;
+        const t = this.time;
 
         for (let i = 0; i < verts.length; i += 2) {
             const rx = rest[i];
@@ -91,12 +91,12 @@ class MeshDeformedGridScene extends Scene {
             verts[i + 1] = ry + Math.cos(t * 1.6 + rx * 0.03) * 10;
         }
 
-        this._mesh.recomputeLocalBounds();
+        this.mesh.recomputeLocalBounds();
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._mesh);
+        context.render(this.mesh);
     }
 }
 

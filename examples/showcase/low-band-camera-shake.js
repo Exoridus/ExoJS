@@ -10,29 +10,29 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class LowBandCameraShakeScene extends Scene {
-    _music;
-    _analyser;
-    _view;
-    _sprite;
+    music;
+    analyser;
+    view;
+    sprite;
     async load(loader) {
         await loader.load(Music, { track: audio.musicLoop });
         await loader.load(Texture, { ship: textures.shipA });
     }
     init(loader) {
-        this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
-        this._analyser = new AudioAnalyser({ fftSize: 1024 });
-        this._analyser.source = this._music;
-        this._view = new View(400, 300, 800, 600);
-        this._sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(2).setPosition(400, 300);
+        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
+        this.analyser = new AudioAnalyser({ fftSize: 1024 });
+        this.analyser.source = this.music;
+        this.view = new View(400, 300, 800, 600);
+        this.sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(2).setPosition(400, 300);
     }
     update() {
-        const low = this._analyser.getBandEnergy(20, 180);
-        this._view.shake(2 + low * 26, 90, { decay: true, frequency: 22 });
+        const low = this.analyser.getBandEnergy(20, 180);
+        this.view.shake(2 + low * 26, 90, { decay: true, frequency: 22 });
     }
     draw(context) {
         context.backend.clear(new Color(22, 24, 34));
-        context.backend.setView(this._view);
-        context.render(this._sprite);
+        context.backend.setView(this.view);
+        context.render(this.sprite);
         context.backend.setView(null);
     }
 }

@@ -29,37 +29,37 @@ struct Uniforms { uProgress:f32, _pad0:vec3<f32> };
 }`;
 
 class LoadingProgressWithShaderScene extends Scene {
-    private _progress!: { v: number };
-    private _label!: Text;
-    private _ring!: Sprite;
-    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private progress!: { v: number };
+    private label!: Text;
+    private ring!: Sprite;
+    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
     }
 
     override init(loader): void {
-        this._progress = { v: 0 };
-        this._label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
-        this._label.setPosition(360, 410);
-        this._ring = new Sprite(loader.get(Texture, 'uvGrid')).setScale(2.2).setPosition(310, 130);
-        this._filter =
+        this.progress = { v: 0 };
+        this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
+        this.label.setPosition(360, 410);
+        this.ring = new Sprite(loader.get(Texture, 'uvGrid')).setScale(2.2).setPosition(310, 130);
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uProgress: 0 } });
-        this._ring.filters = [this._filter];
-        this.app.tweens.create(this._progress).to({ v: 1 }, 2.4).start();
+        this.ring.filters = [this.filter];
+        this.app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
     }
 
     override update(): void {
-        this._filter.uniforms.uProgress = this._progress.v;
-        this._label.text = `${(this._progress.v * 100) | 0}%`;
+        this.filter.uniforms.uProgress = this.progress.v;
+        this.label.text = `${(this.progress.v * 100) | 0}%`;
     }
 
     override draw(context): void {
         context.backend.clear(new Color(14, 18, 28));
-        context.render(this._ring);
-        context.render(this._label);
+        context.render(this.ring);
+        context.render(this.label);
     }
 }
 

@@ -14,9 +14,9 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class SpritesheetFramesScene extends Scene {
-    private _spritesheet!: Spritesheet;
-    private _frameNames!: string[];
-    private _frame = 0;
+    private spritesheet!: Spritesheet;
+    private frameNames!: string[];
+    private frame = 0;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { characters: 'image/platformer-characters.png' });
@@ -28,10 +28,10 @@ class SpritesheetFramesScene extends Scene {
         const texture = loader.get(Texture, 'characters');
         const data = loader.get(Json, 'characters') as SpritesheetData;
 
-        this._spritesheet = new Spritesheet(texture, data);
-        this._frameNames = Array.from(this._spritesheet.frames.keys());
+        this.spritesheet = new Spritesheet(texture, data);
+        this.frameNames = Array.from(this.spritesheet.frames.keys());
 
-        for (const sprite of this._spritesheet.sprites.values()) {
+        for (const sprite of this.spritesheet.sprites.values()) {
             sprite.setAnchor(0.5);
             sprite.setPosition(width / 2, height / 2);
             sprite.setScale(2);
@@ -39,12 +39,12 @@ class SpritesheetFramesScene extends Scene {
     }
 
     override update(): void {
-        this._frame = (this._frame + 1) % this._frameNames.length;
+        this.frame = (this.frame + 1) % this.frameNames.length;
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._spritesheet.getFrameSprite(this._frameNames[this._frame]));
+        context.render(this.spritesheet.getFrameSprite(this.frameNames[this.frame]));
     }
 }
 

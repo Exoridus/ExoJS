@@ -25,45 +25,45 @@ const grayWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) 
 const satWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); let l=dot(c.rgb,vec3<f32>(0.299,0.587,0.114)); return vec4<f32>(mix(vec3<f32>(l),c.rgb,1.8),c.a); }`;
 const HUE_RAMP = technical.color.hueRamp;
 class ColorFilterScene extends Scene {
-    _sprite;
-    _tint;
-    _gray;
-    _sat;
-    _mode = 0;
+    sprite;
+    tint;
+    gray;
+    sat;
+    mode = 0;
     async load(loader) {
         await loader.load(Texture, { hueRamp: HUE_RAMP });
     }
     init(loader) {
-        this._sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(3).setPosition(400, 300);
-        this._tint = new ColorFilter(new Color(255, 160, 120));
-        this._gray =
+        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(3).setPosition(400, 300);
+        this.tint = new ColorFilter(new Color(255, 160, 120));
+        this.gray =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: grayWgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: grayGlsl });
-        this._sat =
+        this.sat =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: satWgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: satGlsl });
-        this._applyMode();
+        this.applyMode();
         this.inputs.onTrigger(Keyboard.One, () => {
-            this._mode = 0;
-            this._applyMode();
+            this.mode = 0;
+            this.applyMode();
         });
         this.inputs.onTrigger(Keyboard.Two, () => {
-            this._mode = 1;
-            this._applyMode();
+            this.mode = 1;
+            this.applyMode();
         });
         this.inputs.onTrigger(Keyboard.Three, () => {
-            this._mode = 2;
-            this._applyMode();
+            this.mode = 2;
+            this.applyMode();
         });
     }
-    _applyMode() {
-        this._sprite.filters = [this._mode === 0 ? this._tint : this._mode === 1 ? this._gray : this._sat];
+    applyMode() {
+        this.sprite.filters = [this.mode === 0 ? this.tint : this.mode === 1 ? this.gray : this.sat];
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 app.start(new ColorFilterScene());

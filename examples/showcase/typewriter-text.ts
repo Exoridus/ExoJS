@@ -16,35 +16,35 @@ document.body.append(app.canvas);
 const message = 'ExoJS gives you explicit rendering control with a compact scene and asset workflow.';
 
 class TypewriterTextScene extends Scene {
-    private _sound!: Sound;
-    private _text!: Text;
-    private _state!: { count: number };
-    private _last = 0;
+    private sound!: Sound;
+    private text!: Text;
+    private state!: { count: number };
+    private last = 0;
 
     override async load(loader): Promise<void> {
         await loader.load(Sound, { tick: 'audio/ui-click.ogg' });
     }
 
     override init(loader): void {
-        this._sound = loader.get(Sound, 'tick');
-        this._text = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 42 }, { maxWidth: 720 });
-        this._text.setPosition(60, 190);
-        this._state = { count: 0 };
+        this.sound = loader.get(Sound, 'tick');
+        this.text = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 42 }, { maxWidth: 720 });
+        this.text.setPosition(60, 190);
+        this.state = { count: 0 };
         this.app.tweens
-            .create(this._state)
+            .create(this.state)
             .to({ count: message.length }, 2.4)
             .onUpdate(() => {
-                const n = this._state.count | 0;
-                if (n > this._last) this._sound.play({ playbackRate: 1.6 });
-                this._last = n;
-                this._text.text = message.slice(0, n);
+                const n = this.state.count | 0;
+                if (n > this.last) this.sound.play({ playbackRate: 1.6 });
+                this.last = n;
+                this.text.text = message.slice(0, n);
             })
             .start();
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 

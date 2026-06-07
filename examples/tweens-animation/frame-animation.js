@@ -12,7 +12,7 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class FrameAnimationScene extends Scene {
-    _sprite;
+    sprite;
     async load(loader) {
         await loader.load(Texture, { characters: 'image/platformer-characters.png' });
         await loader.load(Json, { characters: 'json/platformer-characters.json' });
@@ -22,16 +22,16 @@ class FrameAnimationScene extends Scene {
         const data = loader.get(Json, 'characters');
         const sheet = new Spritesheet(texture, data);
         const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));
-        this._sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: 8, loop: true } });
-        this._sprite.setAnchor(0.5).setScale(3).setPosition(400, 300);
-        this._sprite.play('walk');
+        this.sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: 8, loop: true } });
+        this.sprite.setAnchor(0.5).setScale(3).setPosition(400, 300);
+        this.sprite.play('walk');
     }
     update(delta) {
-        this._sprite.update(delta);
+        this.sprite.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 app.start(new FrameAnimationScene());

@@ -18,31 +18,31 @@ window.addEventListener('resize', () => {
 });
 app.resize(window.innerWidth, window.innerHeight);
 class ResizeScene extends Scene {
-    _sprite;
-    _info;
+    sprite;
+    info;
     async load(loader) {
-        this._sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
     }
     init() {
-        this._sprite.setAnchor(0.5);
-        this._info = new Text('', { fillColor: Color.white, fontSize: 16 });
-        this._info.setAnchor(0.5, 0);
-        this._layout();
+        this.sprite.setAnchor(0.5);
+        this.info = new Text('', { fillColor: Color.white, fontSize: 16 });
+        this.info.setAnchor(0.5, 0);
+        this.layout();
     }
     update() {
-        this._layout();
+        this.layout();
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
-        context.render(this._info);
+        context.render(this.sprite);
+        context.render(this.info);
     }
-    _layout() {
+    layout() {
         const { width, height } = this.app.canvas;
         const dpr = Math.max(1, window.devicePixelRatio || 1);
-        this._sprite.setPosition(width / 2, height / 2);
-        this._info.setPosition(width / 2, 12);
-        this._info.text = `${width}x${height} @ DPR ${dpr.toFixed(2)}`;
+        this.sprite.setPosition(width / 2, height / 2);
+        this.info.setPosition(width / 2, 12);
+        this.info.text = `${width}x${height} @ DPR ${dpr.toFixed(2)}`;
     }
 }
 app.start(new ResizeScene());

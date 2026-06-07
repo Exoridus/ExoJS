@@ -22,19 +22,19 @@ const waypoints = [
     { x: 220, y: 410 },
 ];
 class TweenFromArrayScene extends Scene {
-    _sprite;
+    sprite;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(waypoints[0].x, waypoints[0].y);
-        this._buildPath();
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(waypoints[0].x, waypoints[0].y);
+        this.buildPath();
     }
-    _buildPath() {
+    buildPath() {
         let first = null;
         let prev = null;
         for (let i = 1; i < waypoints.length; i++) {
-            const next = this.app.tweens.create(this._sprite.position).to(waypoints[i], 0.35).easing(Ease.sineInOut);
+            const next = this.app.tweens.create(this.sprite.position).to(waypoints[i], 0.35).easing(Ease.sineInOut);
             if (first === null)
                 first = next;
             if (prev !== null)
@@ -42,14 +42,14 @@ class TweenFromArrayScene extends Scene {
             prev = next;
         }
         prev.onComplete(() => {
-            this._sprite.setPosition(waypoints[0].x, waypoints[0].y);
-            this._buildPath();
+            this.sprite.setPosition(waypoints[0].x, waypoints[0].y);
+            this.buildPath();
         });
         first.start();
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 app.start(new TweenFromArrayScene());

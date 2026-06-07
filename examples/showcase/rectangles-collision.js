@@ -13,48 +13,48 @@ const app = new Application({
 document.body.append(app.canvas);
 const collisionRed = new Color(255, 0, 0);
 class RectanglesCollisionScene extends Scene {
-    _time;
-    _boxA;
-    _boxB;
+    time;
+    boxA;
+    boxB;
     async load(loader) {
         await loader.load(Texture, { gradient: 'image/hue-ramp.png' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this._time = new Time();
-        this._boxA = new Sprite(loader.get(Texture, 'gradient'));
-        this._boxA.setPosition(width / 2, height / 2);
-        this._boxA.setAnchor(0.5, 0.5);
-        this._boxB = new Sprite(loader.get(Texture, 'gradient'));
-        this._boxB.setPosition(width / 2, height / 2);
-        this._boxB.setAnchor(0.5, 0.5);
+        this.time = new Time();
+        this.boxA = new Sprite(loader.get(Texture, 'gradient'));
+        this.boxA.setPosition(width / 2, height / 2);
+        this.boxA.setAnchor(0.5, 0.5);
+        this.boxB = new Sprite(loader.get(Texture, 'gradient'));
+        this.boxB.setPosition(width / 2, height / 2);
+        this.boxB.setAnchor(0.5, 0.5);
         this.app.input.onPointerMove.add(pointer => {
-            this._boxB.setPosition(pointer.x, pointer.y);
+            this.boxB.setPosition(pointer.x, pointer.y);
         });
     }
     update(delta) {
-        this._time.addTime(delta);
-        this._boxA.setScale(0.25 + (Math.cos(this._time.seconds) * 0.5 + 0.5));
-        this._boxB.setScale(0.25 + (Math.sin(this._time.seconds - Math.PI / 2) * 0.5 + 0.5));
-        this._boxA.setRotation(this._time.seconds * 25);
-        this._boxB.setRotation(this._time.seconds * -100);
-        this._boxA.setTint(Color.white);
-        this._boxB.setTint(Color.white);
-        if (this._boxA.intersectsWith(this._boxB)) {
-            const collision = this._boxA.collidesWith(this._boxB);
+        this.time.addTime(delta);
+        this.boxA.setScale(0.25 + (Math.cos(this.time.seconds) * 0.5 + 0.5));
+        this.boxB.setScale(0.25 + (Math.sin(this.time.seconds - Math.PI / 2) * 0.5 + 0.5));
+        this.boxA.setRotation(this.time.seconds * 25);
+        this.boxB.setRotation(this.time.seconds * -100);
+        this.boxA.setTint(Color.white);
+        this.boxB.setTint(Color.white);
+        if (this.boxA.intersectsWith(this.boxB)) {
+            const collision = this.boxA.collidesWith(this.boxB);
             if (!collision) {
                 return;
             }
             const { shapeAinB, shapeBinA } = collision;
-            this._boxA.setTint(shapeAinB ? Color.cyan : collisionRed);
-            this._boxB.setTint(shapeBinA ? Color.cyan : collisionRed);
-            this._boxB.tint.a = 0.5;
+            this.boxA.setTint(shapeAinB ? Color.cyan : collisionRed);
+            this.boxB.setTint(shapeBinA ? Color.cyan : collisionRed);
+            this.boxB.tint.a = 0.5;
         }
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._boxA);
-        context.render(this._boxB);
+        context.render(this.boxA);
+        context.render(this.boxB);
     }
 }
 app.start(new RectanglesCollisionScene());

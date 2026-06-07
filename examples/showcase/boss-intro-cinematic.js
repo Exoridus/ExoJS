@@ -11,60 +11,60 @@ const app = new Application({
 document.body.append(app.canvas);
 const title = 'VOID EMPEROR';
 class BossIntroCinematicScene extends Scene {
-    _view;
-    _bg;
-    _bars;
-    _barSize;
-    _title;
-    _titleState;
-    _boss;
-    _music;
+    view;
+    bg;
+    bars;
+    barSize;
+    title;
+    titleState;
+    boss;
+    music;
     async load(loader) {
         await loader.load(Texture, { boss: textures.shipA });
         await loader.load(Music, { track: music.loopMain });
     }
     init(loader) {
-        this._view = new View(220, 300, 800, 600);
-        this._bg = new Graphics();
-        this._bars = new Graphics();
-        this._barSize = { v: 0 };
-        this._title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
-        this._title.setPosition(150, 120);
-        this._titleState = { count: 0 };
-        this._boss = new Sprite(loader.get(Texture, 'boss'))
+        this.view = new View(220, 300, 800, 600);
+        this.bg = new Graphics();
+        this.bars = new Graphics();
+        this.barSize = { v: 0 };
+        this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
+        this.title.setPosition(150, 120);
+        this.titleState = { count: 0 };
+        this.boss = new Sprite(loader.get(Texture, 'boss'))
             .setAnchor(0.5)
             .setScale(0.4)
             .setPosition(560, 320)
             .setTint(new Color(255, 130, 130));
-        this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.2).play();
-        this.app.tweens.create(this._barSize).to({ v: 70 }, 0.6).start();
-        this.app.tweens.create(this._view.center).to({ x: 520, y: 300 }, 2.0).start();
-        this.app.tweens.create(this._boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
+        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.2).play();
+        this.app.tweens.create(this.barSize).to({ v: 70 }, 0.6).start();
+        this.app.tweens.create(this.view.center).to({ x: 520, y: 300 }, 2.0).start();
+        this.app.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
         this.app.tweens
-            .create(this._titleState)
+            .create(this.titleState)
             .to({ count: title.length }, 1.0)
             .delay(1.6)
             .onUpdate(() => {
-            this._title.text = title.slice(0, this._titleState.count | 0);
+            this.title.text = title.slice(0, this.titleState.count | 0);
         })
             .start();
-        this.app.tweens.create(this._music).to({ volume: 0.85 }, 2.0).start();
+        this.app.tweens.create(this.music).to({ volume: 0.85 }, 2.0).start();
     }
     draw(context) {
         context.backend.clear(new Color(16, 16, 24));
-        this._bg.clear();
-        this._bg.fillColor = new Color(36, 42, 70);
-        this._bg.drawRectangle(-200, 0, 1600, 600);
-        context.backend.setView(this._view);
-        context.render(this._bg);
-        context.render(this._boss);
+        this.bg.clear();
+        this.bg.fillColor = new Color(36, 42, 70);
+        this.bg.drawRectangle(-200, 0, 1600, 600);
+        context.backend.setView(this.view);
+        context.render(this.bg);
+        context.render(this.boss);
         context.backend.setView(null);
-        context.render(this._title);
-        this._bars.clear();
-        this._bars.fillColor = Color.black;
-        this._bars.drawRectangle(0, 0, 800, this._barSize.v);
-        this._bars.drawRectangle(0, 600 - this._barSize.v, 800, this._barSize.v);
-        context.render(this._bars);
+        context.render(this.title);
+        this.bars.clear();
+        this.bars.fillColor = Color.black;
+        this.bars.drawRectangle(0, 0, 800, this.barSize.v);
+        this.bars.drawRectangle(0, 600 - this.barSize.v, 800, this.barSize.v);
+        context.render(this.bars);
     }
 }
 app.start(new BossIntroCinematicScene());

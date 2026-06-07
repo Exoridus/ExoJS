@@ -14,7 +14,7 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class VideoDrawableScene extends Scene {
-    private _video!: Video;
+    private video!: Video;
 
     override async load(loader): Promise<void> {
         await loader.load(Video, { demo: VIDEO_URL });
@@ -23,17 +23,17 @@ class VideoDrawableScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this._video = loader.get(Video, 'demo');
-        this._video.width = width;
-        this._video.height = height;
-        this._video.applyOptions({ loop: true, muted: false, volume: 0.5 });
+        this.video = loader.get(Video, 'demo');
+        this.video.width = width;
+        this.video.height = height;
+        this.video.applyOptions({ loop: true, muted: false, volume: 0.5 });
 
-        this.app.input.onPointerTap.add(() => { this._video.toggle(); });
+        this.app.input.onPointerTap.add(() => { this.video.toggle(); });
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._video);
+        context.render(this.video);
     }
 }
 

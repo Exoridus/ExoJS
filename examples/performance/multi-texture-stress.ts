@@ -20,23 +20,23 @@ interface TextureInfo {
 }
 
 class MultiTextureStressScene extends Scene {
-    private _sprites!: { sprite: Sprite; offsetX: number; offsetY: number; phase: number; baseScale: number; driftX: number; driftY: number; rotationSpeed: number }[];
-    private _spriteLayer!: Container;
-    private _textureInfos!: TextureInfo[];
+    private sprites!: { sprite: Sprite; offsetX: number; offsetY: number; phase: number; baseScale: number; driftX: number; driftY: number; rotationSpeed: number }[];
+    private spriteLayer!: Container;
+    private textureInfos!: TextureInfo[];
 
     override init(): void {
         const { width, height } = this.app.canvas;
 
-        this._sprites = [];
-        this._spriteLayer = new Container();
-        this._spriteLayer.setPosition(width / 2, height / 2);
-        this._textureInfos = createTextureInfos();
+        this.sprites = [];
+        this.spriteLayer = new Container();
+        this.spriteLayer.setPosition(width / 2, height / 2);
+        this.textureInfos = createTextureInfos();
 
         let index = 0;
 
         for (let row = 0; row < GRID_ROWS; row++) {
             for (let column = 0; column < GRID_COLUMNS; column++) {
-                const textureInfo = this._textureInfos[index % this._textureInfos.length];
+                const textureInfo = this.textureInfos[index % this.textureInfos.length];
                 const sprite = new Sprite(textureInfo.texture);
                 const frame = textureInfo.frames[(row + column + index) % textureInfo.frames.length];
                 const offsetX = (column - (GRID_COLUMNS - 1) / 2) * 24;
@@ -51,7 +51,7 @@ class MultiTextureStressScene extends Scene {
                 sprite.setScale(baseScale);
                 sprite.setTint(tint);
 
-                this._sprites.push({
+                this.sprites.push({
                     sprite,
                     offsetX,
                     offsetY,
@@ -62,7 +62,7 @@ class MultiTextureStressScene extends Scene {
                     rotationSpeed: (index % 2 === 0 ? 1 : -1) * (18 + (index % 7) * 6),
                 });
 
-                this._spriteLayer.addChild(sprite);
+                this.spriteLayer.addChild(sprite);
                 index++;
             }
         }
@@ -71,9 +71,9 @@ class MultiTextureStressScene extends Scene {
     override update(delta): void {
         const time = this.app.activeTime.seconds;
 
-        this._spriteLayer.rotation = Math.sin(time * 0.45) * 5;
+        this.spriteLayer.rotation = Math.sin(time * 0.45) * 5;
 
-        for (const entry of this._sprites) {
+        for (const entry of this.sprites) {
             const localPhase = time + entry.phase;
             const scale = entry.baseScale + Math.sin(localPhase * 1.9) * 0.09;
 
@@ -86,15 +86,15 @@ class MultiTextureStressScene extends Scene {
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._spriteLayer);
+        context.render(this.spriteLayer);
     }
 
     override unload(): void {
-        this._spriteLayer?.destroy();
+        this.spriteLayer?.destroy();
     }
 
     override destroy(): void {
-        this._spriteLayer?.destroy();
+        this.spriteLayer?.destroy();
     }
 }
 

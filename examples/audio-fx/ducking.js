@@ -10,32 +10,32 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class DuckingScene extends Scene {
-    _music;
-    _voice;
-    _voiceBus;
-    _ducking;
-    _text;
+    music;
+    voice;
+    voiceBus;
+    ducking;
+    text;
     async load(loader) {
         await loader.load(Music, { music: audio.musicLoop });
         await loader.load(Sound, { voice: audio.uiConfirm });
     }
     init(loader) {
-        this._music = loader.get(Music, 'music').setLoop(true).setVolume(0.7).play();
-        this._voice = loader.get(Sound, 'voice');
-        this._voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
-        app.audio.registerBus(this._voiceBus);
-        this._voice.bus = this._voiceBus;
-        this._ducking = new DuckingFilter({ sidechain: this._voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
-        app.audio.music.addFilter(this._ducking);
-        this._text = new Text('Click to play voice-over and duck music', { fillColor: Color.white, fontSize: 24 });
-        this._text.setPosition(140, 280);
+        this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.7).play();
+        this.voice = loader.get(Sound, 'voice');
+        this.voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
+        app.audio.registerBus(this.voiceBus);
+        this.voice.bus = this.voiceBus;
+        this.ducking = new DuckingFilter({ sidechain: this.voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
+        app.audio.music.addFilter(this.ducking);
+        this.text = new Text('Click to play voice-over and duck music', { fillColor: Color.white, fontSize: 24 });
+        this.text.setPosition(140, 280);
         this.app.input.onPointerTap.add(() => {
-            this._voice.play({ replace: true });
+            this.voice.play({ replace: true });
         });
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 app.start(new DuckingScene());

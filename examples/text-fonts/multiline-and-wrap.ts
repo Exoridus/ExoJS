@@ -16,38 +16,38 @@ const longToken = 'ExoJStextlayoutrendersaverylongunbrokentokenwithoutanyspacest
 const titleColor = new Color(140, 170, 210);
 
 class MultilineAndWrapScene extends Scene {
-    private _titleA!: Text;
-    private _textA!: Text;
-    private _titleB!: Text;
-    private _textB!: Text;
-    private _titleC!: Text;
-    private _textC!: Text;
+    private titleA!: Text;
+    private textA!: Text;
+    private titleB!: Text;
+    private textB!: Text;
+    private titleC!: Text;
+    private textC!: Text;
 
     override init(): void {
-        this._titleA = new Text('No wrap — single line overflows the bounds', { fillColor: titleColor, fontSize: 16 });
-        this._titleA.setPosition(40, 50);
-        this._textA = new Text(paragraph, { fillColor: Color.white, fontSize: 22 });
-        this._textA.setPosition(40, 80);
+        this.titleA = new Text('No wrap — single line overflows the bounds', { fillColor: titleColor, fontSize: 16 });
+        this.titleA.setPosition(40, 50);
+        this.textA = new Text(paragraph, { fillColor: Color.white, fontSize: 22 });
+        this.textA.setPosition(40, 80);
 
-        this._titleB = new Text('Word wrap @ 360px — breaks at word boundaries', { fillColor: titleColor, fontSize: 16 });
-        this._titleB.setPosition(40, 210);
-        this._textB = new Text(paragraph, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 360 });
-        this._textB.setPosition(40, 240);
+        this.titleB = new Text('Word wrap @ 360px — breaks at word boundaries', { fillColor: titleColor, fontSize: 16 });
+        this.titleB.setPosition(40, 210);
+        this.textB = new Text(paragraph, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 360 });
+        this.textB.setPosition(40, 240);
 
-        this._titleC = new Text('Break words @ 280px — splits a long token', { fillColor: titleColor, fontSize: 16 });
-        this._titleC.setPosition(40, 430);
-        this._textC = new Text(longToken, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 280, breakWords: true });
-        this._textC.setPosition(40, 460);
+        this.titleC = new Text('Break words @ 280px — splits a long token', { fillColor: titleColor, fontSize: 16 });
+        this.titleC.setPosition(40, 430);
+        this.textC = new Text(longToken, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 280, breakWords: true });
+        this.textC.setPosition(40, 460);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._titleA);
-        context.render(this._titleB);
-        context.render(this._titleC);
-        context.render(this._textA);
-        context.render(this._textB);
-        context.render(this._textC);
+        context.render(this.titleA);
+        context.render(this.titleB);
+        context.render(this.titleC);
+        context.render(this.textA);
+        context.render(this.textB);
+        context.render(this.textC);
     }
 }
 

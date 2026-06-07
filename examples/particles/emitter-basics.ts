@@ -27,16 +27,16 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class EmitterBasicsScene extends Scene {
-    private _system!: ParticleSystem;
+    private system!: ParticleSystem;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
 
     override init(loader): void {
-        this._system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
-        this._system.setPosition(400, 520);
-        this._system.addSpawnModule(
+        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
+        this.system.setPosition(400, 520);
+        this.system.addSpawnModule(
             new RateSpawn({
                 rate: new Constant(180),
                 lifetime: new Range(0.6, 1.4),
@@ -44,17 +44,17 @@ class EmitterBasicsScene extends Scene {
                 scale: new Constant(new Vector(0.35, 0.35)),
             }),
         );
-        this._system.addUpdateModule(new ApplyForce(0, 240));
-        this._system.addUpdateModule(new AlphaFadeOverLifetime());
+        this.system.addUpdateModule(new ApplyForce(0, 240));
+        this.system.addUpdateModule(new AlphaFadeOverLifetime());
     }
 
     override update(delta): void {
-        this._system.update(delta);
+        this.system.update(delta);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._system);
+        context.render(this.system);
     }
 }
 

@@ -38,31 +38,31 @@ struct Uniforms { uTime:f32, _pad0:vec3<f32> };
 }`;
 
 class WaterMirrorScene extends Scene {
-    private _rt!: RenderTexture;
-    private _source!: Sprite;
-    private _mirror!: Sprite;
-    private _filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
-    private _time = 0;
+    private rt!: RenderTexture;
+    private source!: Sprite;
+    private mirror!: Sprite;
+    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private time = 0;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
 
     override init(loader): void {
-        this._rt = new RenderTexture(800, 280);
-        this._source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 180).setScale(2);
-        this._mirror = new Sprite(this._rt).setPosition(0, 320).setScale(1, -1);
-        this._filter =
+        this.rt = new RenderTexture(800, 280);
+        this.source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 180).setScale(2);
+        this.mirror = new Sprite(this.rt).setPosition(0, 320).setScale(1, -1);
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
-        this._mirror.filters = [this._filter];
+        this.mirror.filters = [this.filter];
     }
 
     override update(delta): void {
-        this._time += delta.seconds;
-        this._source.setPosition(400 + Math.cos(this._time * 1.7) * 170, 180 + Math.sin(this._time * 1.3) * 60);
-        this._filter.uniforms.uTime = this._time;
+        this.time += delta.seconds;
+        this.source.setPosition(400 + Math.cos(this.time * 1.7) * 170, 180 + Math.sin(this.time * 1.3) * 60);
+        this.filter.uniforms.uTime = this.time;
     }
 
     override draw(context): void {
@@ -70,14 +70,14 @@ class WaterMirrorScene extends Scene {
             new RenderTargetPass(
                 () => {
                     context.backend.clear();
-                    context.render(this._source);
+                    context.render(this.source);
                 },
-                { target: this._rt, view: this._rt.view, clearColor: Color.transparentBlack },
+                { target: this.rt, view: this.rt.view, clearColor: Color.transparentBlack },
             ),
         );
         context.backend.clear(new Color(18, 24, 36));
-        context.render(this._source);
-        context.render(this._mirror);
+        context.render(this.source);
+        context.render(this.mirror);
     }
 }
 

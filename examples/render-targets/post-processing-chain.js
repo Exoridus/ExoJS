@@ -12,43 +12,43 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class PostProcessingChainScene extends Scene {
-    _scene;
-    _a;
-    _b;
-    _c;
-    _blur;
-    _color;
-    _final;
-    _time = 0;
+    scene;
+    a;
+    b;
+    c;
+    blur;
+    color;
+    final;
+    time = 0;
     init() {
-        this._scene = new Graphics();
-        this._a = new RenderTexture(800, 600);
-        this._b = new RenderTexture(800, 600);
-        this._c = new RenderTexture(800, 600);
-        this._blur = new BlurFilter({ radius: 6, quality: 2 });
-        this._color = new ColorFilter(new Color(140, 190, 255));
-        this._final = new Sprite(this._c);
+        this.scene = new Graphics();
+        this.a = new RenderTexture(800, 600);
+        this.b = new RenderTexture(800, 600);
+        this.c = new RenderTexture(800, 600);
+        this.blur = new BlurFilter({ radius: 6, quality: 2 });
+        this.color = new ColorFilter(new Color(140, 190, 255));
+        this.final = new Sprite(this.c);
     }
     update(delta) {
-        this._time += delta.seconds;
+        this.time += delta.seconds;
     }
-    _drawScene(backend) {
-        this._scene.clear();
-        this._scene.fillColor = new Color(80, 130, 255);
-        this._scene.drawCircle(400 + Math.cos(this._time * 1.6) * 220, 300 + Math.sin(this._time * 1.8) * 160, 78);
-        this._scene.fillColor = new Color(255, 170, 90);
-        this._scene.drawCircle(400 + Math.cos(this._time * 1.2 + 1) * 210, 300 + Math.sin(this._time * 1.3 + 0.7) * 170, 54);
-        this._scene.render(backend);
+    drawScene(backend) {
+        this.scene.clear();
+        this.scene.fillColor = new Color(80, 130, 255);
+        this.scene.drawCircle(400 + Math.cos(this.time * 1.6) * 220, 300 + Math.sin(this.time * 1.8) * 160, 78);
+        this.scene.fillColor = new Color(255, 170, 90);
+        this.scene.drawCircle(400 + Math.cos(this.time * 1.2 + 1) * 210, 300 + Math.sin(this.time * 1.3 + 0.7) * 170, 54);
+        this.scene.render(backend);
     }
     draw(context) {
         context.backend.execute(new RenderTargetPass(() => {
             context.backend.clear();
-            this._drawScene(context.backend);
-        }, { target: this._a, view: this._a.view }));
-        this._blur.apply(context.backend, this._a, this._b);
-        this._color.apply(context.backend, this._b, this._c);
+            this.drawScene(context.backend);
+        }, { target: this.a, view: this.a.view }));
+        this.blur.apply(context.backend, this.a, this.b);
+        this.color.apply(context.backend, this.b, this.c);
         context.backend.clear();
-        context.render(this._final);
+        context.render(this.final);
     }
 }
 app.start(new PostProcessingChainScene());

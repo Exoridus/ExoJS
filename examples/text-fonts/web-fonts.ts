@@ -14,24 +14,24 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class WebFontsScene extends Scene {
-    private _default!: Text;
-    private _loaded!: Text;
+    private default!: Text;
+    private loaded!: Text;
 
     override async load(loader): Promise<void> {
         await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
     }
 
     override init(): void {
-        this._default = new Text('Default Font', { fillColor: Color.white, fontSize: 52 });
-        this._default.setPosition(120, 200);
-        this._loaded = new Text('Kenney Future Font', { fillColor: Color.white, fontFamily: 'Kenney Future', fontSize: 52 });
-        this._loaded.setPosition(120, 320);
+        this.default = new Text('Default Font', { fillColor: Color.white, fontSize: 52 });
+        this.default.setPosition(120, 200);
+        this.loaded = new Text('Kenney Future Font', { fillColor: Color.white, fontFamily: 'Kenney Future', fontSize: 52 });
+        this.loaded.setPosition(120, 320);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._default);
-        context.render(this._loaded);
+        context.render(this.default);
+        context.render(this.loaded);
     }
 }
 

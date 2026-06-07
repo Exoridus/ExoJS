@@ -12,40 +12,40 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class ScreenShakeOnExplosionScene extends Scene {
-    _view;
-    _ps;
-    _burstPos;
-    _burst;
+    view;
+    ps;
+    burstPos;
+    burst;
     async load(loader) {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
     init(loader) {
-        this._view = new View(400, 300, 800, 600);
-        this._ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
-        this._ps.setPosition(400, 300);
-        this._burstPos = new Vector(0, 0);
-        this._burst = new BurstSpawn({
+        this.view = new View(400, 300, 800, 600);
+        this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
+        this.ps.setPosition(400, 300);
+        this.burstPos = new Vector(0, 0);
+        this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 160 }],
             lifetime: new Constant(0.9),
-            position: new Constant(this._burstPos),
+            position: new Constant(this.burstPos),
             velocity: ConeDirection.omni(100, 360),
             scale: new Constant(new Vector(0.22, 0.22)),
         });
-        this._ps.addSpawnModule(this._burst);
-        this._ps.addUpdateModule(new AlphaFadeOverLifetime());
+        this.ps.addSpawnModule(this.burst);
+        this.ps.addUpdateModule(new AlphaFadeOverLifetime());
         this.app.input.onPointerTap.add(p => {
-            this._burstPos.set(p.x - this._ps.position.x, p.y - this._ps.position.y);
-            this._burst.reset();
-            this._view.shake(22, 280, { frequency: 26, decay: true });
+            this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
+            this.burst.reset();
+            this.view.shake(22, 280, { frequency: 26, decay: true });
         });
     }
     update(delta) {
-        this._ps.update(delta);
+        this.ps.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.backend.setView(this._view);
-        context.render(this._ps);
+        context.backend.setView(this.view);
+        context.render(this.ps);
         context.backend.setView(null);
     }
 }

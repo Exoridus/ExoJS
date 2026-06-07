@@ -11,44 +11,44 @@ const app = new Application({
 document.body.append(app.canvas);
 const PIXEL_GRID = technical.filtering.pixelGrid128;
 class BlurFilterScene extends Scene {
-    _blur;
-    _sprite;
-    _ui;
-    _drag = false;
+    blur;
+    sprite;
+    ui;
+    drag = false;
     async load(loader) {
         await loader.load(Texture, { grid: PIXEL_GRID });
     }
     init(loader) {
-        this._blur = new BlurFilter({ radius: 2, quality: 2 });
-        this._sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(3.5).setPosition(400, 280);
-        this._sprite.filters = [this._blur];
-        this._ui = new Graphics();
+        this.blur = new BlurFilter({ radius: 2, quality: 2 });
+        this.sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(3.5).setPosition(400, 280);
+        this.sprite.filters = [this.blur];
+        this.ui = new Graphics();
         this.app.input.onPointerDown.add(p => {
-            this._drag = p.y > 500;
-            this._setBlurFromX(p.x);
+            this.drag = p.y > 500;
+            this.setBlurFromX(p.x);
         });
         this.app.input.onPointerMove.add(p => {
-            this._setBlurFromX(p.x);
+            this.setBlurFromX(p.x);
         });
         this.app.input.onPointerUp.add(() => {
-            this._drag = false;
+            this.drag = false;
         });
     }
-    _setBlurFromX(x) {
-        if (!this._drag)
+    setBlurFromX(x) {
+        if (!this.drag)
             return;
         const t = Math.max(0, Math.min(1, (x - 180) / 440));
-        this._blur.radius = t * 14;
+        this.blur.radius = t * 14;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
-        this._ui.clear();
-        this._ui.fillColor = new Color(60, 60, 60);
-        this._ui.drawRectangle(180, 510, 440, 14);
-        this._ui.fillColor = new Color(130, 220, 255);
-        this._ui.drawRectangle(180, 510, (this._blur.radius / 14) * 440, 14);
-        context.render(this._ui);
+        context.render(this.sprite);
+        this.ui.clear();
+        this.ui.fillColor = new Color(60, 60, 60);
+        this.ui.drawRectangle(180, 510, 440, 14);
+        this.ui.fillColor = new Color(130, 220, 255);
+        this.ui.drawRectangle(180, 510, (this.blur.radius / 14) * 440, 14);
+        context.render(this.ui);
     }
 }
 app.start(new BlurFilterScene());

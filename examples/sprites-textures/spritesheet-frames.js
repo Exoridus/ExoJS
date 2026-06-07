@@ -12,9 +12,9 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class SpritesheetFramesScene extends Scene {
-    _spritesheet;
-    _frameNames;
-    _frame = 0;
+    spritesheet;
+    frameNames;
+    frame = 0;
     async load(loader) {
         await loader.load(Texture, { characters: 'image/platformer-characters.png' });
         await loader.load(Json, { characters: 'json/platformer-characters.json' });
@@ -23,20 +23,20 @@ class SpritesheetFramesScene extends Scene {
         const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'characters');
         const data = loader.get(Json, 'characters');
-        this._spritesheet = new Spritesheet(texture, data);
-        this._frameNames = Array.from(this._spritesheet.frames.keys());
-        for (const sprite of this._spritesheet.sprites.values()) {
+        this.spritesheet = new Spritesheet(texture, data);
+        this.frameNames = Array.from(this.spritesheet.frames.keys());
+        for (const sprite of this.spritesheet.sprites.values()) {
             sprite.setAnchor(0.5);
             sprite.setPosition(width / 2, height / 2);
             sprite.setScale(2);
         }
     }
     update() {
-        this._frame = (this._frame + 1) % this._frameNames.length;
+        this.frame = (this.frame + 1) % this.frameNames.length;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._spritesheet.getFrameSprite(this._frameNames[this._frame]));
+        context.render(this.spritesheet.getFrameSprite(this.frameNames[this.frame]));
     }
 }
 app.start(new SpritesheetFramesScene());

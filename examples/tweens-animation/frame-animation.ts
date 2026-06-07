@@ -14,7 +14,7 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class FrameAnimationScene extends Scene {
-    private _sprite!: AnimatedSprite;
+    private sprite!: AnimatedSprite;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { characters: 'image/platformer-characters.png' });
@@ -28,18 +28,18 @@ class FrameAnimationScene extends Scene {
 
         const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));
 
-        this._sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: 8, loop: true } });
-        this._sprite.setAnchor(0.5).setScale(3).setPosition(400, 300);
-        this._sprite.play('walk');
+        this.sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: 8, loop: true } });
+        this.sprite.setAnchor(0.5).setScale(3).setPosition(400, 300);
+        this.sprite.play('walk');
     }
 
     override update(delta): void {
-        this._sprite.update(delta);
+        this.sprite.update(delta);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 

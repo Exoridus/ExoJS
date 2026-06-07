@@ -12,13 +12,13 @@ document.body.append(app.canvas);
 const UV_GRID = technical.filtering.uvGrid256;
 const HALF = 240;
 class MeshTexturedQuadScene extends Scene {
-    _quad;
+    quad;
     async load(loader) {
         await loader.load(Texture, { uvGrid: UV_GRID });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this._quad = new Mesh({
+        this.quad = new Mesh({
             vertices: new Float32Array([
                 -HALF,
                 -HALF,
@@ -33,14 +33,14 @@ class MeshTexturedQuadScene extends Scene {
             indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
             texture: loader.get(Texture, 'uvGrid'),
         });
-        this._quad.setPosition((width / 2) | 0, (height / 2) | 0);
+        this.quad.setPosition((width / 2) | 0, (height / 2) | 0);
     }
     update(delta) {
-        this._quad.rotate(delta.seconds * 30);
+        this.quad.rotate(delta.seconds * 30);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._quad);
+        context.render(this.quad);
     }
 }
 app.start(new MeshTexturedQuadScene());

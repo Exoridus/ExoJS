@@ -10,43 +10,43 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class GraphicsPrimitivesScene extends Scene {
-    _sceneRoot;
-    _panel;
-    _circle;
-    _diamond;
-    _star;
+    sceneRoot;
+    panel;
+    circle;
+    diamond;
+    star;
     init() {
         const { width, height } = this.app.canvas;
-        this._sceneRoot = new Container();
-        this._sceneRoot.setPosition(width / 2, height / 2);
-        this._panel = new Graphics();
-        this._panel.fillColor = Color.darkSlateBlue;
-        this._panel.drawRectangle(-190, -130, 380, 260);
-        this._circle = new Graphics();
-        this._circle.fillColor = Color.tomato;
-        this._circle.drawCircle(-92, -6, 48);
-        this._diamond = new Graphics();
-        this._diamond.fillColor = Color.goldenrod;
-        this._diamond.drawPolygon([0, -70, 70, 0, 0, 70, -70, 0]);
-        this._star = new Graphics();
-        this._star.fillColor = Color.mediumSeaGreen;
-        this._star.drawStar(108, 12, 5, 58, 26, -18);
-        this._sceneRoot.addChild(this._panel, this._circle, this._diamond, this._star);
+        this.sceneRoot = new Container();
+        this.sceneRoot.setPosition(width / 2, height / 2);
+        this.panel = new Graphics();
+        this.panel.fillColor = Color.darkSlateBlue;
+        this.panel.drawRectangle(-190, -130, 380, 260);
+        this.circle = new Graphics();
+        this.circle.fillColor = Color.tomato;
+        this.circle.drawCircle(-92, -6, 48);
+        this.diamond = new Graphics();
+        this.diamond.fillColor = Color.goldenrod;
+        this.diamond.drawPolygon([0, -70, 70, 0, 0, 70, -70, 0]);
+        this.star = new Graphics();
+        this.star.fillColor = Color.mediumSeaGreen;
+        this.star.drawStar(108, 12, 5, 58, 26, -18);
+        this.sceneRoot.addChild(this.panel, this.circle, this.diamond, this.star);
     }
     update(delta) {
-        this._sceneRoot.rotate(delta.seconds * 9);
-        this._star.rotate(delta.seconds * 60);
-        this._circle.y = Math.sin(this.app.activeTime.seconds * 2) * 18;
+        this.sceneRoot.rotate(delta.seconds * 9);
+        this.star.rotate(delta.seconds * 60);
+        this.circle.y = Math.sin(this.app.activeTime.seconds * 2) * 18;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sceneRoot);
+        context.render(this.sceneRoot);
     }
     unload() {
-        this._sceneRoot?.destroy();
+        this.sceneRoot?.destroy();
     }
     destroy() {
-        this._sceneRoot?.destroy();
+        this.sceneRoot?.destroy();
     }
 }
 app.start(new GraphicsPrimitivesScene()).catch(() => {

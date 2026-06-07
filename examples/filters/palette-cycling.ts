@@ -37,32 +37,32 @@ function buildPaletteCanvas(offset: number): HTMLCanvasElement {
 }
 
 class PaletteCyclingScene extends Scene {
-    private _palette!: Texture;
-    private _filter!: LutFilter;
-    private _sprite!: Sprite;
-    private _offset = 0;
+    private palette!: Texture;
+    private filter!: LutFilter;
+    private sprite!: Sprite;
+    private offset = 0;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { ramp: PRIMARY_RAMP });
     }
 
     override init(loader): void {
-        this._palette = LutFilter.fromImage(buildPaletteCanvas(0));
-        this._filter = new LutFilter({ mode: '1d' }).setLut(this._palette);
+        this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
+        this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
 
-        this._sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3);
-        this._sprite.setPosition(400, 300);
-        this._sprite.filters = [this._filter];
+        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3);
+        this.sprite.setPosition(400, 300);
+        this.sprite.filters = [this.filter];
     }
 
     override update(delta): void {
-        this._offset = (this._offset + delta.seconds * 80) % PALETTE_SIZE;
-        this._palette.source = buildPaletteCanvas(Math.floor(this._offset));
+        this.offset = (this.offset + delta.seconds * 80) % PALETTE_SIZE;
+        this.palette.source = buildPaletteCanvas(Math.floor(this.offset));
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 

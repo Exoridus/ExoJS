@@ -14,13 +14,13 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class SplitScreenScene extends Scene {
-    private _texture!: Texture;
-    private _leftView!: View;
-    private _rightView!: View;
-    private _divider!: Graphics;
-    private _leftPlayer!: Sprite;
-    private _rightPlayer!: Sprite;
-    private _move = {
+    private texture!: Texture;
+    private leftView!: View;
+    private rightView!: View;
+    private divider!: Graphics;
+    private leftPlayer!: Sprite;
+    private rightPlayer!: Sprite;
+    private move = {
         a: 0,
         d: 0,
         w: 0,
@@ -32,99 +32,99 @@ class SplitScreenScene extends Scene {
     };
 
     override async load(loader): Promise<void> {
-        this._texture = await loader.load(Texture, 'image/ship-a.png');
+        this.texture = await loader.load(Texture, 'image/ship-a.png');
     }
 
     override init(): void {
         const { width, height } = this.app.canvas;
 
-        this._leftView = new View(0, 0, width / 2, height);
-        this._leftView.viewport.set(0, 0, 0.5, 1);
-        this._rightView = new View(0, 0, width / 2, height);
-        this._rightView.viewport.set(0.5, 0, 0.5, 1);
+        this.leftView = new View(0, 0, width / 2, height);
+        this.leftView.viewport.set(0, 0, 0.5, 1);
+        this.rightView = new View(0, 0, width / 2, height);
+        this.rightView.viewport.set(0.5, 0, 0.5, 1);
 
-        this._divider = new Graphics();
-        this._divider.fillColor = Color.white;
-        this._divider.drawRectangle(width / 2 - 1, 0, 2, height);
+        this.divider = new Graphics();
+        this.divider.fillColor = Color.white;
+        this.divider.drawRectangle(width / 2 - 1, 0, 2, height);
 
-        this._leftPlayer = new Sprite(this._texture)
+        this.leftPlayer = new Sprite(this.texture)
             .setAnchor(0.5)
             .setPosition(-160, 0)
             .setTint(new Color(120, 190, 255));
-        this._rightPlayer = new Sprite(this._texture)
+        this.rightPlayer = new Sprite(this.texture)
             .setAnchor(0.5)
             .setPosition(160, 0)
             .setTint(new Color(255, 180, 120));
 
         this.inputs.onActive(Keyboard.A, () => {
-            this._move.a = 1;
+            this.move.a = 1;
         });
         this.inputs.onStop(Keyboard.A, () => {
-            this._move.a = 0;
+            this.move.a = 0;
         });
         this.inputs.onActive(Keyboard.D, () => {
-            this._move.d = 1;
+            this.move.d = 1;
         });
         this.inputs.onStop(Keyboard.D, () => {
-            this._move.d = 0;
+            this.move.d = 0;
         });
         this.inputs.onActive(Keyboard.W, () => {
-            this._move.w = 1;
+            this.move.w = 1;
         });
         this.inputs.onStop(Keyboard.W, () => {
-            this._move.w = 0;
+            this.move.w = 0;
         });
         this.inputs.onActive(Keyboard.S, () => {
-            this._move.s = 1;
+            this.move.s = 1;
         });
         this.inputs.onStop(Keyboard.S, () => {
-            this._move.s = 0;
+            this.move.s = 0;
         });
         this.inputs.onActive(Keyboard.Left, () => {
-            this._move.left = 1;
+            this.move.left = 1;
         });
         this.inputs.onStop(Keyboard.Left, () => {
-            this._move.left = 0;
+            this.move.left = 0;
         });
         this.inputs.onActive(Keyboard.Right, () => {
-            this._move.right = 1;
+            this.move.right = 1;
         });
         this.inputs.onStop(Keyboard.Right, () => {
-            this._move.right = 0;
+            this.move.right = 0;
         });
         this.inputs.onActive(Keyboard.Up, () => {
-            this._move.up = 1;
+            this.move.up = 1;
         });
         this.inputs.onStop(Keyboard.Up, () => {
-            this._move.up = 0;
+            this.move.up = 0;
         });
         this.inputs.onActive(Keyboard.Down, () => {
-            this._move.down = 1;
+            this.move.down = 1;
         });
         this.inputs.onStop(Keyboard.Down, () => {
-            this._move.down = 0;
+            this.move.down = 0;
         });
     }
 
     override update(delta): void {
         const speed = 300 * delta.seconds;
 
-        this._leftPlayer.move((this._move.d - this._move.a) * speed, (this._move.s - this._move.w) * speed);
-        this._rightPlayer.move((this._move.right - this._move.left) * speed, (this._move.down - this._move.up) * speed);
-        this._leftView.setCenter(this._leftPlayer.position.x, this._leftPlayer.position.y);
-        this._rightView.setCenter(this._rightPlayer.position.x, this._rightPlayer.position.y);
+        this.leftPlayer.move((this.move.d - this.move.a) * speed, (this.move.s - this.move.w) * speed);
+        this.rightPlayer.move((this.move.right - this.move.left) * speed, (this.move.down - this.move.up) * speed);
+        this.leftView.setCenter(this.leftPlayer.position.x, this.leftPlayer.position.y);
+        this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.backend.setView(this._leftView);
-        context.render(this._leftPlayer);
-        context.render(this._rightPlayer);
-        context.backend.setView(this._rightView);
-        context.render(this._leftPlayer);
-        context.render(this._rightPlayer);
+        context.backend.setView(this.leftView);
+        context.render(this.leftPlayer);
+        context.render(this.rightPlayer);
+        context.backend.setView(this.rightView);
+        context.render(this.leftPlayer);
+        context.render(this.rightPlayer);
         context.backend.setView(null);
-        context.render(this._divider);
+        context.render(this.divider);
     }
 }
 

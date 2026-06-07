@@ -11,21 +11,21 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class VideoDrawableScene extends Scene {
-    _video;
+    video;
     async load(loader) {
         await loader.load(Video, { demo: VIDEO_URL });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this._video = loader.get(Video, 'demo');
-        this._video.width = width;
-        this._video.height = height;
-        this._video.applyOptions({ loop: true, muted: false, volume: 0.5 });
-        this.app.input.onPointerTap.add(() => { this._video.toggle(); });
+        this.video = loader.get(Video, 'demo');
+        this.video.width = width;
+        this.video.height = height;
+        this.video.applyOptions({ loop: true, muted: false, volume: 0.5 });
+        this.app.input.onPointerTap.add(() => { this.video.toggle(); });
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._video);
+        context.render(this.video);
     }
 }
 app.start(new VideoDrawableScene());

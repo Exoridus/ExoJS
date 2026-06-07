@@ -11,12 +11,12 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class MeshTriangleScene extends Scene {
-    private _triangle!: Mesh;
+    private triangle!: Mesh;
 
     override init(): void {
         const { width, height } = this.app.canvas;
 
-        this._triangle = new Mesh({
+        this.triangle = new Mesh({
             vertices: new Float32Array([0, -100, 100, 100, -100, 100]),
             colors: new Uint32Array([
                 0xff0000ff,
@@ -25,16 +25,16 @@ class MeshTriangleScene extends Scene {
             ]),
         });
 
-        this._triangle.setPosition((width / 2) | 0, (height / 2) | 0);
+        this.triangle.setPosition((width / 2) | 0, (height / 2) | 0);
     }
 
     override update(delta): void {
-        this._triangle.rotate(delta.seconds * 60);
+        this.triangle.rotate(delta.seconds * 60);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._triangle);
+        context.render(this.triangle);
     }
 }
 

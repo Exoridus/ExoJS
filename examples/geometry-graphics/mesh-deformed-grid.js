@@ -48,40 +48,40 @@ function buildGrid() {
 }
 const UV_GRID = technical.filtering.uvGrid256;
 class MeshDeformedGridScene extends Scene {
-    _restVertices;
-    _mesh;
-    _time = 0;
+    restVertices;
+    mesh;
+    time = 0;
     async load(loader) {
         await loader.load(Texture, { uvGrid: UV_GRID });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         const grid = buildGrid();
-        this._restVertices = grid.vertices.slice();
-        this._mesh = new Mesh({
+        this.restVertices = grid.vertices.slice();
+        this.mesh = new Mesh({
             vertices: grid.vertices,
             uvs: grid.uvs,
             indices: grid.indices,
             texture: loader.get(Texture, 'uvGrid'),
         });
-        this._mesh.setPosition((width / 2) | 0, (height / 2) | 0);
+        this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
     }
     update(delta) {
-        this._time += delta.seconds;
-        const verts = this._mesh.vertices;
-        const rest = this._restVertices;
-        const t = this._time;
+        this.time += delta.seconds;
+        const verts = this.mesh.vertices;
+        const rest = this.restVertices;
+        const t = this.time;
         for (let i = 0; i < verts.length; i += 2) {
             const rx = rest[i];
             const ry = rest[i + 1];
             verts[i] = rx + Math.sin(t * 2 + ry * 0.04) * 14;
             verts[i + 1] = ry + Math.cos(t * 1.6 + rx * 0.03) * 10;
         }
-        this._mesh.recomputeLocalBounds();
+        this.mesh.recomputeLocalBounds();
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._mesh);
+        context.render(this.mesh);
     }
 }
 app.start(new MeshDeformedGridScene());

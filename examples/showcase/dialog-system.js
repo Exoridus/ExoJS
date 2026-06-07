@@ -15,49 +15,49 @@ const lines = [
     'If this goes wrong, burn every gate behind us.',
 ];
 class DialogSystemScene extends Scene {
-    _portrait;
-    _box;
-    _beep;
-    _lineIndex = 0;
-    _chars = 0;
-    _timer = 0;
-    _done = false;
+    portrait;
+    box;
+    beep;
+    lineIndex = 0;
+    chars = 0;
+    timer = 0;
+    done = false;
     async load(loader) {
         await loader.load(Texture, { portrait: textures.shipA });
         await loader.load(Sound, { beep: sound.uiConfirm });
     }
     init(loader) {
-        this._portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(1.7).setPosition(170, 420);
-        this._box = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 40 }, { maxWidth: 600 });
-        this._box.setPosition(270, 360);
-        this._beep = loader.get(Sound, 'beep');
+        this.portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(1.7).setPosition(170, 420);
+        this.box = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 40 }, { maxWidth: 600 });
+        this.box.setPosition(270, 360);
+        this.beep = loader.get(Sound, 'beep');
         this.app.input.onPointerTap.add(() => {
-            if (!this._done) {
-                this._chars = lines[this._lineIndex].length;
-                this._done = true;
+            if (!this.done) {
+                this.chars = lines[this.lineIndex].length;
+                this.done = true;
                 return;
             }
-            this._lineIndex = (this._lineIndex + 1) % lines.length;
-            this._chars = 0;
-            this._done = false;
+            this.lineIndex = (this.lineIndex + 1) % lines.length;
+            this.chars = 0;
+            this.done = false;
         });
     }
     update(delta) {
-        if (!this._done) {
-            this._timer += delta.seconds;
-            while (this._timer > 0.035 && this._chars < lines[this._lineIndex].length) {
-                this._timer -= 0.035;
-                this._chars++;
-                this._beep.play({ playbackRate: 1.9, volume: 0.14 });
+        if (!this.done) {
+            this.timer += delta.seconds;
+            while (this.timer > 0.035 && this.chars < lines[this.lineIndex].length) {
+                this.timer -= 0.035;
+                this.chars++;
+                this.beep.play({ playbackRate: 1.9, volume: 0.14 });
             }
-            this._done = this._chars >= lines[this._lineIndex].length;
+            this.done = this.chars >= lines[this.lineIndex].length;
         }
-        this._box.text = lines[this._lineIndex].slice(0, this._chars);
+        this.box.text = lines[this.lineIndex].slice(0, this.chars);
     }
     draw(context) {
         context.backend.clear(new Color(20, 24, 34));
-        context.render(this._portrait);
-        context.render(this._box);
+        context.render(this.portrait);
+        context.render(this.box);
     }
 }
 app.start(new DialogSystemScene());

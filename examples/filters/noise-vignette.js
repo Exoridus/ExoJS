@@ -28,27 +28,27 @@ fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))
     return vec4<f32>((c.rgb+vec3<f32>(n))*vig,c.a);
 }`;
 class NoiseVignetteScene extends Scene {
-    _time = 0;
-    _filter;
-    _sprite;
+    time = 0;
+    filter;
+    sprite;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._filter =
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
-        this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
-        this._sprite.filters = [this._filter];
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
+        this.sprite.filters = [this.filter];
     }
     update(delta) {
-        this._time += delta.seconds;
-        this._filter.uniforms.uTime = this._time;
+        this.time += delta.seconds;
+        this.filter.uniforms.uTime = this.time;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 app.start(new NoiseVignetteScene());

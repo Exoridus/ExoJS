@@ -14,47 +14,47 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class SignalBusInspectorScene extends Scene {
-    private _signals!: { spawn: Signal; damage: Signal; score: Signal };
-    private _text!: Text;
-    private _tick!: Timer;
-    private _listenerA!: () => void;
-    private _listenerB!: () => void;
+    private signals!: { spawn: Signal; damage: Signal; score: Signal };
+    private text!: Text;
+    private tick!: Timer;
+    private listenerA!: () => void;
+    private listenerB!: () => void;
 
     override init(): void {
-        this._signals = {
+        this.signals = {
             spawn: new Signal(),
             damage: new Signal(),
             score: new Signal(),
         };
-        this._text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 28 });
-        this._text.setPosition(40, 70);
-        this._tick = new Timer(seconds(1), true);
-        this._listenerA = () => undefined;
-        this._listenerB = () => undefined;
-        this._signals.spawn.add(this._listenerA);
-        this._signals.damage.add(this._listenerA);
-        this._signals.damage.add(this._listenerB);
-        this._signals.score.add(this._listenerA);
+        this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 28 });
+        this.text.setPosition(40, 70);
+        this.tick = new Timer(seconds(1), true);
+        this.listenerA = () => undefined;
+        this.listenerB = () => undefined;
+        this.signals.spawn.add(this.listenerA);
+        this.signals.damage.add(this.listenerA);
+        this.signals.damage.add(this.listenerB);
+        this.signals.score.add(this.listenerA);
     }
 
     override update(): void {
-        if (this._tick.expired) {
-            if (Math.random() > 0.5) this._signals.spawn.add(this._listenerB);
-            else this._signals.spawn.remove(this._listenerB);
-            this._signals.spawn.dispatch();
-            this._signals.damage.dispatch();
-            this._signals.score.dispatch();
-            this._tick.restart();
+        if (this.tick.expired) {
+            if (Math.random() > 0.5) this.signals.spawn.add(this.listenerB);
+            else this.signals.spawn.remove(this.listenerB);
+            this.signals.spawn.dispatch();
+            this.signals.damage.dispatch();
+            this.signals.score.dispatch();
+            this.tick.restart();
         }
     }
 
     override draw(context): void {
-        this._text.text =
-            `Manual Signal Inspector\n\nspawn listeners: ${this._signals.spawn.count}\n` +
-                `damage listeners: ${this._signals.damage.count}\n` +
-                `score listeners: ${this._signals.score.count}`;
+        this.text.text =
+            `Manual Signal Inspector\n\nspawn listeners: ${this.signals.spawn.count}\n` +
+                `damage listeners: ${this.signals.damage.count}\n` +
+                `score listeners: ${this.signals.score.count}`;
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 

@@ -12,41 +12,41 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class PictureInPictureScene extends Scene {
-    _mainView;
-    _pipView;
-    _sprite;
-    _velocity = 220;
-    _frame;
+    mainView;
+    pipView;
+    sprite;
+    velocity = 220;
+    frame;
     async load(loader) {
-        this._sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
     }
     init() {
         const { width, height } = this.app.canvas;
-        this._mainView = new View(0, 0, width, height);
-        this._pipView = new View(0, 0, width * 0.3, height * 0.3);
-        this._pipView.viewport.set(0.68, 0.04, 0.28, 0.28);
-        this._pipView.setZoom(2.2);
-        this._sprite.setAnchor(0.5).setPosition(-280, 0);
-        this._frame = new Graphics();
-        this._frame.lineWidth = 3;
-        this._frame.lineColor = Color.white;
-        this._frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
+        this.mainView = new View(0, 0, width, height);
+        this.pipView = new View(0, 0, width * 0.3, height * 0.3);
+        this.pipView.viewport.set(0.68, 0.04, 0.28, 0.28);
+        this.pipView.setZoom(2.2);
+        this.sprite.setAnchor(0.5).setPosition(-280, 0);
+        this.frame = new Graphics();
+        this.frame.lineWidth = 3;
+        this.frame.lineColor = Color.white;
+        this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
     }
     update(delta) {
-        this._sprite.move(this._velocity * delta.seconds, 0);
-        if (this._sprite.position.x > 320 || this._sprite.position.x < -320) {
-            this._velocity *= -1;
+        this.sprite.move(this.velocity * delta.seconds, 0);
+        if (this.sprite.position.x > 320 || this.sprite.position.x < -320) {
+            this.velocity *= -1;
         }
-        this._pipView.follow(this._sprite, { lerp: 1 });
+        this.pipView.follow(this.sprite, { lerp: 1 });
     }
     draw(context) {
         context.backend.clear();
-        context.backend.setView(this._mainView);
-        context.render(this._sprite);
-        context.backend.setView(this._pipView);
-        context.render(this._sprite);
+        context.backend.setView(this.mainView);
+        context.render(this.sprite);
+        context.backend.setView(this.pipView);
+        context.render(this.sprite);
         context.backend.setView(null);
-        context.render(this._frame);
+        context.render(this.frame);
     }
 }
 app.start(new PictureInPictureScene());

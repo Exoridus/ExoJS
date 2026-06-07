@@ -12,23 +12,23 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class InterruptAndReplaceScene extends Scene {
-    _sprite;
-    _moveTween = null;
+    sprite;
+    moveTween = null;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
         this.app.input.onPointerTap.add(pointer => {
-            if (this._moveTween !== null) {
-                this._moveTween.stop();
+            if (this.moveTween !== null) {
+                this.moveTween.stop();
             }
-            this._moveTween = this.app.tweens.create(this._sprite.position).to({ x: pointer.x, y: pointer.y }, 0.35).start();
+            this.moveTween = this.app.tweens.create(this.sprite.position).to({ x: pointer.x, y: pointer.y }, 0.35).start();
         });
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 app.start(new InterruptAndReplaceScene());

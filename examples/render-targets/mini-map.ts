@@ -14,39 +14,39 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class MiniMapScene extends Scene {
-    private _world!: Graphics;
-    private _player!: Graphics;
-    private _miniRt!: RenderTexture;
-    private _miniSprite!: Sprite;
-    private _miniFrame!: Graphics;
-    private _time = 0;
+    private world!: Graphics;
+    private player!: Graphics;
+    private miniRt!: RenderTexture;
+    private miniSprite!: Sprite;
+    private miniFrame!: Graphics;
+    private time = 0;
 
     override init(): void {
-        this._world = new Graphics();
-        this._player = new Graphics();
-        this._miniRt = new RenderTexture(220, 160);
-        this._miniSprite = new Sprite(this._miniRt).setPosition(560, 20);
-        this._miniFrame = new Graphics();
+        this.world = new Graphics();
+        this.player = new Graphics();
+        this.miniRt = new RenderTexture(220, 160);
+        this.miniSprite = new Sprite(this.miniRt).setPosition(560, 20);
+        this.miniFrame = new Graphics();
     }
 
     override update(delta): void {
-        this._time += delta.seconds;
+        this.time += delta.seconds;
     }
 
-    private _renderWorld(backend): void {
-        this._world.clear();
-        this._world.lineWidth = 2;
-        this._world.lineColor = new Color(60, 70, 90);
-        for (let x = 80; x <= 720; x += 80) this._world.drawLine(x, 60, x, 540);
-        for (let y = 60; y <= 540; y += 80) this._world.drawLine(80, y, 720, y);
-        this._world.render(backend);
+    private renderWorld(backend): void {
+        this.world.clear();
+        this.world.lineWidth = 2;
+        this.world.lineColor = new Color(60, 70, 90);
+        for (let x = 80; x <= 720; x += 80) this.world.drawLine(x, 60, x, 540);
+        for (let y = 60; y <= 540; y += 80) this.world.drawLine(80, y, 720, y);
+        this.world.render(backend);
 
-        const x = 400 + Math.cos(this._time) * 250;
-        const y = 300 + Math.sin(this._time * 1.3) * 180;
-        this._player.clear();
-        this._player.fillColor = new Color(255, 180, 100);
-        this._player.drawCircle(x, y, 18);
-        this._player.render(backend);
+        const x = 400 + Math.cos(this.time) * 250;
+        const y = 300 + Math.sin(this.time * 1.3) * 180;
+        this.player.clear();
+        this.player.fillColor = new Color(255, 180, 100);
+        this.player.drawCircle(x, y, 18);
+        this.player.render(backend);
     }
 
     override draw(context): void {
@@ -54,19 +54,19 @@ class MiniMapScene extends Scene {
             new RenderTargetPass(
                 () => {
                     context.backend.clear();
-                    this._renderWorld(context.backend);
+                    this.renderWorld(context.backend);
                 },
-                { target: this._miniRt, view: this._miniRt.view },
+                { target: this.miniRt, view: this.miniRt.view },
             ),
         );
         context.backend.clear();
-        this._renderWorld(context.backend);
-        context.render(this._miniSprite);
-        this._miniFrame.clear();
-        this._miniFrame.lineWidth = 2;
-        this._miniFrame.lineColor = Color.white;
-        this._miniFrame.drawRectangle(560, 20, 220, 160);
-        context.render(this._miniFrame);
+        this.renderWorld(context.backend);
+        context.render(this.miniSprite);
+        this.miniFrame.clear();
+        this.miniFrame.lineWidth = 2;
+        this.miniFrame.lineColor = Color.white;
+        this.miniFrame.drawRectangle(560, 20, 220, 160);
+        context.render(this.miniFrame);
     }
 }
 

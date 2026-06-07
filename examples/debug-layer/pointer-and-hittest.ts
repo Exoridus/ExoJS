@@ -19,14 +19,14 @@ debug.layers.hitTest.visible = true;
 debug.layers.pointerStack.visible = true;
 
 class PointerAndHittestScene extends Scene {
-    private _sprites!: Sprite[];
+    private sprites!: Sprite[];
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
 
     override init(loader): void {
-        this._sprites = [];
+        this.sprites = [];
         for (let i = 0; i < 5; i++) {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
                 .setAnchor(0.5)
@@ -38,13 +38,13 @@ class PointerAndHittestScene extends Scene {
             sprite.setTint(
                 [new Color(255, 130, 130), new Color(130, 255, 170), new Color(140, 190, 255), new Color(255, 230, 130), new Color(220, 140, 255)][i],
             );
-            this._sprites.push(sprite);
+            this.sprites.push(sprite);
         }
     }
 
     override draw(context): void {
         context.backend.clear();
-        for (const sprite of this._sprites) context.render(sprite);
+        for (const sprite of this.sprites) context.render(sprite);
     }
 }
 

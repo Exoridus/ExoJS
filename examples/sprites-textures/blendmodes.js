@@ -11,14 +11,14 @@ const app = new Application({
 document.body.append(app.canvas);
 const ALPHA_RINGS = technical.alpha.alphaGradientRings;
 class BlendmodesScene extends Scene {
-    _background;
-    _leftBunny;
-    _rightBunny;
-    _blendModes;
-    _blendModeNames;
-    _blendModeIndex = 0;
-    _ticker = 0;
-    _info;
+    background;
+    leftBunny;
+    rightBunny;
+    blendModes;
+    blendModeNames;
+    blendModeIndex = 0;
+    ticker = 0;
+    info;
     async load(loader) {
         await loader.load(Texture, {
             background: ALPHA_RINGS,
@@ -29,47 +29,47 @@ class BlendmodesScene extends Scene {
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this._background = new Sprite(loader.get(Texture, 'background'));
-        this._background.setPosition(width / 2, height / 2);
-        this._background.setAnchor(0.5, 0.5);
-        this._background.setScale(Math.max(width, height) / 256);
-        this._leftBunny = new Sprite(loader.get(Texture, 'bunny'));
-        this._leftBunny.setAnchor(0.5, 0.5);
-        this._leftBunny.setScale(5);
-        this._rightBunny = new Sprite(loader.get(Texture, 'bunny'));
-        this._rightBunny.setAnchor(0.5, 0.5);
-        this._rightBunny.setScale(5);
-        this._blendModes = [BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply, BlendModes.Screen];
-        this._blendModeNames = ['NORMAL', 'ADDITIVE', 'SUBTRACT', 'MULTIPLY', 'SCREEN'];
-        this._info = new Text('Click to switch between blend modes', {
+        this.background = new Sprite(loader.get(Texture, 'background'));
+        this.background.setPosition(width / 2, height / 2);
+        this.background.setAnchor(0.5, 0.5);
+        this.background.setScale(Math.max(width, height) / 256);
+        this.leftBunny = new Sprite(loader.get(Texture, 'bunny'));
+        this.leftBunny.setAnchor(0.5, 0.5);
+        this.leftBunny.setScale(5);
+        this.rightBunny = new Sprite(loader.get(Texture, 'bunny'));
+        this.rightBunny.setAnchor(0.5, 0.5);
+        this.rightBunny.setScale(5);
+        this.blendModes = [BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply, BlendModes.Screen];
+        this.blendModeNames = ['NORMAL', 'ADDITIVE', 'SUBTRACT', 'MULTIPLY', 'SCREEN'];
+        this.info = new Text('Click to switch between blend modes', {
             fontSize: 16,
             fillColor: Color.white,
             align: 'center',
         });
-        this._info.setPosition(width / 2, 0);
-        this._info.setAnchor(0.5, 0);
+        this.info.setPosition(width / 2, 0);
+        this.info.setAnchor(0.5, 0);
         this.app.input.onPointerDown.add(() => this.updateBlendMode());
         this.updateBlendMode();
     }
     updateBlendMode() {
-        this._blendModeIndex = (this._blendModeIndex + 1) % this._blendModes.length;
-        this._leftBunny.setBlendMode(this._blendModes[this._blendModeIndex]);
-        this._rightBunny.setBlendMode(this._blendModes[this._blendModeIndex]);
-        this._info.text = [`Click to switch between blend modes`, `Current blend mode: ${this._blendModeNames[this._blendModeIndex]}`].join('\n');
+        this.blendModeIndex = (this.blendModeIndex + 1) % this.blendModes.length;
+        this.leftBunny.setBlendMode(this.blendModes[this.blendModeIndex]);
+        this.rightBunny.setBlendMode(this.blendModes[this.blendModeIndex]);
+        this.info.text = [`Click to switch between blend modes`, `Current blend mode: ${this.blendModeNames[this.blendModeIndex]}`].join('\n');
     }
     update(delta) {
         const canvas = this.app.canvas;
-        const offset = (Math.cos(this._ticker * 3) * 0.5 + 0.5) * (canvas.width * 0.25);
-        this._leftBunny.setPosition(canvas.width / 2 - offset, canvas.height / 2);
-        this._rightBunny.setPosition(canvas.width / 2 + offset, canvas.height / 2);
-        this._ticker += delta.seconds;
+        const offset = (Math.cos(this.ticker * 3) * 0.5 + 0.5) * (canvas.width * 0.25);
+        this.leftBunny.setPosition(canvas.width / 2 - offset, canvas.height / 2);
+        this.rightBunny.setPosition(canvas.width / 2 + offset, canvas.height / 2);
+        this.ticker += delta.seconds;
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._background);
-        context.render(this._leftBunny);
-        context.render(this._rightBunny);
-        context.render(this._info);
+        context.render(this.background);
+        context.render(this.leftBunny);
+        context.render(this.rightBunny);
+        context.render(this.info);
     }
 }
 app.start(new BlendmodesScene());

@@ -10,60 +10,60 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class GamepadSpaceshipScene extends Scene {
-    _ship;
-    _velocity;
-    _thrust;
-    _engine;
-    _rate;
-    _particles;
+    ship;
+    velocity;
+    thrust;
+    engine;
+    rate;
+    particles;
     async load(loader) {
         await loader.load(Texture, { ship: textures.shipA, particle: textures.particleSpark });
     }
     init(loader) {
-        this._ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(400, 300);
-        this._velocity = new Vector(0, 0);
-        this._thrust = new Vector(0, 0);
-        this._engine = new OscillatorSound({ type: 'sawtooth', frequency: 90, volume: 0 }).play();
-        this._rate = new Constant(0);
-        this._particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 8000 });
-        this._particles.addSpawnModule(new RateSpawn({
-            rate: this._rate,
+        this.ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(400, 300);
+        this.velocity = new Vector(0, 0);
+        this.thrust = new Vector(0, 0);
+        this.engine = new OscillatorSound({ type: 'sawtooth', frequency: 90, volume: 0 }).play();
+        this.rate = new Constant(0);
+        this.particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 8000 });
+        this.particles.addSpawnModule(new RateSpawn({
+            rate: this.rate,
             lifetime: new Constant(0.6),
             position: new Constant(new Vector(0, 0)),
             velocity: new Constant(new Vector(0, 0)),
             scale: new Constant(new Vector(0.16, 0.16)),
         }));
-        this._particles.addUpdateModule(new AlphaFadeOverLifetime());
+        this.particles.addUpdateModule(new AlphaFadeOverLifetime());
         const pad = this.app.input.getGamepad(0);
-        pad.onActive(GamepadAxis.LeftStickX, (v) => { this._thrust.x = v; });
-        pad.onStop(GamepadAxis.LeftStickX, () => { this._thrust.x = 0; });
-        pad.onActive(GamepadAxis.LeftStickY, (v) => { this._thrust.y = v; });
-        pad.onStop(GamepadAxis.LeftStickY, () => { this._thrust.y = 0; });
+        pad.onActive(GamepadAxis.LeftStickX, (v) => { this.thrust.x = v; });
+        pad.onStop(GamepadAxis.LeftStickX, () => { this.thrust.x = 0; });
+        pad.onActive(GamepadAxis.LeftStickY, (v) => { this.thrust.y = v; });
+        pad.onStop(GamepadAxis.LeftStickY, () => { this.thrust.y = 0; });
     }
     update(delta) {
-        const mag = Math.min(1, Math.hypot(this._thrust.x, this._thrust.y));
+        const mag = Math.min(1, Math.hypot(this.thrust.x, this.thrust.y));
         if (mag > 0.05) {
-            const angle = Math.atan2(this._thrust.y, this._thrust.x);
-            this._ship.setRotation((angle * 180) / Math.PI + 90);
-            this._velocity.x += Math.cos(angle) * mag * 420 * delta.seconds;
-            this._velocity.y += Math.sin(angle) * mag * 420 * delta.seconds;
-            this._rate.value = 900 * mag;
-            this._engine.volume = 0.08 + mag * 0.32;
-            this._particles.setPosition(this._ship.position.x - Math.cos(angle) * 28, this._ship.position.y - Math.sin(angle) * 28);
+            const angle = Math.atan2(this.thrust.y, this.thrust.x);
+            this.ship.setRotation((angle * 180) / Math.PI + 90);
+            this.velocity.x += Math.cos(angle) * mag * 420 * delta.seconds;
+            this.velocity.y += Math.sin(angle) * mag * 420 * delta.seconds;
+            this.rate.value = 900 * mag;
+            this.engine.volume = 0.08 + mag * 0.32;
+            this.particles.setPosition(this.ship.position.x - Math.cos(angle) * 28, this.ship.position.y - Math.sin(angle) * 28);
         }
         else {
-            this._rate.value = 0;
-            this._engine.volume = 0;
+            this.rate.value = 0;
+            this.engine.volume = 0;
         }
-        this._ship.move(this._velocity.x * delta.seconds, this._velocity.y * delta.seconds);
-        this._velocity.x *= 0.985;
-        this._velocity.y *= 0.985;
-        this._particles.update(delta);
+        this.ship.move(this.velocity.x * delta.seconds, this.velocity.y * delta.seconds);
+        this.velocity.x *= 0.985;
+        this.velocity.y *= 0.985;
+        this.particles.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._particles);
-        context.render(this._ship);
+        context.render(this.particles);
+        context.render(this.ship);
     }
 }
 app.start(new GamepadSpaceshipScene());

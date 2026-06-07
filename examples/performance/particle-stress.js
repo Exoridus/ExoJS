@@ -10,29 +10,29 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class TintCycle extends UpdateModule {
-    _palette;
-    _next = 0;
+    palette;
+    next = 0;
     constructor(palette) {
         super();
-        this._palette = palette;
+        this.palette = palette;
     }
     apply(system) {
         const { color, liveCount, elapsed } = system;
         for (let i = 0; i < liveCount; i++) {
             if (elapsed[i] === 0) {
-                color[i] = this._palette[this._next++ % this._palette.length].toRgba();
+                color[i] = this.palette[this.next++ % this.palette.length].toRgba();
             }
         }
     }
 }
 class ParticleStressScene extends Scene {
-    _sharedTexture;
-    _particleSystems;
+    sharedTexture;
+    particleSystems;
     init() {
         const { width, height } = this.app.canvas;
-        this._sharedTexture = createParticleTexture();
-        this._particleSystems = [];
-        this._particleSystems.push(this._buildSystem({
+        this.sharedTexture = createParticleTexture();
+        this.particleSystems = [];
+        this.particleSystems.push(this.buildSystem({
             x: width * 0.24,
             y: height * 0.78,
             rate: 240,
@@ -49,7 +49,7 @@ class ParticleStressScene extends Scene {
             lifetimeMin: 0.95,
             lifetimeMax: 1.6,
         }));
-        this._particleSystems.push(this._buildSystem({
+        this.particleSystems.push(this.buildSystem({
             x: width * 0.5,
             y: height * 0.82,
             rate: 320,
@@ -66,7 +66,7 @@ class ParticleStressScene extends Scene {
             lifetimeMin: 0.8,
             lifetimeMax: 1.45,
         }));
-        this._particleSystems.push(this._buildSystem({
+        this.particleSystems.push(this.buildSystem({
             x: width * 0.76,
             y: height * 0.76,
             rate: 240,
@@ -84,8 +84,8 @@ class ParticleStressScene extends Scene {
             lifetimeMax: 1.55,
         }));
     }
-    _buildSystem(config) {
-        const system = new ParticleSystem(this._sharedTexture, { capacity: 4096 });
+    buildSystem(config) {
+        const system = new ParticleSystem(this.sharedTexture, { capacity: 4096 });
         system.setPosition(config.x, config.y);
         system.addSpawnModule(new RateSpawn({
             rate: new Constant(config.rate),
@@ -109,8 +109,8 @@ class ParticleStressScene extends Scene {
     }
     update(delta) {
         const time = this.app.activeTime.seconds;
-        for (let i = 0; i < this._particleSystems.length; i++) {
-            const entry = this._particleSystems[i];
+        for (let i = 0; i < this.particleSystems.length; i++) {
+            const entry = this.particleSystems[i];
             const wave = time + i * 1.2;
             entry.instance.setPosition(entry.baseX + Math.sin(wave * 1.4) * 18, entry.baseY + Math.cos(wave * 1.7) * 10);
             entry.instance.rotation = Math.sin(wave * 0.9) * 5;
@@ -119,21 +119,21 @@ class ParticleStressScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        for (const entry of this._particleSystems) {
+        for (const entry of this.particleSystems) {
             context.render(entry.instance);
         }
     }
     unload() {
-        this._destroySystems();
+        this.destroySystems();
     }
     destroy() {
-        this._destroySystems();
+        this.destroySystems();
     }
-    _destroySystems() {
-        for (const entry of this._particleSystems)
+    destroySystems() {
+        for (const entry of this.particleSystems)
             entry.instance?.destroy();
-        this._particleSystems = null;
-        this._sharedTexture = null;
+        this.particleSystems = null;
+        this.sharedTexture = null;
     }
 }
 app.start(new ParticleStressScene()).catch(() => {

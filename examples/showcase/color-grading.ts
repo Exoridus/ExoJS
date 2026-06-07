@@ -73,42 +73,42 @@ const LOOKS = [
 const PRIMARY_RAMP = technical.color.primaryRamp;
 
 class ColorGradingScene extends Scene {
-    private _luts!: Texture[];
-    private _filter!: LutFilter;
-    private _index = 0;
-    private _sprite!: Sprite;
-    private _label!: Text;
-    private _hint!: Text;
+    private luts!: Texture[];
+    private filter!: LutFilter;
+    private index = 0;
+    private sprite!: Sprite;
+    private label!: Text;
+    private hint!: Text;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { ramp: PRIMARY_RAMP });
     }
 
     override init(loader): void {
-        this._luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
-        this._filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this._luts[0]);
+        this.luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
+        this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.luts[0]);
 
-        this._sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(2.5);
-        this._sprite.setPosition(400, 320);
-        this._sprite.filters = [this._filter];
+        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(2.5);
+        this.sprite.setPosition(400, 320);
+        this.sprite.filters = [this.filter];
 
-        this._label = new Text(LOOKS[0].name, { fillColor: Color.white, fontSize: 22 });
-        this._label.setPosition(20, 20);
-        this._hint = new Text('Press SPACE to cycle looks', { fillColor: Color.white, fontSize: 14 });
-        this._hint.setPosition(20, 560);
+        this.label = new Text(LOOKS[0].name, { fillColor: Color.white, fontSize: 22 });
+        this.label.setPosition(20, 20);
+        this.hint = new Text('Press SPACE to cycle looks', { fillColor: Color.white, fontSize: 14 });
+        this.hint.setPosition(20, 560);
 
         this.inputs.onTrigger(Keyboard.Space, () => {
-            this._index = (this._index + 1) % LOOKS.length;
-            this._filter.setLut(this._luts[this._index]);
-            this._label.text = LOOKS[this._index].name;
+            this.index = (this.index + 1) % LOOKS.length;
+            this.filter.setLut(this.luts[this.index]);
+            this.label.text = LOOKS[this.index].name;
         });
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._sprite);
-        context.render(this._label);
-        context.render(this._hint);
+        context.render(this.sprite);
+        context.render(this.label);
+        context.render(this.hint);
     }
 }
 

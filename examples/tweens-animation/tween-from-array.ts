@@ -25,36 +25,36 @@ const waypoints = [
 ];
 
 class TweenFromArrayScene extends Scene {
-    private _sprite!: Sprite;
+    private sprite!: Sprite;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
 
     override init(loader): void {
-        this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(waypoints[0].x, waypoints[0].y);
-        this._buildPath();
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(waypoints[0].x, waypoints[0].y);
+        this.buildPath();
     }
 
-    private _buildPath(): void {
+    private buildPath(): void {
         let first: Tween | null = null;
         let prev: Tween | null = null;
         for (let i = 1; i < waypoints.length; i++) {
-            const next = this.app.tweens.create(this._sprite.position).to(waypoints[i], 0.35).easing(Ease.sineInOut);
+            const next = this.app.tweens.create(this.sprite.position).to(waypoints[i], 0.35).easing(Ease.sineInOut);
             if (first === null) first = next;
             if (prev !== null) prev.chain(next);
             prev = next;
         }
         prev!.onComplete(() => {
-            this._sprite.setPosition(waypoints[0].x, waypoints[0].y);
-            this._buildPath();
+            this.sprite.setPosition(waypoints[0].x, waypoints[0].y);
+            this.buildPath();
         });
         first!.start();
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._sprite);
+        context.render(this.sprite);
     }
 }
 

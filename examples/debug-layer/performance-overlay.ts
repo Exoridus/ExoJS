@@ -18,14 +18,14 @@ const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
 
 class PerformanceOverlayScene extends Scene {
-    private _sprites!: { sprite: Sprite; vx: number; vy: number }[];
+    private sprites!: { sprite: Sprite; vx: number; vy: number }[];
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
 
     override init(loader): void {
-        this._sprites = Array.from({ length: 1600 }, () => {
+        this.sprites = Array.from({ length: 1600 }, () => {
             const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.25);
             sprite.setPosition(Math.random() * 800, Math.random() * 600);
             return {
@@ -40,7 +40,7 @@ class PerformanceOverlayScene extends Scene {
     }
 
     override update(delta): void {
-        for (const item of this._sprites) {
+        for (const item of this.sprites) {
             item.sprite.move(item.vx * delta.seconds, item.vy * delta.seconds);
             if (item.sprite.position.x < 0 || item.sprite.position.x > 800) item.vx *= -1;
             if (item.sprite.position.y < 0 || item.sprite.position.y > 600) item.vy *= -1;
@@ -49,7 +49,7 @@ class PerformanceOverlayScene extends Scene {
 
     override draw(context): void {
         context.backend.clear();
-        for (const { sprite } of this._sprites) context.render(sprite);
+        for (const { sprite } of this.sprites) context.render(sprite);
     }
 }
 

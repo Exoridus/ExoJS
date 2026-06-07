@@ -14,9 +14,9 @@ const app = new Application({
 document.body.append(app.canvas);
 
 class RenderToTextureScene extends Scene {
-    private _container!: Container;
-    private _renderTexture!: RenderTexture;
-    private _renderSprite!: Sprite;
+    private container!: Container;
+    private renderTexture!: RenderTexture;
+    private renderSprite!: Sprite;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
@@ -25,13 +25,13 @@ class RenderToTextureScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this._container = this.createBunnyContainer(loader.get(Texture, 'bunny'));
+        this.container = this.createBunnyContainer(loader.get(Texture, 'bunny'));
 
-        this._renderTexture = this.createRenderTexture(this._container);
+        this.renderTexture = this.createRenderTexture(this.container);
 
-        this._renderSprite = new Sprite(this._renderTexture);
-        this._renderSprite.setPosition(width, height);
-        this._renderSprite.setAnchor(1, 1);
+        this.renderSprite = new Sprite(this.renderTexture);
+        this.renderSprite.setPosition(width, height);
+        this.renderSprite.setAnchor(1, 1);
     }
 
     private createBunnyContainer(texture: Texture): Container {
@@ -66,8 +66,8 @@ class RenderToTextureScene extends Scene {
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._container);
-        context.render(this._renderSprite);
+        context.render(this.container);
+        context.render(this.renderSprite);
     }
 }
 

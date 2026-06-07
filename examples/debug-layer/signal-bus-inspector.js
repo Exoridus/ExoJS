@@ -12,46 +12,46 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class SignalBusInspectorScene extends Scene {
-    _signals;
-    _text;
-    _tick;
-    _listenerA;
-    _listenerB;
+    signals;
+    text;
+    tick;
+    listenerA;
+    listenerB;
     init() {
-        this._signals = {
+        this.signals = {
             spawn: new Signal(),
             damage: new Signal(),
             score: new Signal(),
         };
-        this._text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 28 });
-        this._text.setPosition(40, 70);
-        this._tick = new Timer(seconds(1), true);
-        this._listenerA = () => undefined;
-        this._listenerB = () => undefined;
-        this._signals.spawn.add(this._listenerA);
-        this._signals.damage.add(this._listenerA);
-        this._signals.damage.add(this._listenerB);
-        this._signals.score.add(this._listenerA);
+        this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 28 });
+        this.text.setPosition(40, 70);
+        this.tick = new Timer(seconds(1), true);
+        this.listenerA = () => undefined;
+        this.listenerB = () => undefined;
+        this.signals.spawn.add(this.listenerA);
+        this.signals.damage.add(this.listenerA);
+        this.signals.damage.add(this.listenerB);
+        this.signals.score.add(this.listenerA);
     }
     update() {
-        if (this._tick.expired) {
+        if (this.tick.expired) {
             if (Math.random() > 0.5)
-                this._signals.spawn.add(this._listenerB);
+                this.signals.spawn.add(this.listenerB);
             else
-                this._signals.spawn.remove(this._listenerB);
-            this._signals.spawn.dispatch();
-            this._signals.damage.dispatch();
-            this._signals.score.dispatch();
-            this._tick.restart();
+                this.signals.spawn.remove(this.listenerB);
+            this.signals.spawn.dispatch();
+            this.signals.damage.dispatch();
+            this.signals.score.dispatch();
+            this.tick.restart();
         }
     }
     draw(context) {
-        this._text.text =
-            `Manual Signal Inspector\n\nspawn listeners: ${this._signals.spawn.count}\n` +
-                `damage listeners: ${this._signals.damage.count}\n` +
-                `score listeners: ${this._signals.score.count}`;
+        this.text.text =
+            `Manual Signal Inspector\n\nspawn listeners: ${this.signals.spawn.count}\n` +
+                `damage listeners: ${this.signals.damage.count}\n` +
+                `score listeners: ${this.signals.score.count}`;
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 app.start(new SignalBusInspectorScene());

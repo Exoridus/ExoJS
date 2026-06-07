@@ -47,16 +47,16 @@ class SwayModule extends UpdateModule {
 }
 
 class CustomWgslModuleScene extends Scene {
-    private _system!: ParticleSystem;
+    private system!: ParticleSystem;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
 
     override init(loader): void {
-        this._system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 26000 });
-        this._system.setPosition(400, 540);
-        this._system.addSpawnModule(
+        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 26000 });
+        this.system.setPosition(400, 540);
+        this.system.addSpawnModule(
             new RateSpawn({
                 rate: new Constant(1800),
                 lifetime: new Constant(2.0),
@@ -64,16 +64,16 @@ class CustomWgslModuleScene extends Scene {
                 scale: new Constant(new Vector(0.2, 0.2)),
             }),
         );
-        this._system.addUpdateModule(new SwayModule(250, 8));
+        this.system.addUpdateModule(new SwayModule(250, 8));
     }
 
     override update(delta): void {
-        this._system.update(delta);
+        this.system.update(delta);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._system);
+        context.render(this.system);
     }
 }
 

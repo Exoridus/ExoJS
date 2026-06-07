@@ -45,11 +45,11 @@ const fireworkColors = [
 ];
 
 class FireworksScene extends Scene {
-    private _canvasSize!: Size;
-    private _particleSystem!: ParticleSystem;
-    private _burstPosition!: Vector;
-    private _burst!: BurstSpawn;
-    private _explosionTimer!: Timer;
+    private canvasSize!: Size;
+    private particleSystem!: ParticleSystem;
+    private burstPosition!: Vector;
+    private burst!: BurstSpawn;
+    private explosionTimer!: Timer;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { star: textures.particleStar });
@@ -58,22 +58,22 @@ class FireworksScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this._canvasSize = new Size(width, height);
-        this._particleSystem = new ParticleSystem(loader.get(Texture, 'star'), { capacity: 8192 });
+        this.canvasSize = new Size(width, height);
+        this.particleSystem = new ParticleSystem(loader.get(Texture, 'star'), { capacity: 8192 });
 
-        this._burstPosition = new Vector(0, 0);
-        this._burst = new BurstSpawn({
+        this.burstPosition = new Vector(0, 0);
+        this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: particlesPerExplosion }],
             lifetime: new Range(tailDuration * 0.7, tailDuration),
-            position: new Constant(this._burstPosition),
+            position: new Constant(this.burstPosition),
             velocity: ConeDirection.omni(20, 70),
             scale: new Constant(new Vector(0.95, 0.95)),
             tint: new Constant(fireworkColors[0]),
         });
 
-        this._particleSystem.addSpawnModule(this._burst);
-        this._particleSystem.addUpdateModule(new ApplyForce(0, 30));
-        this._particleSystem.addUpdateModule(
+        this.particleSystem.addSpawnModule(this.burst);
+        this.particleSystem.addUpdateModule(new ApplyForce(0, 30));
+        this.particleSystem.addUpdateModule(
             new AlphaFadeOverLifetime(
                 new Curve([
                     { t: 0, v: 1 },
@@ -82,33 +82,33 @@ class FireworksScene extends Scene {
             ),
         );
 
-        this._explosionTimer = new Timer(explosionInterval, true);
+        this.explosionTimer = new Timer(explosionInterval, true);
 
-        this._scheduleNextExplosion();
+        this.scheduleNextExplosion();
     }
 
-    private _scheduleNextExplosion(): void {
-        const x = rand(80, this._canvasSize.width - 80);
-        const y = rand(80, this._canvasSize.height - 80);
+    private scheduleNextExplosion(): void {
+        const x = rand(80, this.canvasSize.width - 80);
+        const y = rand(80, this.canvasSize.height - 80);
         const tint = fireworkColors[rand(0, fireworkColors.length - 1) | 0];
 
-        this._burstPosition.set(x, y);
-        this._burst.config.tint = new Constant(tint);
-        this._burst.reset();
+        this.burstPosition.set(x, y);
+        this.burst.config.tint = new Constant(tint);
+        this.burst.reset();
     }
 
     override update(delta): void {
-        if (this._explosionTimer.expired) {
-            this._scheduleNextExplosion();
-            this._explosionTimer.restart();
+        if (this.explosionTimer.expired) {
+            this.scheduleNextExplosion();
+            this.explosionTimer.restart();
         }
 
-        this._particleSystem.update(delta);
+        this.particleSystem.update(delta);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this._particleSystem);
+        context.render(this.particleSystem);
     }
 }
 

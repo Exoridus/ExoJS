@@ -13,33 +13,33 @@ const app = new Application({
 document.body.append(app.canvas);
 const message = 'ExoJS gives you explicit rendering control with a compact scene and asset workflow.';
 class TypewriterTextScene extends Scene {
-    _sound;
-    _text;
-    _state;
-    _last = 0;
+    sound;
+    text;
+    state;
+    last = 0;
     async load(loader) {
         await loader.load(Sound, { tick: 'audio/ui-click.ogg' });
     }
     init(loader) {
-        this._sound = loader.get(Sound, 'tick');
-        this._text = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 42 }, { maxWidth: 720 });
-        this._text.setPosition(60, 190);
-        this._state = { count: 0 };
+        this.sound = loader.get(Sound, 'tick');
+        this.text = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 42 }, { maxWidth: 720 });
+        this.text.setPosition(60, 190);
+        this.state = { count: 0 };
         this.app.tweens
-            .create(this._state)
+            .create(this.state)
             .to({ count: message.length }, 2.4)
             .onUpdate(() => {
-            const n = this._state.count | 0;
-            if (n > this._last)
-                this._sound.play({ playbackRate: 1.6 });
-            this._last = n;
-            this._text.text = message.slice(0, n);
+            const n = this.state.count | 0;
+            if (n > this.last)
+                this.sound.play({ playbackRate: 1.6 });
+            this.last = n;
+            this.text.text = message.slice(0, n);
         })
             .start();
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._text);
+        context.render(this.text);
     }
 }
 app.start(new TypewriterTextScene());

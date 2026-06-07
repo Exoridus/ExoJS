@@ -12,35 +12,35 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class CursorAttractorParticlesScene extends Scene {
-    _system;
-    _attractor;
+    system;
+    attractor;
     async load(loader) {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
     init(loader) {
-        this._system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 32000 });
-        this._system.setPosition(400, 300);
-        this._attractor = new AttractToPoint(0, 0, 700, 260);
-        this._system.addSpawnModule(new RateSpawn({
+        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 32000 });
+        this.system.setPosition(400, 300);
+        this.attractor = new AttractToPoint(0, 0, 700, 260);
+        this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(2200),
             lifetime: new Constant(2.6),
             position: new Constant(new Vector(0, 0)),
             velocity: new ConeDirection(0, Math.PI, 10, 100),
             scale: new Constant(new Vector(0.18, 0.18)),
         }));
-        this._system.addUpdateModule(this._attractor);
-        this._system.addUpdateModule(new AlphaFadeOverLifetime());
+        this.system.addUpdateModule(this.attractor);
+        this.system.addUpdateModule(new AlphaFadeOverLifetime());
         this.app.input.onPointerMove.add(pointer => {
-            this._attractor.x = pointer.x - this._system.position.x;
-            this._attractor.y = pointer.y - this._system.position.y;
+            this.attractor.x = pointer.x - this.system.position.x;
+            this.attractor.y = pointer.y - this.system.position.y;
         });
     }
     update(delta) {
-        this._system.update(delta);
+        this.system.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._system);
+        context.render(this.system);
     }
 }
 app.start(new CursorAttractorParticlesScene());

@@ -12,28 +12,28 @@ const app = new Application({
 });
 document.body.append(app.canvas);
 class EmitterBasicsScene extends Scene {
-    _system;
+    system;
     async load(loader) {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
     init(loader) {
-        this._system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
-        this._system.setPosition(400, 520);
-        this._system.addSpawnModule(new RateSpawn({
+        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
+        this.system.setPosition(400, 520);
+        this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(180),
             lifetime: new Range(0.6, 1.4),
             velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 70, 180),
             scale: new Constant(new Vector(0.35, 0.35)),
         }));
-        this._system.addUpdateModule(new ApplyForce(0, 240));
-        this._system.addUpdateModule(new AlphaFadeOverLifetime());
+        this.system.addUpdateModule(new ApplyForce(0, 240));
+        this.system.addUpdateModule(new AlphaFadeOverLifetime());
     }
     update(delta) {
-        this._system.update(delta);
+        this.system.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this._system);
+        context.render(this.system);
     }
 }
 app.start(new EmitterBasicsScene());
