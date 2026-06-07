@@ -1,9 +1,13 @@
 import {
-    Application, Color, Graphics, Json, Music, Scene,
+    Application, Color, FontAsset, Graphics, Json, Music, Scene,
     Sprite, Spritesheet, SvgAsset, Text, Texture,
 } from '@codexo/exojs';
+import * as assetCatalog from '@assets';
 
-const catalog: Record<string, any> | null = (globalThis as any).assets ?? null;
+// The playground serves the asset catalog as the `@assets` module (named
+// category exports). This browser introspects every category by string key,
+// so treat the namespace as a dynamic record.
+const catalog = assetCatalog as unknown as Record<string, any>;
 
 const W = 900;
 const H = 680;
@@ -232,8 +236,12 @@ class AssetBrowserScene extends Scene {
         }
 
         for (const [k, url] of Object.entries(catalog.fonts ?? {})) {
+            // The fonts category mixes vector fonts (.ttf/.otf) with bitmap-font
+            // sidecars (.fnt/.png) that FontFace cannot parse. Load only the
+            // vector entries — the bitmap ones fall back to a path readout.
+            if (!/\.(ttf|otf|woff2?)$/i.test(url as string)) continue;
             const family = `assetbrowser_${k}`;
-            await loader.load(FontFace as any, { [`fnt_${k}`]: url }, { family });
+            await loader.load(FontAsset, { [`fnt_${k}`]: url }, { family });
         }
 
         const techBatch: Record<string, string> = {};
@@ -328,7 +336,10 @@ class AssetBrowserScene extends Scene {
             this._soundSpriteData.set(k, loader.get(Json, `sds_${k}`));
         }
 
-        for (const [k] of Object.entries(catalog.fonts ?? {})) {
+        for (const [k, url] of Object.entries(catalog.fonts ?? {})) {
+            // Match the load() filter: only vector fonts get a registered family;
+            // bitmap-font entries render via the path-readout fallback.
+            if (!/\.(ttf|otf|woff2?)$/i.test(url as string)) continue;
             this._fontFamilies.set(k, `assetbrowser_${k}`);
         }
 
