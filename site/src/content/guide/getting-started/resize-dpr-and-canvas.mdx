@@ -1,0 +1,78 @@
+---
+title: 'Resize, DPR & the canvas'
+description: 'Fit the canvas to the window, render crisply on high-DPI displays, and re-lay-out content when the size changes.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+import TryIt from '../../../components/TryIt.astro';
+
+# Resize, DPR & the canvas
+
+Your first scene rendered into a fixed 800×600 canvas. Real apps run in a window the player can resize, on a phone in portrait or landscape, and on high-DPI ("Retina") displays where one CSS pixel covers several physical pixels. This chapter covers the three things that turn a fixed demo into something that fills its container and stays sharp.
+
+## Fixed vs. responsive
+
+By default the `Application` uses the `canvas.width` and `canvas.height` you pass — a fixed-size surface. That is the right choice for a pixel-art game with a locked resolution, or any layout designed around exact dimensions.
+
+For everything else you want the canvas to track its container. The size you draw against then changes at runtime, so any layout that assumes a fixed center or fixed edges needs to recompute when the size changes.
+
+## Crisp rendering with `pixelRatio`
+
+On a high-DPI display, a canvas sized in CSS pixels is stretched across more physical pixels, so anything drawn at the CSS resolution looks soft. The `pixelRatio` canvas option fixes this: it scales the canvas backing store up by that factor while the CSS display size stays the same. Set it to the display's `devicePixelRatio` for native sharpness:
+
+<SourceSnippet
+  source="examples/getting-started/resize-and-dpr.ts"
+  region="app-setup"
+  title="Application with pixelRatio"
+/>
+
+With `pixelRatio: 2`, an 800×600 canvas renders into a 1600×1200 backing store but still displays at 800×600 CSS pixels — twice the detail per pixel, so sprites and text stay crisp. At `pixelRatio: 1` (the default) the backing store matches the CSS size.
+
+## Fitting the window
+
+`app.resize(width, height)` sets a new logical size: it resizes the canvas (applying `pixelRatio` to the backing store), resizes the active backend's render target, and dispatches the [`onResize`](/ExoJS/en/api/application/) signal. Call it once on startup and again whenever the window changes:
+
+<SourceSnippet
+  source="examples/getting-started/resize-and-dpr.ts"
+  region="resize"
+  title="Resize to the window"
+/>
+
+The first call after adding the listener sets the initial size; the listener keeps it in sync as the window changes. The width and height you pass are logical (CSS) pixels — `pixelRatio` is applied internally, so you never multiply by it yourself.
+
+## Re-laying out on size change
+
+Resizing the surface does not move what you already positioned. A sprite centered at `(400, 300)` for an 800×600 canvas is no longer centered once the canvas grows. Recompute any size-dependent positions whenever the size changes — the example does this from a small `layout` helper:
+
+<SourceSnippet
+  source="examples/getting-started/resize-and-dpr.ts"
+  region="layout"
+  title="Re-center content against the current size"
+/>
+
+The example calls `layout()` every frame from `update`, which is simple and always correct. For heavier layouts, subscribe to `app.onResize` instead and recompute only when the size actually changes:
+
+```js no-check
+init() {
+    this.layout();
+    app.onResize.add(() => this.layout());
+}
+```
+
+Either approach works — poll in `update` for small scenes, react to `onResize` when re-layout is expensive.
+
+## Example
+
+<ExamplePreview chapter="getting-started" slug="resize-and-dpr" />
+
+Drag the window edges: the canvas fills the viewport, the sprite stays centered, and the overlay reports the live canvas size and device pixel ratio.
+
+<TryIt
+  examples={['getting-started/resize-and-dpr']}
+  api={['application']}
+/>
+
+## Where to go next
+
+The next part, [Runtime](/ExoJS/en/guide/runtime/application/), goes deeper on the [`Application`](/ExoJS/en/guide/runtime/application/) — how it owns the canvas, the sizing you just used, and the frame loop — then moves on to scenes, the scene graph, and views.

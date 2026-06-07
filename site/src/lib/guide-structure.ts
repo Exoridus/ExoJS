@@ -74,7 +74,7 @@ export interface GuidePartMeta {
 
 const RAW_PARTS: ReadonlyArray<RawPart> = [
     {
-        slug: 'introduction',
+        slug: 'getting-started',
         title: 'Getting Started',
         description: 'Understand what ExoJS is, create a project, and render your first scene.',
         chapters: [
@@ -96,7 +96,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'choose between the minimal, game-starter, and audio-reactive templates',
                     'run the dev server and a production build',
                 ],
-                prerequisites: ['introduction/what-is-exojs'],
+                prerequisites: ['getting-started/what-is-exojs'],
                 apiLinks: ['application'],
             },
             {
@@ -107,7 +107,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'know where the entry point, scenes, and assets live',
                     'understand how main.ts wires an Application to a Scene',
                 ],
-                prerequisites: ['introduction/setup'],
+                prerequisites: ['getting-started/setup'],
                 examples: ['getting-started/hello-world'],
                 apiLinks: ['application', 'scene'],
             },
@@ -119,15 +119,27 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'center a sprite with an anchor',
                     'animate state each frame with delta time',
                 ],
-                prerequisites: ['introduction/setup'],
+                prerequisites: ['getting-started/setup'],
                 examples: ['getting-started/hello-world'],
                 apiLinks: ['application', 'scene', 'sprite', 'texture', 'loader'],
+            },
+            {
+                slug: 'resize-dpr-and-canvas',
+                level: 'intro',
+                learningGoals: [
+                    'fit the canvas to its container with app.resize',
+                    'render crisply on high-DPI displays with pixelRatio',
+                    're-lay-out content when the size changes',
+                ],
+                prerequisites: ['getting-started/your-first-scene'],
+                examples: ['getting-started/resize-and-dpr'],
+                apiLinks: ['application'],
             },
         ],
     },
     {
-        slug: 'core-concepts',
-        title: 'Core Concepts',
+        slug: 'runtime',
+        title: 'Runtime',
         description: 'The runtime model most ExoJS projects rely on: applications, scenes, the frame loop, and coordinates.',
         chapters: [
             {
@@ -137,31 +149,26 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'create and configure an Application',
                     'understand how the application owns canvas, sizing, and the frame loop',
                 ],
-                prerequisites: ['introduction/your-first-scene'],
+                prerequisites: ['getting-started/your-first-scene'],
                 examples: ['getting-started/hello-world', 'getting-started/resize-and-dpr'],
                 apiLinks: ['application'],
             },
             {
-                slug: 'scenes',
+                slug: 'scenes-and-lifecycle',
                 level: 'intro',
                 learningGoals: [
-                    'split a project into focused scenes',
-                    'switch between scenes at runtime',
-                ],
-                prerequisites: ['introduction/your-first-scene'],
-                examples: ['application-scenes/multiple-scenes'],
-                apiLinks: ['scene'],
-            },
-            {
-                slug: 'scene-lifecycle',
-                level: 'intro',
-                learningGoals: [
+                    'split a project into focused scenes and switch between them at runtime',
                     'order work across load, init, update, and draw',
                     'separate state updates from rendering',
                     'release resources in destroy',
                 ],
-                prerequisites: ['core-concepts/scenes'],
-                examples: ['application-scenes/scene-lifecycle', 'application-scenes/pause-and-resume', 'getting-started/game-loop'],
+                prerequisites: ['getting-started/your-first-scene'],
+                examples: [
+                    'application-scenes/multiple-scenes',
+                    'application-scenes/scene-lifecycle',
+                    'application-scenes/pause-and-resume',
+                    'getting-started/game-loop',
+                ],
                 apiLinks: ['scene', 'loader', 'time'],
             },
             {
@@ -171,7 +178,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'compose drawables with containers',
                     'reason about transforms, draw order, and masks',
                 ],
-                prerequisites: ['core-concepts/scenes'],
+                prerequisites: ['runtime/scenes-and-lifecycle'],
                 examples: [
                     'scene-graph/containers',
                     'scene-graph/nested-transforms',
@@ -189,7 +196,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'map world space to screen space',
                     'move and zoom a camera view',
                 ],
-                prerequisites: ['core-concepts/scene-graph'],
+                prerequisites: ['runtime/scene-graph'],
                 examples: [
                     'application-scenes/camera-and-view',
                     'application-scenes/multi-view-split-screen',
@@ -198,6 +205,13 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 ],
                 apiLinks: ['view', 'camera'],
             },
+        ],
+    },
+    {
+        slug: 'assets',
+        title: 'Assets',
+        description: 'Declare, load, and access textures, audio, and data with a predictable resource pipeline.',
+        chapters: [
             {
                 slug: 'loading-and-resources',
                 level: 'intermediate',
@@ -205,16 +219,16 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'declare and load assets predictably',
                     'access loaded resources by name',
                 ],
-                prerequisites: ['core-concepts/scene-lifecycle'],
+                prerequisites: ['runtime/scenes-and-lifecycle'],
                 examples: ['sprites-textures/texture-loader'],
                 apiLinks: ['loader', 'texture'],
             },
         ],
     },
     {
-        slug: 'drawing',
-        title: 'Drawing',
-        description: 'Build a scene with shapes, sprites, text, and animation.',
+        slug: 'rendering',
+        title: 'Rendering',
+        description: 'Build a scene with shapes, sprites, text, animation, and render targets.',
         chapters: [
             {
                 slug: 'graphics',
@@ -223,7 +237,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'draw procedural shapes with Graphics',
                     'fill, stroke, and position drawn geometry',
                 ],
-                prerequisites: ['introduction/your-first-scene'],
+                prerequisites: ['getting-started/your-first-scene'],
                 examples: [
                     'geometry-graphics/graphics-primitives',
                     'geometry-graphics/infinite-grid',
@@ -240,7 +254,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'render textures, sheets, SVG, and video as sprites',
                     'control anchor, blend mode, and frames',
                 ],
-                prerequisites: ['introduction/your-first-scene'],
+                prerequisites: ['getting-started/your-first-scene'],
                 examples: [
                     'sprites-textures/sprite-basics',
                     'sprites-textures/blendmodes',
@@ -291,9 +305,65 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'render a scene into an intermediate texture',
                     'reuse render-target output in composition',
                 ],
-                prerequisites: ['drawing/sprites'],
+                prerequisites: ['rendering/sprites'],
                 examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
                 apiLinks: ['render-target', 'render-texture'],
+            },
+        ],
+    },
+    {
+        slug: 'effects',
+        title: 'Effects',
+        description: 'Layer filters, particles, post-processing, and custom shaders for mood and motion.',
+        chapters: [
+            {
+                slug: 'filters',
+                level: 'intermediate',
+                examples: [
+                    'filters/blur-filter',
+                    'filters/chromatic-aberration',
+                    'filters/color-filter',
+                    'filters/crt-scanlines',
+                    'filters/custom-fragment-shader',
+                    'filters/filter-stack',
+                    'filters/metaballs',
+                    'filters/noise-vignette',
+                    'filters/palette-cycling',
+                    'showcase/color-grading',
+                ],
+                apiLinks: ['filter', 'color-filter', 'blur-filter'],
+            },
+            {
+                slug: 'particles',
+                level: 'intermediate',
+                examples: [
+                    'particles/emitter-basics',
+                    'particles/bonfire',
+                    'particles/fireworks',
+                    'particles/cursor-attractor-particles',
+                    'particles/gpu-particles',
+                    'particles/custom-wgsl-module',
+                ],
+                apiLinks: ['particle-system'],
+            },
+            {
+                slug: 'post-processing',
+                level: 'advanced',
+                prerequisites: ['rendering/render-targets'],
+                examples: [
+                    'render-targets/bloom-lite',
+                    'render-targets/post-processing-chain',
+                    'render-targets/trail-feedback',
+                    'render-targets/water-mirror',
+                ],
+                apiLinks: ['render-target', 'filter'],
+            },
+            {
+                slug: 'custom-mesh-shaders',
+                level: 'advanced',
+                prerequisites: ['rendering/graphics'],
+                examples: ['geometry-graphics/mesh-triangle', 'geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
+                apiLinks: ['mesh'],
             },
         ],
     },
@@ -303,14 +373,16 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         description: 'Handle keyboard, pointer, touch, and gamepad with predictable input flow.',
         chapters: [
             {
-                slug: 'keyboard',
+                slug: 'keyboard-and-actions',
                 level: 'intro',
                 learningGoals: [
                     'capture keys with scene-scoped bindings',
                     'handle taps, holds, and rebinding',
+                    'map several devices to one intent',
+                    'keep gameplay code device-agnostic',
                 ],
-                prerequisites: ['introduction/your-first-scene'],
-                examples: ['input/keyboard', 'input/key-rebinding'],
+                prerequisites: ['getting-started/your-first-scene'],
+                examples: ['input/keyboard', 'input/key-rebinding', 'input/action-mapping'],
                 apiLinks: ['keyboard', 'input-manager'],
             },
             {
@@ -320,7 +392,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'read unified pointer events across mouse and touch',
                     'translate pointer position into world space',
                 ],
-                prerequisites: ['input/keyboard'],
+                prerequisites: ['input/keyboard-and-actions'],
                 examples: ['input/mouse-and-pointer', 'input/multitouch', 'input/pointer-to-world'],
                 apiLinks: ['pointer', 'input-manager'],
             },
@@ -331,20 +403,9 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'read controller buttons and axes',
                     'support multiple connected gamepads',
                 ],
-                prerequisites: ['input/keyboard'],
+                prerequisites: ['input/keyboard-and-actions'],
                 examples: ['input/gamepad', 'input/multi-gamepad'],
                 apiLinks: ['gamepad', 'input-manager'],
-            },
-            {
-                slug: 'action-mapping',
-                level: 'intermediate',
-                learningGoals: [
-                    'map several devices to one intent',
-                    'keep gameplay code device-agnostic',
-                ],
-                prerequisites: ['input/keyboard'],
-                examples: ['input/action-mapping'],
-                apiLinks: ['input-manager'],
             },
         ],
     },
@@ -361,7 +422,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'control volume, looping, and fades',
                     'handle the browser autoplay gesture',
                 ],
-                prerequisites: ['introduction/your-first-scene'],
+                prerequisites: ['getting-started/your-first-scene'],
                 examples: [
                     'audio-basics/play-sound',
                     'audio-basics/music-loop',
@@ -419,115 +480,6 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
     },
     {
-        slug: 'effects',
-        title: 'Effects',
-        description: 'Layer filters, particles, post-processing, and custom shaders for mood and motion.',
-        chapters: [
-            {
-                slug: 'filters',
-                level: 'intermediate',
-                examples: [
-                    'filters/blur-filter',
-                    'filters/chromatic-aberration',
-                    'filters/color-filter',
-                    'filters/crt-scanlines',
-                    'filters/custom-fragment-shader',
-                    'filters/filter-stack',
-                    'filters/metaballs',
-                    'filters/noise-vignette',
-                    'filters/palette-cycling',
-                    'showcase/color-grading',
-                ],
-                apiLinks: ['filter', 'color-filter', 'blur-filter'],
-            },
-            {
-                slug: 'particles',
-                level: 'intermediate',
-                examples: [
-                    'particles/emitter-basics',
-                    'particles/bonfire',
-                    'particles/fireworks',
-                    'particles/cursor-attractor-particles',
-                    'particles/gpu-particles',
-                    'particles/custom-wgsl-module',
-                ],
-                apiLinks: ['particle-system'],
-            },
-            {
-                slug: 'post-processing',
-                level: 'advanced',
-                prerequisites: ['drawing/render-targets'],
-                examples: [
-                    'render-targets/bloom-lite',
-                    'render-targets/post-processing-chain',
-                    'render-targets/trail-feedback',
-                    'render-targets/water-mirror',
-                ],
-                apiLinks: ['render-target', 'filter'],
-            },
-            {
-                slug: 'custom-mesh-shaders',
-                level: 'advanced',
-                prerequisites: ['drawing/graphics'],
-                examples: ['geometry-graphics/mesh-triangle', 'geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
-                apiLinks: ['mesh'],
-            },
-        ],
-    },
-    {
-        slug: 'advanced',
-        title: 'Debugging & Performance',
-        description: 'Inspect a running scene, profile it, debug the render pipeline, and choose a backend.',
-        chapters: [
-            {
-                slug: 'debug-layer',
-                level: 'intermediate',
-                learningGoals: [
-                    'overlay performance, bounds, and hit-test layers',
-                    'toggle debug layers without changing scene code',
-                ],
-                prerequisites: ['introduction/your-first-scene'],
-                examples: ['debug-layer/performance-overlay', 'debug-layer/bounding-boxes', 'debug-layer/pointer-and-hittest', 'debug-layer/signal-bus-inspector'],
-                apiLinks: ['debug-overlay', 'performance-layer', 'bounding-boxes-layer', 'hit-test-layer'],
-            },
-            {
-                slug: 'performance',
-                level: 'intermediate',
-                learningGoals: [
-                    'measure scene limits with stress examples',
-                    'read the performance overlay to find bottlenecks',
-                ],
-                prerequisites: ['advanced/debug-layer'],
-                examples: ['performance/sprite-stress', 'performance/multi-texture-stress', 'performance/particle-stress'],
-                apiLinks: ['performance-layer'],
-            },
-            {
-                slug: 'render-pipeline-debugging',
-                level: 'advanced',
-                prerequisites: ['advanced/debug-layer'],
-                examples: ['render-targets/post-processing-chain', 'render-targets/bloom-lite'],
-                apiLinks: ['render-pass-inspector-layer'],
-            },
-            {
-                slug: 'backend-comparison',
-                level: 'advanced',
-                examples: ['performance/backend-comparison'],
-                apiLinks: ['capabilities'],
-            },
-            {
-                slug: 'custom-renderers',
-                level: 'advanced',
-                examples: ['custom-renderers/custom-render-pass', 'custom-renderers/custom-triangle-renderer'],
-            },
-            {
-                slug: 'collision-detection',
-                level: 'advanced',
-                examples: ['showcase/rectangles-collision'],
-                apiLinks: ['bounds', 'circle'],
-            },
-        ],
-    },
-    {
         slug: 'recipes',
         title: 'Recipes',
         description: 'Practical scene patterns you can adapt directly, ending with a complete small game.',
@@ -573,6 +525,12 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: ['showcase/boss-intro-cinematic'],
             },
             {
+                slug: 'gameplay-collision',
+                level: 'advanced',
+                examples: ['showcase/rectangles-collision'],
+                apiLinks: ['bounds', 'circle'],
+            },
+            {
                 slug: 'build-orb-dodge',
                 level: 'intermediate',
                 learningGoals: [
@@ -580,27 +538,64 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'spawn, move, and collide objects each frame',
                     'transition to a game-over scene and restart',
                 ],
-                prerequisites: ['core-concepts/scene-lifecycle', 'input/keyboard', 'drawing/graphics'],
+                prerequisites: ['runtime/scenes-and-lifecycle', 'input/keyboard-and-actions', 'rendering/graphics'],
                 examples: ['showcase/orb-dodge'],
                 apiLinks: ['scene', 'graphics', 'keyboard', 'text', 'color'],
             },
         ],
     },
     {
-        slug: 'migration',
-        title: 'Migration',
-        description: 'Upgrade guidance for pre-1.0 API changes between ExoJS minor versions.',
+        slug: 'debugging',
+        title: 'Debugging & Performance',
+        description: 'Inspect a running scene, profile it, debug the render pipeline, choose a backend, and extend the renderer.',
         chapters: [
             {
-                slug: 'v0-8-x-to-v0-9-0',
+                slug: 'debugging-and-inspection',
                 level: 'intermediate',
+                learningGoals: [
+                    'overlay performance, bounds, and hit-test layers',
+                    'toggle debug layers without changing scene code',
+                    'inspect filter chains and render-pass counts',
+                ],
+                prerequisites: ['getting-started/your-first-scene'],
+                examples: [
+                    'debug-layer/performance-overlay',
+                    'debug-layer/bounding-boxes',
+                    'debug-layer/pointer-and-hittest',
+                    'debug-layer/signal-bus-inspector',
+                    'render-targets/post-processing-chain',
+                    'render-targets/bloom-lite',
+                ],
+                apiLinks: ['debug-overlay', 'performance-layer', 'bounding-boxes-layer', 'hit-test-layer', 'render-pass-inspector-layer'],
+            },
+            {
+                slug: 'performance',
+                level: 'intermediate',
+                learningGoals: [
+                    'measure scene limits with stress examples',
+                    'read the performance overlay to find bottlenecks',
+                ],
+                prerequisites: ['debugging/debugging-and-inspection'],
+                examples: ['performance/sprite-stress', 'performance/multi-texture-stress', 'performance/particle-stress'],
+                apiLinks: ['performance-layer'],
+            },
+            {
+                slug: 'backend-comparison',
+                level: 'advanced',
+                examples: ['performance/backend-comparison'],
+                apiLinks: ['capabilities'],
+            },
+            {
+                slug: 'custom-renderers',
+                level: 'advanced',
+                examples: ['custom-renderers/custom-render-pass', 'custom-renderers/custom-triangle-renderer'],
             },
         ],
     },
     {
-        slug: 'reference',
-        title: 'Reference & Deployment',
-        description: 'Diagnose common problems and ship an ExoJS app to production.',
+        slug: 'shipping',
+        title: 'Shipping',
+        description: 'Ship an ExoJS app to production, diagnose common problems, and upgrade across versions.',
         chapters: [
             {
                 slug: 'troubleshooting',
@@ -611,6 +606,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 slug: 'deployment',
                 level: 'intermediate',
                 prerequisites: ['recipes/build-orb-dodge'],
+            },
+            {
+                slug: 'v0-8-x-to-v0-9-0',
+                level: 'intermediate',
             },
         ],
     },
@@ -663,14 +662,15 @@ export interface LearningPathStep {
  * example valid.
  */
 export const GUIDE_LEARNING_PATH: ReadonlyArray<LearningPathStep> = [
-    { path: 'introduction/what-is-exojs', goal: 'See what ExoJS is and how its pieces fit together.' },
-    { path: 'introduction/setup', goal: 'Scaffold a typed project and run the dev server.' },
-    { path: 'introduction/your-first-scene', goal: 'Load a texture, draw a sprite, and animate it.', example: 'getting-started/hello-world' },
-    { path: 'core-concepts/scene-lifecycle', goal: 'Update state and render each frame.', example: 'getting-started/game-loop' },
-    { path: 'input/keyboard', goal: 'Move something in response to key presses.', example: 'input/keyboard' },
+    { path: 'getting-started/what-is-exojs', goal: 'See what ExoJS is and how its pieces fit together.' },
+    { path: 'getting-started/setup', goal: 'Scaffold a typed project and run the dev server.' },
+    { path: 'getting-started/project-structure', goal: 'Find your way around a create-exo-app project.', example: 'getting-started/hello-world' },
+    { path: 'getting-started/your-first-scene', goal: 'Load a texture, draw a sprite, and animate it.', example: 'getting-started/hello-world' },
+    { path: 'runtime/scenes-and-lifecycle', goal: 'Update state and render each frame.', example: 'getting-started/game-loop' },
+    { path: 'input/keyboard-and-actions', goal: 'Move something in response to key presses.', example: 'input/keyboard' },
     { path: 'audio/audio-basics', goal: 'Play sound and music with reliable controls.', example: 'audio-basics/play-sound' },
     { path: 'recipes/build-orb-dodge', goal: 'Combine it all into a complete small game.', example: 'showcase/orb-dodge' },
-    { path: 'reference/deployment', goal: 'Build and host the finished project.' },
+    { path: 'shipping/deployment', goal: 'Build and host the finished project.' },
 ];
 
 export interface GuideTopic {
@@ -683,19 +683,22 @@ export interface GuideTopic {
 /** Topic-based entry points on the guide landing page. */
 export const GUIDE_TOPICS: ReadonlyArray<GuideTopic> = [
     { title: 'Build games', description: 'Scenes, input, collision, and a full game walkthrough.', path: 'recipes/build-orb-dodge' },
-    { title: 'Create visuals', description: 'Graphics, sprites, text, filters, and particles.', path: 'drawing/graphics' },
+    { title: 'Create visuals', description: 'Graphics, sprites, text, filters, and particles.', path: 'rendering/graphics' },
     { title: 'Work with audio', description: 'Playback, spatial audio, effects, and beat detection.', path: 'audio/audio-basics' },
-    { title: 'Debug & optimize', description: 'Overlays, profiling, and render-pipeline inspection.', path: 'advanced/debug-layer' },
+    { title: 'Load assets', description: 'Declare, load, and cache textures, audio, and data.', path: 'assets/loading-and-resources' },
+    { title: 'Build UI', description: 'HUDs, dialog systems, pause menus, and typewriter text.', path: 'recipes/ui-patterns' },
+    { title: 'Debug & optimize', description: 'Overlays, profiling, and render-pipeline inspection.', path: 'debugging/debugging-and-inspection' },
+    { title: 'Ship your game', description: 'Build, troubleshoot, and deploy to production.', path: 'shipping/deployment' },
 ];
 
 /** The core onboarding chapters that must carry full pedagogical metadata. */
 export const CORE_ONBOARDING_PATHS: ReadonlyArray<string> = [
-    'introduction/what-is-exojs',
-    'introduction/setup',
-    'introduction/project-structure',
-    'introduction/your-first-scene',
-    'core-concepts/scene-lifecycle',
-    'input/keyboard',
+    'getting-started/what-is-exojs',
+    'getting-started/setup',
+    'getting-started/project-structure',
+    'getting-started/your-first-scene',
+    'runtime/scenes-and-lifecycle',
+    'input/keyboard-and-actions',
     'audio/audio-basics',
     'recipes/build-orb-dodge',
 ];

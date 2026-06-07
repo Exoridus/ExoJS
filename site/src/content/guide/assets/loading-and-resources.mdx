@@ -301,7 +301,72 @@ await loader.loadBundle('menu');
 await loader.loadBundle('level-1');
 ```
 
+`defineAssetManifest` validates the shape at authoring time — non-empty bundle names, valid entries, no duplicate aliases within a type — so a typo throws where you declare it, not deep inside a load. After a bundle resolves, read its assets by the aliases you declared, exactly like a direct load:
+
+```js
+await loader.loadBundle('menu');
+
+this.logo  = new Sprite(loader.get(Texture, 'logo'));
+this.theme = loader.get(Music, 'theme');
+```
+
 Bundles are useful when scene loads should be granular — load the menu bundle once and keep it resident, then load level bundles as the player progresses. Treat bundle names and aliases as part of your project's asset contract.
+
+### Progress for a loading screen
+
+`loadBundle` accepts an `onProgress` callback that fires after each asset in the bundle settles — drive a progress bar with it:
+
+```js
+await loader.loadBundle('level-1', {
+    onProgress: (loaded, total) => {
+        this.bar.value = loaded / total;
+    },
+});
+```
+
+For a single screen that reflects every bundle, subscribe to the loader-wide `onBundleProgress` signal instead. It reports the bundle name alongside the counts:
+
+```js
+loader.onBundleProgress.add((name, loaded, total) => {
+    console.log(`${name}: ${loaded}/${total}`);
+});
+```
+
+### Handling failures
+
+If any asset in a bundle fails, `loadBundle` waits for the rest to settle and then throws a `BundleLoadError`. Its `failures` array lists every entry that errored — the type, alias, and underlying error — so you can show a retry prompt or fall back to a placeholder rather than dropping the whole bundle:
+
+```js
+import { BundleLoadError } from '@codexo/exojs';
+
+try {
+    await loader.loadBundle('level-1');
+} catch (error) {
+    if (error instanceof BundleLoadError) {
+        for (const failure of error.failures) {
+            console.warn(`Failed: ${failure.alias}`, failure.error);
+        }
+        // retry, substitute a fallback asset, or surface a message
+    }
+}
+```
+
+### Pre-warming in the background
+
+To load a bundle ahead of time without blocking the current scene, pass `background: true`. The bundle loads through a low-priority queue while the frame loop keeps running:
+
+```js
+// Kick off the next level while the player is still in this one
+loader.loadBundle('level-2', { background: true });
+```
+
+Guard against re-loading with `loader.hasBundle(name)`, which returns `true` once every asset in the bundle is resident in memory:
+
+```js
+if (!loader.hasBundle('level-2')) {
+    await loader.loadBundle('level-2');
+}
+```
 
 ## Caching and IndexedDB
 
@@ -417,4 +482,4 @@ The minimum loader workflow — register textures during `load`, retrieve them d
 
 ## Where to go next
 
-That closes Core Concepts. The next part, [Drawing](/ExoJS/en/guide/drawing/), covers what you can put on screen — graphics primitives, sprites, text, animation, and render targets.
+That closes the runtime and asset model. The next part, [Rendering](/ExoJS/en/guide/rendering/), covers what you can put on screen — graphics primitives, sprites, text, animation, and render targets.
