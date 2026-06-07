@@ -20,14 +20,6 @@ exo-code-editor {
     overflow: hidden;
 }
 
-.loading-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: rgba(0, 0, 0, 0.32);
-    backdrop-filter: blur(1px);
-}
-
 .menu-anchor {
     position: relative;
     flex: 0 0 auto;

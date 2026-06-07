@@ -243,6 +243,12 @@ export class EditorCode extends LitElement {
     private _autoRefreshTimer: ReturnType<typeof setTimeout> | null = null;
     private _errorZoneMap: Map<number, string> = new Map();
 
+    // Version id whose ExoJS typings have been applied to Monaco's language defaults.
+    // Diagnostics stay suppressed until this matches `selectedVersionId`, so the strip
+    // never flashes the transient "Cannot find module '@codexo/exojs'" errors the
+    // worker reports while the declaration files are still loading.
+    private _typingsAppliedVersion: string | null = null;
+
     public render(): ReturnType<LitElement['render']> {
         return html`
             <exo-toolbar title="Code">
@@ -871,6 +877,12 @@ export class EditorCode extends LitElement {
         const tsApi = monaco.languages.typescript as unknown as MonacoTypeScriptApi;
         tsApi.javascriptDefaults.setExtraLibs(libs);
         tsApi.typescriptDefaults.setExtraLibs(libs);
+
+        // Module imports can only resolve now that these libs are applied. Mark the
+        // version ready and re-run diagnostics so the strip drops the transient
+        // "Cannot find module" errors reported while the typings were still loading.
+        this._typingsAppliedVersion = versionId;
+        this._updateDiagnostics();
     }
 
     private _getTypingsForVersion(versionId: string): Promise<ReadonlyArray<ExtraLib>> {
@@ -1083,14 +1095,21 @@ export class EditorCode extends LitElement {
             baseUrl: 'file:///',
             paths: { '@/*': ['node_modules/@codexo/exojs/dist/esm/*'] },
         };
+        // Suggestion-level diagnostics (e.g. ts7044 "implicitly any, but a better type
+        // may be inferred", ts6133 "declared but never read") are editor hints, not
+        // problems. The example sources intentionally leave lifecycle params untyped and
+        // sometimes keep unread bindings for teaching clarity, so these hints would light
+        // up the diagnostics strip on nearly every example. Disable them for both JS and
+        // TS so the strip only surfaces real errors and warnings.
         const jsDiagnosticsOptions = {
-            diagnosticCodesToIgnore: [7044],
             noSemanticValidation: false,
             noSyntaxValidation: false,
+            noSuggestionDiagnostics: true,
         };
         const diagnosticsOptions = {
             noSemanticValidation: false,
             noSyntaxValidation: false,
+            noSuggestionDiagnostics: true,
         };
 
         tsApi.javascriptDefaults.setEagerModelSync(true);
@@ -1129,6 +1148,14 @@ export class EditorCode extends LitElement {
 
     private _updateDiagnostics(): void {
         if (!this._editorModel) {
+            this._dispatchDiagnostics([]);
+            return;
+        }
+
+        // Hold back diagnostics until the active version's typings have been applied.
+        // Until then the worker can't resolve `@codexo/exojs` and reports false
+        // "Cannot find module" errors; `_ensureTypingsForVersion` re-runs us once ready.
+        if (this._typingsAppliedVersion !== this.selectedVersionId) {
             this._dispatchDiagnostics([]);
             return;
         }

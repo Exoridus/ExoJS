@@ -36,15 +36,15 @@ section {
 .title {
     flex: 1 1 auto;
     min-width: 0;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
     font-size: 0.67rem;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--fg-faint);
     line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .meta {
@@ -87,10 +87,6 @@ section {
 
 @media (max-width: 1119px) {
     .toggle {
-        min-height: 44px;
-    }
-
-    .title {
         min-height: 44px;
     }
 }
