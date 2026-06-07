@@ -1,8 +1,8 @@
+import * as assetCatalog from '@assets';
 import {
     Application, Color, FontAsset, Graphics, Json, Music, Scene,
     Sprite, Spritesheet, SvgAsset, Text, Texture,
 } from '@codexo/exojs';
-import * as assetCatalog from '@assets';
 
 // The playground serves the asset catalog as the `@assets` module (named
 // category exports). This browser introspects every category by string key,

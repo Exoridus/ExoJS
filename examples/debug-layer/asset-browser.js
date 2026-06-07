@@ -1,6 +1,6 @@
 // Auto-generated from asset-browser.ts — edit the .ts source, not this file.
-import { Application, Color, FontAsset, Graphics, Json, Music, Scene, Sprite, Spritesheet, SvgAsset, Text, Texture, } from '@codexo/exojs';
 import * as assetCatalog from '@assets';
+import { Application, Color, FontAsset, Graphics, Json, Music, Scene, Sprite, Spritesheet, SvgAsset, Text, Texture, } from '@codexo/exojs';
 // The playground serves the asset catalog as the `@assets` module (named
 // category exports). This browser introspects every category by string key,
 // so treat the namespace as a dynamic record.
