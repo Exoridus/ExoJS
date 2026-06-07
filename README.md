@@ -2,28 +2,41 @@
 
 ExoJS is a TypeScript-first 2D runtime for games and interactive apps, built around explicit scenes, practical rendering features, and predictable runtime behavior.
 
+**[Guide](https://exoridus.github.io/ExoJS/en/guide/)** · **[API Reference](https://exoridus.github.io/ExoJS/en/api/)** · **[Playground](https://exoridus.github.io/ExoJS/en/playground/)**
+
 ## Project status
 
 ExoJS is **pre-1.0**. The public API is still under active design — scene graph, rendering pipeline, and resource lifecycle boundaries may change between minor versions. Pin exact versions in downstream experiments. `1.0.0` will mark the first stable API contract.
 
-## Why ExoJS
-
-- TypeScript-first API surface with strong runtime contracts
-- Scene and asset workflows built for real game loops
-- Modern rendering stack: WebGPU-first with WebGL2 fallback
-- Practical visuals: filters, masks, render passes, cache-as-bitmap
-- Gameplay tools: animated sprites, scene stacking, camera helpers, audio sprites
-- Performance visibility with built-in render stats and benchmark harness
-
-## What Is Shipped Today
+## Features
 
 - `Application`, `Scene`, and scene-manager lifecycle
+- Scene stacking (`overlay` / `modal` / `opaque`) with input routing and fade transitions
 - Typed `Loader` with manifest/bundle workflow (`defineAssetManifest`, `registerManifest`, `loadBundle`)
 - Drawables: `Sprite`, `AnimatedSprite`, `Graphics`, `ParticleSystem`, `Text`, `Video`
-- Scene stacking (`overlay` / `modal` / `opaque`) with input routing and fade transitions
-- View/camera helpers (`follow`, bounds clamp, shake, zoom)
+- WebGPU-first rendering with automatic WebGL2 fallback
+- GPU-driven particles (WebGPU compute) with a CPU fallback for WebGL2
 - Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, visual masks, cache-as-bitmap)
-- Render stats (`submittedNodes`, `culledNodes`, `drawCalls`, `batches`, `renderPasses`, ...)
+- Linear and radial gradients for `Graphics` fills and strokes (`fillStyle` / `strokeStyle`)
+- View/camera helpers (`follow`, bounds clamp, shake, zoom)
+- Audio with sprites, spatial panning, and frequency/waveform analysis
+- Render stats (`submittedNodes`, `culledNodes`, `drawCalls`, `batches`, `renderPasses`, ...) and a benchmark harness
+
+## Roadmap
+
+Directional work on the way to the `1.0.0` API freeze. Priorities and ordering may change — nothing here is a release commitment.
+
+- Save/load persistence helper
+- Screen-level post-processing stack (bloom, CRT, vignette, chromatic aberration)
+- Path following with Bézier and Catmull-Rom splines
+- Simple 2D lighting and shadows
+- Tilemap / tileset support (Tiled JSON)
+- Additional scene transitions (slide, crossfade) plus custom transition effects
+- UI widget layer (button, label, panel, slider) with keyboard and gamepad navigation
+- Localization primitive
+- Opt-in `Signal` registry for dev tooling, tree-shakeable in production
+- Live documentation, guides, and playground site
+- Final pre-1.0 API audit and stabilization pass
 
 ## Getting Started
 
@@ -55,7 +68,7 @@ npm run dev
 npm install @codexo/exojs
 ```
 
-ExoJS currently publishes an ESM-first package shape. Use `import` syntax with modern bundlers/runtime tooling.
+ExoJS publishes an ESM-first package shape. Use `import` syntax with modern bundlers/runtime tooling.
 CommonJS `require()` usage is not part of the supported contract for this pre-1.0 line.
 
 ## Quickstart
