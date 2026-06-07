@@ -1,4 +1,5 @@
 import type { Example, ExampleDefinition, ExamplesMap, ExamplesResponse } from './types';
+import { CHAPTER_BY_SLUG } from './chapters';
 import { buildExampleUrl, buildGithubRawExampleUrl } from './url-builder';
 import { createUniqueRequest } from './request-manager';
 import { isCurrentVersion } from './versions';
@@ -61,13 +62,19 @@ export function getNestedExamples(versionId: string): ExamplesMap {
     }
 
     return new Map(
-        Object.entries(response).map(([directory, definitions]) => [
-            getCleanName(directory),
-            definitions
-                .slice()
-                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                .map((def: ExampleDefinition) => ({ ...def, section: directory })),
-        ])
+        Object.entries(response)
+            .sort(([a], [b]) => {
+                const orderA = CHAPTER_BY_SLUG.get(a)?.order ?? Number.MAX_SAFE_INTEGER;
+                const orderB = CHAPTER_BY_SLUG.get(b)?.order ?? Number.MAX_SAFE_INTEGER;
+                return orderA - orderB || a.localeCompare(b);
+            })
+            .map(([directory, definitions]) => [
+                getCleanName(directory),
+                definitions
+                    .slice()
+                    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                    .map((def: ExampleDefinition) => ({ ...def, section: directory })),
+            ])
     );
 }
 

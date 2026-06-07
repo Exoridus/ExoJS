@@ -4,7 +4,7 @@
             "slug": "camera-and-view",
             "path": "application-scenes/camera-and-view.js",
             "language": "typescript",
-            "title": "Camera And View",
+            "title": "Camera and View",
             "description": "Pan and zoom the Camera by dragging and scrolling; observe world and screen coordinates update live.",
             "backend": "core",
             "tags": [
@@ -83,7 +83,7 @@
             "slug": "pause-and-resume",
             "path": "application-scenes/pause-and-resume.js",
             "language": "typescript",
-            "title": "Pause And Resume",
+            "title": "Pause and Resume",
             "description": "Pause and resume the game loop by pressing Space — freeze updates without stopping the renderer or audio.",
             "backend": "core",
             "tags": [
@@ -98,7 +98,7 @@
             "slug": "picture-in-picture",
             "path": "application-scenes/picture-in-picture.js",
             "language": "typescript",
-            "title": "Picture In Picture",
+            "title": "Picture in Picture",
             "description": "Embed a secondary scene view inside the main view — classic minimap or security-camera picture-in-picture layout.",
             "backend": "core",
             "tags": [
@@ -278,7 +278,7 @@
             "slug": "reverb-and-delay",
             "path": "audio-fx/reverb-and-delay.js",
             "language": "typescript",
-            "title": "Reverb And Delay",
+            "title": "Reverb and Delay",
             "description": "Chain a reverb and a delay effect on an audio bus; tweak wet/dry, decay, and feedback live.",
             "backend": "core",
             "tags": [
@@ -443,7 +443,7 @@
             "slug": "pointer-and-hittest",
             "path": "debug-layer/pointer-and-hittest.js",
             "language": "typescript",
-            "title": "Pointer And Hittest",
+            "title": "Pointer and Hittest",
             "description": "Visualise pointer hit-test regions and see which node receives each event — useful for debugging interactive areas.",
             "backend": "core",
             "tags": [
@@ -728,7 +728,7 @@
             "slug": "resize-and-dpr",
             "path": "getting-started/resize-and-dpr.js",
             "language": "typescript",
-            "title": "Resize And Dpr",
+            "title": "Resize and DPR",
             "description": "Handle window resizes and device pixel ratio changes so the canvas stays sharp on high-DPI screens without stretching.",
             "backend": "core",
             "level": "intro",
@@ -810,7 +810,7 @@
             "slug": "mouse-and-pointer",
             "path": "input/mouse-and-pointer.js",
             "language": "typescript",
-            "title": "Mouse And Pointer",
+            "title": "Mouse and Pointer",
             "description": "Track pointer position, button state, and movement delta; fire discrete click and drag events.",
             "backend": "core",
             "tags": [
@@ -858,7 +858,7 @@
             "slug": "pointer-to-world",
             "path": "input/pointer-to-world.js",
             "language": "typescript",
-            "title": "Pointer To World",
+            "title": "Pointer to World",
             "description": "Convert screen-space pointer coordinates to world-space positions as the camera pans and zooms.",
             "backend": "core",
             "tags": [
@@ -1059,7 +1059,7 @@
             "slug": "render-to-texture",
             "path": "render-targets/render-to-texture.js",
             "language": "typescript",
-            "title": "Render To Texture",
+            "title": "Render to Texture",
             "description": "Draw a scene into a RenderTarget and sample the result as a texture on another sprite in the same frame.",
             "backend": "core",
             "tags": [
@@ -1163,7 +1163,7 @@
             "slug": "pivot-and-anchor",
             "path": "scene-graph/pivot-and-anchor.js",
             "language": "typescript",
-            "title": "Pivot And Anchor",
+            "title": "Pivot and Anchor",
             "description": "Set pivot and anchor on a Sprite to control the point around which it rotates and how it aligns to its position.",
             "backend": "core",
             "tags": [
@@ -1311,7 +1311,7 @@
             "slug": "loading-progress-with-shader",
             "path": "showcase/loading-progress-with-shader.js",
             "language": "typescript",
-            "title": "Loading Progress With Shader",
+            "title": "Loading Progress with Shader",
             "description": "Show an animated progress ring during asset loading using a custom GLSL fill-sweep shader.",
             "backend": "core",
             "tags": [
@@ -1340,7 +1340,7 @@
             "slug": "minimap-with-mask",
             "path": "showcase/minimap-with-mask.js",
             "language": "typescript",
-            "title": "Minimap With Mask",
+            "title": "Minimap with Mask",
             "description": "Render a secondary camera view inside a circular stencil mask to create a round minimap overlay.",
             "backend": "core",
             "tags": [
@@ -1399,7 +1399,7 @@
             "slug": "screen-shake-on-explosion",
             "path": "showcase/screen-shake-on-explosion.js",
             "language": "typescript",
-            "title": "Screen Shake On Explosion",
+            "title": "Screen Shake on Explosion",
             "description": "Click to detonate — trigger an explosion particle burst followed by a camera shake tween.",
             "backend": "core",
             "tags": [
@@ -1466,8 +1466,8 @@
         {
             "slug": "listener-and-source",
             "path": "spatial-audio/listener-and-source.js",
-            "title": "Listener And Source",
-            "description": "Example: Listener And Source.",
+            "title": "Listener and Source",
+            "description": "Example: Listener and Source.",
             "backend": "core",
             "tags": [
                 "listener",
@@ -1623,7 +1623,7 @@
             "slug": "multiline-and-wrap",
             "path": "text-fonts/multiline-and-wrap.js",
             "language": "typescript",
-            "title": "Multiline And Wrap",
+            "title": "Multiline and Wrap",
             "description": "Configure word-wrap width, line height, and horizontal alignment for multi-line Text drawables.",
             "backend": "core",
             "tags": [
@@ -1634,7 +1634,7 @@
             "slug": "stroke-and-shadow",
             "path": "text-fonts/stroke-and-shadow.js",
             "language": "typescript",
-            "title": "Stroke And Shadow",
+            "title": "Stroke and Shadow",
             "description": "Add outline stroke and drop shadow to text using TextStyle properties — common game UI typography.",
             "backend": "core",
             "tags": [
@@ -1695,7 +1695,7 @@
             "slug": "interrupt-and-replace",
             "path": "tweens-animation/interrupt-and-replace.js",
             "language": "typescript",
-            "title": "Interrupt And Replace",
+            "title": "Interrupt and Replace",
             "description": "Click to interrupt a running tween and start a new one from the current position — no jitter or snap.",
             "backend": "core",
             "tags": [
@@ -1746,7 +1746,7 @@
             "slug": "tween-with-yoyo",
             "path": "tweens-animation/tween-with-yoyo.js",
             "language": "typescript",
-            "title": "Tween With Yoyo",
+            "title": "Tween with Yoyo",
             "description": "Ping-pong a tween back and forth with the yoyo option — ideal for pulsing, breathing, or idle animations.",
             "backend": "core",
             "tags": [
