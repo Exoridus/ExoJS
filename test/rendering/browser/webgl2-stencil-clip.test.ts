@@ -554,7 +554,7 @@ describe('WebGL2 stencil clipping', () => {
       backend.flush();
 
       // The stencil path renders inline (no RT capture); the alpha-mask path
-      // would have incremented renderPasses via RenderTargetPass.
+      // would have incremented renderPasses via BackendTargetPass.
       expect(backend.stats.renderPasses).toBe(0);
     } finally {
       root.destroy();

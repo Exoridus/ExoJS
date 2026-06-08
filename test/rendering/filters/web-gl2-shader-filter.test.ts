@@ -373,8 +373,8 @@ describe('WebGl2ShaderFilter', () => {
     output.destroy();
   });
 
-  // 8. apply() on WebGL2 backend calls backend.execute (RenderTargetPass)
-  test('apply() on WebGL2 backend calls backend.execute with a RenderTargetPass', () => {
+  // 8. apply() on WebGL2 backend calls backend.execute (BackendTargetPass)
+  test('apply() on WebGL2 backend calls backend.execute with a BackendTargetPass', () => {
     const backend = makeWebGl2Backend();
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
     const input = new RenderTexture(64, 64);
@@ -600,14 +600,14 @@ describe('WebGl2ShaderFilter', () => {
     output.destroy();
   });
 
-  // 20. apply() passes output as the RenderTargetPass target
-  test('apply() renders into the output RenderTexture (RenderTargetPass target = output)', () => {
+  // 20. apply() passes output as the BackendTargetPass target
+  test('apply() renders into the output RenderTexture (BackendTargetPass target = output)', () => {
     const backend = makeWebGl2Backend();
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(32, 32);
 
-    // Capture the FIRST setRenderTarget call — RenderTargetPass calls:
+    // Capture the FIRST setRenderTarget call — BackendTargetPass calls:
     //   1. setRenderTarget(output)   ← the one we want to verify
     //   2. setRenderTarget(previousTarget) after the callback
     const capturedTargets: (RenderTarget | null)[] = [];
