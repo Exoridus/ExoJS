@@ -13,37 +13,72 @@ The distinction: a custom renderer controls *when* and *how* things are drawn. A
 
 ## CallbackRenderPass
 
-[`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) wraps an arbitrary draw callback and lets you execute it via `context.backend.execute()`. The callback receives the active `RenderBackend` directly — your scene's `draw` method receives a `RenderingContext`, but the pass callback is a lower-level escape hatch that works directly with the backend:
+[`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) wraps an arbitrary draw callback as one [`RenderPass`](/ExoJS/en/api/render-pass/) and slots it into a [`RenderPipeline`](/ExoJS/en/api/render-pipeline/) between other passes. The callback receives the [`RenderingContext`](/ExoJS/en/api/rendering-context/) — the same high-level object your scene's `draw` method gets. For low-level draws (rendering a `Graphics` directly, immediate-mode geometry), reach through `context.backend` to the active `RenderBackend`:
 
-```js
-import { CallbackRenderPass } from '@codexo/exojs';
+```ts
+import { CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite, Texture } from '@codexo/exojs';
 
-init(loader) {
-    this._angle = 0;
-    this._between = new Graphics();
+class CustomPassScene extends Scene {
+    private back!: Sprite;
+    private front!: Sprite;
+    private between!: Graphics;
+    private pipeline!: RenderPipeline;
+    private angle = 0;
 
-    this._pass = new CallbackRenderPass(backend => {
-        this._between.clear();
-        this._between.lineWidth = 8;
-        this._between.lineColor = new Color(130, 240, 170);
-        this._between.drawArc(400, 300, 120, this._angle, this._angle + Math.PI * 1.3);
-        this._between.render(backend);
-    });
-}
+    override init(loader): void {
+        this.back = new Sprite(loader.get(Texture, 'hero')).setAnchor(0.5).setPosition(280, 300);
+        this.front = new Sprite(loader.get(Texture, 'hero')).setAnchor(0.5).setPosition(520, 300);
+        this.between = new Graphics();
 
-update(delta) {
-    this._angle += delta.seconds * 2.2;
-}
+        this.pipeline = new RenderPipeline()
+            .addPass(new RenderNodePass(this.back, { clear: Color.black })) // draws behind the pass
+            .addPass(
+                new CallbackRenderPass((context) => {
+                    this.between.clear();
+                    this.between.lineWidth = 8;
+                    this.between.lineColor = new Color(130, 240, 170);
+                    this.between.drawArc(400, 300, 120, this.angle, this.angle + Math.PI * 1.3);
+                    this.between.render(context.backend); // low-level draw via context.backend
+                }),
+            ) // draws between sprites
+            .addPass(new RenderNodePass(this.front)); // draws on top
+    }
 
-draw(context) {
-    context.backend.clear();
-    context.render(this._backSprite);           // draws behind the pass
-    context.backend.execute(this._pass);        // draws between sprites
-    context.render(this._frontSprite);          // draws on top
+    override update(delta): void {
+        this.angle += delta.seconds * 2.2;
+    }
+
+    override draw(context): void {
+        this.pipeline.execute(context);
+    }
 }
 ```
 
-The pass's callback runs at the point you call `backend.execute()`, so you control render order relative to other draws. Use `CallbackRenderPass` for procedural geometry (arcs, connectors, debug lines between objects), for rendering non-scene-graph content, or for inserting a filter step at a specific point in the frame.
+The pipeline runs its passes in order, so the callback's draws land exactly where you place the pass — here, between the two sprite passes. Use `CallbackRenderPass` for procedural geometry (arcs, connectors, debug lines between objects), for rendering non-scene-graph content, or for inserting a filter step at a specific point in the frame.
+
+## Low-level backend passes
+
+Beneath the high-level, context-aware pass tree sits `BackendRenderPass` — an interface for a single backend-only command. Its one method, `execute(backend)`, receives the `RenderBackend` directly (no camera, not a frame phase). Implement it when a custom pass needs raw backend access — custom shaders, backend-specific draw logic — and run it via `backend.execute(pass)`:
+
+```ts
+import { CallbackRenderPass, RenderPipeline } from '@codexo/exojs';
+import type { BackendRenderPass, RenderBackend } from '@codexo/exojs';
+
+class MyBackendPass implements BackendRenderPass {
+    public execute(backend: RenderBackend): void {
+        // raw, backend-specific draw work issued through `backend`
+        backend.clear();
+    }
+}
+
+const backendPass = new MyBackendPass();
+
+// Bridge a BackendRenderPass into a high-level RenderPipeline by wrapping it in a
+// CallbackRenderPass and running it through context.backend:
+const pipeline = new RenderPipeline().addPass(new CallbackRenderPass((context) => context.backend.execute(backendPass)));
+```
+
+A `RenderPipeline` composes high-level `RenderPass` objects (`RenderNodePass`, `CallbackRenderPass`, nested pipelines), not `BackendRenderPass` directly. To run a `BackendRenderPass` inside a pipeline, wrap it in a `CallbackRenderPass` and call `context.backend.execute(pass)` — the bridge shown above. For most custom rendering you never need this layer; `CallbackRenderPass` is the intended escape hatch.
 
 ## Direct backend access
 
@@ -103,6 +138,7 @@ Registering a custom renderer is an advanced extension point. For most custom re
 | [`MeshMaterial`](/ExoJS/en/api/mesh-material/) | You need a custom vertex/fragment shader on a `Mesh` |
 | Custom shader filter (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) | You need a screen-space post-render effect on a drawable |
 | `CallbackRenderPass` | You need to issue draw calls at a specific point in the frame between other draws |
+| `BackendRenderPass` | You need a reusable backend-only command (custom shader / draw logic); bridge it into a pipeline via `CallbackRenderPass` |
 | Direct backend access | You need to bypass ExoJS entirely and work at the GPU API level |
 
 ## Examples

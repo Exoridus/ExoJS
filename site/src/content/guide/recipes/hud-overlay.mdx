@@ -65,19 +65,18 @@ The alternative — rendering HUD elements after the world in a single scene's `
 
 ## Mini-map with a mask
 
-A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD scene:
+A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD scene. The capture is a [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) with a `{ target }`, run once per frame from the game scene's pipeline:
 
 ```js
-// In GameScene.draw:
+// In GameScene: build the capture pass once, run it each frame from the pipeline.
 const miniRt = new RenderTexture(260, 260);
-context.backend.execute(new RenderTargetPass(
-    () => {
-        context.backend.clear();
-        // Render world from a wide view into miniRt
+const capturePass = new CallbackRenderPass(
+    (context) => {
+        // Render the world from a wide view into miniRt (immediate-mode draws via context.backend)
         this.drawWorld(context.backend);
     },
-    { target: miniRt, view: miniRt.view }
-));
+    { target: miniRt }, // redirects the callback's output off-screen; clears the target first if you pass `clear`
+);
 
 // In HudScene:
 const miniSprite = new Sprite(miniRt).setPosition(530, 20);
@@ -88,7 +87,7 @@ mask.drawCircle(660, 150, 120);
 miniSprite.mask = mask;
 ```
 
-The [`RenderTargetPass`](/ExoJS/en/api/render-target-pass/) redirects drawing into the texture. The mask clips the mini-map to a circle. See [Render targets](/ExoJS/en/guide/rendering/render-targets/) and [Masks](/ExoJS/en/guide/runtime/scene-graph/#masks) for details.
+The [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) with `{ target }` redirects the callback's drawing into the texture; inside a target redirect, issue immediate-mode draws through `context.backend` (a `context.render(node)` there would reset the view back to the camera). The mask clips the mini-map to a circle. See [Render targets](/ExoJS/en/guide/rendering/render-targets/) and [Masks](/ExoJS/en/guide/runtime/scene-graph/#masks) for details.
 
 ## When DOM UI is a better fit
 

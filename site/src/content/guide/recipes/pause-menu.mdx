@@ -87,7 +87,7 @@ This is simpler than changing stack semantics at runtime and gives you explicit 
 
 The `destroy` hook on `PauseScene` removes the blur filter. Without this, the game scene would remain blurred after resume. `popScene()` calls `destroy` on the popped scene automatically.
 
-If you need to capture the last game frame and blur it without leaving the game scene's filter array polluted, render the game scene root into a `RenderTexture` during `PauseScene.init`, apply the blur as a post-process pass, and display the result:
+If you need to capture the last game frame and blur it without leaving the game scene's filter array polluted, render the game scene root into a `RenderTexture` during `PauseScene.init`, apply the blur, and display the result. A one-pass `RenderNodePass` captures the root subtree off-screen; the blur is a plain `filter.apply` into a second texture:
 
 ```js
 // Alternative: capture + blur without touching game scene's own filters
@@ -96,23 +96,17 @@ init() {
     this._blurred = new RenderTexture(800, 600);
     this._blur = new BlurFilter({ radius: 5, quality: 2 });
 
-    // Capture game's last frame
-    const backend = this.app.backend;
-    backend.execute(new RenderTargetPass(
-        () => {
-            backend.clear();
-            gameScene.root.render(backend);
-        },
-        { target: this._capture, view: this._capture.view }
-    ));
-    this._blur.apply(backend, this._capture, this._blurred);
+    // Capture the game's last frame: render the root subtree into _capture off-screen.
+    const context = this.app.rendering; // the Application's RenderingContext
+    new RenderNodePass(gameScene.root, { target: this._capture, clear: Color.black }).execute(context);
+    this._blur.apply(context.backend, this._capture, this._blurred);
 
     this._bg = new Sprite(this._blurred);
     this._text = new Text('PAUSED', { fill: 'white', fontSize: 64 });
 }
 ```
 
-This approach leaves the game scene's filters untouched and is more robust if multiple systems may add or remove filters from the game root.
+`RenderNodePass` with `{ target }` redirects the node's render into the texture (and `clear` wipes it first). Here it is executed directly — a single off-screen capture — rather than added to a long-lived pipeline. This approach leaves the game scene's filters untouched and is more robust if multiple systems may add or remove filters from the game root.
 
 ## Examples
 

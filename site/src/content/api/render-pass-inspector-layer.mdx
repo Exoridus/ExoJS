@@ -5,11 +5,11 @@ symbol: "RenderPassInspectorLayer"
 kind: "class"
 subsystem: "debug"
 importPath: "@codexo/exojs/debug"
-memberCount: 8
+memberCount: 12
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/debug/RenderPassInspectorLayer.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts#L63"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts#L79"
 ---
 ## Import
 
@@ -37,16 +37,20 @@ passes so those tools show meaningful pass names.
 ## Methods
 
 - `destroy(): void`
+- `pipelineRows(): RenderPipelineRow[]`
 - `render(backend: RenderBackend): void`
+- `setPipeline(pipeline: RenderPipeline | null): this`
 - `update(_delta: Time): void`
+- `describePipeline(pipeline: RenderPipeline): RenderPipelineRow[]`
 
 ## Properties
 
 - `visible: boolean`
 - `entries: readonly RenderPassInspectorEntry[]`
+- `pipeline: RenderPipeline | null`
 - `totalPasses: number`
 - `viewMode: DebugLayerViewMode`
 
 ## Source
 
-[src/debug/RenderPassInspectorLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts#L63)
+[src/debug/RenderPassInspectorLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts#L79)

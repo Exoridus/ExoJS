@@ -1,0 +1,51 @@
+---
+title: "RenderPipeline"
+description: "An ordered list of RenderPass steps, played once per frame against a RenderingContext. A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its whole subtree. It **owns** the passes added to it (exclusive ownership — a pass belongs to at most one pipeline): resize and destroy cascade to them. It never owns scene nodes or caller RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time."
+symbol: "RenderPipeline"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 15
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/RenderPipeline.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderPipeline.ts#L13"
+---
+## Import
+
+`import { RenderPipeline } from '@codexo/exojs'`
+
+An ordered list of RenderPass steps, played once per frame against a RenderingContext.
+
+A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its
+whole subtree. It **owns** the passes added to it (exclusive ownership — a pass belongs to at most one
+pipeline): resize and destroy cascade to them. It never owns scene nodes or caller
+RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time.
+
+## Constructors
+
+- `new(options?: RenderPassOptions): RenderPipeline`
+
+## Methods
+
+- `[iterator](): IterableIterator<RenderPass>`
+- `addPass(pass: RenderPass): this`
+- `at(index: number): RenderPass | undefined`
+- `clear(): this`
+- `destroy(): void`
+- `execute(context: RenderingContext): void`
+- `hasPass(pass: RenderPass): boolean`
+- `indexOf(pass: RenderPass): number`
+- `insertPass(pass: RenderPass, index: number): this`
+- `removePass(pass: RenderPass): boolean`
+- `resize(width: number, height: number): void`
+
+## Properties
+
+- `enabled: boolean`
+- `label: string`
+- `size: number`
+
+## Source
+
+[src/rendering/RenderPipeline.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderPipeline.ts#L13)
