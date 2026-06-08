@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
+import { renderAssetsGlobalDts } from '../../scripts/generate-examples-global-dts.ts';
 import { assets } from '../../examples/assets/assets.js';
 import { rawAssets } from '../../examples/assets/catalog.js';
 import { resolveAssetCatalog } from '../../examples/assets/resolver.js';
@@ -105,6 +106,14 @@ const run = (): void => {
         console.log(`[examples:sync] Transpiled ${transpiled} TypeScript example(s) to JavaScript`);
     }
 
+    // Regenerate the self-contained typed `assets` global declaration from the
+    // canonical catalog so the Monaco editor (and typecheck:examples) get
+    // hierarchical autocomplete + exact literal types with no `@assets` import.
+    // Drift between this and the committed file is guarded by a unit test.
+    const globalDtsPath = path.resolve(sourceExamplesDir, 'shared', 'assets-global.d.ts');
+    fs.writeFileSync(globalDtsPath, renderAssetsGlobalDts(assets as unknown as Record<string, unknown>), 'utf8');
+    console.log(`[examples:sync] Generated ${globalDtsPath}`);
+
     resetDir(targetExamplesDir);
     resetDir(targetAssetsDir);
 
@@ -117,9 +126,10 @@ const run = (): void => {
     // but the playground runtime expects /assets/* URLs.
     fs.rmSync(path.resolve(targetExamplesDir, 'assets'), { recursive: true, force: true });
 
-    // Generate assets/catalog.js — the @assets import-map module consumed by
-    // example scripts. Paths are resolved relative to preview.html (i.e.
-    // 'assets/demo/…', 'assets/technical/…') so no basePath is needed in loaders.
+    // Generate assets/catalog.js — the resolved runtime catalog imported by the
+    // controlled example runtimes to populate the `assets` global. Paths are
+    // resolved relative to preview.html (i.e. 'assets/demo/…', 'assets/technical/…')
+    // so no basePath is needed in loaders.
     const resolved = resolveAssetCatalog(rawAssets, 'assets/');
     const resolvedAssets = resolveAssetCatalog(assets as unknown as Record<string, unknown>, 'assets/');
     const catalogLines = [

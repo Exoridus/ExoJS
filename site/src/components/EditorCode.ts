@@ -96,7 +96,11 @@ interface MonacoTypeScriptApi {
 const SHARED_LIB_FILES = [
     { path: 'examples/shared/runtime.d.ts', virtualPath: 'file:///node_modules/@examples/runtime/index.d.ts' },
     { path: 'examples/shared/editor-support.d.ts', virtualPath: 'file:///node_modules/@examples/editor-support/index.d.ts' },
-    { path: 'examples/shared/assets-catalog.d.ts', virtualPath: 'file:///node_modules/@assets/index.d.ts' },
+    // Self-contained typed `assets` global (no `@assets` import). The file is a
+    // module ending in `export {}` whose `declare global` block adds the typed
+    // `assets` constant, so hierarchical autocomplete + exact literal types
+    // resolve from this single extra-lib without following relative imports.
+    { path: 'examples/shared/assets-global.d.ts', virtualPath: 'file:///node_modules/@examples/assets-global/index.d.ts' },
 ] as const;
 
 // Module-level typings cache. Once a version's `.d.ts` set has been fetched
