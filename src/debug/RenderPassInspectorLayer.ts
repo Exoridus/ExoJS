@@ -6,6 +6,7 @@ import type { Filter } from '@/rendering/filters/Filter';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { RenderNode } from '@/rendering/RenderNode';
+import { RenderPipeline } from '@/rendering/RenderPipeline';
 import { Text as Text } from '@/rendering/text/Text';
 import { TextStyle } from '@/rendering/text/TextStyle';
 
@@ -45,6 +46,21 @@ export interface RenderPassInspectorEntry {
 }
 
 /**
+ * One row of a {@link RenderPipeline} listing produced by {@link RenderPassInspectorLayer.describePipeline}.
+ * Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`.
+ */
+export interface RenderPipelineRow {
+  /** Nesting depth (0 = top-level pass). */
+  readonly depth: number;
+  /** The pass's label (defaults to its constructor name). */
+  readonly label: string;
+  /** Whether the pass is enabled. */
+  readonly enabled: boolean;
+  /** Whether the pass is itself a {@link RenderPipeline}. */
+  readonly isPipeline: boolean;
+}
+
+/**
  * Debug layer that lists every {@link RenderNode} with an active filter chain
  * each frame. Renders a compact text panel with per-drawable rows showing
  * the filter sequence, bounding-box dimensions, and mask/cache status.
@@ -66,9 +82,29 @@ export class RenderPassInspectorLayer extends DebugLayer {
   private _bg: Graphics | null = null;
   private _header: Text | null = null;
   private _lines: Text[] = [];
+  private _pipeline: RenderPipeline | null = null;
 
   public constructor(app: Application) {
     super(app);
+  }
+
+  /**
+   * Flatten a {@link RenderPipeline} into depth-tagged rows, recursing into nested pipelines. Pure and
+   * app-independent: identity is the pass object and `label` is display-only — no names are required.
+   */
+  public static describePipeline(pipeline: RenderPipeline): RenderPipelineRow[] {
+    const rows: RenderPipelineRow[] = [];
+    RenderPassInspectorLayer._collectPipelineRows(pipeline, 0, rows);
+    return rows;
+  }
+
+  private static _collectPipelineRows(pipeline: RenderPipeline, depth: number, rows: RenderPipelineRow[]): void {
+    for (const pass of pipeline) {
+      rows.push({ depth, label: pass.label, enabled: pass.enabled, isPipeline: pass instanceof RenderPipeline });
+      if (pass instanceof RenderPipeline) {
+        RenderPassInspectorLayer._collectPipelineRows(pass, depth + 1, rows);
+      }
+    }
   }
 
   public override get viewMode(): DebugLayerViewMode {
@@ -110,6 +146,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._header = null;
     this._lines = [];
     this._entries.length = 0;
+    this._pipeline = null;
   }
 
   /**
@@ -130,6 +167,23 @@ export class RenderPassInspectorLayer extends DebugLayer {
       if (entry.hasMask) total++;
     }
     return total;
+  }
+
+  /** Set a {@link RenderPipeline} to list beneath the filter chains, or `null` to clear it. */
+  public setPipeline(pipeline: RenderPipeline | null): this {
+    this._pipeline = pipeline;
+
+    return this;
+  }
+
+  /** The pipeline currently being inspected, or `null`. */
+  public get pipeline(): RenderPipeline | null {
+    return this._pipeline;
+  }
+
+  /** Depth-tagged rows for the inspected pipeline (empty if none is set). */
+  public pipelineRows(): RenderPipelineRow[] {
+    return this._pipeline !== null ? RenderPassInspectorLayer.describePipeline(this._pipeline) : [];
   }
 
   // -----------------------------------------------------------------------
@@ -206,6 +260,15 @@ export class RenderPassInspectorLayer extends DebugLayer {
         for (let i = 0; i < entry.filters.length; i++) {
           lines.push({ text: `  ${i}. ${entry.filters[i].constructor.name}`, dim: false });
         }
+      }
+    }
+
+    const pipelineRows = this.pipelineRows();
+    if (pipelineRows.length > 0) {
+      lines.push({ text: 'Pipeline:', dim: true });
+      for (const row of pipelineRows) {
+        const indent = '  '.repeat(row.depth + 1);
+        lines.push({ text: `${indent}${row.label}${row.enabled ? '' : ' [off]'}`, dim: !row.enabled });
       }
     }
 
