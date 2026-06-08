@@ -89,20 +89,49 @@ jobs:
       - name: Build library
         run: pnpm build
 
+      # Extension packages build their own ESM tree (externalising the core,
+      # whose dist/ now exists). Build before packing/publishing so any failure
+      # surfaces here, not mid-publish.
+      - name: Build extension packages
+        run: |
+          pnpm --filter @codexo/exojs-particles build
+          pnpm --filter @codexo/exojs-tiled build
+
+      # Lockstep + peer-range coherence across all three official packages, plus
+      # the deterministic release-matrix / publish-order check. Fails the release
+      # before any publish if the package matrix is inconsistent.
+      - name: Verify release package matrix
+        run: |
+          pnpm verify:lockstep
+          pnpm verify:release-matrix
+
       # Site build produces site/dist/ needed for the release bundle below.
       - name: Build site
         env:
           EXOJS_PACKAGE_PATH: ..
         run: pnpm site:build
 
+      # Full coordinated-release archive: all three npm tarballs, every package's
+      # distribution, the built site, examples, and top-level metadata. Lets a
+      # consumer install the exact coordinated version snapshot offline.
       - name: Assemble release bundle
         run: |
-          BUNDLE_DIR="exojs-${TARGET_TAG}"
+          BUNDLE_DIR="exojs-${TARGET_TAG}-full"
           rm -rf "${BUNDLE_DIR}" "${BUNDLE_DIR}.zip"
-          mkdir -p "${BUNDLE_DIR}/site"
+          mkdir -p "${BUNDLE_DIR}/site" "${BUNDLE_DIR}/npm" "${BUNDLE_DIR}/packages"
+          # npm tarballs for all three official packages (Core → Particles → Tiled).
+          npm pack --pack-destination "${BUNDLE_DIR}/npm"
+          (cd packages/exojs-particles && npm pack --pack-destination "../../${BUNDLE_DIR}/npm")
+          (cd packages/exojs-tiled && npm pack --pack-destination "../../${BUNDLE_DIR}/npm")
+          # Distributions.
           cp -R dist "${BUNDLE_DIR}/dist"
+          cp -R packages/exojs-particles/dist "${BUNDLE_DIR}/packages/exojs-particles-dist"
+          cp -R packages/exojs-tiled/dist "${BUNDLE_DIR}/packages/exojs-tiled-dist"
+          # Examples + built site.
           cp -R examples "${BUNDLE_DIR}/examples"
           cp -R site/dist/. "${BUNDLE_DIR}/site/"
+          # Top-level metadata.
+          cp README.md CHANGELOG.md LICENSE package.json "${BUNDLE_DIR}/"
           zip -r "${BUNDLE_DIR}.zip" "${BUNDLE_DIR}"
 
       - name: Generate release notes
@@ -117,13 +146,42 @@ jobs:
         with:
           body_path: .release/release-notes.md
           tag_name: ${{ env.TARGET_TAG }}
-          files: exojs-${{ env.TARGET_TAG }}.zip
+          files: exojs-${{ env.TARGET_TAG }}-full.zip
 
-      # Publish order matters: the core ships first because the create-exo-app
-      # templates depend on `^<this version>`. Each publish is idempotent — a
-      # workflow re-run (or a re-triggered tag) skips a version that is already
-      # on npm instead of failing.
+      # Publish order matters: the core ships first because the extension
+      # packages declare it as a peer and the create-exo-app templates depend on
+      # `^<this version>`. Each publish is idempotent — a workflow re-run (or a
+      # re-triggered tag) skips a version that is already on npm instead of
+      # failing — but a genuine publish error fails the step and the whole job,
+      # so a partial release can never be reported as success.
       - name: Publish @codexo/exojs to npm
+        run: |
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
+            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
+          else
+            npm publish --provenance --access public
+            echo "::notice::Published ${PKG}@${VER}."
+          fi
+
+      # Particles depends on the core peer published above. Same idempotent +
+      # fail-on-error contract.
+      - name: Publish @codexo/exojs-particles to npm
+        working-directory: packages/exojs-particles
+        run: |
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
+            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
+          else
+            npm publish --provenance --access public
+            echo "::notice::Published ${PKG}@${VER}."
+          fi
+
+      # Tiled is published last of the three official packages.
+      - name: Publish @codexo/exojs-tiled to npm
+        working-directory: packages/exojs-tiled
         run: |
           PKG=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")
