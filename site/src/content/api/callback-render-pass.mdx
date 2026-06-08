@@ -1,6 +1,6 @@
 ---
 title: "CallbackRenderPass"
-description: "Runs a user callback as one pass. The callback receives the RenderingContext (high-level: `context.render(node)`, `context.backend` immediate draws, etc.). Set `options.target` to redirect the callback's output into an off-screen RenderTexture (immediate-mode \"scene\" → texture). To run a low-level BackendRenderPass inside a pipeline, bridge it here: `new CallbackRenderPass((context) => context.backend.execute(myBackendPass))`. `view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame (no per-frame allocation). If your callback closes over owned GPU resources, subclass RenderPass instead so you can override `destroy()`."
+description: "Runs a user callback as one pass. The callback receives the RenderingContext (high-level: `context.render(node)`, `context.backend` immediate draws, etc.). Set `options.target` to redirect the callback's output into an off-screen RenderTexture (immediate-mode \"scene\" → texture). To run a low-level BackendRenderPass inside a pipeline, bridge it here: `new CallbackRenderPass((context) => context.backend.execute(myBackendPass))`. `view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame (no per-frame allocation). `execute` is not re-entrant — a callback must not re-run the same pass instance; the reentrancy guard keeps the redirect's active context from being clobbered. If your callback closes over owned GPU resources, subclass RenderPass instead so you can override `destroy()`."
 symbol: "CallbackRenderPass"
 kind: "class"
 subsystem: "rendering"
@@ -9,7 +9,7 @@ memberCount: 6
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/CallbackRenderPass.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts#L37"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts#L38"
 ---
 ## Import
 
@@ -23,8 +23,9 @@ To run a low-level BackendRenderPass inside a pipeline, bridge it here:
 `new CallbackRenderPass((context) => context.backend.execute(myBackendPass))`.
 
 `view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame
-(no per-frame allocation). If your callback closes over owned GPU resources, subclass RenderPass instead so
-you can override `destroy()`.
+(no per-frame allocation). `execute` is not re-entrant — a callback must not re-run the same pass instance; the
+reentrancy guard keeps the redirect's active context from being clobbered. If your callback closes over owned GPU
+resources, subclass RenderPass instead so you can override `destroy()`.
 
 ## Constructors
 
@@ -43,4 +44,4 @@ you can override `destroy()`.
 
 ## Source
 
-[src/rendering/CallbackRenderPass.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts#L37)
+[src/rendering/CallbackRenderPass.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts#L38)

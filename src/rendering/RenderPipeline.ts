@@ -132,7 +132,15 @@ export class RenderPipeline extends RenderPass {
     }
   }
 
-  /** Cascade `destroy()` to every pass, release their ownership, then clear the list. Idempotent. Throws during `execute`. */
+  /**
+   * Cascade `destroy()` to every pass, release their ownership, then clear the list. Idempotent. Throws during
+   * `execute` (before any teardown begins).
+   *
+   * Best-effort teardown: the pipeline is marked destroyed and detached from its passes up front, so it always
+   * ends in a single, consistent destroyed-and-empty state — every child gets a `destroy()` attempt and has its
+   * owner slot released even if an earlier child throws. If one or more children throw, the first error is
+   * re-thrown after the cascade completes.
+   */
   public override destroy(): void {
     if (this._destroyed) {
       return;
@@ -140,13 +148,27 @@ export class RenderPipeline extends RenderPass {
 
     this._assertNotExecuting();
 
-    for (const pass of this._passes) {
-      pass.destroy();
+    // Mark destroyed and snapshot-detach the children first, so the pipeline ends in a consistent
+    // destroyed-and-empty state regardless of whether a child's destroy() throws.
+    this._destroyed = true;
+
+    const passes = this._passes.splice(0, this._passes.length);
+    const errors: unknown[] = [];
+
+    for (const pass of passes) {
+      // Release ownership before destroying, so a throwing child never stays attached to this pipeline.
       pass._pipelineOwner = null;
+
+      try {
+        pass.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
     }
 
-    this._passes.length = 0;
-    this._destroyed = true;
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 
   private _admit(pass: RenderPass): void {

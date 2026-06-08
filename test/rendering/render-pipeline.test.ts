@@ -8,6 +8,7 @@ interface TestPassOptions {
   readonly label?: string;
   readonly enabled?: boolean;
   readonly onExecute?: () => void;
+  readonly onDestroy?: () => void;
 }
 
 class TestPass extends RenderPass {
@@ -15,10 +16,12 @@ class TestPass extends RenderPass {
   public readonly resizes: [number, number][] = [];
   public destroyCount = 0;
   private readonly _onExecute?: () => void;
+  private readonly _onDestroy?: () => void;
 
   public constructor(options: TestPassOptions = {}) {
     super({ label: options.label, enabled: options.enabled });
     this._onExecute = options.onExecute;
+    this._onDestroy = options.onDestroy;
   }
 
   public override execute(context: RenderingContext): void {
@@ -32,6 +35,7 @@ class TestPass extends RenderPass {
 
   public override destroy(): void {
     this.destroyCount++;
+    this._onDestroy?.();
   }
 }
 
@@ -291,16 +295,23 @@ describe('RenderPipeline', () => {
   });
 
   // 19b
-  test('destroying the pipeline during its own execute throws', () => {
+  test('destroying the pipeline during its own execute throws before any teardown begins', () => {
     const pipeline = new RenderPipeline();
+    const victim = new TestPass();
     const destroyer = new TestPass({
       onExecute: () => {
         pipeline.destroy();
       },
     });
-    pipeline.addPass(destroyer);
+    pipeline.addPass(destroyer).addPass(victim);
 
     expect(() => pipeline.execute(ctx)).toThrow(/executing/);
+
+    // Teardown never started: no child was destroyed and the pipeline is still live and intact.
+    expect(destroyer.destroyCount).toBe(0);
+    expect(victim.destroyCount).toBe(0);
+    expect(pipeline.size).toBe(2);
+    expect(pipeline.hasPass(victim)).toBe(true);
   });
 
   // 20
@@ -403,5 +414,108 @@ describe('RenderPipeline', () => {
 
     expect(enabled.resizes).toEqual([[800, 600]]);
     expect(disabled.resizes).toEqual([[800, 600]]);
+  });
+
+  // 28 — exception-safe best-effort teardown
+  test('destroy keeps tearing down later children after an earlier child throws', () => {
+    const a = new TestPass({
+      onDestroy: () => {
+        throw new Error('a boom');
+      },
+    });
+    const b = new TestPass();
+    const c = new TestPass();
+    const pipeline = new RenderPipeline().addPass(a).addPass(b).addPass(c);
+
+    expect(() => pipeline.destroy()).toThrow('a boom');
+    expect(a.destroyCount).toBe(1);
+    expect(b.destroyCount).toBe(1);
+    expect(c.destroyCount).toBe(1);
+  });
+
+  // 29
+  test('destroy releases every owner slot even when a middle child throws', () => {
+    const a = new TestPass();
+    const b = new TestPass({
+      onDestroy: () => {
+        throw new Error('b boom');
+      },
+    });
+    const c = new TestPass();
+    const pipeline = new RenderPipeline().addPass(a).addPass(b).addPass(c);
+
+    expect(() => pipeline.destroy()).toThrow('b boom');
+    expect(a._pipelineOwner).toBeNull();
+    expect(b._pipelineOwner).toBeNull();
+    expect(c._pipelineOwner).toBeNull();
+  });
+
+  // 30
+  test('destroy rethrows the first error when multiple children throw, and cleanup stays complete', () => {
+    const a = new TestPass({
+      onDestroy: () => {
+        throw new Error('first');
+      },
+    });
+    const b = new TestPass({
+      onDestroy: () => {
+        throw new Error('second');
+      },
+    });
+    const pipeline = new RenderPipeline().addPass(a).addPass(b);
+
+    expect(() => pipeline.destroy()).toThrow('first');
+    expect(a.destroyCount).toBe(1);
+    expect(b.destroyCount).toBe(1);
+    expect(pipeline.size).toBe(0);
+  });
+
+  // 31
+  test('a pipeline is fully destroyed and empty after a child destroy throws', () => {
+    const a = new TestPass({
+      onDestroy: () => {
+        throw new Error('boom');
+      },
+    });
+    const pipeline = new RenderPipeline().addPass(a);
+
+    expect(() => pipeline.destroy()).toThrow('boom');
+    expect(pipeline.size).toBe(0);
+    expect([...pipeline]).toEqual([]);
+    expect(pipeline.hasPass(a)).toBe(false);
+    expect(() => pipeline.addPass(new TestPass())).toThrow(/destroyed/);
+    expect(() => pipeline.execute(ctx)).toThrow(/destroyed/);
+  });
+
+  // 32
+  test('re-destroy is a no-op after a child destroy threw (children are not destroyed twice)', () => {
+    const a = new TestPass({
+      onDestroy: () => {
+        throw new Error('boom');
+      },
+    });
+    const pipeline = new RenderPipeline().addPass(a);
+
+    expect(() => pipeline.destroy()).toThrow('boom');
+    expect(a.destroyCount).toBe(1);
+
+    expect(() => pipeline.destroy()).not.toThrow();
+    expect(a.destroyCount).toBe(1);
+  });
+
+  // 33
+  test('a child whose destroy threw is re-addable elsewhere (owner released)', () => {
+    const a = new TestPass({
+      onDestroy: () => {
+        throw new Error('boom');
+      },
+    });
+    const first = new RenderPipeline().addPass(a);
+
+    expect(() => first.destroy()).toThrow('boom');
+
+    const second = new RenderPipeline();
+    expect(() => second.addPass(a)).not.toThrow();
+    expect(second.hasPass(a)).toBe(true);
   });
 });

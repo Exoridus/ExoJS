@@ -235,4 +235,75 @@ describe('CallbackRenderPass', () => {
     expect(executed).toContain(backendPass);
     expect(backendPass.execute).toHaveBeenCalledWith(context.backend);
   });
+
+  test('rejects direct self-reentrancy', () => {
+    const { context } = createContext();
+    // Holder so the callback can reach its own pass without a self-referential `let`.
+    const ref: CallbackRenderPass[] = [];
+    ref[0] = new CallbackRenderPass(c => ref[0].execute(c));
+
+    expect(() => ref[0].execute(context)).toThrow(/re-entrant/);
+  });
+
+  test('rejects self-reentrancy inside a target redirect (active context cannot be clobbered)', () => {
+    const { context } = createContext();
+    const target = new RenderTexture(32, 32);
+    const ref: CallbackRenderPass[] = [];
+    ref[0] = new CallbackRenderPass(c => ref[0].execute(c), { target });
+
+    expect(() => ref[0].execute(context)).toThrow(/re-entrant/);
+
+    target.destroy();
+  });
+
+  test('releases the reentrancy guard after the callback throws (still runnable)', () => {
+    const { context } = createContext();
+    let shouldThrow = true;
+    const pass = new CallbackRenderPass(() => {
+      if (shouldThrow) {
+        throw new Error('boom');
+      }
+    });
+
+    expect(() => pass.execute(context)).toThrow('boom');
+
+    shouldThrow = false;
+    expect(() => pass.execute(context)).not.toThrow();
+  });
+
+  test('releases the guard after a targeted callback throws (state stays consistent)', () => {
+    const { context } = createContext();
+    const target = new RenderTexture(32, 32);
+    let shouldThrow = true;
+    const pass = new CallbackRenderPass(
+      () => {
+        if (shouldThrow) {
+          throw new Error('boom');
+        }
+      },
+      { target },
+    );
+
+    expect(() => pass.execute(context)).toThrow('boom');
+
+    shouldThrow = false;
+    expect(() => pass.execute(context)).not.toThrow();
+
+    target.destroy();
+  });
+
+  test('nested distinct callback passes run in order', () => {
+    const { context } = createContext();
+    const order: string[] = [];
+    const inner = new CallbackRenderPass(() => order.push('inner'));
+    const outer = new CallbackRenderPass(c => {
+      order.push('outer-start');
+      inner.execute(c);
+      order.push('outer-end');
+    });
+
+    outer.execute(context);
+
+    expect(order).toEqual(['outer-start', 'inner', 'outer-end']);
+  });
 });
