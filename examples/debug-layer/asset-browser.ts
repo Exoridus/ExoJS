@@ -281,11 +281,6 @@ class AssetBrowserScene extends Scene {
     }
 
     override init(loader): void {
-        if (false) {
-            this.txtNoAssets.setPosition(PREVIEW_X + 40, H / 2 - 30);
-            return;
-        }
-
         for (const [k] of Object.entries(assets.demo.textures ?? {})) {
             const s = new Sprite(loader.get(Texture, `tex_${k}`));
             s.setAnchor(0.5);
@@ -584,12 +579,6 @@ class AssetBrowserScene extends Scene {
 
     override draw(context): void {
         context.backend.clear(C.bg);
-
-        if (false) {
-            this.drawNoAssets(context);
-            return;
-        }
-
         this.drawPreviewBg(context);
         this.drawPreviewContent(context);
         this.drawSidebar(context);
