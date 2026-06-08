@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { AssetBinding, RendererBinding } from '@/extensions/Extension';
 import { materializeAssetBindings, materializeRendererBindings } from '@/extensions/materialize';
-import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
-import { RendererRegistry } from '@/rendering/RendererRegistry';
+import { Drawable } from '@/rendering/Drawable';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { Drawable } from '@/rendering/Drawable';
+import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
+import { RendererRegistry } from '@/rendering/RendererRegistry';
 import { Loader } from '@/resources/Loader';
 
 class FakeDrawable extends Drawable {}

@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
+import { beforeEach } from 'vitest';
 
+import type { RendererBinding } from '@/extensions/Extension';
 import { ExtensionRegistry } from '@/extensions/ExtensionRegistry';
 import { materializeRendererBindings } from '@/extensions/materialize';
-import type { RendererBinding } from '@/extensions/Extension';
+import { resetExtensionRegistryForTesting } from '@/extensions/testing';
 import { Drawable } from '@/rendering/Drawable';
-import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
-import { RendererRegistry } from '@/rendering/RendererRegistry';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
+import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
+import { RendererRegistry } from '@/rendering/RendererRegistry';
 import { Loader } from '@/resources/Loader';
-import { resetExtensionRegistryForTesting } from '@/extensions/testing';
-import { beforeEach } from 'vitest';
 
 class TestDrawable extends Drawable {}
 

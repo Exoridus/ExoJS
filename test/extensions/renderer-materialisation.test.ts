@@ -1,15 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Extension, RendererBinding } from '@/extensions/Extension';
+import type { RendererBinding } from '@/extensions/Extension';
 import { ExtensionRegistry } from '@/extensions/ExtensionRegistry';
 import { materializeRendererBindings } from '@/extensions/materialize';
-import { buildSnapshot } from '@/extensions/snapshot';
 import { resetExtensionRegistryForTesting } from '@/extensions/testing';
 import { Drawable } from '@/rendering/Drawable';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
-import { RendererRegistry } from '@/rendering/RendererRegistry';
 import type { RenderBackend } from '@/rendering/RenderBackend';
+import { RenderBackendType } from '@/rendering/RenderBackendType';
+import type { Renderer } from '@/rendering/Renderer';
+import { RendererRegistry } from '@/rendering/RendererRegistry';
 
 // Minimal stub renderer
 function createStubRenderer(): Renderer<RenderBackend> & {

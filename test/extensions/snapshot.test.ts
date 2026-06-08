@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Extension } from '@/extensions/Extension';
 import { ExtensionRegistry, getGlobalSnapshotInternal } from '@/extensions/ExtensionRegistry';
-import { EMPTY_SNAPSHOT, buildSnapshot } from '@/extensions/snapshot';
+import { buildSnapshot, EMPTY_SNAPSHOT } from '@/extensions/snapshot';
 import { resetExtensionRegistryForTesting } from '@/extensions/testing';
 
 describe('ExtensionSnapshot', () => {
