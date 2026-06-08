@@ -151,7 +151,11 @@ pnpm build
 pnpm verify:package
 ```
 
-Internal imports use the `@/*` path alias (mapped to `src/*`) — the same convention used by Vite, Next.js, and other modern TypeScript setups. Building the library requires TypeScript 6.
+Package-internal imports use Node `package.json#imports` subpath imports: `./X` for the
+same directory, `#dir/X` for any other path in the same package, and the public bare
+specifier (`@codexo/exojs`) across packages. See [CONTRIBUTING.md](./CONTRIBUTING.md)
+for the full import policy, per-package commands, and the shared `@codexo/exojs-config`
+tooling. Building the library requires TypeScript 6.
 
 ### Workspace Commands
 
