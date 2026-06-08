@@ -3,7 +3,15 @@ import { fileURLToPath } from 'node:url';
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
-const aliasConfig = { '@': fileURLToPath(new URL('./src', import.meta.url)) };
+// Note: Vite alias matching uses longest-first order. Subpath aliases must come
+// before the root alias so '@codexo/exojs/rendering' resolves before '@codexo/exojs'.
+const aliasConfig = [
+  { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/rendering', replacement: fileURLToPath(new URL('./src/rendering.ts', import.meta.url)) },
+  { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs', replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url)) },
+  { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+] as const;
 
 const shaderPlugin = {
   name: 'shader-text',
