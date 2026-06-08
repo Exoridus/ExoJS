@@ -287,7 +287,7 @@ describe('RenderPipeline WebGL2 browser pixels', () => {
 
     backend.execute(
       new BackendTargetPass(
-        (passBackend) => {
+        passBackend => {
           sprite.render(passBackend);
         },
         { target: imperativeTarget, view: imperativeTarget.view, clearColor: Color.black },

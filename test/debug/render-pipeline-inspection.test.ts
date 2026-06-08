@@ -22,9 +22,7 @@ describe('RenderPassInspectorLayer.describePipeline', () => {
   });
 
   test('recurses into nested pipelines and flags disabled passes', () => {
-    const inner = new RenderPipeline({ label: 'world' })
-      .addPass(new TestPass({ label: 'terrain' }))
-      .addPass(new TestPass({ label: 'units', enabled: false }));
+    const inner = new RenderPipeline({ label: 'world' }).addPass(new TestPass({ label: 'terrain' })).addPass(new TestPass({ label: 'units', enabled: false }));
     const outer = new RenderPipeline({ label: 'frame' }).addPass(inner).addPass(new TestPass({ label: 'hud' }));
 
     expect(RenderPassInspectorLayer.describePipeline(outer)).toEqual([

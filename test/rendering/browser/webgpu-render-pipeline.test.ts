@@ -31,7 +31,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
   }) as unknown as Application;
 
 describe('RenderPipeline WebGPU browser', () => {
-  test('a nested pipeline redirecting into a target raises no validation error', async (ctx) => {
+  test('a nested pipeline redirecting into a target raises no validation error', async ctx => {
     if (!navigator.gpu) {
       ctx.skip('WebGPU unavailable: navigator.gpu is absent');
     }
@@ -67,9 +67,7 @@ describe('RenderPipeline WebGPU browser', () => {
     try {
       // A callback pass redirected into an off-screen target (clears it red via the
       // coordinator's load op), nested one pipeline deep — the full composition path.
-      const inner = new RenderPipeline({ label: 'inner' }).addPass(
-        new CallbackRenderPass(() => undefined, { target, clear: Color.red }),
-      );
+      const inner = new RenderPipeline({ label: 'inner' }).addPass(new CallbackRenderPass(() => undefined, { target, clear: Color.red }));
       new RenderPipeline({ label: 'frame' }).addPass(inner).execute(context);
       backend.flush();
     } finally {

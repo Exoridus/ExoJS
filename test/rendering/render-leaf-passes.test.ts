@@ -228,7 +228,7 @@ describe('CallbackRenderPass', () => {
     const { context, executed } = createContext();
     const backendPass: BackendRenderPass = { execute: vi.fn() };
 
-    new CallbackRenderPass((c) => {
+    new CallbackRenderPass(c => {
       c.backend.execute(backendPass);
     }).execute(context);
 

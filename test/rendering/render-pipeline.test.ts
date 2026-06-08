@@ -124,7 +124,7 @@ describe('RenderPipeline', () => {
     pipeline.insertPass(c, -5); // clamps to 0
     pipeline.insertPass(d, 999); // clamps to size
 
-    expect([...pipeline].map((p) => p.label)).toEqual(['c', 'a', 'b', 'd']);
+    expect([...pipeline].map(p => p.label)).toEqual(['c', 'a', 'b', 'd']);
   });
 
   // 6
