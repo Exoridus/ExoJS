@@ -58,9 +58,17 @@ const modules: RollupOptions = {
     typescript({
       compilerOptions: {
         incremental: false,
+        rootDir: 'src',
         outDir: 'dist/esm',
         declaration: true,
         declarationDir: 'dist/esm',
+        declarationMap: false,
+        paths: {
+          '@codexo/exojs': ['../../dist/esm/index.d.ts'],
+          '@codexo/exojs/extensions': ['../../dist/esm/extensions/index.d.ts'],
+          '@codexo/exojs/rendering': ['../../dist/esm/rendering.d.ts'],
+          '@codexo/exojs/debug': ['../../dist/esm/debug/index.d.ts'],
+        },
       },
     }),
   ],

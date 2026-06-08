@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
-import { resetExtensionRegistryForTesting } from '../../src/extensions/testing';
+import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { particlesExtension, createParticlesExtension } from '../src/particlesExtension';
 import { ParticleSystem } from '../src/ParticleSystem';
 

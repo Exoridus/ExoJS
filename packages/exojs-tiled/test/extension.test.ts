@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
-import { resetExtensionRegistryForTesting } from '../../src/extensions/testing';
+import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { tiledExtension } from '../src/tiledExtension';
 import { TiledMap } from '../src/TiledMap';
 
