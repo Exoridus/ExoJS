@@ -6,6 +6,8 @@ import { Graphics } from '@/rendering/primitives/Graphics';
 import type { RenderNode } from '@/rendering/RenderNode';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
 // valid sources. The mesh sources are the REAL instanced default path (pinned
@@ -229,6 +231,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
 
   return backend;
 };

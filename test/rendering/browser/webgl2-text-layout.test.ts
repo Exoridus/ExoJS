@@ -5,6 +5,8 @@ import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
 import { Text } from '@/rendering/text/Text';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on `initialize()` must be mocked
 // with valid sources. The sprite/mesh/particle sources mirror the gradient test
@@ -231,6 +233,7 @@ const createBackend = async (width: number, height: number): Promise<WebGl2Backe
 
   const backend = new WebGl2Backend(app);
   await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
   return backend;
 };
 

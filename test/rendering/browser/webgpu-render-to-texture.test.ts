@@ -13,6 +13,8 @@ import { Color } from '@/core/Color';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
   if (!navigator.gpu) {
     ctx.skip('WebGPU unavailable: navigator.gpu is absent');
@@ -40,6 +42,7 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
   const backend = new WebGpuBackend(app);
 
   await backend.initialize();
+  wireCoreRenderers(backend);
 
   return backend;
 };

@@ -23,6 +23,7 @@ import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
@@ -83,6 +84,7 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
   const backend = new WebGpuBackend(makeApp(canvas));
 
   await backend.initialize();
+  wireCoreRenderers(backend);
 
   return backend;
 };

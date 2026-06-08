@@ -21,6 +21,7 @@ import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
 
 // Fragment-only WGSL: the engine prepends the canonical sprite vertex module
@@ -90,6 +91,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
     const backend = new WebGpuBackend(makeApp(canvas));
 
     await backend.initialize();
+    wireCoreRenderers(backend);
 
     const device = getBackendDeviceOrSkip(ctx, backend);
 

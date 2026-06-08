@@ -8,6 +8,8 @@ import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 // The vitest shaderPlugin replaces every .vert/.frag import with `export
 // default ""`, so the real engine shaders are mocked with working GLSL here.
 const shaderSources = vi.hoisted(() => ({
@@ -252,6 +254,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
 
   return backend;
 };

@@ -1,8 +1,14 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
+import type { RenderBackend } from '@codexo/exojs/rendering';
+import { RenderBackendType } from '@codexo/exojs/rendering';
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { particlesExtension, createParticlesExtension } from '../src/particlesExtension';
 import { ParticleSystem } from '../src/ParticleSystem';
+import { WebGl2ParticleRenderer } from '../src/renderers/WebGl2ParticleRenderer';
+import { WebGpuParticleRenderer } from '../src/renderers/WebGpuParticleRenderer';
+
+const mockBackend = (backendType: RenderBackendType): RenderBackend => ({ backendType }) as RenderBackend;
 
 describe('@codexo/exojs-particles root', () => {
   it('particlesExtension has correct id', () => {
@@ -33,6 +39,37 @@ describe('@codexo/exojs-particles root', () => {
   it('root import does NOT register in ExtensionRegistry', () => {
     const registry = ExtensionRegistry.list();
     expect(registry.some(e => e.id === '@codexo/exojs-particles')).toBe(false);
+  });
+});
+
+describe('particlesExtension renderer binding — renders through the package', () => {
+  it('create() produces a WebGl2ParticleRenderer for a WebGL2 backend', () => {
+    const binding = particlesExtension.renderers![0];
+    const renderer = binding.create(mockBackend(RenderBackendType.WebGl2));
+    expect(renderer).toBeInstanceOf(WebGl2ParticleRenderer);
+  });
+
+  it('create() produces a WebGpuParticleRenderer for a WebGPU backend', () => {
+    const binding = particlesExtension.renderers![0];
+    const renderer = binding.create(mockBackend(RenderBackendType.WebGpu));
+    expect(renderer).toBeInstanceOf(WebGpuParticleRenderer);
+  });
+
+  it('create() returns undefined for an unsupported backend (binding skipped)', () => {
+    const binding = particlesExtension.renderers![0];
+    const renderer = binding.create(mockBackend('unknown' as unknown as RenderBackendType));
+    expect(renderer).toBeUndefined();
+  });
+
+  it('binding targets the package ParticleSystem (not a Core type)', () => {
+    const binding = particlesExtension.renderers![0];
+    expect(binding.targets).toContain(ParticleSystem);
+  });
+
+  it('createParticlesExtension({ batchSize }) still produces a WebGL2 renderer', () => {
+    const ext = createParticlesExtension({ batchSize: 4096 });
+    const renderer = ext.renderers![0].create(mockBackend(RenderBackendType.WebGl2));
+    expect(renderer).toBeInstanceOf(WebGl2ParticleRenderer);
   });
 });
 
