@@ -1,12 +1,12 @@
 import { Color } from '@/core/Color';
+import { BackendTargetPass } from '@/rendering/BackendTargetPass';
 import type { RenderPassCoordinator } from '@/rendering/pass/RenderPassCoordinator';
 import type { RenderPassDescriptor } from '@/rendering/pass/RenderPassDescriptor';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 
-// RenderTargetPass is RenderBackend-typed and reaches the (backend-specific,
+// BackendTargetPass is RenderBackend-typed and reaches the (backend-specific,
 // non-interface) coordinator through an optional duck-typed accessor. These
 // tests pin both branches: the coordinator path and the legacy inline fallback.
 const createBackend = (coordinator?: RenderPassCoordinator) => {
@@ -35,7 +35,7 @@ const createBackend = (coordinator?: RenderPassCoordinator) => {
   return { backend, root, setRenderTarget, setView, clear };
 };
 
-describe('RenderTargetPass coordinator routing', () => {
+describe('BackendTargetPass coordinator routing', () => {
   test('routes save/restore through the pass coordinator when the backend exposes one', () => {
     const withChildPass = vi.fn((_descriptor: RenderPassDescriptor, body: () => void) => body());
     const coordinator = { withChildPass } as unknown as RenderPassCoordinator;
@@ -43,7 +43,7 @@ describe('RenderTargetPass coordinator routing', () => {
     const target = new RenderTexture(32, 32);
     let ran = false;
 
-    const pass = new RenderTargetPass(
+    const pass = new BackendTargetPass(
       () => {
         ran = true;
       },
@@ -75,7 +75,7 @@ describe('RenderTargetPass coordinator routing', () => {
     const { backend, root } = createBackend(coordinator);
     const target = new RenderTexture(32, 32);
 
-    const pass = new RenderTargetPass(() => undefined, { target });
+    const pass = new BackendTargetPass(() => undefined, { target });
 
     try {
       pass.execute(backend);
@@ -97,7 +97,7 @@ describe('RenderTargetPass coordinator routing', () => {
       order.push(`setRenderTarget:${boundTarget === target ? 'target' : 'root'}`);
     });
 
-    const pass = new RenderTargetPass(
+    const pass = new BackendTargetPass(
       () => {
         order.push('callback');
       },
@@ -124,7 +124,7 @@ describe('RenderTargetPass coordinator routing', () => {
       boundTargets.push(boundTarget);
     });
 
-    const pass = new RenderTargetPass(
+    const pass = new BackendTargetPass(
       () => {
         throw new Error('boom');
       },

@@ -1,5 +1,6 @@
 ﻿import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
+import { BackendTargetPass } from '@/rendering/BackendTargetPass';
 import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
@@ -10,7 +11,6 @@ import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
@@ -303,13 +303,13 @@ describe('render effects', () => {
     source.destroy();
   });
 
-  test('RenderTargetPass restores render target and view after execution', () => {
+  test('BackendTargetPass restores render target and view after execution', () => {
     const { runtime, root, clear } = createRuntime();
     const target = new RenderTexture(64, 64);
     const view = new View(32, 32, 64, 64);
     let executedOnTarget = false;
     let executedWithView = false;
-    const pass = new RenderTargetPass(
+    const pass = new BackendTargetPass(
       () => {
         executedOnTarget = runtime.renderTarget === target;
         executedWithView = runtime.view === view;
@@ -340,7 +340,7 @@ describe('render effects', () => {
     const sequence: string[] = [];
 
     runtime.execute(
-      new RenderTargetPass(
+      new BackendTargetPass(
         () => {
           sequence.push(runtime.renderTarget === firstTarget ? 'first' : 'wrong');
         },
@@ -352,7 +352,7 @@ describe('render effects', () => {
       ),
     );
     runtime.execute(
-      new RenderTargetPass(
+      new BackendTargetPass(
         () => {
           sequence.push(runtime.renderTarget === secondTarget ? 'second' : 'wrong');
         },

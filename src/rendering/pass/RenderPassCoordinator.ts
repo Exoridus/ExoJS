@@ -33,7 +33,7 @@ export interface RenderPassCoordinator {
   /**
    * Run `body` inside a child pass described by `descriptor`, restoring the
    * previous target and view afterwards — even if `body` throws. Preserves the
-   * save / restore semantics of {@link RenderTargetPass}.
+   * save / restore semantics of {@link BackendTargetPass}.
    */
   withChildPass(descriptor: RenderPassDescriptor, body: () => void): void;
 
@@ -58,7 +58,7 @@ export interface RenderPassCoordinator {
 /**
  * Duck-typing host for backends that own a {@link RenderPassCoordinator}.
  *
- * Generic, `RenderBackend`-typed orchestration code ({@link RenderTargetPass},
+ * Generic, `RenderBackend`-typed orchestration code ({@link BackendTargetPass},
  * {@link RenderingContext.renderTo}) reaches the coordinator through this
  * optional accessor and falls back to a legacy inline target/view save-restore
  * when it is absent (e.g. test stub backends), mirroring the `_beginDrawPlan?`

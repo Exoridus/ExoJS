@@ -38,7 +38,7 @@ export interface WebGl2PassBackend {
  * flush the active renderer.
  *
  * Inline stencil clips delegate straight to the backend's stencil stack and
- * never count as a render pass — no {@link RenderTargetPass}, no `renderPasses`
+ * never count as a render pass — no {@link BackendTargetPass}, no `renderPasses`
  * stat — matching the existing inline scissor / stencil behaviour.
  * @internal
  */

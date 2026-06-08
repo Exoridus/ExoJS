@@ -1,9 +1,9 @@
 /// <reference types="@webgpu/types" />
 
 import { Color } from '@/core/Color';
+import { BackendTargetPass } from '@/rendering/BackendTargetPass';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
@@ -226,7 +226,7 @@ export class WebGpuShaderFilter extends Filter {
     const conn = this._connection!;
 
     backend.execute(
-      new RenderTargetPass(
+      new BackendTargetPass(
         b => {
           const gpu = b as WebGpuBackend;
           const device = conn.device;
@@ -252,7 +252,7 @@ export class WebGpuShaderFilter extends Filter {
 
           // ---- Encode render pass ----
           // The coordinator owns the GPU pass (it runs inside the surrounding
-          // RenderTargetPass child pass, so load/clear is already resolved to
+          // BackendTargetPass child pass, so load/clear is already resolved to
           // a clear of the output target) and ends + submits it below.
           const pass = gpu._passCoordinator.acquirePass().pass;
 

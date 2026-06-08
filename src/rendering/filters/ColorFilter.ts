@@ -1,6 +1,6 @@
 import { Color } from '@/core/Color';
+import { BackendTargetPass } from '@/rendering/BackendTargetPass';
 import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { BlendModes } from '@/rendering/types';
@@ -35,7 +35,7 @@ export class ColorFilter extends Filter {
     this._sprite.height = output.height;
 
     backend.execute(
-      new RenderTargetPass(
+      new BackendTargetPass(
         () => {
           this._sprite.render(backend);
         },

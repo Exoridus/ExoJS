@@ -9,6 +9,7 @@ import { BitmapText } from '@/rendering/text/BitmapText';
 import { Text } from '@/rendering/text/Text';
 import { BlendModes } from '@/rendering/types';
 
+import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
@@ -18,7 +19,6 @@ import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
 import { RendererRegistry } from '../RendererRegistry';
-import type { RenderPass } from '../RenderPass';
 import type { RenderStats } from '../RenderStats';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
@@ -395,7 +395,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public execute(pass: RenderPass): this {
+  public execute(pass: BackendRenderPass): this {
     this._flushActiveRenderer();
     this._stats.renderPasses++;
     pass.execute(this);

@@ -145,7 +145,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "RenderBackendType",
   "RenderNode",
   "RenderTarget",
-  "RenderTargetPass",
   "RenderTexture",
   "RendererRegistry",
   "RenderingContext",

@@ -2,10 +2,10 @@ import type { Color } from '@/core/Color';
 import type { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 
+import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
 import type { Geometry } from './geometry/Geometry';
 import type { RenderBackendType } from './RenderBackendType';
-import type { RenderPass } from './RenderPass';
 import type { RenderStats } from './RenderStats';
 import type { RenderTarget } from './RenderTarget';
 import type { RenderTexture } from './texture/RenderTexture';
@@ -23,8 +23,8 @@ import type { View } from './View';
  *
  * Application code rarely calls this directly — high-level code submits
  * drawables via the scene graph and reads `app.backend.stats` for
- * per-frame counters. Custom render passes (subclasses of
- * {@link RenderPass}) interact with the interface directly.
+ * per-frame counters. Custom backend passes (implementations of
+ * {@link BackendRenderPass}) interact with the interface directly.
  * @advanced
  */
 export interface RenderBackend {
@@ -83,7 +83,7 @@ export interface RenderBackend {
   composeWithAlphaMask(content: RenderTexture, mask: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this;
 
   draw(drawable: Drawable): this;
-  execute(pass: RenderPass): this;
+  execute(pass: BackendRenderPass): this;
   flush(): this;
   destroy(): void;
 }
