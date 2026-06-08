@@ -4,6 +4,21 @@ import type { AssetLoaderContext, Loader } from '@codexo/exojs';
 
 import { TiledMap, type TiledMapData } from './TiledMap';
 
+/**
+ * Resolve a tileset image reference relative to the map's source path.
+ * `new URL(ref, source)` only works when `source` is an absolute URL; the
+ * loader is frequently called with relative paths, so fall back to a synthetic
+ * base and strip it.
+ */
+function resolveRelative(ref: string, source: string): string {
+  try {
+    return new URL(ref, source).href;
+  } catch {
+    const base = 'https://exojs.invalid/';
+    return new URL(ref, base + source.replace(/^\/+/, '')).href.slice(base.length);
+  }
+}
+
 const tiledBinding: AssetBinding<TiledMap> = {
   type: TiledMap,
   typeNames: ['tiledMap'],
@@ -30,7 +45,7 @@ const tiledBinding: AssetBinding<TiledMap> = {
         const tilesetTextures = (await Promise.all(
           data.tilesets
             .filter(ts => ts.image !== undefined)
-            .map(ts => loader.load(Texture, new URL(ts.image!, source).href)),
+            .map(ts => loader.load(Texture, resolveRelative(ts.image!, source))),
         )) as Texture[];
 
         return new TiledMap(data, tilesetTextures);

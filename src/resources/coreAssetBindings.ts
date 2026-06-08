@@ -69,6 +69,21 @@ function binding<T>(
   return { type, ...opts, create };
 }
 
+/**
+ * Resolve a sub-asset reference (e.g. a BmFont page image) relative to its
+ * parent's source. `new URL(ref, source)` only works when `source` is an
+ * absolute URL; loaders are frequently called with relative paths (e.g.
+ * `assets/demo/fonts/x.fnt`), so fall back to a synthetic base and strip it.
+ */
+function resolveSubAssetPath(ref: string, source: string): string {
+  try {
+    return new URL(ref, source).href;
+  } catch {
+    const base = 'https://exojs.invalid/';
+    return new URL(ref, base + source.replace(/^\/+/, '')).href.slice(base.length);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Core asset bindings
 // ---------------------------------------------------------------------------
@@ -154,7 +169,7 @@ const bmFontBinding = binding(BmFont, { typeNames: ['bmFont'], extensions: ['fnt
   async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
     const text = await context.fetchText(source);
     const fontData = parseBmFontText(text);
-    const textures = await Promise.all(fontData.pages.map(page => loader.load(Texture, new URL(page, source).href)));
+    const textures = await Promise.all(fontData.pages.map(page => loader.load(Texture, resolveSubAssetPath(page, source))));
     return new BmFont(fontData, textures as Texture[]);
   },
 }));

@@ -1088,9 +1088,18 @@ export class Loader {
       }
     }
 
-    // All validation passed — install atomically
+    // All validation passed — install atomically.
+    // Internally the loader builds a flat config `{ source, ...fields }` (the
+    // shape the advanced `registerAssetType` handler form receives). Extension
+    // AssetHandlers are typed against the public `AssetLoadRequest`
+    // (`{ source, options? }`), so reshape the flat config here: pull `source`
+    // out and nest the remaining per-load fields under `options`.
     this._handlerFunctions.set(keys.type, {
-      load: (config, ctx) => handler.load(config as { source: string; options?: Readonly<Record<string, unknown>> }, ctx),
+      load: (config, ctx) => {
+        const { source, ...rest } = config as { source: string } & Record<string, unknown>;
+        const options = Object.keys(rest).length > 0 ? (rest as Readonly<Record<string, unknown>>) : undefined;
+        return handler.load({ source, options }, ctx);
+      },
     });
 
     for (const name of resolvedNames) {

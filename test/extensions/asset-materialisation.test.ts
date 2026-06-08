@@ -84,6 +84,48 @@ describe('materializeAssetBindings', () => {
     loader.destroy();
   });
 
+  it('extension handler receives per-load options nested under request.options', async () => {
+    // Regression: the loader builds a flat internal config `{ source, ...fields }`,
+    // but the public AssetLoadRequest is `{ source, options? }`. The bindAsset
+    // wrapper must reshape it so handlers (e.g. the core FontAsset adapter) see
+    // their options. A flat config would leave `request.options` undefined.
+    let seen: AssetLoadRequest | undefined;
+    const handler: AssetHandler = {
+      load: async (req: AssetLoadRequest) => {
+        seen = req;
+        return {};
+      },
+    };
+    const binding: AssetBinding = { type: TypeA as never, typeNames: ['withOpts'], create: () => handler };
+    const loader = new Loader();
+    materializeAssetBindings(loader, [binding]);
+
+    await loader.load(TypeA as never, 'thing.dat', { family: 'Kenney Future', size: 32 }).catch(() => undefined);
+
+    expect(seen?.source).toBe('thing.dat');
+    expect(seen?.options).toEqual({ family: 'Kenney Future', size: 32 });
+    loader.destroy();
+  });
+
+  it('extension handler receives no options key when none are passed', async () => {
+    let seen: AssetLoadRequest | undefined;
+    const handler: AssetHandler = {
+      load: async (req: AssetLoadRequest) => {
+        seen = req;
+        return {};
+      },
+    };
+    const binding: AssetBinding = { type: TypeA as never, typeNames: ['noOpts'], create: () => handler };
+    const loader = new Loader();
+    materializeAssetBindings(loader, [binding]);
+
+    await loader.load(TypeA as never, 'thing.dat').catch(() => undefined);
+
+    expect(seen?.source).toBe('thing.dat');
+    expect(seen?.options).toBeUndefined();
+    loader.destroy();
+  });
+
   it('multiple typeNames on a single binding all register', () => {
     const handler = createTestHandler();
     const binding: AssetBinding = { type: TypeA as never, typeNames: ['alpha', 'beta'], create: () => handler };
