@@ -11,7 +11,8 @@
     "dist/exo.debug.esm.js",
     "dist/exo.debug.esm.js.map",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "main": "./dist/exo.esm.js",
   "module": "./dist/esm/index.js",
@@ -60,6 +61,7 @@
     "verify:exports": "tsx ./scripts/verify-exports.ts",
     "verify:package": "pnpm build && pnpm verify:exports && pnpm pack",
     "verify:lockstep": "tsx ./scripts/verify-lockstep-versions.ts",
+    "verify:release-matrix": "tsx ./scripts/verify-release-matrix.ts",
     "verify:create-exo-app": "tsx ./scripts/verify-create-exo-app.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "verify:release": "pnpm verify:lockstep && pnpm typecheck && pnpm typecheck:guides && pnpm typecheck:examples && pnpm lint:strict && pnpm format:check && pnpm test && pnpm verify:package && pnpm verify:create-exo-app && pnpm site:build",
