@@ -1,0 +1,153 @@
+---
+title: 'Tiled maps'
+description: 'Load Tiled (.tmj) tilemaps as assets through the official @codexo/exojs-tiled extension.'
+---
+
+# Tiled maps
+
+[Tiled](https://www.mapeditor.org/) is a popular open-source map editor. The official
+`@codexo/exojs-tiled` extension adds a `TiledMap` asset type that loads Tiled's JSON map
+format (`.tmj`) through the normal [`Loader`](/ExoJS/en/api/loader/) pipeline — fetching the
+map, resolving its tileset image references, and returning a `TiledMap` you can read for layer
+and tile data.
+
+> **Note:** `TiledMap` ships as an official ExoJS extension package, separate from the core.
+> Install `@codexo/exojs-tiled` alongside `@codexo/exojs`:
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-tiled
+> ```
+
+Like all extensions, the core ships nothing Tiled-specific — an `Application` only understands
+`.tmj` files once you activate the extension. There are two ways to do that.
+
+## Activation
+
+### Explicit (recommended)
+
+Pass `tiledExtension` to `ApplicationOptions.extensions`. This is explicit, tree-shakeable, and
+order-independent — the extension is bound to exactly this `Application`:
+
+```js
+import { Application } from '@codexo/exojs';
+import { tiledExtension } from '@codexo/exojs-tiled';
+
+const app = new Application({ extensions: [tiledExtension] });
+```
+
+The package root (`@codexo/exojs-tiled`) is side-effect-free: importing it registers nothing
+globally. You decide which `Application` gets the extension.
+
+### `/register` convenience
+
+For an app that always wants Tiled support, import the `/register` entry once at startup. It
+registers `tiledExtension` in the global `ExtensionRegistry` and re-exports the same public API:
+
+```js
+import '@codexo/exojs-tiled/register';
+import { Application } from '@codexo/exojs';
+
+const app = new Application(); // picks up tiledExtension automatically
+```
+
+The `/register` import must run **before** you construct the `Application` whose extensions are
+read from the global registry. The explicit `extensions: [...]` form works regardless of import
+order.
+
+### Core-only
+
+An `Application` constructed with an explicit empty list takes **no** extensions — not even
+globally registered ones — and will not recognise `.tmj` files:
+
+```js
+import { Application } from '@codexo/exojs';
+
+const app = new Application({ extensions: [] }); // core only; no TiledMap
+```
+
+Loading a `.tmj` here throws `No renderer/handler` style errors directing you to import the
+extension. This is the same add-only model the [Particles](/ExoJS/en/guide/effects/particles/)
+extension uses.
+
+## Loading a map
+
+Once the extension is active, load a `.tmj` map the same way you load any asset — by type token,
+by path, or by config-map. All three resolve to the same handler.
+
+```js no-check
+import { TiledMap } from '@codexo/exojs-tiled';
+
+// By type token (most explicit)
+const map = await loader.load(TiledMap, 'levels/forest.tmj');
+
+// By path — the `.tmj` extension is registered, so the type is inferred
+const sameMap = await loader.load('levels/forest.tmj');
+
+// By config-map type name — the public `'tiledMap'` lookup
+const fromConfig = await loader.load({
+    level: { type: 'tiledMap', source: 'levels/forest.tmj' },
+});
+```
+
+The handler fetches the JSON (cache-routed), validates it, then loads every tileset image it
+references as a `Texture` through the same loader, returning a fully-resolved `TiledMap`.
+
+## Reading the map
+
+`TiledMap` exposes the parsed metadata, layers, and the resolved tileset textures:
+
+```js no-check
+map.width;            // map width in tiles
+map.height;           // map height in tiles
+map.tileWidth;        // tile width in pixels
+map.tileHeight;       // tile height in pixels
+map.layers;           // readonly tile/object layers
+map.tilesets;         // readonly tileset definitions
+map.tilesetTextures;  // readonly resolved Texture[] (one per image tileset)
+map.data;             // the raw parsed TiledMapData
+```
+
+`TiledMap` is a plain data asset, not a `Drawable`. It gives you the layer grids and tileset
+textures; you decide how to render them (for example, by building a `Mesh` or batching `Sprite`s
+per visible tile). A built-in tilemap renderer is out of this extension's initial scope.
+
+## Tileset texture ownership
+
+The tileset textures a `TiledMap` exposes are loaded through the `Loader` and owned by the
+**loader cache** — not by the `TiledMap`. This matters for teardown:
+
+```js no-check
+map.destroy(); // releases the TiledMap; does NOT destroy tileset textures
+```
+
+`TiledMap.destroy()` deliberately does **not** destroy its tileset textures, because the same
+texture may be shared with other maps or sprites through the cache. Release shared textures via
+the loader's own unload path when nothing else needs them — never from the map.
+
+## Supported scope
+
+The initial extension covers the common orthogonal workflow:
+
+- Orthogonal orientation
+- Tile layers (the tile-index grid)
+- Image-based tilesets (each tileset's `image` is resolved to a `Texture`)
+- Basic object layers (object metadata is preserved in `map.data`)
+
+## Not supported
+
+These raise a clear error or are intentionally absent in the initial scope:
+
+- **`.tmx` / XML maps** — only the JSON `.tmj` format is parsed. Export from Tiled as JSON.
+- **Infinite maps** — chunked/infinite maps throw; use a fixed-size map.
+- **Non-orthogonal orientations** — isometric, staggered, and hexagonal throw.
+- **Advanced editor features** — external tilesets (`.tsx`), embedded image collections,
+  per-tile animations, and Wang/terrain sets are not interpreted (data may still be present in
+  `map.data` but is not resolved by the handler).
+
+## Where to look next
+
+- **Package README:** [`@codexo/exojs-tiled`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/README.md)
+  — install, entry points, and the supported-format matrix.
+- **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, the
+  `.tmj` extension lookup, and the `'tiledMap'` config-map type name.
+- **Extension model:** the [Particles](/ExoJS/en/guide/effects/particles/) chapter walks through
+  the same explicit-vs-`/register` activation for the sibling renderer extension.
