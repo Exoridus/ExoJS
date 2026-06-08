@@ -132,11 +132,13 @@ export class RenderPipeline extends RenderPass {
     }
   }
 
-  /** Cascade `destroy()` to every pass, release their ownership, then clear the list. Idempotent. */
+  /** Cascade `destroy()` to every pass, release their ownership, then clear the list. Idempotent. Throws during `execute`. */
   public override destroy(): void {
     if (this._destroyed) {
       return;
     }
+
+    this._assertNotExecuting();
 
     for (const pass of this._passes) {
       pass.destroy();

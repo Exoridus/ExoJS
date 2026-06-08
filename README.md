@@ -16,7 +16,7 @@ ExoJS is **pre-1.0**. The public API is still under active design — scene grap
 - Drawables: `Sprite`, `AnimatedSprite`, `Graphics`, `ParticleSystem`, `Text`, `Video`
 - WebGPU-first rendering with automatic WebGL2 fallback
 - GPU-driven particles (WebGPU compute) with a CPU fallback for WebGL2
-- Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, visual masks, cache-as-bitmap)
+- Rendering composition primitives (`RenderTexture`, `RenderPipeline`, filter chains, visual masks, cache-as-bitmap)
 - Linear and radial gradients for `Graphics` fills and strokes (`fillStyle` / `strokeStyle`)
 - View/camera helpers (`follow`, bounds clamp, shake, zoom)
 - Audio with sprites, spatial panning, and frequency/waveform analysis

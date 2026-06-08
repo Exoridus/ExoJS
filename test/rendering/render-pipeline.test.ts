@@ -290,6 +290,19 @@ describe('RenderPipeline', () => {
     expect(() => pipeline.execute(ctx)).toThrow(/executing/);
   });
 
+  // 19b
+  test('destroying the pipeline during its own execute throws', () => {
+    const pipeline = new RenderPipeline();
+    const destroyer = new TestPass({
+      onExecute: () => {
+        pipeline.destroy();
+      },
+    });
+    pipeline.addPass(destroyer);
+
+    expect(() => pipeline.execute(ctx)).toThrow(/executing/);
+  });
+
   // 20
   test('re-entrant execute throws', () => {
     const pipeline = new RenderPipeline();
