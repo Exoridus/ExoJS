@@ -2,9 +2,8 @@
 import { Color } from '@/core/Color';
 import { materializeRendererBindings } from '@/extensions/materialize';
 import { Rectangle } from '@/math/Rectangle';
-import { buildCoreRendererBindings } from '@/rendering/coreRendererBindings';
-import { ParticleSystem, particlesExtension } from '../../packages/exojs-particles/src/index';
 import { Container } from '@/rendering/Container';
+import { buildCoreRendererBindings } from '@/rendering/coreRendererBindings';
 import { Drawable } from '@/rendering/Drawable';
 import { ColorFilter } from '@/rendering/filters/ColorFilter';
 import { Graphics } from '@/rendering/primitives/Graphics';
@@ -18,6 +17,8 @@ import { Texture } from '@/rendering/texture/Texture';
 import { BlendModes, ScaleModes } from '@/rendering/types';
 import { Video } from '@/rendering/video/Video';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+
+import { particlesExtension,ParticleSystem } from '../../packages/exojs-particles/src/index';
 
 interface MockWebGpuEnvironment {
   readonly canvas: HTMLCanvasElement;
