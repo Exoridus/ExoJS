@@ -49,9 +49,12 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
  */
 export interface AssetBinding<Result = unknown> {
   readonly type: AssetConstructor<Result>;
-  /** Primary type-name for config-map loading. Mutually exclusive with `typeNames`. */
-  readonly typeName?: string;
-  /** Multiple type-names mapping to this handler. Mutually exclusive with `typeName`. */
+  /**
+   * Config-map type names that resolve to this handler, e.g. `['tiledMap']`.
+   * Most bindings declare exactly one name; a binding may declare several when a
+   * single asset type is reachable under multiple aliases (e.g. `['vtt', 'srt']`).
+   * Each name maps the config-map form `{ type: '<name>', source }` to this handler.
+   */
   readonly typeNames?: readonly string[];
   readonly extensions?: readonly string[];
   create(loader: Loader): AssetHandler<Result>;

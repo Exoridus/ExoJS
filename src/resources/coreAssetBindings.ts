@@ -63,7 +63,7 @@ function textFactoryHandler<T>(makeFactory: () => { create(raw: string, options?
 // Typed binding factory that accepts abstract token classes.
 function binding<T>(
   type: AssetConstructor,
-  opts: { typeName?: string; typeNames?: readonly string[]; extensions?: readonly string[] },
+  opts: { typeNames?: readonly string[]; extensions?: readonly string[] },
   create: (loader: Loader) => AssetHandler<T>,
 ): AssetBinding {
   return { type, ...opts, create };
@@ -75,35 +75,35 @@ function binding<T>(
 
 const textureBinding = binding(
   Texture,
-  { typeName: 'texture' },
+  { typeNames: ['texture'] },
   binaryFactoryHandler(() => new TextureFactory()),
 );
 
 const soundBinding = binding(
   Sound,
-  { typeName: 'sound' },
+  { typeNames: ['sound'] },
   binaryFactoryHandler(() => new SoundFactory()),
 );
 
 const musicBinding = binding(
   Music,
-  { typeName: 'music' },
+  { typeNames: ['music'] },
   binaryFactoryHandler(() => new MusicFactory()),
 );
 
 const videoBinding = binding(
   Video,
-  { typeName: 'video' },
+  { typeNames: ['video'] },
   binaryFactoryHandler(() => new VideoFactory()),
 );
 
-const jsonBinding = binding(Json as unknown as AssetConstructor, { typeName: 'json' }, () => ({
+const jsonBinding = binding(Json as unknown as AssetConstructor, { typeNames: ['json'] }, () => ({
   async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<unknown> {
     return context.fetchJson(source);
   },
 }));
 
-const textBinding = binding(TextAsset as unknown as AssetConstructor, { typeName: 'text' }, () => ({
+const textBinding = binding(TextAsset as unknown as AssetConstructor, { typeNames: ['text'] }, () => ({
   async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<string> {
     return context.fetchText(source);
   },
@@ -111,7 +111,7 @@ const textBinding = binding(TextAsset as unknown as AssetConstructor, { typeName
 
 const svgBinding = binding(
   SvgAsset as unknown as AssetConstructor,
-  { typeName: 'svg' },
+  { typeNames: ['svg'] },
   textFactoryHandler(() => new SvgFactory()),
 );
 
@@ -134,23 +134,23 @@ const subtitleBinding = binding(SubtitleAsset as unknown as AssetConstructor, { 
 
 const xmlBinding = binding(
   XmlAsset as unknown as AssetConstructor,
-  { typeName: 'xml' },
+  { typeNames: ['xml'] },
   textFactoryHandler(() => new XmlFactory()),
 );
 
 const csvBinding = binding(
   CsvAsset as unknown as AssetConstructor,
-  { typeName: 'csv' },
+  { typeNames: ['csv'] },
   textFactoryHandler(() => new CsvFactory()),
 );
 
 const binaryBinding = binding(
   BinaryAsset as unknown as AssetConstructor,
-  { typeName: 'binary' },
+  { typeNames: ['binary'] },
   binaryFactoryHandler(() => new BinaryFactory()),
 );
 
-const bmFontBinding = binding(BmFont, { typeName: 'bmFont', extensions: ['fnt'] }, (loader: Loader) => ({
+const bmFontBinding = binding(BmFont, { typeNames: ['bmFont'], extensions: ['fnt'] }, (loader: Loader) => ({
   async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
     const text = await context.fetchText(source);
     const fontData = parseBmFontText(text);
@@ -166,7 +166,7 @@ if (typeof FontFace !== 'undefined') {
   conditionalBindings.push(
     binding(
       FontAsset as unknown as AssetConstructor,
-      { typeName: 'font', extensions: ['woff', 'woff2', 'ttf', 'otf'] },
+      { typeNames: ['font'], extensions: ['woff', 'woff2', 'ttf', 'otf'] },
       binaryFactoryHandler(() => new FontFactory()),
     ),
   );
@@ -176,7 +176,7 @@ if (typeof HTMLImageElement !== 'undefined') {
   conditionalBindings.push(
     binding(
       ImageAsset as unknown as AssetConstructor,
-      { typeName: 'image' },
+      { typeNames: ['image'] },
       binaryFactoryHandler(() => new ImageFactory()),
     ),
   );
@@ -186,7 +186,7 @@ if (typeof WebAssembly !== 'undefined') {
   conditionalBindings.push(
     binding(
       WasmAsset as unknown as AssetConstructor,
-      { typeName: 'wasm' },
+      { typeNames: ['wasm'] },
       binaryFactoryHandler(() => new WasmFactory()),
     ),
   );

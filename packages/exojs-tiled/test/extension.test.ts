@@ -21,7 +21,7 @@ describe('@codexo/exojs-tiled root', () => {
 
   it('tiledExtension asset binding has typeName tiledMap', () => {
     const binding = tiledExtension.assets![0];
-    expect(binding.typeName).toBe('tiledMap');
+    expect(binding.typeNames).toEqual(['tiledMap']);
   });
 
   it('tiledExtension asset binding has tmj extension', () => {

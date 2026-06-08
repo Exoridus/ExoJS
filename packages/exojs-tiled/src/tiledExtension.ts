@@ -6,7 +6,7 @@ import { TiledMap, type TiledMapData } from './TiledMap';
 
 const tiledBinding: AssetBinding<TiledMap> = {
   type: TiledMap,
-  typeName: 'tiledMap',
+  typeNames: ['tiledMap'],
   extensions: ['tmj'],
   create(loader: Loader): AssetHandler<TiledMap> {
     return {
