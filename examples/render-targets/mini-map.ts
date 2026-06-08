@@ -77,6 +77,13 @@ class MiniMapScene extends Scene {
     override draw(context): void {
         this.pipeline.execute(context);
     }
+
+    override destroy(): void {
+        // Pipeline cascades destroy() to its passes; the caller-owned minimap target is freed here.
+        this.pipeline.destroy();
+        this.miniRt.destroy();
+        super.destroy();
+    }
 }
 
 app.start(new MiniMapScene());

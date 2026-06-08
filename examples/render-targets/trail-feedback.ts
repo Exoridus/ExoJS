@@ -54,6 +54,13 @@ class TrailFeedbackScene extends Scene {
     override draw(context): void {
         this.pipeline.execute(context);
     }
+
+    override destroy(): void {
+        // Pipeline cascades destroy() to its passes; the caller-owned feedback target is freed here.
+        this.pipeline.destroy();
+        this.rt.destroy();
+        super.destroy();
+    }
 }
 
 app.start(new TrailFeedbackScene());

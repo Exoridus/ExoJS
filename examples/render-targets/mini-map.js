@@ -64,5 +64,11 @@ class MiniMapScene extends Scene {
     draw(context) {
         this.pipeline.execute(context);
     }
+    destroy() {
+        // Pipeline cascades destroy() to its passes; the caller-owned minimap target is freed here.
+        this.pipeline.destroy();
+        this.miniRt.destroy();
+        super.destroy();
+    }
 }
 app.start(new MiniMapScene());

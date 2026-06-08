@@ -47,5 +47,15 @@ class PostProcessingChainScene extends Scene {
     draw(context) {
         this.pipeline.execute(context);
     }
+    destroy() {
+        // Pipeline cascades destroy() to its passes; the caller-owned targets and filters it created are freed here.
+        this.pipeline.destroy();
+        this.a.destroy();
+        this.b.destroy();
+        this.c.destroy();
+        this.blur.destroy();
+        this.color.destroy();
+        super.destroy();
+    }
 }
 app.start(new PostProcessingChainScene());

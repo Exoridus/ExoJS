@@ -86,6 +86,14 @@ class WaterMirrorScene extends Scene {
     override draw(context): void {
         this.pipeline.execute(context);
     }
+
+    override destroy(): void {
+        // Pipeline cascades destroy() to its passes; the caller-owned target and shader filter are freed here.
+        this.pipeline.destroy();
+        this.rt.destroy();
+        this.filter.destroy();
+        super.destroy();
+    }
 }
 
 app.start(new WaterMirrorScene());

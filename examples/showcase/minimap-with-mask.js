@@ -65,5 +65,11 @@ class MinimapWithMaskScene extends Scene {
     draw(context) {
         this.pipeline.execute(context);
     }
+    destroy() {
+        // Pipeline cascades destroy() to its passes; the caller-owned minimap target is freed here.
+        this.pipeline.destroy();
+        this.rt.destroy();
+        super.destroy();
+    }
 }
 app.start(new MinimapWithMaskScene());

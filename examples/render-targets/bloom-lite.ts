@@ -71,6 +71,16 @@ class BloomLiteScene extends Scene {
     override draw(context): void {
         this.pipeline.execute(context);
     }
+
+    override destroy(): void {
+        // Pipeline cascades destroy() to its passes; the caller-owned targets and blur filter are freed here.
+        this.pipeline.destroy();
+        this.baseRt.destroy();
+        this.glowRt.destroy();
+        this.blurredRt.destroy();
+        this.blur.destroy();
+        super.destroy();
+    }
 }
 
 app.start(new BloomLiteScene());
