@@ -14,7 +14,18 @@ import type { CacheStrategy } from './CacheStrategy';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
-import { type BinaryAsset, type CsvAsset, FontAsset, type ImageAsset, type Json, type SubtitleAsset, type SvgAsset, type TextAsset, type WasmAsset, type XmlAsset } from './tokens';
+import {
+  type BinaryAsset,
+  type CsvAsset,
+  FontAsset,
+  type ImageAsset,
+  type Json,
+  type SubtitleAsset,
+  type SvgAsset,
+  type TextAsset,
+  type WasmAsset,
+  type XmlAsset,
+} from './tokens';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -1048,10 +1059,7 @@ export class Loader {
    * throws before any mutation (no override in 0.12).
    * @internal
    */
-  public bindAsset(
-    keys: { type: AssetConstructor; typeNames?: readonly string[]; extensions?: readonly string[] },
-    handler: AssetHandler,
-  ): void {
+  public bindAsset(keys: { type: AssetConstructor; typeNames?: readonly string[]; extensions?: readonly string[] }, handler: AssetHandler): void {
     const normalizedExts: string[] = [];
     const resolvedNames: string[] = keys.typeNames !== undefined ? [...keys.typeNames] : [];
 
