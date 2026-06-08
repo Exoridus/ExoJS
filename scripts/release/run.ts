@@ -7,17 +7,19 @@
  *   tsx scripts/release/run.ts full-zip
  *   tsx scripts/release/run.ts publish   [--execute] [--no-check-existing]
  *
- * `prepare` builds (optionally), packs exactly three tarballs WITHOUT rebuilding
- * them, hashes them into `release-manifest.json` + `checksums.sha256`, runs attw
- * and the external-consumer smoke against those exact tarballs, and assembles
- * the Full GitHub Release ZIP. `publish` consumes only the prepared artifacts —
- * it re-hashes them (build-once guard) and never builds. The real publish is
- * gated behind `--execute`; the default is a dry-run.
+ * `prepare` builds (optionally), freezes the exact source revision (failing on
+ * a dirty tree or unknown revision), packs exactly three tarballs WITHOUT
+ * rebuilding them, hashes them into `release-manifest.json` + `checksums.sha256`,
+ * runs attw and the external-consumer smoke against those exact tarballs, and
+ * assembles the Full GitHub Release ZIP. `publish` consumes only the prepared
+ * artifacts — it re-hashes them (build-once guard) and never builds. The real
+ * publish is gated behind `--execute`; the default is a dry-run.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { resolveRevision } from '../../packages/exojs-config/build-defines/index.js';
 import { checkAllTarballTypes } from './attw.ts';
 import { createExecRunner } from './command-runner.ts';
 import { verifyExternalConsumers } from './external-consumers.ts';
@@ -67,16 +69,43 @@ const writeManifest = (manifest: ReleaseManifest): void => {
   writeFileSync(resolve(stagingDir, 'checksums.sha256'), renderChecksums(manifest), 'utf8');
 };
 
+/** Resolve and freeze the revision. Fails on dirty tree or unknown revision. */
+const freezeRevision = (): string => {
+  log('\n→ Freezing revision…');
+
+  const dirtyResult = runner.run({ command: 'git', args: ['diff-index', '--quiet', 'HEAD', '--'] });
+  if (dirtyResult.code !== 0) {
+    die('Working tree is dirty — a release must be prepared from a clean tree. Commit or stash changes first.');
+  }
+
+  const explicit = process.env['EXOJS_REVISION'];
+  if (explicit) {
+    log(`  using explicit EXOJS_REVISION=${explicit}`);
+    return explicit;
+  }
+
+  const revision = resolveRevision({ cwd: repoRoot });
+  if (revision === 'unknown') {
+    die('Cannot determine source revision. Set EXOJS_REVISION or ensure Git metadata is available.');
+  }
+
+  log(`  revision: ${revision} (short: ${revision.slice(0, 7)})`);
+  return revision;
+};
+
 const doPrepare = (): void => {
   mkdirSync(releaseDir, { recursive: true });
 
   if (has('--build')) build();
   else ensureBuilt();
 
+  const revision = freezeRevision();
+
   log('\n→ Packing three tarballs (no rebuild) + manifest + checksums…');
-  const prepared = prepareRelease(runner, { rootDir: repoRoot, stagingDir });
+  const prepared = prepareRelease(runner, { rootDir: repoRoot, stagingDir, revision });
   let manifest = prepared.manifest;
   log(`  packed: ${manifest.packages.map(p => `${p.name}@${p.version} (${p.bytes}B)`).join(', ')}`);
+  log(`  revision: ${manifest.shortRevision} (${manifest.revision})`);
 
   if (!has('--skip-attw')) {
     log('\n→ attw (are-the-types-wrong) on each tarball…');
@@ -151,6 +180,7 @@ const doPublish = (): void => {
   };
 
   log(`\n→ Publish (${options.dryRun ? 'DRY-RUN' : 'EXECUTE'}) — dist-tag ${options.distTag} → ${options.promoteTag}`);
+  log(`  revision: ${manifest.shortRevision}`);
   const report = publishRelease(manifest, options, runner, file => resolve(stagingDir, file));
 
   if (report.abortReason) die(`publish aborted: ${report.abortReason}`);

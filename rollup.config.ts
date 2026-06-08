@@ -1,8 +1,7 @@
-import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { dirname, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
@@ -11,23 +10,9 @@ import { string } from 'rollup-plugin-string';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)));
 
-const packageVersion = (() => {
-  const packageJsonPath = resolvePath(rootDir, 'package.json');
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version?: unknown };
+const buildMode = process.env.EXOJS_ENV === 'development' ? 'development' : 'production';
 
-  return typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
-})();
-
-const gitCommitSha = (() => {
-  try {
-    return execSync('git rev-parse --short HEAD', { cwd: rootDir, encoding: 'utf8' }).trim();
-  } catch {
-    return 'unknown';
-  }
-})();
-
-const buildEnvironment = process.env.EXOJS_ENV === 'development' ? 'development' : 'production';
-const isDevelopmentBuild = buildEnvironment === 'development';
+const defines = createBuildDefinesFromRepo({ mode: buildMode, packageDir: rootDir });
 
 // Activates the package-private `@codexo/source` condition in package.json#imports
 // so `#*` resolves to ./src/*.ts at build time. preserveModules then rewrites the
@@ -41,12 +26,7 @@ const glslPlugin = string({
 
 const constantReplacementPlugin = replace({
   preventAssignment: true,
-  values: {
-    __BUILD_ENV__: JSON.stringify(buildEnvironment),
-    __COMMIT_SHA__: JSON.stringify(gitCommitSha),
-    __DEV__: JSON.stringify(isDevelopmentBuild),
-    __VERSION__: JSON.stringify(packageVersion),
-  },
+  values: defines,
 });
 
 const bundled: RollupOptions = {

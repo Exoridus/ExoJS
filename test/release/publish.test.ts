@@ -26,6 +26,8 @@ const writeFixtureTarballs = (): ReleaseManifest => {
   });
   return {
     version: '0.12.0',
+    revision: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+    shortRevision: 'a1b2c3d',
     tag: 'v0.12.0',
     generatedAt: new Date().toISOString(),
     publishOrder: [...PUBLISH_ORDER],

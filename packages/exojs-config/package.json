@@ -9,6 +9,7 @@
     "./prettier": "./prettier/index.js",
     "./vitest": "./vitest/index.js",
     "./rollup": "./rollup/index.js",
+    "./build-defines": "./build-defines/index.js",
     "./package-policy": "./package-policy/index.js",
     "./typescript/base.json": "./typescript/base.json",
     "./typescript/library.json": "./typescript/library.json",

@@ -68,6 +68,31 @@ part of the engine public API. The canonical catalog is `examples/assets/assets.
 `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources and
 the runtime catalog.
 
+## Compile-time build constants
+
+Three synthetic identifiers (denoted by the `__*__` convention) are statically
+replaced at build time by every Rollup/Vite/Vitest configuration in the
+repository:
+
+| Constant       | Type      | Purpose                                                    |
+| -------------- | --------- | ---------------------------------------------------------- |
+| `__DEV__`      | `boolean` | Compile-time diagnostic mode (`true` in dev/test/source)   |
+| `__VERSION__`  | `string`  | Current package version (per-package, from `package.json`) |
+| `__REVISION__` | `string`  | Short source revision; `-dirty` means local changes        |
+
+These are **not** application configuration. Normal application environments
+should use `import.meta.env` or their own configuration mechanism.
+
+The canonical ambient declaration lives in `src/build-constants.d.ts` and is
+included by every tsconfig in the repository. The build-defines helper
+(`@codexo/exojs-config/build-defines`) centralises resolution and serialisation.
+
+Release metadata (full revision SHA, creation date, tarball hashes) belongs in
+`release-manifest.json`. Do not use `.env` as the canonical source of the
+package version or official revision.
+
+See `src/core/BuildInfo.ts` for the public runtime API (`buildInfo`).
+
 ## Distribution
 
 - npm packages are **modular and self-contained**: `@codexo/exojs` ships Core only;

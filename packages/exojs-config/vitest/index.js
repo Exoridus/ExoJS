@@ -31,7 +31,7 @@ export function createJsdomTestProject(opts) {
     resolve: { alias, conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
     plugins: [shaderStubPlugin],
-    define: { __DEV__: JSON.stringify(true) },
+    define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
     test: {
       name,
       environment: 'jsdom',

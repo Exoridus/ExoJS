@@ -33,6 +33,10 @@ export interface FullZipRecord {
 
 export interface ReleaseManifest {
   version: string;
+  /** Full source-control revision SHA (40 hex chars). */
+  revision: string;
+  /** Short revision for display (7 hex chars). Never ends with `-dirty` in a release. */
+  shortRevision: string;
   tag: string;
   generatedAt: string;
   publishOrder: ReadonlyArray<OfficialPackageName>;

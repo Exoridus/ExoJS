@@ -1,5 +1,6 @@
 export * from './Application';
 export * from './Bounds';
+export * from './BuildInfo';
 export * from './capabilities';
 export * from './Clock';
 export * from './Color';

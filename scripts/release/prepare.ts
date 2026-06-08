@@ -33,6 +33,8 @@ export interface PrepareOptions {
   rootDir: string;
   /** Absolute directory the tarballs + manifest are written into. */
   stagingDir: string;
+  /** Full source-control revision SHA. Must not be "unknown". */
+  revision: string;
 }
 
 const readVersion = (packageJsonPath: string): { name: string; version: string } => {
@@ -93,7 +95,9 @@ export const packOfficialTarballs = (
 };
 
 /** Builds a release manifest from the packed tarballs (hashing each one). */
-export const buildManifest = (version: string, packed: Array<{ pkg: OfficialPackage; tarball: string }>): ReleaseManifest => {
+export const buildManifest = (version: string, revision: string, packed: Array<{ pkg: OfficialPackage; tarball: string }>): ReleaseManifest => {
+  const shortRevision = revision.length >= 7 ? revision.slice(0, 7) : revision;
+
   const packages: TarballRecord[] = packed
     .map(({ pkg, tarball }) => {
       const { sha256, bytes } = sha256File(tarball);
@@ -103,6 +107,8 @@ export const buildManifest = (version: string, packed: Array<{ pkg: OfficialPack
 
   return {
     version,
+    revision,
+    shortRevision,
     tag: `v${version}`,
     generatedAt: new Date().toISOString(),
     publishOrder: [...PUBLISH_ORDER],
@@ -121,8 +127,16 @@ export interface PrepareResult {
  * End-to-end prepare: packs the three tarballs into a clean staging dir, hashes
  * them, and writes `release-manifest.json` + `checksums.sha256`. The caller is
  * responsible for having built the packages first (build-once).
+ *
+ * The revision must be a full (non-"unknown", non-dirty) SHA frozen by the
+ * orchestrator. Release-preparation must fail before calling this if the working
+ * tree is dirty or no revision can be determined.
  */
 export const prepareRelease = (runner: CommandRunner, options: PrepareOptions): PrepareResult => {
+  if (options.revision === 'unknown') {
+    throw new Error('Cannot prepare a release with an unknown revision.');
+  }
+
   const packages = officialPackages(options.rootDir);
   const version = assertLockstepVersion(packages);
 
@@ -130,7 +144,7 @@ export const prepareRelease = (runner: CommandRunner, options: PrepareOptions): 
   mkdirSync(options.stagingDir, { recursive: true });
 
   const packed = packOfficialTarballs(runner, packages, options.stagingDir);
-  const manifest = buildManifest(version, packed);
+  const manifest = buildManifest(version, options.revision, packed);
 
   const manifestPath = resolve(options.stagingDir, 'release-manifest.json');
   const checksumsPath = resolve(options.stagingDir, 'checksums.sha256');

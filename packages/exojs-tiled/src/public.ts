@@ -3,5 +3,7 @@
 
 export type { Extension, AssetBinding, AssetHandler, AssetLoadRequest } from '@codexo/exojs/extensions';
 export { tiledExtension } from './tiledExtension';
+export type { TiledBuildInfo } from './tiledBuildInfo';
+export { tiledBuildInfo } from './tiledBuildInfo';
 export { TiledMap } from './TiledMap';
 export type { TiledLayer, TiledMapData, TiledObject, TiledProperty, TiledTileset } from './TiledMap';
