@@ -1,27 +1,86 @@
-import type { BackendRenderPass } from './BackendRenderPass';
-import type { RenderBackend } from './RenderBackend';
+import type { Color } from '@/core/Color';
+
+import { BackendTargetPass } from './BackendTargetPass';
+import type { RenderingContext } from './RenderingContext';
+import { RenderPass, type RenderPassOptions } from './RenderPass';
+import type { RenderTexture } from './texture/RenderTexture';
+import type { View } from './View';
+
+/** Options for {@link CallbackRenderPass}. @advanced */
+export interface CallbackRenderPassOptions extends RenderPassOptions {
+  /** View applied while the callback runs. Only meaningful with `target`. Default: `target.view`. */
+  readonly view?: View;
+  /**
+   * Off-screen destination. When set, the callback runs redirected into this {@link RenderTexture} (save / restore).
+   * `null` / omitted → the active target. Inside a target redirect, draw via `context.backend` (the active view is
+   * the target's); `context.render(node)` would reset the view to `context.camera`. Caller-owned and stable; never
+   * allocated, pooled, resized, or destroyed by the pass.
+   */
+  readonly target?: RenderTexture | null;
+  /** Clear the destination to this colour immediately before the callback runs. */
+  readonly clear?: Color;
+}
 
 /**
- * A {@link BackendRenderPass} that delegates its execution to a user-supplied callback.
- * Use this as a lightweight alternative to a full renderer class when custom
- * draw logic needs to participate in the render graph without a dedicated type.
+ * Runs a user callback as one pass. The callback receives the {@link RenderingContext} (high-level:
+ * `context.render(node)`, `context.backend` immediate draws, etc.). Set `options.target` to redirect the callback's
+ * output into an off-screen {@link RenderTexture} (immediate-mode "scene" → texture).
  *
- * @example
- * ```ts
- * new CallbackRenderPass((backend) => {
- *     backend.draw(myDrawable);
- * });
- * ```
+ * To run a low-level {@link BackendRenderPass} inside a pipeline, bridge it here:
+ * `new CallbackRenderPass((context) => context.backend.execute(myBackendPass))`.
+ *
+ * `view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame
+ * (no per-frame allocation). If your callback closes over owned GPU resources, subclass {@link RenderPass} instead so
+ * you can override `destroy()`.
  * @advanced
  */
-export class CallbackRenderPass implements BackendRenderPass {
-  private readonly _callback: (backend: RenderBackend) => void;
+export class CallbackRenderPass extends RenderPass {
+  private readonly _callback: (context: RenderingContext) => void;
+  private readonly _clear: Color | null;
+  private readonly _redirect: BackendTargetPass | null;
+  private _activeContext: RenderingContext | null = null;
 
-  public constructor(callback: (backend: RenderBackend) => void) {
+  public constructor(callback: (context: RenderingContext) => void, options?: CallbackRenderPassOptions) {
+    super(options);
+
     this._callback = callback;
+    this._clear = options?.clear ?? null;
+
+    const target = options?.target ?? null;
+
+    this._redirect =
+      target !== null
+        ? new BackendTargetPass(() => this._runCallback(), {
+            target,
+            view: options?.view ?? target.view,
+            clearColor: this._clear ?? undefined,
+          })
+        : null;
   }
 
-  public execute(backend: RenderBackend): void {
-    this._callback(backend);
+  public override execute(context: RenderingContext): void {
+    if (this._redirect !== null) {
+      this._activeContext = context;
+
+      try {
+        context.backend.execute(this._redirect);
+      } finally {
+        this._activeContext = null;
+      }
+
+      return;
+    }
+
+    if (this._clear !== null) {
+      context.backend.clear(this._clear);
+    }
+
+    this._callback(context);
+  }
+
+  private _runCallback(): void {
+    if (this._activeContext !== null) {
+      this._callback(this._activeContext);
+    }
   }
 }

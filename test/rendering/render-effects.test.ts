@@ -1,7 +1,6 @@
 ﻿import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { BackendTargetPass } from '@/rendering/BackendTargetPass';
-import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { BlurFilter } from '@/rendering/filters/BlurFilter';
@@ -369,15 +368,6 @@ describe('render effects', () => {
 
     firstTarget.destroy();
     secondTarget.destroy();
-  });
-
-  test('CallbackRenderPass executes supplied callback', () => {
-    const { runtime } = createRuntime();
-    const callback = vi.fn();
-
-    runtime.execute(new CallbackRenderPass(callback));
-
-    expect(callback).toHaveBeenCalledWith(runtime);
   });
 
   test('cache-as-bitmap bypasses subtree redraw until invalidated', () => {
