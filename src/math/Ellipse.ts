@@ -1,7 +1,8 @@
-import type { SceneNode } from '@/core/SceneNode';
-import type { Circle } from '@/math/Circle';
-import type { Collidable, CollisionResponse } from '@/math/Collision';
-import { CollisionType } from '@/math/Collision';
+import type { SceneNode } from '#core/SceneNode';
+
+import type { Circle } from './Circle';
+import type { Collidable, CollisionResponse } from './Collision';
+import { CollisionType } from './Collision';
 import {
   getCollisionEllipseCircle,
   getCollisionEllipseEllipse,
@@ -13,13 +14,13 @@ import {
   intersectionLineEllipse,
   intersectionPointEllipse,
   intersectionRectEllipse,
-} from '@/math/collision-detection';
-import { Interval } from '@/math/Interval';
-import type { Line } from '@/math/Line';
-import type { Polygon } from '@/math/Polygon';
-import { Rectangle } from '@/math/Rectangle';
-import type { ShapeLike } from '@/math/ShapeLike';
-import { Vector } from '@/math/Vector';
+} from './collision-detection';
+import { Interval } from './Interval';
+import type { Line } from './Line';
+import type { Polygon } from './Polygon';
+import { Rectangle } from './Rectangle';
+import type { ShapeLike } from './ShapeLike';
+import { Vector } from './Vector';
 
 /**
  * Mutable axis-aligned ellipse shape defined by a centre position and

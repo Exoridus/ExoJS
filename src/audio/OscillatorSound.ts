@@ -1,5 +1,5 @@
-import type { PlaybackOptions } from '@/core/types';
-import { clamp } from '@/math/utils';
+import type { PlaybackOptions } from '#core/types';
+import { clamp } from '#math/utils';
 
 import { AbstractMedia } from './AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';

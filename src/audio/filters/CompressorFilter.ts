@@ -1,5 +1,5 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '../audio-context';
-import { AudioFilter } from '../AudioFilter';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
+import { AudioFilter } from '#audio/AudioFilter';
 
 /** Construction options for {@link CompressorFilter}. All values are clamped to their valid ranges on assignment. */
 export interface CompressorFilterOptions {

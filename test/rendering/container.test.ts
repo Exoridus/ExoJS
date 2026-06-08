@@ -1,8 +1,8 @@
-﻿import { SceneNode } from '@/core/SceneNode';
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
-import { Graphics } from '@/rendering/primitives/Graphics';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+﻿import { SceneNode } from '#core/SceneNode';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { Graphics } from '#rendering/primitives/Graphics';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 class DummyDrawable extends Drawable {
   public override render(_backend: RenderBackend): this {

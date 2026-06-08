@@ -5,7 +5,7 @@
  * HTMLCanvasElement.prototype.getContext before each test.
  */
 
-import { GlyphAtlas } from '@/rendering/text/GlyphAtlas';
+import { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 
 // ---------------------------------------------------------------------------
 // Helpers

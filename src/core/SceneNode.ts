@@ -1,7 +1,7 @@
-import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
-import type { Circle } from '@/math/Circle';
-import type { Collidable, CollisionResponse } from '@/math/Collision';
-import { CollisionType } from '@/math/Collision';
+import { getActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
+import type { Circle } from '#math/Circle';
+import type { Collidable, CollisionResponse } from '#math/Collision';
+import { CollisionType } from '#math/Collision';
 import {
   getCollisionSat,
   intersectionLineRect,
@@ -9,19 +9,19 @@ import {
   intersectionRectCircle,
   intersectionRectEllipse,
   intersectionSat,
-} from '@/math/collision-detection';
-import type { Ellipse } from '@/math/Ellipse';
-import { Flags } from '@/math/Flags';
-import { Interval } from '@/math/Interval';
-import type { Line } from '@/math/Line';
-import { Matrix } from '@/math/Matrix';
-import { ObservableVector } from '@/math/ObservableVector';
-import { Rectangle } from '@/math/Rectangle';
-import { degreesToRadians, trimRotation } from '@/math/utils';
-import type { Vector } from '@/math/Vector';
-import type { Container } from '@/rendering/Container';
-import type { RenderNode } from '@/rendering/RenderNode';
-import type { View } from '@/rendering/View';
+} from '#math/collision-detection';
+import type { Ellipse } from '#math/Ellipse';
+import { Flags } from '#math/Flags';
+import { Interval } from '#math/Interval';
+import type { Line } from '#math/Line';
+import { Matrix } from '#math/Matrix';
+import { ObservableVector } from '#math/ObservableVector';
+import { Rectangle } from '#math/Rectangle';
+import { degreesToRadians, trimRotation } from '#math/utils';
+import type { Vector } from '#math/Vector';
+import type { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
+import type { View } from '#rendering/View';
 
 import { Bounds } from './Bounds';
 

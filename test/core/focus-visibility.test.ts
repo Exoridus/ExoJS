@@ -1,12 +1,12 @@
-import { Signal } from '@/core/Signal';
+import { Signal } from '#core/Signal';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 interface FocusVisibilityHarness {
-  readonly Application: typeof import('@/core/Application').Application;
-  readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
+  readonly Application: typeof import('#core/Application').Application;
+  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
   readonly inputManagerMock: {
     update: MockInstance;
     destroy: MockInstance;
@@ -59,17 +59,17 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
   };
 
   vi.resetModules();
-  vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+  vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({
     WebGl2Backend: vi.fn(function () {
       return backendMock;
     }),
   }));
-  vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+  vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
     WebGpuBackend: vi.fn(function () {
       return backendMock;
     }),
   }));
-  vi.doMock('@/resources/Loader', () => ({
+  vi.doMock('#resources/Loader', () => ({
     Loader: vi.fn(function () {
       return {
         destroy: vi.fn(),
@@ -80,30 +80,30 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
       };
     }),
   }));
-  vi.doMock('@/extensions/materialize', () => ({
+  vi.doMock('#extensions/materialize', () => ({
     materializeAssetBindings: vi.fn(),
     materializeRendererBindings: vi.fn(),
   }));
-  vi.doMock('@/rendering/coreRendererBindings', () => ({
+  vi.doMock('#rendering/coreRendererBindings', () => ({
     buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
-  vi.doMock('@/input/InputManager', () => ({
+  vi.doMock('#input/InputManager', () => ({
     InputManager: vi.fn(function () {
       return inputManagerMock;
     }),
   }));
-  vi.doMock('@/input/InteractionManager', () => ({
+  vi.doMock('#input/InteractionManager', () => ({
     InteractionManager: vi.fn(function () {
       return interactionMock;
     }),
   }));
-  vi.doMock('@/core/SceneManager', () => ({
+  vi.doMock('#core/SceneManager', () => ({
     SceneManager: vi.fn(function () {
       return sceneManagerMock;
     }),
   }));
 
-  const mod = await import('@/core/Application');
+  const mod = await import('#core/Application');
 
   return {
     Application: mod.Application,

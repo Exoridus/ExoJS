@@ -1,11 +1,11 @@
-import type { Geometry } from '@/rendering/geometry/Geometry';
-import type { Material, UniformValue } from '@/rendering/material/Material';
-import type { Mesh } from '@/rendering/mesh/Mesh';
-import { type DrawCommand, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import { Shader } from '@/rendering/shader/Shader';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { Material, UniformValue } from '#rendering/material/Material';
+import type { Mesh } from '#rendering/mesh/Mesh';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { Shader } from '#rendering/shader/Shader';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/mesh.frag';

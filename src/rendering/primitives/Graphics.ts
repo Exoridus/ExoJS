@@ -1,14 +1,14 @@
-import { Color } from '@/core/Color';
-import type { MeshGeometryData } from '@/math/geometry';
-import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '@/math/geometry';
-import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '@/math/utils';
-import { Vector } from '@/math/Vector';
-import { Container } from '@/rendering/Container';
-import type { Gradient } from '@/rendering/gradient/Gradient';
-import { Mesh } from '@/rendering/mesh/Mesh';
-import type { RenderNode } from '@/rendering/RenderNode';
-import type { DataTexture } from '@/rendering/texture/DataTexture';
-import { ScaleModes } from '@/rendering/types';
+import { Color } from '#core/Color';
+import type { MeshGeometryData } from '#math/geometry';
+import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '#math/geometry';
+import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '#math/utils';
+import { Vector } from '#math/Vector';
+import { Container } from '#rendering/Container';
+import type { Gradient } from '#rendering/gradient/Gradient';
+import { Mesh } from '#rendering/mesh/Mesh';
+import type { RenderNode } from '#rendering/RenderNode';
+import type { DataTexture } from '#rendering/texture/DataTexture';
+import { ScaleModes } from '#rendering/types';
 
 /**
  * Edge length of the square gradient texture rasterized for gradient paints.

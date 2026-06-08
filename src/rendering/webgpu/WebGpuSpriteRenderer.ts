@@ -1,15 +1,15 @@
 /// <reference types="@webgpu/types" />
 
-import type { UniformValue } from '@/rendering/material/Material';
-import type { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import type { Sprite } from '@/rendering/sprite/Sprite';
-import { spriteVertexWgsl } from '@/rendering/sprite/spriteMaterialSources';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { BlendModes } from '@/rendering/types';
-import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
-import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import type { UniformValue } from '#rendering/material/Material';
+import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { Sprite } from '#rendering/sprite/Sprite';
+import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 
+import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
+import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 

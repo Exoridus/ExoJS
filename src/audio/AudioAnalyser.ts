@@ -1,8 +1,9 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
-import type { AudioBus } from '@/audio/AudioBus';
-import { buildMelFilterbank, type MelBand } from '@/audio/dsp/mel';
-import type { Music } from '@/audio/Music';
-import type { Sound } from '@/audio/Sound';
+import { buildMelFilterbank, type MelBand } from '#audio/dsp/mel';
+
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
+import type { AudioBus } from './AudioBus';
+import type { Music } from './Music';
+import type { Sound } from './Sound';
 
 export type AudioAnalyserSource = AudioBus | Sound | Music | MediaStream | AudioNode | null;
 

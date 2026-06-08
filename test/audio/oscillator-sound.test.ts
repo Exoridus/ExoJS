@@ -1,9 +1,9 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { AudioBus } from '@/audio/AudioBus';
-import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
-import { Envelope } from '@/audio/Envelope';
-import { OscillatorSound } from '@/audio/OscillatorSound';
-import { SoundPoolStrategy } from '@/audio/Sound';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
+import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
+import { Envelope } from '#audio/Envelope';
+import { OscillatorSound } from '#audio/OscillatorSound';
+import { SoundPoolStrategy } from '#audio/Sound';
 
 interface MockAudioParam {
   value: number;

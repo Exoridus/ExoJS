@@ -1,7 +1,7 @@
-import { Color } from '@/core/Color';
-import { LinearGradient } from '@/rendering/gradient/LinearGradient';
-import { RadialGradient } from '@/rendering/gradient/RadialGradient';
-import { Sprite } from '@/rendering/sprite/Sprite';
+import { Color } from '#core/Color';
+import { LinearGradient } from '#rendering/gradient/LinearGradient';
+import { RadialGradient } from '#rendering/gradient/RadialGradient';
+import { Sprite } from '#rendering/sprite/Sprite';
 
 describe('Gradient toTexture()', () => {
   test('requires at least 2 stops', () => {

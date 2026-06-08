@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Profile for type-checking tests (no emit). Loosens module-syntax strictness so test fixtures and JS helpers type-check. Package-local config sets include + test type packages + customConditions.",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
+    "ignoreDeprecations": "6.0"
+  }
+}

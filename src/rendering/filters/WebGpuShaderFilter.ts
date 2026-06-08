@@ -1,12 +1,12 @@
 /// <reference types="@webgpu/types" />
 
-import { Color } from '@/core/Color';
-import { BackendTargetPass } from '@/rendering/BackendTargetPass';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import { Color } from '#core/Color';
+import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { Filter } from './Filter';
 import type { ShaderFilterUniformValue } from './WebGl2ShaderFilter';

@@ -1,6 +1,6 @@
 const storage = new Map<string, unknown>();
 
-vi.mock('@/resources/IndexedDbStore', () => {
+vi.mock('#resources/IndexedDbStore', () => {
   class IndexedDbStoreMock {
     public async load(storageName: string, key: string): Promise<unknown | null> {
       const recordKey = `${storageName}:${key}`;
@@ -35,8 +35,8 @@ vi.mock('@/resources/IndexedDbStore', () => {
   return { IndexedDbStore: IndexedDbStoreMock };
 });
 
-import { IndexedDbStore } from '@/resources/IndexedDbStore';
-import { JsonStore } from '@/resources/JsonStore';
+import { IndexedDbStore } from '#resources/IndexedDbStore';
+import { JsonStore } from '#resources/JsonStore';
 
 describe('JsonStore', () => {
   afterEach(() => {

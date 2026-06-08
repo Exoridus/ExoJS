@@ -9,8 +9,8 @@
  *  - Sources are cleaned up from the pool when they end naturally
  */
 
-import { getAudioContext } from '@/audio/audio-context';
-import { Sound, SoundPoolStrategy } from '@/audio/Sound';
+import { getAudioContext } from '#audio/audio-context';
+import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
 // ---------------------------------------------------------------------------
 // Helpers

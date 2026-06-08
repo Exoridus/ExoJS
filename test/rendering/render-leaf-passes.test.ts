@@ -1,16 +1,16 @@
-import { Color } from '@/core/Color';
-import type { BackendRenderPass } from '@/rendering/BackendRenderPass';
-import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
-import type { RenderPassCoordinator } from '@/rendering/pass/RenderPassCoordinator';
-import type { RenderPassDescriptor } from '@/rendering/pass/RenderPassDescriptor';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { RenderingContext, RenderOptions } from '@/rendering/RenderingContext';
-import type { RenderNode } from '@/rendering/RenderNode';
-import { RenderNodePass } from '@/rendering/RenderNodePass';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import { Color } from '#core/Color';
+import type { BackendRenderPass } from '#rendering/BackendRenderPass';
+import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
+import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
+import type { RenderPassDescriptor } from '#rendering/pass/RenderPassDescriptor';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderingContext, RenderOptions } from '#rendering/RenderingContext';
+import type { RenderNode } from '#rendering/RenderNode';
+import { RenderNodePass } from '#rendering/RenderNodePass';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 const playRenderTreeMock = vi.hoisted(() => vi.fn());
-vi.mock('@/rendering/plan/playRenderTree', () => ({ playRenderTree: playRenderTreeMock }));
+vi.mock('#rendering/plan/playRenderTree', () => ({ playRenderTree: playRenderTreeMock }));
 
 const createContext = () => {
   const descriptors: RenderPassDescriptor[] = [];

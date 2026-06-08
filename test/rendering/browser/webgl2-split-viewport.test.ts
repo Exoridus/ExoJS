@@ -1,11 +1,11 @@
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { Rectangle } from '@/math/Rectangle';
-import { Camera } from '@/rendering/Camera';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { Texture } from '@/rendering/texture/Texture';
-import { View } from '@/rendering/View';
-import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
+import { Camera } from '#rendering/Camera';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { Texture } from '#rendering/texture/Texture';
+import { View } from '#rendering/View';
+import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
 
@@ -170,16 +170,16 @@ void main() {
 }`,
 }));
 
-vi.mock('@/rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVertexSource }));
-vi.mock('@/rendering/webgl2/glsl/sprite.frag', () => ({ default: shaderSources.spriteFragmentSource }));
-vi.mock('@/rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVertexSource }));
-vi.mock('@/rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFragmentSource }));
-vi.mock('@/rendering/webgl2/glsl/particle.vert', () => ({ default: shaderSources.particleVertexSource }));
-vi.mock('@/rendering/webgl2/glsl/particle.frag', () => ({ default: shaderSources.particleFragmentSource }));
-vi.mock('@/rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVertexSource }));
-vi.mock('@/rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFragmentSource }));
-vi.mock('@/rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFragmentSource }));
-vi.mock('@/rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVertexSource }));
+vi.mock('#rendering/webgl2/glsl/sprite.frag', () => ({ default: shaderSources.spriteFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVertexSource }));
+vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/particle.vert', () => ({ default: shaderSources.particleVertexSource }));
+vi.mock('#rendering/webgl2/glsl/particle.frag', () => ({ default: shaderSources.particleFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVertexSource }));
+vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFragmentSource }));
 
 const canvasWidth = 400;
 const canvasHeight = 200;

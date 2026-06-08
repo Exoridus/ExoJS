@@ -1,5 +1,4 @@
 // Auto-generated from blur-filter.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, BlurFilter, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {

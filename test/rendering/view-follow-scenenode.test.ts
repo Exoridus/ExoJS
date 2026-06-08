@@ -1,6 +1,6 @@
-import { SceneNode } from '@/core/SceneNode';
-import { Container } from '@/rendering/Container';
-import { View } from '@/rendering/View';
+import { SceneNode } from '#core/SceneNode';
+import { Container } from '#rendering/Container';
+import { View } from '#rendering/View';
 
 describe('View.follow(SceneNode)', () => {
   test('follow with plain {x, y} still works as before', () => {

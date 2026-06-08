@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { GranularFilter } from '@/audio/filters/GranularFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { GranularFilter } from '#audio/filters/GranularFilter';
 
 // ---------------------------------------------------------------------------
 // Tests

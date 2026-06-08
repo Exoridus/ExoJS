@@ -1,5 +1,4 @@
 // Auto-generated from play-sound.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {

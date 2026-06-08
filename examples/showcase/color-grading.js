@@ -1,5 +1,4 @@
 // Auto-generated from color-grading.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {

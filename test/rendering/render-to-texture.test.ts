@@ -1,15 +1,15 @@
-import { Color } from '@/core/Color';
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { View } from '@/rendering/View';
-import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
+import { Color } from '#core/Color';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { View } from '#rendering/View';
+import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 class TestDrawable extends Drawable {}
 

@@ -1,5 +1,4 @@
 // Auto-generated from audio-reactive-particles.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, BeatDetector, Color, Music, Scene, Texture, Vector, } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 const app = new Application({

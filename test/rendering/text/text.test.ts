@@ -9,13 +9,13 @@
  * It stores geometry internally as TextPageQuads instead of Mesh children.
  */
 
-import { Drawable } from '@/rendering/Drawable';
-import type { GlyphAtlas } from '@/rendering/text/GlyphAtlas';
-import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { Text } from '@/rendering/text/Text';
-import { TextStyle } from '@/rendering/text/TextStyle';
-import type { GlyphInfo } from '@/rendering/text/types';
+import { Drawable } from '#rendering/Drawable';
+import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { Text } from '#rendering/text/Text';
+import { TextStyle } from '#rendering/text/TextStyle';
+import type { GlyphInfo } from '#rendering/text/types';
 
 // ---------------------------------------------------------------------------
 // Mock pool

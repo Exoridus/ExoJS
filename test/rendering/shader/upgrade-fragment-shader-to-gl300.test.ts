@@ -1,4 +1,4 @@
-import { upgradeFragmentShaderToGl300 } from '@/rendering/shader/upgradeFragmentShaderToGl300';
+import { upgradeFragmentShaderToGl300 } from '#rendering/shader/upgradeFragmentShaderToGl300';
 
 describe('upgradeFragmentShaderToGl300', () => {
   // 1. Already-3.00 source returned unchanged

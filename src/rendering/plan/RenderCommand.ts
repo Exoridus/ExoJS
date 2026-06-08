@@ -1,9 +1,9 @@
-import type { Drawable } from '@/rendering/Drawable';
-import type { Material } from '@/rendering/material/Material';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { Texture } from '@/rendering/texture/Texture';
-import type { BlendModes } from '@/rendering/types';
+import type { Drawable } from '#rendering/Drawable';
+import type { Material } from '#rendering/material/Material';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
+import type { BlendModes } from '#rendering/types';
 
 /** @internal */
 export const enum RenderEntryKind {

@@ -1,7 +1,6 @@
-import type { Color } from '@/core/Color';
-
-import type { RenderTarget } from '../RenderTarget';
-import type { View } from '../View';
+import type { Color } from '#core/Color';
+import type { RenderTarget } from '#rendering/RenderTarget';
+import type { View } from '#rendering/View';
 
 /**
  * Whether a render pass carries a stencil attachment.

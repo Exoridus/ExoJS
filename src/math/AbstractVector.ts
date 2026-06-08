@@ -1,5 +1,5 @@
-import type { Matrix } from '@/math/Matrix';
-import { getDistance } from '@/math/utils';
+import type { Matrix } from './Matrix';
+import { getDistance } from './utils';
 
 /**
  * Base class for all 2D vector types in ExoJS. Provides the full arithmetic,

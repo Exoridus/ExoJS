@@ -1,8 +1,8 @@
-import { Drawable } from '@/rendering/Drawable';
-import { Geometry } from '@/rendering/geometry/Geometry';
-import { MeshMaterial } from '@/rendering/material/MeshMaterial';
-import { ShaderSource } from '@/rendering/material/ShaderSource';
-import { Mesh } from '@/rendering/mesh/Mesh';
+import { Drawable } from '#rendering/Drawable';
+import { Geometry } from '#rendering/geometry/Geometry';
+import { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { Mesh } from '#rendering/mesh/Mesh';
 
 const validVertices = (): Float32Array => new Float32Array([0, 0, 100, 0, 50, 100]);
 

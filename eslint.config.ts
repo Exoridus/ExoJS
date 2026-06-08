@@ -1,3 +1,4 @@
+import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
@@ -68,22 +69,11 @@ export default defineConfig([
         },
       ],
 
-      // Engine-specific: enforce '@/'-prefixed internal imports; forbid core→extension package imports
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['audio/*', 'core/*', 'input/*', 'math/*', 'particles/*', 'physics/*', 'rendering/*', 'resources/*', 'vendor/*'],
-              message: "Internal imports use the '@/' prefix — e.g. '@/core/X' instead of 'core/X'.",
-            },
-            {
-              group: ['@codexo/exojs-*'],
-              message: 'Core (src/**) must not import extension packages. Use the binding mechanism instead.',
-            },
-          ],
-        },
-      ],
+      // Engine-specific import boundaries (shared policy from @codexo/exojs-config):
+      // enforce `#` package-internal subpath imports; forbid the removed `@/` alias,
+      // parent-relative imports, bare package-internal paths, core→extension
+      // imports, and cross-package /src deep imports.
+      'no-restricted-imports': ['error', { patterns: createImportBoundaries({ internalDirs: coreInternalDirs }) }],
 
       // Core ESLint
       complexity: ['error', 20],
@@ -486,7 +476,7 @@ export default defineConfig([
 
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
   {
-    files: ['src/build-constants.d.ts', 'src/typings.d.ts'],
+    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/exojs-particles/src/typings.d.ts', 'packages/exojs-tiled/src/typings.d.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
@@ -610,6 +600,8 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.es2024,
+        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
+        assets: 'readonly',
       },
     },
     plugins: {

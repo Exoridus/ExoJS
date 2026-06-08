@@ -1,6 +1,5 @@
-import { Time } from '@/core/Time';
-
 import { Clock } from './Clock';
+import { Time } from './Time';
 
 /**
  * {@link Clock} variant with a fixed limit. Inherits start/stop/reset/restart

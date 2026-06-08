@@ -1,18 +1,18 @@
 /* eslint-disable max-lines */
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from '@/math/Matrix';
-import type { Geometry } from '@/rendering/geometry/Geometry';
-import type { Material, UniformValue } from '@/rendering/material/Material';
-import type { Mesh } from '@/rendering/mesh/Mesh';
-import type { DrawCommand } from '@/rendering/plan/RenderCommand';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { Texture } from '@/rendering/texture/Texture';
-import { Texture as TextureClass } from '@/rendering/texture/Texture';
-import { BlendModes } from '@/rendering/types';
-import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
-import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import { Matrix } from '#math/Matrix';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { Material, UniformValue } from '#rendering/material/Material';
+import type { Mesh } from '#rendering/mesh/Mesh';
+import type { DrawCommand } from '#rendering/plan/RenderCommand';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
+import { Texture as TextureClass } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 
+import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
+import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 

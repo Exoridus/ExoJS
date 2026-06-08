@@ -1,12 +1,12 @@
-import { Color } from '@/core/Color';
-import { Matrix } from '@/math/Matrix';
-import { Rectangle } from '@/math/Rectangle';
-import { Geometry } from '@/rendering/geometry/Geometry';
-import { type RenderPassDescriptor, StencilAttachmentMode } from '@/rendering/pass/RenderPassDescriptor';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { View } from '@/rendering/View';
-import { type WebGl2PassBackend, WebGl2PassCoordinator } from '@/rendering/webgl2/WebGl2PassCoordinator';
+import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
+import { Rectangle } from '#math/Rectangle';
+import { Geometry } from '#rendering/geometry/Geometry';
+import { type RenderPassDescriptor, StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { View } from '#rendering/View';
+import { type WebGl2PassBackend, WebGl2PassCoordinator } from '#rendering/webgl2/WebGl2PassCoordinator';
 
 // The coordinator is a thin adapter over the backend's state-transition
 // methods, so a stateful mock backend (no GL context) exercises it fully in
@@ -235,7 +235,7 @@ describe('WebGl2PassCoordinator', () => {
 
 describe('render pass internals are not publicly exported', () => {
   test('the rendering barrel exposes neither the coordinator nor the stencil enum', async () => {
-    const rendering = (await import('@/rendering/index')) as unknown as Record<string, unknown>;
+    const rendering = (await import('#rendering/index')) as unknown as Record<string, unknown>;
 
     expect(rendering['WebGl2PassCoordinator']).toBeUndefined();
     expect(rendering['StencilAttachmentMode']).toBeUndefined();

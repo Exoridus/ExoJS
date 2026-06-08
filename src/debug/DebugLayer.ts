@@ -1,6 +1,6 @@
-import type { Application } from '@/core/Application';
-import type { Time } from '@/core/Time';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+import type { Application } from '#core/Application';
+import type { Time } from '#core/Time';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 /**
  * Determines the coordinate space a {@link DebugLayer} renders into.

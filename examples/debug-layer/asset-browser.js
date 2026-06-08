@@ -1,5 +1,4 @@
 // Auto-generated from asset-browser.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, FontAsset, Graphics, Json, Music, Scene, Sprite, Spritesheet, SvgAsset, Text, Texture, } from '@codexo/exojs';
 // Dynamic category accessor: maps a category key to the correct sub-object
 // in the hierarchical assets catalog. Technical assets live under

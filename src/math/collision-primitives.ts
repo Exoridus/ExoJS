@@ -1,5 +1,5 @@
-import type { PointLike } from '@/math/PointLike';
-import { getDistance, inRange, VoronoiRegion } from '@/math/utils';
+import type { PointLike } from './PointLike';
+import { getDistance, inRange, VoronoiRegion } from './utils';
 
 interface RectangleLikeLike extends PointLike {
   width: number;

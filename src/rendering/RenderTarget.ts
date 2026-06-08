@@ -1,6 +1,6 @@
-import { Rectangle } from '@/math/Rectangle';
-import { Size } from '@/math/Size';
-import { Vector } from '@/math/Vector';
+import { Rectangle } from '#math/Rectangle';
+import { Size } from '#math/Size';
+import { Vector } from '#math/Vector';
 
 import { View } from './View';
 

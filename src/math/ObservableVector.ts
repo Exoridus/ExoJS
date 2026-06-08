@@ -1,4 +1,4 @@
-import { AbstractVector } from '@/math/AbstractVector';
+import { AbstractVector } from './AbstractVector';
 
 /**
  * A {@link AbstractVector} subclass that fires a callback whenever its

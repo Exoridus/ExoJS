@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { CompressorFilter } from '@/audio/filters/CompressorFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { CompressorFilter } from '#audio/filters/CompressorFilter';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),

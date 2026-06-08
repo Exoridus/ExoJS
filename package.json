@@ -52,13 +52,23 @@
     },
     "./package.json": "./package.json"
   },
+  "imports": {
+    "#*.vert": "./src/*.vert",
+    "#*.frag": "./src/*.frag",
+    "#*": {
+      "@codexo/source": "./src/*.ts",
+      "types": "./dist/esm/*.d.ts",
+      "default": "./dist/esm/*.js"
+    }
+  },
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts",
     "clean": "rimraf dist",
-    "build": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production && tsx scripts/rewrite-dist-dts-aliases.ts",
-    "build:dev": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development && tsx scripts/rewrite-dist-dts-aliases.ts",
+    "build": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production",
+    "build:dev": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
     "build:watch": "tsx node_modules/rollup/dist/bin/rollup -cw --environment EXOJS_ENV:development",
     "verify:exports": "tsx ./scripts/verify-exports.ts",
+    "verify:package-policy": "tsx ./scripts/verify-package-policy.ts",
     "verify:package": "pnpm build && pnpm verify:exports && pnpm pack",
     "verify:lockstep": "tsx ./scripts/verify-lockstep-versions.ts",
     "verify:release-matrix": "tsx ./scripts/verify-release-matrix.ts",
@@ -66,6 +76,10 @@
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "verify:release": "pnpm verify:lockstep && pnpm typecheck && pnpm typecheck:guides && pnpm typecheck:examples && pnpm lint:strict && pnpm format:check && pnpm test && pnpm verify:package && pnpm verify:create-exo-app && pnpm site:build",
     "release": "tsx ./scripts/release.ts",
+    "release:prepare": "tsx ./scripts/release/run.ts prepare",
+    "release:full-zip": "tsx ./scripts/release/run.ts full-zip",
+    "release:publish": "tsx ./scripts/release/run.ts publish",
+    "verify:external-consumers": "tsx ./scripts/release/external-consumers.ts",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
     "prepack": "pnpm build",
     "typecheck": "tsc --noEmit",
@@ -120,6 +134,7 @@
     "url": "git+https://github.com/Exoridus/ExoJS.git"
   },
   "devDependencies": {
+    "@codexo/exojs-config": "workspace:*",
     "@eslint/js": "^10.0.1",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "^6.0.3",

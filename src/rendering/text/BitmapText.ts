@@ -1,5 +1,5 @@
-import { assert, warnOnce } from '@/core/dev';
-import type { Texture } from '@/rendering/texture/Texture';
+import { assert, warnOnce } from '#core/dev';
+import type { Texture } from '#rendering/texture/Texture';
 
 import { AbstractText } from './AbstractText';
 import type { BmFontData } from './BmFont';
@@ -66,10 +66,12 @@ export class BmFontAdapter implements GlyphProvider {
     if (g === undefined) {
       // Unknown glyph — warn once per font + codepoint, then return an invisible
       // placeholder with a cursor advance so layout still makes progress.
-      warnOnce(
-        `bitmaptext:${this._fontId}:${cp}`,
-        `BitmapText: missing glyph U+${cp.toString(16).toUpperCase().padStart(4, '0')} ('${char}') in "${this._fontId}"`,
-      );
+      if (__DEV__) {
+        warnOnce(
+          `bitmaptext:${this._fontId}:${cp}`,
+          `BitmapText: missing glyph U+${cp.toString(16).toUpperCase().padStart(4, '0')} ('${char}') in "${this._fontId}"`,
+        );
+      }
       return {
         x: 0,
         y: 0,

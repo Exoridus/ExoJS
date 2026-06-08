@@ -1,8 +1,8 @@
-import type { PlaybackOptions, StreamingLoadEvent } from '@/core/types';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import { Video } from '@/rendering/video/Video';
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
-import { determineMimeType } from '@/resources/utils';
+import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
+import { Video } from '#rendering/video/Video';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
+import { determineMimeType } from '#resources/utils';
 
 const onceListenerOption = { once: true };
 

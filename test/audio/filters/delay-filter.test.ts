@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { DelayFilter } from '@/audio/filters/DelayFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { DelayFilter } from '#audio/filters/DelayFilter';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),

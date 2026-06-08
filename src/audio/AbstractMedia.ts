@@ -1,7 +1,8 @@
-import type { AudioBus } from '@/audio/AudioBus';
-import type { Media } from '@/audio/Media';
-import { Signal } from '@/core/Signal';
-import type { PlaybackOptions } from '@/core/types';
+import { Signal } from '#core/Signal';
+import type { PlaybackOptions } from '#core/types';
+
+import type { AudioBus } from './AudioBus';
+import type { Media } from './Media';
 
 /** Initial state passed to the {@link AbstractMedia} constructor by subclasses. */
 export interface AbstractMediaInitialState extends Omit<PlaybackOptions, 'time'> {

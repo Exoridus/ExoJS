@@ -1,9 +1,9 @@
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from '@/math/Matrix';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { Texture } from '@/rendering/texture/Texture';
-import type { BlendModes } from '@/rendering/types';
+import { Matrix } from '#math/Matrix';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
+import type { BlendModes } from '#rendering/types';
 
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';

@@ -1,12 +1,12 @@
-﻿import { materializeAssetBindings } from '@/extensions/materialize';
-import { Asset } from '@/resources/Asset';
-import type { AssetFactory } from '@/resources/AssetFactory';
-import { BundleLoadError, defineAssetManifest } from '@/resources/AssetManifest';
-import { Assets } from '@/resources/Assets';
-import type { CacheStore } from '@/resources/CacheStore';
-import { coreAssetBindings } from '@/resources/coreAssetBindings';
-import { Loader } from '@/resources/Loader';
-import { Json, TextAsset } from '@/resources/tokens';
+﻿import { materializeAssetBindings } from '#extensions/materialize';
+import { Asset } from '#resources/Asset';
+import type { AssetFactory } from '#resources/AssetFactory';
+import { BundleLoadError, defineAssetManifest } from '#resources/AssetManifest';
+import { Assets } from '#resources/Assets';
+import type { CacheStore } from '#resources/CacheStore';
+import { coreAssetBindings } from '#resources/coreAssetBindings';
+import { Loader } from '#resources/Loader';
+import { Json, TextAsset } from '#resources/tokens';
 
 /** Create a Loader with all core asset bindings pre-installed. */
 function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
@@ -16,7 +16,7 @@ function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Lo
 }
 
 // Declaration merges for test-only asset types
-declare module '@/resources/AssetDefinitions' {
+declare module '#resources/AssetDefinitions' {
   interface AssetDefinitions {
     mockAsset: { resource: string; config: { source: string } };
     richAsset: { resource: string; config: { source: string; format: string } };

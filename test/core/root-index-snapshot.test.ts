@@ -13,7 +13,7 @@
  * compile time and do not show up in Object.keys() output.
  */
 
-import * as exo from '@/index';
+import * as exo from '#index';
 
 describe('root index export surface snapshot', () => {
   test('sorted runtime export names match committed snapshot', () => {

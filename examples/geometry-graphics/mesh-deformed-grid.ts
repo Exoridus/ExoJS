@@ -1,4 +1,3 @@
-import { assets } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 
 const app = new Application({

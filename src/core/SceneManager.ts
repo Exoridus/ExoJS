@@ -1,5 +1,5 @@
-import { Mesh } from '@/rendering/mesh/Mesh';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+import { Mesh } from '#rendering/mesh/Mesh';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 import type { Application } from './Application';
 import { Color } from './Color';

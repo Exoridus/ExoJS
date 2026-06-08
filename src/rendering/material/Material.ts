@@ -1,7 +1,7 @@
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import type { Texture } from '@/rendering/texture/Texture';
-import { BlendModes } from '@/rendering/types';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
+import type { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 
 import { deriveBindKey, derivePipelineKey } from './MaterialKey';
 import type { ShaderSource } from './ShaderSource';

@@ -1,5 +1,5 @@
-import { getCollisionRectangleRectangle } from '@/math/collision-detection';
-import { Rectangle } from '@/math/Rectangle';
+import { getCollisionRectangleRectangle } from '#math/collision-detection';
+import { Rectangle } from '#math/Rectangle';
 
 function rect(x: number, y: number, width: number, height: number): Rectangle {
   return new Rectangle(x, y, width, height);

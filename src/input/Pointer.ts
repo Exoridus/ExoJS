@@ -1,7 +1,8 @@
-import { ChannelOffset, pointerSlotSize } from '@/input/types';
-import { Flags } from '@/math/Flags';
-import { Size } from '@/math/Size';
-import { Vector } from '@/math/Vector';
+import { Flags } from '#math/Flags';
+import { Size } from '#math/Size';
+import { Vector } from '#math/Vector';
+
+import { ChannelOffset, pointerSlotSize } from './types';
 
 declare const pointerChannelBrand: unique symbol;
 

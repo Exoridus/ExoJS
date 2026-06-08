@@ -1,5 +1,4 @@
-import { Signal } from '@/core/Signal';
-import { ChannelOffset, ChannelSize } from '@/input/types';
+import { Signal } from '#core/Signal';
 
 import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadAxisChannel } from './GamepadAxis';
@@ -9,6 +8,7 @@ import type { BrowserGamepad, ResolvedGamepadDefinition } from './GamepadDefinit
 import type { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
+import { ChannelOffset, ChannelSize } from './types';
 
 /** Identity metadata for a connected gamepad. Populated from a {@link ResolvedGamepadDefinition}. */
 export interface GamepadInfo {

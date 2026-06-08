@@ -5,13 +5,13 @@
  * lifecycle, visibility toggling, F1 keybinding, and render path.
  */
 
-import { Signal } from '@/core/Signal';
-import { DebugOverlay } from '@/debug/DebugOverlay';
-import * as debugExports from '@/debug/index';
-import * as rootExports from '@/index';
-import { Keyboard } from '@/input/types';
-import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
+import { Signal } from '#core/Signal';
+import { DebugOverlay } from '#debug/DebugOverlay';
+import * as debugExports from '#debug/index';
+import * as rootExports from '#index';
+import { Keyboard } from '#input/types';
+import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
 // Stub the glyph atlas pool so Text construction never touches a
 // real 2D canvas context (jsdom's canvas does not implement measureText).
@@ -82,7 +82,7 @@ const makeSceneManager = () => ({
   scene: null as null | { root: object },
 });
 
-const makeOnFrame = () => new Signal<[import('@/core/Time').Time]>();
+const makeOnFrame = () => new Signal<[import('#core/Time').Time]>();
 const makeOnKeyDown = () => new Signal<[number]>();
 const makeOnResize = () => new Signal<[number, number, unknown]>();
 
@@ -98,7 +98,7 @@ const makeApp = () => {
     input: { onKeyDown },
     onFrame,
     onResize,
-  } as unknown as import('@/core/Application').Application;
+  } as unknown as import('#core/Application').Application;
 };
 
 // ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ describe('DebugOverlay — render path', () => {
     const debug = new DebugOverlay(app);
 
     // visible defaults to false — dispatch a frame
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 
@@ -198,7 +198,7 @@ describe('DebugOverlay — render path', () => {
 
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 
@@ -213,7 +213,7 @@ describe('DebugOverlay — render path', () => {
 
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 
@@ -343,7 +343,7 @@ describe('DebugOverlay — master visible switch', () => {
     debug.layers.performance.visible = true;
     debug.layers.boundingBoxes.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 
@@ -360,7 +360,7 @@ describe('DebugOverlay — master visible switch', () => {
     debug.visible = true;
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 
@@ -376,7 +376,7 @@ describe('DebugOverlay — master visible switch', () => {
     debug.layers.performance.visible = true;
     debug.visible = false;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
     expect(app.backend.setView).not.toHaveBeenCalled();
@@ -397,7 +397,7 @@ describe('DebugOverlay — view-mode routing', () => {
     // Enable only a world-mode layer (boundingBoxes).
     debug.layers.boundingBoxes.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 
@@ -414,7 +414,7 @@ describe('DebugOverlay — view-mode routing', () => {
     // Enable only a screen-mode layer (performance).
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 
@@ -432,7 +432,7 @@ describe('DebugOverlay — view-mode routing', () => {
     debug.layers.boundingBoxes.visible = true;
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);
 

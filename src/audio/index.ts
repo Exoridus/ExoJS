@@ -47,4 +47,4 @@ export type { OscillatorPlayOptions, OscillatorSoundOptions, OscillatorType } fr
 export { OscillatorSound } from './OscillatorSound';
 export type { AudioSpriteClip, PlayOptions, SoundOptions } from './Sound';
 export { Sound, SoundPoolStrategy } from './Sound';
-export { registerAudioWorkletProcessor } from './worklet/registerWorklet';
+export { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';

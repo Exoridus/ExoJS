@@ -8,17 +8,17 @@
  * setup, uniform marshalling, WebGL2 guard, and lifecycle methods.
  */
 
-import type { WebGpuShaderFilterOptions } from '@/rendering/filters/WebGpuShaderFilter';
-import { WebGpuShaderFilter } from '@/rendering/filters/WebGpuShaderFilter';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import type { View } from '@/rendering/View';
-import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
-import { type WebGpuPassBackend, WebGpuPassCoordinator } from '@/rendering/webgpu/WebGpuPassCoordinator';
+import type { WebGpuShaderFilterOptions } from '#rendering/filters/WebGpuShaderFilter';
+import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import type { View } from '#rendering/View';
+import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+import { type WebGpuPassBackend, WebGpuPassCoordinator } from '#rendering/webgpu/WebGpuPassCoordinator';
 
 // ---------------------------------------------------------------------------
 // WebGPU mock environment (mirrors webgpu-backend.test.ts pattern)

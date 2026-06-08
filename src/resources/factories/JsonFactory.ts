@@ -1,4 +1,4 @@
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
 
 /**
  * {@link AssetFactory} implementation that parses JSON files and exposes them

@@ -1,5 +1,6 @@
 packages:
   - site
+  - packages/exojs-config
   - packages/exojs-particles
   - packages/exojs-tiled
   - packages/create-exo-app

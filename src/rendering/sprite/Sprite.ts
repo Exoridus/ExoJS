@@ -1,12 +1,12 @@
-import { Interval } from '@/math/Interval';
-import { Rectangle } from '@/math/Rectangle';
-import { Vector } from '@/math/Vector';
-import { Drawable } from '@/rendering/Drawable';
-import type { Material } from '@/rendering/material/Material';
-import type { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import { RenderNode } from '@/rendering/RenderNode';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { Texture } from '@/rendering/texture/Texture';
+import { Interval } from '#math/Interval';
+import { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
+import { Drawable } from '#rendering/Drawable';
+import type { Material } from '#rendering/material/Material';
+import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { RenderNode } from '#rendering/RenderNode';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
 
 /**
  * Internal dirty-flag bitmask used by {@link Sprite} to lazily recompute

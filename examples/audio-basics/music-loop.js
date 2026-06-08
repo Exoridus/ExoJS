@@ -1,5 +1,4 @@
 // Auto-generated from music-loop.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, crossFade, Graphics, Music, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {

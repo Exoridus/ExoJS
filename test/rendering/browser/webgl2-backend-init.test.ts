@@ -11,7 +11,7 @@
  * renderTarget setup), not the renderer pipeline itself.
  */
 
-vi.mock('@/rendering/RendererRegistry', () => ({
+vi.mock('#rendering/RendererRegistry', () => ({
   RendererRegistry: class {
     registerRenderer() {
       return this;
@@ -31,9 +31,9 @@ vi.mock('@/rendering/RendererRegistry', () => ({
   },
 }));
 
-import type { Application } from '@/core/Application';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
+import type { Application } from '#core/Application';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 const makeMinimalApp = (canvas: HTMLCanvasElement): Application => ({ canvas, options: {} }) as unknown as Application;
 

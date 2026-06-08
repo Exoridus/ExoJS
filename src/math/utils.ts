@@ -1,4 +1,4 @@
-import type { Vector } from '@/math/Vector';
+import type { Vector } from './Vector';
 
 /** τ = 2π, the full-circle radian constant. */
 export const tau = Math.PI * 2;

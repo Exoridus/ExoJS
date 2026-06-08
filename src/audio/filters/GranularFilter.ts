@@ -1,4 +1,5 @@
-import { granularWorkletSource } from '../worklets/granular.worklet';
+import { granularWorkletSource } from '#audio/worklets/granular.worklet';
+
 import { WorkletFilter } from './WorkletFilter';
 
 export interface GranularFilterOptions {

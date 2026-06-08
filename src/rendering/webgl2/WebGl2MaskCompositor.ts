@@ -1,9 +1,9 @@
-import type { BlendModes } from '@/rendering/types';
-import { BufferTypes, BufferUsage } from '@/rendering/types';
+import { Shader } from '#rendering/shader/Shader';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
+import type { BlendModes } from '#rendering/types';
+import { BufferTypes, BufferUsage } from '#rendering/types';
 
-import { Shader } from '../shader/Shader';
-import type { RenderTexture } from '../texture/RenderTexture';
-import type { Texture } from '../texture/Texture';
 import fragmentSource from './glsl/mask-compose.frag';
 import vertexSource from './glsl/mask-compose.vert';
 import type { WebGl2Backend } from './WebGl2Backend';

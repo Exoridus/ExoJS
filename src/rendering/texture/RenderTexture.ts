@@ -1,8 +1,9 @@
-import { assert } from '@/core/dev';
-import { isPowerOfTwo } from '@/math/utils';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import { ScaleModes, WrapModes } from '@/rendering/types';
+import { assert } from '#core/dev';
+import { isPowerOfTwo } from '#math/utils';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { ScaleModes, WrapModes } from '#rendering/types';
+
+import type { SamplerOptions } from './Sampler';
 
 /**
  * An off-screen render target that can also be sampled as a texture.

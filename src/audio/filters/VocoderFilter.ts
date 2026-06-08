@@ -1,5 +1,6 @@
-import type { AudioBus } from '../AudioBus';
-import { vocoderWorkletSource } from '../worklets/vocoder.worklet';
+import type { AudioBus } from '#audio/AudioBus';
+import { vocoderWorkletSource } from '#audio/worklets/vocoder.worklet';
+
 import { WorkletFilter } from './WorkletFilter';
 
 export interface VocoderFilterOptions {

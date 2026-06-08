@@ -18,22 +18,22 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { Rectangle } from '@/math/Rectangle';
-import { Container } from '@/rendering/Container';
-import { Geometry } from '@/rendering/geometry/Geometry';
-import { MeshMaterial } from '@/rendering/material/MeshMaterial';
-import { ShaderSource } from '@/rendering/material/ShaderSource';
-import { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import { Mesh } from '@/rendering/mesh/Mesh';
-import { Graphics } from '@/rendering/primitives/Graphics';
-import type { RenderNode } from '@/rendering/RenderNode';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { BitmapText, type BmFontData } from '@/rendering/text/BitmapText';
-import { BmFont } from '@/rendering/text/BmFont';
-import { Texture } from '@/rendering/texture/Texture';
-import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
+import { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Mesh } from '#rendering/mesh/Mesh';
+import { Graphics } from '#rendering/primitives/Graphics';
+import type { RenderNode } from '#rendering/RenderNode';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { BitmapText, type BmFontData } from '#rendering/text/BitmapText';
+import { BmFont } from '#rendering/text/BmFont';
+import { Texture } from '#rendering/texture/Texture';
+import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';

@@ -1,5 +1,5 @@
-import type { Color } from '@/core/Color';
-import type { Matrix } from '@/math/Matrix';
+import type { Color } from '#core/Color';
+import type { Matrix } from '#math/Matrix';
 
 const floatsPerSlot = 12;
 const initialCapacity = 16;

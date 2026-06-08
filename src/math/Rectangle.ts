@@ -1,8 +1,9 @@
-import type { SceneNode } from '@/core/SceneNode';
-import type { Circle } from '@/math/Circle';
-import type { Collidable, CollisionResponse } from '@/math/Collision';
-import { CollisionType } from '@/math/Collision';
-import { getCollisionCircleRectangle, getCollisionEllipseRectangle, getCollisionRectangleRectangle, getCollisionSat } from '@/math/collision-detection';
+import type { SceneNode } from '#core/SceneNode';
+
+import type { Circle } from './Circle';
+import type { Collidable, CollisionResponse } from './Collision';
+import { CollisionType } from './Collision';
+import { getCollisionCircleRectangle, getCollisionEllipseRectangle, getCollisionRectangleRectangle, getCollisionSat } from './collision-detection';
 import {
   intersectionLineRect,
   intersectionPointRect,
@@ -11,17 +12,17 @@ import {
   intersectionRectPoly,
   intersectionRectRect,
   intersectionSat,
-} from '@/math/collision-detection';
-import type { Ellipse } from '@/math/Ellipse';
-import { Interval } from '@/math/Interval';
-import type { Line } from '@/math/Line';
-import type { Matrix } from '@/math/Matrix';
-import { ObservableVector } from '@/math/ObservableVector';
-import type { Polygon } from '@/math/Polygon';
-import type { ShapeLike } from '@/math/ShapeLike';
-import { Size } from '@/math/Size';
-import { inRange } from '@/math/utils';
-import type { Vector } from '@/math/Vector';
+} from './collision-detection';
+import type { Ellipse } from './Ellipse';
+import { Interval } from './Interval';
+import type { Line } from './Line';
+import type { Matrix } from './Matrix';
+import { ObservableVector } from './ObservableVector';
+import type { Polygon } from './Polygon';
+import type { ShapeLike } from './ShapeLike';
+import { Size } from './Size';
+import { inRange } from './utils';
+import type { Vector } from './Vector';
 
 let temp: Rectangle | null = null;
 const noop = (): void => {};

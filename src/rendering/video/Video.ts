@@ -1,16 +1,15 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
-import type { AudioBus } from '@/audio/AudioBus';
-import { getAudioManager } from '@/audio/AudioManager';
-import type { Media } from '@/audio/Media';
-import { Signal } from '@/core/Signal';
-import type { PlaybackOptions } from '@/core/types';
-import { Rectangle } from '@/math/Rectangle';
-import { clamp } from '@/math/utils';
-import type { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
-
-import { Sprite } from '../sprite/Sprite';
-import type { SamplerOptions } from '../texture/Sampler';
-import { Texture } from '../texture/Texture';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
+import type { AudioBus } from '#audio/AudioBus';
+import { getAudioManager } from '#audio/AudioManager';
+import type { Media } from '#audio/Media';
+import { Signal } from '#core/Signal';
+import type { PlaybackOptions } from '#core/types';
+import { Rectangle } from '#math/Rectangle';
+import { clamp } from '#math/utils';
+import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { Sprite } from '#rendering/sprite/Sprite';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
+import { Texture } from '#rendering/texture/Texture';
 
 interface VideoAudioSetup {
   readonly audioContext: AudioContext;

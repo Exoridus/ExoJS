@@ -1,4 +1,4 @@
-import type { RenderNode } from '@/rendering/RenderNode';
+import type { RenderNode } from '#rendering/RenderNode';
 
 import type { Pointer } from './Pointer';
 

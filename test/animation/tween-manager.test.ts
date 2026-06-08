@@ -1,6 +1,6 @@
-﻿import { Tween } from '@/animation/Tween';
-import { TweenManager } from '@/animation/TweenManager';
-import { TweenState } from '@/animation/types';
+﻿import { Tween } from '#animation/Tween';
+import { TweenManager } from '#animation/TweenManager';
+import { TweenState } from '#animation/types';
 
 const makeTarget = () => ({ x: 0, y: 0 });
 

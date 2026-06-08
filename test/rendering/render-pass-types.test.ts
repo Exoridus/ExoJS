@@ -1,8 +1,8 @@
-import type { RenderNode } from '@/rendering/RenderNode';
-import { RenderNodePass } from '@/rendering/RenderNodePass';
-import type { RenderPass } from '@/rendering/RenderPass';
-import { RenderPipeline } from '@/rendering/RenderPipeline';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { RenderNode } from '#rendering/RenderNode';
+import { RenderNodePass } from '#rendering/RenderNodePass';
+import type { RenderPass } from '#rendering/RenderPass';
+import { RenderPipeline } from '#rendering/RenderPipeline';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 // Compile-time contracts. The body is type-checked by tsc; it is never executed.
 const contracts = (pipeline: RenderPipeline, node: RenderNode, target: RenderTexture, pass: RenderPass): unknown[] => {

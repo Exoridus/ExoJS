@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { Extension } from '@/extensions/Extension';
-import { ExtensionRegistry } from '@/extensions/ExtensionRegistry';
-import { resetExtensionRegistryForTesting } from '@/extensions/testing';
+import type { Extension } from '#extensions/Extension';
+import { ExtensionRegistry } from '#extensions/ExtensionRegistry';
+import { resetExtensionRegistryForTesting } from '#extensions/testing';
 
 describe('ExtensionRegistry', () => {
   beforeEach(() => {

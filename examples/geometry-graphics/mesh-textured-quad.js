@@ -1,5 +1,4 @@
 // Auto-generated from mesh-textured-quad.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {

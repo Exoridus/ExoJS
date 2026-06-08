@@ -30,6 +30,8 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "resolvePackageJsonImports": true,
+    "customConditions": ["@codexo/source", "@codexo/exojs-particles-source"],
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
@@ -38,8 +40,7 @@
       "@codexo/exojs-particles": ["./packages/exojs-particles/src/index.ts"],
       "@codexo/exojs-particles/register": ["./packages/exojs-particles/src/register.ts"],
       "@codexo/exojs-tiled": ["./packages/exojs-tiled/src/index.ts"],
-      "@codexo/exojs-tiled/register": ["./packages/exojs-tiled/src/register.ts"],
-      "@/*": ["./src/*"]
+      "@codexo/exojs-tiled/register": ["./packages/exojs-tiled/src/register.ts"]
     }
   },
   "include": [".workspace/generated/guide-typecheck/**/*.ts", ".workspace/generated/guide-typecheck/**/*.js", "src/typings.d.ts"]

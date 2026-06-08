@@ -1,9 +1,9 @@
-import type { TypedArray } from '@/core/types';
-import { ShaderPrimitives } from '@/rendering/types';
+import type { TypedArray } from '#core/types';
+import type { Shader, ShaderProgram } from '#rendering/shader/Shader';
+import { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
+import { ShaderUniform } from '#rendering/shader/ShaderUniform';
+import { ShaderPrimitives } from '#rendering/types';
 
-import type { Shader, ShaderProgram } from '../shader/Shader';
-import { ShaderAttribute } from '../shader/ShaderAttribute';
-import { ShaderUniform } from '../shader/ShaderUniform';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './WebGl2ShaderMappings';
 

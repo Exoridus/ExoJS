@@ -1,5 +1,4 @@
 // Auto-generated from blendmodes.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, BlendModes, Color, ScaleModes, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {

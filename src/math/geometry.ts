@@ -1,6 +1,6 @@
-import { triangulate } from '@/math/triangulate';
-import { tau } from '@/math/utils';
-import { Vector } from '@/math/Vector';
+import { triangulate } from './triangulate';
+import { tau } from './utils';
+import { Vector } from './Vector';
 
 /**
  * Raw mesh data produced by geometry builders. `vertices` is a flat `Float32Array`

@@ -1,11 +1,11 @@
-import { Color } from '@/core/Color';
-import { Drawable } from '@/rendering/Drawable';
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import type { RenderGroup } from '@/rendering/plan/RenderInstruction';
-import { RenderPlanPlayer } from '@/rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope, GroupScopeEntry } from '@/rendering/plan/RenderScope';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { TransformBuffer } from '@/rendering/TransformBuffer';
+import { Color } from '#core/Color';
+import { Drawable } from '#rendering/Drawable';
+import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderGroup } from '#rendering/plan/RenderInstruction';
+import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
+import type { DrawScopeEntry, GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { TransformBuffer } from '#rendering/TransformBuffer';
 
 const floatsPerSlot = 12;
 

@@ -1,6 +1,6 @@
-import type { CircleLike } from '@/math/CircleLike';
-import { Rectangle } from '@/math/Rectangle';
-import { substepSweep, sweepCircleAgainst, sweepCircleVsCircle, sweepCircleVsRectangle, sweepRectangle, sweepRectangleAgainst } from '@/math/swept-collision';
+import type { CircleLike } from '#math/CircleLike';
+import { Rectangle } from '#math/Rectangle';
+import { substepSweep, sweepCircleAgainst, sweepCircleVsCircle, sweepCircleVsRectangle, sweepRectangle, sweepRectangleAgainst } from '#math/swept-collision';
 
 // ---------------------------------------------------------------------------
 // Helpers

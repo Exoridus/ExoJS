@@ -1,4 +1,4 @@
-import { Signal } from '@/core/Signal';
+import { Signal } from '#core/Signal';
 
 describe('Signal type-level assertions', () => {
   it('dispatch parameters match the Args tuple', () => {

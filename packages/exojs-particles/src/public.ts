@@ -6,5 +6,7 @@ export type { ParticlesExtensionOptions } from './particlesExtension';
 export { createParticlesExtension, particlesExtension } from './particlesExtension';
 export * from './distributions';
 export * from './modules';
+export type { ParticlesBuildInfo } from './particlesBuildInfo';
+export { particlesBuildInfo } from './particlesBuildInfo';
 export { ParticleSystem } from './ParticleSystem';
 export type { ParticleSystemOptions } from './ParticleSystem';

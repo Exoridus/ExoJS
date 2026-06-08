@@ -43,20 +43,20 @@
  *   exhaustion are renderer-owned and are not the optimizer's concern.
  */
 
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
-import { ShaderSource } from '@/rendering/material/ShaderSource';
-import { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import { type DrawCommand, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
-import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
-import type { GroupScope } from '@/rendering/plan/RenderScope';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { createRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { Texture } from '@/rendering/texture/Texture';
-import { BlendModes } from '@/rendering/types';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
+import type { GroupScope } from '#rendering/plan/RenderScope';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { createRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 
 // ---------------------------------------------------------------------------
 // Test infrastructure

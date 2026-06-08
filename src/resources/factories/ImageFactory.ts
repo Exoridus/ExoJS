@@ -1,5 +1,5 @@
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
-import { determineMimeType } from '@/resources/utils';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
+import { determineMimeType } from '#resources/utils';
 
 /** Decoded image result from {@link ImageFactory.create}. */
 export type DecodedImage = HTMLImageElement | ImageBitmap;

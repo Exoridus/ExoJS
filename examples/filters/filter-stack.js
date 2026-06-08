@@ -1,5 +1,4 @@
 // Auto-generated from filter-stack.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {

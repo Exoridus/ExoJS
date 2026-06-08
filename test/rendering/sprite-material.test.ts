@@ -1,7 +1,7 @@
-import { MeshMaterial } from '@/rendering/material/MeshMaterial';
-import { ShaderSource } from '@/rendering/material/ShaderSource';
-import { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import { Sprite } from '@/rendering/sprite/Sprite';
+import { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Sprite } from '#rendering/sprite/Sprite';
 
 const minimalGlsl = {
   vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',

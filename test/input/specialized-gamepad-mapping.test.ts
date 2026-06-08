@@ -1,9 +1,9 @@
-import { ArcadeStickGamepadMapping } from '@/input/ArcadeStickGamepadMapping';
-import { GamepadAxis } from '@/input/GamepadAxis';
-import { GamepadButton } from '@/input/GamepadButton';
-import { parseGamepadDescriptor, resolveGamepadDefinition } from '@/input/GamepadDefinitions';
-import { GamepadMappingFamily } from '@/input/GamepadMapping';
-import { SteamDeckGamepadMapping } from '@/input/SteamDeckGamepadMapping';
+import { ArcadeStickGamepadMapping } from '#input/ArcadeStickGamepadMapping';
+import { GamepadAxis } from '#input/GamepadAxis';
+import { GamepadButton } from '#input/GamepadButton';
+import { parseGamepadDescriptor, resolveGamepadDefinition } from '#input/GamepadDefinitions';
+import { GamepadMappingFamily } from '#input/GamepadMapping';
+import { SteamDeckGamepadMapping } from '#input/SteamDeckGamepadMapping';
 
 describe('specialized gamepad mappings', () => {
   test('arcade stick mapping keeps the fight-stick surface explicit and axis-free', () => {

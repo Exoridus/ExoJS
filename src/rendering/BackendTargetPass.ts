@@ -1,8 +1,8 @@
-import type { Color } from '@/core/Color';
+import type { Color } from '#core/Color';
+import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
+import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 
 import type { BackendRenderPass } from './BackendRenderPass';
-import type { RenderPassCoordinatorHost } from './pass/RenderPassCoordinator';
-import { StencilAttachmentMode } from './pass/RenderPassDescriptor';
 import type { RenderBackend } from './RenderBackend';
 import type { RenderTarget } from './RenderTarget';
 import type { View } from './View';

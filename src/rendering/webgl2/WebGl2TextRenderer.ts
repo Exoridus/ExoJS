@@ -1,10 +1,10 @@
-import { type BitmapText } from '@/rendering/text/BitmapText';
-import type { TextPageQuads } from '@/rendering/text/Text';
-import { Text } from '@/rendering/text/Text';
-import type { Texture } from '@/rendering/texture/Texture';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
+import { Shader } from '#rendering/shader/Shader';
+import { type BitmapText } from '#rendering/text/BitmapText';
+import type { TextPageQuads } from '#rendering/text/Text';
+import { Text } from '#rendering/text/Text';
+import type { Texture } from '#rendering/texture/Texture';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
-import { Shader } from '../shader/Shader';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import textVertSource from './glsl/text.vert';
 import textColorFragSource from './glsl/text-color.frag';

@@ -1,10 +1,9 @@
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from '@/math/Matrix';
-
-import type { Geometry } from '../geometry/Geometry';
-import type { GeometryAttribute } from '../geometry/GeometryAttribute';
-import type { View } from '../View';
+import { Matrix } from '#math/Matrix';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
+import type { View } from '#rendering/View';
 
 /** depth24plus-stencil8 is the portable depth/stencil format with an 8-bit stencil aspect. */
 export const stencilAttachmentFormat: GPUTextureFormat = 'depth24plus-stencil8';

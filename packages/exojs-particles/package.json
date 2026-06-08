@@ -22,6 +22,13 @@
     },
     "./package.json": "./package.json"
   },
+  "imports": {
+    "#*": {
+      "@codexo/exojs-particles-source": "./src/*.ts",
+      "types": "./dist/esm/*.d.ts",
+      "default": "./dist/esm/*.js"
+    }
+  },
   "files": [
     "dist/esm/",
     "README.md",
@@ -32,13 +39,14 @@
     "build:dev": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
-    "test": "vitest run --project=exojs-particles"
+    "test": "vitest run --root ../.. --project=exojs-particles"
   },
   "peerDependencies": {
     "@codexo/exojs": "0.12.x"
   },
   "devDependencies": {
-    "@codexo/exojs": "workspace:*"
+    "@codexo/exojs": "workspace:*",
+    "@codexo/exojs-config": "workspace:*"
   },
   "license": "MIT",
   "publishConfig": {

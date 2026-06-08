@@ -1,9 +1,9 @@
-import { Drawable } from '@/rendering/Drawable';
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import type { RenderGroup } from '@/rendering/plan/RenderInstruction';
-import { RenderPlanPlayer } from '@/rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope, GroupScopeEntry } from '@/rendering/plan/RenderScope';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+import { Drawable } from '#rendering/Drawable';
+import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderGroup } from '#rendering/plan/RenderInstruction';
+import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
+import type { DrawScopeEntry, GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {

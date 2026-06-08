@@ -1,11 +1,11 @@
-﻿import type { Application } from '@/core/Application';
-import { Scene } from '@/core/Scene';
-import { SceneManager } from '@/core/SceneManager';
-import { Signal } from '@/core/Signal';
-import { Time } from '@/core/Time';
-import type { Pointer } from '@/input/Pointer';
-import { Rectangle } from '@/math/Rectangle';
-import type { Vector } from '@/math/Vector';
+﻿import type { Application } from '#core/Application';
+import { Scene } from '#core/Scene';
+import { SceneManager } from '#core/SceneManager';
+import { Signal } from '#core/Signal';
+import { Time } from '#core/Time';
+import type { Pointer } from '#input/Pointer';
+import { Rectangle } from '#math/Rectangle';
+import type { Vector } from '#math/Vector';
 
 interface InputManagerStub {
   readonly onKeyDown: Signal<[number]>;

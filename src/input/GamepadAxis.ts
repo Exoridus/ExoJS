@@ -1,5 +1,6 @@
-import { ChannelOffset } from '@/input/types';
-import { clamp } from '@/math/utils';
+import { clamp } from '#math/utils';
+
+import { ChannelOffset } from './types';
 
 declare const gamepadAxisChannelBrand: unique symbol;
 

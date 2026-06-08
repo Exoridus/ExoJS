@@ -1,9 +1,9 @@
-import { builtInGamepadDefinitions, parseGamepadDescriptor, resolveGamepadDefinition } from '@/input/GamepadDefinitions';
-import { GamepadMappingFamily } from '@/input/GamepadMapping';
-import { GenericDualAnalogGamepadMapping } from '@/input/GenericDualAnalogGamepadMapping';
-import { PlayStationGamepadMapping } from '@/input/PlayStationGamepadMapping';
-import { SwitchProGamepadMapping } from '@/input/SwitchProGamepadMapping';
-import { XboxGamepadMapping } from '@/input/XboxGamepadMapping';
+import { builtInGamepadDefinitions, parseGamepadDescriptor, resolveGamepadDefinition } from '#input/GamepadDefinitions';
+import { GamepadMappingFamily } from '#input/GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
+import { PlayStationGamepadMapping } from '#input/PlayStationGamepadMapping';
+import { SwitchProGamepadMapping } from '#input/SwitchProGamepadMapping';
+import { XboxGamepadMapping } from '#input/XboxGamepadMapping';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 

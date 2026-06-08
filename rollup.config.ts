@@ -1,8 +1,7 @@
-import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { dirname, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
@@ -11,23 +10,15 @@ import { string } from 'rollup-plugin-string';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)));
 
-const packageVersion = (() => {
-  const packageJsonPath = resolvePath(rootDir, 'package.json');
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version?: unknown };
+const buildMode = process.env.EXOJS_ENV === 'development' ? 'development' : 'production';
 
-  return typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
-})();
+const defines = createBuildDefinesFromRepo({ mode: buildMode, packageDir: rootDir });
 
-const gitCommitSha = (() => {
-  try {
-    return execSync('git rev-parse --short HEAD', { cwd: rootDir, encoding: 'utf8' }).trim();
-  } catch {
-    return 'unknown';
-  }
-})();
-
-const buildEnvironment = process.env.EXOJS_ENV === 'development' ? 'development' : 'production';
-const isDevelopmentBuild = buildEnvironment === 'development';
+// Activates the package-private `@codexo/source` condition in package.json#imports
+// so `#*` resolves to ./src/*.ts at build time. preserveModules then rewrites the
+// resolved paths to relative specifiers in the emitted ESM tree. The trailing
+// standard conditions keep normal dependency resolution intact.
+const sourceConditions = ['@codexo/source', 'browser', 'module', 'import', 'default'];
 
 const glslPlugin = string({
   include: ['**/*.vert', '**/*.frag'],
@@ -35,12 +26,7 @@ const glslPlugin = string({
 
 const constantReplacementPlugin = replace({
   preventAssignment: true,
-  values: {
-    __BUILD_ENV__: JSON.stringify(buildEnvironment),
-    __COMMIT_SHA__: JSON.stringify(gitCommitSha),
-    __DEV__: JSON.stringify(isDevelopmentBuild),
-    __VERSION__: JSON.stringify(packageVersion),
-  },
+  values: defines,
 });
 
 const bundled: RollupOptions = {
@@ -52,7 +38,7 @@ const bundled: RollupOptions = {
   },
   plugins: [
     constantReplacementPlugin,
-    resolve({ mainFields: ['browser', 'module', 'main'] }),
+    resolve({ mainFields: ['browser', 'module', 'main'], exportConditions: sourceConditions }),
     glslPlugin,
     typescript({
       compilerOptions: { incremental: false },
@@ -63,19 +49,20 @@ const bundled: RollupOptions = {
 
 const debugBundled: RollupOptions = {
   input: 'src/debug/index.ts',
-  // All @/ imports are core dependencies — mark them external so the debug
+  // All `#` imports are core dependencies — mark them external so the debug
   // bundle contains only debug code and imports from @codexo/exojs at runtime.
-  external: id => id.startsWith('@/'),
+  // (Intra-debug imports are same-directory `./` and stay bundled.)
+  external: id => id.startsWith('#'),
   output: {
     file: 'dist/exo.debug.esm.js',
     format: 'es',
     sourcemap: true,
-    // Remap all @/ external IDs to the package name in the output.
-    paths: id => (id.startsWith('@/') ? '@codexo/exojs' : id),
+    // Remap all `#` external IDs to the package name in the output.
+    paths: id => (id.startsWith('#') ? '@codexo/exojs' : id),
   },
   plugins: [
     constantReplacementPlugin,
-    resolve({ mainFields: ['browser', 'module', 'main'] }),
+    resolve({ mainFields: ['browser', 'module', 'main'], exportConditions: sourceConditions }),
     glslPlugin,
     typescript({
       compilerOptions: { incremental: false },
@@ -95,7 +82,7 @@ const modules: RollupOptions = {
   },
   plugins: [
     constantReplacementPlugin,
-    resolve({ mainFields: ['module', 'browser', 'main'] }),
+    resolve({ mainFields: ['module', 'browser', 'main'], exportConditions: sourceConditions }),
     glslPlugin,
     typescript({
       compilerOptions: {

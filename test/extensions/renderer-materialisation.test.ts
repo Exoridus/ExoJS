@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RendererBinding } from '@/extensions/Extension';
-import { ExtensionRegistry } from '@/extensions/ExtensionRegistry';
-import { materializeRendererBindings } from '@/extensions/materialize';
-import { resetExtensionRegistryForTesting } from '@/extensions/testing';
-import { Drawable } from '@/rendering/Drawable';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import type { Renderer } from '@/rendering/Renderer';
-import { RendererRegistry } from '@/rendering/RendererRegistry';
+import type { RendererBinding } from '#extensions/Extension';
+import { ExtensionRegistry } from '#extensions/ExtensionRegistry';
+import { materializeRendererBindings } from '#extensions/materialize';
+import { resetExtensionRegistryForTesting } from '#extensions/testing';
+import { Drawable } from '#rendering/Drawable';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { Renderer } from '#rendering/Renderer';
+import { RendererRegistry } from '#rendering/RendererRegistry';
 
 // Minimal stub renderer
 function createStubRenderer(): Renderer<RenderBackend> & {
@@ -238,7 +238,7 @@ describe('materializeRendererBindings', () => {
 
 describe('coreRendererBindings multi-target', () => {
   it('coreRendererBindings provides Text+BitmapText as multi-target binding', async () => {
-    const { buildCoreRendererBindings } = await import('@/rendering/coreRendererBindings');
+    const { buildCoreRendererBindings } = await import('#rendering/coreRendererBindings');
     const bindings = buildCoreRendererBindings({});
     const textBinding = bindings.find(b => b.targets.length > 1);
     expect(textBinding).toBeDefined();

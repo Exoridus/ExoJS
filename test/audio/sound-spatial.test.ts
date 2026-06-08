@@ -1,7 +1,7 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { AudioBus } from '@/audio/AudioBus';
-import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
-import { Sound } from '@/audio/Sound';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
+import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
+import { Sound } from '#audio/Sound';
 
 // ---------------------------------------------------------------------------
 // Helpers

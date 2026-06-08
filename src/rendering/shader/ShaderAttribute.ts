@@ -1,4 +1,4 @@
-import { webGl2PrimitiveByteSizeMapping } from '../webgl2/WebGl2ShaderMappings';
+import { webGl2PrimitiveByteSizeMapping } from '#rendering/webgl2/WebGl2ShaderMappings';
 
 /**
  * Metadata for a single vertex attribute declared in a GLSL vertex shader.

@@ -29,7 +29,7 @@ env:
 
 jobs:
   # Run the full CI gate (typecheck -> lint -> test -> build -> site-build) at
-  # the exact tagged commit before any publish attempt.
+  # the exact tagged commit before anything is built for release.
   checks:
     name: Verify at tag
     permissions:
@@ -41,9 +41,91 @@ jobs:
       pnpm-version: '11.4.0'
       ref: ${{ github.event.inputs.tag || github.ref_name }}
 
-  publish:
-    name: Publish to npm
+  # ── Stage 1: PREPARE/VERIFY ────────────────────────────────────────────────
+  # Build the three official packages exactly once, then pack/hash/attw/
+  # external-consumer/full-zip WITHOUT rebuilding them, and upload the resulting
+  # artifacts. Any failure here means no publish, no latest, no tag, no release.
+  prepare:
+    name: Prepare release artifacts (build-once)
     needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ env.TARGET_TAG }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Refuse to release unless the resolved tag matches package.json.
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$TARGET_TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Tag '$TARGET_TAG' does not match package.json version '$PKG_VERSION'."
+            exit 1
+          fi
+          echo "Tag and package.json agree on $PKG_VERSION."
+
+      # Lockstep + peer-range coherence + deterministic publish-order matrix.
+      - name: Verify release package matrix
+        run: |
+          pnpm verify:lockstep
+          pnpm verify:release-matrix
+
+      # Build core + extensions exactly once. `release:prepare --build` invokes
+      # `pnpm build` + the two extension builds, then packs WITHOUT rebuilding.
+      - name: Build site (vendored ESM for the Full ZIP)
+        env:
+          EXOJS_PACKAGE_PATH: ..
+        run: |
+          pnpm build
+          pnpm --filter @codexo/exojs-particles build
+          pnpm --filter @codexo/exojs-tiled build
+          pnpm site:build
+
+      # Build-once prepare: pack 3 tarballs (no rebuild) -> hash -> manifest +
+      # checksums -> attw (bundler) -> external consumers -> Full GitHub ZIP.
+      - name: Prepare release (pack, hash, attw, consumers, full-zip)
+        run: pnpm release:prepare
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            .release/artifacts/
+            .release/exojs-${{ env.TARGET_TAG }}-full.zip
+            .release/exojs-${{ env.TARGET_TAG }}-full.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  # ── Stage 2: PUBLISH ───────────────────────────────────────────────────────
+  # Consumes ONLY the artifacts built by `prepare`. Never builds or repacks: the
+  # release:publish step re-hashes the downloaded tarballs against the manifest
+  # (build-once guard) and aborts on any drift. Publishes Core -> Particles ->
+  # Tiled to a version-specific temporary dist-tag, then promotes all three to
+  # `latest` only after every publish succeeds.
+  publish:
+    name: Publish to npm (build-once artifacts)
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -68,135 +150,25 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install dependencies
+      # Tooling only (tsx + release scripts). Does NOT build the runtime packages
+      # — the tarballs are consumed as-is from the prepare stage.
+      - name: Install tooling
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # Refuse to publish unless the resolved tag name matches the
-      # version inside package.json. Catches the "tag and package.json
-      # drifted" mistake before it ships.
-      - name: Verify tag matches package.json version
-        run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
-          if [ "$TARGET_TAG" != "$PKG_VERSION" ]; then
-            echo "::error::Tag '$TARGET_TAG' does not match package.json version '$PKG_VERSION'."
-            exit 1
-          fi
-          echo "Tag and package.json agree on $PKG_VERSION."
-
-      # `prepack` rebuilds dist/ via rollup; we run it explicitly here so
-      # any build failure surfaces before the publish attempt rather than
-      # mid-publish.
-      - name: Build library
-        run: pnpm build
-
-      # Extension packages build their own ESM tree (externalising the core,
-      # whose dist/ now exists). Build before packing/publishing so any failure
-      # surfaces here, not mid-publish.
-      - name: Build extension packages
-        run: |
-          pnpm --filter @codexo/exojs-particles build
-          pnpm --filter @codexo/exojs-tiled build
-
-      # Lockstep + peer-range coherence across all three official packages, plus
-      # the deterministic release-matrix / publish-order check. Fails the release
-      # before any publish if the package matrix is inconsistent.
-      - name: Verify release package matrix
-        run: |
-          pnpm verify:lockstep
-          pnpm verify:release-matrix
-
-      # Site build produces site/dist/ needed for the release bundle below.
-      - name: Build site
-        env:
-          EXOJS_PACKAGE_PATH: ..
-        run: pnpm site:build
-
-      # Full coordinated-release archive: all three npm tarballs, every package's
-      # distribution, the built site, examples, and top-level metadata. Lets a
-      # consumer install the exact coordinated version snapshot offline.
-      - name: Assemble release bundle
-        run: |
-          BUNDLE_DIR="exojs-${TARGET_TAG}-full"
-          rm -rf "${BUNDLE_DIR}" "${BUNDLE_DIR}.zip"
-          mkdir -p "${BUNDLE_DIR}/site" "${BUNDLE_DIR}/npm" "${BUNDLE_DIR}/packages"
-          # npm tarballs for all three official packages (Core → Particles → Tiled).
-          npm pack --pack-destination "${BUNDLE_DIR}/npm"
-          (cd packages/exojs-particles && npm pack --pack-destination "../../${BUNDLE_DIR}/npm")
-          (cd packages/exojs-tiled && npm pack --pack-destination "../../${BUNDLE_DIR}/npm")
-          # Distributions.
-          cp -R dist "${BUNDLE_DIR}/dist"
-          cp -R packages/exojs-particles/dist "${BUNDLE_DIR}/packages/exojs-particles-dist"
-          cp -R packages/exojs-tiled/dist "${BUNDLE_DIR}/packages/exojs-tiled-dist"
-          # Examples + built site.
-          cp -R examples "${BUNDLE_DIR}/examples"
-          cp -R site/dist/. "${BUNDLE_DIR}/site/"
-          # Top-level metadata.
-          cp README.md CHANGELOG.md LICENSE package.json "${BUNDLE_DIR}/"
-          zip -r "${BUNDLE_DIR}.zip" "${BUNDLE_DIR}"
-
-      - name: Generate release notes
-        run: |
-          pnpm release:notes -- \
-            --tag "${TARGET_TAG}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --out ".release/release-notes.md"
-
-      - name: Attach release bundle
-        uses: softprops/action-gh-release@v3
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
         with:
-          body_path: .release/release-notes.md
-          tag_name: ${{ env.TARGET_TAG }}
-          files: exojs-${{ env.TARGET_TAG }}-full.zip
+          name: release-artifacts
+          path: .release
 
-      # Publish order matters: the core ships first because the extension
-      # packages declare it as a peer and the create-exo-app templates depend on
-      # `^<this version>`. Each publish is idempotent — a workflow re-run (or a
-      # re-triggered tag) skips a version that is already on npm instead of
-      # failing — but a genuine publish error fails the step and the whole job,
-      # so a partial release can never be reported as success.
-      - name: Publish @codexo/exojs to npm
-        run: |
-          PKG=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
-          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
-            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
-          else
-            npm publish --provenance --access public
-            echo "::notice::Published ${PKG}@${VER}."
-          fi
+      # Re-hash guard + ordered publish (Core -> Particles -> Tiled) to the
+      # temporary dist-tag, then promote all three to `latest`. Idempotent: a
+      # re-run skips versions already on npm; a partial failure promotes nothing.
+      - name: Publish coordinated release (build-once, dist-tag -> latest)
+        run: pnpm release:publish --execute
 
-      # Particles depends on the core peer published above. Same idempotent +
-      # fail-on-error contract.
-      - name: Publish @codexo/exojs-particles to npm
-        working-directory: packages/exojs-particles
-        run: |
-          PKG=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
-          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
-            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
-          else
-            npm publish --provenance --access public
-            echo "::notice::Published ${PKG}@${VER}."
-          fi
-
-      # Tiled is published last of the three official packages.
-      - name: Publish @codexo/exojs-tiled to npm
-        working-directory: packages/exojs-tiled
-        run: |
-          PKG=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
-          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
-            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
-          else
-            npm publish --provenance --access public
-            echo "::notice::Published ${PKG}@${VER}."
-          fi
-
-      # create-exo-app is versioned independently (0.1.x) and lives in its own
-      # workspace package. `npm publish` runs its `prepack` (pnpm build → tsc +
-      # shebang), so dist/index.js is built from source at publish time; a build
-      # failure surfaces before anything is uploaded. Same OIDC provenance and
-      # public access as the core — no extra secrets.
+      # create-exo-app is versioned independently and ships from source (its own
+      # prepack build) — not part of the build-once coordinated three.
       - name: Publish create-exo-app to npm
         working-directory: packages/create-exo-app
         run: |
@@ -208,3 +180,21 @@ jobs:
             npm publish --provenance --access public
             echo "::notice::Published ${PKG}@${VER}."
           fi
+
+      - name: Generate release notes
+        run: |
+          pnpm release:notes -- \
+            --tag "${TARGET_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --out ".release/release-notes.md"
+
+      - name: Create GitHub release with Full ZIP
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: .release/release-notes.md
+          tag_name: ${{ env.TARGET_TAG }}
+          files: |
+            .release/exojs-${{ env.TARGET_TAG }}-full.zip
+            .release/exojs-${{ env.TARGET_TAG }}-full.zip.sha256
+            .release/artifacts/checksums.sha256
+            .release/artifacts/release-manifest.json

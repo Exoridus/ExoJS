@@ -1,8 +1,8 @@
-import type { Rectangle } from '@/math/Rectangle';
-import type { Filter } from '@/rendering/filters/Filter';
-import type { Geometry } from '@/rendering/geometry/Geometry';
-import type { MaskSource, RenderNode } from '@/rendering/RenderNode';
-import type { BlendModes } from '@/rendering/types';
+import type { Rectangle } from '#math/Rectangle';
+import type { Filter } from '#rendering/filters/Filter';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { MaskSource, RenderNode } from '#rendering/RenderNode';
+import type { BlendModes } from '#rendering/types';
 
 import type { DrawCommand, RenderEntryKind } from './RenderCommand';
 

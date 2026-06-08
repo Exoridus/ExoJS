@@ -1,5 +1,4 @@
 // Auto-generated from video-drawable.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, Scene, Video } from '@codexo/exojs';
 const VIDEO_URL = assets.demo.video.demoLoop;
 const app = new Application({

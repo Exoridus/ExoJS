@@ -1,4 +1,4 @@
-import { GlyphSdf } from '@/rendering/text/GlyphSdf';
+import { GlyphSdf } from '#rendering/text/GlyphSdf';
 
 /**
  * Regression: assigning `canvas.width`/`height` — which {@link GlyphSdf} does

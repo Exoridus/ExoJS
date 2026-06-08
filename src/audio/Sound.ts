@@ -1,10 +1,11 @@
-import { AbstractMedia } from '@/audio/AbstractMedia';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
-import type { AudioBus } from '@/audio/AudioBus';
-import { getAudioManager } from '@/audio/AudioManager';
-import type { PlaybackOptions } from '@/core/types';
-import { clamp } from '@/math/utils';
-import { Vector } from '@/math/Vector';
+import type { PlaybackOptions } from '#core/types';
+import { clamp } from '#math/utils';
+import { Vector } from '#math/Vector';
+
+import { AbstractMedia } from './AbstractMedia';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
+import type { AudioBus } from './AudioBus';
+import { getAudioManager } from './AudioManager';
 
 /**
  * Eviction strategy used when the pool is full and a new play is requested.

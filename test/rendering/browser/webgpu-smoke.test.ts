@@ -8,7 +8,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-vi.mock('@/rendering/RendererRegistry', () => ({
+vi.mock('#rendering/RendererRegistry', () => ({
   RendererRegistry: class {
     registerRenderer() {
       return this;
@@ -34,10 +34,10 @@ vi.mock('@/rendering/RendererRegistry', () => ({
   },
 }));
 
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 // ── Section 1: raw WebGPU API availability ────────────────────────────────
 

@@ -1,7 +1,7 @@
-﻿import { Signal } from '@/core/Signal';
-import { RenderPassInspectorLayer } from '@/debug/RenderPassInspectorLayer';
-import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
+﻿import { Signal } from '#core/Signal';
+import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
+import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
 // Stub the glyph atlas pool so Text construction doesn't touch a real 2D canvas context.
 const fakeGlyph = {
@@ -93,9 +93,9 @@ const makeApp = (root: FakeNode | null = null) =>
     scene: { currentScene: root ? { root } : null },
     onFrame: new Signal(),
     onResize: new Signal(),
-  }) as unknown as import('@/core/Application').Application;
+  }) as unknown as import('#core/Application').Application;
 
-const makeTime = () => ({ milliseconds: 16, seconds: 0.016 }) as unknown as import('@/core/Time').Time;
+const makeTime = () => ({ milliseconds: 16, seconds: 0.016 }) as unknown as import('#core/Time').Time;
 
 // ---------------------------------------------------------------------------
 // Tests

@@ -1,5 +1,4 @@
 // Auto-generated from vinyl-record.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, AudioAnalyser, BeatDetector, Color, Graphics, Music, Scene } from '@codexo/exojs';
 const app = new Application({
     canvas: {

@@ -1,4 +1,4 @@
-import { removeArrayItems } from '@/core/utils';
+import { removeArrayItems } from './utils';
 
 /**
  * Listener function for a {@link Signal}. Returning `false` from a handler

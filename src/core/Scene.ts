@@ -1,9 +1,9 @@
-import type { Tween } from '@/animation/Tween';
-import type { InputBinding, InputBindingOptions, InputChannel } from '@/input/InputBinding';
-import { Container } from '@/rendering/Container';
-import type { RenderingContext } from '@/rendering/RenderingContext';
-import type { RenderNode } from '@/rendering/RenderNode';
-import type { Loader } from '@/resources/Loader';
+import type { Tween } from '#animation/Tween';
+import type { InputBinding, InputBindingOptions, InputChannel } from '#input/InputBinding';
+import { Container } from '#rendering/Container';
+import type { RenderingContext } from '#rendering/RenderingContext';
+import type { RenderNode } from '#rendering/RenderNode';
+import type { Loader } from '#resources/Loader';
 
 import type { Application } from './Application';
 import type { Time } from './Time';

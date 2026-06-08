@@ -1,7 +1,7 @@
-import { GamepadAxis } from '@/input/GamepadAxis';
-import { GamepadButton } from '@/input/GamepadButton';
-import { GenericDualAnalogGamepadMapping } from '@/input/GenericDualAnalogGamepadMapping';
-import { ChannelSize } from '@/input/types';
+import { GamepadAxis } from '#input/GamepadAxis';
+import { GamepadButton } from '#input/GamepadButton';
+import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
+import { ChannelSize } from '#input/types';
 
 describe('GenericDualAnalogGamepadMapping', () => {
   test('maps menu and extended buttons including guide, share, capture, touchpad, and paddle1', () => {

@@ -1,7 +1,7 @@
-﻿import { Ease } from '@/animation/Easing';
-import { Tween } from '@/animation/Tween';
-import { TweenManager } from '@/animation/TweenManager';
-import { TweenState } from '@/animation/types';
+﻿import { Ease } from '#animation/Easing';
+import { Tween } from '#animation/Tween';
+import { TweenManager } from '#animation/TweenManager';
+import { TweenState } from '#animation/types';
 
 // Minimal sprite-like target.
 const makeSprite = (x = 0, y = 0, alpha = 1) => ({ x, y, alpha });

@@ -1,7 +1,7 @@
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import { Texture } from '@/rendering/texture/Texture';
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
-import { determineMimeType } from '@/resources/utils';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
+import { Texture } from '#rendering/texture/Texture';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
+import { determineMimeType } from '#resources/utils';
 
 /** Construction options for {@link TextureFactory.create}. */
 export interface TextureFactoryOptions {

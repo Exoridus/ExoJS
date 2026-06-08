@@ -1,15 +1,15 @@
 /// <reference types="@webgpu/types" />
 
-import type { Color } from '@/core/Color';
-import { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
+import type { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
+import type { RenderPassDescriptor, RenderPassLoad } from '#rendering/pass/RenderPassDescriptor';
+import type { RenderStats } from '#rendering/RenderStats';
+import type { RenderTarget } from '#rendering/RenderTarget';
+import type { View } from '#rendering/View';
 
-import type { Geometry } from '../geometry/Geometry';
-import type { RenderPassCoordinator } from '../pass/RenderPassCoordinator';
-import type { RenderPassDescriptor, RenderPassLoad } from '../pass/RenderPassDescriptor';
-import type { RenderStats } from '../RenderStats';
-import type { RenderTarget } from '../RenderTarget';
-import type { View } from '../View';
 import { stencilAttachmentFormat, WebGpuStencilClipper } from './WebGpuStencilClipper';
 
 /** Pixel-space scissor rectangle, as returned by the backend. @internal */

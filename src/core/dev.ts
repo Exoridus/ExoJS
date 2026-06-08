@@ -1,5 +1,33 @@
-// Internal dev/diagnostic utilities. Guards are stripped in production builds
-// when __DEV__ is replaced with `false` by the rollup replace plugin.
+// Internal dev/diagnostic utilities.
+//
+// Every function in this module is guarded by `__DEV__`, which is statically
+// replaced with `false` in production builds — the entire function body becomes
+// dead code and is tree-shaken.
+//
+// ── Argument-evaluation note ────────────────────────────────────────────────
+// JavaScript evaluates function arguments BEFORE entering the function body,
+// so `assert(expensive(), msg)` still calls `expensive()` in production even
+// though the assert body is a no-op. All callsites in the engine source have
+// been audited and fall into these categories:
+//
+//   1. Trivial value/property checks — the comparisons and template-literal
+//      messages are simple enough that the production cost is negligible.
+//      → No guard needed; the inline `if (__DEV__ && …)` in the function
+//        body is sufficient.
+//
+//   2. Nontrivial string formatting or allocations — the callsite wraps the
+//      call in an explicit `if (__DEV__) { … }` block so the arguments are
+//      never evaluated in production.
+//
+//   3. Side-effecting validation — callsites that mutate state must always
+//      be guarded externally. (None exist in the current engine source.)
+//
+//   4. Always-on runtime validation — guards user input and public-contract
+//      invariants that must remain active in production. These do NOT use
+//      this module; they throw unconditionally.
+//
+// New callers: prefer category 1 for simple checks. For anything that
+// allocates objects, calls functions, or formats strings use category 2.
 
 const _warned = new Set<string>();
 

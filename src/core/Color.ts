@@ -1,5 +1,6 @@
-import type { Cloneable } from '@/core/types';
-import { clamp } from '@/math/utils';
+import { clamp } from '#math/utils';
+
+import type { Cloneable } from './types';
 
 /**
  * 32-bit RGBA color value with channel-wise accessors. Red, green, and blue

@@ -1,6 +1,6 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { AudioBus } from '@/audio/AudioBus';
-import type { AudioFilter } from '@/audio/AudioFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
+import type { AudioFilter } from '#audio/AudioFilter';
 
 // ---------------------------------------------------------------------------
 // Helpers

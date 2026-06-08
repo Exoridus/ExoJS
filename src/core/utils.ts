@@ -1,7 +1,8 @@
-import { Time } from '@/core/Time';
-import type { TextureSource } from '@/core/types';
-import { Random } from '@/math/Random';
-import { Size } from '@/math/Size';
+import { Random } from '#math/Random';
+import { Size } from '#math/Size';
+
+import { Time } from './Time';
+import type { TextureSource } from './types';
 
 interface CanvasSourceWithDisplaySize {
   displayWidth?: number;

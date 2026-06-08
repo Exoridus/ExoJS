@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { LowpassFilter } from '@/audio/filters/LowpassFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { LowpassFilter } from '#audio/filters/LowpassFilter';
 
 describe('LowpassFilter', () => {
   describe('construction', () => {

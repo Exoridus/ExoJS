@@ -1,6 +1,6 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { AudioListener } from '@/audio/AudioListener';
-import { disposeAudioManager } from '@/audio/AudioManager';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { AudioListener } from '#audio/AudioListener';
+import { disposeAudioManager } from '#audio/AudioManager';
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -1,11 +1,11 @@
-import type { Color } from '@/core/Color';
+import type { Color } from '#core/Color';
+import { playRenderTree } from '#rendering/plan/playRenderTree';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import { BackendTargetPass } from './BackendTargetPass';
-import { playRenderTree } from './plan/playRenderTree';
 import type { RenderingContext, RenderOptions } from './RenderingContext';
 import type { RenderNode } from './RenderNode';
 import { RenderPass, type RenderPassOptions } from './RenderPass';
-import type { RenderTexture } from './texture/RenderTexture';
 import type { View } from './View';
 
 /** Options for {@link RenderNodePass}. @advanced */

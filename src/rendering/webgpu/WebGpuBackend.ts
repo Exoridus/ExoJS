@@ -1,31 +1,31 @@
 /* eslint-disable max-lines */
 /// <reference types="@webgpu/types" />
 
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { Signal } from '@/core/Signal';
-import type { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
-import { Vector } from '@/math/Vector';
-import type { BlendModes } from '@/rendering/types';
-import { ScaleModes, WrapModes } from '@/rendering/types';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
+import type { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
+import type { BackendRenderPass } from '#rendering/BackendRenderPass';
+import type { Drawable } from '#rendering/Drawable';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
+import type { RenderGroup } from '#rendering/plan/RenderInstruction';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { Renderer } from '#rendering/Renderer';
+import { RendererRegistry } from '#rendering/RendererRegistry';
+import type { RenderStats } from '#rendering/RenderStats';
+import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
+import type { BlendModes } from '#rendering/types';
+import { ScaleModes, WrapModes } from '#rendering/types';
+import type { View } from '#rendering/View';
 
-import type { BackendRenderPass } from '../BackendRenderPass';
-import type { Drawable } from '../Drawable';
-import type { Geometry } from '../geometry/Geometry';
-import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
-import type { RenderGroup } from '../plan/RenderInstruction';
-import type { RenderBackend } from '../RenderBackend';
-import { RenderBackendType } from '../RenderBackendType';
-import type { Renderer } from '../Renderer';
-import { RendererRegistry } from '../RendererRegistry';
-import type { RenderStats } from '../RenderStats';
-import { createRenderStats, resetRenderStats } from '../RenderStats';
-import { RenderTarget } from '../RenderTarget';
-import { DataTexture, type DataTextureFormat } from '../texture/DataTexture';
-import { RenderTexture } from '../texture/RenderTexture';
-import type { Texture } from '../texture/Texture';
-import type { View } from '../View';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';

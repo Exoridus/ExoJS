@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { ChorusFilter } from '@/audio/filters/ChorusFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { ChorusFilter } from '#audio/filters/ChorusFilter';
 
 // ---------------------------------------------------------------------------
 // Helpers

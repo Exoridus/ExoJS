@@ -1,12 +1,12 @@
-﻿import { SceneNode } from '@/core/SceneNode';
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { RenderNode } from '@/rendering/RenderNode';
-import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
+﻿import { SceneNode } from '#core/SceneNode';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { RenderNode } from '#rendering/RenderNode';
+import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 class TestDrawable extends Drawable {}
 

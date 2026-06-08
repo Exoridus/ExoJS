@@ -6,10 +6,10 @@
  * canvas 2D context.
  */
 
-import type { GlyphAtlas } from '@/rendering/text/GlyphAtlas';
-import { layoutText } from '@/rendering/text/TextLayout';
-import { TextStyle } from '@/rendering/text/TextStyle';
-import type { GlyphInfo } from '@/rendering/text/types';
+import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+import { layoutText } from '#rendering/text/TextLayout';
+import { TextStyle } from '#rendering/text/TextStyle';
+import type { GlyphInfo } from '#rendering/text/types';
 
 // ---------------------------------------------------------------------------
 // Mock atlas

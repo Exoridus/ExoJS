@@ -1,5 +1,5 @@
-import { assert } from '@/core/dev';
-import type { Texture } from '@/rendering/texture/Texture';
+import { assert } from '#core/dev';
+import type { Texture } from '#rendering/texture/Texture';
 
 /** Per-character metrics from a BMFont descriptor. */
 export interface BmFontChar {

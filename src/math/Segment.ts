@@ -1,5 +1,6 @@
-import type { Cloneable } from '@/core/types';
-import { Vector } from '@/math/Vector';
+import type { Cloneable } from '#core/types';
+
+import { Vector } from './Vector';
 
 let temp: Segment | null = null;
 

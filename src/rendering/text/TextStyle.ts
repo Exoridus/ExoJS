@@ -1,5 +1,5 @@
-import { Color } from '@/core/Color';
-import { Signal } from '@/core/Signal';
+import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
 
 import type { TextAlignment } from './types';
 

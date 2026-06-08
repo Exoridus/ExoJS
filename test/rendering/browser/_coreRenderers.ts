@@ -1,7 +1,7 @@
-import type { RenderingApplicationOptions } from '@/core/Application';
-import { materializeRendererBindings } from '@/extensions/materialize';
-import { buildCoreRendererBindings } from '@/rendering/coreRendererBindings';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+import type { RenderingApplicationOptions } from '#core/Application';
+import { materializeRendererBindings } from '#extensions/materialize';
+import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 /**
  * Wire the built-in core renderers (Sprite, Mesh, Text/BitmapText) into a bare

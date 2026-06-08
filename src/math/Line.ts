@@ -1,7 +1,8 @@
-import type { SceneNode } from '@/core/SceneNode';
-import type { Circle } from '@/math/Circle';
-import type { Collidable, CollisionResponse } from '@/math/Collision';
-import { CollisionType } from '@/math/Collision';
+import type { SceneNode } from '#core/SceneNode';
+
+import type { Circle } from './Circle';
+import type { Collidable, CollisionResponse } from './Collision';
+import { CollisionType } from './Collision';
 import {
   intersectionLineCircle,
   intersectionLineEllipse,
@@ -9,13 +10,13 @@ import {
   intersectionLinePoly,
   intersectionLineRect,
   intersectionPointLine,
-} from '@/math/collision-detection';
-import type { Ellipse } from '@/math/Ellipse';
-import { Interval } from '@/math/Interval';
-import type { Polygon } from '@/math/Polygon';
-import { Rectangle } from '@/math/Rectangle';
-import type { ShapeLike } from '@/math/ShapeLike';
-import { Vector } from '@/math/Vector';
+} from './collision-detection';
+import type { Ellipse } from './Ellipse';
+import { Interval } from './Interval';
+import type { Polygon } from './Polygon';
+import { Rectangle } from './Rectangle';
+import type { ShapeLike } from './ShapeLike';
+import { Vector } from './Vector';
 
 let temp: Line | null = null;
 

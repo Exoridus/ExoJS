@@ -1,6 +1,5 @@
-import { getPreciseTime } from '@/core/utils';
-
 import { Time } from './Time';
+import { getPreciseTime } from './utils';
 
 /**
  * High-precision wall-clock that accumulates elapsed time while running.

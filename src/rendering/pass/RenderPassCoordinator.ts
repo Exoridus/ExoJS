@@ -1,9 +1,9 @@
-import type { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
+import type { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { RenderTarget } from '#rendering/RenderTarget';
+import type { View } from '#rendering/View';
 
-import type { Geometry } from '../geometry/Geometry';
-import type { RenderTarget } from '../RenderTarget';
-import type { View } from '../View';
 import type { RenderPassDescriptor, RenderPassLoad } from './RenderPassDescriptor';
 
 /**

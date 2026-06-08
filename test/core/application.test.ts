@@ -17,8 +17,8 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
 };
 
 interface ApplicationTestHarness {
-  readonly Application: typeof import('@/core/Application').Application;
-  readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
+  readonly Application: typeof import('#core/Application').Application;
+  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
   readonly LoaderMock: MockInstance;
   readonly InputManagerMock: MockInstance;
   readonly webglManager: {
@@ -120,26 +120,26 @@ const loadApplicationHarness = async (
   });
 
   vi.resetModules();
-  vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+  vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({
     WebGl2Backend: BackendMock,
   }));
-  vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+  vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
     WebGpuBackend: WebGpuBackendMock,
   }));
-  vi.doMock('@/resources/Loader', () => ({
+  vi.doMock('#resources/Loader', () => ({
     Loader: LoaderMock,
   }));
-  vi.doMock('@/extensions/materialize', () => ({
+  vi.doMock('#extensions/materialize', () => ({
     materializeAssetBindings: vi.fn(),
     materializeRendererBindings: vi.fn(),
   }));
-  vi.doMock('@/rendering/coreRendererBindings', () => ({
+  vi.doMock('#rendering/coreRendererBindings', () => ({
     buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
-  vi.doMock('@/input/InputManager', () => ({
+  vi.doMock('#input/InputManager', () => ({
     InputManager: InputManagerMock,
   }));
-  vi.doMock('@/input/InteractionManager', () => ({
+  vi.doMock('#input/InteractionManager', () => ({
     InteractionManager: vi.fn(function () {
       return {
         update: vi.fn(),
@@ -148,13 +148,13 @@ const loadApplicationHarness = async (
       };
     }),
   }));
-  vi.doMock('@/core/SceneManager', () => ({
+  vi.doMock('#core/SceneManager', () => ({
     SceneManager: vi.fn(function () {
       return sceneManager;
     }),
   }));
 
-  const { Application, ApplicationStatus } = await import('@/core/Application');
+  const { Application, ApplicationStatus } = await import('#core/Application');
 
   return {
     Application,
@@ -177,7 +177,7 @@ describe('Application', () => {
 
   test('update flushes renderer once per frame while running', async () => {
     const { Application, ApplicationStatus } = await loadApplicationHarness();
-    const app = Object.create(Application.prototype) as import('@/core/Application').Application;
+    const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
     const inputManager = { update: vi.fn() };
     const tweens = { update: vi.fn() };
@@ -289,7 +289,7 @@ describe('Application', () => {
         canvas: { element: document.createElement('canvas') },
       });
 
-      await app.start({} as import('@/core/Scene').Scene);
+      await app.start({} as import('#core/Scene').Scene);
 
       expect(WebGpuBackendMock).toHaveBeenCalledTimes(1);
       expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
@@ -317,7 +317,7 @@ describe('Application', () => {
         backend: { type: 'webgpu' },
       });
 
-      await expect(app.start({} as import('@/core/Scene').Scene)).rejects.toThrow(webgpuError);
+      await expect(app.start({} as import('#core/Scene').Scene)).rejects.toThrow(webgpuError);
       expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
       expect(webgpuManager.destroy).not.toHaveBeenCalled();
       expect(BackendMock).not.toHaveBeenCalled();
@@ -372,8 +372,8 @@ describe('Application', () => {
   test('passes grouped loader options through to Loader constructor', async () => {
     const { Application, LoaderMock } = await loadApplicationHarness();
     const fetchOptions: RequestInit = { credentials: 'include' };
-    const cache = {} as import('@/resources/CacheStore').CacheStore;
-    const cacheStrategy = { resolve: vi.fn() } as unknown as import('@/resources/CacheStrategy').CacheStrategy;
+    const cache = {} as import('#resources/CacheStore').CacheStore;
+    const cacheStrategy = { resolve: vi.fn() } as unknown as import('#resources/CacheStrategy').CacheStrategy;
 
     new Application({
       loader: {
@@ -405,7 +405,7 @@ describe('Application', () => {
       },
     });
 
-    const appArg = InputManagerMock.mock.calls[0][0] as import('@/core/Application').Application;
+    const appArg = InputManagerMock.mock.calls[0][0] as import('#core/Application').Application;
 
     expect(appArg.options.input?.gamepadSlotStrategy).toBe('compact');
     expect(appArg.options.input?.pointerDistanceThreshold).toBe(24);
@@ -424,7 +424,7 @@ describe('Application', () => {
       },
     });
 
-    const appArg = BackendMock.mock.calls[0][0] as import('@/core/Application').Application;
+    const appArg = BackendMock.mock.calls[0][0] as import('#core/Application').Application;
 
     expect(appArg.options.rendering?.debug).toBe(true);
     expect(appArg.options.rendering?.webglAttributes).toEqual({ antialias: true });
@@ -473,7 +473,7 @@ describe('Application', () => {
 
   test('ignores removed flat options at runtime (no compatibility shim)', async () => {
     const { Application } = await loadApplicationHarness();
-    const app = new Application({ width: 123, height: 45 } as unknown as import('@/core/Application').ApplicationOptions);
+    const app = new Application({ width: 123, height: 45 } as unknown as import('#core/Application').ApplicationOptions);
 
     expect(app.canvas.width).toBe(800);
     expect(app.canvas.height).toBe(600);
@@ -481,7 +481,7 @@ describe('Application', () => {
 
   test('stop() catches async scene teardown failures instead of leaking rejections', async () => {
     const { Application, ApplicationStatus } = await loadApplicationHarness();
-    const app = Object.create(Application.prototype) as import('@/core/Application').Application;
+    const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
     const sceneTeardownError = new Error('scene teardown failed');
     const sceneManager = {

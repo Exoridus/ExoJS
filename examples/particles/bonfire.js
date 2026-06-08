@@ -1,5 +1,4 @@
 // Auto-generated from bonfire.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, BlendModes, Color, Scene, Texture, } from '@codexo/exojs';
 import { ColorGradient, ColorOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, VectorRange, } from '@codexo/exojs-particles';
 const app = new Application({

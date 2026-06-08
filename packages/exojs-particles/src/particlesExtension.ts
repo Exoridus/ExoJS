@@ -3,8 +3,8 @@ import type { RenderBackend } from '@codexo/exojs/rendering';
 import { RenderBackendType } from '@codexo/exojs/rendering';
 
 import { ParticleSystem } from './ParticleSystem';
-import { WebGl2ParticleRenderer } from './renderers/WebGl2ParticleRenderer';
-import { WebGpuParticleRenderer } from './renderers/WebGpuParticleRenderer';
+import { WebGl2ParticleRenderer } from '#renderers/WebGl2ParticleRenderer';
+import { WebGpuParticleRenderer } from '#renderers/WebGpuParticleRenderer';
 
 /** Options for {@link createParticlesExtension}. */
 export interface ParticlesExtensionOptions {

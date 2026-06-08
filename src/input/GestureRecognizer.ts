@@ -1,5 +1,5 @@
-import type { Signal } from '@/core/Signal';
-import { Vector } from '@/math/Vector';
+import type { Signal } from '#core/Signal';
+import { Vector } from '#math/Vector';
 
 import type { Pointer } from './Pointer';
 

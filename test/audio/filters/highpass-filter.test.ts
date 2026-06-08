@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { HighpassFilter } from '@/audio/filters/HighpassFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { HighpassFilter } from '#audio/filters/HighpassFilter';
 
 describe('HighpassFilter', () => {
   describe('construction', () => {

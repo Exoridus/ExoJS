@@ -1,7 +1,7 @@
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
-import type { AssetConstructor } from '@/resources/FactoryRegistry';
-import type { Loader } from '@/resources/Loader';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
+import type { AssetConstructor } from '#resources/FactoryRegistry';
+import type { Loader } from '#resources/Loader';
 
 import type { AssetBinding, AssetHandler, RendererBinding } from './Extension';
 

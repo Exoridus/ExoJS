@@ -1,7 +1,7 @@
-import { decodeAudioData } from '@/audio/audio-context';
-import { type AudioSpriteClip, Sound } from '@/audio/Sound';
-import type { PlaybackOptions } from '@/core/types';
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { decodeAudioData } from '#audio/audio-context';
+import { type AudioSpriteClip, Sound } from '#audio/Sound';
+import type { PlaybackOptions } from '#core/types';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
 
 /** Construction options for {@link SoundFactory.create}. */
 export interface SoundFactoryOptions {

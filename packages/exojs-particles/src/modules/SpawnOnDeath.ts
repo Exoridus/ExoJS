@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "../ParticleSystem";
+﻿import type { ParticleSystem } from "#ParticleSystem";
 
 import { DeathModule } from './DeathModule';
 import type { SpawnModule } from './SpawnModule';

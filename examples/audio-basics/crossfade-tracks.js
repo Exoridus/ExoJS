@@ -1,5 +1,4 @@
 // Auto-generated from crossfade-tracks.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, crossFade, Music, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {

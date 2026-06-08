@@ -2,10 +2,10 @@
  * PointerStackLayer tests (0.7.5).
  */
 
-import { Signal } from '@/core/Signal';
-import { PointerStackLayer } from '@/debug/PointerStackLayer';
-import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
+import { Signal } from '#core/Signal';
+import { PointerStackLayer } from '#debug/PointerStackLayer';
+import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
 // Stub the glyph atlas pool so Text construction never touches a real 2D canvas context.
 const fakeGlyph = {
@@ -118,7 +118,7 @@ const makeApp = (
     },
     onFrame: new Signal(),
     onResize: new Signal(),
-  }) as unknown as import('@/core/Application').Application;
+  }) as unknown as import('#core/Application').Application;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -140,7 +140,7 @@ describe('PointerStackLayer', () => {
   test('update() does not throw when no pointer', () => {
     const app = makeApp({ pointerPos: null });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     expect(() => layer.update(fakeTime)).not.toThrow();
   });
@@ -148,7 +148,7 @@ describe('PointerStackLayer', () => {
   test('render() does not throw when root is null', () => {
     const app = makeApp({ root: null });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
     const backend = makeBackend();
 
     expect(() => {
@@ -167,7 +167,7 @@ describe('PointerStackLayer', () => {
 
     const app = makeApp({ root, pointerPos: { x: 100, y: 100 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
     const backend = app.backend;
 
     layer.update(fakeTime);
@@ -187,7 +187,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false, children: [nodeA, nodeB, nodeC] });
     const app = makeApp({ root, pointerPos: { x: 100, y: 100 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
     const backend = app.backend;
 
     // Run update to populate lines.
@@ -212,7 +212,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false, children: nodes });
     const app = makeApp({ root, pointerPos: { x: 50, y: 50 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
     const backend = app.backend;
 
     // Should not throw even with 15 matching nodes.
@@ -226,7 +226,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false });
     const app = makeApp({ root, pointerPos: null });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
     const backend = app.backend;
 
     expect(() => {
@@ -241,7 +241,7 @@ describe('PointerStackLayer', () => {
   test('destroy() cleans up without throwing', () => {
     const app = makeApp({ pointerPos: { x: 10, y: 10 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
     const backend = app.backend;
 
     // Trigger internal build.
