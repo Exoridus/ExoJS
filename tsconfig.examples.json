@@ -52,8 +52,7 @@
       "@codexo/exojs-particles": ["./packages/exojs-particles/src/index.ts"],
       "@codexo/exojs-particles/register": ["./packages/exojs-particles/src/register.ts"],
       "@codexo/exojs-tiled": ["./packages/exojs-tiled/src/index.ts"],
-      "@codexo/exojs-tiled/register": ["./packages/exojs-tiled/src/register.ts"],
-      "@assets": ["./examples/assets/index.ts"]
+      "@codexo/exojs-tiled/register": ["./packages/exojs-tiled/src/register.ts"]
     }
   },
   "include": ["examples/**/*.js", "examples/**/*.ts", "examples/shared/runtime.d.ts", "src/typings.d.ts"],

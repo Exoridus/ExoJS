@@ -1,5 +1,4 @@
 // Auto-generated from audio-buses.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {

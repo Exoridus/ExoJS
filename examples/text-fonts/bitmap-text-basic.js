@@ -1,5 +1,4 @@
 // Auto-generated from bitmap-text-basic.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, BitmapText, BmFont, Color, Scene } from '@codexo/exojs';
 const app = new Application({
     canvas: {

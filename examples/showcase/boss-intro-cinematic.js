@@ -1,5 +1,4 @@
 // Auto-generated from boss-intro-cinematic.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
 const app = new Application({
     canvas: {

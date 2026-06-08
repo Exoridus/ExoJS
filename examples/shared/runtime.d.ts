@@ -55,7 +55,7 @@ declare global {
     interface Window {
         __EXAMPLE_META__?: ExampleRuntimeMeta | null;
         __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
-        assets?: Record<string, unknown>;
+        // `assets` is declared (typed) in assets-global.d.ts.
     }
 }
 

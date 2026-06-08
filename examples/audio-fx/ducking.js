@@ -1,5 +1,4 @@
 // Auto-generated from ducking.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, AudioBus, Color, DuckingFilter, Music, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {

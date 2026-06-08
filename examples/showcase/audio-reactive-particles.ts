@@ -1,4 +1,3 @@
-import { assets } from '@assets';
 import {
     Application,
     BeatDetector,

@@ -1,4 +1,3 @@
-import { assets } from '@assets';
 import { Application, BlurFilter, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({

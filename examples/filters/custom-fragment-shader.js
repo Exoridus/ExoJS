@@ -1,5 +1,4 @@
 // Auto-generated from custom-fragment-shader.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {

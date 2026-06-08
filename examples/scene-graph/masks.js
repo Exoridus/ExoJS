@@ -1,5 +1,4 @@
 // Auto-generated from masks.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {

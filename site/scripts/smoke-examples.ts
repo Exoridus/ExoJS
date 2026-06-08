@@ -244,10 +244,17 @@ async function runExample(
         await page.goto(`${baseUrl}/preview.html?no-cache=${index}`, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
 
         await page.evaluate(
-            ({ exampleSource, meta }) => {
+            async ({ exampleSource, meta }) => {
                 const w = window as unknown as { __EXAMPLE_META__?: unknown; assets?: unknown };
                 w.__EXAMPLE_META__ = meta;
-                w.assets = {};
+                // Install the global typed asset catalog (resolved paths) before the
+                // example evaluates — examples use the `assets` global, not an import.
+                try {
+                    const catalog = (await import('./assets/catalog.js')) as { assets?: unknown };
+                    w.assets = catalog.assets ?? {};
+                } catch {
+                    w.assets = {};
+                }
                 const script = document.createElement('script');
                 script.type = 'module';
                 script.textContent = `${exampleSource}\n`;

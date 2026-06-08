@@ -1,9 +1,12 @@
 /**
  * Canonical hierarchical asset catalog for ExoJS examples and playground.
  *
- * Usage:
- *   import { assets } from '@assets';
+ * Example authors use the injected `assets` global directly (no import):
  *   const path = assets.demo.textures.particleFlame;
+ *
+ * This module is the source of truth: the controlled example runtimes install a
+ * resolved copy of it on `globalThis.assets`, and examples:sync generates the
+ * `assets-global.d.ts` typing + the runtime `catalog.js`.
  */
 export const assets = {
     demo: {

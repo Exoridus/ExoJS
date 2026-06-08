@@ -600,6 +600,8 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.es2024,
+        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
+        assets: 'readonly',
       },
     },
     plugins: {

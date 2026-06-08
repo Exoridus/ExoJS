@@ -1,5 +1,4 @@
 // Auto-generated from gamepad-spaceship.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, GamepadAxis, OscillatorSound, Scene, Sprite, Texture, Vector, } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';
 const app = new Application({

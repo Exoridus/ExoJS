@@ -1,4 +1,3 @@
-import { assets } from '@assets';
 import { Application, Color, Scene, Video } from '@codexo/exojs';
 
 const VIDEO_URL = assets.demo.video.demoLoop;

@@ -1,5 +1,4 @@
 // Auto-generated from fireworks.ts — edit the .ts source, not this file.
-import { assets } from '@assets';
 import { Application, Color, rand, Scene, seconds, Size, Texture, Timer, Vector, } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, BurstSpawn, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, } from '@codexo/exojs-particles';
 const app = new Application({

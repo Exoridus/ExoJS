@@ -1,4 +1,3 @@
-import { assets } from '@assets';
 import {
     Application, Color, FontAsset, Graphics, Json, Music, Scene,
     Sprite, Spritesheet, SvgAsset, Text, Texture,
