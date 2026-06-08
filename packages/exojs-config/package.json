@@ -1,0 +1,25 @@
+{
+  "name": "@codexo/exojs-config",
+  "version": "0.0.0",
+  "description": "Private shared tooling configuration for the ExoJS monorepo (TypeScript, ESLint, Prettier, Vitest, Rollup, package policy). Not published.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint/index.js",
+    "./prettier": "./prettier/index.js",
+    "./vitest": "./vitest/index.js",
+    "./rollup": "./rollup/index.js",
+    "./package-policy": "./package-policy/index.js",
+    "./typescript/base.json": "./typescript/base.json",
+    "./typescript/library.json": "./typescript/library.json",
+    "./typescript/extension.json": "./typescript/extension.json",
+    "./typescript/test.json": "./typescript/test.json"
+  },
+  "dependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-replace": "^6.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "rollup-plugin-string": "^3.0.0"
+  },
+  "license": "MIT"
+}

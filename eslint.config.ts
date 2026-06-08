@@ -1,3 +1,4 @@
+import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
@@ -68,45 +69,11 @@ export default defineConfig([
         },
       ],
 
-      // Engine-specific import boundaries: enforce `#` package-internal subpath
-      // imports; forbid the removed `@/` alias, parent-relative imports, bare
-      // package-internal paths, core→extension imports, and /src deep imports.
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@/*'],
-              message: "The '@/' alias was removed. Use '#dir/X' package-internal subpath imports (or './X' for the same directory).",
-            },
-            {
-              group: ['../*', '../**'],
-              message: "No parent-relative imports. Use '#dir/X' for cross-directory or './X' for the same directory.",
-            },
-            {
-              group: [
-                'audio/*',
-                'core/*',
-                'input/*',
-                'math/*',
-                'animation/*',
-                'extensions/*',
-                'debug/*',
-                'particles/*',
-                'physics/*',
-                'rendering/*',
-                'resources/*',
-                'vendor/*',
-              ],
-              message: "Package-internal imports use the '#' prefix — e.g. '#core/X' instead of 'core/X'.",
-            },
-            {
-              group: ['@codexo/exojs-*', '@codexo/exojs/src', '@codexo/exojs/src/*'],
-              message: 'Core (src/**) must not import extension packages or any package via its /src internals.',
-            },
-          ],
-        },
-      ],
+      // Engine-specific import boundaries (shared policy from @codexo/exojs-config):
+      // enforce `#` package-internal subpath imports; forbid the removed `@/` alias,
+      // parent-relative imports, bare package-internal paths, core→extension
+      // imports, and cross-package /src deep imports.
+      'no-restricted-imports': ['error', { patterns: createImportBoundaries({ internalDirs: coreInternalDirs }) }],
 
       // Core ESLint
       complexity: ['error', 20],

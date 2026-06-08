@@ -38,7 +38,8 @@
     "@codexo/exojs": "0.12.x"
   },
   "devDependencies": {
-    "@codexo/exojs": "workspace:*"
+    "@codexo/exojs": "workspace:*",
+    "@codexo/exojs-config": "workspace:*"
   },
   "license": "MIT",
   "publishConfig": {

@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Profile for an official extension package (particles, tiled). Same emit shape as a library; the extension's package-local config adds its Core `paths` mapping, customConditions, rootDir/outDir, and include/exclude.",
+  "extends": "./library.json"
+}

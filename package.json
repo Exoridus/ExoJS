@@ -68,6 +68,7 @@
     "build:dev": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
     "build:watch": "tsx node_modules/rollup/dist/bin/rollup -cw --environment EXOJS_ENV:development",
     "verify:exports": "tsx ./scripts/verify-exports.ts",
+    "verify:package-policy": "tsx ./scripts/verify-package-policy.ts",
     "verify:package": "pnpm build && pnpm verify:exports && pnpm pack",
     "verify:lockstep": "tsx ./scripts/verify-lockstep-versions.ts",
     "verify:release-matrix": "tsx ./scripts/verify-release-matrix.ts",
@@ -129,6 +130,7 @@
     "url": "git+https://github.com/Exoridus/ExoJS.git"
   },
   "devDependencies": {
+    "@codexo/exojs-config": "workspace:*",
     "@eslint/js": "^10.0.1",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "^6.0.3",
