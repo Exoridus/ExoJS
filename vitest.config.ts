@@ -158,6 +158,36 @@ export default defineConfig({
           },
         },
       },
+
+      // ── Project 7: exojs-particles — unit tests for the particles package ──
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
+        test: {
+          name: 'exojs-particles',
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./test/setup-env.vitest.ts'],
+          include: ['packages/exojs-particles/test/**/*.test.ts'],
+          testTimeout: 15_000,
+        },
+      },
+
+      // ── Project 8: exojs-tiled — unit tests for the tiled package ──
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
+        test: {
+          name: 'exojs-tiled',
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./test/setup-env.vitest.ts'],
+          include: ['packages/exojs-tiled/test/**/*.test.ts'],
+          testTimeout: 15_000,
+        },
+      },
     ],
   },
   benchmark: {
