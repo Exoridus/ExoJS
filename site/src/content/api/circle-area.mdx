@@ -1,0 +1,42 @@
+---
+title: "CircleArea"
+description: "Random point on or inside a circle of radius `radius`, centred at `(centerX, centerY)`. With `mode: 'edge'` the result lies exactly on the circumference; with `mode: 'volume'` (default) it lies anywhere in the disk, with uniform area density (sqrt-of-random-radius distribution). Use as a spawn-position distribution for circular emitters."
+symbol: "CircleArea"
+kind: "class"
+subsystem: "particles"
+importPath: "@codexo/exojs-particles"
+memberCount: 6
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-particles/src/distributions/CircleArea.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/CircleArea.ts#L15"
+---
+## Import
+
+`import { CircleArea } from '@codexo/exojs-particles'`
+
+Random point on or inside a circle of radius `radius`, centred at
+`(centerX, centerY)`. With `mode: 'edge'` the result lies exactly on the
+circumference; with `mode: 'volume'` (default) it lies anywhere in the
+disk, with uniform area density (sqrt-of-random-radius distribution).
+
+Use as a spawn-position distribution for circular emitters.
+
+## Constructors
+
+- `new(centerX: number, centerY: number, radius: number, mode: "volume" | "edge"): CircleArea`
+
+## Methods
+
+- `sample(out: Vector): Vector`
+
+## Properties
+
+- `centerX: number`
+- `centerY: number`
+- `mode: "volume" | "edge"`
+- `radius: number`
+
+## Source
+
+[packages/exojs-particles/src/distributions/CircleArea.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/CircleArea.ts#L15)

@@ -2,7 +2,7 @@ import type { CollectionEntry } from 'astro:content';
 
 export type ApiEntry = CollectionEntry<'api'>;
 
-export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'particles', 'animation', 'resources', 'math', 'debug'] as const;
+export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tiled'] as const;
 
 export type ApiSubsystem = (typeof API_SUBSYSTEM_ORDER)[number];
 
@@ -24,8 +24,8 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
         description: 'Playback, analysis, spatialization, and effect chains.',
     },
     particles: {
-        label: 'Effects',
-        description: 'Particle systems, modules, and GPU-backed simulation tools.',
+        label: 'Particles (official extension)',
+        description: 'The @codexo/exojs-particles package: particle systems, modules, distributions, and GPU-backed simulation.',
     },
     animation: {
         label: 'Animation',
@@ -42,6 +42,10 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     debug: {
         label: 'Debug / Tooling',
         description: 'Debug layers, overlays, and inspection helpers.',
+    },
+    tiled: {
+        label: 'Tiled (official extension)',
+        description: 'The @codexo/exojs-tiled package: load Tiled (.tmj) tilemaps through the loader.',
     },
 };
 

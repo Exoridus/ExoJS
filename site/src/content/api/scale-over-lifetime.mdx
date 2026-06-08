@@ -1,0 +1,48 @@
+---
+title: "ScaleOverLifetime"
+description: "Sets every live particle's scale to a curve sampled at the particle's current lifetime ratio. Both axes share one curve — for non-uniform scaling layer two ScaleOverLifetime modules with separate `axis` filters (or extend with a per-axis variant). Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like curve up to peak then down), slow-grow (linear ramp). GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and sampled with linear filtering on the GPU — no curve evaluation cost in the inner loop."
+symbol: "ScaleOverLifetime"
+kind: "class"
+subsystem: "particles"
+importPath: "@codexo/exojs-particles"
+memberCount: 7
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-particles/src/modules/ScaleOverLifetime.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ScaleOverLifetime.ts#L24"
+---
+## Import
+
+`import { ScaleOverLifetime } from '@codexo/exojs-particles'`
+
+Sets every live particle's scale to a curve sampled at the particle's
+current lifetime ratio. Both axes share one curve — for non-uniform
+scaling layer two ScaleOverLifetime modules with separate `axis` filters
+(or extend with a per-axis variant).
+
+Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like
+curve up to peak then down), slow-grow (linear ramp).
+
+GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and
+sampled with linear filtering on the GPU — no curve evaluation cost in
+the inner loop.
+
+## Constructors
+
+- `new(curve: Curve): ScaleOverLifetime`
+
+## Methods
+
+- `apply(system: ParticleSystem, _dt: number): void`
+- `destroy(): void`
+- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
+- `wgsl(): WgslContribution`
+- `writeUniforms(view: DataView, byteOffset: number, dt: number): void`
+
+## Properties
+
+- `curve: Curve`
+
+## Source
+
+[packages/exojs-particles/src/modules/ScaleOverLifetime.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ScaleOverLifetime.ts#L24)

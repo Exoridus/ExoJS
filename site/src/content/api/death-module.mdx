@@ -1,0 +1,46 @@
+---
+title: "DeathModule"
+description: "Per-particle hook invoked exactly once when a particle expires, before its slot is recycled by the compaction pass. The dying particle's data is still readable at `system.posX[slot]` etc. Use for sub-emitters (spawn child particles where this one died), event dispatch (trigger an audio cue, score event), or trail termination. Implementation pattern: ```ts onDeath(system, slot) { const x = system.posX[slot]; const y = system.posY[slot]; this._childSystem.spawnBurstAt(x, y, 8); } ```"
+symbol: "DeathModule"
+kind: "class"
+subsystem: "particles"
+importPath: "@codexo/exojs-particles"
+memberCount: 3
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Source"]
+sourcePath: "packages/exojs-particles/src/modules/DeathModule.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/DeathModule.ts#L21"
+---
+## Import
+
+`import { DeathModule } from '@codexo/exojs-particles'`
+
+Per-particle hook invoked exactly once when a particle expires, before
+its slot is recycled by the compaction pass. The dying particle's data
+is still readable at `system.posX[slot]` etc.
+
+Use for sub-emitters (spawn child particles where this one died), event
+dispatch (trigger an audio cue, score event), or trail termination.
+
+Implementation pattern:
+
+```ts
+onDeath(system, slot) \{
+    const x = system.posX[slot];
+    const y = system.posY[slot];
+    this._childSystem.spawnBurstAt(x, y, 8);
+\}
+```
+
+## Constructors
+
+- `new(): DeathModule`
+
+## Methods
+
+- `destroy(): void`
+- `onDeath(system: ParticleSystem, slot: number): void`
+
+## Source
+
+[packages/exojs-particles/src/modules/DeathModule.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/DeathModule.ts#L21)

@@ -1,0 +1,45 @@
+---
+title: "ApplyForce"
+description: "Adds a constant 2D acceleration to every live particle's velocity each frame. Use for gravity (`new ApplyForce(0, 980)`), wind, or any uniform force field. Force is applied to all particles equally — for per-particle variation, layer multiple ApplyForce modules with different gates. GPU-eligible: implements UpdateModule.wgsl so this module runs in the system's compute shader on WebGPU backends with no CPU readback."
+symbol: "ApplyForce"
+kind: "class"
+subsystem: "particles"
+importPath: "@codexo/exojs-particles"
+memberCount: 8
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-particles/src/modules/ApplyForce.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ApplyForce.ts#L15"
+---
+## Import
+
+`import { ApplyForce } from '@codexo/exojs-particles'`
+
+Adds a constant 2D acceleration to every live particle's velocity each
+frame. Use for gravity (`new ApplyForce(0, 980)`), wind, or any uniform
+force field. Force is applied to all particles equally — for per-particle
+variation, layer multiple ApplyForce modules with different gates.
+
+GPU-eligible: implements UpdateModule.wgsl so this module runs in
+the system's compute shader on WebGPU backends with no CPU readback.
+
+## Constructors
+
+- `new(accelerationX: number, accelerationY: number): ApplyForce`
+
+## Methods
+
+- `apply(system: ParticleSystem, dt: number): void`
+- `destroy(): void`
+- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
+- `wgsl(): WgslContribution`
+- `writeUniforms(view: DataView, offset: number): void`
+
+## Properties
+
+- `accelerationX: number`
+- `accelerationY: number`
+
+## Source
+
+[packages/exojs-particles/src/modules/ApplyForce.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ApplyForce.ts#L15)

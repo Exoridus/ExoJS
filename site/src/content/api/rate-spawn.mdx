@@ -1,0 +1,40 @@
+---
+title: "RateSpawn"
+description: "Continuous, rate-based spawner. Emits a RateSpawnConfig.rate sample per second; sub-frame fractions accumulate so low rates (e.g. 0.5 particles/s) remain accurate over time. Each property is independently randomised via its Distribution. Every spawned particle gets a fresh sample for every configured field."
+symbol: "RateSpawn"
+kind: "class"
+subsystem: "particles"
+importPath: "@codexo/exojs-particles"
+memberCount: 4
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-particles/src/modules/RateSpawn.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/RateSpawn.ts#L37"
+---
+## Import
+
+`import { RateSpawn } from '@codexo/exojs-particles'`
+
+Continuous, rate-based spawner. Emits a RateSpawnConfig.rate
+sample per second; sub-frame fractions accumulate so low rates (e.g.
+0.5 particles/s) remain accurate over time.
+
+Each property is independently randomised via its Distribution.
+Every spawned particle gets a fresh sample for every configured field.
+
+## Constructors
+
+- `new(config: RateSpawnConfig): RateSpawn`
+
+## Methods
+
+- `apply(system: ParticleSystem, dt: number): void`
+- `destroy(): void`
+
+## Properties
+
+- `config: RateSpawnConfig`
+
+## Source
+
+[packages/exojs-particles/src/modules/RateSpawn.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/RateSpawn.ts#L37)
