@@ -344,7 +344,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'particles/gpu-particles',
                     'particles/custom-wgsl-module',
                 ],
-                apiLinks: ['particle-system'],
+                apiLinks: [],
             },
             {
                 slug: 'post-processing',

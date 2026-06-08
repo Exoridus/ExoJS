@@ -7,16 +7,43 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Particles
 
-A [`ParticleSystem`](/ExoJS/en/api/particle-system/) is a `Drawable` that manages thousands of animated sprites with data-oriented performance. Instead of creating and destroying individual `Sprite` instances per particle, the system stores particle state in parallel typed arrays (Struct-of-Arrays) and mutates them in bulk. This keeps the work per-particle extremely lean — no allocations, no GC pressure, no per-sprite transform tree overhead.
+`ParticleSystem` is a `Drawable` that manages thousands of animated sprites with data-oriented performance. Instead of creating and destroying individual `Sprite` instances per particle, the system stores particle state in parallel typed arrays (Struct-of-Arrays) and mutates them in bulk. This keeps the work per-particle extremely lean — no allocations, no GC pressure, no per-sprite transform tree overhead.
+
+> **Note:** `ParticleSystem` ships as an official ExoJS extension package.
+> Install `@codexo/exojs-particles` alongside `@codexo/exojs`:
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-particles
+> ```
 
 The mental model: you register modules that describe how particles *spawn*, what they *do over their lifetime*, and what happens when they *die*. The system calls those modules each frame against its internal arrays. You never write a per-particle `update` loop.
+
+## Setup
+
+Register the extension when creating your Application:
+
+```js
+import { Application } from '@codexo/exojs';
+import { particlesExtension } from '@codexo/exojs-particles';
+
+const app = new Application({ extensions: [particlesExtension] });
+```
+
+Or use the `/register` convenience import for global registration:
+
+```js
+import '@codexo/exojs-particles/register';
+import { Application } from '@codexo/exojs';
+
+const app = new Application(); // picks up particlesExtension automatically
+```
 
 ## Construction
 
 A particle system needs a texture and a capacity:
 
 ```js
-import { BlendModes, ParticleSystem, Texture } from '@codexo/exojs';
+import { BlendModes, Texture } from '@codexo/exojs';
+import { ParticleSystem } from '@codexo/exojs-particles';
 
 const system = new ParticleSystem(loader.get(Texture, 'spark'), {
     capacity: 4000,
@@ -41,7 +68,7 @@ A spawn module creates new particles each frame. Two built-in spawners cover the
 **`RateSpawn`** — continuous emission at a configurable rate (particles per second):
 
 ```js no-check
-import { ConeDirection, Constant, RateSpawn, Range, Vector } from '@codexo/exojs';
+import { ConeDirection, Constant, RateSpawn, Range, Vector } from '@codexo/exojs-particles';
 
 system.addSpawnModule(new RateSpawn({
     rate: new Constant(180),                            // 180 particles / second
@@ -54,7 +81,7 @@ system.addSpawnModule(new RateSpawn({
 **`BurstSpawn`** — named bursts at scheduled times, with optional looping:
 
 ```js no-check
-import { BurstSpawn, ConeDirection, Constant, Range, Vector } from '@codexo/exojs';
+import { BurstSpawn, ConeDirection, Constant, Range, Vector } from '@codexo/exojs-particles';
 
 const burst = new BurstSpawn({
     schedule: [{ time: 0, count: 100 }],  // 100 particles at t=0
@@ -93,17 +120,17 @@ Update modules mutate particle state each frame. Every built-in update module th
 The frequently-used update modules:
 
 ```js no-check
+import { Color } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
-    Color,
     ColorOverLifetime,
     ColorGradient,
     Curve,
     Drag,
     ScaleOverLifetime,
     Turbulence,
-} from '@codexo/exojs';
+} from '@codexo/exojs-particles';
 
 // Constant acceleration (gravity, wind)
 system.addUpdateModule(new ApplyForce(0, 240));
@@ -142,7 +169,7 @@ Other available update modules: `RotateOverLifetime`, `VelocityOverLifetime`, `A
 A death module fires once per particle when its lifetime expires. The only built-in death module is `SpawnOnDeath`:
 
 ```js no-check
-import { SpawnOnDeath } from '@codexo/exojs';
+import { SpawnOnDeath } from '@codexo/exojs-particles';
 
 system.addDeathModule(new SpawnOnDeath(
     childSystem,     // target ParticleSystem
