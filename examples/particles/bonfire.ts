@@ -3,17 +3,20 @@ import {
     Application,
     BlendModes,
     Color,
+    Scene,
+    Texture,
+} from '@codexo/exojs';
+import {
     ColorGradient,
     ColorOverLifetime,
     ConeDirection,
     Constant,
+    particlesExtension,
     ParticleSystem,
     Range,
     RateSpawn,
-    Scene,
-    Texture,
     VectorRange,
-} from '@codexo/exojs';
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -21,6 +24,7 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);

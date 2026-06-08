@@ -1,4 +1,12 @@
-import { Application, Color, Constant, ParticleSystem, RateSpawn, Scene, Texture, UpdateModule, Vector, type WgslContribution } from '@codexo/exojs';
+import { Application, Color, Scene, Texture, Vector } from '@codexo/exojs';
+import {
+    Constant,
+    particlesExtension,
+    ParticleSystem,
+    RateSpawn,
+    UpdateModule,
+    type WgslContribution,
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -9,6 +17,7 @@ const app = new Application({
     loader: {
         basePath: 'assets/',
     },
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);

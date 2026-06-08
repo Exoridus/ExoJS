@@ -1,19 +1,22 @@
 import {
-    AlphaFadeOverLifetime,
     Application,
-    ApplyForce,
     Color,
+    Scene,
+    Texture,
+} from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    ApplyForce,
     Constant,
     Curve,
+    particlesExtension,
     ParticleSystem,
     Range,
     RateSpawn,
     ScaleOverLifetime,
-    Scene,
-    Texture,
     UpdateModule,
     VectorRange,
-} from '@codexo/exojs';
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -22,6 +25,7 @@ const app = new Application({
     },
     clearColor: new Color(0.02 * 255, 0.02 * 255, 0.045 * 255, 1),
     backend: { type: 'webgpu' },
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);

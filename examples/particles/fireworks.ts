@@ -1,16 +1,8 @@
 import { textures } from '@assets';
 import {
-    AlphaFadeOverLifetime,
     Application,
-    ApplyForce,
-    BurstSpawn,
     Color,
-    ConeDirection,
-    Constant,
-    Curve,
-    ParticleSystem,
     rand,
-    Range,
     Scene,
     seconds,
     Size,
@@ -18,6 +10,17 @@ import {
     Timer,
     Vector,
 } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    ApplyForce,
+    BurstSpawn,
+    ConeDirection,
+    Constant,
+    Curve,
+    particlesExtension,
+    ParticleSystem,
+    Range,
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -25,6 +28,7 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);

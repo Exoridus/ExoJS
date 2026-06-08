@@ -1,18 +1,21 @@
 import { textures } from '@assets';
 import {
-    AlphaFadeOverLifetime,
     Application,
     Color,
-    Constant,
     GamepadAxis,
     OscillatorSound,
-    ParticleSystem,
-    RateSpawn,
     Scene,
     Sprite,
     Texture,
     Vector,
 } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    Constant,
+    particlesExtension,
+    ParticleSystem,
+    RateSpawn,
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -20,6 +23,7 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);

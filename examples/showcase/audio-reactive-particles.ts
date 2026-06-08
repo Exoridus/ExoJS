@@ -1,18 +1,21 @@
 import { audio, textures } from '@assets';
 import {
-    AlphaFadeOverLifetime,
     Application,
     BeatDetector,
-    BurstSpawn,
     Color,
-    ConeDirection,
-    Constant,
     Music,
-    ParticleSystem,
     Scene,
     Texture,
     Vector,
 } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    BurstSpawn,
+    ConeDirection,
+    Constant,
+    particlesExtension,
+    ParticleSystem,
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -20,6 +23,7 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);
