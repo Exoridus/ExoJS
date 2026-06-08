@@ -105,8 +105,6 @@ importers:
         specifier: ^4.1.7
         version: 4.1.8(@types/node@25.9.1)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-istanbul@4.1.8)(jsdom@29.1.1)(vite@7.3.5(@types/node@25.9.1)(jiti@2.7.0)(sass@1.100.0)(tsx@4.22.4)(yaml@2.9.0))
 
-  packages/assets: {}
-
   packages/create-exo-app:
     devDependencies:
       '@types/node':
@@ -119,6 +117,18 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/exojs-particles:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+
+  packages/exojs-tiled:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+
   site:
     dependencies:
       '@astrojs/mdx':
@@ -127,9 +137,6 @@ importers:
       '@codexo/exojs':
         specifier: workspace:*
         version: link:..
-      '@codexo/exojs-assets':
-        specifier: workspace:*
-        version: link:../packages/assets
       '@fontsource/inter':
         specifier: ^5.2.8
         version: 5.2.8

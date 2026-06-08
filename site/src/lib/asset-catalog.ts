@@ -1,4 +1,4 @@
-import { rawAssets, resolveAssetCatalog } from '@codexo/exojs-assets';
+import { rawAssets, resolveAssetCatalog } from '../../../examples/assets/catalog.js';
 
 const SITE_BASE = import.meta.env.BASE_URL;
 const ASSET_BASE = `${SITE_BASE}assets/`;

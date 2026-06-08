@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
-import { rawAssets } from '../../packages/assets/src/catalog.js';
-import { resolveAssetCatalog } from '../../packages/assets/src/resolver.js';
+import { rawAssets } from '../../examples/assets/catalog.js';
+import { resolveAssetCatalog } from '../../examples/assets/resolver.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,8 +14,8 @@ const repositoryRoot = path.resolve(projectRoot, '..');
 
 const sourceExamplesDir = path.resolve(repositoryRoot, 'examples');
 const sourceAssetsDir = path.resolve(sourceExamplesDir, 'assets');
-const sourceCatalogDemoDir = path.resolve(repositoryRoot, 'packages', 'assets', 'demo');
-const sourceCatalogTechnicalDir = path.resolve(repositoryRoot, 'packages', 'assets', 'technical');
+const sourceCatalogDemoDir = path.resolve(sourceExamplesDir, 'assets', 'demo');
+const sourceCatalogTechnicalDir = path.resolve(sourceExamplesDir, 'assets', 'technical');
 
 const targetExamplesDir = path.resolve(projectRoot, 'public', 'examples');
 const targetAssetsDir = path.resolve(projectRoot, 'public', 'assets');
