@@ -162,7 +162,7 @@ class AssetBrowserScene extends Scene {
     txtAnimFrame = new Text('', { fillColor: C.dim,   fontSize: 11 });
 
     override async load(loader): Promise<void> {
-        
+
 
         const texBatch: Record<string, string> = {};
         for (const [k, url] of Object.entries(assets.demo.textures ?? {})) {
@@ -379,7 +379,7 @@ class AssetBrowserScene extends Scene {
     }
 
     private techFlatKeys(): string[] {
-        
+
         const out: string[] = [];
         for (const subcat of ['alpha', 'filtering', 'color']) {
             const items = assets.technical[subcat];
