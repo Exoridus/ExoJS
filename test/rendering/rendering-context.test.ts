@@ -1,16 +1,16 @@
-import { Color } from '@/core/Color';
-import { Rectangle } from '@/math/Rectangle';
-import { Camera } from '@/rendering/Camera';
-import { Container } from '@/rendering/Container';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { RenderingContext } from '@/rendering/RenderingContext';
-import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { View } from '@/rendering/View';
+import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
+import { Camera } from '#rendering/Camera';
+import { Container } from '#rendering/Container';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { RenderingContext } from '#rendering/RenderingContext';
+import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { View } from '#rendering/View';
 
 const createTexture = (width = 16, height = 16): Texture => {
   const canvas = document.createElement('canvas');

@@ -1,16 +1,16 @@
-import type { Color } from '@/core/Color';
-import type { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
+import type { Color } from '#core/Color';
+import type { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
 
 import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
-import type { Geometry } from './geometry/Geometry';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RendererRegistry } from './RendererRegistry';
 import type { RenderStats } from './RenderStats';
 import type { RenderTarget } from './RenderTarget';
-import type { RenderTexture } from './texture/RenderTexture';
-import type { Texture } from './texture/Texture';
 import type { BlendModes } from './types';
 import type { View } from './View';
 

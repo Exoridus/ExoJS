@@ -1,5 +1,5 @@
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { RenderNode } from '@/rendering/RenderNode';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
 
 import { RenderPlanBuilder } from './RenderPlanBuilder';
 import { RenderPlanOptimizer } from './RenderPlanOptimizer';

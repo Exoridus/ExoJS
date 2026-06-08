@@ -1,4 +1,4 @@
-import { _resetWarnOnce, assert, assertDefined, invariant, warnOnce } from '@/core/dev';
+import { _resetWarnOnce, assert, assertDefined, invariant, warnOnce } from '#core/dev';
 
 beforeEach(() => {
   _resetWarnOnce();

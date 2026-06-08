@@ -1,8 +1,8 @@
-﻿import { SceneNode } from '@/core/SceneNode';
-import { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
+﻿import { SceneNode } from '#core/SceneNode';
+import { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
 
 // Regression suite for the SceneNode transform cache after the 0.5.0 inline
 // of `Transformable`. These tests assert behavior that was previously implicit

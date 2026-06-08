@@ -1,6 +1,6 @@
-﻿import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+﻿import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 // A concrete Drawable with a configurable local-bounds size.
 class TestDrawable extends Drawable {

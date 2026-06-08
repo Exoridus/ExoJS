@@ -1,5 +1,6 @@
-import type { Rectangle } from '@/math/Rectangle';
-import { View } from '@/rendering/View';
+import type { Rectangle } from '#math/Rectangle';
+
+import { View } from './View';
 
 export interface CameraOptions {
   center?: { x: number; y: number };

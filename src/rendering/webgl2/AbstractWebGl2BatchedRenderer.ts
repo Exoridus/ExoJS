@@ -1,6 +1,6 @@
-import type { BlendModes } from '@/rendering/types';
-import { BufferTypes, BufferUsage } from '@/rendering/types';
-import { createQuadIndices } from '@/rendering/utils';
+import type { BlendModes } from '#rendering/types';
+import { BufferTypes, BufferUsage } from '#rendering/types';
+import { createQuadIndices } from '#rendering/utils';
 
 import type { Drawable } from '../Drawable';
 import { Shader } from '../shader/Shader';

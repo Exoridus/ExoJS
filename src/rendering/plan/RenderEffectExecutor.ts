@@ -1,9 +1,9 @@
-import { Rectangle } from '@/math/Rectangle';
-import type { Geometry } from '@/rendering/geometry/Geometry';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { MaskSource, RenderNode } from '@/rendering/RenderNode';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
+import { Rectangle } from '#math/Rectangle';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { MaskSource, RenderNode } from '#rendering/RenderNode';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
 
 import { type BarrierScope, ClipKind, type GroupScope } from './RenderScope';
 

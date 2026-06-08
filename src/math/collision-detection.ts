@@ -1,13 +1,5 @@
-import type { Circle } from '@/math/Circle';
-import type { Collidable, CollisionResponse } from '@/math/Collision';
-import type { Ellipse } from '@/math/Ellipse';
-import { Interval } from '@/math/Interval';
-import type { Line } from '@/math/Line';
-import type { PointLike } from '@/math/PointLike';
-import type { Polygon } from '@/math/Polygon';
-import type { Rectangle } from '@/math/Rectangle';
-import { clamp, getDistance, VoronoiRegion } from '@/math/utils';
-
+import type { Circle } from './Circle';
+import type { Collidable, CollisionResponse } from './Collision';
 import {
   buildCirclePoints,
   buildEllipsePoints,
@@ -25,6 +17,13 @@ import {
   intersectionRectRect as intersectionPrimitiveRectRect,
   polygonsIntersect,
 } from './collision-primitives';
+import type { Ellipse } from './Ellipse';
+import { Interval } from './Interval';
+import type { Line } from './Line';
+import type { PointLike } from './PointLike';
+import type { Polygon } from './Polygon';
+import type { Rectangle } from './Rectangle';
+import { clamp, getDistance, VoronoiRegion } from './utils';
 
 /**
  * INTERSECTION

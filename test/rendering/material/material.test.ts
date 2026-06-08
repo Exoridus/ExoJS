@@ -1,10 +1,10 @@
-import type { MaterialOptions } from '@/rendering/material/Material';
-import { MeshMaterial } from '@/rendering/material/MeshMaterial';
-import { ShaderSource } from '@/rendering/material/ShaderSource';
-import { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import { Texture } from '@/rendering/texture/Texture';
-import { BlendModes, ScaleModes, WrapModes } from '@/rendering/types';
+import type { MaterialOptions } from '#rendering/material/Material';
+import { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
+import { Texture } from '#rendering/texture/Texture';
+import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 
 const GLSL_VERTEX = /* glsl */ `#version 300 es
 layout(location = 0) in vec2 a_position;

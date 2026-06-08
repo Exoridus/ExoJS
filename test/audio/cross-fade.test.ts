@@ -1,5 +1,5 @@
-﻿import type { AbstractMedia } from '@/audio/AbstractMedia';
-import { crossFade } from '@/audio/crossFade';
+﻿import type { AbstractMedia } from '#audio/AbstractMedia';
+import { crossFade } from '#audio/crossFade';
 
 const makeMockMedia = (paused = false): Mocked<Pick<AbstractMedia, 'paused' | 'play' | 'pause' | 'fadeIn' | 'fadeOut'>> => ({
   paused,

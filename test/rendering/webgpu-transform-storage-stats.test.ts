@@ -1,8 +1,8 @@
-import { Color } from '@/core/Color';
-import { Drawable } from '@/rendering/Drawable';
-import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { WebGpuTransformStorage } from '@/rendering/webgpu/WebGpuTransformStorage';
+import { Color } from '#core/Color';
+import { Drawable } from '#rendering/Drawable';
+import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
 // Sprite/Mesh-like: renderer reads the shared transform storage.
 class ConsumingDrawable extends Drawable {

@@ -1,4 +1,4 @@
-import type { PlaybackOptions } from '@/core/types';
+import type { PlaybackOptions } from '#core/types';
 
 /**
  * Common public interface implemented by every playable audio source —

@@ -1,6 +1,6 @@
-import type { SceneNode } from '@/core/SceneNode';
-import { Vector } from '@/math/Vector';
-import type { View } from '@/rendering/View';
+import type { SceneNode } from '#core/SceneNode';
+import { Vector } from '#math/Vector';
+import type { View } from '#rendering/View';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 

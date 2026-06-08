@@ -1,5 +1,6 @@
-import type { Cloneable } from '@/core/types';
-import { degreesToRadians } from '@/math/utils';
+import type { Cloneable } from '#core/types';
+
+import { degreesToRadians } from './utils';
 
 let temp: Matrix | null = null;
 

@@ -10,9 +10,9 @@
  * complex mock setup, letting us validate the shape without executing code.
  */
 
-import type { Application } from '@/core/Application';
-import { Signal } from '@/core/Signal';
-import type { Texture } from '@/rendering/texture/Texture';
+import type { Application } from '#core/Application';
+import { Signal } from '#core/Signal';
+import type { Texture } from '#rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------
 // Application — cursor API

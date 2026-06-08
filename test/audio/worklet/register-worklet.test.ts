@@ -1,4 +1,4 @@
-﻿import { registerAudioWorkletProcessor } from '@/audio/worklet/registerWorklet';
+﻿import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
 
 // ---------------------------------------------------------------------------
 // Helpers

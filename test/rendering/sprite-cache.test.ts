@@ -1,7 +1,7 @@
-import { Rectangle } from '@/math/Rectangle';
-import { Container } from '@/rendering/Container';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import type { Texture } from '@/rendering/texture/Texture';
+import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import { Sprite } from '#rendering/sprite/Sprite';
+import type { Texture } from '#rendering/texture/Texture';
 
 const makeTexture = (w = 128, h = 64): Texture =>
   ({

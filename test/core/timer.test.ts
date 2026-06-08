@@ -1,5 +1,5 @@
-import { Time } from '@/core/Time';
-import { Timer } from '@/core/Timer';
+import { Time } from '#core/Time';
+import { Timer } from '#core/Timer';
 
 describe('Timer', () => {
   test('limit getter returns the configured Time', () => {

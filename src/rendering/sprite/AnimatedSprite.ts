@@ -1,8 +1,8 @@
-import { Signal } from '@/core/Signal';
-import type { Time } from '@/core/Time';
-import type { Rectangle } from '@/math/Rectangle';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { Texture } from '@/rendering/texture/Texture';
+import { Signal } from '#core/Signal';
+import type { Time } from '#core/Time';
+import type { Rectangle } from '#math/Rectangle';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
 
 import { Sprite } from './Sprite';
 import type { Spritesheet } from './Spritesheet';

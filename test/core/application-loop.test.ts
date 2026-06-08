@@ -4,8 +4,8 @@
  *   F2 — internal MAX_DELTA_MS clamp applied to simulation delta
  */
 
-import { Application, ApplicationStatus } from '@/core/Application';
-import { Time } from '@/core/Time';
+import { Application, ApplicationStatus } from '#core/Application';
+import { Time } from '#core/Time';
 
 // ---------------------------------------------------------------------------
 // Backend stubs — keep WebGL2 / WebGPU out of jsdom.
@@ -13,7 +13,7 @@ import { Time } from '@/core/Time';
 // any variable declarations in the file.
 // ---------------------------------------------------------------------------
 
-vi.mock('@/rendering/webgl2/WebGl2Backend', () => ({
+vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
     return {
       onContextLost: { add: vi.fn() },
@@ -50,7 +50,7 @@ vi.mock('@/rendering/webgl2/WebGl2Backend', () => ({
   }),
 }));
 
-vi.mock('@/rendering/webgpu/WebGpuBackend', () => ({
+vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
   WebGpuBackend: vi.fn().mockImplementation(function () {
     return {
       onDeviceLost: { add: vi.fn() },
@@ -97,8 +97,8 @@ function forceRunning(app: Application): void {
 }
 
 /** Access the private _frameClock. */
-function frameClock(app: Application): import('@/core/Clock').Clock {
-  return (app as unknown as Record<string, unknown>)['_frameClock'] as import('@/core/Clock').Clock;
+function frameClock(app: Application): import('#core/Clock').Clock {
+  return (app as unknown as Record<string, unknown>)['_frameClock'] as import('#core/Clock').Clock;
 }
 
 /** Mock _frameClock.elapsedTime getter to return a fixed Time value. */

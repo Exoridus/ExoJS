@@ -57,6 +57,11 @@ const modules: RollupOptions = {
         declaration: true,
         declarationDir: 'dist/esm',
         declarationMap: false,
+        // This package has no package-internal `#` imports. Disable source
+        // conditions for the build so Core's `#` imports (in its built .d.ts)
+        // resolve to Core's dist, not Core's source (single type identity).
+        customConditions: [],
+        // Core types come from the BUILT declarations (ambient .d.ts).
         paths: {
           '@codexo/exojs': ['../../dist/esm/index.d.ts'],
           '@codexo/exojs/extensions': ['../../dist/esm/extensions/index.d.ts'],

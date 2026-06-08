@@ -1,4 +1,4 @@
-import { parseBmFontText } from '@/resources/factories/BmFontFactory';
+import { parseBmFontText } from '#resources/factories/BmFontFactory';
 
 // ---------------------------------------------------------------------------
 // Fixtures

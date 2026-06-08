@@ -1,8 +1,8 @@
-import { Color } from '@/core/Color';
-import { LinearGradient } from '@/rendering/gradient/LinearGradient';
-import { RadialGradient } from '@/rendering/gradient/RadialGradient';
-import { Graphics } from '@/rendering/primitives/Graphics';
-import { DataTexture } from '@/rendering/texture/DataTexture';
+import { Color } from '#core/Color';
+import { LinearGradient } from '#rendering/gradient/LinearGradient';
+import { RadialGradient } from '#rendering/gradient/RadialGradient';
+import { Graphics } from '#rendering/primitives/Graphics';
+import { DataTexture } from '#rendering/texture/DataTexture';
 
 const createLinearGradient = (): LinearGradient =>
   new LinearGradient(

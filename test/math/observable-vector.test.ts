@@ -1,4 +1,4 @@
-﻿import { ObservableVector } from '@/math/ObservableVector';
+﻿import { ObservableVector } from '#math/ObservableVector';
 
 describe('ObservableVector.destroy()', () => {
   // destroy() should not throw

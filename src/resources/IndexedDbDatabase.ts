@@ -1,5 +1,6 @@
-import { supportsIndexedDb } from '@/core/utils';
-import type { Database } from '@/resources/Database';
+import { supportsIndexedDb } from '#core/utils';
+
+import type { Database } from './Database';
 
 const defaultStoreNames: readonly string[] = [
   'font',

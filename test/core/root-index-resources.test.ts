@@ -1,4 +1,4 @@
-import * as exo from '@/index';
+import * as exo from '#index';
 
 describe('root index resources exports', () => {
   test('re-exports resource tokens, stores, and factories', () => {

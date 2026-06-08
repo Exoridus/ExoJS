@@ -1,9 +1,9 @@
-import { Color } from '@/core/Color';
-import { Matrix } from '@/math/Matrix';
-import { Container } from '@/rendering/Container';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { Texture } from '@/rendering/texture/Texture';
-import { TransformBuffer } from '@/rendering/TransformBuffer';
+import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
+import { Container } from '#rendering/Container';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { Texture } from '#rendering/texture/Texture';
+import { TransformBuffer } from '#rendering/TransformBuffer';
 
 describe('TransformBuffer', () => {
   test('stores transform rows and normalized tint at the requested slot', () => {

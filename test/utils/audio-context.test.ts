@@ -60,7 +60,7 @@ describe('utils/audio-context', () => {
 
     const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
-    await import('@/audio/audio-context');
+    await import('#audio/audio-context');
 
     expect(audioContextCreations).toBe(0);
     expect(offlineAudioContextCreations).toBe(0);
@@ -101,7 +101,7 @@ describe('utils/audio-context', () => {
 
     const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
-    const { onAudioContextReady } = await import('@/audio/audio-context');
+    const { onAudioContextReady } = await import('#audio/audio-context');
 
     onAudioContextReady.once(() => undefined);
 

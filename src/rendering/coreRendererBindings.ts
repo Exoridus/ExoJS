@@ -1,18 +1,18 @@
-import type { RenderingApplicationOptions } from '@/core/Application';
-import type { RendererBinding } from '@/extensions/Extension';
+import type { RenderingApplicationOptions } from '#core/Application';
+import type { RendererBinding } from '#extensions/Extension';
+import { Mesh } from '#rendering/mesh/Mesh';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { BitmapText } from '#rendering/text/BitmapText';
+import { Text } from '#rendering/text/Text';
+import { WebGl2MeshRenderer } from '#rendering/webgl2/WebGl2MeshRenderer';
+import { WebGl2SpriteRenderer } from '#rendering/webgl2/WebGl2SpriteRenderer';
+import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
+import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
+import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 
-import { Mesh } from './mesh/Mesh';
 import { RenderBackendType } from './RenderBackendType';
 import type { Renderer } from './Renderer';
-import { Sprite } from './sprite/Sprite';
-import { BitmapText } from './text/BitmapText';
-import { Text } from './text/Text';
-import { WebGl2MeshRenderer } from './webgl2/WebGl2MeshRenderer';
-import { WebGl2SpriteRenderer } from './webgl2/WebGl2SpriteRenderer';
-import { WebGl2TextRenderer } from './webgl2/WebGl2TextRenderer';
-import { WebGpuMeshRenderer } from './webgpu/WebGpuMeshRenderer';
-import { WebGpuSpriteRenderer } from './webgpu/WebGpuSpriteRenderer';
-import { WebGpuTextRenderer } from './webgpu/WebGpuTextRenderer';
 
 /**
  * Build the core renderer binding array for a given rendering options config.

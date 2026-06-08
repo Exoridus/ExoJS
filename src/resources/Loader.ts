@@ -1,6 +1,6 @@
-import { Signal } from '@/core/Signal';
-import type { AssetHandler } from '@/extensions/Extension';
-import { type BmFont } from '@/rendering/text/BmFont';
+import { Signal } from '#core/Signal';
+import type { AssetHandler } from '#extensions/Extension';
+import { type BmFont } from '#rendering/text/BmFont';
 
 import { Asset, AssetImpl } from './Asset';
 import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';

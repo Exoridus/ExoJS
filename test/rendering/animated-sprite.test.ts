@@ -1,7 +1,7 @@
-﻿import { Rectangle } from '@/math/Rectangle';
-import { AnimatedSprite } from '@/rendering/sprite/AnimatedSprite';
-import { Spritesheet } from '@/rendering/sprite/Spritesheet';
-import type { Texture } from '@/rendering/texture/Texture';
+﻿import { Rectangle } from '#math/Rectangle';
+import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
+import { Spritesheet } from '#rendering/sprite/Spritesheet';
+import type { Texture } from '#rendering/texture/Texture';
 
 const createTextureStub = (): Texture =>
   ({

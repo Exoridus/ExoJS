@@ -1,6 +1,6 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { AudioBus } from '@/audio/AudioBus';
-import { DuckingFilter } from '@/audio/filters/DuckingFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
+import { DuckingFilter } from '#audio/filters/DuckingFilter';
 
 // ---------------------------------------------------------------------------
 // Helpers

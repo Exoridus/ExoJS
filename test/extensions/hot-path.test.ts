@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { beforeEach } from 'vitest';
 
-import type { RendererBinding } from '@/extensions/Extension';
-import { ExtensionRegistry } from '@/extensions/ExtensionRegistry';
-import { materializeRendererBindings } from '@/extensions/materialize';
-import { resetExtensionRegistryForTesting } from '@/extensions/testing';
-import { Drawable } from '@/rendering/Drawable';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
-import { RendererRegistry } from '@/rendering/RendererRegistry';
-import { Loader } from '@/resources/Loader';
+import type { RendererBinding } from '#extensions/Extension';
+import { ExtensionRegistry } from '#extensions/ExtensionRegistry';
+import { materializeRendererBindings } from '#extensions/materialize';
+import { resetExtensionRegistryForTesting } from '#extensions/testing';
+import { Drawable } from '#rendering/Drawable';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
+import { RendererRegistry } from '#rendering/RendererRegistry';
+import { Loader } from '#resources/Loader';
 
 class TestDrawable extends Drawable {}
 
@@ -121,7 +121,7 @@ describe('hot-path spy tests', () => {
   });
 
   it('global snapshot returns identical object for N applications (shared immutable snapshot)', async () => {
-    const { buildSnapshot } = await import('@/extensions/snapshot');
+    const { buildSnapshot } = await import('#extensions/snapshot');
     const snapshots: object[] = [];
     for (let i = 0; i < 5; i++) {
       snapshots.push(buildSnapshot([]));

@@ -1,11 +1,11 @@
-import type { Application } from '@/core/Application';
-import type { Signal } from '@/core/Signal';
-import { setActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
-import type { QuadtreeItem } from '@/math/Quadtree';
-import { Quadtree } from '@/math/Quadtree';
-import { Rectangle } from '@/math/Rectangle';
-import { Container } from '@/rendering/Container';
-import type { RenderNode } from '@/rendering/RenderNode';
+import type { Application } from '#core/Application';
+import type { Signal } from '#core/Signal';
+import { setActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
+import type { QuadtreeItem } from '#math/Quadtree';
+import { Quadtree } from '#math/Quadtree';
+import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
 
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';

@@ -12,7 +12,7 @@ describe('utils/core', () => {
     const createElementSpy = vi.spyOn(document, 'createElement');
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
 
-    await import('@/core/utils');
+    await import('#core/utils');
 
     expect(createElementSpy).not.toHaveBeenCalled();
     expect(addEventListenerSpy).not.toHaveBeenCalled();
@@ -21,7 +21,7 @@ describe('utils/core', () => {
   it('creates the audio element lazily when codec support is checked', async () => {
     const createElementSpy = vi.spyOn(document, 'createElement');
 
-    const { supportsCodec } = await import('@/core/utils');
+    const { supportsCodec } = await import('#core/utils');
 
     supportsCodec('@/audio/mpeg');
 
@@ -31,7 +31,7 @@ describe('utils/core', () => {
   it('probes passive event support lazily', async () => {
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
 
-    const { supportsEventOptions } = await import('@/core/utils');
+    const { supportsEventOptions } = await import('#core/utils');
 
     expect(addEventListenerSpy).not.toHaveBeenCalled();
     expect(supportsEventOptions()).toBe(true);

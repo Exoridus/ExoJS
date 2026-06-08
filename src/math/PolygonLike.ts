@@ -1,4 +1,4 @@
-import type { PointLike } from '@/math/PointLike';
+import type { PointLike } from './PointLike';
 
 /**
  * Structural type for any object that describes a polygon via a world-space

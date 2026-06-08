@@ -1,7 +1,7 @@
-import type { Application } from '@/core/Application';
-import type { Time } from '@/core/Time';
-import { Keyboard } from '@/input/types';
-import { View } from '@/rendering/View';
+import type { Application } from '#core/Application';
+import type { Time } from '#core/Time';
+import { Keyboard } from '#input/types';
+import { View } from '#rendering/View';
 
 import { BoundingBoxesLayer } from './BoundingBoxesLayer';
 import type { DebugLayer } from './DebugLayer';

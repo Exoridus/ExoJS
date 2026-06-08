@@ -1,6 +1,6 @@
-import { Signal } from '@/core/Signal';
-import { DataTexture } from '@/rendering/texture/DataTexture';
-import { Texture } from '@/rendering/texture/Texture';
+import { Signal } from '#core/Signal';
+import { DataTexture } from '#rendering/texture/DataTexture';
+import { Texture } from '#rendering/texture/Texture';
 
 import { GlyphSdf } from './GlyphSdf';
 import type { GlyphInfo, GlyphKey, GlyphProvider } from './types';

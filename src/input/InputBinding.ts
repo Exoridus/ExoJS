@@ -1,10 +1,10 @@
-import { Signal } from '@/core/Signal';
-import { Timer } from '@/core/Timer';
-import { milliseconds } from '@/core/utils';
-import type { Keyboard } from '@/input/types';
+import { Signal } from '#core/Signal';
+import { Timer } from '#core/Timer';
+import { milliseconds } from '#core/utils';
 
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButtonChannel } from './GamepadButton';
+import type { Keyboard } from './types';
 
 /** Channel a single {@link InputBinding} can subscribe to. */
 export type InputChannel = GamepadButtonChannel | GamepadAxisChannel | Keyboard;

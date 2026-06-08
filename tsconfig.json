@@ -6,9 +6,8 @@
     "lib": ["es2022", "dom", "dom.iterable"],
     "outDir": "dist",
     "rootDir": "src",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
+    "resolvePackageJsonImports": true,
+    "customConditions": ["@codexo/source"],
     "sourceMap": true,
     "strict": true,
     "skipLibCheck": true,

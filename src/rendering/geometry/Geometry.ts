@@ -1,4 +1,4 @@
-import { Rectangle } from '@/math/Rectangle';
+import { Rectangle } from '#math/Rectangle';
 
 import type { AttributeType, GeometryAttribute, GeometryOptions, GeometryUsage, Topology } from './GeometryAttribute';
 

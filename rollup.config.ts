@@ -29,6 +29,12 @@ const gitCommitSha = (() => {
 const buildEnvironment = process.env.EXOJS_ENV === 'development' ? 'development' : 'production';
 const isDevelopmentBuild = buildEnvironment === 'development';
 
+// Activates the package-private `@codexo/source` condition in package.json#imports
+// so `#*` resolves to ./src/*.ts at build time. preserveModules then rewrites the
+// resolved paths to relative specifiers in the emitted ESM tree. The trailing
+// standard conditions keep normal dependency resolution intact.
+const sourceConditions = ['@codexo/source', 'browser', 'module', 'import', 'default'];
+
 const glslPlugin = string({
   include: ['**/*.vert', '**/*.frag'],
 });
@@ -52,7 +58,7 @@ const bundled: RollupOptions = {
   },
   plugins: [
     constantReplacementPlugin,
-    resolve({ mainFields: ['browser', 'module', 'main'] }),
+    resolve({ mainFields: ['browser', 'module', 'main'], exportConditions: sourceConditions }),
     glslPlugin,
     typescript({
       compilerOptions: { incremental: false },
@@ -63,19 +69,20 @@ const bundled: RollupOptions = {
 
 const debugBundled: RollupOptions = {
   input: 'src/debug/index.ts',
-  // All @/ imports are core dependencies — mark them external so the debug
+  // All `#` imports are core dependencies — mark them external so the debug
   // bundle contains only debug code and imports from @codexo/exojs at runtime.
-  external: id => id.startsWith('@/'),
+  // (Intra-debug imports are same-directory `./` and stay bundled.)
+  external: id => id.startsWith('#'),
   output: {
     file: 'dist/exo.debug.esm.js',
     format: 'es',
     sourcemap: true,
-    // Remap all @/ external IDs to the package name in the output.
-    paths: id => (id.startsWith('@/') ? '@codexo/exojs' : id),
+    // Remap all `#` external IDs to the package name in the output.
+    paths: id => (id.startsWith('#') ? '@codexo/exojs' : id),
   },
   plugins: [
     constantReplacementPlugin,
-    resolve({ mainFields: ['browser', 'module', 'main'] }),
+    resolve({ mainFields: ['browser', 'module', 'main'], exportConditions: sourceConditions }),
     glslPlugin,
     typescript({
       compilerOptions: { incremental: false },
@@ -95,7 +102,7 @@ const modules: RollupOptions = {
   },
   plugins: [
     constantReplacementPlugin,
-    resolve({ mainFields: ['module', 'browser', 'main'] }),
+    resolve({ mainFields: ['module', 'browser', 'main'], exportConditions: sourceConditions }),
     glslPlugin,
     typescript({
       compilerOptions: {

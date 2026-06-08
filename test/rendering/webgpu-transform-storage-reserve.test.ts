@@ -1,6 +1,6 @@
-import { Drawable } from '@/rendering/Drawable';
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import { WebGpuTransformStorage } from '@/rendering/webgpu/WebGpuTransformStorage';
+import { Drawable } from '#rendering/Drawable';
+import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
 // Minimal WebGPU device mock sufficient for storage-buffer creation/destruction.
 interface MockBuffer {

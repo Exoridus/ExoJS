@@ -1,4 +1,4 @@
-import * as exo from '@/index';
+import * as exo from '#index';
 
 describe('root index public API exports', () => {
   test('exports core surfaces documented in README and guides', () => {

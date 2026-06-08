@@ -1,4 +1,4 @@
-import { Rectangle } from '@/math/Rectangle';
+import { Rectangle } from '#math/Rectangle';
 
 import type { Texture } from '../texture/Texture';
 import { Sprite } from './Sprite';

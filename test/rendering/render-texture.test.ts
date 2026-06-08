@@ -1,4 +1,4 @@
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 describe('RenderTexture dev assertions', () => {
   test('throws when width is zero', () => {

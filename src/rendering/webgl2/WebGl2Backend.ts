@@ -1,10 +1,10 @@
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { Signal } from '@/core/Signal';
-import { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
-import { Vector } from '@/math/Vector';
-import { BlendModes } from '@/rendering/types';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
+import { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
+import { BlendModes } from '#rendering/types';
 
 import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';

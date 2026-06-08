@@ -1,6 +1,6 @@
-import { Container } from '@/rendering/Container';
-import { Mesh } from '@/rendering/mesh/Mesh';
-import { Texture } from '@/rendering/texture/Texture';
+import { Container } from '#rendering/Container';
+import { Mesh } from '#rendering/mesh/Mesh';
+import { Texture } from '#rendering/texture/Texture';
 
 export type FontFormat = 'woff2' | 'woff' | 'ttf' | 'otf';
 

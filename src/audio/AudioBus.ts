@@ -1,4 +1,4 @@
-import { clamp } from '@/math/utils';
+import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import type { AudioFilter } from './AudioFilter';

@@ -1,8 +1,8 @@
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { ScaleModes, WrapModes } from '@/rendering/types';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes, WrapModes } from '#rendering/types';
 
 import { Filter } from './Filter';
 import { WebGl2ShaderFilter } from './WebGl2ShaderFilter';

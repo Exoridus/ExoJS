@@ -1,4 +1,4 @@
-import { triangulate } from '@/math/triangulate';
+import { triangulate } from '#math/triangulate';
 
 // ---------------------------------------------------------------------------
 // Helpers

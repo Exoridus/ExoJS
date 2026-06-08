@@ -6,17 +6,17 @@
  * lifecycle methods without requiring a real WebGL2RenderingContext.
  */
 
-import type { ShaderFilterUniformValue, WebGl2ShaderFilterOptions } from '@/rendering/filters/WebGl2ShaderFilter';
-import { WebGl2ShaderFilter } from '@/rendering/filters/WebGl2ShaderFilter';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { ShaderPrimitives } from '@/rendering/types';
-import type { View } from '@/rendering/View';
-import type { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
+import type { ShaderFilterUniformValue, WebGl2ShaderFilterOptions } from '#rendering/filters/WebGl2ShaderFilter';
+import { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { ShaderPrimitives } from '#rendering/types';
+import type { View } from '#rendering/View';
+import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 // ---------------------------------------------------------------------------
 // Minimal WebGL2 rendering context mock

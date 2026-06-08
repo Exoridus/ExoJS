@@ -1,9 +1,9 @@
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import type { Time } from '@/core/Time';
-import { Graphics } from '@/rendering/primitives/Graphics';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { RenderNode } from '@/rendering/RenderNode';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import type { Time } from '#core/Time';
+import { Graphics } from '#rendering/primitives/Graphics';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
 
 import type { DebugLayerViewMode } from './DebugLayer';
 import { DebugLayer } from './DebugLayer';

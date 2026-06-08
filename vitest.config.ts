@@ -5,13 +5,23 @@ import { defineConfig } from 'vitest/config';
 
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
 // before the root alias so '@codexo/exojs/rendering' resolves before '@codexo/exojs'.
+// These map the PUBLIC cross-package specifiers to source for in-repo tests.
+// Package-internal `#*` imports are NOT aliased — they resolve through each
+// package's own package.json#imports map via the `@codexo/source` condition below.
 const aliasConfig = [
   { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
   { find: '@codexo/exojs/rendering', replacement: fileURLToPath(new URL('./src/rendering.ts', import.meta.url)) },
   { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
   { find: '@codexo/exojs', replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url)) },
-  { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
 ] as const;
+
+// Activates the package-private source conditions defined in each package.json#imports
+// so `#*` resolves to ./src/*.ts during tests. Each package owns a distinct condition
+// name (Core: @codexo/source, Particles: @codexo/exojs-particles-source); listing both
+// makes every package's `#` resolve to its own source. This is the real imports map,
+// not a Vite alias. `module`/`browser`/`import`/`default` keep normal dependency
+// resolution intact for the browser-first engine.
+const srcConditions = ['@codexo/source', '@codexo/exojs-particles-source', 'module', 'browser', 'import', 'default'];
 
 const shaderPlugin = {
   name: 'shader-text',
@@ -41,7 +51,8 @@ export default defineConfig({
     projects: [
       // ── Project 1: jsdom — all unit/integration tests ─────────────────
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {
@@ -57,7 +68,8 @@ export default defineConfig({
 
       // ── Project 2: browser-webgl-chromium — WebGL2 via Chromium headless ──
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {
@@ -80,7 +92,8 @@ export default defineConfig({
 
       // ── Project 3: browser-webgl-firefox — WebGL2 via Firefox headless ──
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {
@@ -99,7 +112,8 @@ export default defineConfig({
       // ── Project 4: browser-webgpu — WebGPU via Chromium new headless ──
       // New headless Chromium exposes a WebGPU adapter via swiftshader.
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {
@@ -123,7 +137,8 @@ export default defineConfig({
       // ── Project 5: browser-webgpu-firefox — WebGPU via Firefox headed ──
       // Firefox only exposes a WebGPU adapter in a headed session.
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {
@@ -143,7 +158,8 @@ export default defineConfig({
       // Emulates a dark-mode OS preference so colour-scheme-sensitive rendering
       // paths are exercised alongside the default light-mode session.
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {
@@ -161,7 +177,8 @@ export default defineConfig({
 
       // ── Project 7: exojs-particles — unit tests for the particles package ──
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {
@@ -176,7 +193,8 @@ export default defineConfig({
 
       // ── Project 8: exojs-tiled — unit tests for the tiled package ──
       {
-        resolve: { alias: aliasConfig },
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
         plugins: [shaderPlugin],
         define: { __DEV__: JSON.stringify(true) },
         test: {

@@ -1,4 +1,4 @@
-import type { TypedEnum } from '@/core/types';
+import type { TypedEnum } from '#core/types';
 
 /**
  * Type-safe bitfield utility for managing sets of numeric enum flags.

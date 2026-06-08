@@ -14,13 +14,13 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { LinearGradient } from '@/rendering/gradient/LinearGradient';
-import { RadialGradient } from '@/rendering/gradient/RadialGradient';
-import { Graphics } from '@/rendering/primitives/Graphics';
-import type { RenderNode } from '@/rendering/RenderNode';
-import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { LinearGradient } from '#rendering/gradient/LinearGradient';
+import { RadialGradient } from '#rendering/gradient/RadialGradient';
+import { Graphics } from '#rendering/primitives/Graphics';
+import type { RenderNode } from '#rendering/RenderNode';
+import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';

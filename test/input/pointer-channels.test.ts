@@ -3,9 +3,9 @@
  * slot allocation, normalization, multi-touch, gestures, and long-press.
  */
 
-import type { Application } from '@/core/Application';
-import { InputManager } from '@/input/InputManager';
-import { Pointer } from '@/input/Pointer';
+import type { Application } from '#core/Application';
+import { InputManager } from '#input/InputManager';
+import { Pointer } from '#input/Pointer';
 
 // ---------------------------------------------------------------------------
 // Helpers

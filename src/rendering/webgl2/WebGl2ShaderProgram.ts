@@ -1,5 +1,5 @@
-import type { TypedArray } from '@/core/types';
-import { ShaderPrimitives } from '@/rendering/types';
+import type { TypedArray } from '#core/types';
+import { ShaderPrimitives } from '#rendering/types';
 
 import type { Shader, ShaderProgram } from '../shader/Shader';
 import { ShaderAttribute } from '../shader/ShaderAttribute';

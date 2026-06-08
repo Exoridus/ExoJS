@@ -1,9 +1,9 @@
-import type { TextureSource } from '@/core/types';
-import { getTextureSourceSize } from '@/core/utils';
-import { Size } from '@/math/Size';
-import { isPowerOfTwo } from '@/math/utils';
-import { ScaleModes, WrapModes } from '@/rendering/types';
-import { createCanvas } from '@/rendering/utils';
+import type { TextureSource } from '#core/types';
+import { getTextureSourceSize } from '#core/utils';
+import { Size } from '#math/Size';
+import { isPowerOfTwo } from '#math/utils';
+import { ScaleModes, WrapModes } from '#rendering/types';
+import { createCanvas } from '#rendering/utils';
 
 import type { SamplerOptions } from './Sampler';
 

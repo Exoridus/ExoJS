@@ -1,4 +1,4 @@
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
 
 /** Construction options for {@link CsvFactory.create}. */
 export interface CsvFactoryOptions {

@@ -1,4 +1,4 @@
-﻿import { vibrate } from '@/core/utils';
+﻿import { vibrate } from '#core/utils';
 
 describe('vibrate()', () => {
   test('returns false when navigator.vibrate is unavailable', () => {

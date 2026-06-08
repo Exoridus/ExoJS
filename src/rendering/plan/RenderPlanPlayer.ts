@@ -1,4 +1,4 @@
-import type { RenderBackend } from '@/rendering/RenderBackend';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { RenderEntryKind } from './RenderCommand';
 import { RenderEffectExecutor } from './RenderEffectExecutor';

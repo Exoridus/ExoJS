@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { ReverbFilter } from '@/audio/filters/ReverbFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { ReverbFilter } from '#audio/filters/ReverbFilter';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),

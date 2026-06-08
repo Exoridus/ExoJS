@@ -1,12 +1,12 @@
-import { Bounds } from '@/core/Bounds';
-import { SceneNode } from '@/core/SceneNode';
-import { Flags } from '@/math/Flags';
-import { Matrix } from '@/math/Matrix';
-import { ObservableSize } from '@/math/ObservableSize';
-import { ObservableVector } from '@/math/ObservableVector';
-import type { PointLike } from '@/math/PointLike';
-import { Rectangle } from '@/math/Rectangle';
-import { clamp, degreesToRadians, trimRotation } from '@/math/utils';
+import { Bounds } from '#core/Bounds';
+import { SceneNode } from '#core/SceneNode';
+import { Flags } from '#math/Flags';
+import { Matrix } from '#math/Matrix';
+import { ObservableSize } from '#math/ObservableSize';
+import { ObservableVector } from '#math/ObservableVector';
+import type { PointLike } from '#math/PointLike';
+import { Rectangle } from '#math/Rectangle';
+import { clamp, degreesToRadians, trimRotation } from '#math/utils';
 
 /**
  * Dirty-flag bits for lazy {@link View} transform and bounds recalculation.

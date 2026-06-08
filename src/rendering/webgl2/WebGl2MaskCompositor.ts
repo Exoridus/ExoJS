@@ -1,5 +1,5 @@
-import type { BlendModes } from '@/rendering/types';
-import { BufferTypes, BufferUsage } from '@/rendering/types';
+import type { BlendModes } from '#rendering/types';
+import { BufferTypes, BufferUsage } from '#rendering/types';
 
 import { Shader } from '../shader/Shader';
 import type { RenderTexture } from '../texture/RenderTexture';

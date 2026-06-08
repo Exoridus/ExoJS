@@ -1,5 +1,5 @@
-﻿import { AudioBus } from '@/audio/AudioBus';
-import { AudioManager, disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
+﻿import { AudioBus } from '#audio/AudioBus';
+import { AudioManager, disposeAudioManager, getAudioManager } from '#audio/AudioManager';
 
 // ---------------------------------------------------------------------------
 // Tests

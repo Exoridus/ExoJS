@@ -1,16 +1,16 @@
-import { Color } from '@/core/Color';
-import { BackendTargetPass } from '@/rendering/BackendTargetPass';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { Shader } from '@/rendering/shader/Shader';
-import { upgradeFragmentShaderToGl300 } from '@/rendering/shader/upgradeFragmentShaderToGl300';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
-import type { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
-import { WebGl2RenderBuffer } from '@/rendering/webgl2/WebGl2RenderBuffer';
-import { createWebGl2ShaderProgram } from '@/rendering/webgl2/WebGl2ShaderProgram';
-import { WebGl2VertexArrayObject } from '@/rendering/webgl2/WebGl2VertexArrayObject';
+import { Color } from '#core/Color';
+import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { Shader } from '#rendering/shader/Shader';
+import { upgradeFragmentShaderToGl300 } from '#rendering/shader/upgradeFragmentShaderToGl300';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
+import { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
+import { createWebGl2ShaderProgram } from '#rendering/webgl2/WebGl2ShaderProgram';
+import { WebGl2VertexArrayObject } from '#rendering/webgl2/WebGl2VertexArrayObject';
 
 import { Filter } from './Filter';
 

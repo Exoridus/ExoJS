@@ -22,6 +22,13 @@
     },
     "./package.json": "./package.json"
   },
+  "imports": {
+    "#*": {
+      "@codexo/exojs-particles-source": "./src/*.ts",
+      "types": "./dist/esm/*.d.ts",
+      "default": "./dist/esm/*.js"
+    }
+  },
   "files": [
     "dist/esm/",
     "README.md",

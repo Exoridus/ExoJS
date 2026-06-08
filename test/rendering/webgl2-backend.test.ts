@@ -27,11 +27,11 @@ describe('WebGl2Backend', () => {
   }
 
   // Import the real Signal so we can construct real Signal instances.
-  let Signal!: typeof import('@/core/Signal').Signal;
+  let Signal!: typeof import('#core/Signal').Signal;
 
   beforeEach(async () => {
     vi.resetModules();
-    const mod = await import('@/core/Signal');
+    const mod = await import('#core/Signal');
     Signal = mod.Signal;
   });
 
@@ -81,7 +81,7 @@ describe('WebGl2Backend', () => {
     // Import the real class just to inspect its prototype — no GL context required.
     // We don't call the constructor, so no GL calls happen.
     vi.resetModules();
-    const { WebGl2Backend: WebGl2BackendCtor } = await import('@/rendering/webgl2/WebGl2Backend');
+    const { WebGl2Backend: WebGl2BackendCtor } = await import('#rendering/webgl2/WebGl2Backend');
 
     // setCursor has been moved to Application; it must not be on the prototype.
     // Cast via Record to avoid TS error — the point is it does not exist at runtime.
@@ -92,7 +92,7 @@ describe('WebGl2Backend', () => {
 
   test('WebGl2Backend class does not declare a cursor getter', async () => {
     vi.resetModules();
-    const { WebGl2Backend: WebGl2BackendCtor } = await import('@/rendering/webgl2/WebGl2Backend');
+    const { WebGl2Backend: WebGl2BackendCtor } = await import('#rendering/webgl2/WebGl2Backend');
 
     // The cursor getter was also removed from the backend.
     expect(Object.getOwnPropertyDescriptor(WebGl2BackendCtor.prototype, 'cursor')).toBeUndefined();
@@ -103,11 +103,11 @@ describe('WebGl2Backend', () => {
 // Application.setCursor tests
 // ---------------------------------------------------------------------------
 describe('Application.setCursor', () => {
-  let Application: typeof import('@/core/Application').Application;
+  let Application: typeof import('#core/Application').Application;
 
   beforeEach(async () => {
     vi.resetModules();
-    vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+    vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({
       WebGl2Backend: vi.fn(function () {
         return {
           initialize: vi.fn().mockResolvedValue(undefined),
@@ -122,14 +122,14 @@ describe('Application.setCursor', () => {
         };
       }),
     }));
-    vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+    vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
       WebGpuBackend: vi.fn(function () {
         return null;
       }),
     }));
 
     // stub out non-rendering deps
-    vi.doMock('@/resources/Loader', () => ({
+    vi.doMock('#resources/Loader', () => ({
       Loader: vi.fn(function () {
         return {
           destroy: vi.fn(),
@@ -140,14 +140,14 @@ describe('Application.setCursor', () => {
         };
       }),
     }));
-    vi.doMock('@/extensions/materialize', () => ({
+    vi.doMock('#extensions/materialize', () => ({
       materializeAssetBindings: vi.fn(),
       materializeRendererBindings: vi.fn(),
     }));
-    vi.doMock('@/rendering/coreRendererBindings', () => ({
+    vi.doMock('#rendering/coreRendererBindings', () => ({
       buildCoreRendererBindings: vi.fn().mockReturnValue([]),
     }));
-    vi.doMock('@/input/InputManager', () => ({
+    vi.doMock('#input/InputManager', () => ({
       InputManager: vi.fn(function () {
         return {
           update: vi.fn(),
@@ -156,12 +156,12 @@ describe('Application.setCursor', () => {
         };
       }),
     }));
-    vi.doMock('@/input/InteractionManager', () => ({
+    vi.doMock('#input/InteractionManager', () => ({
       InteractionManager: vi.fn(function () {
         return { update: vi.fn(), destroy: vi.fn() };
       }),
     }));
-    vi.doMock('@/core/SceneManager', () => ({
+    vi.doMock('#core/SceneManager', () => ({
       SceneManager: vi.fn(function () {
         return {
           update: vi.fn(),
@@ -171,7 +171,7 @@ describe('Application.setCursor', () => {
       }),
     }));
 
-    const m = await import('@/core/Application');
+    const m = await import('#core/Application');
     Application = m.Application;
   });
 

@@ -1,4 +1,4 @@
-import { fft, hannWindow, magnitudeSpectrum } from '@/audio/dsp/fft';
+import { fft, hannWindow, magnitudeSpectrum } from '#audio/dsp/fft';
 
 const FFT_SIZE = 64; // small for fast tests
 

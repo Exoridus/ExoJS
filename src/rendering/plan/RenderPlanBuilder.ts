@@ -1,9 +1,9 @@
-import { Rectangle } from '@/math/Rectangle';
-import type { Drawable } from '@/rendering/Drawable';
-import type { Geometry } from '@/rendering/geometry/Geometry';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { RenderNode } from '@/rendering/RenderNode';
-import type { View } from '@/rendering/View';
+import { Rectangle } from '#math/Rectangle';
+import type { Drawable } from '#rendering/Drawable';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
+import type { View } from '#rendering/View';
 
 import { type DrawCommand, makeMaterialKey, RenderEntryKind } from './RenderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';

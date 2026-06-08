@@ -1,17 +1,17 @@
-import { Rectangle } from '@/math/Rectangle';
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
-import { Filter } from '@/rendering/filters/Filter';
-import { type DrawCommand, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
-import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { Texture } from '@/rendering/texture/Texture';
+import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { Filter } from '#rendering/filters/Filter';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {

@@ -2,11 +2,11 @@
  * HitTestLayer tests (0.7.5).
  */
 
-import { Signal } from '@/core/Signal';
-import { HitTestLayer } from '@/debug/HitTestLayer';
-import { Graphics } from '@/rendering/primitives/Graphics';
-import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
+import { Signal } from '#core/Signal';
+import { HitTestLayer } from '#debug/HitTestLayer';
+import { Graphics } from '#rendering/primitives/Graphics';
+import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
 // Stub the glyph atlas pool so Text construction never touches a real 2D canvas context.
 const fakeGlyph = {
@@ -122,7 +122,7 @@ const makeApp = (root: FakeNode | null = null, interaction: any = makeInteractio
     interaction,
     onFrame: new Signal(),
     onResize: new Signal(),
-  }) as unknown as import('@/core/Application').Application;
+  }) as unknown as import('#core/Application').Application;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -184,9 +184,9 @@ describe('HitTestLayer', () => {
 
     vi.spyOn(Graphics.prototype, 'lineColor', 'set').mockImplementation(function (this: unknown, c) {
       colorAssignments.push({
-        r: (c as import('@/core/Color').Color).r,
-        g: (c as import('@/core/Color').Color).g,
-        b: (c as import('@/core/Color').Color).b,
+        r: (c as import('#core/Color').Color).r,
+        g: (c as import('#core/Color').Color).g,
+        b: (c as import('#core/Color').Color).b,
       });
       originalSetter?.call(this, c);
     });
@@ -214,9 +214,9 @@ describe('HitTestLayer', () => {
 
     vi.spyOn(Graphics.prototype, 'lineColor', 'set').mockImplementation(function (this: unknown, c) {
       colorAssignments.push({
-        r: (c as import('@/core/Color').Color).r,
-        g: (c as import('@/core/Color').Color).g,
-        b: (c as import('@/core/Color').Color).b,
+        r: (c as import('#core/Color').Color).r,
+        g: (c as import('#core/Color').Color).g,
+        b: (c as import('#core/Color').Color).b,
       });
       originalSetter?.call(this, c);
     });
@@ -241,9 +241,9 @@ describe('HitTestLayer', () => {
 
     vi.spyOn(Graphics.prototype, 'lineColor', 'set').mockImplementation(function (this: unknown, c) {
       colorAssignments.push({
-        r: (c as import('@/core/Color').Color).r,
-        g: (c as import('@/core/Color').Color).g,
-        b: (c as import('@/core/Color').Color).b,
+        r: (c as import('#core/Color').Color).r,
+        g: (c as import('#core/Color').Color).g,
+        b: (c as import('#core/Color').Color).b,
       });
       originalSetter?.call(this, c);
     });
@@ -290,7 +290,7 @@ describe('HitTestLayer', () => {
 
   test('update() does not throw', () => {
     const layer = new HitTestLayer(makeApp());
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     expect(() => layer.update(fakeTime)).not.toThrow();
   });

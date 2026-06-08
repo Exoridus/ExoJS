@@ -1,7 +1,7 @@
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { DataTexture } from '@/rendering/texture/DataTexture';
-import { Texture } from '@/rendering/texture/Texture';
-import { ScaleModes, WrapModes } from '@/rendering/types';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { DataTexture } from '#rendering/texture/DataTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes, WrapModes } from '#rendering/types';
 
 describe('DataTexture', () => {
   describe('construction', () => {

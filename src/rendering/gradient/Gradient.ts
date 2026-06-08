@@ -1,8 +1,8 @@
-import type { Color } from '@/core/Color';
-import type { Cloneable, Destroyable } from '@/core/types';
-import { clamp } from '@/math/utils';
-import { DataTexture } from '@/rendering/texture/DataTexture';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
+import type { Color } from '#core/Color';
+import type { Cloneable, Destroyable } from '#core/types';
+import { clamp } from '#math/utils';
+import { DataTexture } from '#rendering/texture/DataTexture';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
 
 /** Discriminant identifying the concrete gradient kind (`gradient.type`). */
 export type GradientType = 'linear' | 'radial';

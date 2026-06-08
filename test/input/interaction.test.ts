@@ -1,13 +1,13 @@
-﻿import type { Application } from '@/core/Application';
-import { Scene } from '@/core/Scene';
-import { Signal } from '@/core/Signal';
-import type { InputManager } from '@/input/InputManager';
-import type { InteractionEvent } from '@/input/InteractionEvent';
-import { InteractionManager } from '@/input/InteractionManager';
-import type { Pointer } from '@/input/Pointer';
-import { Rectangle } from '@/math/Rectangle';
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
+﻿import type { Application } from '#core/Application';
+import { Scene } from '#core/Scene';
+import { Signal } from '#core/Signal';
+import type { InputManager } from '#input/InputManager';
+import type { InteractionEvent } from '#input/InteractionEvent';
+import { InteractionManager } from '#input/InteractionManager';
+import type { Pointer } from '#input/Pointer';
+import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
 
 // ---------------------------------------------------------------------------
 // Minimal concrete RenderNode subclass for tests

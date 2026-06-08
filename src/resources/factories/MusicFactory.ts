@@ -1,7 +1,7 @@
-import { Music } from '@/audio/Music';
-import type { PlaybackOptions, StreamingLoadEvent } from '@/core/types';
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
-import { determineMimeType } from '@/resources/utils';
+import { Music } from '#audio/Music';
+import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
+import { determineMimeType } from '#resources/utils';
 
 const onceListenerOption = { once: true };
 

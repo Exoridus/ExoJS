@@ -1,6 +1,7 @@
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import { Texture } from '@/rendering/texture/Texture';
-import { ScaleModes, WrapModes } from '@/rendering/types';
+import { ScaleModes, WrapModes } from '#rendering/types';
+
+import type { SamplerOptions } from './Sampler';
+import { Texture } from './Texture';
 
 /**
  * Pixel format for {@link DataTexture}.

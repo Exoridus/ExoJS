@@ -1,6 +1,6 @@
-import type { Drawable } from '@/rendering/Drawable';
-import type { DrawCommand } from '@/rendering/plan/RenderCommand';
-import { TransformBuffer } from '@/rendering/TransformBuffer';
+import type { Drawable } from '#rendering/Drawable';
+import type { DrawCommand } from '#rendering/plan/RenderCommand';
+import { TransformBuffer } from '#rendering/TransformBuffer';
 
 const slotFloatCount = 12;
 

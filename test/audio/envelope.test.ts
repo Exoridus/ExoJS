@@ -1,4 +1,4 @@
-﻿import { Envelope } from '@/audio/Envelope';
+﻿import { Envelope } from '#audio/Envelope';
 
 const makeMockAudioParam = (): Mocked<AudioParam> =>
   ({

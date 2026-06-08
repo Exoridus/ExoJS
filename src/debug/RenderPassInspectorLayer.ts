@@ -1,14 +1,14 @@
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import type { Time } from '@/core/Time';
-import { Container } from '@/rendering/Container';
-import type { Filter } from '@/rendering/filters/Filter';
-import { Graphics } from '@/rendering/primitives/Graphics';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { RenderNode } from '@/rendering/RenderNode';
-import { RenderPipeline } from '@/rendering/RenderPipeline';
-import { Text as Text } from '@/rendering/text/Text';
-import { TextStyle } from '@/rendering/text/TextStyle';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import type { Time } from '#core/Time';
+import { Container } from '#rendering/Container';
+import type { Filter } from '#rendering/filters/Filter';
+import { Graphics } from '#rendering/primitives/Graphics';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
+import { RenderPipeline } from '#rendering/RenderPipeline';
+import { Text as Text } from '#rendering/text/Text';
+import { TextStyle } from '#rendering/text/TextStyle';
 
 import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
 

@@ -1,4 +1,4 @@
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
 
 /**
  * {@link AssetFactory} implementation that loads plain-text files (TXT, CSV,

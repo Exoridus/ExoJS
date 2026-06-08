@@ -1,13 +1,13 @@
-import { Color } from '@/core/Color';
-import { type Matrix } from '@/math/Matrix';
-import { Rectangle } from '@/math/Rectangle';
-import { type Geometry } from '@/rendering/geometry/Geometry';
-import { type RenderPassDescriptor, StencilAttachmentMode } from '@/rendering/pass/RenderPassDescriptor';
-import { createRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { View } from '@/rendering/View';
-import { type WebGpuPassBackend, WebGpuPassCoordinator } from '@/rendering/webgpu/WebGpuPassCoordinator';
+import { Color } from '#core/Color';
+import { type Matrix } from '#math/Matrix';
+import { Rectangle } from '#math/Rectangle';
+import { type Geometry } from '#rendering/geometry/Geometry';
+import { type RenderPassDescriptor, StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+import { createRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { View } from '#rendering/View';
+import { type WebGpuPassBackend, WebGpuPassCoordinator } from '#rendering/webgpu/WebGpuPassCoordinator';
 
 // A stateful mock backend with a minimal GPU device (createCommandEncoder →
 // encoder → beginRenderPass → pass) so the coordinator's real acquire/end pass

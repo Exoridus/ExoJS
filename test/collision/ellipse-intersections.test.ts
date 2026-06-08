@@ -1,16 +1,16 @@
-import { Circle } from '@/math/Circle';
+import { Circle } from '#math/Circle';
 import {
   intersectionCircleEllipse,
   intersectionEllipseEllipse,
   intersectionEllipsePoly,
   intersectionLineEllipse,
   intersectionRectEllipse,
-} from '@/math/collision-detection';
-import { Ellipse } from '@/math/Ellipse';
-import { Line } from '@/math/Line';
-import { Polygon } from '@/math/Polygon';
-import { Rectangle } from '@/math/Rectangle';
-import { Vector } from '@/math/Vector';
+} from '#math/collision-detection';
+import { Ellipse } from '#math/Ellipse';
+import { Line } from '#math/Line';
+import { Polygon } from '#math/Polygon';
+import { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
 
 describe('Ellipse intersections', () => {
   test('line/ellipse intersection works without throwing', () => {

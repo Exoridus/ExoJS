@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { WorkletFilter } from '@/audio/filters/WorkletFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { WorkletFilter } from '#audio/filters/WorkletFilter';
 
 // ---------------------------------------------------------------------------
 // Test subclass

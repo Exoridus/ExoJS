@@ -1,13 +1,13 @@
-import { Container } from '@/rendering/Container';
-import { Drawable } from '@/rendering/Drawable';
-import { type DrawCommand, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import { collectRenderGroups, type RenderInstruction } from '@/rendering/plan/RenderInstruction';
-import { RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
-import { RenderPlanOptimizer } from '@/rendering/plan/RenderPlanOptimizer';
-import type { GroupScope } from '@/rendering/plan/RenderScope';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { createRenderStats } from '@/rendering/RenderStats';
-import { RenderTarget } from '@/rendering/RenderTarget';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { collectRenderGroups, type RenderInstruction } from '#rendering/plan/RenderInstruction';
+import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
+import type { GroupScope } from '#rendering/plan/RenderScope';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { createRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
 
 class BoxDrawable extends Drawable {
   public constructor() {

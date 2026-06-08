@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { PitchShiftFilter } from '@/audio/filters/PitchShiftFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { PitchShiftFilter } from '#audio/filters/PitchShiftFilter';
 
 // ---------------------------------------------------------------------------
 // Tests

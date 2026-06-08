@@ -1,5 +1,6 @@
-import type { Cloneable, Destroyable, HasBoundingBox } from '@/core/types';
-import type { Collidable } from '@/math/Collision';
+import type { Cloneable, Destroyable, HasBoundingBox } from '#core/types';
+
+import type { Collidable } from './Collision';
 
 /**
  * Full shape contract: a {@link Collidable} that can also be cloned, destroyed,

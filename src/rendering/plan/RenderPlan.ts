@@ -1,6 +1,6 @@
-import type { Color } from '@/core/Color';
-import type { RenderTarget } from '@/rendering/RenderTarget';
-import type { View } from '@/rendering/View';
+import type { Color } from '#core/Color';
+import type { RenderTarget } from '#rendering/RenderTarget';
+import type { View } from '#rendering/View';
 
 import type { GroupScope } from './RenderScope';
 

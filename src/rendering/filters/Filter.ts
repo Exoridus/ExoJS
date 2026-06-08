@@ -1,5 +1,5 @@
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 /**
  * Abstract base class for post-process filters applied to a drawable's

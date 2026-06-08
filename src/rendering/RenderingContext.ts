@@ -1,14 +1,14 @@
-import type { Color } from '@/core/Color';
-import { type RenderBackend } from '@/rendering/RenderBackend';
-import { type RenderNode } from '@/rendering/RenderNode';
-import { type RenderStats } from '@/rendering/RenderStats';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { View } from '@/rendering/View';
+import type { Color } from '#core/Color';
+import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
+import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+import { playRenderTree } from '#rendering/plan/playRenderTree';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import { Camera } from './Camera';
-import type { RenderPassCoordinatorHost } from './pass/RenderPassCoordinator';
-import { StencilAttachmentMode } from './pass/RenderPassDescriptor';
-import { playRenderTree } from './plan/playRenderTree';
+import { type RenderBackend } from './RenderBackend';
+import { type RenderNode } from './RenderNode';
+import { type RenderStats } from './RenderStats';
+import { View } from './View';
 
 export interface RenderToOptions {
   width: number;

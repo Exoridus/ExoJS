@@ -1,6 +1,6 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { AudioBus } from '@/audio/AudioBus';
-import { VocoderFilter } from '@/audio/filters/VocoderFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
+import { VocoderFilter } from '#audio/filters/VocoderFilter';
 
 // ---------------------------------------------------------------------------
 // Helpers

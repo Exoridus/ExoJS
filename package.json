@@ -52,11 +52,20 @@
     },
     "./package.json": "./package.json"
   },
+  "imports": {
+    "#*.vert": "./src/*.vert",
+    "#*.frag": "./src/*.frag",
+    "#*": {
+      "@codexo/source": "./src/*.ts",
+      "types": "./dist/esm/*.d.ts",
+      "default": "./dist/esm/*.js"
+    }
+  },
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts",
     "clean": "rimraf dist",
-    "build": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production && tsx scripts/rewrite-dist-dts-aliases.ts",
-    "build:dev": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development && tsx scripts/rewrite-dist-dts-aliases.ts",
+    "build": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production",
+    "build:dev": "pnpm clean && tsx node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
     "build:watch": "tsx node_modules/rollup/dist/bin/rollup -cw --environment EXOJS_ENV:development",
     "verify:exports": "tsx ./scripts/verify-exports.ts",
     "verify:package": "pnpm build && pnpm verify:exports && pnpm pack",

@@ -1,8 +1,8 @@
-import type { Drawable } from '@/rendering/Drawable';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import type { DrawableConstructor, Renderer } from '@/rendering/Renderer';
-import type { AssetConstructor } from '@/resources/FactoryRegistry';
-import type { AssetLoaderContext, Loader } from '@/resources/Loader';
+import type { Drawable } from '#rendering/Drawable';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
+import type { AssetConstructor } from '#resources/FactoryRegistry';
+import type { AssetLoaderContext, Loader } from '#resources/Loader';
 
 /**
  * Per-load request passed to {@link AssetHandler.load}.

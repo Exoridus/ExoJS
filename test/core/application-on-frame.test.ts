@@ -7,8 +7,8 @@
 // ---------------------------------------------------------------------------
 
 interface OnFrameTestHarness {
-  readonly Application: typeof import('@/core/Application').Application;
-  readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
+  readonly Application: typeof import('#core/Application').Application;
+  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
   readonly sceneManager: { update: MockInstance; setScene: MockInstance; destroy: MockInstance };
   readonly backend: {
     flush: MockInstance;
@@ -46,17 +46,17 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
 
   vi.resetModules();
 
-  vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+  vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({
     WebGl2Backend: vi.fn(function () {
       return backend;
     }),
   }));
-  vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+  vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
     WebGpuBackend: vi.fn(function () {
       return backend;
     }),
   }));
-  vi.doMock('@/resources/Loader', () => ({
+  vi.doMock('#resources/Loader', () => ({
     Loader: vi.fn(function () {
       return {
         destroy: vi.fn(),
@@ -67,20 +67,20 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
       };
     }),
   }));
-  vi.doMock('@/extensions/materialize', () => ({
+  vi.doMock('#extensions/materialize', () => ({
     materializeAssetBindings: vi.fn(),
     materializeRendererBindings: vi.fn(),
   }));
-  vi.doMock('@/rendering/coreRendererBindings', () => ({
+  vi.doMock('#rendering/coreRendererBindings', () => ({
     buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
   const onCanvasFocusChange = { add: vi.fn(), remove: vi.fn(), dispatch: vi.fn(), destroy: vi.fn() };
-  vi.doMock('@/input/InputManager', () => ({
+  vi.doMock('#input/InputManager', () => ({
     InputManager: vi.fn(function () {
       return { update: vi.fn(), destroy: vi.fn(), onKeyDown, onCanvasFocusChange };
     }),
   }));
-  vi.doMock('@/input/InteractionManager', () => ({
+  vi.doMock('#input/InteractionManager', () => ({
     InteractionManager: vi.fn(function () {
       return {
         update: vi.fn(),
@@ -89,13 +89,13 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
       };
     }),
   }));
-  vi.doMock('@/core/SceneManager', () => ({
+  vi.doMock('#core/SceneManager', () => ({
     SceneManager: vi.fn(function () {
       return sceneManager;
     }),
   }));
 
-  const { Application, ApplicationStatus } = await import('@/core/Application');
+  const { Application, ApplicationStatus } = await import('#core/Application');
 
   return { Application, ApplicationStatus, sceneManager, backend };
 };
@@ -125,7 +125,7 @@ describe('Application.onFrame', () => {
 
   test('app.update() dispatches onFrame after sceneManager.update and before backend.flush', async () => {
     const { Application, ApplicationStatus } = await loadOnFrameHarness();
-    const app = Object.create(Application.prototype) as import('@/core/Application').Application;
+    const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
     const callOrder: string[] = [];
@@ -136,9 +136,9 @@ describe('Application.onFrame', () => {
     };
 
     // Get the Signal class from the same module registry that Application uses.
-    const { Signal } = await import('@/core/Signal');
+    const { Signal } = await import('#core/Signal');
 
-    const onFrame = new Signal<[import('@/core/Time').Time]>();
+    const onFrame = new Signal<[import('#core/Time').Time]>();
 
     onFrame.add(() => {
       callOrder.push('onFrame.dispatch');

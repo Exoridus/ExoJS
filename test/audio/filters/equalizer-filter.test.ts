@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { EqualizerFilter } from '@/audio/filters/EqualizerFilter';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { EqualizerFilter } from '#audio/filters/EqualizerFilter';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),

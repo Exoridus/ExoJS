@@ -1,5 +1,5 @@
-import type { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
+import type { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
 
 import type { Geometry } from '../geometry/Geometry';
 import type { RenderTarget } from '../RenderTarget';

@@ -15,13 +15,13 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
-import { RenderingContext } from '@/rendering/RenderingContext';
-import { RenderPipeline } from '@/rendering/RenderPipeline';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
+import { RenderingContext } from '#rendering/RenderingContext';
+import { RenderPipeline } from '#rendering/RenderPipeline';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';

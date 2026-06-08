@@ -1,6 +1,6 @@
-import { Rectangle } from '@/math/Rectangle';
-import { Geometry } from '@/rendering/geometry/Geometry';
-import type { GeometryAttribute, GeometryOptions } from '@/rendering/geometry/GeometryAttribute';
+import { Rectangle } from '#math/Rectangle';
+import { Geometry } from '#rendering/geometry/Geometry';
+import type { GeometryAttribute, GeometryOptions } from '#rendering/geometry/GeometryAttribute';
 
 const createAttributes = (): readonly GeometryAttribute[] => [
   { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },

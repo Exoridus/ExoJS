@@ -1,14 +1,14 @@
 /* eslint-disable max-lines */
 /// <reference types="@webgpu/types" />
 
-import type { Application } from '@/core/Application';
-import { Color } from '@/core/Color';
-import { Signal } from '@/core/Signal';
-import type { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
-import { Vector } from '@/math/Vector';
-import type { BlendModes } from '@/rendering/types';
-import { ScaleModes, WrapModes } from '@/rendering/types';
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
+import type { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
+import type { BlendModes } from '#rendering/types';
+import { ScaleModes, WrapModes } from '#rendering/types';
 
 import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';

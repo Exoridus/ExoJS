@@ -1,9 +1,9 @@
-import { Drawable } from '@/rendering/Drawable';
-import type { Geometry } from '@/rendering/geometry/Geometry';
-import type { GeometryAttribute } from '@/rendering/geometry/GeometryAttribute';
-import type { MeshMaterial } from '@/rendering/material/MeshMaterial';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { Texture } from '@/rendering/texture/Texture';
+import { Drawable } from '#rendering/Drawable';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
+import type { MeshMaterial } from '#rendering/material/MeshMaterial';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
 
 /**
  * Construction-time options for a {@link Mesh}.

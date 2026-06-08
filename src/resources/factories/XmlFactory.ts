@@ -1,4 +1,4 @@
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
 
 /**
  * {@link AssetFactory} implementation that loads XML files and produces a

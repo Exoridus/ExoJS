@@ -1,6 +1,6 @@
-import type { UniformValue } from '@/rendering/material/Material';
-import type { SpriteMaterial } from '@/rendering/material/SpriteMaterial';
-import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
+import type { UniformValue } from '#rendering/material/Material';
+import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
 import { Shader } from '../shader/Shader';
 import type { Sprite } from '../sprite/Sprite';

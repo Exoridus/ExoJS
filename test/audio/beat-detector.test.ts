@@ -1,7 +1,7 @@
-﻿import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
-import { AudioBus } from '@/audio/AudioBus';
-import { disposeAudioManager } from '@/audio/AudioManager';
-import { BeatDetector } from '@/audio/BeatDetector';
+﻿import { getAudioContext, isAudioContextReady } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
+import { disposeAudioManager } from '#audio/AudioManager';
+import { BeatDetector } from '#audio/BeatDetector';
 
 // ---------------------------------------------------------------------------
 // Types for the mock AudioWorkletNode (extended in setup-env.ts)
@@ -38,14 +38,14 @@ function makeMediaStream(): MediaStream {
   return { getTracks: () => [] } as unknown as MediaStream;
 }
 
-function makeSoundLike(): import('@/audio/Sound').Sound {
+function makeSoundLike(): import('#audio/Sound').Sound {
   const ctx = getAudioContext();
-  return { analyserTarget: ctx.createGain() } as unknown as import('@/audio/Sound').Sound;
+  return { analyserTarget: ctx.createGain() } as unknown as import('#audio/Sound').Sound;
 }
 
-function makeMusicLike(): import('@/audio/Music').Music {
+function makeMusicLike(): import('#audio/Music').Music {
   const ctx = getAudioContext();
-  return { analyserTarget: ctx.createGain() } as unknown as import('@/audio/Music').Music;
+  return { analyserTarget: ctx.createGain() } as unknown as import('#audio/Music').Music;
 }
 
 // ---------------------------------------------------------------------------
@@ -649,4 +649,4 @@ describe('BeatDetector', () => {
 });
 
 // Import for the type in the test above
-import type { UpcomingBeat } from '@/audio/BeatDetector';
+import type { UpcomingBeat } from '#audio/BeatDetector';

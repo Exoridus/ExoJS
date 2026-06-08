@@ -1,11 +1,11 @@
-import { Color } from '@/core/Color';
-import { Drawable } from '@/rendering/Drawable';
-import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '@/rendering/plan/RenderCommand';
-import type { RenderGroup } from '@/rendering/plan/RenderInstruction';
-import { RenderPlanPlayer } from '@/rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope } from '@/rendering/plan/RenderScope';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { WebGpuTransformStorage } from '@/rendering/webgpu/WebGpuTransformStorage';
+import { Color } from '#core/Color';
+import { Drawable } from '#rendering/Drawable';
+import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderGroup } from '#rendering/plan/RenderInstruction';
+import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
+import type { DrawScopeEntry, GroupScope } from '#rendering/plan/RenderScope';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
 // Sprite/Mesh-like: renderer reads shared transform storage.
 class ConsumingDrawable extends Drawable {

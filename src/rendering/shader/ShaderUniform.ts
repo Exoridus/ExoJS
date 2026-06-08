@@ -1,4 +1,4 @@
-import type { TypedArray } from '@/core/types';
+import type { TypedArray } from '#core/types';
 
 /**
  * Metadata and current value for a single GLSL uniform variable.

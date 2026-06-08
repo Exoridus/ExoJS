@@ -1,4 +1,4 @@
-import type { ScaleModes, WrapModes } from '@/rendering/types';
+import type { ScaleModes, WrapModes } from '#rendering/types';
 
 /**
  * Full set of texture sampling and upload parameters.

@@ -8,10 +8,10 @@ import type { RenderBackend } from '@codexo/exojs/rendering';
 import { Spritesheet } from '@codexo/exojs';
 import { Texture } from '@codexo/exojs';
 
-import { ParticleGpuState } from './gpu/ParticleGpuState';
-import type { DeathModule } from './modules/DeathModule';
-import type { SpawnModule } from './modules/SpawnModule';
-import type { UpdateModule } from './modules/UpdateModule';
+import { ParticleGpuState } from '#gpu/ParticleGpuState';
+import type { DeathModule } from '#modules/DeathModule';
+import type { SpawnModule } from '#modules/SpawnModule';
+import type { UpdateModule } from '#modules/UpdateModule';
 
 const defaultCapacity = 4096;
 

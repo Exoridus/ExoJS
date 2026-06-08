@@ -1,9 +1,9 @@
-import { Color } from '@/core/Color';
-import { BackendTargetPass } from '@/rendering/BackendTargetPass';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { Sprite } from '@/rendering/sprite/Sprite';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import { BlendModes } from '@/rendering/types';
+import { Color } from '#core/Color';
+import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { Sprite } from '#rendering/sprite/Sprite';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { BlendModes } from '#rendering/types';
 
 import { Filter } from './Filter';
 

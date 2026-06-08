@@ -1,10 +1,10 @@
-import { Color } from '@/core/Color';
-import { BackendTargetPass } from '@/rendering/BackendTargetPass';
-import type { RenderPassCoordinator } from '@/rendering/pass/RenderPassCoordinator';
-import type { RenderPassDescriptor } from '@/rendering/pass/RenderPassDescriptor';
-import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderTarget } from '@/rendering/RenderTarget';
-import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import { Color } from '#core/Color';
+import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
+import type { RenderPassDescriptor } from '#rendering/pass/RenderPassDescriptor';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 // BackendTargetPass is RenderBackend-typed and reaches the (backend-specific,
 // non-interface) coordinator through an optional duck-typed accessor. These

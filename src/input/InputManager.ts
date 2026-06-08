@@ -1,10 +1,9 @@
-import type { Application } from '@/core/Application';
-import { Signal } from '@/core/Signal';
-import { stopEvent } from '@/core/utils';
-import { ChannelOffset, ChannelSize, maxPointers } from '@/input/types';
-import { Flags } from '@/math/Flags';
-import { getDistance } from '@/math/utils';
-import { Vector } from '@/math/Vector';
+import type { Application } from '#core/Application';
+import { Signal } from '#core/Signal';
+import { stopEvent } from '#core/utils';
+import { Flags } from '#math/Flags';
+import { getDistance } from '#math/utils';
+import { Vector } from '#math/Vector';
 
 import { Gamepad } from './Gamepad';
 import type { GamepadAxis } from './GamepadAxis';
@@ -15,6 +14,7 @@ import { GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
+import { ChannelOffset, ChannelSize, maxPointers } from './types';
 
 const gamepadSlots = 4;
 

@@ -1,4 +1,4 @@
-﻿import { perfClearMarks, perfClearMeasures, perfMark, perfMeasure } from '@/core/Perf';
+﻿import { perfClearMarks, perfClearMeasures, perfMark, perfMeasure } from '#core/Perf';
 
 // jsdom does not implement the User Timing API (mark/measure/clearMarks/
 // clearMeasures). Tests therefore inject a minimal mock on `performance`

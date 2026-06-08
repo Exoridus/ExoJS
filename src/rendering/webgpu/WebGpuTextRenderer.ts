@@ -1,10 +1,10 @@
 /// <reference types="@webgpu/types" />
 
-import { type BitmapText } from '@/rendering/text/BitmapText';
-import type { TextPageQuads } from '@/rendering/text/Text';
-import { Text } from '@/rendering/text/Text';
-import type { Texture } from '@/rendering/texture/Texture';
-import { BlendModes } from '@/rendering/types';
+import { type BitmapText } from '#rendering/text/BitmapText';
+import type { TextPageQuads } from '#rendering/text/Text';
+import { Text } from '#rendering/text/Text';
+import type { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';

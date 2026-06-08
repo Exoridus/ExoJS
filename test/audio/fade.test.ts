@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { Sound } from '@/audio/Sound';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { Sound } from '#audio/Sound';
 
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 5 }) as AudioBuffer;
 

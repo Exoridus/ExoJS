@@ -1,5 +1,5 @@
-import type { EasingFunction } from '@/animation/Easing';
-import { Ease } from '@/animation/Easing';
+import type { EasingFunction } from '#animation/Easing';
+import { Ease } from '#animation/Easing';
 
 const EPSILON = 1e-10;
 

@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from '@/math/Matrix';
+import { Matrix } from '#math/Matrix';
 
 import type { Geometry } from '../geometry/Geometry';
 import type { GeometryAttribute } from '../geometry/GeometryAttribute';

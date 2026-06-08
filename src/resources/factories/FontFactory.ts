@@ -1,4 +1,4 @@
-import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
 
 /**
  * Options accepted by {@link FontFactory.create}.

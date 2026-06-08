@@ -2,10 +2,10 @@
  * BoundingBoxesLayer tests (0.7.5).
  */
 
-import { Signal } from '@/core/Signal';
-import { BoundingBoxesLayer } from '@/debug/BoundingBoxesLayer';
-import type { GlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
-import { resetDefaultGlyphAtlasPool } from '@/rendering/text/GlyphAtlasPool';
+import { Signal } from '#core/Signal';
+import { BoundingBoxesLayer } from '#debug/BoundingBoxesLayer';
+import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
 // Stub the glyph atlas pool so Text construction never touches a real 2D canvas context.
 const fakeGlyph = {
@@ -114,7 +114,7 @@ const makeApp = (root: FakeNode | null = null) =>
     },
     onFrame: new Signal(),
     onResize: new Signal(),
-  }) as unknown as import('@/core/Application').Application;
+  }) as unknown as import('#core/Application').Application;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -250,7 +250,7 @@ describe('BoundingBoxesLayer', () => {
 
   test('update() does not throw', () => {
     const layer = new BoundingBoxesLayer(makeApp());
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     expect(() => layer.update(fakeTime)).not.toThrow();
   });

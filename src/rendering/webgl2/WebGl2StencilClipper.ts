@@ -1,7 +1,7 @@
-import { Matrix } from '@/math/Matrix';
-import type { Geometry } from '@/rendering/geometry/Geometry';
-import type { GeometryAttribute } from '@/rendering/geometry/GeometryAttribute';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
+import { Matrix } from '#math/Matrix';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
 import { Shader } from '../shader/Shader';
 import fragmentSource from './glsl/stencil-clip.frag';

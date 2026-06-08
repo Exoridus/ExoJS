@@ -11,9 +11,9 @@
  * directive makes the type-check fail.
  */
 
-import { Color } from '@/core/Color';
-import type { LayoutOptions } from '@/rendering/text/LayoutOptions';
-import type { TextStyleOptions } from '@/rendering/text/TextStyle';
+import { Color } from '#core/Color';
+import type { LayoutOptions } from '#rendering/text/LayoutOptions';
+import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 const acceptStyle = (_options: TextStyleOptions): void => undefined;
 const acceptLayout = (_options: LayoutOptions): void => undefined;

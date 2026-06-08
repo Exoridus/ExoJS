@@ -1,8 +1,8 @@
 /// <reference types="@webgpu/types" />
 
-import type { Color } from '@/core/Color';
-import { Matrix } from '@/math/Matrix';
-import type { Rectangle } from '@/math/Rectangle';
+import type { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
+import type { Rectangle } from '#math/Rectangle';
 
 import type { Geometry } from '../geometry/Geometry';
 import type { RenderPassCoordinator } from '../pass/RenderPassCoordinator';

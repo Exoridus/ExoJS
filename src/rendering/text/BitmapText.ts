@@ -1,5 +1,5 @@
-import { assert, warnOnce } from '@/core/dev';
-import type { Texture } from '@/rendering/texture/Texture';
+import { assert, warnOnce } from '#core/dev';
+import type { Texture } from '#rendering/texture/Texture';
 
 import { AbstractText } from './AbstractText';
 import type { BmFontData } from './BmFont';

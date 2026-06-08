@@ -1,4 +1,4 @@
-import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 export interface BrowserWebGpuTestContext {
   skip: (reason: string) => void;

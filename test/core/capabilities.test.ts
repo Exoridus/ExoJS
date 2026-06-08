@@ -1,4 +1,4 @@
-import { Capabilities } from '@/core/capabilities';
+import { Capabilities } from '#core/capabilities';
 
 describe('Capabilities', () => {
   test('Capabilities.ready returns the same Promise across calls (memoized)', () => {

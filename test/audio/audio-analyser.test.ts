@@ -1,7 +1,7 @@
-﻿import { getAudioContext, isAudioContextReady } from '@/audio/audio-context';
-import { AudioAnalyser } from '@/audio/AudioAnalyser';
-import { AudioBus } from '@/audio/AudioBus';
-import { disposeAudioManager } from '@/audio/AudioManager';
+﻿import { getAudioContext, isAudioContextReady } from '#audio/audio-context';
+import { AudioAnalyser } from '#audio/AudioAnalyser';
+import { AudioBus } from '#audio/AudioBus';
+import { disposeAudioManager } from '#audio/AudioManager';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -132,7 +132,7 @@ describe('AudioAnalyser', () => {
       const soundLike = { analyserTarget: gainNode };
       const connectSpy = vi.spyOn(gainNode, 'connect');
       const a = new AudioAnalyser();
-      a.source = soundLike as unknown as import('@/audio/Sound').Sound;
+      a.source = soundLike as unknown as import('#audio/Sound').Sound;
       expect(connectSpy).toHaveBeenCalled();
       a.destroy();
     });
@@ -145,7 +145,7 @@ describe('AudioAnalyser', () => {
       const musicLike = { analyserTarget: gainNode };
       const connectSpy = vi.spyOn(gainNode, 'connect');
       const a = new AudioAnalyser();
-      a.source = musicLike as unknown as import('@/audio/Music').Music;
+      a.source = musicLike as unknown as import('#audio/Music').Music;
       expect(connectSpy).toHaveBeenCalled();
       a.destroy();
     });

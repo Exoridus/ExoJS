@@ -1,8 +1,8 @@
-import { Color } from '@/core/Color';
-import { BlendModes } from '@/rendering/types';
+import { Color } from '#core/Color';
+import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 
-import type { RenderPlanBuilder } from './plan/RenderPlanBuilder';
 import { RenderNode } from './RenderNode';
+import { BlendModes } from './types';
 
 /**
  * Base class for every renderable scene object.

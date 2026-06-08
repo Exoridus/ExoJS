@@ -1,11 +1,11 @@
-import type { Music } from '@/audio/Music';
-import type { AudioSpriteClip } from '@/audio/Sound';
-import type { Sound } from '@/audio/Sound';
-import type { PlaybackOptions, StreamingLoadEvent } from '@/core/types';
-import type { BmFont } from '@/rendering/text/BmFont';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import type { Texture } from '@/rendering/texture/Texture';
-import type { Video } from '@/rendering/video/Video';
+import type { Music } from '#audio/Music';
+import type { AudioSpriteClip } from '#audio/Sound';
+import type { Sound } from '#audio/Sound';
+import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
+import type { BmFont } from '#rendering/text/BmFont';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
+import type { Texture } from '#rendering/texture/Texture';
+import type { Video } from '#rendering/video/Video';
 
 import type { Asset } from './Asset';
 

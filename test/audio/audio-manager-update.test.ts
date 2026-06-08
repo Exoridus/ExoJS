@@ -1,6 +1,6 @@
-﻿import { getAudioContext } from '@/audio/audio-context';
-import { disposeAudioManager, getAudioManager } from '@/audio/AudioManager';
-import { Sound } from '@/audio/Sound';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
+import { Sound } from '#audio/Sound';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -95,10 +95,10 @@ describe('AudioManager.update()', () => {
       }),
       _applyVisibility: vi.fn(),
     };
-    vi.doMock('@/audio/AudioManager', () => ({
+    vi.doMock('#audio/AudioManager', () => ({
       getAudioManager: () => mixerMock,
     }));
-    vi.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+    vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({
       WebGl2Backend: vi.fn(function () {
         return {
           initialize: vi.fn(),
@@ -110,15 +110,15 @@ describe('AudioManager.update()', () => {
         };
       }),
     }));
-    vi.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+    vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
       WebGpuBackend: vi.fn(),
     }));
-    vi.doMock('@/resources/Loader', () => ({
+    vi.doMock('#resources/Loader', () => ({
       Loader: vi.fn(function () {
         return { destroy: vi.fn() };
       }),
     }));
-    vi.doMock('@/input/InputManager', () => ({
+    vi.doMock('#input/InputManager', () => ({
       InputManager: vi.fn(function () {
         return {
           update: vi.fn(),
@@ -127,7 +127,7 @@ describe('AudioManager.update()', () => {
         };
       }),
     }));
-    vi.doMock('@/input/InteractionManager', () => ({
+    vi.doMock('#input/InteractionManager', () => ({
       InteractionManager: vi.fn(function () {
         return {
           update: vi.fn(() => {
@@ -137,15 +137,15 @@ describe('AudioManager.update()', () => {
         };
       }),
     }));
-    vi.doMock('@/core/SceneManager', () => ({
+    vi.doMock('#core/SceneManager', () => ({
       SceneManager: vi.fn(function () {
         return { update: vi.fn(), setScene: vi.fn(), destroy: vi.fn() };
       }),
     }));
 
-    const { Application, ApplicationStatus } = await import('@/core/Application');
+    const { Application, ApplicationStatus } = await import('#core/Application');
 
-    const app = Object.create(Application.prototype) as import('@/core/Application').Application;
+    const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
     const tweens = {

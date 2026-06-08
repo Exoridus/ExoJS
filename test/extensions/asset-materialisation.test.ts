@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AssetBinding, AssetHandler, AssetLoadRequest } from '@/extensions/Extension';
-import { materializeAssetBindings } from '@/extensions/materialize';
-import { resetExtensionRegistryForTesting } from '@/extensions/testing';
-import type { AssetLoaderContext } from '@/resources/Loader';
-import { Loader } from '@/resources/Loader';
+import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
+import { materializeAssetBindings } from '#extensions/materialize';
+import { resetExtensionRegistryForTesting } from '#extensions/testing';
+import type { AssetLoaderContext } from '#resources/Loader';
+import { Loader } from '#resources/Loader';
 
 // Minimal test asset types
 class TypeA {}
@@ -204,7 +204,7 @@ describe('materializeAssetBindings', () => {
   });
 
   it('ExtensionRegistry is NOT read during load', async () => {
-    const { ExtensionRegistry } = await import('@/extensions/ExtensionRegistry');
+    const { ExtensionRegistry } = await import('#extensions/ExtensionRegistry');
     const handler = createTestHandler();
     const binding: AssetBinding = {
       type: TypeA as never,

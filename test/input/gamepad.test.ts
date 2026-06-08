@@ -1,9 +1,9 @@
-﻿import { Gamepad } from '@/input/Gamepad';
-import { GamepadButton } from '@/input/GamepadButton';
-import { resolveGamepadDefinition } from '@/input/GamepadDefinitions';
-import { GamepadMappingFamily } from '@/input/GamepadMapping';
-import { GenericDualAnalogGamepadMapping } from '@/input/GenericDualAnalogGamepadMapping';
-import { ChannelSize } from '@/input/types';
+﻿import { Gamepad } from '#input/Gamepad';
+import { GamepadButton } from '#input/GamepadButton';
+import { resolveGamepadDefinition } from '#input/GamepadDefinitions';
+import { GamepadMappingFamily } from '#input/GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
+import { ChannelSize } from '#input/types';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 

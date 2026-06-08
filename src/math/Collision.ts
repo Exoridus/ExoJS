@@ -1,5 +1,5 @@
-import type { Interval } from '@/math/Interval';
-import type { Vector } from '@/math/Vector';
+import type { Interval } from './Interval';
+import type { Vector } from './Vector';
 
 /**
  * Discriminant tag carried by every {@link Collidable} so that intersection

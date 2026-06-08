@@ -1,6 +1,6 @@
-import type { RenderingContext } from '@/rendering/RenderingContext';
-import { RenderPass } from '@/rendering/RenderPass';
-import { RenderPipeline } from '@/rendering/RenderPipeline';
+import type { RenderingContext } from '#rendering/RenderingContext';
+import { RenderPass } from '#rendering/RenderPass';
+import { RenderPipeline } from '#rendering/RenderPipeline';
 
 const ctx = {} as RenderingContext;
 

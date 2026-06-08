@@ -1,7 +1,7 @@
-import { RenderPassInspectorLayer } from '@/debug/RenderPassInspectorLayer';
-import type { RenderingContext } from '@/rendering/RenderingContext';
-import { RenderPass } from '@/rendering/RenderPass';
-import { RenderPipeline } from '@/rendering/RenderPipeline';
+import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
+import type { RenderingContext } from '#rendering/RenderingContext';
+import { RenderPass } from '#rendering/RenderPass';
+import { RenderPipeline } from '#rendering/RenderPipeline';
 
 class TestPass extends RenderPass {
   public override execute(_context: RenderingContext): void {

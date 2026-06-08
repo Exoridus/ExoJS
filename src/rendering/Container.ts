@@ -1,7 +1,7 @@
-import { removeArrayItems } from '@/core/utils';
-import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
+import { removeArrayItems } from '#core/utils';
+import { getActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
+import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 
-import type { RenderPlanBuilder } from './plan/RenderPlanBuilder';
 import { RenderNode } from './RenderNode';
 
 /**
