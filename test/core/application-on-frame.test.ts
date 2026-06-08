@@ -58,7 +58,13 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
   }));
   vi.doMock('@/resources/Loader', () => ({
     Loader: vi.fn(function () {
-      return { destroy: vi.fn(), hasLoadable: vi.fn().mockReturnValue(false), hasAssetType: vi.fn().mockReturnValue(false), hasExtension: vi.fn().mockReturnValue(false), bindAsset: vi.fn() };
+      return {
+        destroy: vi.fn(),
+        hasLoadable: vi.fn().mockReturnValue(false),
+        hasAssetType: vi.fn().mockReturnValue(false),
+        hasExtension: vi.fn().mockReturnValue(false),
+        bindAsset: vi.fn(),
+      };
     }),
   }));
   vi.doMock('@/extensions/materialize', () => ({

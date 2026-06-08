@@ -9,7 +9,6 @@ import { BlendModes } from '@/rendering/types';
 import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
-
 import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
 import type { RenderGroup } from '../plan/RenderInstruction';
 import type { RenderBackend } from '../RenderBackend';
@@ -178,7 +177,6 @@ export class WebGl2Backend implements RenderBackend {
     const clearColor = app.options.clearColor;
     const webglAttributes = renderingOptions.webglAttributes;
     const debug = renderingOptions.debug ?? false;
-    const spriteRendererBatchSize = renderingOptions.spriteRendererBatchSize ?? 4096;
     this._canvas = app.canvas;
 
     const gl = this._createContext(webglAttributes);

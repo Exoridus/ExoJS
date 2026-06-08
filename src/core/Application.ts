@@ -8,6 +8,7 @@ import type { GamepadDefinition } from '@/input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '@/input/InputManager';
 import { InputManager } from '@/input/InputManager';
 import { InteractionManager } from '@/input/InteractionManager';
+import { buildCoreRendererBindings } from '@/rendering/coreRendererBindings';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderingContext, type RenderToOptions } from '@/rendering/RenderingContext';
 import { type RenderNode } from '@/rendering/RenderNode';
@@ -15,7 +16,6 @@ import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
-import { buildCoreRendererBindings } from '@/rendering/coreRendererBindings';
 import { coreAssetBindings } from '@/resources/coreAssetBindings';
 import { Loader, type LoaderOptions } from '@/resources/Loader';
 

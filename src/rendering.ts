@@ -3,11 +3,11 @@
 // extension packages. Prefer the root barrel for ordinary application code.
 
 export { Drawable } from './rendering/Drawable';
+export type { RenderPlanBuilder } from './rendering/plan/RenderPlanBuilder';
 export type { RenderBackend } from './rendering/RenderBackend';
 export { RenderBackendType } from './rendering/RenderBackendType';
 export type { DrawableConstructor, Renderer } from './rendering/Renderer';
 export { RendererRegistry } from './rendering/RendererRegistry';
-export type { RenderPlanBuilder } from './rendering/plan/RenderPlanBuilder';
 export type { ShaderProgram } from './rendering/shader/Shader';
 export { Shader } from './rendering/shader/Shader';
 export { Spritesheet } from './rendering/sprite/Spritesheet';

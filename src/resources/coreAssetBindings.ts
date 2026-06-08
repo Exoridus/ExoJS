@@ -5,8 +5,6 @@ import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { Video } from '@/rendering/video/Video';
 
-import type { AssetConstructor } from './FactoryRegistry';
-import type { AssetLoaderContext, Loader } from './Loader';
 import { BinaryFactory } from './factories/BinaryFactory';
 import { parseBmFontText } from './factories/BmFontFactory';
 import { CsvFactory } from './factories/CsvFactory';
@@ -14,13 +12,14 @@ import { FontFactory } from './factories/FontFactory';
 import { ImageFactory } from './factories/ImageFactory';
 import { MusicFactory } from './factories/MusicFactory';
 import { SoundFactory } from './factories/SoundFactory';
-import { SvgFactory } from './factories/SvgFactory';
 import { SubtitleFactory } from './factories/SubtitleFactory';
-import { TextFactory } from './factories/TextFactory';
+import { SvgFactory } from './factories/SvgFactory';
 import { TextureFactory } from './factories/TextureFactory';
 import { VideoFactory } from './factories/VideoFactory';
 import { WasmFactory } from './factories/WasmFactory';
 import { XmlFactory } from './factories/XmlFactory';
+import type { AssetConstructor } from './FactoryRegistry';
+import type { AssetLoaderContext, Loader } from './Loader';
 import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -46,9 +45,7 @@ function binaryFactoryHandler<T>(
 }
 
 /** Create an AssetHandler backed by a factory that uses fetchText. */
-function textFactoryHandler<T>(
-  makeFactory: () => { create(raw: string, options?: unknown): Promise<T>; destroy(): void },
-): (loader: Loader) => AssetHandler {
+function textFactoryHandler<T>(makeFactory: () => { create(raw: string, options?: unknown): Promise<T>; destroy(): void }): (loader: Loader) => AssetHandler {
   return () => {
     const factory = makeFactory();
     return {
@@ -69,7 +66,7 @@ function binding<T>(
   opts: { typeName?: string; typeNames?: readonly string[]; extensions?: readonly string[] },
   create: (loader: Loader) => AssetHandler<T>,
 ): AssetBinding {
-  return { type, ...opts, create } as AssetBinding;
+  return { type, ...opts, create };
 }
 
 // ---------------------------------------------------------------------------
@@ -100,25 +97,17 @@ const videoBinding = binding(
   binaryFactoryHandler(() => new VideoFactory()),
 );
 
-const jsonBinding = binding(
-  Json as unknown as AssetConstructor,
-  { typeName: 'json' },
-  () => ({
-    async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<unknown> {
-      return context.fetchJson(source);
-    },
-  }),
-);
+const jsonBinding = binding(Json as unknown as AssetConstructor, { typeName: 'json' }, () => ({
+  async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<unknown> {
+    return context.fetchJson(source);
+  },
+}));
 
-const textBinding = binding(
-  TextAsset as unknown as AssetConstructor,
-  { typeName: 'text' },
-  () => ({
-    async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<string> {
-      return context.fetchText(source);
-    },
-  }),
-);
+const textBinding = binding(TextAsset as unknown as AssetConstructor, { typeName: 'text' }, () => ({
+  async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<string> {
+    return context.fetchText(source);
+  },
+}));
 
 const svgBinding = binding(
   SvgAsset as unknown as AssetConstructor,
@@ -126,25 +115,22 @@ const svgBinding = binding(
   textFactoryHandler(() => new SvgFactory()),
 );
 
-const subtitleBinding = binding(
-  SubtitleAsset as unknown as AssetConstructor,
-  { typeNames: ['vtt', 'srt'] },
-  () => {
-    const factory = new SubtitleFactory();
-    return {
-      async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<VTTCue[]> {
-        const text = await context.fetchText(source);
-        const url = source.split('?')[0].toLowerCase();
-        const fmt = url.endsWith('.srt') ? 'srt' : 'vtt';
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (factory as any).create({ fmt, text }) as Promise<VTTCue[]>;
-      },
-      destroy() {
-        factory.destroy();
-      },
-    };
-  },
-);
+const subtitleBinding = binding(SubtitleAsset as unknown as AssetConstructor, { typeNames: ['vtt', 'srt'] }, () => {
+  const factory = new SubtitleFactory();
+  return {
+    async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<VTTCue[]> {
+      const text = await context.fetchText(source);
+      const url = source.split('?')[0].toLowerCase();
+      const fmt = url.endsWith('.srt') ? 'srt' : 'vtt';
+      const fakeResponse = { text: () => Promise.resolve(text), url: source } as unknown as Response;
+      const intermediate = await factory.process(fakeResponse);
+      return factory.create({ ...intermediate, fmt });
+    },
+    destroy() {
+      factory.destroy();
+    },
+  };
+});
 
 const xmlBinding = binding(
   XmlAsset as unknown as AssetConstructor,
@@ -164,46 +150,46 @@ const binaryBinding = binding(
   binaryFactoryHandler(() => new BinaryFactory()),
 );
 
-const bmFontBinding = binding(
-  BmFont,
-  { typeName: 'bmFont', extensions: ['fnt'] },
-  (loader: Loader) => ({
-    async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
-      const text = await context.fetchText(source);
-      const fontData = parseBmFontText(text);
-      const textures = await Promise.all(
-        fontData.pages.map(page => loader.load(Texture, new URL(page, source).href)),
-      );
-      return new BmFont(fontData, textures as Texture[]);
-    },
-  }),
-);
+const bmFontBinding = binding(BmFont, { typeName: 'bmFont', extensions: ['fnt'] }, (loader: Loader) => ({
+  async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
+    const text = await context.fetchText(source);
+    const fontData = parseBmFontText(text);
+    const textures = await Promise.all(fontData.pages.map(page => loader.load(Texture, new URL(page, source).href)));
+    return new BmFont(fontData, textures as Texture[]);
+  },
+}));
 
 // Conditional bindings — only registered when the environment supports them.
 const conditionalBindings: AssetBinding[] = [];
 
 if (typeof FontFace !== 'undefined') {
-  conditionalBindings.push(binding(
-    FontAsset as unknown as AssetConstructor,
-    { typeName: 'font', extensions: ['woff', 'woff2', 'ttf', 'otf'] },
-    binaryFactoryHandler(() => new FontFactory()),
-  ));
+  conditionalBindings.push(
+    binding(
+      FontAsset as unknown as AssetConstructor,
+      { typeName: 'font', extensions: ['woff', 'woff2', 'ttf', 'otf'] },
+      binaryFactoryHandler(() => new FontFactory()),
+    ),
+  );
 }
 
 if (typeof HTMLImageElement !== 'undefined') {
-  conditionalBindings.push(binding(
-    ImageAsset as unknown as AssetConstructor,
-    { typeName: 'image' },
-    binaryFactoryHandler(() => new ImageFactory()),
-  ));
+  conditionalBindings.push(
+    binding(
+      ImageAsset as unknown as AssetConstructor,
+      { typeName: 'image' },
+      binaryFactoryHandler(() => new ImageFactory()),
+    ),
+  );
 }
 
 if (typeof WebAssembly !== 'undefined') {
-  conditionalBindings.push(binding(
-    WasmAsset as unknown as AssetConstructor,
-    { typeName: 'wasm' },
-    binaryFactoryHandler(() => new WasmFactory()),
-  ));
+  conditionalBindings.push(
+    binding(
+      WasmAsset as unknown as AssetConstructor,
+      { typeName: 'wasm' },
+      binaryFactoryHandler(() => new WasmFactory()),
+    ),
+  );
 }
 
 /**

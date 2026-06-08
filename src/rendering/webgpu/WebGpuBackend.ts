@@ -13,7 +13,6 @@ import { ScaleModes, WrapModes } from '@/rendering/types';
 import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
-
 import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
 import type { RenderGroup } from '../plan/RenderInstruction';
 import type { RenderBackend } from '../RenderBackend';
@@ -23,7 +22,6 @@ import { RendererRegistry } from '../RendererRegistry';
 import type { RenderStats } from '../RenderStats';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
-
 import { DataTexture, type DataTextureFormat } from '../texture/DataTexture';
 import { RenderTexture } from '../texture/RenderTexture';
 import type { Texture } from '../texture/Texture';

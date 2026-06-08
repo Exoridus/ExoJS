@@ -1067,11 +1067,13 @@ export class Loader {
    * throws before any mutation (no override in 0.12).
    * @internal
    */
-  public bindAsset(keys: { type: AssetConstructor; typeName?: string; typeNames?: readonly string[]; extensions?: readonly string[] }, handler: AssetHandler): void {
+  public bindAsset(
+    keys: { type: AssetConstructor; typeName?: string; typeNames?: readonly string[]; extensions?: readonly string[] },
+    handler: AssetHandler,
+  ): void {
     const normalizedExts: string[] = [];
-    const resolvedNames: string[] = keys.typeNames !== undefined && keys.typeNames.length > 0
-      ? [...keys.typeNames]
-      : keys.typeName !== undefined ? [keys.typeName] : [];
+    const resolvedNames: string[] =
+      keys.typeNames !== undefined && keys.typeNames.length > 0 ? [...keys.typeNames] : keys.typeName !== undefined ? [keys.typeName] : [];
 
     // Normalise extension keys
     for (const ext of keys.extensions ?? []) {

@@ -55,12 +55,6 @@
       "@assets": ["./examples/shared/assets-catalog.d.ts"]
     }
   },
-  "include": [
-    "examples/**/*.js",
-    "examples/**/*.ts",
-    "examples/shared/runtime.d.ts",
-    "examples/shared/assets-catalog.d.ts",
-    "src/typings.d.ts"
-  ],
+  "include": ["examples/**/*.js", "examples/**/*.ts", "examples/shared/runtime.d.ts", "examples/shared/assets-catalog.d.ts", "src/typings.d.ts"],
   "exclude": ["examples/shared/editor-support.d.ts"]
 }

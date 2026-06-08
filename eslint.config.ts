@@ -486,7 +486,7 @@ export default defineConfig([
 
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
   {
-    files: ['src/build-constants.d.ts'],
+    files: ['src/build-constants.d.ts', 'src/typings.d.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
