@@ -1,4 +1,5 @@
-import { pitchShiftWorkletSource } from '../worklets/pitch-shift.worklet';
+import { pitchShiftWorkletSource } from '#audio/worklets/pitch-shift.worklet';
+
 import { WorkletFilter } from './WorkletFilter';
 
 export interface PitchShiftFilterOptions {

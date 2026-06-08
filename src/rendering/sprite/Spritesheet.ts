@@ -1,6 +1,6 @@
 import { Rectangle } from '#math/Rectangle';
+import type { Texture } from '#rendering/texture/Texture';
 
-import type { Texture } from '../texture/Texture';
 import { Sprite } from './Sprite';
 
 /** A single frame entry in a {@link SpritesheetData} descriptor. */

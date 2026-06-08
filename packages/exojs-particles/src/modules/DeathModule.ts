@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "../ParticleSystem";
+﻿import type { ParticleSystem } from "#ParticleSystem";
 
 /**
  * Per-particle hook invoked exactly once when a particle expires, before

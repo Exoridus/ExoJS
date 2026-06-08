@@ -1,12 +1,12 @@
+import type { Drawable } from '#rendering/Drawable';
+import { Shader } from '#rendering/shader/Shader';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 import { BufferTypes, BufferUsage } from '#rendering/types';
 import { createQuadIndices } from '#rendering/utils';
+import type { View } from '#rendering/View';
 
-import type { Drawable } from '../Drawable';
-import { Shader } from '../shader/Shader';
-import type { RenderTexture } from '../texture/RenderTexture';
-import type { Texture } from '../texture/Texture';
-import type { View } from '../View';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';

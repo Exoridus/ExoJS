@@ -1,4 +1,5 @@
-import type { AudioBus } from '../AudioBus';
+import type { AudioBus } from '#audio/AudioBus';
+
 import { WorkletFilter } from './WorkletFilter';
 
 const duckingWorkletSource = `

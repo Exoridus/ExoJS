@@ -1,6 +1,6 @@
 ﻿/// <reference types="@webgpu/types" />
 
-import type { ParticleSystem } from '../ParticleSystem';
+import type { ParticleSystem } from '#ParticleSystem';
 import { Texture } from '@codexo/exojs/rendering';
 import type { BlendModes } from '@codexo/exojs/rendering';
 import { AbstractWebGpuRenderer } from '@codexo/exojs/rendering';

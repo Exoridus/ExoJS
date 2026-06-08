@@ -1,4 +1,5 @@
-import { ShaderUniform } from '../shader/ShaderUniform';
+import { ShaderUniform } from '#rendering/shader/ShaderUniform';
+
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './WebGl2ShaderMappings';
 
 export class WebGl2ShaderBlock {

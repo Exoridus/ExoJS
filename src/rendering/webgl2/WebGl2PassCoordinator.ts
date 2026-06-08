@@ -1,12 +1,11 @@
 import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
-
-import type { Geometry } from '../geometry/Geometry';
-import type { RenderPassCoordinator } from '../pass/RenderPassCoordinator';
-import { type RenderPassDescriptor, type RenderPassLoad, StencilAttachmentMode } from '../pass/RenderPassDescriptor';
-import type { RenderTarget } from '../RenderTarget';
-import type { View } from '../View';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
+import { type RenderPassDescriptor, type RenderPassLoad, StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+import type { RenderTarget } from '#rendering/RenderTarget';
+import type { View } from '#rendering/View';
 
 /**
  * The minimal surface of {@link WebGl2Backend} that the coordinator drives.

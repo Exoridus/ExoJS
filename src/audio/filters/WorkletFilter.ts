@@ -1,6 +1,6 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '../audio-context';
-import { AudioFilter } from '../AudioFilter';
-import { registerAudioWorkletProcessor } from '../worklet/registerWorklet';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
+import { AudioFilter } from '#audio/AudioFilter';
+import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
 
 /**
  * Base class for filters implemented as AudioWorkletProcessors. Subclasses

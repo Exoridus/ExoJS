@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "../ParticleSystem";
+﻿import type { ParticleSystem } from "#ParticleSystem";
 
 /**
  * Per-frame particle spawner. Subclasses decide how many particles to emit

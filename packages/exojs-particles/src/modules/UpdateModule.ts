@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "../ParticleSystem";
+﻿import type { ParticleSystem } from "#ParticleSystem";
 
 import type { WgslContribution } from './WgslContribution';
 

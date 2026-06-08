@@ -1,9 +1,9 @@
 import { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
+import { Shader } from '#rendering/shader/Shader';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
-import { Shader } from '../shader/Shader';
 import fragmentSource from './glsl/stencil-clip.frag';
 import vertexSource from './glsl/stencil-clip.vert';
 import type { WebGl2Backend } from './WebGl2Backend';

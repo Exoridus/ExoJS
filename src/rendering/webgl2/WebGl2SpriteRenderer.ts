@@ -1,13 +1,13 @@
 import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Shader } from '#rendering/shader/Shader';
+import type { Sprite } from '#rendering/sprite/Sprite';
+import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import type { View } from '#rendering/View';
 
-import { Shader } from '../shader/Shader';
-import type { Sprite } from '../sprite/Sprite';
-import { spriteVertexGlsl } from '../sprite/spriteMaterialSources';
-import { RenderTexture } from '../texture/RenderTexture';
-import { Texture } from '../texture/Texture';
-import type { View } from '../View';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/sprite.frag';
 import vertexSource from './glsl/sprite.vert';

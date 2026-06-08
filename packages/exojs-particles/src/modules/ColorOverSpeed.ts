@@ -1,8 +1,8 @@
 ﻿/// <reference types="@webgpu/types" />
 
 import { Color } from '@codexo/exojs';
-import type { ColorGradient } from "../distributions/ColorGradient";
-import type { ParticleSystem } from "../ParticleSystem";
+import type { ColorGradient } from "#distributions/ColorGradient";
+import type { ParticleSystem } from "#ParticleSystem";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';

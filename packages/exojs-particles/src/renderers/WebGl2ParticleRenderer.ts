@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from '../ParticleSystem';
+﻿import type { ParticleSystem } from '#ParticleSystem';
 import type { BlendModes } from '@codexo/exojs/rendering';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/rendering';
 

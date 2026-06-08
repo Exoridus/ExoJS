@@ -1,8 +1,9 @@
 /// <reference types="@webgpu/types" />
 
-import type { Drawable } from '../Drawable';
-import { RenderBackendType } from '../RenderBackendType';
-import type { Renderer } from '../Renderer';
+import type { Drawable } from '#rendering/Drawable';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { Renderer } from '#rendering/Renderer';
+
 import type { WebGpuBackend } from './WebGpuBackend';
 
 /**

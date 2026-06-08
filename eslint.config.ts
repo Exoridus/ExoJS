@@ -68,18 +68,41 @@ export default defineConfig([
         },
       ],
 
-      // Engine-specific: enforce '@/'-prefixed internal imports; forbid core→extension package imports
+      // Engine-specific import boundaries: enforce `#` package-internal subpath
+      // imports; forbid the removed `@/` alias, parent-relative imports, bare
+      // package-internal paths, core→extension imports, and /src deep imports.
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['audio/*', 'core/*', 'input/*', 'math/*', 'particles/*', 'physics/*', 'rendering/*', 'resources/*', 'vendor/*'],
-              message: "Internal imports use the '@/' prefix — e.g. '@/core/X' instead of 'core/X'.",
+              group: ['@/*'],
+              message: "The '@/' alias was removed. Use '#dir/X' package-internal subpath imports (or './X' for the same directory).",
             },
             {
-              group: ['@codexo/exojs-*'],
-              message: 'Core (src/**) must not import extension packages. Use the binding mechanism instead.',
+              group: ['../*', '../**'],
+              message: "No parent-relative imports. Use '#dir/X' for cross-directory or './X' for the same directory.",
+            },
+            {
+              group: [
+                'audio/*',
+                'core/*',
+                'input/*',
+                'math/*',
+                'animation/*',
+                'extensions/*',
+                'debug/*',
+                'particles/*',
+                'physics/*',
+                'rendering/*',
+                'resources/*',
+                'vendor/*',
+              ],
+              message: "Package-internal imports use the '#' prefix — e.g. '#core/X' instead of 'core/X'.",
+            },
+            {
+              group: ['@codexo/exojs-*', '@codexo/exojs/src', '@codexo/exojs/src/*'],
+              message: 'Core (src/**) must not import extension packages or any package via its /src internals.',
             },
           ],
         },
