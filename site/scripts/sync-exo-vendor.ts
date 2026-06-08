@@ -338,6 +338,35 @@ const syncVendor = (): void => {
     fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), JSON.stringify(registry, null, 2) + '\n', 'utf8');
 
     console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
+
+    // Sync extension packages (ESM trees only — no declaration patching needed).
+    const extensionPackages = ['exojs-particles', 'exojs-tiled'] as const;
+    for (const pkgName of extensionPackages) {
+        let pkgRoot: string | null = null;
+        try {
+            const pkgJsonPath = requireFromSite.resolve(`@codexo/${pkgName}/package.json`);
+            pkgRoot = path.dirname(pkgJsonPath);
+        } catch {
+            // Fall back to workspace path.
+            pkgRoot = path.resolve(projectRoot, '..', 'packages', pkgName);
+        }
+        const pkgDist = path.resolve(pkgRoot, 'dist', 'esm');
+        if (!fs.existsSync(pkgDist)) {
+            console.warn(`[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist} — skipping.`);
+            continue;
+        }
+        const destDir = path.resolve(projectRoot, 'public', 'vendor', pkgName, 'esm');
+        fs.rmSync(path.dirname(destDir), { recursive: true, force: true });
+        fs.mkdirSync(destDir, { recursive: true });
+        const files = collectFiles(pkgDist);
+        for (const rel of files) {
+            const src = path.resolve(pkgDist, rel);
+            const dst = path.resolve(destDir, rel);
+            fs.mkdirSync(path.dirname(dst), { recursive: true });
+            fs.copyFileSync(src, dst);
+        }
+        console.log(`[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files) -> vendor/${pkgName}/esm/`);
+    }
 };
 
 syncVendor();

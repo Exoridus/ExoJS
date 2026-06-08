@@ -35,20 +35,45 @@
 
                 var exoEntry;
                 var exoDebugEntry;
+                var exoExtensionsEntry;
+                var exoRenderingEntry;
+                var particlesEntry;
+                var particlesRegisterEntry;
+                var tiledEntry;
+                var tiledRegisterEntry;
                 if (!safeVersion || safeVersion === 'current') {
                     exoEntry = './vendor/exojs/esm/index.js?no-cache=' + noCache;
                     exoDebugEntry = './vendor/exojs/esm/debug/index.js?no-cache=' + noCache;
+                    exoExtensionsEntry = './vendor/exojs/esm/extensions/index.js?no-cache=' + noCache;
+                    exoRenderingEntry = './vendor/exojs/esm/rendering.js?no-cache=' + noCache;
+                    particlesEntry = './vendor/exojs-particles/esm/index.js?no-cache=' + noCache;
+                    particlesRegisterEntry = './vendor/exojs-particles/esm/register.js?no-cache=' + noCache;
+                    tiledEntry = './vendor/exojs-tiled/esm/index.js?no-cache=' + noCache;
+                    tiledRegisterEntry = './vendor/exojs-tiled/esm/register.js?no-cache=' + noCache;
                 } else {
                     // jsDelivr serves immutable npm tarballs — the version pin
                     // alone is enough, no cache-buster needed.
-                    exoEntry = 'https://cdn.jsdelivr.net/npm/@codexo/exojs@' + safeVersion + '/dist/esm/index.js';
-                    exoDebugEntry = 'https://cdn.jsdelivr.net/npm/@codexo/exojs@' + safeVersion + '/dist/esm/debug/index.js';
+                    var cdnBase = 'https://cdn.jsdelivr.net/npm/@codexo/';
+                    exoEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/index.js';
+                    exoDebugEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/debug/index.js';
+                    exoExtensionsEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/extensions/index.js';
+                    exoRenderingEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/rendering.js';
+                    particlesEntry = cdnBase + 'exojs-particles@' + safeVersion + '/dist/esm/index.js';
+                    particlesRegisterEntry = cdnBase + 'exojs-particles@' + safeVersion + '/dist/esm/register.js';
+                    tiledEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/index.js';
+                    tiledRegisterEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/register.js';
                 }
 
                 var importMap = {
                     imports: {
                         '@codexo/exojs': exoEntry,
                         '@codexo/exojs/debug': exoDebugEntry,
+                        '@codexo/exojs/extensions': exoExtensionsEntry,
+                        '@codexo/exojs/rendering': exoRenderingEntry,
+                        '@codexo/exojs-particles': particlesEntry,
+                        '@codexo/exojs-particles/register': particlesRegisterEntry,
+                        '@codexo/exojs-tiled': tiledEntry,
+                        '@codexo/exojs-tiled/register': tiledRegisterEntry,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
                         '@assets': './assets/catalog.js?no-cache=' + noCache,
                     },
