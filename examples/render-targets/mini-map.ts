@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, RenderTargetPass, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,6 +19,7 @@ class MiniMapScene extends Scene {
     private miniRt!: RenderTexture;
     private miniSprite!: Sprite;
     private miniFrame!: Graphics;
+    private pipeline!: RenderPipeline;
     private time = 0;
 
     override init(): void {
@@ -27,6 +28,30 @@ class MiniMapScene extends Scene {
         this.miniRt = new RenderTexture(220, 160);
         this.miniSprite = new Sprite(this.miniRt).setPosition(560, 20);
         this.miniFrame = new Graphics();
+        this.miniFrame.lineWidth = 2;
+        this.miniFrame.lineColor = Color.white;
+        this.miniFrame.drawRectangle(560, 20, 220, 160);
+
+        // The "world" is immediate-mode (grid + player) — a context-aware callback, drawn once
+        // into the minimap texture and once to the screen. The sprite + frame are scene nodes.
+        this.pipeline = new RenderPipeline()
+            .addPass(
+                new CallbackRenderPass(
+                    (context) => {
+                        context.backend.clear();
+                        this.renderWorld(context.backend);
+                    },
+                    { target: this.miniRt },
+                ),
+            )
+            .addPass(
+                new CallbackRenderPass((context) => {
+                    context.backend.clear();
+                    this.renderWorld(context.backend);
+                }),
+            )
+            .addPass(new RenderNodePass(this.miniSprite))
+            .addPass(new RenderNodePass(this.miniFrame));
     }
 
     override update(delta): void {
@@ -50,23 +75,7 @@ class MiniMapScene extends Scene {
     }
 
     override draw(context): void {
-        context.backend.execute(
-            new RenderTargetPass(
-                () => {
-                    context.backend.clear();
-                    this.renderWorld(context.backend);
-                },
-                { target: this.miniRt, view: this.miniRt.view },
-            ),
-        );
-        context.backend.clear();
-        this.renderWorld(context.backend);
-        context.render(this.miniSprite);
-        this.miniFrame.clear();
-        this.miniFrame.lineWidth = 2;
-        this.miniFrame.lineColor = Color.white;
-        this.miniFrame.drawRectangle(560, 20, 220, 160);
-        context.render(this.miniFrame);
+        this.pipeline.execute(context);
     }
 }
 

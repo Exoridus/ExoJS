@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, RenderTargetPass, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -20,6 +20,7 @@ class MinimapWithMaskScene extends Scene {
     private mini!: Sprite;
     private mask!: Graphics;
     private frame!: Graphics;
+    private pipeline!: RenderPipeline;
     private time = 0;
 
     override init(): void {
@@ -32,6 +33,28 @@ class MinimapWithMaskScene extends Scene {
         this.mask.drawCircle(660, 150, 120);
         this.mini.mask = this.mask;
         this.frame = new Graphics();
+        this.frame.lineWidth = 3;
+        this.frame.lineColor = Color.white;
+        this.frame.drawCircle(660, 150, 120);
+
+        this.pipeline = new RenderPipeline()
+            .addPass(
+                new CallbackRenderPass(
+                    (context) => {
+                        context.backend.clear();
+                        this.drawWorld(context.backend);
+                    },
+                    { target: this.rt },
+                ),
+            )
+            .addPass(
+                new CallbackRenderPass((context) => {
+                    context.backend.clear();
+                    this.drawWorld(context.backend);
+                }),
+            )
+            .addPass(new RenderNodePass(this.mini))
+            .addPass(new RenderNodePass(this.frame));
     }
 
     override update(delta): void {
@@ -52,23 +75,7 @@ class MinimapWithMaskScene extends Scene {
     }
 
     override draw(context): void {
-        context.backend.execute(
-            new RenderTargetPass(
-                () => {
-                    context.backend.clear();
-                    this.drawWorld(context.backend);
-                },
-                { target: this.rt, view: this.rt.view },
-            ),
-        );
-        context.backend.clear();
-        this.drawWorld(context.backend);
-        context.render(this.mini);
-        this.frame.clear();
-        this.frame.lineWidth = 3;
-        this.frame.lineColor = Color.white;
-        this.frame.drawCircle(660, 150, 120);
-        context.render(this.frame);
+        this.pipeline.execute(context);
     }
 }
 

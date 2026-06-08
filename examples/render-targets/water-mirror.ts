@@ -1,8 +1,10 @@
 import {
     Application,
+    CallbackRenderPass,
     Color,
     RenderBackendType,
-    RenderTargetPass,
+    RenderNodePass,
+    RenderPipeline,
     RenderTexture,
     Scene,
     Sprite,
@@ -42,6 +44,7 @@ class WaterMirrorScene extends Scene {
     private source!: Sprite;
     private mirror!: Sprite;
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private pipeline!: RenderPipeline;
     private time = 0;
 
     override async load(loader): Promise<void> {
@@ -57,6 +60,21 @@ class WaterMirrorScene extends Scene {
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
         this.mirror.filters = [this.filter];
+
+        // Capture the source into a target (camera view → a callback), then composite the source and
+        // its filtered, flipped mirror to the screen.
+        this.pipeline = new RenderPipeline()
+            .addPass(
+                new CallbackRenderPass(
+                    (context) => {
+                        context.backend.clear();
+                        context.render(this.source);
+                    },
+                    { target: this.rt },
+                ),
+            )
+            .addPass(new RenderNodePass(this.source, { clear: new Color(18, 24, 36) }))
+            .addPass(new RenderNodePass(this.mirror));
     }
 
     override update(delta): void {
@@ -66,18 +84,7 @@ class WaterMirrorScene extends Scene {
     }
 
     override draw(context): void {
-        context.backend.execute(
-            new RenderTargetPass(
-                () => {
-                    context.backend.clear();
-                    context.render(this.source);
-                },
-                { target: this.rt, view: this.rt.view, clearColor: Color.transparentBlack },
-            ),
-        );
-        context.backend.clear(new Color(18, 24, 36));
-        context.render(this.source);
-        context.render(this.mirror);
+        this.pipeline.execute(context);
     }
 }
 

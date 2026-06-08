@@ -1,5 +1,5 @@
 // Auto-generated from minimap-with-mask.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, RenderTargetPass, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 800,
@@ -18,6 +18,7 @@ class MinimapWithMaskScene extends Scene {
     mini;
     mask;
     frame;
+    pipeline;
     time = 0;
     init() {
         this.world = new Graphics();
@@ -29,6 +30,20 @@ class MinimapWithMaskScene extends Scene {
         this.mask.drawCircle(660, 150, 120);
         this.mini.mask = this.mask;
         this.frame = new Graphics();
+        this.frame.lineWidth = 3;
+        this.frame.lineColor = Color.white;
+        this.frame.drawCircle(660, 150, 120);
+        this.pipeline = new RenderPipeline()
+            .addPass(new CallbackRenderPass((context) => {
+            context.backend.clear();
+            this.drawWorld(context.backend);
+        }, { target: this.rt }))
+            .addPass(new CallbackRenderPass((context) => {
+            context.backend.clear();
+            this.drawWorld(context.backend);
+        }))
+            .addPass(new RenderNodePass(this.mini))
+            .addPass(new RenderNodePass(this.frame));
     }
     update(delta) {
         this.time += delta.seconds;
@@ -48,18 +63,7 @@ class MinimapWithMaskScene extends Scene {
         this.player.render(backend);
     }
     draw(context) {
-        context.backend.execute(new RenderTargetPass(() => {
-            context.backend.clear();
-            this.drawWorld(context.backend);
-        }, { target: this.rt, view: this.rt.view }));
-        context.backend.clear();
-        this.drawWorld(context.backend);
-        context.render(this.mini);
-        this.frame.clear();
-        this.frame.lineWidth = 3;
-        this.frame.lineColor = Color.white;
-        this.frame.drawCircle(660, 150, 120);
-        context.render(this.frame);
+        this.pipeline.execute(context);
     }
 }
 app.start(new MinimapWithMaskScene());

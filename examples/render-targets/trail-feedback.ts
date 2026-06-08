@@ -1,4 +1,4 @@
-import { Application, Color, RenderTargetPass, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,6 +18,7 @@ class TrailFeedbackScene extends Scene {
     private decay!: Sprite;
     private bunny!: Sprite;
     private final!: Sprite;
+    private pipeline!: RenderPipeline;
     private time = 0;
 
     override async load(loader): Promise<void> {
@@ -29,6 +30,20 @@ class TrailFeedbackScene extends Scene {
         this.decay = new Sprite(this.rt).setTint(new Color(255, 255, 255, 0.93));
         this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
         this.final = new Sprite(this.rt);
+
+        // Feedback: the off-screen target is deliberately NOT cleared, so the decayed previous frame
+        // plus the bunny accumulate into a trail; the final sprite composites it to the screen.
+        this.pipeline = new RenderPipeline()
+            .addPass(
+                new CallbackRenderPass(
+                    (context) => {
+                        context.render(this.decay);
+                        context.render(this.bunny);
+                    },
+                    { target: this.rt },
+                ),
+            )
+            .addPass(new RenderNodePass(this.final, { clear: Color.black }));
     }
 
     override update(delta): void {
@@ -37,17 +52,7 @@ class TrailFeedbackScene extends Scene {
     }
 
     override draw(context): void {
-        context.backend.execute(
-            new RenderTargetPass(
-                () => {
-                    context.render(this.decay);
-                    context.render(this.bunny);
-                },
-                { target: this.rt, view: this.rt.view },
-            ),
-        );
-        context.backend.clear();
-        context.render(this.final);
+        this.pipeline.execute(context);
     }
 }
 

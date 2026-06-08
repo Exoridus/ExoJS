@@ -1,5 +1,5 @@
 // Auto-generated from water-mirror.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, RenderTargetPass, RenderTexture, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter, } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, RenderBackendType, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter, } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 800,
@@ -28,6 +28,7 @@ class WaterMirrorScene extends Scene {
     source;
     mirror;
     filter;
+    pipeline;
     time = 0;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
@@ -41,6 +42,15 @@ class WaterMirrorScene extends Scene {
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
         this.mirror.filters = [this.filter];
+        // Capture the source into a target (camera view → a callback), then composite the source and
+        // its filtered, flipped mirror to the screen.
+        this.pipeline = new RenderPipeline()
+            .addPass(new CallbackRenderPass((context) => {
+            context.backend.clear();
+            context.render(this.source);
+        }, { target: this.rt }))
+            .addPass(new RenderNodePass(this.source, { clear: new Color(18, 24, 36) }))
+            .addPass(new RenderNodePass(this.mirror));
     }
     update(delta) {
         this.time += delta.seconds;
@@ -48,13 +58,7 @@ class WaterMirrorScene extends Scene {
         this.filter.uniforms.uTime = this.time;
     }
     draw(context) {
-        context.backend.execute(new RenderTargetPass(() => {
-            context.backend.clear();
-            context.render(this.source);
-        }, { target: this.rt, view: this.rt.view, clearColor: Color.transparentBlack }));
-        context.backend.clear(new Color(18, 24, 36));
-        context.render(this.source);
-        context.render(this.mirror);
+        this.pipeline.execute(context);
     }
 }
 app.start(new WaterMirrorScene());
