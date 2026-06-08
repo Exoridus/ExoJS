@@ -81,7 +81,7 @@ const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
  */
 export class WebGpuBackend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGpu;
-  public readonly rendererRegistry = new RendererRegistry<WebGpuBackend>();
+  public readonly rendererRegistry: RendererRegistry<WebGpuBackend> = new RendererRegistry<WebGpuBackend>();
   public readonly onDeviceLost = new Signal<[GPUDeviceLostInfo]>();
   public readonly onDeviceRestored = new Signal();
 

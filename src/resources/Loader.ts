@@ -1,6 +1,7 @@
 import { Music } from '@/audio/Music';
 import { Sound } from '@/audio/Sound';
 import { Signal } from '@/core/Signal';
+import type { AssetHandler } from '@/extensions/Extension';
 import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { Video } from '@/rendering/video/Video';
@@ -263,6 +264,9 @@ export class Loader {
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
   // Maps lower-case file extensions (without dot) to the constructor to use
   private readonly _extensionMap = new Map<string, AssetConstructor>();
+
+  // Handlers registered via bindAsset — owned for their full lifecycle
+  private readonly _boundHandlers: AssetHandler[] = [];
 
   private _basePath: string;
   private _fetchOptions: RequestInit;
@@ -1056,6 +1060,92 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
+  // Extension binding — @internal / @advanced
+  // -----------------------------------------------------------------------
+
+  /**
+   * Atomically bind all keys for one AssetBinding to a pre-created handler.
+   * Validates all keys BEFORE mutating any map. Any already-registered key
+   * throws before any mutation (no override in 0.12).
+   * @internal
+   */
+  public bindAsset(keys: { type: AssetConstructor; typeName?: string; extensions?: readonly string[] }, handler: AssetHandler): void {
+    const normalizedExts: string[] = [];
+
+    // Normalise extension keys
+    for (const ext of keys.extensions ?? []) {
+      normalizedExts.push(ext.replace(/^\./, '').toLowerCase());
+    }
+
+    // Validate: detect duplicates within this binding
+    const seenExts = new Set<string>();
+
+    for (const ext of normalizedExts) {
+      if (seenExts.has(ext)) {
+        throw new Error(`Duplicate extension key ".${ext}" within a single asset binding.`);
+      }
+
+      seenExts.add(ext);
+    }
+
+    // Validate: detect conflicts with already-registered keys — throw before any mutation
+    if (this._handlerFunctions.has(keys.type)) {
+      throw new Error(`An asset handler is already registered for ${keys.type.name}.`);
+    }
+
+    if (keys.typeName !== undefined && this._assetTypeMap.has(keys.typeName)) {
+      throw new Error(`Asset type name "${keys.typeName}" is already registered.`);
+    }
+
+    for (const ext of normalizedExts) {
+      if (this._extensionMap.has(ext)) {
+        throw new Error(`File extension ".${ext}" is already mapped to an asset type.`);
+      }
+    }
+
+    // All validation passed — install atomically
+    this._handlerFunctions.set(keys.type, {
+      load: (config, ctx) => handler.load(config as { source: string; options?: Readonly<Record<string, unknown>> }, ctx),
+    });
+
+    if (keys.typeName !== undefined) {
+      this._assetTypeMap.set(keys.typeName, keys.type);
+    }
+
+    for (const ext of normalizedExts) {
+      this._extensionMap.set(ext, keys.type);
+    }
+
+    // Own this handler for lifecycle management
+    this._boundHandlers.push(handler);
+  }
+
+  /**
+   * Returns true if a handler or factory is already registered for the given constructor.
+   * @advanced
+   */
+  public hasLoadable(type: AssetConstructor): boolean {
+    return this._handlerFunctions.has(type) || this._registry.has(type);
+  }
+
+  /**
+   * Returns true if a type-name mapping is already registered.
+   * @advanced
+   */
+  public hasAssetType(typeName: string): boolean {
+    return this._assetTypeMap.has(typeName);
+  }
+
+  /**
+   * Returns true if a file extension is already mapped to an asset type.
+   * Extension is normalised (leading dot stripped, lower-cased).
+   * @advanced
+   */
+  public hasExtension(ext: string): boolean {
+    return this._extensionMap.has(ext.replace(/^\./, '').toLowerCase());
+  }
+
+  // -----------------------------------------------------------------------
   // Lifecycle
   // -----------------------------------------------------------------------
 
@@ -1065,6 +1155,7 @@ export class Loader {
    * Destroys the factory registry (releasing object URLs), destroys every
    * cache store, clears all in-memory assets, manifest entries, bundle
    * definitions, and in-flight tracking, and disconnects all signals.
+   * Also calls `destroy?.()` on every handler registered via `bindAsset`.
    */
   public destroy(): void {
     this._registry.destroy();
@@ -1073,6 +1164,17 @@ export class Loader {
       store.destroy();
     }
 
+    // Call destroy on all bound handlers (deduplicated by identity)
+    const destroyedHandlers = new Set<AssetHandler>();
+
+    for (const handler of this._boundHandlers) {
+      if (!destroyedHandlers.has(handler)) {
+        destroyedHandlers.add(handler);
+        handler.destroy?.();
+      }
+    }
+
+    this._boundHandlers.length = 0;
     this._resources.clear();
     this._manifest.clear();
     this._bundles.clear();
@@ -1116,6 +1218,22 @@ export class Loader {
     const entry = this._getManifestEntry(type, alias);
     const path = explicitPath ?? entry?.path ?? alias;
     const resolvedOptions = options ?? entry?.options;
+
+    // Check handler path first (for extension types registered via bindAsset)
+    const handlerEntry = this._handlerFunctions.get(type);
+
+    if (handlerEntry) {
+      const identityKey = this._identityKey(type, path);
+      const config: Record<string, unknown> = { source: path };
+
+      if (resolvedOptions !== null && resolvedOptions !== undefined && typeof resolvedOptions === 'object') {
+        Object.assign(config, resolvedOptions as Record<string, unknown>);
+      }
+
+      const context = this._buildHandlerContext(identityKey);
+
+      return this._trackInFlight(key, this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context));
+    }
 
     return this._trackInFlight(key, this._fetch(type, alias, path, resolvedOptions));
   }

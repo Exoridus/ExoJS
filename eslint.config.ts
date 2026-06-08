@@ -68,7 +68,7 @@ export default defineConfig([
         },
       ],
 
-      // Engine-specific: enforce '@/'-prefixed internal imports
+      // Engine-specific: enforce '@/'-prefixed internal imports; forbid core→extension package imports
       'no-restricted-imports': [
         'error',
         {
@@ -76,6 +76,10 @@ export default defineConfig([
             {
               group: ['audio/*', 'core/*', 'input/*', 'math/*', 'particles/*', 'physics/*', 'rendering/*', 'resources/*', 'vendor/*'],
               message: "Internal imports use the '@/' prefix — e.g. '@/core/X' instead of 'core/X'.",
+            },
+            {
+              group: ['@codexo/exojs-*'],
+              message: 'Core (src/**) must not import extension packages. Use the binding mechanism instead.',
             },
           ],
         },

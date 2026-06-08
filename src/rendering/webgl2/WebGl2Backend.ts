@@ -135,7 +135,7 @@ const renderTargetTextureSyncUnit = 15;
  */
 export class WebGl2Backend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGl2;
-  public readonly rendererRegistry = new RendererRegistry<WebGl2Backend>();
+  public readonly rendererRegistry: RendererRegistry<WebGl2Backend> = new RendererRegistry<WebGl2Backend>();
   public readonly onContextLost = new Signal();
   public readonly onContextRestored = new Signal();
 
@@ -188,7 +188,6 @@ export class WebGl2Backend implements RenderBackend {
     const debug = renderingOptions.debug ?? false;
     const spriteRendererBatchSize = renderingOptions.spriteRendererBatchSize ?? 4096;
     const particleRendererBatchSize = renderingOptions.particleRendererBatchSize ?? 8192;
-
     this._canvas = app.canvas;
 
     const gl = this._createContext(webglAttributes);
