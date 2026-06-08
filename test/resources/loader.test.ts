@@ -1,10 +1,19 @@
-﻿import { Asset } from '@/resources/Asset';
+﻿import { materializeAssetBindings } from '@/extensions/materialize';
+import { Asset } from '@/resources/Asset';
 import type { AssetFactory } from '@/resources/AssetFactory';
 import { BundleLoadError, defineAssetManifest } from '@/resources/AssetManifest';
 import { Assets } from '@/resources/Assets';
 import type { CacheStore } from '@/resources/CacheStore';
+import { coreAssetBindings } from '@/resources/coreAssetBindings';
 import { Loader } from '@/resources/Loader';
 import { Json, TextAsset } from '@/resources/tokens';
+
+/** Create a Loader with all core asset bindings pre-installed. */
+function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
+  const loader = new Loader(options);
+  materializeAssetBindings(loader, coreAssetBindings);
+  return loader;
+}
 
 // Declaration merges for test-only asset types
 declare module '@/resources/AssetDefinitions' {
@@ -334,7 +343,7 @@ describe('Loader', () => {
   });
 
   test('load(Json, path) returns unknown by default', async () => {
-    const loader = new Loader({ basePath: '/' });
+    const loader = createCoreLoader({ basePath: '/' });
 
     global.fetch = vi.fn(
       async (): Promise<Response> =>

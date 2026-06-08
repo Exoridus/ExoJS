@@ -294,8 +294,6 @@ export class Loader {
     this._concurrency = options.concurrency ?? 6;
     this._stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
     this._cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
-
-    this._registerBuiltinFactories();
   }
 
   // -----------------------------------------------------------------------
@@ -1069,8 +1067,11 @@ export class Loader {
    * throws before any mutation (no override in 0.12).
    * @internal
    */
-  public bindAsset(keys: { type: AssetConstructor; typeName?: string; extensions?: readonly string[] }, handler: AssetHandler): void {
+  public bindAsset(keys: { type: AssetConstructor; typeName?: string; typeNames?: readonly string[]; extensions?: readonly string[] }, handler: AssetHandler): void {
     const normalizedExts: string[] = [];
+    const resolvedNames: string[] = keys.typeNames !== undefined && keys.typeNames.length > 0
+      ? [...keys.typeNames]
+      : keys.typeName !== undefined ? [keys.typeName] : [];
 
     // Normalise extension keys
     for (const ext of keys.extensions ?? []) {
@@ -1093,8 +1094,10 @@ export class Loader {
       throw new Error(`An asset handler is already registered for ${keys.type.name}.`);
     }
 
-    if (keys.typeName !== undefined && this._assetTypeMap.has(keys.typeName)) {
-      throw new Error(`Asset type name "${keys.typeName}" is already registered.`);
+    for (const name of resolvedNames) {
+      if (this._assetTypeMap.has(name)) {
+        throw new Error(`Asset type name "${name}" is already registered.`);
+      }
     }
 
     for (const ext of normalizedExts) {
@@ -1108,8 +1111,8 @@ export class Loader {
       load: (config, ctx) => handler.load(config as { source: string; options?: Readonly<Record<string, unknown>> }, ctx),
     });
 
-    if (keys.typeName !== undefined) {
-      this._assetTypeMap.set(keys.typeName, keys.type);
+    for (const name of resolvedNames) {
+      this._assetTypeMap.set(name, keys.type);
     }
 
     for (const ext of normalizedExts) {

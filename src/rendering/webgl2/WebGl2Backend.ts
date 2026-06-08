@@ -4,15 +4,12 @@ import { Signal } from '@/core/Signal';
 import { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
-import { ParticleSystem } from '@/particles/ParticleSystem';
-import { BitmapText } from '@/rendering/text/BitmapText';
-import { Text } from '@/rendering/text/Text';
 import { BlendModes } from '@/rendering/types';
 
 import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
-import { Mesh } from '../mesh/Mesh';
+
 import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
 import type { RenderGroup } from '../plan/RenderInstruction';
 import type { RenderBackend } from '../RenderBackend';
@@ -23,19 +20,14 @@ import type { RenderStats } from '../RenderStats';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
 import type { Shader } from '../shader/Shader';
-import { Sprite } from '../sprite/Sprite';
 import { DataTexture, type DataTextureFormat } from '../texture/DataTexture';
 import { RenderTexture } from '../texture/RenderTexture';
 import type { Texture } from '../texture/Texture';
 import { TransformBuffer } from '../TransformBuffer';
 import type { View } from '../View';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
-import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
-import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
-import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import { WebGl2StencilClipper } from './WebGl2StencilClipper';
-import { WebGl2TextRenderer } from './WebGl2TextRenderer';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
 // Inline GL debug helpers — replaces the webgl-debug vendor lib.
@@ -187,7 +179,6 @@ export class WebGl2Backend implements RenderBackend {
     const webglAttributes = renderingOptions.webglAttributes;
     const debug = renderingOptions.debug ?? false;
     const spriteRendererBatchSize = renderingOptions.spriteRendererBatchSize ?? 4096;
-    const particleRendererBatchSize = renderingOptions.particleRendererBatchSize ?? 8192;
     this._canvas = app.canvas;
 
     const gl = this._createContext(webglAttributes);
@@ -216,11 +207,8 @@ export class WebGl2Backend implements RenderBackend {
     this._setupContext();
     this._addEvents();
 
-    this.rendererRegistry.registerRenderer(Sprite, new WebGl2SpriteRenderer(spriteRendererBatchSize));
-    this.rendererRegistry.registerRenderer(Mesh, new WebGl2MeshRenderer());
-    this.rendererRegistry.registerRenderer(ParticleSystem, new WebGl2ParticleRenderer(particleRendererBatchSize));
-    this.rendererRegistry.registerRenderer(Text, new WebGl2TextRenderer());
-    this.rendererRegistry.registerRenderer(BitmapText, new WebGl2TextRenderer());
+    // Core renderers are bound via buildCoreRendererBindings in Application.createBackend.
+    // Connect the registry now so newly bound renderers are immediately connected.
     this.rendererRegistry.connect(this);
 
     this._bindRenderTarget(this._renderTarget);

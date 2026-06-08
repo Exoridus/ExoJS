@@ -49,7 +49,10 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
  */
 export interface AssetBinding<Result = unknown> {
   readonly type: AssetConstructor<Result>;
+  /** Primary type-name for config-map loading. Mutually exclusive with `typeNames`. */
   readonly typeName?: string;
+  /** Multiple type-names mapping to this handler. Mutually exclusive with `typeName`. */
+  readonly typeNames?: readonly string[];
   readonly extensions?: readonly string[];
   create(loader: Loader): AssetHandler<Result>;
 }
