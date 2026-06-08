@@ -1,4 +1,4 @@
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, crossFade, Music, Scene, Text } from '@codexo/exojs';
 
 const app = new Application({
@@ -18,7 +18,7 @@ class CrossfadeTracksScene extends Scene {
     private text!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { a: audio.musicA, b: audio.musicB });
+        await loader.load(Music, { a: assets.demo.audio.musicA, b: assets.demo.audio.musicB });
     }
 
     override init(loader): void {

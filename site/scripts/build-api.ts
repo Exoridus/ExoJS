@@ -10,11 +10,43 @@ const repoRoot = path.resolve(siteRoot, '..');
 const outputDir = path.resolve(siteRoot, 'src', 'content', 'api');
 const toPosix = (value: string): string => value.replaceAll('\\', '/');
 
-type Subsystem = 'animation' | 'audio' | 'core' | 'debug' | 'input' | 'math' | 'particles' | 'rendering' | 'resources';
+type Subsystem = 'animation' | 'audio' | 'core' | 'debug' | 'input' | 'math' | 'particles' | 'rendering' | 'resources' | 'tiled';
 type ApiKind = 'class' | 'enum';
 type ApiTier = 'stable' | 'advanced';
 
-const SUBSYSTEMS: ReadonlyArray<Subsystem> = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'];
+const SUBSYSTEMS: ReadonlyArray<Subsystem> = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources', 'tiled'];
+
+/**
+ * Official extension packages documented as their own API surfaces, alongside
+ * the core. Each is converted with its own tsconfig (which maps `@codexo/exojs`
+ * to the core source) and only the package's OWN symbols are emitted — core
+ * types the package re-exports are skipped so they are not duplicated.
+ */
+interface ExtensionPackage {
+    importPath: string;
+    subsystem: Subsystem;
+    entryPoint: string;
+    tsconfig: string;
+    /** Substring every emitted symbol's source path must contain. */
+    sourceMarker: string;
+}
+
+const EXTENSION_PACKAGES: ReadonlyArray<ExtensionPackage> = [
+    {
+        importPath: '@codexo/exojs-particles',
+        subsystem: 'particles',
+        entryPoint: 'packages/exojs-particles/src/index.ts',
+        tsconfig: 'packages/exojs-particles/tsconfig.json',
+        sourceMarker: 'packages/exojs-particles/src/',
+    },
+    {
+        importPath: '@codexo/exojs-tiled',
+        subsystem: 'tiled',
+        entryPoint: 'packages/exojs-tiled/src/index.ts',
+        tsconfig: 'packages/exojs-tiled/tsconfig.json',
+        sourceMarker: 'packages/exojs-tiled/src/',
+    },
+];
 
 const isClass = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Class) > 0;
 const isEnum = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Enum) > 0;
@@ -177,93 +209,161 @@ const ensureCleanOutput = (): void => {
     fs.mkdirSync(outputDir, { recursive: true });
 };
 
-const build = async (): Promise<void> => {
+const MODIFIER_TAGS = ['@stable', '@advanced', '@override', '@internal', '@alpha', '@beta', '@experimental', '@virtual', '@readonly', '@sealed', '@abstract', '@public', '@protected', '@private'];
+
+interface EmitOptions {
+    /** Force a fixed import path (extension packages). When unset, derive from source. */
+    importPathOverride?: string;
+    /** Force a fixed subsystem (extension packages). When unset, guess from source. */
+    subsystemOverride?: Subsystem;
+    /** When set, only emit symbols whose source path contains this marker. */
+    sourceMarker?: string;
+}
+
+const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOptions): boolean => {
+    if (!isDocumentableKind(reflection.kind)) return false;
+
+    const source = reflection.sources?.[0];
+    const sourcePath = source?.fileName ? normalizePath(source.fileName) : undefined;
+
+    // Extension packages re-export core types; only document the package's own
+    // symbols so core pages are never duplicated under a package surface.
+    if (options.sourceMarker && !(sourcePath ?? '').includes(options.sourceMarker)) return false;
+
+    const subsystem = options.subsystemOverride ?? guessSubsystem(sourcePath ?? '');
+    const importPath = options.importPathOverride ?? entryPointTitle(reflection);
+    const description = renderComment(reflection.comment);
+    const tier: ApiTier = reflection.comment?.modifierTags?.has('@advanced') ? 'advanced' : 'stable';
+    const { body, sections, memberCount } = renderReflectionBody(reflection);
+    const kind = toApiKind(reflection.kind);
+
+    const baseSlug = slugify(reflection.name);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (usedSlugs.has(slug)) {
+        slug = `${baseSlug}-${suffix}`;
+        suffix += 1;
+    }
+    usedSlugs.add(slug);
+
+    // Core sources live under <repo>/src; package sources under <repo>/packages/<pkg>/src.
+    // Prefer the package-relative form so extension source links resolve correctly.
+    const sourceRelative = sourcePath
+        ? (sourcePath.match(/(?:^|\/)(packages\/[^/]+\/src\/.*)$/)?.[1] ?? sourcePath.match(/(?:^|\/)(src\/.*)$/)?.[1])
+        : undefined;
+    const sourceUrl = sourceRelative && source?.line ? `https://github.com/Exoridus/ExoJS/blob/main/${sourceRelative}#L${source.line}` : undefined;
+    const safeDescriptionBody = description ? escapeMdxText(description) : '';
+    const allSections = ['Import', ...sections, ...(sourceUrl ? ['Source'] : [])];
+    const bodyBlocks: Array<string> = [`## Import\n\n\`import { ${reflection.name} } from '${importPath}'\``];
+    if (safeDescriptionBody.length > 0) {
+        bodyBlocks.push(safeDescriptionBody);
+    }
+    if (body.length > 0) {
+        bodyBlocks.push(body);
+    }
+    if (sourceUrl && sourceRelative) {
+        bodyBlocks.push(`## Source\n\n[${sourceRelative}](${sourceUrl})`);
+    }
+    const composedBody = bodyBlocks.join('\n\n');
+
+    const mdx = [
+        '---',
+        `title: ${toFrontmatterString(reflection.name)}`,
+        `description: ${toFrontmatterString(description)}`,
+        `symbol: ${toFrontmatterString(reflection.name)}`,
+        `kind: ${toFrontmatterString(kind)}`,
+        `subsystem: ${toFrontmatterString(subsystem)}`,
+        `importPath: ${toFrontmatterString(importPath)}`,
+        `memberCount: ${memberCount}`,
+        `tier: ${toFrontmatterString(tier)}`,
+        `sections: ${toFrontmatterArray(allSections)}`,
+        sourceRelative ? `sourcePath: ${toFrontmatterString(sourceRelative)}` : '',
+        sourceUrl ? `sourceUrl: ${toFrontmatterString(sourceUrl)}` : '',
+        '---',
+        '',
+        composedBody,
+    ]
+        .filter(Boolean)
+        .join('\n');
+
+    fs.writeFileSync(path.resolve(outputDir, `${slug}.mdx`), `${mdx}\n`, 'utf8');
+    return true;
+};
+
+/**
+ * Collect documentable (class/enum) reflections from a converted project,
+ * handling both shapes TypeDoc produces: multiple entry points nest symbols
+ * under per-module children; a single entry point flattens them onto the
+ * project root.
+ */
+const collectSymbols = (project: any): any[] => {
+    const out: any[] = [];
+    for (const child of project.children ?? []) {
+        if (isDocumentableKind(child.kind)) {
+            out.push(child);
+        } else if (Array.isArray(child.children)) {
+            for (const sub of child.children) {
+                if (isDocumentableKind(sub.kind)) out.push(sub);
+            }
+        }
+    }
+    return out;
+};
+
+const convertEntryPoints = async (entryPoints: ReadonlyArray<string>, tsconfig: string): Promise<any> => {
     const app = await Application.bootstrapWithPlugins({
-        entryPoints: [toPosix(path.resolve(repoRoot, 'src/index.ts')), toPosix(path.resolve(repoRoot, 'src/debug/index.ts'))],
-        tsconfig: toPosix(path.resolve(repoRoot, 'tsconfig.json')),
+        entryPoints: entryPoints.map(entry => toPosix(path.resolve(repoRoot, entry))),
+        tsconfig: toPosix(path.resolve(repoRoot, tsconfig)),
         excludeInternal: true,
-        // Register @stable and @advanced as recognized modifier tags so TypeDoc
-        // preserves them on reflections instead of emitting unknown-tag warnings.
-        modifierTags: ['@stable', '@advanced', '@override', '@internal', '@alpha', '@beta', '@experimental', '@virtual', '@readonly', '@sealed', '@abstract', '@public', '@protected', '@private'],
+        modifierTags: MODIFIER_TAGS,
     });
 
     const project = await app.convert();
     if (!project) {
-        throw new Error('TypeDoc conversion failed.');
+        throw new Error(`TypeDoc conversion failed for ${entryPoints.join(', ')}.`);
     }
+    return project;
+};
 
+const build = async (): Promise<void> => {
     ensureCleanOutput();
     const usedSlugs = new Set<string>();
 
-    const modules = project.children ?? [];
-    for (const moduleReflection of modules) {
-        const exported = moduleReflection.children ?? [];
-        for (const reflection of exported) {
-            if (!isDocumentableKind(reflection.kind)) continue;
+    // 1. Core (+ debug subpath).
+    const coreProject = await convertEntryPoints(['src/index.ts', 'src/debug/index.ts'], 'tsconfig.json');
+    let coreCount = 0;
+    for (const reflection of collectSymbols(coreProject)) {
+        if (emitReflection(reflection, usedSlugs, {})) coreCount += 1;
+    }
 
-            const source = reflection.sources?.[0];
-            const sourcePath = source?.fileName ? normalizePath(source.fileName) : undefined;
-            const subsystem = guessSubsystem(sourcePath ?? '');
-            const importPath = entryPointTitle(reflection);
-            const description = renderComment(reflection.comment);
-            const tier: ApiTier = reflection.comment?.modifierTags?.has('@advanced') ? 'advanced' : 'stable';
-            const { body, sections, memberCount } = renderReflectionBody(reflection);
-            const kind = toApiKind(reflection.kind);
+    if (coreCount === 0) {
+        throw new Error('TypeDoc conversion produced no exportable core symbols.');
+    }
 
-            const baseSlug = slugify(reflection.name);
-            let slug = baseSlug;
-            let suffix = 2;
-            while (usedSlugs.has(slug)) {
-                slug = `${baseSlug}-${suffix}`;
-                suffix += 1;
+    // 2. Official extension packages — each as its own discoverable surface.
+    const packageCounts: Array<{ importPath: string; count: number }> = [];
+    for (const pkg of EXTENSION_PACKAGES) {
+        const project = await convertEntryPoints([pkg.entryPoint], pkg.tsconfig);
+        let count = 0;
+        for (const reflection of collectSymbols(project)) {
+            if (
+                emitReflection(reflection, usedSlugs, {
+                    importPathOverride: pkg.importPath,
+                    subsystemOverride: pkg.subsystem,
+                    sourceMarker: pkg.sourceMarker,
+                })
+            ) {
+                count += 1;
             }
-            usedSlugs.add(slug);
-
-            const sourceRelative = sourcePath ? sourcePath.replace(/^.*\/src\//, 'src/') : undefined;
-            const sourceUrl = sourceRelative && source?.line ? `https://github.com/Exoridus/ExoJS/blob/main/${sourceRelative}#L${source.line}` : undefined;
-            const safeDescriptionBody = description ? escapeMdxText(description) : '';
-            const allSections = ['Import', ...sections, ...(sourceUrl ? ['Source'] : [])];
-            const bodyBlocks: Array<string> = [`## Import\n\n\`import { ${reflection.name} } from '${importPath}'\``];
-            if (safeDescriptionBody.length > 0) {
-                bodyBlocks.push(safeDescriptionBody);
-            }
-            if (body.length > 0) {
-                bodyBlocks.push(body);
-            }
-            if (sourceUrl && sourceRelative) {
-                bodyBlocks.push(`## Source\n\n[${sourceRelative}](${sourceUrl})`);
-            }
-            const composedBody = bodyBlocks.join('\n\n');
-
-            const mdx = [
-                '---',
-                `title: ${toFrontmatterString(reflection.name)}`,
-                `description: ${toFrontmatterString(description)}`,
-                `symbol: ${toFrontmatterString(reflection.name)}`,
-                `kind: ${toFrontmatterString(kind)}`,
-                `subsystem: ${toFrontmatterString(subsystem)}`,
-                `importPath: ${toFrontmatterString(importPath)}`,
-                `memberCount: ${memberCount}`,
-                `tier: ${toFrontmatterString(tier)}`,
-                `sections: ${toFrontmatterArray(allSections)}`,
-                sourceRelative ? `sourcePath: ${toFrontmatterString(sourceRelative)}` : '',
-                sourceUrl ? `sourceUrl: ${toFrontmatterString(sourceUrl)}` : '',
-                '---',
-                '',
-                composedBody,
-            ]
-                .filter(Boolean)
-                .join('\n');
-
-            fs.writeFileSync(path.resolve(outputDir, `${slug}.mdx`), `${mdx}\n`, 'utf8');
         }
+        if (count === 0) {
+            throw new Error(`TypeDoc conversion produced no own symbols for ${pkg.importPath}.`);
+        }
+        packageCounts.push({ importPath: pkg.importPath, count });
     }
 
-    if (usedSlugs.size === 0) {
-        throw new Error('TypeDoc conversion produced no exportable symbols.');
-    }
-
-    console.log(`[build:api] Generated ${usedSlugs.size} API page(s) in ${outputDir}`);
+    const summary = [`${coreCount} core`, ...packageCounts.map(p => `${p.count} ${p.importPath}`)].join(', ');
+    console.log(`[build:api] Generated ${usedSlugs.size} API page(s) (${summary}) in ${outputDir}`);
 };
 
 void build();

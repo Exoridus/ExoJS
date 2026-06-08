@@ -1,8 +1,9 @@
-﻿import type { Application } from '@/core/Application';
+﻿import type { Application, RenderingApplicationOptions } from '@/core/Application';
 import { Color } from '@/core/Color';
+import { materializeRendererBindings } from '@/extensions/materialize';
 import { Rectangle } from '@/math/Rectangle';
-import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Container } from '@/rendering/Container';
+import { buildCoreRendererBindings } from '@/rendering/coreRendererBindings';
 import { Drawable } from '@/rendering/Drawable';
 import { ColorFilter } from '@/rendering/filters/ColorFilter';
 import { Graphics } from '@/rendering/primitives/Graphics';
@@ -16,6 +17,8 @@ import { Texture } from '@/rendering/texture/Texture';
 import { BlendModes, ScaleModes } from '@/rendering/types';
 import { Video } from '@/rendering/video/Video';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+
+import { particlesExtension, ParticleSystem } from '../../packages/exojs-particles/src/index';
 
 interface MockWebGpuEnvironment {
   readonly canvas: HTMLCanvasElement;
@@ -389,6 +392,24 @@ const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuBackend
   flush: vi.fn(),
 });
 
+/**
+ * Install core renderer bindings on a directly-constructed WebGpuBackend.
+ * Required after PR-2: core renderers are no longer registered in the backend constructor.
+ */
+function installCoreRenderers(backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void {
+  const bindings = buildCoreRendererBindings(renderingOptions);
+  materializeRendererBindings(backend, bindings);
+}
+
+/**
+ * Install core + particle renderer bindings on a directly-constructed WebGpuBackend.
+ */
+function installCoreAndParticleRenderers(backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void {
+  const coreBindings = buildCoreRendererBindings(renderingOptions);
+  const particleBindings = particlesExtension.renderers ?? [];
+  materializeRendererBindings(backend, [...coreBindings, ...particleBindings]);
+}
+
 describe('WebGpuBackend', () => {
   test('flushes the active renderer when switching renderer types', async () => {
     const environment = createMockWebGpuEnvironment();
@@ -402,6 +423,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const firstRenderer = createCustomRenderer<CustomDrawableA>();
       const secondRenderer = createCustomRenderer<CustomDrawableB>();
 
@@ -433,6 +455,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const renderer = createCustomRenderer<CustomDrawableA>();
       const pass = {
         execute: vi.fn(),
@@ -463,6 +486,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const renderer = createCustomRenderer<CustomDrawableA>();
 
       await manager.initialize();
@@ -491,6 +515,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
 
       expect(environment.canvas.width).toBe(640);
       expect(environment.canvas.height).toBe(360);
@@ -518,6 +543,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
 
       await manager.initialize();
 
@@ -541,6 +567,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const graphics = new Graphics();
 
       graphics.fillColor = Color.red;
@@ -577,6 +604,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const graphics = new Graphics();
 
       graphics.fillColor = Color.red;
@@ -618,6 +646,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const graphics = new Graphics();
 
       graphics.fillColor = Color.red;
@@ -659,6 +688,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -697,6 +727,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const first = new Sprite(texture);
@@ -743,6 +774,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const firstSprite = new Sprite(texture);
@@ -780,6 +812,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const firstCanvas = document.createElement('canvas');
       const secondCanvas = document.createElement('canvas');
       const firstTexture = new Texture(firstCanvas);
@@ -821,6 +854,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const firstCanvas = document.createElement('canvas');
       const texture = new Texture(firstCanvas);
       const firstSprite = new Sprite(texture);
@@ -857,6 +891,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const firstCanvas = document.createElement('canvas');
       const secondCanvas = document.createElement('canvas');
       const firstTexture = new Texture(firstCanvas);
@@ -899,6 +934,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sprites: Sprite[] = [];
 
       for (let index = 0; index < 9; index++) {
@@ -945,6 +981,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const firstSprite = new Sprite(texture);
@@ -982,6 +1019,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -1027,6 +1065,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -1072,6 +1111,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -1116,6 +1156,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -1177,6 +1218,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
 
       // "Hi" → 2 glyphs → 2 quads → 12 indices, batched into 1 drawIndexed
       const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
@@ -1235,6 +1277,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
       const firstQuads = text.pageQuads[0];
 
@@ -1296,6 +1339,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
       const firstQuads = text.pageQuads[0];
 
@@ -1336,6 +1380,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const video = new Video(mockVideo.video);
 
       await manager.initialize();
@@ -1366,6 +1411,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const video = new Video(mockVideo.video);
 
       await manager.initialize();
@@ -1399,6 +1445,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
       const video = new Video(mockVideo.video);
 
       await manager.initialize();
@@ -1435,6 +1482,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreRenderers(manager);
 
       mockVideo.setDimensions(64, 32);
 
@@ -1473,6 +1521,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
@@ -1517,6 +1566,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
@@ -1567,6 +1617,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
@@ -1618,6 +1669,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
@@ -1669,6 +1721,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
@@ -1716,6 +1769,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const renderTexture = new RenderTexture(64, 64);
       const graphics = new Graphics();
       const sprite = new Sprite(renderTexture);
@@ -1767,6 +1821,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const renderTexture = new RenderTexture(64, 64);
       const graphics = new Graphics();
       const sourceCanvas = document.createElement('canvas');
@@ -1813,6 +1868,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const renderTexture = new RenderTexture(32, 32);
 
       await manager.initialize();
@@ -1852,6 +1908,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -1888,6 +1945,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -1928,6 +1986,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const container = new Container();
@@ -1977,6 +2036,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const first = new Sprite(texture);
@@ -2017,6 +2077,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const sprite = new Sprite(texture);
@@ -2075,6 +2136,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
 
       await expect(manager.initialize()).rejects.toThrow('getPreferredCanvasFormat');
     } finally {
@@ -2109,6 +2171,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
 
       await expect(manager.initialize()).rejects.toThrow('Failed to request a WebGPU device.');
     } finally {
@@ -2146,6 +2209,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
 
       await expect(manager.initialize()).rejects.toThrow('Could not acquire a WebGPU adapter.');
       await expect(manager.initialize()).resolves.toBe(manager);
@@ -2166,6 +2230,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
 
       await manager.initialize();
 
@@ -2191,6 +2256,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
 
       await manager.initialize();
 
@@ -2219,6 +2285,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
       const lostHandler = vi.fn();
 
       await manager.initialize();
@@ -2252,6 +2319,7 @@ describe('WebGpuBackend', () => {
         },
       } as unknown as Application;
       const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
 
       await manager.initialize();
 

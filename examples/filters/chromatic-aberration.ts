@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
@@ -11,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const CHECKER = technical.filtering.checker256;
+const CHECKER = assets.technical.filtering.checker256;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;

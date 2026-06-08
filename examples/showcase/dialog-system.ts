@@ -1,4 +1,4 @@
-import { sound, textures } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Scene, Sound, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -27,8 +27,8 @@ class DialogSystemScene extends Scene {
     private done = false;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { portrait: textures.shipA });
-        await loader.load(Sound, { beep: sound.uiConfirm });
+        await loader.load(Texture, { portrait: assets.demo.textures.shipA });
+        await loader.load(Sound, { beep: assets.demo.sound.uiConfirm });
     }
 
     override init(loader): void {

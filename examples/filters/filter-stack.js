@@ -1,5 +1,5 @@
 // Auto-generated from filter-stack.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -9,7 +9,7 @@ const app = new Application({
     clearColor: Color.black,
 });
 document.body.append(app.canvas);
-const PRIMARY_RAMP = technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;
 void main(){ vec4 c=texture(uTexture,vUv); fragColor=vec4(c.rgb*vec3(1.0,0.9,1.2),c.a);} `;

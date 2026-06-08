@@ -58,8 +58,21 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
   }));
   vi.doMock('@/resources/Loader', () => ({
     Loader: vi.fn(function () {
-      return { destroy: vi.fn() };
+      return {
+        destroy: vi.fn(),
+        hasLoadable: vi.fn().mockReturnValue(false),
+        hasAssetType: vi.fn().mockReturnValue(false),
+        hasExtension: vi.fn().mockReturnValue(false),
+        bindAsset: vi.fn(),
+      };
     }),
+  }));
+  vi.doMock('@/extensions/materialize', () => ({
+    materializeAssetBindings: vi.fn(),
+    materializeRendererBindings: vi.fn(),
+  }));
+  vi.doMock('@/rendering/coreRendererBindings', () => ({
+    buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
   const onCanvasFocusChange = { add: vi.fn(), remove: vi.fn(), dispatch: vi.fn(), destroy: vi.fn() };
   vi.doMock('@/input/InputManager', () => ({

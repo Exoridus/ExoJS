@@ -1,5 +1,6 @@
 // Auto-generated from custom-wgsl-module.ts — edit the .ts source, not this file.
-import { Application, Color, Constant, ParticleSystem, RateSpawn, Scene, Texture, UpdateModule, Vector } from '@codexo/exojs';
+import { Application, Color, Scene, Texture, Vector } from '@codexo/exojs';
+import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
@@ -9,6 +10,7 @@ const app = new Application({
     loader: {
         basePath: 'assets/',
     },
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 class SwayModule extends UpdateModule {

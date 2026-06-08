@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -11,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const ALPHA_RINGS = technical.alpha.alphaGradientRings;
+const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 
 class MasksScene extends Scene {
     private rectSprite!: Sprite;

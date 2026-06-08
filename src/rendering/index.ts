@@ -88,7 +88,6 @@ export { AbstractWebGl2BatchedRenderer } from './webgl2/AbstractWebGl2BatchedRen
 export { AbstractWebGl2Renderer } from './webgl2/AbstractWebGl2Renderer';
 export { WebGl2Backend } from './webgl2/WebGl2Backend';
 export { WebGl2MeshRenderer } from './webgl2/WebGl2MeshRenderer';
-export { WebGl2ParticleRenderer } from './webgl2/WebGl2ParticleRenderer';
 export type { WebGl2RenderBufferRuntime } from './webgl2/WebGl2RenderBuffer';
 export { WebGl2RenderBuffer } from './webgl2/WebGl2RenderBuffer';
 export { WebGl2ShaderBlock } from './webgl2/WebGl2ShaderBlock';
@@ -104,6 +103,5 @@ export { WebGpuComputePipeline, WebGpuStorageBuffer } from './webgpu/compute';
 export { WebGpuBackend } from './webgpu/WebGpuBackend';
 export { getWebGpuBlendState } from './webgpu/WebGpuBlendState';
 export { WebGpuMeshRenderer } from './webgpu/WebGpuMeshRenderer';
-export { WebGpuParticleRenderer } from './webgpu/WebGpuParticleRenderer';
 export { WebGpuSpriteRenderer } from './webgpu/WebGpuSpriteRenderer';
 export { WebGpuTextRenderer } from './webgpu/WebGpuTextRenderer';

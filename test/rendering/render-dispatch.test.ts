@@ -1,5 +1,4 @@
-﻿import { ParticleSystem } from '@/particles/ParticleSystem';
-import { Container } from '@/rendering/Container';
+﻿import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { Mesh } from '@/rendering/mesh/Mesh';
 import type { RenderBackend } from '@/rendering/RenderBackend';
@@ -113,15 +112,6 @@ describe('render dispatch', () => {
     mesh.render(runtime);
 
     expect(draw).toHaveBeenCalledWith(mesh);
-  });
-
-  test('ParticleSystem.render submits through runtime.draw', () => {
-    const { runtime, draw } = createRuntime();
-    const system = new ParticleSystem(createTexture());
-
-    system.render(runtime);
-
-    expect(draw).toHaveBeenCalledWith(system);
   });
 
   test('Container.render remains traversal-only', () => {

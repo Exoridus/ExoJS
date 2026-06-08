@@ -46,7 +46,7 @@ The two highest-impact reductions: remove filters you don't need, and set `cache
 
 ## Particle system throughput
 
-The [`ParticleSystem`](/ExoJS/en/api/particle-system/) is designed for throughput — SoA storage, no per-particle allocations, instanced rendering. The practical limits depend on whether you're on CPU or GPU path:
+The `ParticleSystem` (from `@codexo/exojs-particles`) is designed for throughput — SoA storage, no per-particle allocations, instanced rendering. The practical limits depend on whether you're on CPU or GPU path:
 
 - **CPU path** (WebGL2, or any non-GPU-eligible update module): Suitable for moderate particle counts — performance drops roughly linearly with particle count. The per-frame update cost is proportional to `aliveCount` × number of update modules.
 - **GPU path** (WebGPU, all modules GPU-eligible): The composite WGSL compute shader runs update logic on the GPU in one dispatch, writing directly into the renderer's instance buffer — no CPU readback. This path becomes attractive for large systems with many particles and GPU-eligible modules.

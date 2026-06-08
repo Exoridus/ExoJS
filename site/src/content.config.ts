@@ -20,7 +20,7 @@ const api = defineCollection({
         description: z.string().default(''),
         symbol: z.string(),
         kind: z.enum(['class', 'enum', 'interface', 'type']),
-        subsystem: z.enum(['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources']),
+        subsystem: z.enum(['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources', 'tiled']),
         importPath: z.string(),
         memberCount: z.number().int().min(0).default(0),
         sections: z.array(z.string()).default([]),

@@ -50,8 +50,12 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
       throw new Error(`An asset handler is already registered for ${binding.type.name}.`);
     }
 
-    if (binding.typeName !== undefined && (seenNames.has(binding.typeName) || loader.hasAssetType(binding.typeName))) {
-      throw new Error(`Asset type name "${binding.typeName}" is already registered. Remove the conflicting binding.`);
+    for (const name of binding.typeNames ?? []) {
+      if (seenNames.has(name) || loader.hasAssetType(name)) {
+        throw new Error(`Asset type name "${name}" is already registered. Remove the conflicting binding.`);
+      }
+
+      seenNames.add(name);
     }
 
     for (const ext of binding.extensions ?? []) {
@@ -65,16 +69,12 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
     }
 
     seenTypes.add(binding.type);
-
-    if (binding.typeName !== undefined) {
-      seenNames.add(binding.typeName);
-    }
   }
 
   // --- Materialise: all pre-validation passed ---
   for (const binding of bindings) {
     const handler: AssetHandler = binding.create(loader);
 
-    loader.bindAsset({ type: binding.type, typeName: binding.typeName, extensions: binding.extensions }, handler);
+    loader.bindAsset({ type: binding.type, typeNames: binding.typeNames, extensions: binding.extensions }, handler);
   }
 }

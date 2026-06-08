@@ -1,4 +1,4 @@
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Texture, Time } from '@codexo/exojs';
 
 const app = new Application({
@@ -25,7 +25,7 @@ class AudioVisualisationScene extends Scene {
     private styles!: string[];
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { example: audio.musicLoop });
+        await loader.load(Music, { example: assets.demo.audio.musicLoop });
     }
 
     override init(loader): void {

@@ -1,7 +1,7 @@
-import { video } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Scene, Video } from '@codexo/exojs';
 
-const VIDEO_URL = video.demoLoop;
+const VIDEO_URL = assets.demo.video.demoLoop;
 
 const app = new Application({
     canvas: {

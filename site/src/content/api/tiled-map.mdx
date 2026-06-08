@@ -1,0 +1,50 @@
+---
+title: "TiledMap"
+description: "Runtime representation of a loaded Tiled map. Exposes map metadata, layers, and tileset textures. Tileset textures are owned by the Loader cache — `TiledMap.destroy()` does NOT destroy them. Only the initial proof scope is implemented: orthogonal tile layers, basic tilesets, and basic object layers. TMX/XML, infinite maps, and world streaming are not supported."
+symbol: "TiledMap"
+kind: "class"
+subsystem: "tiled"
+importPath: "@codexo/exojs-tiled"
+memberCount: 12
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tiled/src/TiledMap.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledMap.ts#L83"
+---
+## Import
+
+`import { TiledMap } from '@codexo/exojs-tiled'`
+
+Runtime representation of a loaded Tiled map.
+
+Exposes map metadata, layers, and tileset textures. Tileset textures
+are owned by the Loader cache — `TiledMap.destroy()` does NOT destroy them.
+
+Only the initial proof scope is implemented: orthogonal tile layers,
+basic tilesets, and basic object layers. TMX/XML, infinite maps, and
+world streaming are not supported.
+
+## Constructors
+
+- `new(data: TiledMapData, tilesetTextures: readonly Texture[]): TiledMap`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `data: TiledMapData`
+- `height: number`
+- `layers: readonly TiledLayer[]`
+- `tileHeight: number`
+- `tilesets: readonly TiledTileset[]`
+- `tilesetTextures: readonly Texture[]`
+- `tileWidth: number`
+- `width: number`
+- `objectLayers: readonly TiledLayer[]`
+- `tileLayers: readonly TiledLayer[]`
+
+## Source
+
+[packages/exojs-tiled/src/TiledMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledMap.ts#L83)

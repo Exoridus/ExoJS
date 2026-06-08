@@ -1,5 +1,5 @@
 // Auto-generated from music-loop.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, crossFade, Graphics, Music, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -15,7 +15,7 @@ class MusicLoopScene extends Scene {
     ui;
     text;
     async load(loader) {
-        await loader.load(Music, { track: audio.musicLoop, silent: audio.musicLoop });
+        await loader.load(Music, { track: assets.demo.audio.musicLoop, silent: assets.demo.audio.musicLoop });
     }
     init(loader) {
         this.music = loader.get(Music, 'track');

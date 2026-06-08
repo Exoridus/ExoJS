@@ -10,6 +10,8 @@ import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 // Simplified shaders mocked in place of the real .vert/.frag string imports
 // (the test environment has no loader for them). Hoisted so the sync vi.mock
 // factories below can reference them.
@@ -213,6 +215,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 
   const backend = new WebGl2Backend(app);
   await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
 
   return backend;
 };

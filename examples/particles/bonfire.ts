@@ -1,19 +1,22 @@
-import { textures } from '@assets';
+import { assets } from '@assets';
 import {
     Application,
     BlendModes,
     Color,
+    Scene,
+    Texture,
+} from '@codexo/exojs';
+import {
     ColorGradient,
     ColorOverLifetime,
     ConeDirection,
     Constant,
+    particlesExtension,
     ParticleSystem,
     Range,
     RateSpawn,
-    Scene,
-    Texture,
     VectorRange,
-} from '@codexo/exojs';
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -21,6 +24,7 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);
@@ -30,7 +34,7 @@ class BonfireScene extends Scene {
     private smokeSystem!: ParticleSystem;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { flame: textures.particleFlame, smoke: textures.particleSmoke });
+        await loader.load(Texture, { flame: assets.demo.textures.particleFlame, smoke: assets.demo.textures.particleSmoke });
     }
 
     override init(loader): void {

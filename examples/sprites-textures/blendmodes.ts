@@ -1,4 +1,4 @@
-import { technical, textures } from '@assets';
+import { assets } from '@assets';
 import { Application, BlendModes, Color, ScaleModes, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -11,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const ALPHA_RINGS = technical.alpha.alphaGradientRings;
+const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 
 class BlendmodesScene extends Scene {
     private background!: Sprite;
@@ -28,7 +28,7 @@ class BlendmodesScene extends Scene {
             Texture,
             {
                 background: ALPHA_RINGS,
-                bunny: textures.shipA,
+                bunny: assets.demo.textures.shipA,
             },
             {
                 scaleMode: ScaleModes.Nearest,

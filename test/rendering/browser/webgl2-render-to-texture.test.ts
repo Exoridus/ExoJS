@@ -9,6 +9,8 @@ import { Texture } from '@/rendering/texture/Texture';
 import { View } from '@/rendering/View';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 const shaderSources = vi.hoisted(() => ({
   spriteVertexSource: `#version 300 es
 precision mediump float;
@@ -208,6 +210,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 
   const backend = new WebGl2Backend(app);
   await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
   return backend;
 };
 

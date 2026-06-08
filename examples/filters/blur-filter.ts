@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, BlurFilter, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -11,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const PIXEL_GRID = technical.filtering.pixelGrid128;
+const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
 
 class BlurFilterScene extends Scene {
     private blur!: BlurFilter;

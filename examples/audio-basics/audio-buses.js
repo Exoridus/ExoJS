@@ -1,5 +1,5 @@
 // Auto-generated from audio-buses.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -21,8 +21,8 @@ class AudioBusesScene extends Scene {
     labels;
     drag = -1;
     async load(loader) {
-        await loader.load(Music, { music: audio.musicLoop });
-        await loader.load(Sound, { sfx: audio.uiClick });
+        await loader.load(Music, { music: assets.demo.audio.musicLoop });
+        await loader.load(Sound, { sfx: assets.demo.audio.uiClick });
     }
     init(loader) {
         this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.6).play();

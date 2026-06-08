@@ -1,4 +1,4 @@
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
 
 const app = new Application({
@@ -16,7 +16,7 @@ class PlaySoundScene extends Scene {
     private text!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Sound, { click: audio.uiClick });
+        await loader.load(Sound, { click: assets.demo.audio.uiClick });
     }
 
     override init(loader): void {

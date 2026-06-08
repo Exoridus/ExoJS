@@ -1,4 +1,4 @@
-import { fonts } from '@assets';
+import { assets } from '@assets';
 import { Application, BitmapText, BmFont, Color, Scene } from '@codexo/exojs';
 
 const app = new Application({
@@ -20,7 +20,7 @@ class BitmapTextBasicScene extends Scene {
     private frame = 0;
 
     override async load(loader): Promise<void> {
-        this.font = await loader.load(BmFont, fonts.kenneyBlocksFnt);
+        this.font = await loader.load(BmFont, assets.demo.fonts.kenneyBlocksFnt);
     }
 
     override init(): void {

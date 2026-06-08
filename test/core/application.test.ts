@@ -54,6 +54,15 @@ const loadApplicationHarness = async (
     webglInitialize?: MockInstance;
   } = {},
 ): Promise<ApplicationTestHarness> => {
+  const rendererRegistry = {
+    bindRenderer: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    destroy: vi.fn(),
+    resolve: vi.fn(),
+    renderers: vi.fn().mockReturnValue([]),
+    registerRenderer: vi.fn(),
+  };
   const webglManager = {
     initialize: options.webglInitialize ?? vi.fn().mockResolvedValue(undefined),
     flush: vi.fn(),
@@ -64,6 +73,8 @@ const loadApplicationHarness = async (
     renderTarget: { setView: vi.fn() },
     onContextLost: { add: vi.fn(), destroy: vi.fn() },
     onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+    rendererRegistry,
+    backendType: 'webgl2',
   };
   const webgpuManager = {
     initialize: options.webgpuInitialize ?? vi.fn().mockResolvedValue(undefined),
@@ -75,6 +86,8 @@ const loadApplicationHarness = async (
     renderTarget: { setView: vi.fn() },
     onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
     onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
+    rendererRegistry,
+    backendType: 'webgpu',
   };
   const sceneManager = {
     update: vi.fn(),
@@ -88,6 +101,10 @@ const loadApplicationHarness = async (
   };
   const loader = {
     destroy: vi.fn(),
+    hasLoadable: vi.fn().mockReturnValue(false),
+    hasAssetType: vi.fn().mockReturnValue(false),
+    hasExtension: vi.fn().mockReturnValue(false),
+    bindAsset: vi.fn(),
   };
   const BackendMock = vi.fn(function () {
     return webglManager;
@@ -111,6 +128,13 @@ const loadApplicationHarness = async (
   }));
   vi.doMock('@/resources/Loader', () => ({
     Loader: LoaderMock,
+  }));
+  vi.doMock('@/extensions/materialize', () => ({
+    materializeAssetBindings: vi.fn(),
+    materializeRendererBindings: vi.fn(),
+  }));
+  vi.doMock('@/rendering/coreRendererBindings', () => ({
+    buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
   vi.doMock('@/input/InputManager', () => ({
     InputManager: InputManagerMock,
@@ -397,7 +421,6 @@ describe('Application', () => {
         debug: true,
         webglAttributes: { antialias: true },
         spriteRendererBatchSize: 128,
-        particleRendererBatchSize: 256,
       },
     });
 
@@ -406,7 +429,6 @@ describe('Application', () => {
     expect(appArg.options.rendering?.debug).toBe(true);
     expect(appArg.options.rendering?.webglAttributes).toEqual({ antialias: true });
     expect(appArg.options.rendering?.spriteRendererBatchSize).toBe(128);
-    expect(appArg.options.rendering?.particleRendererBatchSize).toBe(256);
   });
 
   test('applies canvas pixelRatio to backing size and keeps resize logical', async () => {

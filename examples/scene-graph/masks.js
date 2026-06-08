@@ -1,5 +1,5 @@
 // Auto-generated from masks.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -9,7 +9,7 @@ const app = new Application({
     clearColor: Color.black,
 });
 document.body.append(app.canvas);
-const ALPHA_RINGS = technical.alpha.alphaGradientRings;
+const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 class MasksScene extends Scene {
     rectSprite;
     rectMask;

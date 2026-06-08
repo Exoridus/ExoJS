@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -53,7 +53,7 @@ function buildGrid(): { vertices: Float32Array; uvs: Float32Array; indices: Uint
     return { vertices, uvs, indices };
 }
 
-const UV_GRID = technical.filtering.uvGrid256;
+const UV_GRID = assets.technical.filtering.uvGrid256;
 
 class MeshDeformedGridScene extends Scene {
     private restVertices!: Float32Array;

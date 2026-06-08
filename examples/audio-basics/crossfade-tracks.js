@@ -1,5 +1,5 @@
 // Auto-generated from crossfade-tracks.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, crossFade, Music, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -15,7 +15,7 @@ class CrossfadeTracksScene extends Scene {
     toB = true;
     text;
     async load(loader) {
-        await loader.load(Music, { a: audio.musicA, b: audio.musicB });
+        await loader.load(Music, { a: assets.demo.audio.musicA, b: assets.demo.audio.musicB });
     }
     init(loader) {
         this.trackA = loader.get(Music, 'a').setLoop(true).setVolume(0.7).play();

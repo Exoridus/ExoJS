@@ -1,18 +1,21 @@
 import {
-    AlphaFadeOverLifetime,
     Application,
-    ApplyForce,
     Color,
-    ConeDirection,
-    Constant,
-    ParticleSystem,
-    Range,
-    RateSpawn,
     Scene,
     Text,
     Texture,
     Vector,
 } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    ApplyForce,
+    ConeDirection,
+    Constant,
+    particlesExtension,
+    ParticleSystem,
+    Range,
+    RateSpawn,
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -23,6 +26,7 @@ const app = new Application({
     loader: {
         basePath: 'assets/',
     },
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);

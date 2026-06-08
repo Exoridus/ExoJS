@@ -1,16 +1,8 @@
-import { textures } from '@assets';
+import { assets } from '@assets';
 import {
-    AlphaFadeOverLifetime,
     Application,
-    ApplyForce,
-    BurstSpawn,
     Color,
-    ConeDirection,
-    Constant,
-    Curve,
-    ParticleSystem,
     rand,
-    Range,
     Scene,
     seconds,
     Size,
@@ -18,6 +10,17 @@ import {
     Timer,
     Vector,
 } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    ApplyForce,
+    BurstSpawn,
+    ConeDirection,
+    Constant,
+    Curve,
+    particlesExtension,
+    ParticleSystem,
+    Range,
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -25,6 +28,7 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);
@@ -52,7 +56,7 @@ class FireworksScene extends Scene {
     private explosionTimer!: Timer;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { star: textures.particleStar });
+        await loader.load(Texture, { star: assets.demo.textures.particleStar });
     }
 
     override init(loader): void {

@@ -1,4 +1,4 @@
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioBus, Color, DuckingFilter, Music, Scene, Sound, Text } from '@codexo/exojs';
 
 const app = new Application({
@@ -19,8 +19,8 @@ class DuckingScene extends Scene {
     private text!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { music: audio.musicLoop });
-        await loader.load(Sound, { voice: audio.uiConfirm });
+        await loader.load(Music, { music: assets.demo.audio.musicLoop });
+        await loader.load(Sound, { voice: assets.demo.audio.uiConfirm });
     }
 
     override init(loader): void {

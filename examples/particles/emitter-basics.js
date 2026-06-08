@@ -1,5 +1,6 @@
 // Auto-generated from emitter-basics.ts — edit the .ts source, not this file.
-import { AlphaFadeOverLifetime, Application, ApplyForce, Color, ConeDirection, Constant, ParticleSystem, Range, RateSpawn, Scene, Texture, Vector, } from '@codexo/exojs';
+import { Application, Color, Scene, Texture, Vector, } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
@@ -9,6 +10,7 @@ const app = new Application({
     loader: {
         basePath: 'assets/',
     },
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 class EmitterBasicsScene extends Scene {

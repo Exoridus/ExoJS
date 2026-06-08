@@ -1,6 +1,7 @@
 # === Project artifacts ===
 node_modules
 dist/*
+packages/*/dist
 coverage
 __screenshots__
 npm-debug.log*

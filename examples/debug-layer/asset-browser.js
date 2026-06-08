@@ -1,10 +1,14 @@
 // Auto-generated from asset-browser.ts — edit the .ts source, not this file.
-import * as assetCatalog from '@assets';
+import { assets } from '@assets';
 import { Application, Color, FontAsset, Graphics, Json, Music, Scene, Sprite, Spritesheet, SvgAsset, Text, Texture, } from '@codexo/exojs';
-// The playground serves the asset catalog as the `@assets` module (named
-// category exports). This browser introspects every category by string key,
-// so treat the namespace as a dynamic record.
-const catalog = assetCatalog;
+// Dynamic category accessor: maps a category key to the correct sub-object
+// in the hierarchical assets catalog. Technical assets live under
+// assets.technical; everything else is under assets.demo.
+function getCategoryData(catKey) {
+    if (catKey === 'technical')
+        return assets.technical;
+    return assets.demo[catKey] ?? {};
+}
 const W = 900;
 const H = 680;
 const TOOLBAR_H = 110;
@@ -129,17 +133,15 @@ class AssetBrowserScene extends Scene {
     txtAnimPlay = new Text('', { fillColor: C.white, fontSize: 12 });
     txtAnimFrame = new Text('', { fillColor: C.dim, fontSize: 11 });
     async load(loader) {
-        if (!catalog)
-            return;
         const texBatch = {};
-        for (const [k, url] of Object.entries(catalog.textures ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.textures ?? {})) {
             texBatch[`tex_${k}`] = url;
         }
         if (Object.keys(texBatch).length)
             await loader.load(Texture, texBatch);
         const sprImgBatch = {};
         const sprJsonBatch = {};
-        for (const [k, entry] of Object.entries(catalog.sprites ?? {})) {
+        for (const [k, entry] of Object.entries(assets.demo.sprites ?? {})) {
             sprImgBatch[`spr_${k}`] = entry.image;
             sprJsonBatch[`spr_${k}`] = entry.data;
         }
@@ -149,7 +151,7 @@ class AssetBrowserScene extends Scene {
         }
         const sshImgBatch = {};
         const sshJsonBatch = {};
-        for (const [k, entry] of Object.entries(catalog.spritesheets ?? {})) {
+        for (const [k, entry] of Object.entries(assets.demo.spritesheets ?? {})) {
             sshImgBatch[`ssh_${k}`] = entry.image;
             sshJsonBatch[`ssh_${k}`] = entry.data;
         }
@@ -158,14 +160,14 @@ class AssetBrowserScene extends Scene {
             await loader.load(Json, sshJsonBatch);
         }
         const svgBatch = {};
-        for (const [k, url] of Object.entries(catalog.svg ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.svg ?? {})) {
             svgBatch[`svg_${k}`] = url;
         }
         if (Object.keys(svgBatch).length)
             await loader.load(SvgAsset, svgBatch);
         const inpImgBatch = {};
         const inpJsonBatch = {};
-        for (const [k, entry] of Object.entries(catalog.inputPrompts ?? {})) {
+        for (const [k, entry] of Object.entries(assets.demo.inputPrompts ?? {})) {
             inpImgBatch[`inp_${k}`] = entry.image;
             inpJsonBatch[`inp_${k}`] = entry.data;
         }
@@ -174,26 +176,26 @@ class AssetBrowserScene extends Scene {
             await loader.load(Json, inpJsonBatch);
         }
         const audBatch = {};
-        for (const [k, url] of Object.entries(catalog.audio ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.audio ?? {})) {
             audBatch[`aud_${k}`] = url;
         }
         if (Object.keys(audBatch).length)
             await loader.load(Music, audBatch);
         const sndBatch = {};
-        for (const [k, url] of Object.entries(catalog.sound ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.sound ?? {})) {
             sndBatch[`snd_${k}`] = url;
         }
         if (Object.keys(sndBatch).length)
             await loader.load(Music, sndBatch);
         const musBatch = {};
-        for (const [k, url] of Object.entries(catalog.music ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.music ?? {})) {
             musBatch[`mus_${k}`] = url;
         }
         if (Object.keys(musBatch).length)
             await loader.load(Music, musBatch);
         const sdsBatch = {};
         const sdsJsonBatch = {};
-        for (const [k, entry] of Object.entries(catalog.soundSprites ?? {})) {
+        for (const [k, entry] of Object.entries(assets.demo.soundSprites ?? {})) {
             sdsBatch[`sds_${k}`] = entry.audio;
             sdsJsonBatch[`sds_${k}`] = entry.data;
         }
@@ -201,7 +203,7 @@ class AssetBrowserScene extends Scene {
             await loader.load(Music, sdsBatch);
             await loader.load(Json, sdsJsonBatch);
         }
-        for (const [k, url] of Object.entries(catalog.fonts ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.fonts ?? {})) {
             // The fonts category mixes vector fonts (.ttf/.otf) with bitmap-font
             // sidecars (.fnt/.png) that FontFace cannot parse. Load only the
             // vector entries — the bitmap ones fall back to a path readout.
@@ -211,7 +213,7 @@ class AssetBrowserScene extends Scene {
             await loader.load(FontAsset, { [`fnt_${k}`]: url }, { family });
         }
         const techBatch = {};
-        for (const [subcat, items] of Object.entries(catalog.technical ?? {})) {
+        for (const [subcat, items] of Object.entries(assets.technical ?? {})) {
             for (const [k, u] of Object.entries(items)) {
                 techBatch[`tech_${subcat}_${k}`] = u;
             }
@@ -219,41 +221,37 @@ class AssetBrowserScene extends Scene {
         if (Object.keys(techBatch).length)
             await loader.load(Texture, techBatch);
         const bgBatch = {};
-        for (const [k, url] of Object.entries(catalog.backgrounds ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.backgrounds ?? {})) {
             bgBatch[`bg_${k}`] = url;
         }
         if (Object.keys(bgBatch).length)
             await loader.load(Texture, bgBatch);
         const curBatch = {};
-        for (const [k, url] of Object.entries(catalog.cursors ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.cursors ?? {})) {
             curBatch[`cur_${k}`] = url;
         }
         if (Object.keys(curBatch).length)
             await loader.load(SvgAsset, curBatch);
         const tlsBatch = {};
-        for (const [k, entry] of Object.entries(catalog.tilesets ?? {})) {
+        for (const [k, entry] of Object.entries(assets.demo.tilesets ?? {})) {
             tlsBatch[`tls_${k}`] = entry.image;
         }
         if (Object.keys(tlsBatch).length)
             await loader.load(Texture, tlsBatch);
         const vndBatch = {};
-        for (const [k, url] of Object.entries(catalog.vendor ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.vendor ?? {})) {
             vndBatch[`vnd_${k}`] = url;
         }
         if (Object.keys(vndBatch).length)
             await loader.load(Json, vndBatch);
     }
     init(loader) {
-        if (!catalog) {
-            this.txtNoAssets.setPosition(PREVIEW_X + 40, H / 2 - 30);
-            return;
-        }
-        for (const [k] of Object.entries(catalog.textures ?? {})) {
+        for (const [k] of Object.entries(assets.demo.textures ?? {})) {
             const s = new Sprite(loader.get(Texture, `tex_${k}`));
             s.setAnchor(0.5);
             this.texSprites.set(k, s);
         }
-        for (const [k] of Object.entries(catalog.sprites ?? {})) {
+        for (const [k] of Object.entries(assets.demo.sprites ?? {})) {
             const tex = loader.get(Texture, `spr_${k}`);
             const data = loader.get(Json, `spr_${k}`);
             const ss = new Spritesheet(tex, data);
@@ -261,7 +259,7 @@ class AssetBrowserScene extends Scene {
             for (const s of ss.sprites.values())
                 s.setAnchor(0.5);
         }
-        for (const [k] of Object.entries(catalog.spritesheets ?? {})) {
+        for (const [k] of Object.entries(assets.demo.spritesheets ?? {})) {
             const tex = loader.get(Texture, `ssh_${k}`);
             const data = loader.get(Json, `ssh_${k}`);
             const ss = new Spritesheet(tex, data);
@@ -269,12 +267,12 @@ class AssetBrowserScene extends Scene {
             for (const s of ss.sprites.values())
                 s.setAnchor(0.5);
         }
-        for (const [k] of Object.entries(catalog.svg ?? {})) {
+        for (const [k] of Object.entries(assets.demo.svg ?? {})) {
             const s = new Sprite(new Texture(loader.get(SvgAsset, `svg_${k}`)));
             s.setAnchor(0.5);
             this.svgSprites.set(k, s);
         }
-        for (const [k] of Object.entries(catalog.inputPrompts ?? {})) {
+        for (const [k] of Object.entries(assets.demo.inputPrompts ?? {})) {
             const tex = loader.get(Texture, `inp_${k}`);
             const data = loader.get(Json, `inp_${k}`);
             const ss = new Spritesheet(tex, data);
@@ -282,49 +280,49 @@ class AssetBrowserScene extends Scene {
             for (const s of ss.sprites.values())
                 s.setAnchor(0.5);
         }
-        for (const [k] of Object.entries(catalog.audio ?? {})) {
+        for (const [k] of Object.entries(assets.demo.audio ?? {})) {
             this.audioMusics.set(k, loader.get(Music, `aud_${k}`));
         }
-        for (const [k] of Object.entries(catalog.sound ?? {})) {
+        for (const [k] of Object.entries(assets.demo.sound ?? {})) {
             this.soundMusics.set(k, loader.get(Music, `snd_${k}`));
         }
-        for (const [k] of Object.entries(catalog.music ?? {})) {
+        for (const [k] of Object.entries(assets.demo.music ?? {})) {
             this.musicMusics.set(k, loader.get(Music, `mus_${k}`));
         }
-        for (const [k] of Object.entries(catalog.soundSprites ?? {})) {
+        for (const [k] of Object.entries(assets.demo.soundSprites ?? {})) {
             this.soundSpriteAudio.set(k, loader.get(Music, `sds_${k}`));
             this.soundSpriteData.set(k, loader.get(Json, `sds_${k}`));
         }
-        for (const [k, url] of Object.entries(catalog.fonts ?? {})) {
+        for (const [k, url] of Object.entries(assets.demo.fonts ?? {})) {
             // Match the load() filter: only vector fonts get a registered family;
             // bitmap-font entries render via the path-readout fallback.
             if (!/\.(ttf|otf|woff2?)$/i.test(url))
                 continue;
             this.fontFamilies.set(k, `assetbrowser_${k}`);
         }
-        for (const [subcat, items] of Object.entries(catalog.technical ?? {})) {
+        for (const [subcat, items] of Object.entries(assets.technical ?? {})) {
             for (const [k] of Object.entries(items)) {
                 const s = new Sprite(loader.get(Texture, `tech_${subcat}_${k}`));
                 s.setAnchor(0.5);
                 this.techSprites.set(`${subcat}.${k}`, s);
             }
         }
-        for (const [k] of Object.entries(catalog.backgrounds ?? {})) {
+        for (const [k] of Object.entries(assets.demo.backgrounds ?? {})) {
             const s = new Sprite(loader.get(Texture, `bg_${k}`));
             s.setAnchor(0.5);
             this.bgSprites.set(k, s);
         }
-        for (const [k] of Object.entries(catalog.cursors ?? {})) {
+        for (const [k] of Object.entries(assets.demo.cursors ?? {})) {
             const s = new Sprite(new Texture(loader.get(SvgAsset, `cur_${k}`)));
             s.setAnchor(0.5);
             this.cursorSprites.set(k, s);
         }
-        for (const [k] of Object.entries(catalog.tilesets ?? {})) {
+        for (const [k] of Object.entries(assets.demo.tilesets ?? {})) {
             const s = new Sprite(loader.get(Texture, `tls_${k}`));
             s.setAnchor(0.5);
             this.tilesetSprites.set(k, s);
         }
-        for (const [k] of Object.entries(catalog.vendor ?? {})) {
+        for (const [k] of Object.entries(assets.demo.vendor ?? {})) {
             this.vendorData.set(k, loader.get(Json, `vnd_${k}`));
         }
         this.app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
@@ -333,11 +331,9 @@ class AssetBrowserScene extends Scene {
         this.selectFirstInCategory();
     }
     techFlatKeys() {
-        if (!catalog?.technical)
-            return [];
         const out = [];
         for (const subcat of ['alpha', 'filtering', 'color']) {
-            const items = catalog.technical[subcat];
+            const items = assets.technical[subcat];
             if (!items)
                 continue;
             out.push(subcat);
@@ -347,25 +343,23 @@ class AssetBrowserScene extends Scene {
         return out;
     }
     keys() {
-        if (!catalog)
-            return [];
         if (this.cat === 'technical')
             return this.techFlatKeys();
         const cat = CATEGORIES.find(c => c.id === this.cat);
-        const obj = catalog[cat?.catKey ?? ''];
+        const obj = getCategoryData(cat?.catKey ?? '');
         return obj ? Object.keys(obj) : [];
     }
     assetPath() {
-        if (!catalog || !this.key)
+        if (!this.key)
             return '';
         if (this.cat === 'technical') {
             if (!this.key.includes('.'))
                 return '';
             const [subcat, itemKey] = this.key.split('.');
-            return catalog.technical?.[subcat]?.[itemKey] ?? '';
+            return assets.technical[subcat]?.[itemKey] ?? '';
         }
         const cat = CATEGORIES.find(c => c.id === this.cat);
-        const v = catalog[cat?.catKey ?? '']?.[this.key];
+        const v = getCategoryData(cat?.catKey ?? '')[this.key];
         if (typeof v === 'string')
             return v;
         if (v && typeof v.image === 'string')
@@ -545,10 +539,6 @@ class AssetBrowserScene extends Scene {
     }
     draw(context) {
         context.backend.clear(C.bg);
-        if (!catalog) {
-            this.drawNoAssets(context);
-            return;
-        }
         this.drawPreviewBg(context);
         this.drawPreviewContent(context);
         this.drawSidebar(context);
@@ -970,7 +960,7 @@ class AssetBrowserScene extends Scene {
         const sprite = this.tilesetSprites.get(this.key ?? '');
         if (!sprite)
             return;
-        const entry = catalog?.tilesets?.[this.key ?? ''];
+        const entry = assets.demo.tilesets[this.key ?? ''];
         const { cx, cy, maxW, maxH } = this.previewCenter();
         this.fitSprite(sprite, maxW, maxH - 30, cx, cy - 15);
         context.render(sprite);

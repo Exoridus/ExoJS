@@ -1,5 +1,5 @@
 // Auto-generated from crt-scanlines.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -9,7 +9,7 @@ const app = new Application({
     clearColor: Color.black,
 });
 document.body.append(app.canvas);
-const PIXEL_GRID = technical.filtering.pixelGrid128;
+const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 uv=vUv*2.0-1.0; uv*=1.0+dot(uv,uv)*0.07; uv=uv*0.5+0.5; vec4 c=texture(uTexture,uv); float scan=0.88+0.12*sin(vUv.y*900.0); float vig=1.0-smoothstep(0.45,0.95,length(vUv-0.5)); fragColor=vec4(c.rgb*scan*vig,c.a);} `;

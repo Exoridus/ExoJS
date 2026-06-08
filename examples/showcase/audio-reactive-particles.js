@@ -1,12 +1,14 @@
 // Auto-generated from audio-reactive-particles.ts — edit the .ts source, not this file.
-import { audio, textures } from '@assets';
-import { AlphaFadeOverLifetime, Application, BeatDetector, BurstSpawn, Color, ConeDirection, Constant, Music, ParticleSystem, Scene, Texture, Vector, } from '@codexo/exojs';
+import { assets } from '@assets';
+import { Application, BeatDetector, Color, Music, Scene, Texture, Vector, } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
@@ -16,8 +18,8 @@ class AudioReactiveParticlesScene extends Scene {
     ps;
     burst;
     async load(loader) {
-        await loader.load(Music, { track: audio.musicLoop });
-        await loader.load(Texture, { particle: textures.particleLight });
+        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
     }
     init(loader) {
         this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();

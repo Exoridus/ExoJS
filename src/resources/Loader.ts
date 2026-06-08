@@ -1,10 +1,6 @@
-import { Music } from '@/audio/Music';
-import { Sound } from '@/audio/Sound';
 import { Signal } from '@/core/Signal';
 import type { AssetHandler } from '@/extensions/Extension';
-import { BmFont } from '@/rendering/text/BmFont';
-import { Texture } from '@/rendering/texture/Texture';
-import { Video } from '@/rendering/video/Video';
+import { type BmFont } from '@/rendering/text/BmFont';
 
 import { Asset, AssetImpl } from './Asset';
 import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
@@ -15,25 +11,21 @@ import { type Assets, AssetsImpl } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
-import { BinaryFactory } from './factories/BinaryFactory';
-import { BmFontLoaderFactory } from './factories/BmFontFactory';
-import { CsvFactory } from './factories/CsvFactory';
-import { FontFactory } from './factories/FontFactory';
-import { ImageFactory } from './factories/ImageFactory';
-import { JsonFactory } from './factories/JsonFactory';
-import { MusicFactory } from './factories/MusicFactory';
-import { SoundFactory } from './factories/SoundFactory';
-import { SubtitleFactory } from './factories/SubtitleFactory';
-import { SvgFactory } from './factories/SvgFactory';
-import { TextFactory } from './factories/TextFactory';
-import { TextureFactory } from './factories/TextureFactory';
-import { VideoFactory } from './factories/VideoFactory';
-import { WasmFactory } from './factories/WasmFactory';
-import { XmlFactory } from './factories/XmlFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
-import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
+import {
+  type BinaryAsset,
+  type CsvAsset,
+  FontAsset,
+  type ImageAsset,
+  type Json,
+  type SubtitleAsset,
+  type SvgAsset,
+  type TextAsset,
+  type WasmAsset,
+  type XmlAsset,
+} from './tokens';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -294,8 +286,6 @@ export class Loader {
     this._concurrency = options.concurrency ?? 6;
     this._stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
     this._cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
-
-    this._registerBuiltinFactories();
   }
 
   // -----------------------------------------------------------------------
@@ -1069,8 +1059,9 @@ export class Loader {
    * throws before any mutation (no override in 0.12).
    * @internal
    */
-  public bindAsset(keys: { type: AssetConstructor; typeName?: string; extensions?: readonly string[] }, handler: AssetHandler): void {
+  public bindAsset(keys: { type: AssetConstructor; typeNames?: readonly string[]; extensions?: readonly string[] }, handler: AssetHandler): void {
     const normalizedExts: string[] = [];
+    const resolvedNames: string[] = keys.typeNames !== undefined ? [...keys.typeNames] : [];
 
     // Normalise extension keys
     for (const ext of keys.extensions ?? []) {
@@ -1093,8 +1084,10 @@ export class Loader {
       throw new Error(`An asset handler is already registered for ${keys.type.name}.`);
     }
 
-    if (keys.typeName !== undefined && this._assetTypeMap.has(keys.typeName)) {
-      throw new Error(`Asset type name "${keys.typeName}" is already registered.`);
+    for (const name of resolvedNames) {
+      if (this._assetTypeMap.has(name)) {
+        throw new Error(`Asset type name "${name}" is already registered.`);
+      }
     }
 
     for (const ext of normalizedExts) {
@@ -1103,13 +1096,22 @@ export class Loader {
       }
     }
 
-    // All validation passed — install atomically
+    // All validation passed — install atomically.
+    // Internally the loader builds a flat config `{ source, ...fields }` (the
+    // shape the advanced `registerAssetType` handler form receives). Extension
+    // AssetHandlers are typed against the public `AssetLoadRequest`
+    // (`{ source, options? }`), so reshape the flat config here: pull `source`
+    // out and nest the remaining per-load fields under `options`.
     this._handlerFunctions.set(keys.type, {
-      load: (config, ctx) => handler.load(config as { source: string; options?: Readonly<Record<string, unknown>> }, ctx),
+      load: (config, ctx) => {
+        const { source, ...rest } = config as { source: string } & Record<string, unknown>;
+        const options = Object.keys(rest).length > 0 ? (rest as Readonly<Record<string, unknown>>) : undefined;
+        return handler.load({ source, options }, ctx);
+      },
     });
 
-    if (keys.typeName !== undefined) {
-      this._assetTypeMap.set(keys.typeName, keys.type);
+    for (const name of resolvedNames) {
+      this._assetTypeMap.set(name, keys.type);
     }
 
     for (const ext of normalizedExts) {
@@ -1783,59 +1785,5 @@ export class Loader {
     }
 
     return `${this._basePath}${path}`;
-  }
-
-  // -----------------------------------------------------------------------
-  // Internal — built-in factory registration
-  // -----------------------------------------------------------------------
-
-  private _registerBuiltinFactories(): void {
-    this._registry.register(Texture, new TextureFactory());
-    this._registry.register(Sound, new SoundFactory());
-    this._registry.register(Music, new MusicFactory());
-    this._registry.register(Video, new VideoFactory());
-    this._registry.register(Json, new JsonFactory() as AssetFactory<Json>);
-    this._registry.register(TextAsset, new TextFactory());
-    this._registry.register(SvgAsset, new SvgFactory());
-    this._registry.register(SubtitleAsset, new SubtitleFactory());
-    this._registry.register(XmlAsset, new XmlFactory());
-    this._registry.register(CsvAsset, new CsvFactory());
-    this._registry.register(BinaryAsset, new BinaryFactory());
-
-    this._assetTypeMap.set('texture', Texture);
-    this._assetTypeMap.set('sound', Sound);
-    this._assetTypeMap.set('music', Music);
-    this._assetTypeMap.set('json', Json);
-    this._assetTypeMap.set('video', Video);
-    this._assetTypeMap.set('text', TextAsset);
-    this._assetTypeMap.set('svg', SvgAsset);
-    this._assetTypeMap.set('vtt', SubtitleAsset);
-    this._assetTypeMap.set('srt', SubtitleAsset);
-    this._assetTypeMap.set('xml', XmlAsset);
-    this._assetTypeMap.set('csv', CsvAsset);
-    this._assetTypeMap.set('binary', BinaryAsset);
-
-    this._registry.register(BmFont, new BmFontLoaderFactory(this));
-    this._assetTypeMap.set('bmFont', BmFont);
-    this._extensionMap.set('fnt', BmFont);
-
-    if (typeof FontFace !== 'undefined') {
-      this._registry.register(FontAsset, new FontFactory());
-      this._assetTypeMap.set('font', FontAsset);
-      this._extensionMap.set('woff', FontAsset);
-      this._extensionMap.set('woff2', FontAsset);
-      this._extensionMap.set('ttf', FontAsset);
-      this._extensionMap.set('otf', FontAsset);
-    }
-
-    if (typeof HTMLImageElement !== 'undefined') {
-      this._registry.register(ImageAsset, new ImageFactory());
-      this._assetTypeMap.set('image', ImageAsset);
-    }
-
-    if (typeof WebAssembly !== 'undefined') {
-      this._registry.register(WasmAsset, new WasmFactory());
-      this._assetTypeMap.set('wasm', WasmAsset);
-    }
   }
 }

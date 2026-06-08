@@ -223,6 +223,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: ['sprites-textures/texture-loader'],
                 apiLinks: ['loader', 'texture'],
             },
+            {
+                slug: 'tiled-maps',
+                level: 'intermediate',
+                learningGoals: [
+                    'activate the official Tiled extension explicitly or via /register',
+                    'load a .tmj map through the loader and read its layers and tilesets',
+                    'understand tileset texture ownership and the supported format scope',
+                ],
+                prerequisites: ['assets/loading-and-resources'],
+                apiLinks: ['loader'],
+            },
         ],
     },
     {
@@ -344,7 +355,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'particles/gpu-particles',
                     'particles/custom-wgsl-module',
                 ],
-                apiLinks: ['particle-system'],
+                apiLinks: [],
             },
             {
                 slug: 'post-processing',

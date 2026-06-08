@@ -21,7 +21,6 @@
 import type { Application } from '@/core/Application';
 import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
-import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Container } from '@/rendering/Container';
 import { Geometry } from '@/rendering/geometry/Geometry';
 import { MeshMaterial } from '@/rendering/material/MeshMaterial';
@@ -36,6 +35,7 @@ import { BmFont } from '@/rendering/text/BmFont';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
+import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
@@ -194,6 +194,7 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }, logicalSize
   const backend = new WebGpuBackend(makeApp(canvas, logicalSize));
 
   await backend.initialize();
+  wireCoreRenderers(backend);
 
   return backend;
 };
@@ -788,46 +789,10 @@ describe('WebGPU geometric (stencil) clipping', () => {
     }
   });
 
-  test('a ParticleSystem renders inside a Geometry stencil clip', async ctx => {
-    const backend = await setupBackend(ctx);
-    const texture = createSolidTexture('#ffffff', 16);
-    const root = new Container();
-    const clipped = new Container();
-    const system = new ParticleSystem(texture);
-    const slot = system.spawn();
-
-    try {
-      // Deterministic single particle: a solid white texture tinted red, scaled
-      // to blanket the whole 64×64 canvas (local quad ±64 around the centre) so
-      // only the stencil clip — not the particle bounds — decides visibility.
-      system.posX[slot] = 64;
-      system.posY[slot] = 64;
-      system.scaleX[slot] = 16;
-      system.scaleY[slot] = 16;
-      system.rotations[slot] = 0;
-      system.color[slot] = Color.red.toRgba();
-      system.lifetime[slot] = 1;
-
-      clipped.clip = true;
-      clipped.clipShape = createRightTriangle(48);
-      clipped.addChild(system);
-      root.addChild(clipped);
-
-      await renderClipped(ctx, backend, root);
-
-      const readPixel = readCanvas(backend);
-
-      // Inside the triangle (x + y << 48): the red particle survives.
-      expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
-      // Outside the triangle (x + y >> 48): clipped to the black clear.
-      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
-    } finally {
-      root.destroy();
-      (clipped.clipShape as Geometry).destroy();
-      texture.destroy();
-      backend.destroy();
-    }
-  });
+  // The "ParticleSystem renders inside a Geometry stencil clip" case lived here
+  // before ParticleSystem moved to @codexo/exojs-particles. Core browser tests no
+  // longer reference the extracted drawable; particle rendering is covered by the
+  // package's own suite (packages/exojs-particles/test).
 
   test('an alpha mask composites correctly under a Geometry stencil clip', async ctx => {
     // RenderEffectExecutor pushes the Geometry clip outermost, so the mask

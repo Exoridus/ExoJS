@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -70,7 +70,7 @@ const LOOKS = [
     },
 ];
 
-const PRIMARY_RAMP = technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 
 class ColorGradingScene extends Scene {
     private luts!: Texture[];

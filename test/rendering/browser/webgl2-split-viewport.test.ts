@@ -7,6 +7,8 @@ import { Texture } from '@/rendering/texture/Texture';
 import { View } from '@/rendering/View';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 type RgbaTuple = [number, number, number, number];
 
 const shaderSources = vi.hoisted(() => ({
@@ -218,6 +220,7 @@ const createBackend = async (): Promise<BackendRuntime> => {
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
 
   return { backend };
 };

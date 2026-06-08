@@ -1,5 +1,6 @@
 // Auto-generated from particle-stress.ts — edit the .ts source, not this file.
-import { AlphaFadeOverLifetime, Application, ApplyForce, Color, Constant, Curve, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, Scene, Texture, UpdateModule, VectorRange, } from '@codexo/exojs';
+import { Application, Color, Scene, Texture, } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, ApplyForce, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, UpdateModule, VectorRange, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
@@ -7,6 +8,7 @@ const app = new Application({
     },
     clearColor: new Color(0.02 * 255, 0.02 * 255, 0.045 * 255, 1),
     backend: { type: 'webgpu' },
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 class TintCycle extends UpdateModule {

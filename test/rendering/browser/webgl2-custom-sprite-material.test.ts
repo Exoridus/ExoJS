@@ -9,6 +9,8 @@ import { spriteVertexGlsl } from '@/rendering/sprite/spriteMaterialSources';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 
+import { wireCoreRenderers } from './_coreRenderers';
+
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
 // valid sources. The sprite vertex mock keeps the REAL pinned attribute
@@ -225,6 +227,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
 
   return backend;
 };

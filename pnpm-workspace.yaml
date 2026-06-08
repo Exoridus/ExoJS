@@ -1,6 +1,8 @@
 packages:
   - site
-  - packages/*
+  - packages/exojs-particles
+  - packages/exojs-tiled
+  - packages/create-exo-app
 
 # Packages permitted to run install/build scripts. pnpm v10+ blocks build
 # scripts by default and prompts for approval; this is the explicit allowlist.

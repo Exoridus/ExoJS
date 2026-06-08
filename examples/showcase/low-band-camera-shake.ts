@@ -1,4 +1,4 @@
-import { audio, textures } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Texture, View } from '@codexo/exojs';
 
 const app = new Application({
@@ -18,8 +18,8 @@ class LowBandCameraShakeScene extends Scene {
     private sprite!: Sprite;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { track: audio.musicLoop });
-        await loader.load(Texture, { ship: textures.shipA });
+        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(Texture, { ship: assets.demo.textures.shipA });
     }
 
     override init(loader): void {

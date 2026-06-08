@@ -1,5 +1,5 @@
 // Auto-generated from dialog-system.ts — edit the .ts source, not this file.
-import { sound, textures } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Scene, Sound, Sprite, Text, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -23,8 +23,8 @@ class DialogSystemScene extends Scene {
     timer = 0;
     done = false;
     async load(loader) {
-        await loader.load(Texture, { portrait: textures.shipA });
-        await loader.load(Sound, { beep: sound.uiConfirm });
+        await loader.load(Texture, { portrait: assets.demo.textures.shipA });
+        await loader.load(Sound, { beep: assets.demo.sound.uiConfirm });
     }
     init(loader) {
         this.portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(1.7).setPosition(170, 420);

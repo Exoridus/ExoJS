@@ -1,5 +1,5 @@
 // Auto-generated from color-grading.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -63,7 +63,7 @@ const LOOKS = [
         transform: (r, g, b) => [0.567 * r + 0.433 * g, 0.558 * r + 0.442 * g, 0.242 * g + 0.758 * b],
     },
 ];
-const PRIMARY_RAMP = technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 class ColorGradingScene extends Scene {
     luts;
     filter;

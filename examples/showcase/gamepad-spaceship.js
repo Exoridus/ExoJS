@@ -1,12 +1,14 @@
 // Auto-generated from gamepad-spaceship.ts — edit the .ts source, not this file.
-import { textures } from '@assets';
-import { AlphaFadeOverLifetime, Application, Color, Constant, GamepadAxis, OscillatorSound, ParticleSystem, RateSpawn, Scene, Sprite, Texture, Vector, } from '@codexo/exojs';
+import { assets } from '@assets';
+import { Application, Color, GamepadAxis, OscillatorSound, Scene, Sprite, Texture, Vector, } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 class GamepadSpaceshipScene extends Scene {
@@ -17,7 +19,7 @@ class GamepadSpaceshipScene extends Scene {
     rate;
     particles;
     async load(loader) {
-        await loader.load(Texture, { ship: textures.shipA, particle: textures.particleSpark });
+        await loader.load(Texture, { ship: assets.demo.textures.shipA, particle: assets.demo.textures.particleSpark });
     }
     init(loader) {
         this.ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(400, 300);

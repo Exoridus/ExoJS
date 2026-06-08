@@ -1,5 +1,5 @@
 // Auto-generated from custom-fragment-shader.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -9,7 +9,7 @@ const app = new Application({
     clearColor: Color.black,
 });
 document.body.append(app.canvas);
-const HUE_RAMP = technical.color.hueRamp;
+const HUE_RAMP = assets.technical.color.hueRamp;
 const glsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;

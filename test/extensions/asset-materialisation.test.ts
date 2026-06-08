@@ -76,11 +76,76 @@ describe('materializeAssetBindings', () => {
   });
 
   it('duplicate typeName throws before any mutation', () => {
-    const bindingA: AssetBinding = { type: TypeA as never, typeName: 'myType', create: () => createTestHandler() };
-    const bindingB: AssetBinding = { type: TypeB as never, typeName: 'myType', create: () => createTestHandler() };
+    const bindingA: AssetBinding = { type: TypeA as never, typeNames: ['myType'], create: () => createTestHandler() };
+    const bindingB: AssetBinding = { type: TypeB as never, typeNames: ['myType'], create: () => createTestHandler() };
     const loader = new Loader();
 
     expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('Asset type name "myType" is already registered');
+    loader.destroy();
+  });
+
+  it('extension handler receives per-load options nested under request.options', async () => {
+    // Regression: the loader builds a flat internal config `{ source, ...fields }`,
+    // but the public AssetLoadRequest is `{ source, options? }`. The bindAsset
+    // wrapper must reshape it so handlers (e.g. the core FontAsset adapter) see
+    // their options. A flat config would leave `request.options` undefined.
+    let seen: AssetLoadRequest | undefined;
+    const handler: AssetHandler = {
+      load: async (req: AssetLoadRequest) => {
+        seen = req;
+        return {};
+      },
+    };
+    const binding: AssetBinding = { type: TypeA as never, typeNames: ['withOpts'], create: () => handler };
+    const loader = new Loader();
+    materializeAssetBindings(loader, [binding]);
+
+    await loader.load(TypeA as never, 'thing.dat', { family: 'Kenney Future', size: 32 }).catch(() => undefined);
+
+    expect(seen?.source).toBe('thing.dat');
+    expect(seen?.options).toEqual({ family: 'Kenney Future', size: 32 });
+    loader.destroy();
+  });
+
+  it('extension handler receives no options key when none are passed', async () => {
+    let seen: AssetLoadRequest | undefined;
+    const handler: AssetHandler = {
+      load: async (req: AssetLoadRequest) => {
+        seen = req;
+        return {};
+      },
+    };
+    const binding: AssetBinding = { type: TypeA as never, typeNames: ['noOpts'], create: () => handler };
+    const loader = new Loader();
+    materializeAssetBindings(loader, [binding]);
+
+    await loader.load(TypeA as never, 'thing.dat').catch(() => undefined);
+
+    expect(seen?.source).toBe('thing.dat');
+    expect(seen?.options).toBeUndefined();
+    loader.destroy();
+  });
+
+  it('multiple typeNames on a single binding all register', () => {
+    const handler = createTestHandler();
+    const binding: AssetBinding = { type: TypeA as never, typeNames: ['alpha', 'beta'], create: () => handler };
+    const loader = new Loader();
+
+    materializeAssetBindings(loader, [binding]);
+
+    expect(loader.hasAssetType('alpha')).toBe(true);
+    expect(loader.hasAssetType('beta')).toBe(true);
+    loader.destroy();
+  });
+
+  it('a typeName conflict across the two names of one binding is detected', () => {
+    const bindingA: AssetBinding = { type: TypeA as never, typeNames: ['shared'], create: () => createTestHandler() };
+    const bindingB: AssetBinding = { type: TypeB as never, typeNames: ['other', 'shared'], create: () => createTestHandler() };
+    const loader = new Loader();
+
+    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('Asset type name "shared" is already registered');
+    // No partial mutation from bindingB
+    expect(loader.hasAssetType('other')).toBe(false);
     loader.destroy();
   });
 
@@ -108,7 +173,7 @@ describe('materializeAssetBindings', () => {
 
   it('typeName registers hasAssetType', () => {
     const handler = createTestHandler();
-    const binding: AssetBinding = { type: TypeA as never, typeName: 'typeAlpha', create: () => handler };
+    const binding: AssetBinding = { type: TypeA as never, typeNames: ['typeAlpha'], create: () => handler };
     const loader = new Loader();
 
     materializeAssetBindings(loader, [binding]);
@@ -143,7 +208,7 @@ describe('materializeAssetBindings', () => {
     const handler = createTestHandler();
     const binding: AssetBinding = {
       type: TypeA as never,
-      typeName: 'testType',
+      typeNames: ['testType'],
       extensions: ['tstx'],
       create: () => handler,
     };

@@ -5,11 +5,11 @@ symbol: "Loader"
 kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
-memberCount: 24
+memberCount: 27
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/resources/Loader.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L243"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L225"
 ---
 ## Import
 
@@ -48,7 +48,10 @@ subsequent `load` or get calls without re-fetching.
 - `get(type: typeof Json, alias: string): T`
 - `get(type: T, alias: string): LoadReturn<T>`
 - `has(type: Loadable, alias: string): boolean`
+- `hasAssetType(typeName: string): boolean`
 - `hasBundle(name: string): boolean`
+- `hasExtension(ext: string): boolean`
+- `hasLoadable(type: AssetConstructor): boolean`
 - `load(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>`
 - `load(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>`
 - `load(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>`
@@ -89,4 +92,4 @@ subsequent `load` or get calls without re-fetching.
 
 ## Source
 
-[src/resources/Loader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L243)
+[src/resources/Loader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts#L225)

@@ -44,18 +44,17 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
+      "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
+      "@codexo/exojs/rendering": ["./src/rendering.ts"],
       "@codexo/exojs/debug": ["./src/debug/index.ts"],
+      "@codexo/exojs-particles": ["./packages/exojs-particles/src/index.ts"],
+      "@codexo/exojs-particles/register": ["./packages/exojs-particles/src/register.ts"],
+      "@codexo/exojs-tiled": ["./packages/exojs-tiled/src/index.ts"],
+      "@codexo/exojs-tiled/register": ["./packages/exojs-tiled/src/register.ts"],
       "@/*": ["./src/*"],
-      "@assets": ["./examples/shared/assets-catalog.d.ts"]
+      "@assets": ["./examples/assets/index.ts"]
     }
   },
-  "include": [
-    "examples/**/*.js",
-    "examples/**/*.ts",
-    "examples/shared/runtime.d.ts",
-    "examples/shared/assets-catalog.d.ts",
-    "src/typings.d.ts",
-    "src/build-constants.d.ts"
-  ],
+  "include": ["examples/**/*.js", "examples/**/*.ts", "examples/shared/runtime.d.ts", "src/typings.d.ts"],
   "exclude": ["examples/shared/editor-support.d.ts"]
 }

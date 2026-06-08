@@ -1,5 +1,5 @@
 // Auto-generated from audio-visualisation.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Texture, Time } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -22,7 +22,7 @@ class AudioVisualisationScene extends Scene {
     values;
     styles;
     async load(loader) {
-        await loader.load(Music, { example: audio.musicLoop });
+        await loader.load(Music, { example: assets.demo.audio.musicLoop });
     }
     init(loader) {
         const { width, height } = this.app.canvas;

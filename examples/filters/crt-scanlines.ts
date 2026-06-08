@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
@@ -11,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const PIXEL_GRID = technical.filtering.pixelGrid128;
+const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;

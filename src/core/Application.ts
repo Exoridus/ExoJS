@@ -8,6 +8,7 @@ import type { GamepadDefinition } from '@/input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '@/input/InputManager';
 import { InputManager } from '@/input/InputManager';
 import { InteractionManager } from '@/input/InteractionManager';
+import { buildCoreRendererBindings } from '@/rendering/coreRendererBindings';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderingContext, type RenderToOptions } from '@/rendering/RenderingContext';
 import { type RenderNode } from '@/rendering/RenderNode';
@@ -56,8 +57,6 @@ export interface RenderingApplicationOptions {
   webglAttributes?: WebGLContextAttributes;
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
   spriteRendererBatchSize?: number;
-  /** WebGL2 particle renderer batch size. Ignored by WebGPU. */
-  particleRendererBatchSize?: number;
 }
 
 export interface InputApplicationOptions {
@@ -116,7 +115,6 @@ const defaultLoaderFetchOptions: RequestInit = {
 const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
   debug: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
-  particleRendererBatchSize: 8192, // ~ 1.18mb
   webglAttributes: {
     alpha: false,
     antialias: false,
@@ -234,7 +232,6 @@ export class Application {
         debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
         webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
         spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
-        particleRendererBatchSize: renderingOptions.particleRendererBatchSize ?? defaultRenderingSettings.particleRendererBatchSize,
       },
       input: {
         gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
@@ -569,6 +566,10 @@ export class Application {
   }
 
   private createBackend(backendType: 'webgl2' | 'webgpu', snapshot: ExtensionSnapshot): RenderBackend {
+    const renderingOptions = this.options.rendering ?? {};
+    const coreBindings = buildCoreRendererBindings(renderingOptions);
+    const allBindings = [...coreBindings, ...snapshot.renderers];
+
     if (backendType === 'webgpu') {
       const backend = new WebGpuBackend(this);
 
@@ -580,9 +581,7 @@ export class Application {
       });
 
       try {
-        // Core bindings are registered by the backend constructor.
-        // Only extension bindings are materialised here.
-        materializeRendererBindings(backend, snapshot.renderers);
+        materializeRendererBindings(backend, allBindings);
       } catch (error) {
         try {
           backend.destroy();
@@ -605,9 +604,7 @@ export class Application {
     });
 
     try {
-      // Core bindings are registered by the backend constructor.
-      // Only extension bindings are materialised here.
-      materializeRendererBindings(backend, snapshot.renderers);
+      materializeRendererBindings(backend, allBindings);
     } catch (error) {
       try {
         backend.destroy();

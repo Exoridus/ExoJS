@@ -1,18 +1,21 @@
-import { textures } from '@assets';
+import { assets } from '@assets';
 import {
-    AlphaFadeOverLifetime,
     Application,
     Color,
-    Constant,
     GamepadAxis,
     OscillatorSound,
-    ParticleSystem,
-    RateSpawn,
     Scene,
     Sprite,
     Texture,
     Vector,
 } from '@codexo/exojs';
+import {
+    AlphaFadeOverLifetime,
+    Constant,
+    particlesExtension,
+    ParticleSystem,
+    RateSpawn,
+} from '@codexo/exojs-particles';
 
 const app = new Application({
     canvas: {
@@ -20,6 +23,7 @@ const app = new Application({
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 
 document.body.append(app.canvas);
@@ -33,7 +37,7 @@ class GamepadSpaceshipScene extends Scene {
     private particles!: ParticleSystem;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { ship: textures.shipA, particle: textures.particleSpark });
+        await loader.load(Texture, { ship: assets.demo.textures.shipA, particle: assets.demo.textures.particleSpark });
     }
 
     override init(loader): void {

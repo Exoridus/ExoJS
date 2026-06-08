@@ -7,16 +7,12 @@ import { Signal } from '@/core/Signal';
 import type { Matrix } from '@/math/Matrix';
 import type { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
-import { ParticleSystem } from '@/particles/ParticleSystem';
-import { BitmapText } from '@/rendering/text/BitmapText';
-import { Text } from '@/rendering/text/Text';
 import type { BlendModes } from '@/rendering/types';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 
 import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
-import { Mesh } from '../mesh/Mesh';
 import { type DrawCommand, drawCommandUsesSharedTransform } from '../plan/RenderCommand';
 import type { RenderGroup } from '../plan/RenderInstruction';
 import type { RenderBackend } from '../RenderBackend';
@@ -26,17 +22,12 @@ import { RendererRegistry } from '../RendererRegistry';
 import type { RenderStats } from '../RenderStats';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
-import { Sprite } from '../sprite/Sprite';
 import { DataTexture, type DataTextureFormat } from '../texture/DataTexture';
 import { RenderTexture } from '../texture/RenderTexture';
 import type { Texture } from '../texture/Texture';
 import type { View } from '../View';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
-import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
-import { WebGpuParticleRenderer } from './WebGpuParticleRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
-import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
-import { WebGpuTextRenderer } from './WebGpuTextRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
 interface ManagedWebGpuTextureState {
@@ -138,11 +129,7 @@ export class WebGpuBackend implements RenderBackend {
       this._clearColor.copy(clearColor);
     }
 
-    this.rendererRegistry.registerRenderer(Sprite, new WebGpuSpriteRenderer());
-    this.rendererRegistry.registerRenderer(Mesh, new WebGpuMeshRenderer());
-    this.rendererRegistry.registerRenderer(ParticleSystem, new WebGpuParticleRenderer());
-    this.rendererRegistry.registerRenderer(Text, new WebGpuTextRenderer());
-    this.rendererRegistry.registerRenderer(BitmapText, new WebGpuTextRenderer());
+    // Core renderers are bound via buildCoreRendererBindings in Application.createBackend.
     this.resize(width, height);
   }
 

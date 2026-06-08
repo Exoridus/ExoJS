@@ -3,7 +3,15 @@ import { fileURLToPath } from 'node:url';
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
-const aliasConfig = { '@': fileURLToPath(new URL('./src', import.meta.url)) };
+// Note: Vite alias matching uses longest-first order. Subpath aliases must come
+// before the root alias so '@codexo/exojs/rendering' resolves before '@codexo/exojs'.
+const aliasConfig = [
+  { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/rendering', replacement: fileURLToPath(new URL('./src/rendering.ts', import.meta.url)) },
+  { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs', replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url)) },
+  { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+] as const;
 
 const shaderPlugin = {
   name: 'shader-text',
@@ -148,6 +156,36 @@ export default defineConfig({
             provider: playwright(),
             instances: [{ browser: 'firefox', contextOptions: { colorScheme: 'dark' } }],
           },
+        },
+      },
+
+      // ── Project 7: exojs-particles — unit tests for the particles package ──
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
+        test: {
+          name: 'exojs-particles',
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./test/setup-env.vitest.ts'],
+          include: ['packages/exojs-particles/test/**/*.test.ts'],
+          testTimeout: 15_000,
+        },
+      },
+
+      // ── Project 8: exojs-tiled — unit tests for the tiled package ──
+      {
+        resolve: { alias: aliasConfig },
+        plugins: [shaderPlugin],
+        define: { __DEV__: JSON.stringify(true) },
+        test: {
+          name: 'exojs-tiled',
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./test/setup-env.vitest.ts'],
+          include: ['packages/exojs-tiled/test/**/*.test.ts'],
+          testTimeout: 15_000,
         },
       },
     ],

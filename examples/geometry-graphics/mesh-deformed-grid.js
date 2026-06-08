@@ -1,5 +1,5 @@
 // Auto-generated from mesh-deformed-grid.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -46,7 +46,7 @@ function buildGrid() {
     }
     return { vertices, uvs, indices };
 }
-const UV_GRID = technical.filtering.uvGrid256;
+const UV_GRID = assets.technical.filtering.uvGrid256;
 class MeshDeformedGridScene extends Scene {
     restVertices;
     mesh;
