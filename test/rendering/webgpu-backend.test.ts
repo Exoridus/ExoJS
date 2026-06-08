@@ -18,7 +18,7 @@ import { BlendModes, ScaleModes } from '@/rendering/types';
 import { Video } from '@/rendering/video/Video';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 
-import { particlesExtension,ParticleSystem } from '../../packages/exojs-particles/src/index';
+import { particlesExtension, ParticleSystem } from '../../packages/exojs-particles/src/index';
 
 interface MockWebGpuEnvironment {
   readonly canvas: HTMLCanvasElement;
