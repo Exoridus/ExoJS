@@ -1,7 +1,7 @@
 import { Color } from '@/core/Color';
+import { BackendTargetPass } from '@/rendering/BackendTargetPass';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
-import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { Shader } from '@/rendering/shader/Shader';
 import { upgradeFragmentShaderToGl300 } from '@/rendering/shader/upgradeFragmentShaderToGl300';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
@@ -188,7 +188,7 @@ export class WebGl2ShaderFilter extends Filter {
     const shader = this._shader!;
 
     backend.execute(
-      new RenderTargetPass(
+      new BackendTargetPass(
         b => {
           const gl2 = b as WebGl2Backend;
 

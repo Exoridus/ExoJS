@@ -4,12 +4,12 @@ import { Signal } from '@/core/Signal';
 import type { InteractionEvent } from '@/input/InteractionEvent';
 import { getActiveInteractionManager } from '@/input/internal/interactionManagerRegistry';
 import { Rectangle } from '@/math/Rectangle';
+import { BackendTargetPass } from '@/rendering/BackendTargetPass';
 import type { Filter } from '@/rendering/filters/Filter';
 import type { Geometry } from '@/rendering/geometry/Geometry';
 import { playRenderTree } from '@/rendering/plan/playRenderTree';
 import { type RenderPlanBuilder } from '@/rendering/plan/RenderPlanBuilder';
 import type { RenderBackend } from '@/rendering/RenderBackend';
-import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
 import { BlendModes } from '@/rendering/types';
@@ -413,7 +413,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     backend.execute(
-      new RenderTargetPass(
+      new BackendTargetPass(
         () => {
           renderContent();
         },

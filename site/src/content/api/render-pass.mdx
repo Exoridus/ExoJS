@@ -1,0 +1,45 @@
+---
+title: "RenderPass"
+description: "One high-level phase of a frame. Subclass and implement execute, or use a stock subclass (RenderNodePass, CallbackRenderPass, RenderPipeline). `enabled`, `label`, resize, and destroy are part of the contract so every pass — including resource-owning effect passes — composes uniformly inside a RenderPipeline. **Exclusive ownership:** a `RenderPass` belongs to at most one RenderPipeline at a time (tracked via an internal slot). `removePass`/`clear`/`destroy` release it. This is what makes add-time cycle detection and safe cascade-destroy possible, and prevents a pass's `enabled`/`resize`/`destroy` state from being shared."
+symbol: "RenderPass"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 6
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/RenderPass.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderPass.ts#L27"
+---
+## Import
+
+`import { RenderPass } from '@codexo/exojs'`
+
+One high-level phase of a frame. Subclass and implement execute, or use a stock subclass
+(RenderNodePass, CallbackRenderPass, RenderPipeline).
+
+`enabled`, `label`, resize, and destroy are part of the contract so every pass — including
+resource-owning effect passes — composes uniformly inside a RenderPipeline.
+
+**Exclusive ownership:** a `RenderPass` belongs to at most one RenderPipeline at a time (tracked via an
+internal slot). `removePass`/`clear`/`destroy` release it. This is what makes add-time cycle detection and safe
+cascade-destroy possible, and prevents a pass's `enabled`/`resize`/`destroy` state from being shared.
+
+## Constructors
+
+- `new(options?: RenderPassOptions): RenderPass`
+
+## Methods
+
+- `destroy(): void`
+- `execute(context: RenderingContext): void`
+- `resize(_width: number, _height: number): void`
+
+## Properties
+
+- `enabled: boolean`
+- `label: string`
+
+## Source
+
+[src/rendering/RenderPass.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderPass.ts#L27)

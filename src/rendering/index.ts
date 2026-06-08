@@ -1,5 +1,7 @@
 /// <reference types="@webgpu/types" />
 
+export type { BackendRenderPass } from './BackendRenderPass';
+export type { CallbackRenderPassOptions } from './CallbackRenderPass';
 export { CallbackRenderPass } from './CallbackRenderPass';
 export type { CameraOptions } from './Camera';
 export { Camera } from './Camera';
@@ -38,12 +40,14 @@ export type { RenderOptions, RenderToOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
 export type { MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
-export type { RenderPass } from './RenderPass';
+export type { RenderNodePassOptions } from './RenderNodePass';
+export { RenderNodePass } from './RenderNodePass';
+export type { RenderPassOptions } from './RenderPass';
+export { RenderPass } from './RenderPass';
+export { RenderPipeline } from './RenderPipeline';
 export type { RenderStats } from './RenderStats';
 export { createRenderStats, resetRenderStats } from './RenderStats';
 export { RenderTarget } from './RenderTarget';
-export type { RenderTargetPassOptions } from './RenderTargetPass';
-export { RenderTargetPass } from './RenderTargetPass';
 export type { ShaderProgram } from './shader/Shader';
 export { Shader } from './shader/Shader';
 export { ShaderAttribute } from './shader/ShaderAttribute';

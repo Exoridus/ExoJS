@@ -240,8 +240,8 @@ describe('render pass internals are not publicly exported', () => {
     expect(rendering['WebGl2PassCoordinator']).toBeUndefined();
     expect(rendering['StencilAttachmentMode']).toBeUndefined();
     expect(rendering['RenderPassCoordinator']).toBeUndefined();
-    // Sanity: the legitimately advanced pass class is still exported, so the
+    // Sanity: a legitimately advanced pass class is still exported, so the
     // barrel actually loaded.
-    expect(rendering['RenderTargetPass']).toBeDefined();
+    expect(rendering['CallbackRenderPass']).toBeDefined();
   });
 });

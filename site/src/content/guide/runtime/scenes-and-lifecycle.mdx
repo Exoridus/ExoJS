@@ -180,6 +180,8 @@ draw(context) {
 
 For most scenes, one `context.render(this.root)` after `clear` is the right pattern. Reach for selective rendering when you have a reason — debug overlays you toggle, layers that sometimes skip a frame, render-to-texture targets.
 
+When a frame grows into a sequence of distinct phases — render the world, capture it off-screen, composite lighting, draw a HUD, layer in a debug overlay — you can keep that order as data instead of imperative `draw` code. A [`RenderPipeline`](/ExoJS/en/api/render-pipeline/) holds an ordered, individually toggleable (`pass.enabled`), freely nestable list of passes and runs them with a single `pipeline.execute(context)` call from `draw`. It is general frame composition, not only a post-processing tool; the [Post-processing](/ExoJS/en/guide/effects/post-processing/) chapter introduces it in depth.
+
 ## Input
 
 Scenes receive input through `this.inputs`, which proxies to the application's input manager. Register bindings in `init`:

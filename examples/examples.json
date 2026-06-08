@@ -366,7 +366,7 @@
             "path": "custom-renderers/custom-render-pass.js",
             "language": "typescript",
             "title": "Custom Render Pass",
-            "description": "Register a custom RenderPass that runs after the built-in sprite pass. Shows the low-level pass extension points.",
+            "description": "Compose a RenderPipeline that slots a CallbackRenderPass with procedural geometry between two scene nodes.",
             "backend": "advanced",
             "tags": [
                 "rendering",
@@ -1053,6 +1053,19 @@
                 "fx",
                 "rendering",
                 "advanced"
+            ]
+        },
+        {
+            "slug": "render-pipeline",
+            "path": "render-targets/render-pipeline.js",
+            "language": "typescript",
+            "title": "Render Pipeline",
+            "description": "Compose a frame from named RenderPass steps: render the world off-screen, blur it, composite to the screen, and nest a UI pipeline — with a runtime-toggleable blur step and resize wiring.",
+            "backend": "core",
+            "tags": [
+                "rendering",
+                "advanced",
+                "fx"
             ]
         },
         {

@@ -41,7 +41,7 @@ GPU-side state as needed on the next draw.
 - `composeWithAlphaMask(content: RenderTexture | Texture, mask: RenderTexture | Texture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this`
 - `destroy(): void`
 - `draw(drawable: Drawable): this`
-- `execute(pass: RenderPass): this`
+- `execute(pass: BackendRenderPass): this`
 - `flush(): this`
 - `initialize(): Promise<WebGl2Backend>`
 - `popScissorRect(): this`

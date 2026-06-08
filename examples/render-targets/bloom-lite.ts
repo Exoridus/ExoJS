@@ -1,4 +1,4 @@
-import { Application, BlendModes, BlurFilter, Color, RenderTargetPass, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,6 +21,7 @@ class BloomLiteScene extends Scene {
     private baseSprite!: Sprite;
     private glowSprite!: Sprite;
     private blur!: BlurFilter;
+    private pipeline!: RenderPipeline;
     private time = 0;
 
     override async load(loader): Promise<void> {
@@ -35,6 +36,31 @@ class BloomLiteScene extends Scene {
         this.baseSprite = new Sprite(this.baseRt);
         this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
         this.blur = new BlurFilter({ radius: 10, quality: 2 });
+
+        // The same sprite is drawn twice with different tints (white base, warm glow), so each
+        // off-screen step is a callback that sets the tint before rendering.
+        this.pipeline = new RenderPipeline()
+            .addPass(
+                new CallbackRenderPass(
+                    (context) => {
+                        this.bunny.setTint(Color.white);
+                        context.render(this.bunny);
+                    },
+                    { target: this.baseRt, clear: Color.black },
+                ),
+            )
+            .addPass(
+                new CallbackRenderPass(
+                    (context) => {
+                        this.bunny.setTint(new Color(255, 230, 190));
+                        context.render(this.bunny);
+                    },
+                    { target: this.glowRt, clear: Color.black },
+                ),
+            )
+            .addPass(new CallbackRenderPass((context) => this.blur.apply(context.backend, this.glowRt, this.blurredRt)))
+            .addPass(new RenderNodePass(this.baseSprite, { clear: Color.black }))
+            .addPass(new RenderNodePass(this.glowSprite));
     }
 
     override update(delta): void {
@@ -43,30 +69,17 @@ class BloomLiteScene extends Scene {
     }
 
     override draw(context): void {
-        context.backend.execute(
-            new RenderTargetPass(
-                () => {
-                    context.backend.clear();
-                    this.bunny.setTint(Color.white);
-                    context.render(this.bunny);
-                },
-                { target: this.baseRt, view: this.baseRt.view },
-            ),
-        );
-        context.backend.execute(
-            new RenderTargetPass(
-                () => {
-                    context.backend.clear();
-                    this.bunny.setTint(new Color(255, 230, 190));
-                    context.render(this.bunny);
-                },
-                { target: this.glowRt, view: this.glowRt.view },
-            ),
-        );
-        this.blur.apply(context.backend, this.glowRt, this.blurredRt);
-        context.backend.clear();
-        context.render(this.baseSprite);
-        context.render(this.glowSprite);
+        this.pipeline.execute(context);
+    }
+
+    override destroy(): void {
+        // Pipeline cascades destroy() to its passes; the caller-owned targets and blur filter are freed here.
+        this.pipeline.destroy();
+        this.baseRt.destroy();
+        this.glowRt.destroy();
+        this.blurredRt.destroy();
+        this.blur.destroy();
+        super.destroy();
     }
 }
 

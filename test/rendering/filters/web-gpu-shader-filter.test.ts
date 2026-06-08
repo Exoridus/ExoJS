@@ -702,7 +702,7 @@ describe('WebGpuShaderFilter', () => {
     filter.destroy();
   });
 
-  // 20. apply() calls backend.execute (uses RenderTargetPass)
+  // 20. apply() calls backend.execute (uses BackendTargetPass)
   test('apply() on WebGPU backend calls backend.execute', () => {
     const backend = makeWebGpuBackend(env);
     const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });

@@ -8,7 +8,7 @@ describe('root index public API exports', () => {
     expect(exo.View).toBeDefined();
     expect(exo.defineAssetManifest).toBeDefined();
     expect(exo.BundleLoadError).toBeDefined();
-    expect(exo.RenderTargetPass).toBeDefined();
+    expect(exo.RenderTexture).toBeDefined();
     expect(exo.BlurFilter).toBeDefined();
     expect(exo.ColorFilter).toBeDefined();
     expect(exo.createRenderStats).toBeDefined();

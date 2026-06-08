@@ -13,6 +13,7 @@ import { Text } from '@/rendering/text/Text';
 import type { BlendModes } from '@/rendering/types';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 
+import type { BackendRenderPass } from '../BackendRenderPass';
 import type { Drawable } from '../Drawable';
 import type { Geometry } from '../geometry/Geometry';
 import { Mesh } from '../mesh/Mesh';
@@ -22,7 +23,6 @@ import type { RenderBackend } from '../RenderBackend';
 import { RenderBackendType } from '../RenderBackendType';
 import type { Renderer } from '../Renderer';
 import { RendererRegistry } from '../RendererRegistry';
-import type { RenderPass } from '../RenderPass';
 import type { RenderStats } from '../RenderStats';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
@@ -323,7 +323,7 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
-  public execute(pass: RenderPass): this {
+  public execute(pass: BackendRenderPass): this {
     if (this._deviceLost || this._device === null) {
       return this;
     }

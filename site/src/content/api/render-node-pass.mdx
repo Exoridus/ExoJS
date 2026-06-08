@@ -1,0 +1,42 @@
+---
+title: "RenderNodePass"
+description: "Renders a scene subtree (a RenderNode) as one pass — into the active target, or off-screen when `options.target` is set. The most common pass: world, HUD overlay, an off-screen scene capture. `view`/`target`/`clear` are fixed at construction; only `enabled`/`label` are mutable. The off-screen redirect is built once and reused every frame (no per-frame allocation). The node and any caller `target` are NOT owned by this pass — `destroy()` never frees them."
+symbol: "RenderNodePass"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 6
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/RenderNodePass.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNodePass.ts#L34"
+---
+## Import
+
+`import { RenderNodePass } from '@codexo/exojs'`
+
+Renders a scene subtree (a RenderNode) as one pass — into the active target, or off-screen when
+`options.target` is set. The most common pass: world, HUD overlay, an off-screen scene capture.
+
+`view`/`target`/`clear` are fixed at construction; only `enabled`/`label` are mutable. The off-screen redirect is
+built once and reused every frame (no per-frame allocation). The node and any caller `target` are NOT owned by
+this pass — `destroy()` never frees them.
+
+## Constructors
+
+- `new(node: RenderNode, options?: RenderNodePassOptions): RenderNodePass`
+
+## Methods
+
+- `destroy(): void`
+- `execute(context: RenderingContext): void`
+- `resize(_width: number, _height: number): void`
+
+## Properties
+
+- `enabled: boolean`
+- `label: string`
+
+## Source
+
+[src/rendering/RenderNodePass.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNodePass.ts#L34)

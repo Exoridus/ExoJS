@@ -1,14 +1,17 @@
 import type { Color } from '@/core/Color';
 
+import type { BackendRenderPass } from './BackendRenderPass';
 import type { RenderPassCoordinatorHost } from './pass/RenderPassCoordinator';
 import { StencilAttachmentMode } from './pass/RenderPassDescriptor';
 import type { RenderBackend } from './RenderBackend';
-import type { RenderPass } from './RenderPass';
 import type { RenderTarget } from './RenderTarget';
 import type { View } from './View';
 
-/** Configuration options for {@link RenderTargetPass}. */
-export interface RenderTargetPassOptions {
+/**
+ * Configuration options for {@link BackendTargetPass}.
+ * @internal
+ */
+export interface BackendTargetPassOptions {
   /** Render target to draw into. `null` or omitted redirects output to the default framebuffer. */
   readonly target?: RenderTarget | null;
   /** Camera {@link View} to use while executing this pass. Falls back to the backend's active view when omitted. */
@@ -18,19 +21,24 @@ export interface RenderTargetPassOptions {
 }
 
 /**
- * A {@link RenderPass} that redirects rendering into an off-screen {@link RenderTarget}.
+ * A {@link BackendRenderPass} that redirects rendering into an off-screen {@link RenderTarget}.
  *
- * Saves the current render target and view before executing the callback, then
- * restores them afterwards — even if the callback throws. This makes it safe to
- * nest passes or use in try/finally chains without manual cleanup.
+ * Saves the current render target and view before executing the callback, then restores them afterwards —
+ * even if the callback throws. This makes it safe to nest passes or use in try/finally chains without manual
+ * cleanup.
+ *
+ * Engine-internal target-redirect primitive: used by the stock filters, `RenderNode`'s bitmap/cache capture,
+ * and the high-level `RenderNodePass` / `CallbackRenderPass` `{ target }` redirect. Not part of the public
+ * surface — high-level code sets `{ target }` on a leaf pass instead.
+ * @internal
  */
-export class RenderTargetPass implements RenderPass {
+export class BackendTargetPass implements BackendRenderPass {
   private readonly _callback: (backend: RenderBackend) => void;
   private readonly _target: RenderTarget | null;
   private readonly _view: View | null;
   private readonly _clearColor: Color | null;
 
-  public constructor(callback: (backend: RenderBackend) => void, options: RenderTargetPassOptions = {}) {
+  public constructor(callback: (backend: RenderBackend) => void, options: BackendTargetPassOptions = {}) {
     this._callback = callback;
     this._target = options.target ?? null;
     this._view = options.view ?? null;
