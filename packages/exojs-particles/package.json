@@ -39,7 +39,7 @@
     "build:dev": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
-    "test": "vitest run --project=exojs-particles"
+    "test": "vitest run --root ../.. --project=exojs-particles"
   },
   "peerDependencies": {
     "@codexo/exojs": "0.12.x"

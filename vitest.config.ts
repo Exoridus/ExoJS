@@ -18,6 +18,15 @@ const aliasConfig = [
 ] as const;
 
 // Shared resolution/plugin wiring for the repository-local browser projects.
+//
+// The top-level Vite `define` replaces `__DEV__` in files Vite transforms
+// directly. Under the `#` subpath-imports model some engine modules (e.g.
+// `src/core/dev.ts`) resolve through `package.json#imports` and can be
+// pre-bundled by esbuild's optimizer, which does NOT apply this `define` — so
+// the bare `__DEV__` would survive and throw `__DEV__ is not defined` in the
+// browser runtime. The `_setup-dev-global` setup file (wired into every browser
+// project below) installs `__DEV__` as a real global so the reference resolves
+// regardless of how the module was bundled.
 const browserBase = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
@@ -32,6 +41,10 @@ const browserBase = {
 //  - WebGPU Firefox:  headed — Firefox only exposes a WebGPU adapter in a headed session.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
 const webgl2Headless = !headed;
+
+// Setup run in every browser project to install the `__DEV__` global (see the
+// browserBase note) before any engine module evaluates.
+const browserSetupFiles = ['./test/rendering/browser/_setup-dev-global.ts'];
 
 export default defineConfig({
   test: {
@@ -66,6 +79,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-chromium',
           globals: true,
+          setupFiles: browserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: {
             enabled: true,
@@ -84,6 +98,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-firefox',
           globals: true,
+          setupFiles: browserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: { enabled: true, headless: true, provider: playwright(), instances: [{ browser: 'firefox' }] },
         },
@@ -95,6 +110,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgpu',
           globals: true,
+          setupFiles: browserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,
@@ -113,6 +129,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgpu-firefox',
           globals: true,
+          setupFiles: browserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: { enabled: true, headless: false, provider: playwright(), instances: [{ browser: 'firefox' }] },
         },
@@ -124,6 +141,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgpu-firefox-dark',
           globals: true,
+          setupFiles: browserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,
