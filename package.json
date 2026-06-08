@@ -17,9 +17,7 @@
   "module": "./dist/esm/index.js",
   "browser": "./dist/exo.esm.js",
   "types": "./dist/esm/index.d.ts",
-  "sideEffects": [
-    "./dist/esm/rendering/sprite/Sprite.js"
-  ],
+  "sideEffects": false,
   "keywords": [
     "2d",
     "browser",
@@ -35,6 +33,16 @@
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./extensions": {
+      "types": "./dist/esm/extensions/index.d.ts",
+      "import": "./dist/esm/extensions/index.js",
+      "default": "./dist/esm/extensions/index.js"
+    },
+    "./renderer-sdk": {
+      "types": "./dist/esm/renderer-sdk.d.ts",
+      "import": "./dist/esm/renderer-sdk.js",
+      "default": "./dist/esm/renderer-sdk.js"
     },
     "./debug": {
       "types": "./dist/esm/debug/index.d.ts",

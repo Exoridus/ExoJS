@@ -6,6 +6,7 @@ import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
 import type { Geometry } from './geometry/Geometry';
 import type { RenderBackendType } from './RenderBackendType';
+import type { RendererRegistry } from './RendererRegistry';
 import type { RenderStats } from './RenderStats';
 import type { RenderTarget } from './RenderTarget';
 import type { RenderTexture } from './texture/RenderTexture';
@@ -29,6 +30,8 @@ import type { View } from './View';
  */
 export interface RenderBackend {
   readonly backendType: RenderBackendType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly rendererRegistry: RendererRegistry<any>;
   readonly view: View;
   readonly renderTarget: RenderTarget;
   readonly stats: RenderStats;

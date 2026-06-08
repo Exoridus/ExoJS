@@ -1,5 +1,9 @@
 import { TweenManager } from '@/animation/TweenManager';
 import { type AudioManager, getAudioManager } from '@/audio/AudioManager';
+import type { Extension } from '@/extensions/Extension';
+import { getGlobalSnapshotInternal } from '@/extensions/ExtensionRegistry';
+import { materializeAssetBindings, materializeRendererBindings } from '@/extensions/materialize';
+import { buildSnapshot, type ExtensionSnapshot } from '@/extensions/snapshot';
 import type { GamepadDefinition } from '@/input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '@/input/InputManager';
 import { InputManager } from '@/input/InputManager';
@@ -11,6 +15,7 @@ import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import { coreAssetBindings } from '@/resources/coreAssetBindings';
 import { Loader, type LoaderOptions } from '@/resources/Loader';
 
 import { Capabilities } from './capabilities';
@@ -68,6 +73,15 @@ export interface ApplicationOptions {
   loader?: LoaderOptions;
   rendering?: RenderingApplicationOptions;
   input?: InputApplicationOptions;
+  /**
+   * Extension selection.
+   * `undefined` → Core + globally registered extensions.
+   * `[]`         → Core only.
+   * `[a, b, …]` → Core + exactly these; global registry not consulted.
+   * Captured once at construction; later registrations do not affect
+   * already-constructed Applications.
+   */
+  extensions?: readonly Extension[];
 }
 
 export interface WebGl2BackendConfig {
@@ -169,6 +183,7 @@ export class Application {
   private _backendType: 'webgl2' | 'webgpu';
   private _backend: RenderBackend;
   private _rendering: RenderingContext;
+  private readonly _snapshot: ExtensionSnapshot;
   private _capabilities: Capabilities | null = null;
   private _documentVisible = true;
   private _cursor = 'default';
@@ -228,9 +243,24 @@ export class Application {
       },
     };
 
+    // Capture extension snapshot before constructing extension-sensitive subsystems.
+    this._snapshot = appSettings.extensions === undefined ? getGlobalSnapshotInternal() : buildSnapshot([...(appSettings.extensions ?? [])]);
+
     this.loader = new Loader(this.options.loader);
+
+    try {
+      materializeAssetBindings(this.loader, [...coreAssetBindings, ...this._snapshot.assets]);
+    } catch (error) {
+      try {
+        this.loader.destroy();
+      } catch {
+        /* cleanup failure is secondary */
+      }
+      throw error;
+    }
+
     this._backendType = this.resolveInitialBackendType();
-    this._backend = this.createBackend(this._backendType);
+    this._backend = this.createBackend(this._backendType, this._snapshot);
     this._rendering = new RenderingContext(this._backend);
     this.input = new InputManager(this);
     this.interaction = new InteractionManager(this);
@@ -538,7 +568,7 @@ export class Application {
     return this.canUseWebGpu() ? 'webgpu' : 'webgl2';
   }
 
-  private createBackend(backendType: 'webgl2' | 'webgpu'): RenderBackend {
+  private createBackend(backendType: 'webgl2' | 'webgpu', snapshot: ExtensionSnapshot): RenderBackend {
     if (backendType === 'webgpu') {
       const backend = new WebGpuBackend(this);
 
@@ -548,6 +578,19 @@ export class Application {
       backend.onDeviceRestored.add(() => {
         this.onBackendRestored.dispatch();
       });
+
+      try {
+        // Core bindings are registered by the backend constructor.
+        // Only extension bindings are materialised here.
+        materializeRendererBindings(backend, snapshot.renderers);
+      } catch (error) {
+        try {
+          backend.destroy();
+        } catch {
+          /* cleanup failure is secondary */
+        }
+        throw error;
+      }
 
       return backend;
     }
@@ -560,6 +603,19 @@ export class Application {
     backend.onContextRestored.add(() => {
       this.onBackendRestored.dispatch();
     });
+
+    try {
+      // Core bindings are registered by the backend constructor.
+      // Only extension bindings are materialised here.
+      materializeRendererBindings(backend, snapshot.renderers);
+    } catch (error) {
+      try {
+        backend.destroy();
+      } catch {
+        /* cleanup failure is secondary */
+      }
+      throw error;
+    }
 
     return backend;
   }
@@ -574,7 +630,7 @@ export class Application {
 
       this._backend.destroy();
       this._backendType = 'webgl2';
-      this._backend = this.createBackend(this._backendType);
+      this._backend = this.createBackend(this._backendType, this._snapshot);
       this._rendering = new RenderingContext(this._backend);
       await this._backend.initialize();
     }

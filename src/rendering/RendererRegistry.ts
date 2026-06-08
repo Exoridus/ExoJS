@@ -18,6 +18,7 @@ import type { DrawableConstructor, Renderer } from './Renderer';
  */
 export class RendererRegistry<Runtime extends RenderBackend> {
   private readonly _renderers = new Map<DrawableConstructor, Renderer<Runtime>>();
+  private readonly _resolved = new Map<DrawableConstructor, Renderer<Runtime>>();
   private _backend: Runtime | null = null;
 
   /**
@@ -37,9 +38,53 @@ export class RendererRegistry<Runtime extends RenderBackend> {
     // Widen TDrawable to Drawable for storage. Safe because the map key
     // guarantees the correct drawable type is always paired at lookup.
     this._renderers.set(drawableType, renderer);
+    this._resolved.clear();
 
     if (this._backend !== null) {
       (renderer as Renderer<Runtime>).connect(this._backend);
+    }
+  }
+
+  /**
+   * Atomically bind all `targets` to `renderer`.
+   * Validates every target before mutating any map entry.
+   * Clears the resolution cache exactly once after all entries are written.
+   * @internal
+   */
+  public bindRenderer(targets: readonly DrawableConstructor[], renderer: Renderer<Runtime>): void {
+    if (targets.length === 0) {
+      throw new Error('A RendererBinding must declare at least one target.');
+    }
+
+    // Validate: no duplicate targets within this call
+    const seen = new Set<DrawableConstructor>();
+
+    for (const target of targets) {
+      if (seen.has(target)) {
+        throw new Error(`A RendererBinding declares the same target ${target.name} more than once.`);
+      }
+
+      seen.add(target);
+    }
+
+    // Validate: no target already registered — throw before any mutation
+    for (const target of targets) {
+      if (this._renderers.has(target)) {
+        throw new Error(`A renderer is already registered for ${target.name}.`);
+      }
+    }
+
+    // All validation passed — atomically install all mappings
+    for (const target of targets) {
+      this._renderers.set(target, renderer);
+    }
+
+    // Invalidate resolution cache once
+    this._resolved.clear();
+
+    // Connect renderer if already connected
+    if (this._backend !== null) {
+      renderer.connect(this._backend);
     }
   }
 
@@ -54,13 +99,20 @@ export class RendererRegistry<Runtime extends RenderBackend> {
 
   /**
    * Find the renderer responsible for `drawable`.
-   * Walks the prototype chain so subclasses inherit their parent's renderer
-   * without requiring an explicit registration.
+   * Uses a first-resolution cache — after warm-up, a single Map.get.
+   * Falls back to prototype-chain walk on cache miss.
    *
    * @throws Error if no renderer is found for the drawable's type.
    */
   public resolve(drawable: Drawable): Renderer<Runtime> {
-    let constructor = drawable.constructor as DrawableConstructor | null;
+    const ctor = drawable.constructor as DrawableConstructor;
+    const cached = this._resolved.get(ctor);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    let constructor: DrawableConstructor | null = ctor;
     let renderer: Renderer<Runtime> | undefined;
 
     while (constructor !== null && !renderer) {
@@ -75,9 +127,13 @@ export class RendererRegistry<Runtime extends RenderBackend> {
 
     if (!renderer) {
       throw new Error(
-        `No renderer registered for ${drawable.constructor.name}. ` + 'Register one with registry.registerRenderer() before the first draw call.',
+        `No renderer registered for ${drawable.constructor.name}. ` +
+          'If it comes from an ExoJS extension, import that package before creating the Application, ' +
+          'or pass the extension via ApplicationOptions.extensions.',
       );
     }
+
+    this._resolved.set(ctor, renderer);
 
     return renderer;
   }
@@ -106,16 +162,25 @@ export class RendererRegistry<Runtime extends RenderBackend> {
 
   /**
    * Disconnect all registered renderers and clear the registry.
+   * Deduplicates across multi-target bindings so each shared renderer
+   * instance is disconnected and destroyed exactly once.
    */
   public destroy(): void {
-    this.disconnect();
+    const seen = new Set<Renderer<Runtime>>();
 
     for (const renderer of this._renderers.values()) {
-      if ('destroy' in renderer && typeof renderer.destroy === 'function') {
-        (renderer as Renderer<Runtime> & { destroy(): void }).destroy();
+      if (!seen.has(renderer)) {
+        seen.add(renderer);
+        renderer.disconnect();
+
+        if ('destroy' in renderer && typeof renderer.destroy === 'function') {
+          (renderer as Renderer<Runtime> & { destroy(): void }).destroy();
+        }
       }
     }
 
     this._renderers.clear();
+    this._resolved.clear();
+    this._backend = null;
   }
 }
