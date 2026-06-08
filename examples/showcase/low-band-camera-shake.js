@@ -1,5 +1,5 @@
 // Auto-generated from low-band-camera-shake.ts — edit the .ts source, not this file.
-import { audio, textures } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Texture, View } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -15,8 +15,8 @@ class LowBandCameraShakeScene extends Scene {
     view;
     sprite;
     async load(loader) {
-        await loader.load(Music, { track: audio.musicLoop });
-        await loader.load(Texture, { ship: textures.shipA });
+        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(Texture, { ship: assets.demo.textures.shipA });
     }
     init(loader) {
         this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();

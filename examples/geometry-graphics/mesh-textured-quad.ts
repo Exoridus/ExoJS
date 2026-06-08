@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -11,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const UV_GRID = technical.filtering.uvGrid256;
+const UV_GRID = assets.technical.filtering.uvGrid256;
 const HALF = 240;
 
 class MeshTexturedQuadScene extends Scene {

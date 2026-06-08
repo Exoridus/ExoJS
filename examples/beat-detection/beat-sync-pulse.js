@@ -1,5 +1,6 @@
 // Auto-generated from beat-sync-pulse.ts — edit the .ts source, not this file.
-import { AlphaFadeOverLifetime, Application, BeatDetector, BurstSpawn, Color, ConeDirection, Constant, Music, ParticleSystem, Scene, Sprite, Texture, Vector, } from '@codexo/exojs';
+import { Application, BeatDetector, Color, Music, Scene, Sprite, Texture, Vector, } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
@@ -9,6 +10,7 @@ const app = new Application({
     loader: {
         basePath: 'assets/',
     },
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 class BeatSyncPulseScene extends Scene {

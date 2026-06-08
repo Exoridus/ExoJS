@@ -1,4 +1,4 @@
-import { textures } from '@assets';
+import { assets } from '@assets';
 import {
     Application,
     Color,
@@ -56,7 +56,7 @@ class FireworksScene extends Scene {
     private explosionTimer!: Timer;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { star: textures.particleStar });
+        await loader.load(Texture, { star: assets.demo.textures.particleStar });
     }
 
     override init(loader): void {

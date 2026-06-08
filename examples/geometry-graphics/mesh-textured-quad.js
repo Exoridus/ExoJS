@@ -1,5 +1,5 @@
 // Auto-generated from mesh-textured-quad.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -9,7 +9,7 @@ const app = new Application({
     clearColor: Color.black,
 });
 document.body.append(app.canvas);
-const UV_GRID = technical.filtering.uvGrid256;
+const UV_GRID = assets.technical.filtering.uvGrid256;
 const HALF = 240;
 class MeshTexturedQuadScene extends Scene {
     quad;

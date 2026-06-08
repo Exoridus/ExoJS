@@ -1,5 +1,5 @@
 // Auto-generated from boss-intro-cinematic.ts — edit the .ts source, not this file.
-import { music, textures } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -20,8 +20,8 @@ class BossIntroCinematicScene extends Scene {
     boss;
     music;
     async load(loader) {
-        await loader.load(Texture, { boss: textures.shipA });
-        await loader.load(Music, { track: music.loopMain });
+        await loader.load(Texture, { boss: assets.demo.textures.shipA });
+        await loader.load(Music, { track: assets.demo.music.loopMain });
     }
     init(loader) {
         this.view = new View(220, 300, 800, 600);

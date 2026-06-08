@@ -1,4 +1,4 @@
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
@@ -11,7 +11,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const PRIMARY_RAMP = technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 
 const PALETTE_SIZE = 256;
 

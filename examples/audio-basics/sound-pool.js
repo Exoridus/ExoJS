@@ -1,5 +1,5 @@
 // Auto-generated from sound-pool.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -15,7 +15,7 @@ class SoundPoolScene extends Scene {
     firing = false;
     timer = 0;
     async load(loader) {
-        await loader.load(Sound, { shot: audio.uiClick });
+        await loader.load(Sound, { shot: assets.demo.audio.uiClick });
     }
     init(loader) {
         this.sound = loader.get(Sound, 'shot');

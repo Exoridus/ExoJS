@@ -1,4 +1,4 @@
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioAnalyser, BeatDetector, Color, Graphics, Music, Scene } from '@codexo/exojs';
 
 const app = new Application({
@@ -20,7 +20,7 @@ class VinylRecordScene extends Scene {
     private angle = 0;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { track: audio.musicLoop });
+        await loader.load(Music, { track: assets.demo.audio.musicLoop });
     }
 
     override init(loader): void {

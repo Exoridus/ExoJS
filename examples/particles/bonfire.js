@@ -1,19 +1,21 @@
 // Auto-generated from bonfire.ts — edit the .ts source, not this file.
-import { textures } from '@assets';
-import { Application, BlendModes, Color, ColorGradient, ColorOverLifetime, ConeDirection, Constant, ParticleSystem, Range, RateSpawn, Scene, Texture, VectorRange, } from '@codexo/exojs';
+import { assets } from '@assets';
+import { Application, BlendModes, Color, Scene, Texture, } from '@codexo/exojs';
+import { ColorGradient, ColorOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, VectorRange, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 class BonfireScene extends Scene {
     fireSystem;
     smokeSystem;
     async load(loader) {
-        await loader.load(Texture, { flame: textures.particleFlame, smoke: textures.particleSmoke });
+        await loader.load(Texture, { flame: assets.demo.textures.particleFlame, smoke: assets.demo.textures.particleSmoke });
     }
     init(loader) {
         const { width, height } = this.app.canvas;

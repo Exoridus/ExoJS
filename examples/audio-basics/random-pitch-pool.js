@@ -1,5 +1,5 @@
 // Auto-generated from random-pitch-pool.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -15,7 +15,7 @@ class RandomPitchPoolScene extends Scene {
     active = false;
     timer = 0;
     async load(loader) {
-        await loader.load(Sound, { blip: audio.impactLight });
+        await loader.load(Sound, { blip: assets.demo.audio.impactLight });
     }
     init(loader) {
         this.sound = loader.get(Sound, 'blip');

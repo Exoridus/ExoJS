@@ -1,12 +1,14 @@
 // Auto-generated from fireworks.ts — edit the .ts source, not this file.
-import { textures } from '@assets';
-import { AlphaFadeOverLifetime, Application, ApplyForce, BurstSpawn, Color, ConeDirection, Constant, Curve, ParticleSystem, rand, Range, Scene, seconds, Size, Texture, Timer, Vector, } from '@codexo/exojs';
+import { assets } from '@assets';
+import { Application, Color, rand, Scene, seconds, Size, Texture, Timer, Vector, } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, ApplyForce, BurstSpawn, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
         height: 600,
     },
     clearColor: Color.black,
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 const explosionInterval = seconds(1);
@@ -30,7 +32,7 @@ class FireworksScene extends Scene {
     burst;
     explosionTimer;
     async load(loader) {
-        await loader.load(Texture, { star: textures.particleStar });
+        await loader.load(Texture, { star: assets.demo.textures.particleStar });
     }
     init(loader) {
         const { width, height } = this.app.canvas;

@@ -1,5 +1,5 @@
 // Auto-generated from ducking.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioBus, Color, DuckingFilter, Music, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -16,8 +16,8 @@ class DuckingScene extends Scene {
     ducking;
     text;
     async load(loader) {
-        await loader.load(Music, { music: audio.musicLoop });
-        await loader.load(Sound, { voice: audio.uiConfirm });
+        await loader.load(Music, { music: assets.demo.audio.musicLoop });
+        await loader.load(Sound, { voice: assets.demo.audio.uiConfirm });
     }
     init(loader) {
         this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.7).play();

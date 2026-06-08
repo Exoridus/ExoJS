@@ -1,4 +1,4 @@
-import { textures } from '@assets';
+import { assets } from '@assets';
 import {
     Application,
     BlendModes,
@@ -34,7 +34,7 @@ class BonfireScene extends Scene {
     private smokeSystem!: ParticleSystem;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { flame: textures.particleFlame, smoke: textures.particleSmoke });
+        await loader.load(Texture, { flame: assets.demo.textures.particleFlame, smoke: assets.demo.textures.particleSmoke });
     }
 
     override init(loader): void {

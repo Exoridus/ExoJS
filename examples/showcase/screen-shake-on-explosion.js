@@ -1,5 +1,6 @@
 // Auto-generated from screen-shake-on-explosion.ts — edit the .ts source, not this file.
-import { AlphaFadeOverLifetime, Application, BurstSpawn, Color, ConeDirection, Constant, ParticleSystem, Scene, Texture, Vector, View } from '@codexo/exojs';
+import { Application, Color, Scene, Texture, Vector, View } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
         width: 800,
@@ -9,6 +10,7 @@ const app = new Application({
     loader: {
         basePath: 'assets/',
     },
+    extensions: [particlesExtension],
 });
 document.body.append(app.canvas);
 class ScreenShakeOnExplosionScene extends Scene {

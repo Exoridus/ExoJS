@@ -1,5 +1,5 @@
 // Auto-generated from vinyl-record.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, AudioAnalyser, BeatDetector, Color, Graphics, Music, Scene } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -17,7 +17,7 @@ class VinylRecordScene extends Scene {
     bars;
     angle = 0;
     async load(loader) {
-        await loader.load(Music, { track: audio.musicLoop });
+        await loader.load(Music, { track: assets.demo.audio.musicLoop });
     }
     init(loader) {
         this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();

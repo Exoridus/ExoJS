@@ -1,4 +1,4 @@
-import { audio, textures } from '@assets';
+import { assets } from '@assets';
 import {
     Application,
     BeatDetector,
@@ -37,8 +37,8 @@ class AudioReactiveParticlesScene extends Scene {
     private burst!: BurstSpawn;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { track: audio.musicLoop });
-        await loader.load(Texture, { particle: textures.particleLight });
+        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
     }
 
     override init(loader): void {

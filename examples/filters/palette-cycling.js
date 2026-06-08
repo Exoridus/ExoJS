@@ -1,5 +1,5 @@
 // Auto-generated from palette-cycling.ts — edit the .ts source, not this file.
-import { technical } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -9,7 +9,7 @@ const app = new Application({
     clearColor: Color.black,
 });
 document.body.append(app.canvas);
-const PRIMARY_RAMP = technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const PALETTE_SIZE = 256;
 function buildPaletteCanvas(offset) {
     const canvas = document.createElement('canvas');

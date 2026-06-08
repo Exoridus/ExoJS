@@ -1,4 +1,4 @@
-import { textures } from '@assets';
+import { assets } from '@assets';
 import {
     Application,
     Color,
@@ -37,7 +37,7 @@ class GamepadSpaceshipScene extends Scene {
     private particles!: ParticleSystem;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { ship: textures.shipA, particle: textures.particleSpark });
+        await loader.load(Texture, { ship: assets.demo.textures.shipA, particle: assets.demo.textures.particleSpark });
     }
 
     override init(loader): void {

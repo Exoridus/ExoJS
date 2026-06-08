@@ -1,5 +1,5 @@
 // Auto-generated from play-sound.ts — edit the .ts source, not this file.
-import { audio } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
@@ -13,7 +13,7 @@ class PlaySoundScene extends Scene {
     sound;
     text;
     async load(loader) {
-        await loader.load(Sound, { click: audio.uiClick });
+        await loader.load(Sound, { click: assets.demo.audio.uiClick });
     }
     init(loader) {
         this.sound = loader.get(Sound, 'click');

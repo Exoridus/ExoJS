@@ -1,4 +1,4 @@
-import { music, textures } from '@assets';
+import { assets } from '@assets';
 import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
 
 const app = new Application({
@@ -24,8 +24,8 @@ class BossIntroCinematicScene extends Scene {
     private music!: Music;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { boss: textures.shipA });
-        await loader.load(Music, { track: music.loopMain });
+        await loader.load(Texture, { boss: assets.demo.textures.shipA });
+        await loader.load(Music, { track: assets.demo.music.loopMain });
     }
 
     override init(loader): void {
