@@ -167,20 +167,6 @@ jobs:
       - name: Publish coordinated release (build-once, dist-tag -> latest)
         run: pnpm release:publish --execute
 
-      # create-exo-app is versioned independently and ships from source (its own
-      # prepack build) — not part of the build-once coordinated three.
-      - name: Publish create-exo-app to npm
-        working-directory: packages/create-exo-app
-        run: |
-          PKG=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
-          if [ -n "$(npm view "${PKG}@${VER}" version 2>/dev/null || true)" ]; then
-            echo "::notice::${PKG}@${VER} is already on npm — skipping publish."
-          else
-            npm publish --provenance --access public
-            echo "::notice::Published ${PKG}@${VER}."
-          fi
-
       - name: Generate release notes
         run: |
           pnpm release:notes -- \
