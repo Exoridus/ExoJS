@@ -12,56 +12,187 @@ merged pull requests and commits since the previous tag (each with its commit /
 PR link); `pnpm release:notes` then renders that section into the published
 GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
 
-## [0.12.0] - 2026-06-06
+## [0.12.0] - 2026-06-09
 
-A developer-experience release: a rebuilt guide, a `create-exo-app` scaffolder, a
-more navigable playground, and more reliable docs and published types. No new
-engine features — the runtime API is unchanged from 0.11.0.
+The rendering-architecture and extension-system release. A composable,
+context-aware render pipeline replaces the monolithic backend-level
+`RenderTargetPass`; the Particles system is split into its own official
+extension package; the Tiled map loader joins as a second official extension;
+and the repository is reorganised into a pnpm-workspace monorepo with
+code-split packages, a private shared configuration package, and a build-once
+coordinated release pipeline.
 
 ### Added
 
+- **Composable `RenderPass` architecture.** `RenderPass` is a public,
+  abstract base class with `execute(context)`, `enabled`, `label`, `resize`,
+  and `destroy`. `RenderPipeline` extends `RenderPass` and owns an ordered
+  list of passes (`addPass` / `insertPass` / `removePass`), with add-time
+  cycle detection, reentrancy protection, and exclusive ownership (each pass
+  belongs to at most one pipeline). Pipelines nest freely. The
+  `RenderPassInspectorLayer` visualises the pipeline tree additively. A
+  context-aware `CallbackRenderPass` receives the high-level
+  `RenderingContext`; its signature changed from the old backend-only
+  callback. `BackendRenderPass` remains the low-level backend interface,
+  bridged where needed via
+  `callback(context) { context.backend.execute(myBackendPass) }`.
+
+- **`RenderNodePass`.** Renders a scene subtree (a `RenderNode`) as one pass
+  — into the active target, or off-screen when an optional `target` render
+  texture is set. Carries a fixed `view`, optional `target`, and optional
+  `clear` colour. The view and target are caller-owned; the target redirect
+  is created once and reused, so execution performs no per-frame redirect
+  allocation.
+
+- **Extension system.** `ExtensionRegistry` is a static catalogue of immutable
+  `Extension` descriptors. Each extension contributes `RendererBinding`s
+  and/or `AssetBinding`s. Renderer bindings are materialised once per
+  backend during backend creation; asset bindings and their handlers are
+  created once per Loader during `Application` construction. After
+  initialisation, never looked up in the draw or load
+  hot paths. Extensions are provided either via `ApplicationOptions.extensions`
+  or globally via `/register` (which calls `ExtensionRegistry.register` as an
+  import side effect). All package roots are side-effect-free — only the
+  explicit `/register` entry triggers registration. The registry is add-only:
+  registering the same object under the same `id` is a no-op; a different
+  object under an existing `id` throws. Snapshot-based deduplication and
+  rollback handle cleanup when backend or loader construction fails.
+
+- **`@codexo/exojs-particles` — official Particles extension.** Extracted
+  from Core into an independent npm package (`0.12.0`, lockstep with Core).
+  Exposes `ParticleSystem`, the full CPU and GPU module suite (spawn, update,
+  death, forces, colour/alpha/scale/velocity-over-lifetime, turbulence,
+  burst/rate spawn, WGSL contributions), distributions,
+  `particlesExtension` (default immutable descriptor),
+  `createParticlesExtension({ batchSize })` for application-local
+  configuration, and `particlesBuildInfo` for frozen runtime metadata. Both
+  WebGL2 and WebGPU particle renderers are included. Side-effect-free root;
+  import `@codexo/exojs-particles/register` for global auto-registration.
+
+- **`@codexo/exojs-tiled` — official Tiled map extension.** Loads Tiled JSON
+  (TMJ) maps as typed assets via `TiledMap`, a `TiledMapData`-shaped data
+  model with `TiledTileset`, `TiledLayer`, `TiledObject`, and
+  `TiledProperty`. Maps load through the standard asset pipeline
+  (`loader.load(TiledMap, 'map.tmj')`); tileset textures are resolved
+  relative to the map source and loaded via the `Loader`. Exposes
+  `tiledExtension`, `tiledBuildInfo`, a side-effect-free root, and
+  `@codexo/exojs-tiled/register`. Orthogonal maps only; infinite and
+  non-orthogonal maps are rejected with clear errors.
+
+- **`@codexo/exojs-config` — private shared tooling package.** Centralises
+  reusable TypeScript profiles, ESLint import-boundary rules, Prettier config,
+  Vitest project factories, the Rollup extension-config factory, the package
+  policy verifier, and the build-defines helper. Consumed without a build
+  step; not published to npm.
+
+- **Compile-time build metadata.** Three canonical constants —
+  `__DEV__` (boolean), `__VERSION__` (per-package version), `__REVISION__`
+  (short Git SHA, appended with `-dirty` when local changes exist) — are
+  statically replaced at build time and tree-shaken in production. A public
+  frozen `buildInfo` (Core) / `particlesBuildInfo` (Particles) /
+  `tiledBuildInfo` (Tiled) API exposes version, revision, and development
+  flag at runtime.
+
+- **Build-once coordinated release pipeline.** `release:prepare` builds the
+  three official packages exactly once, packs tarballs (`--ignore-scripts`),
+  hashes them, runs ATTW and external-consumer smoke, assembles a Full GitHub
+  Release ZIP, and records a `release-manifest.json` + `checksums.sha256`.
+  `release:publish` re-hashes the same files (refusing on drift), publishes
+  in ordered phases (Core → Particles → Tiled) to a temporary dist-tag, and
+  promotes to `latest` only after all three succeed.
+
 - **Rebuilt guide experience.** A new information architecture with a "Start
   Here" learning path, per-chapter learning goals and prerequisites,
-  Previous/Next navigation, and a Guide → Playground → API flow that links each
-  concept to a runnable example and its API page. New Project Structure,
-  Troubleshooting, and Deployment chapters, an Orb Dodge build walkthrough, and
-  source-backed snippets that render real, type-checked code straight from the
-  example sources.
+  Previous/Next navigation, and a Guide → Playground → API flow that links
+  each concept to a runnable example and its API page. New Project Structure,
+  Troubleshooting, and Deployment chapters, an Orb Dodge build walkthrough,
+  and source-backed snippets that render real, type-checked code straight
+  from the example sources.
 
 - **`create-exo-app` scaffolder.** Start a typed project with
   `npm create exo-app`, choosing from three templates — `minimal`,
   `game-starter`, and `audio-reactive`. An interactive prompt guides template
-  selection in a TTY;
-  non-interactive environments default to `minimal`. This is the first public
-  `create-exo-app` release (`0.1.0`), versioned independently of the engine.
+  selection in a TTY; non-interactive environments default to `minimal`. This
+  is the first public `create-exo-app` release (`0.1.0`), versioned
+  independently of the engine.
 
 - **Playground navigation.** A "Start Here" featured set, full-text search,
   category filtering, concrete per-example descriptions, and the Orb Dodge
   sample turn the example catalog into something browsable rather than a flat
   list.
 
-- **`@codexo/exojs/debug` entry point.** Debug layers and overlays ship under a
-  dedicated `@codexo/exojs/debug` subpath, bundled as an external-core
+- **`@codexo/exojs/debug` entry point.** Debug layers and overlays ship under
+  a dedicated `@codexo/exojs/debug` subpath, bundled as an external-core
   `dist/exo.debug.esm.js` that imports the engine at runtime rather than
   duplicating it — ready for import-map consumption alongside the core.
 
 ### Changed
 
+- **`RenderTargetPass` replaced.** The public `RenderTargetPass` is removed.
+  Internally, `BackendTargetPass` handles target redirection. `RenderNodePass`
+  and `CallbackRenderPass` accept an optional `target` render texture;
+  redirection is managed transparently through the internal target-redirect
+  path.
+
+- **`CallbackRenderPass` signature.** The callback now receives the high-level
+  `RenderingContext` instead of only the low-level `RenderBackend`.
+  `context.render(node)` and the full public draw surface are available; the
+  previous `context.backend` API is still accessible.
+
+- **Package-private `#` subpath imports.** Internal source imports moved from
+  `@/path` aliases to Node `package.json#imports`-based `#path` specifiers,
+  resolved via custom conditions (`@codexo/source`,
+  `@codexo/exojs-particles-source`). The declaration-rewrite script is
+  removed; `.d.ts` files keep `#` verbatim and resolve through each
+  package's imports map. Public consumer imports (`@codexo/exojs`,
+  `@codexo/exojs-particles`) are unchanged.
+
 - **Docs track the real API.** Guide code blocks are type-checked against the
   engine in CI, the guides teach the current `RenderingContext` draw API, and
   the custom-shader chapter was corrected to the real `ShaderSource` +
   `MeshMaterial` model. Internal guide and API prose links are validated, and
-  the API reference is regenerated deterministically so the committed pages stay
-  in sync with the source. `astro check` is clean.
+  the API reference is regenerated deterministically so the committed pages
+  stay in sync with the source. `astro check` is clean.
 
 ### Fixed
 
 - **Published TypeScript declarations resolve for consumers.** The emitted
-  `.d.ts` files shipped internal `@/…` path aliases that a consumer's TypeScript
-  could not resolve, which silently dropped inherited members from the public
-  types (for example, `Graphics` lost `Drawable` methods like `setPosition` and
-  `rotate`). Declarations now use relative specifiers, so `tsc` resolves the
-  full type surface and the starter templates type-check and build.
+  `.d.ts` files shipped internal `@/…` path aliases that a consumer's
+  TypeScript could not resolve, which silently dropped inherited members from
+  the public types (for example, `Graphics` lost `Drawable` methods like
+  `setPosition` and `rotate`). Declarations now retain standards-based
+  package-private `#` specifiers, resolved through each package's
+  `package.json#imports` map, so consumers receive the complete type surface
+  without a post-emit alias rewrite.
+
+### Breaking changes
+
+- **Particles extracted from Core.** All particle imports (`ParticleSystem`,
+  modules, distributions) moved to `@codexo/exojs-particles`. Core no longer
+  exports any particle types. Consumers must add the new dependency and update
+  imports.
+
+- **`RenderPass` is now an abstract class; the old backend-only interface is
+  renamed to `BackendRenderPass`.** The new `RenderPass.execute(context)`
+  receives a `RenderingContext`. Low-level backend pass implementations now
+  implement `BackendRenderPass` instead.
+
+- **`RenderTargetPass` removed.** Use `RenderNodePass` or
+  `CallbackRenderPass` with an optional `target`. Advanced backend-level
+  integrations implement `BackendRenderPass` and execute it through
+  `context.backend.execute(...)`.
+
+- **`CallbackRenderPass` callback signature changed.** The callback parameter
+  is now `RenderingContext` (not `RenderBackend`).
+
+- **`@/` path aliases removed (internal).** Internal source imports use
+  `#` subpath imports. Downstream forks or plugins that imported from engine
+  internals via `@/` must update to the `#` convention. Public consumer
+  imports (`@codexo/exojs`, `@codexo/exojs-particles`, etc.) are unchanged.
+
+- **No full aggregator package.** Core and the official extensions remain
+  separate npm packages; no full aggregator package or Core `/full` entry is
+  introduced.
 
 ## [0.11.0] - 2026-06-04
 
