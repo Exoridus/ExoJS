@@ -3,7 +3,8 @@
 
 export type { Extension } from '@codexo/exojs/extensions';
 export { tilemapExtension } from './tilemapExtension';
-export { TileChunk } from './TileChunk';
+// The mutable TileChunk implementation is package-internal —
+// only the ReadonlyTileChunk interface is exported publicly.
 export type { ReadonlyTileChunk } from './TileChunk';
 export { TileLayer } from './TileLayer';
 export type { TileLayerOptions } from './TileLayer';
@@ -13,6 +14,7 @@ export { TileSet } from './TileSet';
 export type { TileSetOptions } from './TileSet';
 export type {
   ChunkCoord,
+  PackedTile,
   ResolvedTile,
   TileDefinition,
   TileProperties,

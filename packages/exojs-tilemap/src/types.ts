@@ -69,12 +69,15 @@ export function tileTransformLabel(t: TileTransform): string {
  * 0 means "empty cell". Any non-zero value encodes localTileId, tilesetIndex,
  * and flip bits according to the bit-layout constants below.
  *
- * Use {@link packTile} / {@link unpackTile} to convert between packed form
- * and a {@link ResolvedTile}.
+ * A `PackedTile` is **not** a source-format GID — it is a fully resolved
+ * internal compact representation. Use {@link packTile} / {@link unpackTile}
+ * (package-internal) to convert between packed form and a {@link ResolvedTile}
+ * if writing adapters.
  *
- * Never expose this type as a plain number in public query signatures —
- * public APIs return {@link ResolvedTile} or null.
- * @internal
+ * In public APIs, prefer {@link ResolvedTile} or null for queries.
+ * `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()`
+ * has a self-documenting return type.
+ * @advanced
  */
 export type PackedTile = number;
 

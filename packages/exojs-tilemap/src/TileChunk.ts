@@ -176,6 +176,20 @@ export class TileChunk implements ReadonlyTileChunk {
   // ── Internal mutation (package-private, NOT public API) ──────────────
 
   /**
+   * Package-internal access to the underlying tile storage.
+   * Returns the actual mutable `Uint32Array` — DO NOT USE publicly.
+   *
+   * Provided for the future tilemap renderer (same package) so it can
+   * read chunk data efficiently without a full `cloneTiles()` copy per frame.
+   *
+   * External consumers and other packages MUST NOT call this.
+   * @internal
+   */
+  public _getRawStorage(): Uint32Array {
+    return this._tiles;
+  }
+
+  /**
    * Validate a packed tile value before storing.
    * Accepts any finite integer — `Uint32Array` stores via unsigned 32-bit
    * truncation (`ToUint32`). Negative values produced by JavaScript's
