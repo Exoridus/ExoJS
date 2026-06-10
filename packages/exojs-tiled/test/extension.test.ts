@@ -75,10 +75,39 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
   });
 });
 
-describe('@codexo/exojs-tiled asset handler', () => {
+describe('@codexo/exojs-tiled asset handler — tiledMapBinding', () => {
   it('create() returns an object with a load function', () => {
     const handler = tiledMapBinding.create();
     expect(typeof handler.load).toBe('function');
+  });
+
+  it('create() returns an object with a getIdentityKey function', () => {
+    const handler = tiledMapBinding.create();
+    expect(typeof handler.getIdentityKey).toBe('function');
+  });
+});
+
+describe('tiledMapBinding.getIdentityKey', () => {
+  const handler = tiledMapBinding.create();
+
+  it('includes source, format, and strict in the key', () => {
+    expect(handler.getIdentityKey!({ source: 'world.tmj' })).toBe('world.tmj|tiled|true');
+  });
+
+  it('strict:false produces a distinct key', () => {
+    const key = handler.getIdentityKey!({ source: 'world.tmj', options: { strict: false } });
+    expect(key).toBe('world.tmj|tiled|false');
+  });
+});
+
+describe('tiledRuntimeMapBinding and tiledMapBinding identity keys', () => {
+  it('produce the same key string for the same source (Loader namespaces them by type)', () => {
+    const runtimeHandler = tiledRuntimeMapBinding.create();
+    const sourceHandler  = tiledMapBinding.create();
+    // Both use the same discriminator; the Loader prepends distinct type IDs so
+    // their cache keys are different even though this string matches.
+    const req = { source: 'world.tmj' };
+    expect(runtimeHandler.getIdentityKey!(req)).toBe(sourceHandler.getIdentityKey!(req));
   });
 });
 

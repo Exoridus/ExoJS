@@ -2,6 +2,7 @@
 // No registration is performed on import.
 
 export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension } from '@codexo/exojs/extensions';
+export { type TiledLoadOptions } from './tiledOptions';
 
 // ── Runtime facade (re-exports from @codexo/exojs-tilemap) ─────────────────
 // These are re-exports of the *same* module bindings — `instanceof TileMap`
@@ -77,3 +78,24 @@ export type { TiledTilesetResources } from './TiledTileset';
 
 // ── Validation ───────────────────────────────────────────────────────────────
 export { TiledFormatError } from './validate';
+
+// ── Module augmentation — typed load calls ───────────────────────────────────
+import type { TileMap } from '@codexo/exojs-tilemap';
+import type { TiledMap } from './TiledMap';
+
+declare module '@codexo/exojs' {
+  interface ExtensionTypeMap {
+    /** `.tmj` path-only loads resolve to the generic runtime {@link TileMap}. */
+    tmj: TileMap;
+  }
+  interface AssetDefinitions {
+    tileMap: {
+      resource: TileMap;
+      config: { source: string; format?: 'tiled'; strict?: boolean };
+    };
+    tiledMap: {
+      resource: TiledMap;
+      config: { source: string; format?: 'tiled'; strict?: boolean };
+    };
+  }
+}

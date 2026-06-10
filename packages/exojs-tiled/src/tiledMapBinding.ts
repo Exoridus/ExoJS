@@ -1,7 +1,8 @@
-import type { AssetBinding, AssetHandler, AssetLoadRequest } from '@codexo/exojs/extensions';
+import type { AssetBinding, AssetHandler } from '@codexo/exojs/extensions';
 
 import { loadTiledMap } from './loadTiledMap';
 import { TiledMap } from './TiledMap';
+import { type TiledLoadOptions, resolveTiledOptions } from './tiledOptions';
 
 /**
  * Declarative asset binding for {@link TiledMap}.
@@ -15,11 +16,15 @@ import { TiledMap } from './TiledMap';
 export const tiledMapBinding = {
   type: TiledMap,
   typeNames: ['tiledMap'],
-  create(): AssetHandler<TiledMap> {
+  create() {
     return {
-      async load({ source }: AssetLoadRequest, context): Promise<TiledMap> {
-        return loadTiledMap(source, context);
+      getIdentityKey(req) {
+        const o = resolveTiledOptions(req.options);
+        return `${req.source}|${o.format}|${o.strict}`;
       },
-    };
+      async load(req, ctx) {
+        return loadTiledMap(req.source, ctx);
+      },
+    } satisfies AssetHandler<TiledMap, TiledLoadOptions>;
   },
-} satisfies AssetBinding<TiledMap>;
+} satisfies AssetBinding<TiledMap, TiledLoadOptions>;
