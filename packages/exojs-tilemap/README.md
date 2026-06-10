@@ -29,7 +29,11 @@ custom-format maps.
 **Scene / rendering (`@advanced`)**:
 
 - `TileMapNode` — convenience root that renders a whole `TileMap`.
-- `TileLayerNode` — renders one `TileLayer`; place these yourself to interleave actors.
+- `TileLayerNode` — renders one `TileLayer`; generated per layer by `TileMapView` (or construct
+  directly).
+- `TileMapView` — groups a map's layers into independently placeable layer nodes and named
+  `TileMapBand`s for actor interleaving (a helper, not a scene node).
+- `TileMapBand` — a `Container` of tile-layer nodes produced by `TileMapView`.
 - `tilemapExtension` — extension descriptor carrying the WebGL2/WebGPU renderer bindings.
 
 ## Usage — procedural map
@@ -82,19 +86,49 @@ const map = new TileMap({
 app.scene.root.addChild(new TileMapNode(map));
 ```
 
-### Interleaving actors between layers
+### Interleaving actors between layers — `TileMapView`
 
-`TileMapNode` owns **only** the map's layer nodes. To place actors *between* layers, build the
-layer nodes yourself and parent them in your own scene graph:
+`TileMapNode` owns **only** the map's layer nodes and renders them back-to-front — use it when
+nothing renders between layers. To draw application actors *between* tile layers, create a
+`TileMapView`: it generates one `TileLayerNode` per map layer (stable identity, map document
+order) and groups them into named `TileMapBand`s that you parent yourself, as siblings of your
+own actor containers:
 
 ```ts
-const background = new TileLayerNode(map.getTileLayer('background')!);
-const foreground = new TileLayerNode(map.getTileLayer('foreground')!);
+const view = map.createView({
+  bands: {
+    ground: ['background', 'ground'],
+    roof: ['roofs', 'foreground'],
+  },
+});
 
-world.addChild(background);
-world.addChild(player);      // app-owned actor, drawn between the two layers
-world.addChild(foreground);
+worldRoot.addChild(
+  view.band('ground'),
+  actors,            // app-owned actor container — drawn between ground and roof
+  view.band('roof'),
+);
 ```
+
+Or, without bands, place the generated per-layer nodes directly:
+
+```ts
+const view = map.createView();
+
+worldRoot.addChild(view.getLayerNodeById(groundId)!, actors, view.getLayerNodeById(roofId)!);
+```
+
+Actors are application-owned siblings. `TileMapView` never adopts or destroys actors.
+
+- A band definition **selects** layers (by id, or by unique layer name); rendering order within
+  a band always follows map document order — definitions never reorder layers.
+- Layers not listed in any band stay reachable via `view.getLayerNodeById(id)` /
+  `view.getLayerNodesByName(name)`; they are not auto-added to any band.
+- Destroying a view or a band destroys only the tile nodes it generated — never actors, the
+  `TileMap`, its `TileLayer`s, or tileset textures.
+- There is no map-replacement API: to swap maps, destroy the old view and create a new view from
+  the new map — the actor tree is untouched.
+- After layers are structurally added to or removed from the map, call `view.refreshLayers()`:
+  unchanged layer nodes keep their identity and bands keep their placement in your scene graph.
 
 ## `/register` convenience entry
 
@@ -122,11 +156,14 @@ import '@codexo/exojs-tilemap/register';
 ## Ownership & lifecycle
 
 - Tileset **textures are Loader-owned**. The runtime and renderer never destroy them.
-- `TileMapNode` / `TileLayerNode` reference — but never own — the `TileMap`. Destroying a map
-  node frees its layer/chunk nodes and their cached geometry; the `TileMap` data and textures
-  survive. Free those via `TileMap.destroy()` and `Loader.destroy()` respectively.
-- A `TileMapNode` reflects the layer set at construction time. After structural changes (layers
-  added/removed, or tiles written into previously-empty chunks) call `node.refreshLayers()` /
+- `TileMapNode` / `TileMapView` / `TileMapBand` / `TileLayerNode` reference — but never own —
+  the `TileMap`. Destroying a map node, view, or band frees only the tile nodes it generated
+  (detaching them from their application parents) and their cached geometry; application actors,
+  the `TileMap` data, its `TileLayer`s, and textures all survive. Free those via
+  `TileMap.destroy()` and `Loader.destroy()` respectively.
+- A `TileMapNode` or `TileMapView` reflects the layer set at construction time. After layers are
+  structurally added to or removed from the map call `node.refreshLayers()` /
+  `view.refreshLayers()`; after tiles are written into previously-empty chunks call
   `layerNode.refresh()`. In-place edits to existing chunks are picked up automatically.
 
 ## Core compatibility

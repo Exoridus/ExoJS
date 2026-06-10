@@ -22,6 +22,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 
 - `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(TileMap, url)`
 - `TileMapNode` / `TileLayerNode` (re-exported from `@codexo/exojs-tilemap`) — scene nodes that render a loaded `TileMap` on WebGL2/WebGPU
+- `TileMapView` / `TileMapBand` (re-exported from `@codexo/exojs-tilemap`) — group a map's layers into independently placeable bands for interleaving actors between tile layers; same class identity, so `instanceof` holds across both import paths (the canonical view/band docs live in the [`@codexo/exojs-tilemap` README](https://www.npmjs.com/package/@codexo/exojs-tilemap))
 - `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(TiledMap, url)`
 - `TiledTileset` — parsed tileset (atlas-image or collection-of-images); holds resolved textures
 - `TiledLayer` hierarchy — `TiledTileLayer`, `TiledObjectLayer`, `TiledImageLayer`, `TiledGroupLayer`

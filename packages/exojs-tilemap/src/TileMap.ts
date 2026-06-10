@@ -1,5 +1,7 @@
 import { TileLayer } from './TileLayer';
 import type { TileLayerOptions } from './TileLayer';
+import { TileMapView } from './TileMapView';
+import type { TileMapViewOptions } from './TileMapView';
 import { TileSet } from './TileSet';
 import type { TileProperties, ResolvedTile } from './types';
 import { validatePositiveInteger } from './types';
@@ -201,6 +203,25 @@ export class TileMap {
     layer.destroy();
     this._revision++;
     return true;
+  }
+
+  // ── Scene composition ─────────────────────────────────────────────────
+
+  /**
+   * Create a new {@link TileMapView} that groups this map's layers into
+   * independently placeable band / layer scene nodes for interleaving
+   * application actors between tile layers.
+   *
+   * Each call returns a fresh, independent view — the map does **not** cache a
+   * single global view, so multiple coexisting views of the same map are
+   * allowed. The view references this map but never owns it: destroying the
+   * view frees only its generated layer/band nodes — never the map, its layers,
+   * tileset textures, or any application actors.
+   *
+   * @advanced
+   */
+  public createView(options?: TileMapViewOptions): TileMapView {
+    return new TileMapView(this, options);
   }
 
   // ── Queries ───────────────────────────────────────────────────────────
