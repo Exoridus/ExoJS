@@ -37,6 +37,9 @@
   "peerDependencies": {
     "@codexo/exojs": "0.12.x"
   },
+  "dependencies": {
+    "@codexo/exojs-tilemap": "workspace:*"
+  },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
     "@codexo/exojs-config": "workspace:*"

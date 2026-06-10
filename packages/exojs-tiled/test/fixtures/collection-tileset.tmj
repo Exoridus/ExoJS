@@ -1,0 +1,39 @@
+{
+  "width": 2,
+  "height": 1,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "type": "map",
+  "version": "1.10",
+  "infinite": false,
+  "layers": [
+    {
+      "id": 1,
+      "name": "Base",
+      "type": "tilelayer",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 2,
+      "height": 1,
+      "opacity": 1,
+      "data": [1, 2]
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "collection",
+      "tilewidth": 16,
+      "tileheight": 16,
+      "tilecount": 2,
+      "columns": 0,
+      "tiles": [
+        { "id": 0, "image": "tile0.png", "imagewidth": 16, "imageheight": 16 },
+        { "id": 1, "image": "tile1.png", "imagewidth": 16, "imageheight": 16 }
+      ]
+    }
+  ]
+}

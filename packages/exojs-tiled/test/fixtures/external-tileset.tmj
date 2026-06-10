@@ -1,0 +1,31 @@
+{
+  "width": 2,
+  "height": 2,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "type": "map",
+  "version": "1.10",
+  "infinite": false,
+  "layers": [
+    {
+      "id": 1,
+      "name": "Base",
+      "type": "tilelayer",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 2,
+      "height": 2,
+      "opacity": 1,
+      "data": [1, 1, 1, 1]
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "source": "external-tileset.tsj"
+    }
+  ]
+}

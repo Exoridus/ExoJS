@@ -1,0 +1,14 @@
+{
+  "name": "external",
+  "tilewidth": 16,
+  "tileheight": 16,
+  "tilecount": 4,
+  "columns": 2,
+  "spacing": 0,
+  "margin": 0,
+  "image": "external-tileset.png",
+  "imagewidth": 32,
+  "imageheight": 32,
+  "tiledversion": "1.10.2",
+  "version": "1.10"
+}
