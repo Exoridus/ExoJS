@@ -69,6 +69,7 @@ export interface AssetBinding<Result = unknown> {
  */
 export interface Extension {
   readonly id: string;
+  readonly dependencies?: readonly Extension[];
   readonly renderers?: readonly RendererBinding[];
   readonly assets?: readonly AssetBinding[];
 }

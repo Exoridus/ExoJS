@@ -1,5 +1,5 @@
 import type { Extension } from './Extension';
-import { buildSnapshot, type ExtensionSnapshot } from './snapshot';
+import { buildSnapshot, type ExtensionSnapshot, freezeExtension } from './snapshot';
 
 // Module-level store — accessible to testing.ts via _clearRegistryStore.
 let _byId = new Map<string, Extension>();
@@ -57,30 +57,9 @@ export class ExtensionRegistry {
     _revision++;
     _cache = undefined;
 
-    if (__DEV__) {
-      Object.freeze(extension);
-
-      if (extension.renderers) {
-        Object.freeze(extension.renderers);
-
-        for (const binding of extension.renderers) {
-          Object.freeze(binding);
-          Object.freeze(binding.targets);
-        }
-      }
-
-      if (extension.assets) {
-        Object.freeze(extension.assets);
-
-        for (const binding of extension.assets) {
-          Object.freeze(binding);
-
-          if (binding.extensions) {
-            Object.freeze(binding.extensions);
-          }
-        }
-      }
-    }
+    // Eager freeze at registration time so that globally registered descriptors
+    // are immediately immutable. Idempotent with buildSnapshot's per-visit freeze.
+    freezeExtension(extension);
   }
 
   /** True if an extension with `id` is currently registered. */
