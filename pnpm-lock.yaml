@@ -145,6 +145,10 @@ importers:
         version: link:../exojs-config
 
   packages/exojs-tiled:
+    dependencies:
+      '@codexo/exojs-tilemap':
+        specifier: workspace:*
+        version: link:../exojs-tilemap
     devDependencies:
       '@codexo/exojs':
         specifier: workspace:*
