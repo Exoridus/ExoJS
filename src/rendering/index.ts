@@ -80,9 +80,13 @@ export type { GlyphInfo, GlyphKey, GlyphPlacement, GlyphProvider, TextAlignment,
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
+export type { RepeatFit, RepeatMode, RepeatPlan, RepeatSegment } from '#rendering/texture/repeat';
+export { planRepeat } from '#rendering/texture/repeat';
 export type { SamplerOptions } from '#rendering/texture/Sampler';
 export { Sampler } from '#rendering/texture/Sampler';
 export { Texture } from '#rendering/texture/Texture';
+export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';
+export { TextureRegion } from '#rendering/texture/TextureRegion';
 export { Video } from '#rendering/video/Video';
 export { AbstractWebGl2BatchedRenderer } from '#rendering/webgl2/AbstractWebGl2BatchedRenderer';
 export { AbstractWebGl2Renderer } from '#rendering/webgl2/AbstractWebGl2Renderer';
