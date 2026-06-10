@@ -9,7 +9,9 @@ export { type TiledLoadOptions } from './tiledOptions';
 // holds whether the class was imported from @codexo/exojs-tilemap or here.
 export {
   TileLayer,
+  TileLayerNode,
   TileMap,
+  TileMapNode,
   TileSet,
   tilemapExtension,
   TILE_TRANSFORM_IDENTITY,
@@ -20,7 +22,9 @@ export type {
   ReadonlyTileChunk,
   ResolvedTile,
   TileDefinition,
+  TileLayerNodeOptions,
   TileLayerOptions,
+  TileMapNodeOptions,
   TileMapOptions,
   TileProperties,
   TilePropertyValue,

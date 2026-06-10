@@ -18,6 +18,7 @@ const aliasConfig = [
   // @codexo/exojs-tiled depends on @codexo/exojs-tilemap; neither package
   // exports a `@codexo/source` condition, so alias to source for in-repo tests.
   { find: '@codexo/exojs-tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs-tiled', replacement: fileURLToPath(new URL('./packages/exojs-tiled/src/index.ts', import.meta.url)) },
 ] as const;
 
 // Shared resolution/plugin wiring for the repository-local browser projects.

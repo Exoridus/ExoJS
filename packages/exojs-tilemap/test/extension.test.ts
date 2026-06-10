@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { tilemapExtension } from '../src/tilemapExtension';
+import { TileChunkNode } from '../src/TileChunkNode';
 
 describe('@codexo/exojs-tilemap root', () => {
   it('tilemapExtension has correct id', () => {
@@ -12,8 +13,10 @@ describe('@codexo/exojs-tilemap root', () => {
     expect(tilemapExtension.assets).toBeUndefined();
   });
 
-  it('tilemapExtension has no renderer bindings yet (deferred to renderer slice)', () => {
-    expect(tilemapExtension.renderers).toBeUndefined();
+  it('tilemapExtension exposes exactly one tile chunk renderer binding', () => {
+    expect(tilemapExtension.renderers).toBeDefined();
+    expect(tilemapExtension.renderers).toHaveLength(1);
+    expect(tilemapExtension.renderers![0].targets).toContain(TileChunkNode);
   });
 
   it('tilemapExtension has no dependencies', () => {

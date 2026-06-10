@@ -12,6 +12,12 @@ export { TileMap } from './TileMap';
 export type { TileMapOptions } from './TileMap';
 export { TileSet } from './TileSet';
 export type { TileSetOptions } from './TileSet';
+// Scene/rendering nodes (advanced). The per-chunk drawable and the
+// per-backend renderers stay package-internal.
+export { TileMapNode } from './TileMapNode';
+export type { TileMapNodeOptions } from './TileMapNode';
+export { TileLayerNode } from './TileLayerNode';
+export type { TileLayerNodeOptions } from './TileLayerNode';
 export type {
   ChunkCoord,
   PackedTile,
