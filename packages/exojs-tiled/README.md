@@ -21,6 +21,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 ## What this package provides
 
 - `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(TileMap, url)`
+- `TileMapNode` / `TileLayerNode` (re-exported from `@codexo/exojs-tilemap`) — scene nodes that render a loaded `TileMap` on WebGL2/WebGPU
 - `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(TiledMap, url)`
 - `TiledTileset` — parsed tileset (atlas-image or collection-of-images); holds resolved textures
 - `TiledLayer` hierarchy — `TiledTileLayer`, `TiledObjectLayer`, `TiledImageLayer`, `TiledGroupLayer`
@@ -30,17 +31,26 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 
 ## Usage — common case
 
-Register the extension and load a `.tmj` map into a generic runtime `TileMap`:
+Register the extension, load a `.tmj` map into a generic runtime `TileMap`, and render it. One
+extension enables **both** loading and rendering — `tiledExtension` depends on `tilemapExtension`,
+so the tile chunk renderer bindings are materialised automatically (no manual `tilemapExtension`
+registration):
 
 ```ts
 import { Application } from '@codexo/exojs';
-import { TileMap, tiledExtension } from '@codexo/exojs-tiled';
+import { TileMap, TileMapNode, tiledExtension } from '@codexo/exojs-tiled';
 
 const app = new Application({ extensions: [tiledExtension] });
 
 const map = await app.loader.load(TileMap, 'maps/world.tmj');
 // map is a @codexo/exojs-tilemap TileMap
+
+app.scene.root.addChild(new TileMapNode(map));
 ```
+
+`TileMapNode` and `TileLayerNode` are the same classes exported by `@codexo/exojs-tilemap` (see its
+[README](https://www.npmjs.com/package/@codexo/exojs-tilemap) for the rendering/culling model and
+actor interleaving). `instanceof TileMap` holds across both import paths.
 
 ## Usage — advanced parsed-source case
 

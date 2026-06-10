@@ -69,9 +69,11 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
     expect(snapshot.assets).toContain(tiledMapBinding);
   });
 
-  it('buildSnapshot has no renderer bindings (rendering not yet implemented)', () => {
+  it('buildSnapshot([tiledExtension]) pulls in the tilemap renderer binding (one-extension rendering)', () => {
     const snapshot = buildSnapshot([tiledExtension]);
-    expect(snapshot.renderers).toHaveLength(0);
+    // The tilemap dependency contributes its tile chunk renderer binding, so a
+    // Tiled-only setup can both load AND render without manual registration.
+    expect(snapshot.renderers).toHaveLength(1);
   });
 });
 
