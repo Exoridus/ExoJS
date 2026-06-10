@@ -128,7 +128,8 @@ in vec2 a_position; in vec2 a_texcoord; in float a_nodeIndex;
 uniform mat3 u_projection;
 out vec2 v_uv;
 void main() {
-  vec3 clip = u_projection * vec3(a_position, 1.0);
+  float ni = a_nodeIndex;
+  vec3 clip = u_projection * vec3(a_position + vec2(ni * 0.0), 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
 }`,
 
@@ -315,7 +316,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
     try {
       sprite.setPosition(8, 8);
-      sprite.tint = Color.fromRgb(255, 0, 0);
+      sprite.tint = new Color(255, 0, 0);
       root.addChild(sprite);
 
       render(backend, root);
@@ -471,7 +472,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
     try {
       sprite.setPosition(8, 8);
-      sprite.tint = Color.fromRgb(0, 255, 0);
+      sprite.tint = new Color(0, 255, 0);
       root.addChild(sprite);
 
       render(backend, root);

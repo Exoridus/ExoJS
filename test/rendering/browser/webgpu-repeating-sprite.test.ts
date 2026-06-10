@@ -263,7 +263,7 @@ describe('WebGPU RepeatingSprite — shader path', () => {
 
     try {
       sprite.setPosition(8, 8);
-      sprite.tint = Color.fromRgb(255, 0, 0);
+      sprite.tint = new Color(255, 0, 0);
       root.addChild(sprite);
 
       if (!(await renderScene(ctx, backend, root))) {
@@ -393,7 +393,7 @@ describe('WebGPU RepeatingSprite — geometry path', () => {
 
     try {
       sprite.setPosition(8, 8);
-      sprite.tint = Color.fromRgb(0, 255, 0);
+      sprite.tint = new Color(0, 255, 0);
       root.addChild(sprite);
 
       if (!(await renderScene(ctx, backend, root))) {

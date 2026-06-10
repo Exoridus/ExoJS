@@ -13,10 +13,11 @@ import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 // ---------------------------------------------------------------------------
-// Shader path WGSL — one quad per sprite, UVs computed in vertex shader.
+// Shared WGSL declarations — structs, bindings, and output struct used by
+// both the shader path and the geometry path entry points.
 // ---------------------------------------------------------------------------
 
-const shaderPathSource = `
+const commonWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
 };
@@ -31,16 +32,23 @@ struct TransformSlot {
 @group(1) @binding(0) var spriteTexture: texture_2d<f32>;
 @group(1) @binding(1) var spriteSampler: sampler;
 
+struct VOut {
+    @builtin(position) pos: vec4<f32>,
+    @location(0) uv:    vec2<f32>,
+    @location(1) color: vec4<f32>,
+};
+`;
+
+// ---------------------------------------------------------------------------
+// Shader path WGSL — one quad per sprite, UVs computed in vertex shader.
+// ---------------------------------------------------------------------------
+
+const shaderPathEntries = `
 struct ShaderVIn {
     @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
     @location(1) uvParams:   vec4<f32>,  // tilingX, tilingY, offsetU, offsetV
     @location(2) color:      vec4<f32>,  // RGBA tint
     @location(3) nodeIndex:  u32,
-};
-struct VOut {
-    @builtin(position) pos: vec4<f32>,
-    @location(0) uv:    vec2<f32>,
-    @location(1) color: vec4<f32>,
 };
 
 @vertex
@@ -76,31 +84,12 @@ fn shaderFrag(input: VOut) -> @location(0) vec4<f32> {
 // Geometry path WGSL — N quads per sprite, UVs pre-computed in CPU.
 // ---------------------------------------------------------------------------
 
-const geoPathSource = `
-struct ProjectionUniforms {
-    matrix: mat4x4<f32>,
-};
-struct TransformSlot {
-    m0: vec4<f32>,
-    m1: vec4<f32>,
-    m2: vec4<f32>,
-};
-
-@group(0) @binding(0) var<uniform> projection: ProjectionUniforms;
-@group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
-@group(1) @binding(0) var spriteTexture: texture_2d<f32>;
-@group(1) @binding(1) var spriteSampler: sampler;
-
+const geoPathEntries = `
 struct GeoVIn {
     @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
     @location(1) uvBounds:   vec4<f32>,  // u0,v0,u1,v1 (normalised, flipY pre-applied)
     @location(2) color:      vec4<f32>,  // RGBA tint
     @location(3) nodeIndex:  u32,
-};
-struct VOut {
-    @builtin(position) pos: vec4<f32>,
-    @location(0) uv:    vec2<f32>,
-    @location(1) color: vec4<f32>,
 };
 
 @vertex
@@ -196,7 +185,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const device = backend.device;
     this._device = device;
 
-    this._shaderModule = device.createShaderModule({ code: shaderPathSource + geoPathSource });
+    this._shaderModule = device.createShaderModule({ code: commonWgsl + shaderPathEntries + geoPathEntries });
 
     this._uniformBindGroupLayout = device.createBindGroupLayout({
       entries: [
@@ -429,7 +418,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     pass: GPURenderPassEncoder,
     stencil: boolean,
   ): void {
-    if (!this._shaderInstBuf || !this._indexBuffer || !this._currentBlendMode || !this._currentTexture) return;
+    if (!this._shaderInstBuf || !this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
 
     device.queue.writeBuffer(this._shaderInstBuf, 0, this._shaderInstData, 0, this._shaderQuadCount * shaderStrideBytes);
 
@@ -464,7 +453,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     pass: GPURenderPassEncoder,
     stencil: boolean,
   ): void {
-    if (!this._geoInstBuf || !this._indexBuffer || !this._currentBlendMode || !this._currentTexture) return;
+    if (!this._geoInstBuf || !this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
 
     device.queue.writeBuffer(this._geoInstBuf, 0, this._geoInstData, 0, this._geoQuadCount * geoStrideBytes);
 

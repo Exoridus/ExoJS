@@ -477,6 +477,11 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._shaderPathShader.connect(createWebGl2ShaderProgram(gl));
     this._geoPathShader.connect(createWebGl2ShaderProgram(gl));
 
+    // sync() triggers finalize() which compiles the shaders and populates the
+    // attributes/uniforms maps — must happen before any getAttribute() call.
+    this._shaderPathShader.sync();
+    this._geoPathShader.sync();
+
     const conn = this._createConnection(gl);
     this._connection = conn;
 
@@ -501,9 +506,6 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, geoStrideBytes, 24, false, 1)
       .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, geoStrideBytes, 28, true, 1)
       .connect(this._createVaoRuntime(conn, 'geo'));
-
-    this._shaderPathShader.sync();
-    this._geoPathShader.sync();
   }
 
   protected onDisconnect(): void {
