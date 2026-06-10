@@ -75,7 +75,7 @@ describe('ExtensionSnapshot', () => {
   it('buildSnapshot throws on same id + different object', () => {
     const extA: Extension = { id: 'dup' };
     const extB: Extension = { id: 'dup' };
-    expect(() => buildSnapshot([extA, extB])).toThrow('Duplicate extension id "dup" with a different descriptor');
+    expect(() => buildSnapshot([extA, extB])).toThrow('Extension "dup" was provided by multiple descriptor objects.');
   });
 
   it('snapshot is frozen', () => {
