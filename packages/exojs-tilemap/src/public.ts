@@ -4,6 +4,7 @@
 export type { Extension } from '@codexo/exojs/extensions';
 export { tilemapExtension } from './tilemapExtension';
 export { TileChunk } from './TileChunk';
+export type { ReadonlyTileChunk } from './TileChunk';
 export { TileLayer } from './TileLayer';
 export type { TileLayerOptions } from './TileLayer';
 export { TileMap } from './TileMap';
@@ -12,7 +13,6 @@ export { TileSet } from './TileSet';
 export type { TileSetOptions } from './TileSet';
 export type {
   ChunkCoord,
-  PackedTile,
   ResolvedTile,
   TileDefinition,
   TileProperties,
@@ -21,9 +21,6 @@ export type {
 } from './types';
 export {
   TILE_TRANSFORM_IDENTITY,
-  packTile,
   tileToChunkCoord,
   tileToLocalInChunk,
-  tileTransformLabel,
-  unpackTile,
 } from './types';

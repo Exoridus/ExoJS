@@ -11,6 +11,7 @@ import {
 import type { ChunkCoord, PackedTile, ResolvedTile } from './types';
 import { tileToChunkCoord, tileToLocalInChunk } from './types';
 import { TileChunk } from './TileChunk';
+import type { ReadonlyTileChunk } from './TileChunk';
 
 /**
  * Options for constructing a {@link TileLayer}.
@@ -56,12 +57,15 @@ const DEFAULT_CHUNK_SIZE = 32;
  * chunk coordinates. For finite maps, only chunks that intersect the layer
  * bounds exist.
  *
- * Mutation is controlled: {@link setTileAt} / {@link clearTileAt} validate
- * coordinates, tileset references, and increment chunk revision counters
- * only when the stored value actually changes.
+ * **Mutation must go through the layer's public APIs only.**
+ * `setTileAt` / `clearTileAt` validate coordinates, tileset references,
+ * and increment revision counters only when the stored value actually
+ * changes. Direct chunk mutation is not supported — the layer owns chunk
+ * storage and exposes only a {@link ReadonlyTileChunk} view.
  *
  * The layer is NOT a SceneNode — that integration lives in the future
  * renderer slice.
+ *
  * @advanced
  */
 export class TileLayer {
@@ -105,10 +109,14 @@ export class TileLayer {
   /** The tilesets available to this layer (shared array reference). */
   public readonly tilesets: readonly TileSet[];
 
-  /** Chunk storage: chunkKey → TileChunk. */
+  /** Chunk storage: chunkKey → mutable TileChunk (internal). */
   private readonly _chunks: Map<string, TileChunk> = new Map();
 
-  /** Monotonic layer revision. Increments on any structural or tile change. */
+  /**
+   * Monotonic layer revision counter.
+   * Increments on every cell mutation that actually changes a stored value.
+   * Does NOT increment on no-op writes or failed mutations.
+   */
   private _revision: number = 0;
 
   /** Whether the layer has been destroyed. */
@@ -187,26 +195,30 @@ export class TileLayer {
 
   // ── Chunk keying ──────────────────────────────────────────────────────
 
-  private chunkKey(cx: number, cy: number): string {
+  private _chunkKey(cx: number, cy: number): string {
     return `${cx},${cy}`;
   }
 
   /**
-   * Get a chunk by signed chunk coordinates, or undefined if it doesn't exist.
+   * Get a readonly view of a chunk by signed chunk coordinates,
+   * or undefined if it does not exist (never been touched).
    * @advanced
    */
-  public getChunk(cx: number, cy: number): TileChunk | undefined {
-    return this._chunks.get(this.chunkKey(cx, cy));
+  public getChunk(cx: number, cy: number): ReadonlyTileChunk | undefined {
+    return this._chunks.get(this._chunkKey(cx, cy));
   }
 
   /**
    * Get or create a chunk at the given coordinates.
    * For finite layers, creation is only allowed within the valid chunk range.
-   * @internal
+   *
+   * @internal Package-private: used by {@link setTileAt}, {@link fillRect},
+   *           and future adapter ingest. External users should not allocate
+   *           chunks — use {@link setTileAt} to populate tiles.
    */
-  public ensureChunk(cx: number, cy: number): TileChunk {
+  public _ensureChunk(cx: number, cy: number): TileChunk {
     this._checkDestroyed();
-    const key = this.chunkKey(cx, cy);
+    const key = this._chunkKey(cx, cy);
     let chunk = this._chunks.get(key);
     if (!chunk) {
       const range = this.chunkRange();
@@ -229,9 +241,10 @@ export class TileLayer {
 
   /**
    * Iterate over all loaded chunks in deterministic (cy, cx) ascending order.
+   * Returns readonly chunk views — callers cannot mutate storage.
    * @advanced
    */
-  public loadedChunks(): IterableIterator<TileChunk> {
+  public loadedChunks(): IterableIterator<ReadonlyTileChunk> {
     const entries = [...this._chunks.values()];
     entries.sort((a, b) => a.cy - b.cy || a.cx - b.cx);
     return entries[Symbol.iterator]();
@@ -248,7 +261,7 @@ export class TileLayer {
     validateInteger(ty, 'ty');
     if (!this.inBounds(tx, ty)) return 0;
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
-    const chunk = this._chunks.get(this.chunkKey(cx, cy));
+    const chunk = this._chunks.get(this._chunkKey(cx, cy));
     if (!chunk) return 0;
     const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
     return chunk.getRawAt(lx, ly);
@@ -315,9 +328,9 @@ export class TileLayer {
     }
     const packed = this._validateTileRef(tile);
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
-    const chunk = this.ensureChunk(cx, cy);
+    const chunk = this._ensureChunk(cx, cy);
     const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
-    if (chunk.setRawAt(lx, ly, packed)) {
+    if (chunk._setRawAt(lx, ly, packed)) {
       this._revision++;
     }
   }
@@ -338,10 +351,10 @@ export class TileLayer {
       );
     }
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
-    const chunk = this._chunks.get(this.chunkKey(cx, cy));
+    const chunk = this._chunks.get(this._chunkKey(cx, cy));
     if (!chunk) return; // no chunk = already empty
     const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
-    if (chunk.setRawAt(lx, ly, 0)) {
+    if (chunk._setRawAt(lx, ly, 0)) {
       this._revision++;
     }
   }
@@ -355,15 +368,16 @@ export class TileLayer {
   public fillRect(
     x: number, y: number, w: number, h: number, tile: ResolvedTile,
   ): void {
+    this._checkDestroyed();
     const packed = this._validateTileRef(tile);
     let changed = false;
     for (let ty = y; ty < y + h; ty++) {
       for (let tx = x; tx < x + w; tx++) {
         if (!this.inBounds(tx, ty)) continue;
         const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
-        const chunk = this.ensureChunk(cx, cy);
+        const chunk = this._ensureChunk(cx, cy);
         const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
-        if (chunk.setRawAt(lx, ly, packed)) {
+        if (chunk._setRawAt(lx, ly, packed)) {
           changed = true;
         }
       }
@@ -376,15 +390,16 @@ export class TileLayer {
    * @advanced
    */
   public clearRect(x: number, y: number, w: number, h: number): void {
+    this._checkDestroyed();
     let changed = false;
     for (let ty = y; ty < y + h; ty++) {
       for (let tx = x; tx < x + w; tx++) {
         if (!this.inBounds(tx, ty)) continue;
         const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
-        const chunk = this._chunks.get(this.chunkKey(cx, cy));
+        const chunk = this._chunks.get(this._chunkKey(cx, cy));
         if (!chunk) continue;
         const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
-        if (chunk.setRawAt(lx, ly, 0)) {
+        if (chunk._setRawAt(lx, ly, 0)) {
           changed = true;
         }
       }
@@ -409,7 +424,7 @@ export class TileLayer {
 
     for (let cy = startCy; cy <= endCy; cy++) {
       for (let cx = startCx; cx <= endCx; cx++) {
-        const chunk = this._chunks.get(this.chunkKey(cx, cy));
+        const chunk = this._chunks.get(this._chunkKey(cx, cy));
         if (!chunk || chunk.empty) continue;
 
         const chunkStartTx = cx * this.chunkWidth;
@@ -473,8 +488,9 @@ export class TileLayer {
   // ── Revision / lifecycle ──────────────────────────────────────────────
 
   /**
-   * Monotonic layer revision counter. Increments on structural change
-   * and every cell mutation that actually changes a stored value.
+   * Monotonic layer revision counter.
+   * Increments on every cell mutation that changes a stored value.
+   * No-op writes and failed mutations do NOT increment.
    * @advanced
    */
   public get revision(): number {
@@ -495,13 +511,11 @@ export class TileLayer {
   /**
    * Destroy this layer: clear chunk storage and mark destroyed.
    * Does NOT destroy tileset textures or external resources.
+   * Idempotent.
    */
   public destroy(): void {
     if (this._destroyed) return;
     this._destroyed = true;
-    for (const chunk of this._chunks.values()) {
-      // Chunk arrays will be GC'd; no explicit free needed.
-    }
     this._chunks.clear();
   }
 
@@ -513,8 +527,10 @@ export class TileLayer {
   public countNonEmptyTiles(): number {
     let count = 0;
     for (const chunk of this._chunks.values()) {
-      for (let i = 0; i < chunk.tiles.length; i++) {
-        if (chunk.tiles[i] !== 0) count++;
+      for (let ly = 0; ly < chunk.height; ly++) {
+        for (let lx = 0; lx < chunk.width; lx++) {
+          if (chunk.getRawAt(lx, ly) !== 0) count++;
+        }
       }
     }
     return count;

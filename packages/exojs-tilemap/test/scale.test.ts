@@ -51,17 +51,15 @@ describe('scale / storage', () => {
     expect(map.width).toBe(512);
     expect(map.height).toBe(512);
 
-    // No chunks created yet — lazy
     const layer = map.getLayerById(0)!;
     expect([...layer.loadedChunks()]).toHaveLength(0);
 
-    // After setting a single tile, only one chunk exists
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
     layer.setTileAt(0, 0, ref);
     expect([...layer.loadedChunks()]).toHaveLength(1);
   });
 
-  it('dense fill 16×16 chunk creates exactly one chunk', () => {
+  it('dense fill 32×32 chunk creates exactly one chunk', () => {
     const ts = makeTileset('base', 256);
     const layer = new TileLayer({
       id: 0,
@@ -100,8 +98,6 @@ describe('scale / storage', () => {
       chunkHeight: 32,
     });
 
-    // 512 / 32 = 16 chunks per dimension → 256 total potential chunks
-    // Fill one tile in each chunk corner
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
     for (let cy = 0; cy < 16; cy++) {
       for (let cx = 0; cx < 16; cx++) {
@@ -112,10 +108,12 @@ describe('scale / storage', () => {
     expect([...layer.loadedChunks()]).toHaveLength(256);
   });
 
-  it('storage uses Uint32Array, not object arrays', () => {
+  it('storage uses Uint32Array internally, not exposed publicly', () => {
     const chunk = new TileChunk(0, 0, 32, 32);
-    expect(chunk.tiles).toBeInstanceOf(Uint32Array);
-    expect(chunk.tiles.length).toBe(1024);
+    // The private _tiles is not accessible from outside
+    expect((chunk as Record<string, unknown>).tiles).toBeUndefined();
+    expect(chunk.cloneTiles()).toBeInstanceOf(Uint32Array);
+    expect(chunk.cloneTiles().length).toBe(1024);
   });
 
   it('empty chunk is identified quickly after creation', () => {
@@ -136,7 +134,6 @@ describe('scale / storage', () => {
     });
 
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
-    // Fill a diagonal
     for (let i = 0; i < 128; i++) {
       layer.setTileAt(i, i, ref);
     }
@@ -144,11 +141,9 @@ describe('scale / storage', () => {
     const tiles = [...layer.tilesInRect(0, 0, 128, 128)];
     expect(tiles.length).toBe(128);
 
-    // Verify chunk count — should be exactly the chunks that intersect the diagonal
     const chunkCount = [...layer.loadedChunks()].length;
-    // Diagonal crosses chunk boundaries; expect ≤ chunks per axis intersecting
     expect(chunkCount).toBeGreaterThan(1);
-    expect(chunkCount).toBeLessThanOrEqual(32); // max 4×4 = 16 chunks, giving some margin
+    expect(chunkCount).toBeLessThanOrEqual(32);
   });
 
   it('clearRect on 128×128 dense fill is efficient', () => {

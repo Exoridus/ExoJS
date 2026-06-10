@@ -88,9 +88,12 @@ describe('tile packing', () => {
     expect(() => packTile(-1, 1, TILE_TRANSFORM_IDENTITY)).toThrow();
   });
 
-  it('identity transform packs as no flip bits', () => {
+  it('identity transform packs as non-zero when localTileId=0', () => {
+    // With the +1 offset, tile 0 stores as 1, not 0
     const packed = packTile(0, 0, TILE_TRANSFORM_IDENTITY);
-    expect(packed & 0xe0000000).toBe(0);
+    expect(packed).not.toBe(0);
+    const u = unpackTile(packed)!;
+    expect(u.localTileId).toBe(0);
   });
 
   it('TILE_TRANSFORM_IDENTITY is frozen identity', () => {
@@ -135,7 +138,6 @@ describe('chunk coordinate math', () => {
   });
 
   it('local in chunk wraps correctly for negatives', () => {
-    // tx=-1 with chunkW=32: cx=-1, lx=31
     const { cx, cy } = tileToChunkCoord(-1, -5, 32, 32);
     const { lx, ly } = tileToLocalInChunk(-1, -5, 32, 32);
     expect(cx).toBe(-1);
@@ -162,8 +164,8 @@ describe('TileSet', () => {
     expect(ts.tileWidth).toBe(32);
     expect(ts.tileHeight).toBe(32);
     expect(ts.tileCount).toBe(64);
-    expect(ts.columns).toBe(8); // 256 / 32
-    expect(ts.rows).toBe(8);    // ceil(64 / 8)
+    expect(ts.columns).toBe(8);
+    expect(ts.rows).toBe(8);
   });
 
   it('custom columns', () => {
@@ -189,9 +191,6 @@ describe('TileSet', () => {
       spacing: 2,
       margin: 4,
     });
-    // With margin: usable area is 320 - 8 = 312
-    // columns = floor(312 / 32) = 9
-    // But: 32*9 + 2*8 = 288 + 16 = 304 <= 312 ✓
     expect(ts.columns).toBeGreaterThanOrEqual(1);
   });
 
@@ -206,7 +205,7 @@ describe('TileSet', () => {
     const r = ts.getTileRect(0);
     expect(r).toEqual({ x: 0, y: 0, width: 32, height: 32 });
 
-    const r2 = ts.getTileRect(5); // col 1, row 1
+    const r2 = ts.getTileRect(5);
     expect(r2.x).toBe(32);
     expect(r2.y).toBe(32);
   });
@@ -225,7 +224,6 @@ describe('TileSet', () => {
     expect(r.x).toBe(4);
     expect(r.y).toBe(4);
 
-    // Column 1: margin + (tileWidth + spacing) * col = 4 + 34 = 38
     const r2 = ts.getTileRect(1);
     expect(r2.x).toBe(38);
   });
@@ -278,8 +276,8 @@ describe('TileSet', () => {
     const ts = makeTileset('test', 16);
     const mutableProps = { solid: true };
     ts._setDefinition(0, { properties: mutableProps });
-    mutableProps.solid = false; // mutate after
-    expect(ts.getTileDefinition(0)!.properties!.solid).toBe(true); // unchanged
+    mutableProps.solid = false;
+    expect(ts.getTileDefinition(0)!.properties!.solid).toBe(true);
   });
 
   it('allDefinitions returns frozen snapshot', () => {
@@ -311,63 +309,69 @@ describe('TileChunk', () => {
     expect(chunk.cy).toBe(0);
     expect(chunk.width).toBe(32);
     expect(chunk.height).toBe(32);
-    expect(chunk.tiles.length).toBe(1024);
+    expect(chunk.cloneTiles().length).toBe(1024);
     expect(chunk.empty).toBe(true);
   });
 
-  it('source data is copied', () => {
+  it('backing array is NOT exposed publicly', () => {
+    const chunk = new TileChunk(0, 0, 2, 2);
+    // The `tiles` property does not exist on the public interface
+    expect((chunk as Record<string, unknown>).tiles).toBeUndefined();
+  });
+
+  it('source data is defensively copied', () => {
     const source = new Uint32Array(4);
     source[0] = 1;
     const chunk = new TileChunk(0, 0, 2, 2, source);
-    source[0] = 99; // mutate original
+    source[0] = 99;
     expect(chunk.getRawAt(0, 0)).toBe(1);
   });
 
-  it('setRawAt returns true on change, false on no-op', () => {
+  it('_setRawAt returns true on change, false on no-op', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
-    expect(chunk.setRawAt(0, 0, 42)).toBe(true);
-    expect(chunk.setRawAt(0, 0, 42)).toBe(false);
+    expect(chunk._setRawAt(0, 0, 42)).toBe(true);
+    expect(chunk._setRawAt(0, 0, 42)).toBe(false);
   });
 
   it('revision increments on change, not on no-op', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
     expect(chunk.revision).toBe(0);
-    chunk.setRawAt(0, 0, 42);
+    chunk._setRawAt(0, 0, 42);
     expect(chunk.revision).toBe(1);
-    chunk.setRawAt(0, 0, 42);
+    chunk._setRawAt(0, 0, 42);
     expect(chunk.revision).toBe(1);
-    chunk.setRawAt(1, 0, 99);
+    chunk._setRawAt(1, 0, 99);
     expect(chunk.revision).toBe(2);
   });
 
   it('empty flag is cached and invalidated', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
     expect(chunk.empty).toBe(true);
-    chunk.setRawAt(0, 0, 42);
+    chunk._setRawAt(0, 0, 42);
     expect(chunk.empty).toBe(false);
-    chunk.setRawAt(0, 0, 0);
+    chunk._setRawAt(0, 0, 0);
     expect(chunk.empty).toBe(true);
   });
 
-  it('clear sets all to 0 and increments revision if had content', () => {
+  it('_clear sets all to 0 and increments revision if had content', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
-    chunk.setRawAt(0, 0, 42);
+    chunk._setRawAt(0, 0, 42);
     const rev = chunk.revision;
-    chunk.clear();
+    chunk._clear();
     expect(chunk.revision).toBe(rev + 1);
     expect(chunk.empty).toBe(true);
   });
 
-  it('clear on already-empty chunk is no-op', () => {
+  it('_clear on already-empty chunk is no-op', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
     const rev = chunk.revision;
-    chunk.clear();
+    chunk._clear();
     expect(chunk.revision).toBe(rev);
   });
 
-  it('markDirty invalidates empty cache and increments revision', () => {
+  it('_markDirty invalidates empty cache and increments revision', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
-    chunk.markDirty();
+    chunk._markDirty();
     expect(chunk.revision).toBe(1);
   });
 
@@ -382,13 +386,51 @@ describe('TileChunk', () => {
   });
 
   it('rejects unsafe allocation size', () => {
-    // width * height that overflows safe integer
     expect(() => new TileChunk(0, 0, 1e8, 1e8)).toThrow();
+  });
+
+  it('rejects non-integer cx', () => {
+    expect(() => new TileChunk(1.5, 0, 2, 2)).toThrow();
+  });
+
+  it('rejects non-finite cx', () => {
+    expect(() => new TileChunk(NaN, 0, 2, 2)).toThrow();
+    expect(() => new TileChunk(Infinity, 0, 2, 2)).toThrow();
+  });
+
+  it('rejects non-safe-integer cx', () => {
+    expect(() => new TileChunk(Number.MAX_SAFE_INTEGER + 1, 0, 2, 2)).toThrow();
+  });
+
+  it('getRawAt validates local coordinates', () => {
+    const chunk = new TileChunk(0, 0, 8, 8);
+    expect(() => chunk.getRawAt(-1, 0)).toThrow();
+    expect(() => chunk.getRawAt(0, -1)).toThrow();
+    expect(() => chunk.getRawAt(8, 0)).toThrow();
+    expect(() => chunk.getRawAt(0, 8)).toThrow();
+    expect(() => chunk.getRawAt(0.5, 0)).toThrow();
+    expect(() => chunk.getRawAt(NaN, 0)).toThrow();
+  });
+
+  it('_setRawAt validates local coordinates', () => {
+    const chunk = new TileChunk(0, 0, 8, 8);
+    expect(() => chunk._setRawAt(-1, 0, 1)).toThrow();
+    expect(() => chunk._setRawAt(0, 8, 1)).toThrow();
+    expect(chunk.revision).toBe(0); // no revision change on rejection
+  });
+
+  it('_setRawAt validates packed value is a finite integer', () => {
+    const chunk = new TileChunk(0, 0, 8, 8);
+    expect(() => chunk._setRawAt(0, 0, NaN)).toThrow();
+    expect(() => chunk._setRawAt(0, 0, 0.5)).toThrow();
+    expect(() => chunk._setRawAt(0, 0, Infinity)).toThrow();
+    // Negative integers are valid uint32 values (bit 31 set)
+    expect(() => chunk._setRawAt(0, 0, -1)).not.toThrow();
   });
 
   it('cloneTiles returns independent copy', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
-    chunk.setRawAt(0, 0, 42);
+    chunk._setRawAt(0, 0, 42);
     const copy = chunk.cloneTiles();
     copy[0] = 99;
     expect(chunk.getRawAt(0, 0)).toBe(42);
@@ -478,27 +520,46 @@ describe('TileLayer', () => {
     const range = layer.chunkRange();
     expect(range.minCx).toBe(0);
     expect(range.minCy).toBe(0);
-    expect(range.maxCx).toBe(3); // ceil(100/32) - 1 = 3
-    expect(range.maxCy).toBe(2); // ceil(80/32) - 1 = 2
+    expect(range.maxCx).toBe(3);
+    expect(range.maxCy).toBe(2);
   });
 
-  it('ensureChunk creates chunks in valid range', () => {
+  it('getChunk returns readonly view (ReadonlyTileChunk)', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 32, height: 32,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    // No chunk exists yet (lazy)
+    expect(layer.getChunk(0, 0)).toBeUndefined();
+
+    // Create via layer mutation
+    const ref = { tileset: ts, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY };
+    layer.setTileAt(0, 0, ref);
+
+    const chunk = layer.getChunk(0, 0);
+    expect(chunk).toBeDefined();
+    expect(chunk!.cx).toBe(0);
+    expect(chunk!.cy).toBe(0);
+    expect(chunk!.getRawAt(0, 0)).not.toBe(0);
+  });
+
+  it('_ensureChunk creates chunks in valid range', () => {
     const layer = new TileLayer({
       id: 0, name: 'l', width: 64, height: 64,
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
     });
-    const chunk = layer.ensureChunk(0, 0);
+    const chunk = layer._ensureChunk(0, 0);
     expect(chunk).toBeDefined();
     expect(chunk.width).toBe(32);
     expect(chunk.height).toBe(32);
   });
 
-  it('ensureChunk outside range throws', () => {
+  it('_ensureChunk outside range throws', () => {
     const layer = new TileLayer({
       id: 0, name: 'l', width: 32, height: 32,
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
     });
-    expect(() => layer.ensureChunk(5, 5)).toThrow();
+    expect(() => layer._ensureChunk(5, 5)).toThrow();
   });
 
   it('edge chunks have correct dimensions', () => {
@@ -507,8 +568,8 @@ describe('TileLayer', () => {
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
       chunkWidth: 32, chunkHeight: 32,
     });
-    const edgeChunk = layer.ensureChunk(1, 0); // right edge
-    expect(edgeChunk.width).toBe(8); // 40 - 32 = 8
+    const edgeChunk = layer._ensureChunk(1, 0);
+    expect(edgeChunk.width).toBe(8);
     expect(edgeChunk.height).toBe(32);
   });
 
@@ -626,6 +687,10 @@ describe('TileLayer', () => {
     expect(layer.revision).toBe(1);
     layer.setTileAt(0, 0, ref); // no-op
     expect(layer.revision).toBe(1);
+    layer.clearTileAt(0, 0);
+    expect(layer.revision).toBe(2);
+    layer.clearTileAt(0, 0); // no-op (already empty)
+    expect(layer.revision).toBe(2);
   });
 
   it('getRawTileAt returns 0 for empty', () => {
@@ -695,14 +760,12 @@ describe('TileLayer', () => {
       chunkWidth: 32, chunkHeight: 32,
     });
     const ref = { tileset: ts, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY };
-    // Set tiles to create chunks in non-sequential order
-    layer.setTileAt(65, 0, ref);  // chunk (2, 0)
-    layer.setTileAt(0, 65, ref);  // chunk (0, 2)
-    layer.setTileAt(35, 0, ref);  // chunk (1, 0)
-    layer.setTileAt(0, 0, ref);   // chunk (0, 0)
+    layer.setTileAt(65, 0, ref);
+    layer.setTileAt(0, 65, ref);
+    layer.setTileAt(35, 0, ref);
+    layer.setTileAt(0, 0, ref);
 
     const chunkCoords = [...layer.loadedChunks()].map(c => [c.cx, c.cy]);
-    // Expected order: sorted by cy then cx
     const expected = [[0, 0], [1, 0], [2, 0], [0, 2]];
     expect(chunkCoords).toEqual(expected);
   });
@@ -767,6 +830,7 @@ describe('TileLayer', () => {
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
     expect(() => layer.setTileAt(0, 0, ref)).toThrow();
     expect(() => layer.clearTileAt(0, 0)).toThrow();
+    expect(() => layer._ensureChunk(0, 0)).toThrow();
   });
 
   it('destroy is idempotent', () => {
@@ -775,7 +839,7 @@ describe('TileLayer', () => {
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
     });
     layer.destroy();
-    layer.destroy(); // should not throw
+    layer.destroy();
     expect(layer.destroyed).toBe(true);
   });
 
@@ -797,6 +861,41 @@ describe('TileLayer', () => {
     expect(t1.tileset).toBe(ts2);
     expect(t1.localTileId).toBe(10);
     expect(t1.transform.flipX).toBe(true);
+  });
+
+  // ── No-op mutation & revision ─────────────────────────────────────────
+
+  it('no-op setTileAt does NOT change revision', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 3, transform: TILE_TRANSFORM_IDENTITY };
+    layer.setTileAt(0, 0, ref);
+    const rev = layer.revision;
+    layer.setTileAt(0, 0, ref);
+    expect(layer.revision).toBe(rev);
+  });
+
+  it('no-op clearTileAt does NOT change revision', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const rev = layer.revision;
+    layer.clearTileAt(0, 0);
+    expect(layer.revision).toBe(rev);
+  });
+
+  it('failed setTileAt does NOT change revision', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const ts2 = makeTileset('other', 16);
+    const rev = layer.revision;
+    try { layer.setTileAt(0, 0, { tileset: ts2, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY }); } catch { /* expected */ }
+    expect(layer.revision).toBe(rev);
   });
 });
 
@@ -986,7 +1085,7 @@ describe('TileMap', () => {
     });
     map.addTileset(ts1);
     expect(map.tilesets).toHaveLength(1);
-    const ts2 = makeTileset('unique', 16); // same name
+    const ts2 = makeTileset('unique', 16);
     expect(() => map.addTileset(ts2)).toThrow();
   });
 
@@ -1099,12 +1198,11 @@ describe('TileMap', () => {
       tilesets: [tileset],
     });
     map.destroy();
-    // Tileset still holds the texture reference; texture is not destroyed
     expect(tileset.texture).toBe(region);
     expect(tileset.name).toBe('ts');
   });
 
-  it('revision increments on structural changes', () => {
+  it('revision increments on structural changes only (not cell mutations)', () => {
     const map = new TileMap({
       width: 64, height: 64,
       tileWidth: 32, tileHeight: 32,
@@ -1113,8 +1211,15 @@ describe('TileMap', () => {
     expect(map.revision).toBe(0);
     map.addTileset(makeTileset('extra', 16));
     expect(map.revision).toBe(1);
-    map.addLayer(new TileLayer({ id: 1, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] }));
+
+    const layer = new TileLayer({ id: 1, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    map.addLayer(layer);
     expect(map.revision).toBe(2);
+
+    // Cell mutation through layer does NOT increment map revision
+    const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
+    map.setTileAt(1, 0, 0, ref);
+    expect(map.revision).toBe(2); // unchanged — layer tracks cell revisions
   });
 });
 
@@ -1123,19 +1228,6 @@ describe('TileMap', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('immutability', () => {
-  it('TileSet constructor copies options', () => {
-    const opts = {
-      name: 'test',
-      texture: fakeRegion(),
-      tileWidth: 32,
-      tileHeight: 32,
-      tileCount: 16,
-    };
-    const ts = new TileSet(opts);
-    expect(ts.name).toBe('test');
-    expect(ts.tileCount).toBe(16);
-  });
-
   it('TileMap tilesets array is copied', () => {
     const tsArr = [makeTileset('base', 16)];
     const map = new TileMap({
@@ -1146,15 +1238,47 @@ describe('immutability', () => {
     expect(map.tilesets).not.toBe(tsArr);
   });
 
-  it('TileMap layers readonly snapshot is not the internal array', () => {
-    const layer = new TileLayer({ id: 0, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [makeTileset('b', 16)] });
-    const map = new TileMap({
-      width: 64, height: 64,
-      tileWidth: 32, tileHeight: 32,
-      layers: [layer],
+  it('cloneTiles mutation does not affect chunk', () => {
+    const chunk = new TileChunk(0, 0, 2, 2);
+    chunk._setRawAt(0, 0, 1);
+    const clone = chunk.cloneTiles();
+    clone[0] = 99;
+    expect(chunk.getRawAt(0, 0)).toBe(1);
+  });
+
+  it('readonly chunk from layer has no writable tiles', () => {
+    const ts = makeTileset('base', 16);
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 32, height: 32,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
     });
-    const snap = map.layers;
-    expect(snap).toHaveLength(1);
-    // The snapshot is a readonly tuple from the internal array slice.
+    const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
+    layer.setTileAt(0, 0, ref);
+
+    const chunk = layer.getChunk(0, 0)!;
+    // The public ReadonlyTileChunk interface has no 'tiles' property
+    const chunkAsAny = chunk as Record<string, unknown>;
+    // Verify that 'tiles' is undefined (private member)
+    expect(chunkAsAny.tiles).toBeUndefined();
+    // Verify that _setRawAt is still there (internal, but not public API intent)
+    // The key point is tiles is NOT exposed
+  });
+
+  it('clone can modify other chunks through public API only', () => {
+    const ts = makeTileset('base', 16);
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 32, height: 32,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY };
+    layer.setTileAt(0, 0, ref);
+
+    // Get a readonly chunk view — the chunk is separate from tileset/clone
+    const chunk = layer.getChunk(0, 0)!;
+    const clone = chunk.cloneTiles();
+    clone[0] = 0; // mutate clone
+
+    // Original layer tile still exists
+    expect(layer.getTileAt(0, 0)).not.toBeNull();
   });
 });

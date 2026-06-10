@@ -266,8 +266,9 @@ export class TileMap {
   // ── Revision / lifecycle ──────────────────────────────────────────────
 
   /**
-   * Monotonic map revision counter. Increments on structural changes
-   * (add/remove layer, add tileset) and on any cell mutation in any layer.
+   * Monotonic map revision counter. Increments on structural changes only
+   * (add/remove layer, add tileset). Cell mutations are tracked per-chunk
+   * and per-layer; the renderer reads chunk-level revisions directly.
    * @advanced
    */
   public get revision(): number {
