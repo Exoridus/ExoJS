@@ -1,5 +1,5 @@
 import { Signal } from '#core/Signal';
-import type { AssetHandler } from '#extensions/Extension';
+import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { type BmFont } from '#rendering/text/BmFont';
 
 import { Asset, AssetImpl } from './Asset';
@@ -1057,9 +1057,16 @@ export class Loader {
    * Atomically bind all keys for one AssetBinding to a pre-created handler.
    * Validates all keys BEFORE mutating any map. Any already-registered key
    * throws before any mutation (no override in 0.12).
+   *
+   * `Result` and `Options` are inferred from the binding's `AssetBinding<Result, Options>`
+   * contract. A declarative handler's optional `getIdentityKey` is forwarded into
+   * the internal {@link HandlerEntry} so it participates in in-flight deduplication.
    * @internal
    */
-  public bindAsset(keys: { type: AssetConstructor; typeNames?: readonly string[]; extensions?: readonly string[] }, handler: AssetHandler): void {
+  public bindAsset<Result = unknown, Options = undefined>(
+    keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[] },
+    handler: AssetHandler<Result, Options>,
+  ): void {
     const normalizedExts: string[] = [];
     const resolvedNames: string[] = keys.typeNames !== undefined ? [...keys.typeNames] : [];
 
@@ -1097,17 +1104,34 @@ export class Loader {
     }
 
     // All validation passed — install atomically.
-    // Internally the loader builds a flat config `{ source, ...fields }` (the
-    // shape the advanced `registerAssetType` handler form receives). Extension
-    // AssetHandlers are typed against the public `AssetLoadRequest`
-    // (`{ source, options? }`), so reshape the flat config here: pull `source`
-    // out and nest the remaining per-load fields under `options`.
+    //
+    // Localized type-erasure boundary: the internal Loader uses a flat config
+    // `{ source, ...fields }`. The public AssetHandler<Result, Options> interface
+    // uses `AssetLoadRequest<Options> = { source, options? }`. This single `toRequest`
+    // helper is the only place where the erased flat config is cast to the typed
+    // request — justified by the `AssetBinding<Result, Options>` contract that
+    // associates this handler's Options with the registered constructor.
+    //
+    // `options` is intentionally omitted (not set to `undefined`) when the flat
+    // config carries no extra fields, keeping the object compatible with a future
+    // `exactOptionalPropertyTypes` migration.
+    const toRequest = (config: unknown): AssetLoadRequest<Options> => {
+      const { source, ...rest } = config as { source: string } & Record<string, unknown>;
+
+      if (Object.keys(rest).length === 0) {
+        return { source };
+      }
+
+      return { source, options: rest as Options };
+    };
+
+    const boundIdentityKey = handler.getIdentityKey?.bind(handler);
+
     this._handlerFunctions.set(keys.type, {
-      load: (config, ctx) => {
-        const { source, ...rest } = config as { source: string } & Record<string, unknown>;
-        const options = Object.keys(rest).length > 0 ? (rest as Readonly<Record<string, unknown>>) : undefined;
-        return handler.load({ source, options }, ctx);
-      },
+      load: (config, ctx) => handler.load(toRequest(config), ctx),
+      getIdentityKey: boundIdentityKey
+        ? (config) => boundIdentityKey(toRequest(config))
+        : undefined,
     });
 
     for (const name of resolvedNames) {
@@ -1118,8 +1142,10 @@ export class Loader {
       this._extensionMap.set(ext, keys.type);
     }
 
-    // Own this handler for lifecycle management
-    this._boundHandlers.push(handler);
+    // Own this handler for lifecycle management.
+    // Cast to the erased AssetHandler for storage; destroy() is the only method
+    // called on entries in this array.
+    this._boundHandlers.push(handler as AssetHandler);
   }
 
   /**
