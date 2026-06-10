@@ -6,6 +6,8 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import type { NineSliceInsets, NineSliceModes, NineSliceOptions, NineSliceQuad } from './nineSlice';
 import {
   buildNineSliceQuads,
+  equalInsets,
+  equalModes,
   normalizeInsets,
   normalizeModes,
   validateBorder,
@@ -148,30 +150,45 @@ export class NineSliceSprite extends Drawable {
     return this;
   }
 
-  /** Update the SOURCE-space slice insets. Fails atomically. */
+  /** Update the SOURCE-space slice insets. Fails atomically. No-ops on equivalent values. */
   public setSlices(slices: number | Partial<NineSliceInsets>): this {
     const region = this._region;
     const normalized = normalizeInsets(slices);
     validateSlices(normalized, region.width, region.height);
+
+    if (equalInsets(normalized, this._slices)) {
+      return this;
+    }
+
     this._slices = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
     return this;
   }
 
-  /** Update the DESTINATION border sizes. Fails atomically. */
+  /** Update the DESTINATION border sizes. Fails atomically. No-ops on equivalent values. */
   public setBorder(border: number | Partial<NineSliceInsets>): this {
     const normalized = normalizeInsets(border);
     validateBorder(normalized);
+
+    if (equalInsets(normalized, this._border)) {
+      return this;
+    }
+
     this._border = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
     return this;
   }
 
-  /** Update the edge/center fill modes. Input is copied and frozen. */
+  /** Update the edge/center fill modes. Input is copied, validated, and frozen. No-ops on equivalent values. */
   public setModes(modes: NineSliceModes): this {
     const normalized = normalizeModes(modes);
+
+    if (equalModes(normalized, this._modes)) {
+      return this;
+    }
+
     this._modes = normalized;
     this._geometryDirty = true;
     this.invalidateCache();

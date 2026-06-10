@@ -125,6 +125,25 @@ export function normalizeInsets(
   });
 }
 
+const validRepeatModes = new Set<string>(['stretch', 'repeat', 'mirror-repeat']);
+const validRepeatFits = new Set<string>(['clip', 'round']);
+
+function validateModeField(value: unknown, label: string): void {
+  if (typeof value !== 'string' || !validRepeatModes.has(value)) {
+    throw new Error(
+      `NineSliceSprite: ${label} must be "stretch", "repeat", or "mirror-repeat".`,
+    );
+  }
+}
+
+function validateFitField(value: unknown, label: string): void {
+  if (typeof value !== 'string' || !validRepeatFits.has(value)) {
+    throw new Error(
+      `NineSliceSprite: ${label} must be "clip" or "round".`,
+    );
+  }
+}
+
 export function normalizeModes(modes: NineSliceModes | undefined): Readonly<NineSliceModes> {
   if (!modes) {
     return _defaultModes;
@@ -132,19 +151,34 @@ export function normalizeModes(modes: NineSliceModes | undefined): Readonly<Nine
 
   const normalized: Record<string, unknown> = {};
 
-  if (modes.edges !== undefined) normalized.edges = modes.edges;
-  if (modes.center !== undefined) normalized.center = modes.center;
-  if (modes.top !== undefined) normalized.top = modes.top;
-  if (modes.right !== undefined) normalized.right = modes.right;
-  if (modes.bottom !== undefined) normalized.bottom = modes.bottom;
-  if (modes.left !== undefined) normalized.left = modes.left;
-  if (modes.edgeFit !== undefined) normalized.edgeFit = modes.edgeFit;
-  if (modes.centerFit !== undefined) normalized.centerFit = modes.centerFit;
+  if (modes.edges !== undefined) { validateModeField(modes.edges, 'modes.edges'); normalized.edges = modes.edges; }
+  if (modes.center !== undefined) { validateModeField(modes.center, 'modes.center'); normalized.center = modes.center; }
+  if (modes.top !== undefined) { validateModeField(modes.top, 'modes.top'); normalized.top = modes.top; }
+  if (modes.right !== undefined) { validateModeField(modes.right, 'modes.right'); normalized.right = modes.right; }
+  if (modes.bottom !== undefined) { validateModeField(modes.bottom, 'modes.bottom'); normalized.bottom = modes.bottom; }
+  if (modes.left !== undefined) { validateModeField(modes.left, 'modes.left'); normalized.left = modes.left; }
+  if (modes.edgeFit !== undefined) { validateFitField(modes.edgeFit, 'modes.edgeFit'); normalized.edgeFit = modes.edgeFit; }
+  if (modes.centerFit !== undefined) { validateFitField(modes.centerFit, 'modes.centerFit'); normalized.centerFit = modes.centerFit; }
 
   return Object.freeze(normalized);
 }
 
 const _defaultModes: Readonly<NineSliceModes> = Object.freeze({});
+
+export function equalInsets(a: Readonly<NineSliceInsets>, b: Readonly<NineSliceInsets>): boolean {
+  return a.left === b.left && a.top === b.top && a.right === b.right && a.bottom === b.bottom;
+}
+
+export function equalModes(a: Readonly<NineSliceModes>, b: Readonly<NineSliceModes>): boolean {
+  return a.edges === b.edges
+    && a.center === b.center
+    && a.top === b.top
+    && a.right === b.right
+    && a.bottom === b.bottom
+    && a.left === b.left
+    && a.edgeFit === b.edgeFit
+    && a.centerFit === b.centerFit;
+}
 
 // ---------------------------------------------------------------------------
 // Mode resolution helpers (module-private)

@@ -172,10 +172,8 @@ describe('NineSliceSprite — no-op setters', () => {
     const sprite = new NineSliceSprite(tex, { slices: { left: 8, top: 8, right: 8, bottom: 8 } });
     void sprite.quads;
     sprite.setSlices(8);
-    // Same effective slices, should rebuild (normalized value may differ in reference)
-    // Actually, the slices ARE different objects so setSlices always marks dirty.
-    // This test verifies that duplicate setSlices with same input marks dirty.
-    expect(getDirty(sprite)).toBe(true);
+    // Same effective slices via equality check — no rebuild
+    expect(getDirty(sprite)).toBe(false);
   });
 });
 
@@ -589,13 +587,13 @@ describe('NineSliceSprite — zero-size behavior', () => {
 // ---------------------------------------------------------------------------
 
 describe('NineSliceSprite — geometry invalidation', () => {
-  test('setting equivalent normalized inset does not rebuild', () => {
+  test('setting equivalent normalized inset does not trigger rebuild', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: { left: 8, top: 8, right: 8, bottom: 8 } });
     void sprite.quads;
     sprite.setSlices({ left: 8, top: 8, right: 8, bottom: 8 });
-    // setSlices always marks dirty because ref changes
-    expect(getDirty(sprite)).toBe(true);
+    // Equivalent values — no rebuild via equality check
+    expect(getDirty(sprite)).toBe(false);
   });
 
   test('changing modes rebuilds once', () => {
@@ -625,5 +623,173 @@ describe('NineSliceSprite — geometry invalidation', () => {
     sprite.setSize(200, 200);
     const quads2 = sprite.quads;
     expect(quads1).not.toBe(quads2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mode validation (runtime strings, not just TypeScript types)
+// ---------------------------------------------------------------------------
+
+describe('NineSliceSprite — mode validation', () => {
+  test('rejects invalid edges mode in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { edges: 'banana' as string } as NineSliceModes }))
+      .toThrow(/modes.edges must be/);
+  });
+
+  test('rejects invalid center mode in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { center: 'tile' as string } as NineSliceModes }))
+      .toThrow(/modes.center must be/);
+  });
+
+  test('rejects invalid top override in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { top: 'invalid' as string } as NineSliceModes }))
+      .toThrow(/modes.top must be/);
+  });
+
+  test('rejects invalid right override in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { right: '' as string } as NineSliceModes }))
+      .toThrow(/modes.right must be/);
+  });
+
+  test('rejects invalid bottom override in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { bottom: 42 as unknown as string } as NineSliceModes }))
+      .toThrow(/modes.bottom must be/);
+  });
+
+  test('rejects invalid left override in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { left: 'undefined' as string } as NineSliceModes }))
+      .toThrow(/modes.left must be/);
+  });
+
+  test('rejects invalid edgeFit in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { edgeFit: 'stretch' as string } as NineSliceModes }))
+      .toThrow(/modes.edgeFit must be/);
+  });
+
+  test('rejects invalid centerFit in constructor', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { centerFit: 'squeeze' as string } as NineSliceModes }))
+      .toThrow(/modes.centerFit must be/);
+  });
+
+  test('rejects invalid mode in setModes', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10 });
+    expect(() => sprite.setModes({ edges: 'garbage' as string } as NineSliceModes))
+      .toThrow(/modes.edges must be/);
+  });
+
+  test('rejects invalid fit in setModes', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10 });
+    expect(() => sprite.setModes({ edgeFit: 'trim' as string } as NineSliceModes))
+      .toThrow(/modes.edgeFit must be/);
+  });
+
+  test('failed setModes is atomic — prior modes preserved', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, modes: { edges: 'repeat' } });
+    const prevModes = sprite.modes;
+    try { sprite.setModes({ edges: 'bad' as string } as NineSliceModes); } catch { /* expected */ }
+    expect(sprite.modes).toBe(prevModes);
+  });
+
+  test('failed setModes does not mark geometry dirty', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, modes: { edges: 'repeat' } });
+    void sprite.quads;
+    try { sprite.setModes({ edges: 'bad' as string } as NineSliceModes); } catch { /* expected */ }
+    expect(getDirty(sprite)).toBe(false);
+  });
+
+  test('omitted mode fields remain valid', () => {
+    const tex = makeTexture(64, 64);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: {} })).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Equivalent-value no-ops (avoid unnecessary rebuilds)
+// ---------------------------------------------------------------------------
+
+describe('NineSliceSprite — equivalent-value no-ops', () => {
+  test('setSlices with same numeric value does not rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10 });
+    void sprite.quads;
+    sprite.setSlices(10);
+    expect(getDirty(sprite)).toBe(false);
+  });
+
+  test('setSlices with equivalent object does not rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 8 });
+    void sprite.quads;
+    sprite.setSlices({ left: 8, top: 8, right: 8, bottom: 8 });
+    expect(getDirty(sprite)).toBe(false);
+  });
+
+  test('setSlices with different value does rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10 });
+    void sprite.quads;
+    sprite.setSlices(12);
+    expect(getDirty(sprite)).toBe(true);
+  });
+
+  test('setBorder with same numeric value does not rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, border: 12 });
+    void sprite.quads;
+    sprite.setBorder(12);
+    expect(getDirty(sprite)).toBe(false);
+  });
+
+  test('setBorder with equivalent object does not rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, border: { left: 5, top: 5, right: 5, bottom: 5 } });
+    void sprite.quads;
+    sprite.setBorder({ left: 5, top: 5, right: 5, bottom: 5 });
+    expect(getDirty(sprite)).toBe(false);
+  });
+
+  test('setBorder with different value does rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, border: 10 });
+    void sprite.quads;
+    sprite.setBorder(15);
+    expect(getDirty(sprite)).toBe(true);
+  });
+
+  test('setModes with equivalent object does not rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, modes: { edges: 'repeat', edgeFit: 'round' } });
+    void sprite.quads;
+    sprite.setModes({ edges: 'repeat', edgeFit: 'round' });
+    expect(getDirty(sprite)).toBe(false);
+  });
+
+  test('setModes with different value does rebuild', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, modes: { edges: 'repeat' } });
+    void sprite.quads;
+    sprite.setModes({ edges: 'mirror-repeat' });
+    expect(getDirty(sprite)).toBe(true);
+  });
+
+  test('setModes with same values but omitted optional fields is no-op', () => {
+    const tex = makeTexture(64, 64);
+    const sprite = new NineSliceSprite(tex, { slices: 10, modes: { edges: 'repeat', edgeFit: 'round' } });
+    void sprite.quads;
+    sprite.setModes({ edges: 'repeat' });
+    // edgeFit defaults to 'round', so after normalization they should match
+    expect(getDirty(sprite)).toBe(true);
   });
 });
