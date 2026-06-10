@@ -2,15 +2,18 @@ import type { RenderingApplicationOptions } from '#core/Application';
 import type { RendererBinding } from '#extensions/Extension';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { BitmapText } from '#rendering/text/BitmapText';
 import { Text } from '#rendering/text/Text';
 import { WebGl2MeshRenderer } from '#rendering/webgl2/WebGl2MeshRenderer';
 import { WebGl2NineSliceSpriteRenderer } from '#rendering/webgl2/WebGl2NineSliceSpriteRenderer';
+import { WebGl2RepeatingSpriteRenderer } from '#rendering/webgl2/WebGl2RepeatingSpriteRenderer';
 import { WebGl2SpriteRenderer } from '#rendering/webgl2/WebGl2SpriteRenderer';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
 import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { WebGpuNineSliceSpriteRenderer } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
+import { WebGpuRepeatingSpriteRenderer } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
 import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 
@@ -44,6 +47,10 @@ export function buildCoreRendererBindings(options: RenderingApplicationOptions):
     [RenderBackendType.WebGl2]: () => new WebGl2NineSliceSpriteRenderer(spriteRendererBatchSize),
     [RenderBackendType.WebGpu]: () => new WebGpuNineSliceSpriteRenderer(),
   };
+  const repeatingSpriteRenderers: BackendRendererMap = {
+    [RenderBackendType.WebGl2]: () => new WebGl2RepeatingSpriteRenderer(spriteRendererBatchSize),
+    [RenderBackendType.WebGpu]: () => new WebGpuRepeatingSpriteRenderer(),
+  };
 
   return [
     {
@@ -62,6 +69,10 @@ export function buildCoreRendererBindings(options: RenderingApplicationOptions):
     {
       targets: [NineSliceSprite],
       create: backend => nineSliceRenderers[backend.backendType]?.(),
+    },
+    {
+      targets: [RepeatingSprite],
+      create: backend => repeatingSpriteRenderers[backend.backendType]?.(),
     },
   ];
 }

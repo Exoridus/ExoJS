@@ -1,0 +1,631 @@
+/// <reference types="@webgpu/types" />
+
+import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
+import { computeShaderTiling } from '#rendering/sprite/repeatingSpritePlan';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { RepeatMode } from '#rendering/texture/repeat';
+import { Texture } from '#rendering/texture/Texture';
+import { type BlendModes } from '#rendering/types';
+
+import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
+import type { WebGpuBackend } from './WebGpuBackend';
+import { getWebGpuBlendState } from './WebGpuBlendState';
+import { stencilContentDepthStencilState } from './WebGpuStencilState';
+
+// ---------------------------------------------------------------------------
+// Shader path WGSL — one quad per sprite, UVs computed in vertex shader.
+// ---------------------------------------------------------------------------
+
+const shaderPathSource = `
+struct ProjectionUniforms {
+    matrix: mat4x4<f32>,
+};
+struct TransformSlot {
+    m0: vec4<f32>,
+    m1: vec4<f32>,
+    m2: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> projection: ProjectionUniforms;
+@group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
+@group(1) @binding(0) var spriteTexture: texture_2d<f32>;
+@group(1) @binding(1) var spriteSampler: sampler;
+
+struct ShaderVIn {
+    @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
+    @location(1) uvParams:   vec4<f32>,  // tilingX, tilingY, offsetU, offsetV
+    @location(2) color:      vec4<f32>,  // RGBA tint
+    @location(3) nodeIndex:  u32,
+};
+struct VOut {
+    @builtin(position) pos: vec4<f32>,
+    @location(0) uv:    vec2<f32>,
+    @location(1) color: vec4<f32>,
+};
+
+@vertex
+fn shaderVert(input: ShaderVIn, @builtin(vertex_index) vid: u32) -> VOut {
+    var out: VOut;
+    let cx = ((vid + 1u) >> 1u) & 1u;
+    let cy = vid >> 1u;
+    let lx = select(input.quadBounds.x, input.quadBounds.z, cx == 1u);
+    let ly = select(input.quadBounds.y, input.quadBounds.w, cy == 1u);
+
+    let destW = input.quadBounds.z - input.quadBounds.x;
+    let destH = input.quadBounds.w - input.quadBounds.y;
+
+    let slot = transforms[input.nodeIndex];
+    let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
+    let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
+    out.pos = projection.matrix * vec4<f32>(wx, wy, 0.0, 1.0);
+
+    let u = select(input.uvParams.z, ((lx - input.quadBounds.x) / destW) * input.uvParams.x + input.uvParams.z, destW > 0.0);
+    let v = select(input.uvParams.w, ((ly - input.quadBounds.y) / destH) * input.uvParams.y + input.uvParams.w, destH > 0.0);
+    out.uv    = vec2<f32>(u, v);
+    out.color = vec4<f32>(input.color.rgb * input.color.a, input.color.a);
+    return out;
+}
+
+@fragment
+fn shaderFrag(input: VOut) -> @location(0) vec4<f32> {
+    return textureSample(spriteTexture, spriteSampler, input.uv) * input.color;
+}
+`;
+
+// ---------------------------------------------------------------------------
+// Geometry path WGSL — N quads per sprite, UVs pre-computed in CPU.
+// ---------------------------------------------------------------------------
+
+const geoPathSource = `
+struct ProjectionUniforms {
+    matrix: mat4x4<f32>,
+};
+struct TransformSlot {
+    m0: vec4<f32>,
+    m1: vec4<f32>,
+    m2: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> projection: ProjectionUniforms;
+@group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
+@group(1) @binding(0) var spriteTexture: texture_2d<f32>;
+@group(1) @binding(1) var spriteSampler: sampler;
+
+struct GeoVIn {
+    @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
+    @location(1) uvBounds:   vec4<f32>,  // u0,v0,u1,v1 (normalised, flipY pre-applied)
+    @location(2) color:      vec4<f32>,  // RGBA tint
+    @location(3) nodeIndex:  u32,
+};
+struct VOut {
+    @builtin(position) pos: vec4<f32>,
+    @location(0) uv:    vec2<f32>,
+    @location(1) color: vec4<f32>,
+};
+
+@vertex
+fn geoVert(input: GeoVIn, @builtin(vertex_index) vid: u32) -> VOut {
+    var out: VOut;
+    let cx = ((vid + 1u) >> 1u) & 1u;
+    let cy = vid >> 1u;
+    let lx = select(input.quadBounds.x, input.quadBounds.z, cx == 1u);
+    let ly = select(input.quadBounds.y, input.quadBounds.w, cy == 1u);
+
+    let slot = transforms[input.nodeIndex];
+    let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
+    let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
+    out.pos = projection.matrix * vec4<f32>(wx, wy, 0.0, 1.0);
+
+    let u = select(input.uvBounds.x, input.uvBounds.z, cx == 1u);
+    let v = select(input.uvBounds.y, input.uvBounds.w, cy == 1u);
+    out.uv    = vec2<f32>(u, v);
+    out.color = vec4<f32>(input.color.rgb * input.color.a, input.color.a);
+    return out;
+}
+
+@fragment
+fn geoFrag(input: VOut) -> @location(0) vec4<f32> {
+    return textureSample(spriteTexture, spriteSampler, input.uv) * input.color;
+}
+`;
+
+// ---------------------------------------------------------------------------
+// Layout constants
+// ---------------------------------------------------------------------------
+
+const shaderStrideBytes      = 40;  // float32x4 bounds + float32x4 uvParams + unorm8x4 + uint32
+const geoStrideBytes         = 32;  // float32x4 bounds + unorm16x4 + unorm8x4 + uint32 (NineSlice layout)
+const projectionByteLength   = 64;
+const initialBatchCapacity   = 32;
+const indicesPerInstance   = 6;
+const quadIndices        = new Uint16Array([0, 1, 2, 0, 2, 3]);
+
+// ---------------------------------------------------------------------------
+// Sampler address mode helper
+// ---------------------------------------------------------------------------
+
+function repeatModeToAddressMode(mode: RepeatMode): GPUAddressMode {
+  if (mode === 'repeat') return 'repeat';
+  if (mode === 'mirror-repeat') return 'mirror-repeat';
+  return 'clamp-to-edge';
+}
+
+/** Instanced renderer for {@link RepeatingSprite} using WebGPU. */
+export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> {
+  private readonly _projData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
+
+  // Shared GPU objects
+  private _device: GPUDevice | null = null;
+  private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _shaderModule: GPUShaderModule | null = null;
+  private _uniformBuffer: GPUBuffer | null = null;
+  private _indexBuffer: GPUBuffer | null = null;
+  private _transformBindGroup: GPUBindGroup | null = null;
+  private _transformStorageBuf: GPUBuffer | null = null;
+  private readonly _pipelines = new Map<string, GPURenderPipeline>();
+  private readonly _samplers = new Map<string, GPUSampler>();
+
+  // Shader-path instance buffer
+  private _shaderInstBuf: GPUBuffer | null = null;
+  private _shaderInstCapacity = 0;
+  private _shaderInstData: ArrayBuffer = new ArrayBuffer(0);
+  private _shaderInstF32 = new Float32Array(this._shaderInstData);
+  private _shaderInstU32 = new Uint32Array(this._shaderInstData);
+  private _shaderQuadCount = 0;
+
+  // Geometry-path instance buffer
+  private _geoInstBuf: GPUBuffer | null = null;
+  private _geoInstCapacity = 0;
+  private _geoInstData: ArrayBuffer = new ArrayBuffer(0);
+  private _geoInstF32 = new Float32Array(this._geoInstData);
+  private _geoInstU32 = new Uint32Array(this._geoInstData);
+  private _geoQuadCount = 0;
+
+  // Shared batch state
+  private _maxNodeIndex = 0;
+  private _currentTexture: Texture | RenderTexture | null = null;
+  private _currentBlendMode: BlendModes | null = null;
+  private _currentModeX: RepeatMode | null = null;
+  private _currentModeY: RepeatMode | null = null;
+  private _currentPath: 'shader' | 'geometry' | null = null;
+
+  protected onConnect(backend: WebGpuBackend): void {
+    if (this._device) return;
+
+    const device = backend.device;
+    this._device = device;
+
+    this._shaderModule = device.createShaderModule({ code: shaderPathSource + geoPathSource });
+
+    this._uniformBindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      ],
+    });
+
+    this._textureBindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      ],
+    });
+
+    this._uniformBuffer = device.createBuffer({
+      size: projectionByteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    this._indexBuffer = device.createBuffer({
+      size: quadIndices.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(this._indexBuffer, 0, quadIndices.buffer, quadIndices.byteOffset, quadIndices.byteLength);
+  }
+
+  protected onDisconnect(): void {
+    this._shaderInstBuf?.destroy();
+    this._geoInstBuf?.destroy();
+    this._indexBuffer?.destroy();
+    this._uniformBuffer?.destroy();
+    this._pipelines.clear();
+    this._samplers.clear();
+
+    this._shaderInstBuf    = null;
+    this._geoInstBuf       = null;
+    this._indexBuffer      = null;
+    this._uniformBuffer    = null;
+    this._transformBindGroup = null;
+    this._transformStorageBuf = null;
+    this._textureBindGroupLayout       = null;
+    this._uniformBindGroupLayout       = null;
+    this._shaderModule     = null;
+    this._device           = null;
+    this._backend          = null;
+
+    this._shaderInstCapacity = 0;
+    this._shaderInstData     = new ArrayBuffer(0);
+    this._shaderInstF32      = new Float32Array(this._shaderInstData);
+    this._shaderInstU32      = new Uint32Array(this._shaderInstData);
+    this._geoInstCapacity    = 0;
+    this._geoInstData        = new ArrayBuffer(0);
+    this._geoInstF32         = new Float32Array(this._geoInstData);
+    this._geoInstU32         = new Uint32Array(this._geoInstData);
+
+    this._shaderQuadCount = 0;
+    this._geoQuadCount    = 0;
+    this._maxNodeIndex    = 0;
+    this._currentTexture  = null;
+    this._currentBlendMode = null;
+    this._currentModeX    = null;
+    this._currentModeY    = null;
+    this._currentPath     = null;
+  }
+
+  public render(sprite: RepeatingSprite): void {
+    const backend = this._backend;
+    if (!backend) return;
+
+    const texture  = sprite.texture;
+    if (texture instanceof Texture && texture.source === null) return;
+    if (texture.width === 0 || texture.height === 0) return;
+
+    const strategy  = sprite.resolvedStrategy;
+    const blendMode = sprite.blendMode;
+    const modeX     = sprite.modeX;
+    const modeY     = sprite.modeY;
+
+    const hasData = this._shaderQuadCount > 0 || this._geoQuadCount > 0;
+
+    if (hasData) {
+      const pathChanged  = this._currentPath !== strategy;
+      const texChanged   = this._currentTexture !== texture;
+      const blendChanged = this._currentBlendMode !== blendMode;
+      const modeChanged  = strategy === 'shader'
+        && (this._currentModeX !== modeX || this._currentModeY !== modeY);
+
+      if (pathChanged || texChanged || blendChanged || modeChanged) {
+        this.flush();
+      }
+    }
+
+    this._currentTexture   = texture;
+    this._currentBlendMode = blendMode;
+    this._currentPath      = strategy;
+    backend.setBlendMode(blendMode);
+
+    const command   = backend.activeDrawCommand;
+    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+    if (nodeIndex > this._maxNodeIndex) this._maxNodeIndex = nodeIndex;
+
+    if (strategy === 'shader') {
+      this._currentModeX = modeX;
+      this._currentModeY = modeY;
+      this._writeShaderInstance(sprite, nodeIndex);
+    } else {
+      this._writeGeoQuads(sprite, nodeIndex);
+    }
+  }
+
+  private _writeShaderInstance(sprite: RepeatingSprite, nodeIndex: number): void {
+    const texture = sprite.texture;
+    const srcW    = sprite.region.width;
+    const srcH    = sprite.region.height;
+    const destW   = sprite.width;
+    const destH   = sprite.height;
+    const flipY   = texture instanceof Texture && texture.flipY;
+
+    const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
+    const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
+    const offsetU = sprite.offsetX / (srcW > 0 ? srcW : 1);
+    const offsetV = sprite.offsetY / (srcH > 0 ? srcH : 1);
+    const uvParamY = flipY ? -tilingY : tilingY;
+    const uvParamW = flipY ? tilingY + offsetV : offsetV;
+
+    this._ensureShaderCapacity(this._shaderQuadCount + 1);
+
+    const words  = shaderStrideBytes / 4;
+    const offset = this._shaderQuadCount * words;
+    const f32    = this._shaderInstF32;
+    const u32    = this._shaderInstU32;
+
+    f32[offset + 0] = 0;
+    f32[offset + 1] = 0;
+    f32[offset + 2] = destW;
+    f32[offset + 3] = destH;
+    f32[offset + 4] = tilingX;
+    f32[offset + 5] = uvParamY;
+    f32[offset + 6] = offsetU;
+    f32[offset + 7] = uvParamW;
+    u32[offset + 8] = sprite.tint.toRgba();
+    u32[offset + 9] = nodeIndex >>> 0;
+
+    this._shaderQuadCount++;
+  }
+
+  private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
+    const quads = sprite.quads;
+    if (quads.length === 0) return;
+
+    const flipY = (sprite.texture instanceof Texture) && sprite.texture.flipY;
+    const tint  = sprite.tint.toRgba();
+    const words = geoStrideBytes / 4;
+
+    this._ensureGeoCapacity(this._geoQuadCount + quads.length);
+
+    const f32 = this._geoInstF32;
+    const u32 = this._geoInstU32;
+
+    for (let i = 0; i < quads.length; i++) {
+      const q      = quads[i];
+      const offset = (this._geoQuadCount + i) * words;
+
+      f32[offset + 0] = q.x0;
+      f32[offset + 1] = q.y0;
+      f32[offset + 2] = q.x1;
+      f32[offset + 3] = q.y1;
+
+      const uMin  = (q.u0 * 0xffff) & 0xffff;
+      const uMax  = (q.u1 * 0xffff) & 0xffff;
+      const v0Raw = (q.v0 * 0xffff) & 0xffff;
+      const v1Raw = (q.v1 * 0xffff) & 0xffff;
+      const vMin  = flipY ? v1Raw : v0Raw;
+      const vMax  = flipY ? v0Raw : v1Raw;
+
+      u32[offset + 4] = uMin | (vMin << 16);
+      u32[offset + 5] = uMax | (vMax << 16);
+      u32[offset + 6] = tint;
+      u32[offset + 7] = nodeIndex >>> 0;
+    }
+
+    this._geoQuadCount += quads.length;
+  }
+
+  public flush(): void {
+    const backend = this._backend;
+    const device  = this._device;
+    const uniform = this._uniformBuffer;
+
+    if (!backend || !device || !uniform) return;
+
+    if (this._shaderQuadCount === 0 && this._geoQuadCount === 0 && !backend.clearRequested) {
+      return;
+    }
+
+    const vm = backend.view.getTransform();
+    this._projData.set([vm.a, vm.c, 0, 0, vm.b, vm.d, 0, 0, 0, 0, 1, 0, vm.x, vm.y, 0, vm.z]);
+    device.queue.writeBuffer(uniform, 0, this._projData.buffer, this._projData.byteOffset, this._projData.byteLength);
+
+    const scissor     = backend.getScissorRect();
+    const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
+
+    const pass    = backend._passCoordinator.acquirePass().pass;
+    const stencil = backend._passCoordinator.stencilActive;
+
+    if (this._shaderQuadCount > 0 && !maskClipsAll) {
+      this._drawShaderBatch(device, backend, pass, stencil);
+    }
+
+    if (this._geoQuadCount > 0 && !maskClipsAll) {
+      this._drawGeoBatch(device, backend, pass, stencil);
+    }
+
+    backend._passCoordinator.endPass();
+
+    this._shaderQuadCount  = 0;
+    this._geoQuadCount     = 0;
+    this._maxNodeIndex     = 0;
+    this._currentTexture   = null;
+    this._currentBlendMode = null;
+    this._currentModeX     = null;
+    this._currentModeY     = null;
+    this._currentPath      = null;
+  }
+
+  private _drawShaderBatch(
+    device: GPUDevice,
+    backend: WebGpuBackend,
+    pass: GPURenderPassEncoder,
+    stencil: boolean,
+  ): void {
+    if (!this._shaderInstBuf || !this._indexBuffer || !this._currentBlendMode || !this._currentTexture) return;
+
+    device.queue.writeBuffer(this._shaderInstBuf, 0, this._shaderInstData, 0, this._shaderQuadCount * shaderStrideBytes);
+
+    const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
+    const uniformBindGroup = this._getOrCreateTransformBindGroup(device, this._uniformBuffer!, storage.buffer);
+
+    const modeX  = this._currentModeX ?? 'repeat';
+    const modeY  = this._currentModeY ?? 'repeat';
+    const sampler = this._getOrCreateSampler(device, modeX, modeY);
+    const texView = backend.getTextureBinding(this._currentTexture).view;
+    const textureBindGroup   = device.createBindGroup({
+      layout: this._textureBindGroupLayout!,
+      entries: [{ binding: 0, resource: texView }, { binding: 1, resource: sampler }],
+    });
+
+    const pipeline = this._getPipeline('shader', this._currentBlendMode, backend.renderTargetFormat, stencil);
+
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, uniformBindGroup);
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, this._shaderInstBuf);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerInstance, this._shaderQuadCount, 0, 0, 0);
+
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+  }
+
+  private _drawGeoBatch(
+    device: GPUDevice,
+    backend: WebGpuBackend,
+    pass: GPURenderPassEncoder,
+    stencil: boolean,
+  ): void {
+    if (!this._geoInstBuf || !this._indexBuffer || !this._currentBlendMode || !this._currentTexture) return;
+
+    device.queue.writeBuffer(this._geoInstBuf, 0, this._geoInstData, 0, this._geoQuadCount * geoStrideBytes);
+
+    const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
+    const uniformBindGroup = this._getOrCreateTransformBindGroup(device, this._uniformBuffer!, storage.buffer);
+
+    // Geometry path: use backend's default (clamp) sampler.
+    const binding = backend.getTextureBinding(this._currentTexture);
+    const textureBindGroup   = device.createBindGroup({
+      layout: this._textureBindGroupLayout!,
+      entries: [{ binding: 0, resource: binding.view }, { binding: 1, resource: binding.sampler }],
+    });
+
+    const pipeline = this._getPipeline('geo', this._currentBlendMode, backend.renderTargetFormat, stencil);
+
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, uniformBindGroup);
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, this._geoInstBuf);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerInstance, this._geoQuadCount, 0, 0, 0);
+
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+  }
+
+  public destroy(): void {
+    this.disconnect();
+  }
+
+  // -----------------------------------------------------------------------
+  // Private helpers
+  // -----------------------------------------------------------------------
+
+  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode): GPUSampler {
+    const key = `${modeX}:${modeY}`;
+    const existing = this._samplers.get(key);
+    if (existing) return existing;
+
+    const sampler = device.createSampler({
+      addressModeU: repeatModeToAddressMode(modeX),
+      addressModeV: repeatModeToAddressMode(modeY),
+      magFilter: 'linear',
+      minFilter: 'linear',
+    });
+    this._samplers.set(key, sampler);
+    return sampler;
+  }
+
+  private _getOrCreateTransformBindGroup(device: GPUDevice, uniformBuf: GPUBuffer, storageBuf: GPUBuffer): GPUBindGroup {
+    if (this._transformBindGroup !== null && this._transformStorageBuf === storageBuf) {
+      return this._transformBindGroup;
+    }
+    this._transformStorageBuf = storageBuf;
+    this._transformBindGroup  = device.createBindGroup({
+      layout: this._uniformBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuf } },
+        { binding: 1, resource: { buffer: storageBuf } },
+      ],
+    });
+    return this._transformBindGroup;
+  }
+
+  private _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    const key = `${kind}:${blend}:${format}:${stencil ? 's' : 'n'}`;
+    const existing = this._pipelines.get(key);
+    if (existing) return existing;
+
+    if (!this._device || !this._shaderModule || !this._uniformBindGroupLayout || !this._textureBindGroupLayout) {
+      throw new Error('WebGpuRepeatingSpriteRenderer: not connected.');
+    }
+
+    const layout = this._device.createPipelineLayout({
+      bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
+    });
+
+    const isShader = kind === 'shader';
+    const strideBytes = isShader ? shaderStrideBytes : geoStrideBytes;
+
+    const buffers: GPUVertexBufferLayout[] = isShader
+      ? [{
+          arrayStride: strideBytes,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0,  format: 'float32x4' },
+            { shaderLocation: 1, offset: 16, format: 'float32x4' },
+            { shaderLocation: 2, offset: 32, format: 'unorm8x4' },
+            { shaderLocation: 3, offset: 36, format: 'uint32' },
+          ],
+        }]
+      : [{
+          arrayStride: strideBytes,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0,  format: 'float32x4' },
+            { shaderLocation: 1, offset: 16, format: 'unorm16x4' },
+            { shaderLocation: 2, offset: 24, format: 'unorm8x4' },
+            { shaderLocation: 3, offset: 28, format: 'uint32' },
+          ],
+        }];
+
+    const desc: GPURenderPipelineDescriptor = {
+      layout,
+      vertex: {
+        module: this._shaderModule,
+        entryPoint: isShader ? 'shaderVert' : 'geoVert',
+        buffers,
+      },
+      fragment: {
+        module: this._shaderModule,
+        entryPoint: isShader ? 'shaderFrag' : 'geoFrag',
+        targets: [{ format, blend: getWebGpuBlendState(blend), writeMask: GPUColorWrite.ALL }],
+      },
+      primitive: { topology: 'triangle-list' },
+    };
+
+    if (stencil) {
+      desc.depthStencil = stencilContentDepthStencilState();
+    }
+
+    const pipeline = this._device.createRenderPipeline(desc);
+    this._pipelines.set(key, pipeline);
+    return pipeline;
+  }
+
+  private _ensureShaderCapacity(needed: number): void {
+    if (!this._device || needed <= this._shaderInstCapacity) return;
+    this._shaderInstCapacity = this._growCapacity(this._shaderInstCapacity, needed);
+    const oldData   = this._shaderInstData;
+    const carry     = this._shaderQuadCount * shaderStrideBytes;
+    this._shaderInstData = new ArrayBuffer(this._shaderInstCapacity * shaderStrideBytes);
+    if (carry > 0) new Uint8Array(this._shaderInstData).set(new Uint8Array(oldData, 0, carry));
+    this._shaderInstF32 = new Float32Array(this._shaderInstData);
+    this._shaderInstU32 = new Uint32Array(this._shaderInstData);
+    this._shaderInstBuf?.destroy();
+    this._shaderInstBuf = this._device.createBuffer({
+      size: this._shaderInstData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+  }
+
+  private _ensureGeoCapacity(needed: number): void {
+    if (!this._device || needed <= this._geoInstCapacity) return;
+    this._geoInstCapacity = this._growCapacity(this._geoInstCapacity, needed);
+    const oldData = this._geoInstData;
+    const carry   = this._geoQuadCount * geoStrideBytes;
+    this._geoInstData = new ArrayBuffer(this._geoInstCapacity * geoStrideBytes);
+    if (carry > 0) new Uint8Array(this._geoInstData).set(new Uint8Array(oldData, 0, carry));
+    this._geoInstF32 = new Float32Array(this._geoInstData);
+    this._geoInstU32 = new Uint32Array(this._geoInstData);
+    this._geoInstBuf?.destroy();
+    this._geoInstBuf = this._device.createBuffer({
+      size: this._geoInstData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+  }
+
+  private _growCapacity(current: number, needed: number): number {
+    let cap = Math.max(current, initialBatchCapacity);
+    while (cap < needed) cap *= 2;
+    return cap;
+  }
+}
