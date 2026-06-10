@@ -58,6 +58,8 @@ export { ShaderUniform } from '#rendering/shader/ShaderUniform';
 export { upgradeFragmentShaderToGl300 } from '#rendering/shader/upgradeFragmentShaderToGl300';
 export type { AnimatedSpriteClipDefinition, AnimatedSpritePlayOptions } from '#rendering/sprite/AnimatedSprite';
 export { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
+export type { NineSliceInsets, NineSliceModes, NineSliceOptions, NineSliceQuad } from '#rendering/sprite/nineSlice';
+export { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 export { Sprite, SpriteFlags } from '#rendering/sprite/Sprite';
 export type { SpritesheetData, SpritesheetFrame } from '#rendering/sprite/Spritesheet';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
@@ -92,6 +94,7 @@ export { AbstractWebGl2BatchedRenderer } from '#rendering/webgl2/AbstractWebGl2B
 export { AbstractWebGl2Renderer } from '#rendering/webgl2/AbstractWebGl2Renderer';
 export { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 export { WebGl2MeshRenderer } from '#rendering/webgl2/WebGl2MeshRenderer';
+export { WebGl2NineSliceSpriteRenderer } from '#rendering/webgl2/WebGl2NineSliceSpriteRenderer';
 export type { WebGl2RenderBufferRuntime } from '#rendering/webgl2/WebGl2RenderBuffer';
 export { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
 export { WebGl2ShaderBlock } from '#rendering/webgl2/WebGl2ShaderBlock';
@@ -107,5 +110,6 @@ export { WebGpuComputePipeline, WebGpuStorageBuffer } from '#rendering/webgpu/co
 export { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 export { getWebGpuBlendState } from '#rendering/webgpu/WebGpuBlendState';
 export { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
+export { WebGpuNineSliceSpriteRenderer } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
 export { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
 export { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
