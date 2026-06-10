@@ -2,7 +2,7 @@
  * Release manifest: the contract between the build-once `prepare` stage and the
  * `publish` stage.
  *
- * `prepare` packs exactly three npm tarballs, hashes them, and records the
+ * `prepare` packs exactly four npm tarballs, hashes them, and records the
  * digests here. `publish` re-hashes the on-disk tarballs and refuses to proceed
  * if any digest drifts from the manifest — that is the build-once guarantee:
  * the artifacts that were built, hashed and externally tested are byte-for-byte
@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 
 /** Lockstep publish order — Core first (peer of the extensions), then the extensions. */
-export const PUBLISH_ORDER = ['@codexo/exojs', '@codexo/exojs-particles', '@codexo/exojs-tiled'] as const;
+export const PUBLISH_ORDER = ['@codexo/exojs', '@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled'] as const;
 
 export type OfficialPackageName = (typeof PUBLISH_ORDER)[number];
 

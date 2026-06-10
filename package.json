@@ -93,7 +93,7 @@
     "lint:strict:fast:fix": "eslint --cache --cache-location .cache/eslintcache --fix --max-warnings=0 \"src/**/*.ts\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --project=exojs --project=exojs-particles --project=exojs-tiled",
+    "test": "vitest run --project=exojs --project=exojs-particles --project=exojs-tilemap --project=exojs-tiled",
     "test:core": "vitest run --project=exojs",
     "test:coverage": "vitest run --coverage --project=exojs",
     "test:watch": "vitest --project=exojs",
