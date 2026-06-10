@@ -2,14 +2,19 @@ import { tilemapExtension } from '@codexo/exojs-tilemap';
 import type { Extension } from '@codexo/exojs/extensions';
 
 import { tiledMapBinding } from './tiledMapBinding';
+import { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
 
 /**
  * Default immutable Tiled extension descriptor.
  *
- * Depends on {@link tilemapExtension} (the generic tilemap runtime) so that
- * snapshot construction always materializes it alongside `@codexo/exojs-tiled`,
- * even though this package's `TiledMap` source model does not yet convert
- * into the runtime `TileMap`.
+ * Registers two asset bindings:
+ * - {@link tiledRuntimeMapBinding} — `loader.load(TileMap, 'world.tmj')` →
+ *   returns a format-independent runtime {@link TileMap} (common case).
+ * - {@link tiledMapBinding} — `loader.load(TiledMap, 'world.tmj')` →
+ *   returns the raw parsed {@link TiledMap} source model (advanced/diagnostic).
+ *
+ * Depends on {@link tilemapExtension} so that snapshot construction always
+ * materialises the generic tilemap runtime before the Tiled adapter.
  *
  * Use with `ApplicationOptions.extensions` or call
  * `import '@codexo/exojs-tiled/register'` for global auto-registration.
@@ -17,5 +22,5 @@ import { tiledMapBinding } from './tiledMapBinding';
 export const tiledExtension: Extension = Object.freeze({
   id: '@codexo/exojs-tiled',
   dependencies: [tilemapExtension],
-  assets: [tiledMapBinding],
+  assets: [tiledRuntimeMapBinding, tiledMapBinding],
 });

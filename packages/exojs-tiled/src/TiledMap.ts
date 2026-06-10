@@ -1,5 +1,14 @@
+import { TextureRegion } from '@codexo/exojs';
+import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import type { ResolvedTile, TileTransform } from '@codexo/exojs-tilemap';
+
 import type { TiledMapData, TiledOrientation, TiledPropertyData, TiledRenderOrder } from './data';
-import { maskTiledGid } from './gid';
+import {
+  maskTiledGid,
+  TILED_FLIPPED_DIAGONALLY_FLAG,
+  TILED_FLIPPED_HORIZONTALLY_FLAG,
+  TILED_FLIPPED_VERTICALLY_FLAG,
+} from './gid';
 import { createTiledLayer, TiledGroupLayer, TiledObjectLayer, TiledTileLayer, type TiledLayer } from './TiledLayer';
 import type { TiledTileset } from './TiledTileset';
 import { TiledFormatError } from './validate';
@@ -90,12 +99,138 @@ export class TiledMap {
   }
 
   /**
+   * Convert this parsed Tiled source model into a format-independent runtime
+   * {@link TileMap} from `@codexo/exojs-tilemap`.
+   *
+   * Only finite orthogonal maps with atlas tilesets are supported. Passing a
+   * map with collection-of-images tilesets throws {@link TiledFormatError}.
+   * Object, image, and group layers are not yet converted (Phase C2 scope:
+   * tile layers only; group layer children are flattened into the result).
+   *
+   * The returned `TileMap` does **not** own the tileset textures — they remain
+   * in the Loader cache. Destroying the returned map does not unload textures.
+   */
+  public toTileMap(): TileMap {
+    // Build runtime tilesets. Tilesets with a per-tile image collection are
+    // not yet supported; collection-of-images tilesets throw TiledFormatError.
+    // Tilesets with no image at all (no texture, no tileTextures) are silently
+    // skipped — their cells appear as empty in the runtime layer.
+    const runtimeTilesets: TileSet[] = [];
+    // indexToRuntime[i] = runtime TileSet for tilesets[i], or null if skipped.
+    const indexToRuntime: (TileSet | null)[] = [];
+    for (let i = 0; i < this.tilesets.length; i++) {
+      const tiledTs = this.tilesets[i]!;
+      if (!tiledTs.texture) {
+        if (tiledTs.tileTextures.size > 0) {
+          throw new TiledFormatError(
+            this.source,
+            `tilesets/${tiledTs.name}`,
+            `tileset "${tiledTs.name}" is a collection-of-images tileset; ` +
+            `toTileMap() requires atlas tilesets in this release`,
+          );
+        }
+        // No atlas image and no per-tile images → skip; cells become empty.
+        indexToRuntime.push(null);
+        continue;
+      }
+      const tw = tiledTs.imageWidth ?? tiledTs.texture.width;
+      const th = tiledTs.imageHeight ?? tiledTs.texture.height;
+      const region = new TextureRegion(tiledTs.texture, { x: 0, y: 0, width: tw, height: th });
+      const rts = new TileSet({
+        name: tiledTs.name,
+        texture: region,
+        tileWidth: tiledTs.tileWidth,
+        tileHeight: tiledTs.tileHeight,
+        tileCount: tiledTs.tileCount,
+        columns: tiledTs.columns,
+        spacing: tiledTs.spacing,
+        margin: tiledTs.margin,
+      });
+      runtimeTilesets.push(rts);
+      indexToRuntime.push(rts);
+    }
+
+    // Collect and convert tile layers, flattening group layers.
+    const runtimeLayers: TileLayer[] = [];
+    const convertLayers = (layers: readonly TiledLayer[]): void => {
+      for (const layer of layers) {
+        if (layer instanceof TiledGroupLayer) {
+          convertLayers(layer.layers);
+        } else if (layer instanceof TiledTileLayer) {
+          const rLayer = new TileLayer({
+            id: layer.id,
+            name: layer.name,
+            width: layer.width,
+            height: layer.height,
+            tilesets: runtimeTilesets,
+            tileWidth: this.tileWidth,
+            tileHeight: this.tileHeight,
+            visible: layer.visible,
+            opacity: layer.opacity,
+            offsetX: layer.offsetX,
+            offsetY: layer.offsetY,
+          });
+          if (layer.data) {
+            populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime);
+          }
+          runtimeLayers.push(rLayer);
+        }
+        // ObjectLayer, ImageLayer: not converted in Phase C2 (tile layers only).
+      }
+    };
+    convertLayers(this.layers);
+
+    return new TileMap({
+      name: this.source,
+      width: this.width,
+      height: this.height,
+      tileWidth: this.tileWidth,
+      tileHeight: this.tileHeight,
+      tilesets: runtimeTilesets,
+      layers: runtimeLayers,
+    });
+  }
+
+  /**
    * Releases this map's reference to its parsed source. Tileset textures are
    * Loader-owned and may be shared with other maps; this does NOT destroy
    * them.
    */
   public destroy(): void {
     // Intentionally empty: all sub-resources (textures) are Loader-owned.
+  }
+}
+
+/** Fill a `TileLayer` from a flat GID array decoded from a Tiled tile layer. */
+function populateTileLayer(
+  layer: TileLayer,
+  gids: readonly number[],
+  tiledTilesets: readonly TiledTileset[],
+  indexToRuntime: readonly (TileSet | null)[],
+): void {
+  for (let i = 0; i < gids.length; i++) {
+    const rawGid = gids[i]!;
+    if (rawGid === 0) continue;
+    const baseGid = maskTiledGid(rawGid);
+    const transform: TileTransform = {
+      flipX: (rawGid >>> 0 & TILED_FLIPPED_HORIZONTALLY_FLAG) !== 0,
+      flipY: (rawGid >>> 0 & TILED_FLIPPED_VERTICALLY_FLAG) !== 0,
+      diagonal: (rawGid >>> 0 & TILED_FLIPPED_DIAGONALLY_FLAG) !== 0,
+    };
+    // Find owning tileset: rightmost with firstGid <= baseGid (tilesets sorted asc).
+    let tsIdx = -1;
+    for (let t = tiledTilesets.length - 1; t >= 0; t--) {
+      if (baseGid >= tiledTilesets[t]!.firstGid) { tsIdx = t; break; }
+    }
+    if (tsIdx === -1) continue;
+    const runtimeTs = indexToRuntime[tsIdx];
+    if (!runtimeTs) continue; // tileset was skipped (no atlas image)
+    const tile: ResolvedTile = {
+      tileset: runtimeTs,
+      localTileId: baseGid - tiledTilesets[tsIdx]!.firstGid,
+      transform,
+    };
+    layer.setTileAt(i % layer.width, Math.floor(i / layer.width), tile);
   }
 }
 

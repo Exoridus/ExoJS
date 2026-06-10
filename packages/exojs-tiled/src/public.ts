@@ -3,8 +3,33 @@
 
 export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension } from '@codexo/exojs/extensions';
 
+// ── Runtime facade (re-exports from @codexo/exojs-tilemap) ─────────────────
+// These are re-exports of the *same* module bindings — `instanceof TileMap`
+// holds whether the class was imported from @codexo/exojs-tilemap or here.
+export {
+  TileLayer,
+  TileMap,
+  TileSet,
+  tilemapExtension,
+  TILE_TRANSFORM_IDENTITY,
+} from '@codexo/exojs-tilemap';
+export type {
+  ChunkCoord,
+  PackedTile,
+  ReadonlyTileChunk,
+  ResolvedTile,
+  TileDefinition,
+  TileLayerOptions,
+  TileMapOptions,
+  TileProperties,
+  TilePropertyValue,
+  TileSetOptions,
+  TileTransform,
+} from '@codexo/exojs-tilemap';
+
 export { tiledExtension } from './tiledExtension';
 export { tiledMapBinding } from './tiledMapBinding';
+export { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
 
 export type { TiledBuildInfo } from './tiledBuildInfo';
 export { tiledBuildInfo } from './tiledBuildInfo';

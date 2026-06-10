@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
-import { tilemapExtension } from '@codexo/exojs-tilemap';
+import { tilemapExtension, TileMap } from '@codexo/exojs-tilemap';
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { buildSnapshot } from '../../../src/extensions/snapshot';
 import { tiledExtension } from '../src/tiledExtension';
 import { tiledMapBinding } from '../src/tiledMapBinding';
+import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
 import { TiledMap } from '../src/TiledMap';
 
 describe('@codexo/exojs-tiled extension descriptor', () => {
@@ -17,21 +18,42 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
     expect(tiledExtension.dependencies).toContain(tilemapExtension);
   });
 
-  it('has exactly one asset binding', () => {
+  it('has exactly two asset bindings', () => {
     expect(tiledExtension.assets).toBeDefined();
-    expect(tiledExtension.assets!.length).toBe(1);
-    expect(tiledExtension.assets![0]).toBe(tiledMapBinding);
+    expect(tiledExtension.assets!.length).toBe(2);
   });
 
-  it('asset binding targets TiledMap constructor', () => {
+  it('runtime binding (TileMap) is listed first', () => {
+    expect(tiledExtension.assets![0]).toBe(tiledRuntimeMapBinding);
+  });
+
+  it('source binding (TiledMap) is listed second', () => {
+    expect(tiledExtension.assets![1]).toBe(tiledMapBinding);
+  });
+
+  // ── tiledRuntimeMapBinding
+  it('runtime binding targets TileMap constructor', () => {
+    expect(tiledRuntimeMapBinding.type).toBe(TileMap);
+  });
+
+  it('runtime binding has typeNames ["tileMap"]', () => {
+    expect(tiledRuntimeMapBinding.typeNames).toEqual(['tileMap']);
+  });
+
+  it('runtime binding claims the .tmj file extension', () => {
+    expect((tiledRuntimeMapBinding as { extensions?: string[] }).extensions).toEqual(['tmj']);
+  });
+
+  // ── tiledMapBinding (advanced/source)
+  it('source binding targets TiledMap constructor', () => {
     expect(tiledMapBinding.type).toBe(TiledMap);
   });
 
-  it('asset binding has typeNames ["tiledMap"]', () => {
+  it('source binding has typeNames ["tiledMap"]', () => {
     expect(tiledMapBinding.typeNames).toEqual(['tiledMap']);
   });
 
-  it('asset binding does NOT claim file extensions (token-only; .tmj reserved for C2)', () => {
+  it('source binding does NOT claim file extensions (token-only)', () => {
     expect((tiledMapBinding as { extensions?: unknown }).extensions).toBeUndefined();
   });
 
@@ -40,10 +62,11 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
     expect(snapshot.extensions.map(e => e.id)).toEqual(['@codexo/exojs-tilemap', '@codexo/exojs-tiled']);
   });
 
-  it('buildSnapshot([tiledExtension]) collects exactly the tiledMap asset binding', () => {
+  it('buildSnapshot([tiledExtension]) collects both asset bindings', () => {
     const snapshot = buildSnapshot([tiledExtension]);
-    expect(snapshot.assets).toHaveLength(1);
-    expect(snapshot.assets[0]).toBe(tiledMapBinding);
+    expect(snapshot.assets).toHaveLength(2);
+    expect(snapshot.assets).toContain(tiledRuntimeMapBinding);
+    expect(snapshot.assets).toContain(tiledMapBinding);
   });
 
   it('buildSnapshot has no renderer bindings (rendering not yet implemented)', () => {
