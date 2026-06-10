@@ -49,16 +49,33 @@ function isFinite(value: number): boolean {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function normalizeExtrusion(extrusion: number | TextureRegionInsets | undefined): TextureRegionInsets {
+function normalizeExtrusion(extrusion: number | TextureRegionInsets | undefined): Readonly<TextureRegionInsets> {
   if (extrusion === undefined) {
-    return { left: 0, top: 0, right: 0, bottom: 0 };
+    return Object.freeze({
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+    });
   }
 
   if (typeof extrusion === 'number') {
-    return { left: extrusion, top: extrusion, right: extrusion, bottom: extrusion };
+    return Object.freeze({
+      left: extrusion,
+      top: extrusion,
+      right: extrusion,
+      bottom: extrusion,
+    });
   }
 
-  return extrusion;
+  // Copy caller-owned values into an engine-owned frozen object so that
+  // external mutation of the original never affects the region.
+  return Object.freeze({
+    left: extrusion.left,
+    top: extrusion.top,
+    right: extrusion.right,
+    bottom: extrusion.bottom,
+  });
 }
 
 function validateExtrusion(extrusion: TextureRegionInsets, x: number, y: number, width: number, height: number, textureWidth: number, textureHeight: number): void {
@@ -124,6 +141,12 @@ function validateOptions(options: TextureRegionOptions, textureWidth: number, te
  * Constructed once and reused across sprites, tile-sets, atlas lookups, and
  * the scalable-sprite repeat planners.
  *
+ * All region descriptor fields are stable after construction. Extrusion
+ * metadata is copied and frozen during construction — the caller retains no
+ * mutable reference to the stored object. The underlying {@link Texture}
+ * reference is stable, but the Texture's own lifecycle and sampler state
+ * remain owned by {@link Texture}.
+ *
  * Texture dimensions **must** be known at construction time; a texture with
  * zero dimensions will cause the constructor to throw.
  *
@@ -158,8 +181,8 @@ export class TextureRegion {
   /** Normalised bottom texture coordinate (V-max). */
   public readonly v1: number;
 
-  /** Per-edge extrusion/padding metadata (immutable). */
-  public readonly extrusion: TextureRegionInsets;
+  /** Per-edge extrusion/padding metadata (engine-owned, frozen). */
+  public readonly extrusion: Readonly<TextureRegionInsets>;
 
   /**
    * Create a new immutable region.
@@ -194,5 +217,9 @@ export class TextureRegion {
     this.v1 = (options.y + options.height) / textureHeight;
 
     this.extrusion = extrusion;
+
+    if (__DEV__) {
+      Object.freeze(this);
+    }
   }
 }

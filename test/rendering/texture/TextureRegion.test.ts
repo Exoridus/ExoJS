@@ -120,7 +120,6 @@ describe('TextureRegion — immutability', () => {
     const tex = makeTexture(256, 128);
     const region = makeRegion(tex, 32, 16, 64, 32);
 
-    // Verify properties exist and are accessible
     expect(region.x).toBe(32);
     expect(region.u0).toBe(32 / 256);
 
@@ -134,20 +133,62 @@ describe('TextureRegion — immutability', () => {
     expect(region.texture).toBe(tex);
   });
 
-  test('extrusion object is not externally mutable through region reference', () => {
+  test('caller-owned extrusion object is not retained directly', () => {
     const tex = makeTexture(256, 128);
-    const region = makeRegion(tex, 16, 16, 64, 32, { left: 2, top: 2, right: 2, bottom: 2 });
+    const input = { left: 1, top: 2, right: 3, bottom: 4 };
+    const region = new TextureRegion(tex, { x: 16, y: 16, width: 64, height: 32, extrusion: input });
 
-    // The extrusion reference is stored; the object itself is the one we own
-    // Verify the values
-    expect(region.extrusion.left).toBe(2);
-    expect(region.extrusion.top).toBe(2);
-    expect(region.extrusion.right).toBe(2);
-    expect(region.extrusion.bottom).toBe(2);
+    // The caller's object was NOT stored — a copy was made
+    expect(region.extrusion).not.toBe(input);
+    // Values were preserved
+    expect(region.extrusion).toEqual(input);
+  });
 
-    // Mutation of the returned object is technically possible but discouraged
-    // Verify the reference is stable
-    expect(region.extrusion).toBe(region.extrusion);
+  test('mutation of caller object does not affect region', () => {
+    const tex = makeTexture(256, 128);
+    const input = { left: 1, top: 2, right: 3, bottom: 4 };
+    const region = new TextureRegion(tex, { x: 16, y: 16, width: 64, height: 32, extrusion: input });
+
+    input.left = 99;
+
+    expect(region.extrusion.left).toBe(1);
+  });
+
+  test('extrusion object is frozen at runtime', () => {
+    const tex = makeTexture(256, 128);
+    const region = new TextureRegion(tex, { x: 16, y: 16, width: 64, height: 32, extrusion: { left: 2, top: 2, right: 2, bottom: 2 } });
+
+    expect(Object.isFrozen(region.extrusion)).toBe(true);
+  });
+
+  test('extrusion object is frozen at runtime — uniform number shorthand', () => {
+    const tex = makeTexture(256, 128);
+    const region = new TextureRegion(tex, { x: 16, y: 16, width: 64, height: 32, extrusion: 2 });
+
+    expect(Object.isFrozen(region.extrusion)).toBe(true);
+  });
+
+  test('extrusion object is frozen at runtime — omitted extrusion', () => {
+    const tex = makeTexture(256, 128);
+    const region = makeRegion(tex);
+
+    expect(Object.isFrozen(region.extrusion)).toBe(true);
+  });
+
+  test('direct runtime mutation of frozen extrusion throws in strict mode', () => {
+    const tex = makeTexture(256, 128);
+    const region = new TextureRegion(tex, { x: 16, y: 16, width: 64, height: 32, extrusion: 3 });
+
+    expect(() => {
+      (region.extrusion as { left: number }).left = 99;
+    }).toThrow();
+  });
+
+  test('TextureRegion instance is frozen', () => {
+    const tex = makeTexture(256, 128);
+    const region = new TextureRegion(tex, { x: 16, y: 16, width: 64, height: 32, extrusion: { left: 1, top: 2, right: 3, bottom: 4 } });
+
+    expect(Object.isFrozen(region)).toBe(true);
   });
 });
 
