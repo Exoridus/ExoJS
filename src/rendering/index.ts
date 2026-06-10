@@ -58,7 +58,7 @@ export { ShaderUniform } from '#rendering/shader/ShaderUniform';
 export { upgradeFragmentShaderToGl300 } from '#rendering/shader/upgradeFragmentShaderToGl300';
 export type { AnimatedSpriteClipDefinition, AnimatedSpritePlayOptions } from '#rendering/sprite/AnimatedSprite';
 export { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
-export type { NineSliceInsets, NineSliceModes, NineSliceOptions, NineSliceQuad } from '#rendering/sprite/nineSlice';
+export type { NineSliceInsets, NineSliceModes, NineSliceOptions } from '#rendering/sprite/nineSlice';
 export { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 export { Sprite, SpriteFlags } from '#rendering/sprite/Sprite';
 export type { SpritesheetData, SpritesheetFrame } from '#rendering/sprite/Spritesheet';

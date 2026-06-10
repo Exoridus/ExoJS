@@ -1,4 +1,5 @@
 import { Shader } from '#rendering/shader/Shader';
+import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -14,7 +15,7 @@ import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 const instanceStrideBytes = 32;
-const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT; // = 8
+const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const transformTextureUnit = 1;
 
 interface NineSliceRendererConnection {
@@ -64,19 +65,23 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const backend = this.getBackend();
     const texture = sprite.texture;
     const blendMode = sprite.blendMode;
+    const tintRgba = sprite.tint.toRgba();
 
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
 
-    const willExceed = this._quadIndex + quads.length > this._batchSize;
     const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
     const blendModeChanged = blendMode !== this._currentBlendMode;
 
-    if ((willExceed || textureChanged || blendModeChanged) && this._quadIndex > 0) {
-      this.flush();
+    // If the batch would overflow with current quads + new quads, flush first.
+    if (this._quadIndex > 0) {
+      if (blendModeChanged || textureChanged || this._quadIndex + quads.length > this._batchSize) {
+        this.flush();
+      }
     }
 
-    if (blendModeChanged || this._currentBlendMode === null) {
+    // Establish blend and texture state (may have been cleared by flush).
+    if (this._currentBlendMode === null || this._currentBlendMode !== blendMode) {
       this._currentBlendMode = blendMode;
       backend.setBlendMode(blendMode);
     }
@@ -86,17 +91,49 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
       backend.bindTexture(texture, 0);
     }
 
+    // A single sprite may produce more quads than the fixed batch buffer can hold.
+    // Process in chunks, flushing between each chunk.
+    let offset = 0;
+
+    while (offset < quads.length) {
+      const remaining = quads.length - offset;
+      const chunkSize = Math.min(remaining, this._batchSize);
+      const chunk = (offset === 0 && chunkSize === quads.length)
+        ? quads
+        : quads.slice(offset, offset + chunkSize);
+
+      this._writeQuadChunk(chunk, texture, tintRgba, nodeIndex);
+
+      offset += chunkSize;
+
+      if (offset < quads.length) {
+        this.flush();
+        // Re-establish state after flush
+        this._currentBlendMode = blendMode;
+        backend.setBlendMode(blendMode);
+        this._currentTexture = texture;
+        backend.bindTexture(texture, 0);
+      }
+    }
+  }
+
+  private _writeQuadChunk(
+    quads: readonly NineSliceQuad[],
+    texture: Texture | RenderTexture,
+    tintRgba: number,
+    nodeIndex: number,
+  ): void {
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
     const flipY = texture.flipY;
 
     for (const q of quads) {
-      const offset = this._quadIndex * wordsPerInstance;
+      const idx = this._quadIndex * wordsPerInstance;
 
-      f32[offset + 0] = q.x0;
-      f32[offset + 1] = q.y0;
-      f32[offset + 2] = q.x1;
-      f32[offset + 3] = q.y1;
+      f32[idx + 0] = q.x0;
+      f32[idx + 1] = q.y0;
+      f32[idx + 2] = q.x1;
+      f32[idx + 3] = q.y1;
 
       const uMin = (q.u0 * 0xffff) & 0xffff;
       const uMax = (q.u1 * 0xffff) & 0xffff;
@@ -105,11 +142,10 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
       const vMin = flipY ? v1Raw : v0Raw;
       const vMax = flipY ? v0Raw : v1Raw;
 
-      u32[offset + 4] = uMin | (vMin << 16);
-      u32[offset + 5] = uMax | (vMax << 16);
-
-      u32[offset + 6] = sprite.tint.toRgba();
-      u32[offset + 7] = nodeIndex >>> 0;
+      u32[idx + 4] = uMin | (vMin << 16);
+      u32[idx + 5] = uMax | (vMax << 16);
+      u32[idx + 6] = tintRgba;
+      u32[idx + 7] = nodeIndex >>> 0;
 
       this._quadIndex++;
 

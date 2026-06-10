@@ -236,7 +236,6 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "NineSliceInsets: interface",
   "NineSliceModes: interface",
   "NineSliceOptions: interface",
-  "NineSliceQuad: interface",
   "NineSliceSprite: class",
   "ObservableSize: class",
   "ObservableVector: class",

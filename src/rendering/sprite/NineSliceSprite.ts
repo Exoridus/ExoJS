@@ -1,9 +1,30 @@
+import type { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 
 import type { NineSliceInsets, NineSliceModes, NineSliceOptions, NineSliceQuad } from './nineSlice';
-import { buildNineSliceQuads, normalizeInsets } from './nineSlice';
+import {
+  buildNineSliceQuads,
+  normalizeInsets,
+  normalizeModes,
+  validateBorder,
+  validateSlices,
+} from './nineSlice';
+
+function validateSizeInput(width: number, height: number): void {
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    throw new Error(
+      `NineSliceSprite: width and height must be finite numbers (got ${width}, ${height}).`,
+    );
+  }
+  if (width < 0) {
+    throw new Error(`NineSliceSprite: width must be non-negative (got ${width}).`);
+  }
+  if (height < 0) {
+    throw new Error(`NineSliceSprite: height must be non-negative (got ${height}).`);
+  }
+}
 
 /**
  * A scalable nine-slice (9-patch) sprite.
@@ -12,12 +33,11 @@ import { buildNineSliceQuads, normalizeInsets } from './nineSlice';
  */
 export class NineSliceSprite extends Drawable {
   private _region: TextureRegion;
-  private _slices: NineSliceInsets;
-  private _border: NineSliceInsets;
+  private _slices: Readonly<NineSliceInsets>;
+  private _border: Readonly<NineSliceInsets>;
   private _width: number;
   private _height: number;
-  private _modes: NineSliceModes | undefined;
-  private _bleed: number;
+  private _modes: Readonly<NineSliceModes>;
 
   private _quads: NineSliceQuad[] = [];
   private _geometryDirty = true;
@@ -36,36 +56,32 @@ export class NineSliceSprite extends Drawable {
 
     const region = this._region;
 
+    // Validate and own slices
     const rawSlices = normalizeInsets(options.slices);
-
-    if (!Number.isFinite(rawSlices.left) || !Number.isFinite(rawSlices.top) ||
-        !Number.isFinite(rawSlices.right) || !Number.isFinite(rawSlices.bottom)) {
-      throw new Error('NineSliceSprite: slices must be finite numbers.');
-    }
-
-    if (rawSlices.left < 0 || rawSlices.top < 0 || rawSlices.right < 0 || rawSlices.bottom < 0) {
-      throw new Error('NineSliceSprite: slice values must be non-negative.');
-    }
-
-    if (rawSlices.left + rawSlices.right > region.width) {
-      throw new Error(`NineSliceSprite: slices.left (${rawSlices.left}) + slices.right (${rawSlices.right}) exceeds region width (${region.width}).`);
-    }
-
-    if (rawSlices.top + rawSlices.bottom > region.height) {
-      throw new Error(`NineSliceSprite: slices.top (${rawSlices.top}) + slices.bottom (${rawSlices.bottom}) exceeds region height (${region.height}).`);
-    }
-
+    validateSlices(rawSlices, region.width, region.height);
     this._slices = rawSlices;
 
-    this._border = options.border !== undefined
+    // Validate and own border
+    const rawBorder = options.border !== undefined
       ? normalizeInsets(options.border)
-      : { ...rawSlices };
+      : normalizeInsets(options.slices);
+    validateBorder(rawBorder);
+    this._border = rawBorder;
 
-    this._width = options.width ?? region.width;
-    this._height = options.height ?? region.height;
-    this._modes = options.modes;
-    this._bleed = options.bleed ?? 0.5;
+    // Validate and own size
+    const width = options.width ?? region.width;
+    const height = options.height ?? region.height;
+    validateSizeInput(width, height);
+    this._width = width;
+    this._height = height;
+
+    // Copy and freeze modes
+    this._modes = normalizeModes(options.modes);
   }
+
+  // -----------------------------------------------------------------------
+  // Public read-only accessors (engine-owned, frozen)
+  // -----------------------------------------------------------------------
 
   /** The TextureRegion this nine-slice samples from. */
   public get region(): TextureRegion {
@@ -77,17 +93,32 @@ export class NineSliceSprite extends Drawable {
     return this._region.texture;
   }
 
+  /** The engine-owned, frozen source slice insets. */
+  public get slices(): Readonly<NineSliceInsets> {
+    return this._slices;
+  }
+
+  /** The engine-owned, frozen destination border insets. */
+  public get border(): Readonly<NineSliceInsets> {
+    return this._border;
+  }
+
+  /** The engine-owned, frozen edge/center fill modes. */
+  public get modes(): Readonly<NineSliceModes> {
+    return this._modes;
+  }
+
+  // -----------------------------------------------------------------------
+  // Width / Height (with atomic validation)
+  // -----------------------------------------------------------------------
+
   /** Destination width in local units. */
   public get width(): number {
     return this._width;
   }
 
   public set width(value: number) {
-    if (this._width !== value) {
-      this._width = value;
-      this._geometryDirty = true;
-      this.invalidateCache();
-    }
+    this.setSize(value, this._height);
   }
 
   /** Destination height in local units. */
@@ -96,15 +127,17 @@ export class NineSliceSprite extends Drawable {
   }
 
   public set height(value: number) {
-    if (this._height !== value) {
-      this._height = value;
-      this._geometryDirty = true;
-      this.invalidateCache();
-    }
+    this.setSize(this._width, value);
   }
 
-  /** Set destination size. */
+  // -----------------------------------------------------------------------
+  // Mutators
+  // -----------------------------------------------------------------------
+
+  /** Set destination size. Fails atomically — prior state is preserved on invalid input. */
   public setSize(width: number, height: number): this {
+    validateSizeInput(width, height);
+
     if (this._width !== width || this._height !== height) {
       this._width = width;
       this._height = height;
@@ -115,29 +148,49 @@ export class NineSliceSprite extends Drawable {
     return this;
   }
 
-  /** Update the SOURCE-space slice insets. */
+  /** Update the SOURCE-space slice insets. Fails atomically. */
   public setSlices(slices: number | Partial<NineSliceInsets>): this {
-    this._slices = normalizeInsets(slices);
+    const region = this._region;
+    const normalized = normalizeInsets(slices);
+    validateSlices(normalized, region.width, region.height);
+    this._slices = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
     return this;
   }
 
-  /** Update the DESTINATION border sizes. */
+  /** Update the DESTINATION border sizes. Fails atomically. */
   public setBorder(border: number | Partial<NineSliceInsets>): this {
-    this._border = normalizeInsets(border);
+    const normalized = normalizeInsets(border);
+    validateBorder(normalized);
+    this._border = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
     return this;
   }
 
-  /** Update the edge/center fill modes. */
+  /** Update the edge/center fill modes. Input is copied and frozen. */
   public setModes(modes: NineSliceModes): this {
-    this._modes = modes;
+    const normalized = normalizeModes(modes);
+    this._modes = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
     return this;
   }
+
+  // -----------------------------------------------------------------------
+  // Bounds
+  // -----------------------------------------------------------------------
+
+  public override getLocalBounds(): Rectangle {
+    const bounds = super.getLocalBounds();
+    bounds.set(0, 0, this._width, this._height);
+    return bounds;
+  }
+
+  // -----------------------------------------------------------------------
+  // Internal geometry (for renderers)
+  // -----------------------------------------------------------------------
 
   /**
    * Lazily-built geometry quads. Each quad describes one rendered sub-region
@@ -152,6 +205,10 @@ export class NineSliceSprite extends Drawable {
     return this._quads;
   }
 
+  // -----------------------------------------------------------------------
+  // Private helpers
+  // -----------------------------------------------------------------------
+
   private _rebuildGeometry(): void {
     this._quads = buildNineSliceQuads(
       this._region,
@@ -160,7 +217,6 @@ export class NineSliceSprite extends Drawable {
       this._width,
       this._height,
       this._modes,
-      this._bleed,
     );
     this._geometryDirty = false;
   }
