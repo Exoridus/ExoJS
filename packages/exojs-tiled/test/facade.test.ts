@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TileLayer, TileLayerNode, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { TileLayer, TileLayerNode, TileMap, TileMapBand, TileMapNode, TileMapView, TileSet } from '@codexo/exojs-tilemap';
 
 import * as tiled from '../src/public';
 
@@ -11,6 +11,8 @@ describe('@codexo/exojs-tiled runtime facade', () => {
   it('re-exports the same class identities as @codexo/exojs-tilemap', () => {
     expect(tiled.TileMap).toBe(TileMap);
     expect(tiled.TileMapNode).toBe(TileMapNode);
+    expect(tiled.TileMapView).toBe(TileMapView);
+    expect(tiled.TileMapBand).toBe(TileMapBand);
     expect(tiled.TileLayerNode).toBe(TileLayerNode);
     expect(tiled.TileLayer).toBe(TileLayer);
     expect(tiled.TileSet).toBe(TileSet);
@@ -24,6 +26,21 @@ describe('@codexo/exojs-tiled runtime facade', () => {
     expect(node).toBeInstanceOf(TileMapNode);
 
     node.destroy();
+  });
+
+  it('a view and its bands built through the facade are instanceof the canonical classes', () => {
+    const map = new tiled.TileMap({ name: 'm', width: 2, height: 2, tileWidth: 16, tileHeight: 16 });
+    const view = new tiled.TileMapView(map, { bands: { stage: [] } });
+
+    expect(view).toBeInstanceOf(TileMapView);
+    expect(view.band('stage')).toBeInstanceOf(TileMapBand);
+
+    const created = map.createView();
+
+    expect(created).toBeInstanceOf(TileMapView);
+
+    created.destroy();
+    view.destroy();
   });
 
   it('the Tiled extension depends on the tilemap extension (one-extension rendering)', () => {

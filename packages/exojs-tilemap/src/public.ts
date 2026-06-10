@@ -18,6 +18,16 @@ export { TileMapNode } from './TileMapNode';
 export type { TileMapNodeOptions } from './TileMapNode';
 export { TileLayerNode } from './TileLayerNode';
 export type { TileLayerNodeOptions } from './TileLayerNode';
+// Layer composition: independently placeable bands/layer nodes for actor
+// interleaving. `TileMapView` is a helper (not a scene node); `TileMapBand`
+// is a Container of tile-layer nodes.
+export { TileMapView } from './TileMapView';
+export type {
+  TileLayerSelector,
+  TileMapBandDefinition,
+  TileMapViewOptions,
+} from './TileMapView';
+export { TileMapBand } from './TileMapBand';
 export type {
   ChunkCoord,
   PackedTile,
