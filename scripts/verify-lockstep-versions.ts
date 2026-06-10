@@ -1,9 +1,9 @@
 /**
- * Verifies that all three official ExoJS packages share the same version.
+ * Verifies that all four official ExoJS packages share the same version.
  *
  * The lockstep version contract: @codexo/exojs, @codexo/exojs-particles,
- * and @codexo/exojs-tiled must all be on the same X.Y.Z version for every
- * coordinated release.
+ * @codexo/exojs-tilemap, and @codexo/exojs-tiled must all be on the same
+ * X.Y.Z version for every coordinated release.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -27,7 +27,11 @@ function readPackage(relPath: string): PackageInfo {
 }
 
 const corePkg = readPackage('package.json');
-const extensionPkgs = [readPackage('packages/exojs-particles/package.json'), readPackage('packages/exojs-tiled/package.json')];
+const extensionPkgs = [
+  readPackage('packages/exojs-particles/package.json'),
+  readPackage('packages/exojs-tilemap/package.json'),
+  readPackage('packages/exojs-tiled/package.json'),
+];
 const packages = [corePkg, ...extensionPkgs];
 
 const versions = [...new Set(packages.map(p => p.version))];
@@ -62,4 +66,4 @@ if (peerProblems.length > 0) {
   process.exit(1);
 }
 
-process.stdout.write(`verify-lockstep: all 3 packages at v${versions[0]}; extension peer ranges = "${expectedPeer}" ✓\n`);
+process.stdout.write(`verify-lockstep: all 4 packages at v${versions[0]}; extension peer ranges = "${expectedPeer}" ✓\n`);

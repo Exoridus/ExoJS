@@ -68,6 +68,11 @@ export default defineConfig({
         include: ['packages/exojs-particles/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
+        name: 'exojs-tilemap',
+        alias: aliasConfig,
+        include: ['packages/exojs-tilemap/test/**/*.test.ts'],
+      }),
+      createJsdomTestProject({
         name: 'exojs-tiled',
         alias: aliasConfig,
         include: ['packages/exojs-tiled/test/**/*.test.ts'],

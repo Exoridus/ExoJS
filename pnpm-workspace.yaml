@@ -2,6 +2,7 @@ packages:
   - site
   - packages/exojs-config
   - packages/exojs-particles
+  - packages/exojs-tilemap
   - packages/exojs-tiled
   - packages/create-exo-app
 

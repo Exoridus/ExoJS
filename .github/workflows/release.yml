@@ -42,7 +42,7 @@ jobs:
       ref: ${{ github.event.inputs.tag || github.ref_name }}
 
   # ── Stage 1: PREPARE/VERIFY ────────────────────────────────────────────────
-  # Build the three official packages exactly once, then pack/hash/attw/
+  # Build the four official packages exactly once, then pack/hash/attw/
   # external-consumer/full-zip WITHOUT rebuilding them, and upload the resulting
   # artifacts. Any failure here means no publish, no latest, no tag, no release.
   prepare:
@@ -91,17 +91,18 @@ jobs:
           pnpm verify:release-matrix
 
       # Build core + extensions exactly once. `release:prepare --build` invokes
-      # `pnpm build` + the two extension builds, then packs WITHOUT rebuilding.
+      # `pnpm build` + the three extension builds, then packs WITHOUT rebuilding.
       - name: Build site (vendored ESM for the Full ZIP)
         env:
           EXOJS_PACKAGE_PATH: ..
         run: |
           pnpm build
           pnpm --filter @codexo/exojs-particles build
+          pnpm --filter @codexo/exojs-tilemap build
           pnpm --filter @codexo/exojs-tiled build
           pnpm site:build
 
-      # Build-once prepare: pack 3 tarballs (no rebuild) -> hash -> manifest +
+      # Build-once prepare: pack 4 tarballs (no rebuild) -> hash -> manifest +
       # checksums -> attw (bundler) -> external consumers -> Full GitHub ZIP.
       - name: Prepare release (pack, hash, attw, consumers, full-zip)
         run: pnpm release:prepare
@@ -121,8 +122,8 @@ jobs:
   # Consumes ONLY the artifacts built by `prepare`. Never builds or repacks: the
   # release:publish step re-hashes the downloaded tarballs against the manifest
   # (build-once guard) and aborts on any drift. Publishes Core -> Particles ->
-  # Tiled to a version-specific temporary dist-tag, then promotes all three to
-  # `latest` only after every publish succeeds.
+  # Tilemap -> Tiled to a version-specific temporary dist-tag, then promotes all
+  # four to `latest` only after every publish succeeds.
   publish:
     name: Publish to npm (build-once artifacts)
     needs: prepare
@@ -161,8 +162,8 @@ jobs:
           name: release-artifacts
           path: .release
 
-      # Re-hash guard + ordered publish (Core -> Particles -> Tiled) to the
-      # temporary dist-tag, then promote all three to `latest`. Idempotent: a
+      # Re-hash guard + ordered publish (Core -> Particles -> Tilemap -> Tiled) to
+      # the temporary dist-tag, then promote all four to `latest`. Idempotent: a
       # re-run skips versions already on npm; a partial failure promotes nothing.
       - name: Publish coordinated release (build-once, dist-tag -> latest)
         run: pnpm release:publish --execute

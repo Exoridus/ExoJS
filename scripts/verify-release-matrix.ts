@@ -5,7 +5,7 @@
  * handles every official package, in the right order, with coherent versions,
  * via the two-stage build-once pipeline:
  *
- *  1. The three official packages (@codexo/exojs, -particles, -tiled) share one
+ *  1. The four official packages (@codexo/exojs, -particles, -tilemap, -tiled) share one
  *     lockstep version.
  *  2. Each extension's peerDependencies["@codexo/exojs"] is "<major>.<minor>.x".
  *  3. create-exo-app is versioned independently (a different version line).
@@ -14,7 +14,7 @@
  *     uploads the artifacts.
  *  6. PUBLISH consumes those artifacts (`download-artifact` + `release:publish`)
  *     and never rebuilds.
- *  7. The publish order Core → Particles → Tiled is the canonical PUBLISH_ORDER.
+ *  7. The publish order Core → Particles → Tilemap → Tiled is the canonical PUBLISH_ORDER.
  *
  * Read-only: safe to run in dry-run/CI. Exits non-zero on any inconsistency.
  *
@@ -48,10 +48,11 @@ const ok: string[] = [];
 
 const core = readPkg('package.json');
 const particles = readPkg('packages/exojs-particles/package.json');
+const tilemap = readPkg('packages/exojs-tilemap/package.json');
 const tiled = readPkg('packages/exojs-tiled/package.json');
 const createExoApp = readPkg('packages/create-exo-app/package.json');
 
-const official = [core, particles, tiled];
+const official = [core, particles, tilemap, tiled];
 
 // 1. Lockstep version.
 const versions = new Set(official.map(p => p.version));
@@ -66,7 +67,7 @@ const [major, minor] = version.split('.');
 const expectedPeer = `${major}.${minor}.x`;
 
 // 2. Extension peer ranges.
-for (const ext of [particles, tiled]) {
+for (const ext of [particles, tilemap, tiled]) {
   if (ext.peer !== expectedPeer) {
     problems.push(`${ext.name}: peer "@codexo/exojs" is "${ext.peer ?? '(missing)'}", expected "${expectedPeer}"`);
   } else {
@@ -95,6 +96,7 @@ const requireInWorkflow = (needle: string, label: string): void => {
 // 4. PREPARE builds all three official packages exactly once (build-once).
 requireInWorkflow('pnpm build', 'prepare builds core');
 requireInWorkflow('pnpm --filter @codexo/exojs-particles build', 'prepare builds particles');
+requireInWorkflow('pnpm --filter @codexo/exojs-tilemap build', 'prepare builds tilemap');
 requireInWorkflow('pnpm --filter @codexo/exojs-tiled build', 'prepare builds tiled');
 
 // 5. PREPARE packs/hashes/zips and uploads the artifacts.
@@ -124,10 +126,10 @@ if (/run:\s*pnpm build\b/.test(publishSection)) {
 }
 
 // 7. Canonical publish order Core → Particles → Tiled (enforced in code).
-if (PUBLISH_ORDER[0] === '@codexo/exojs' && PUBLISH_ORDER[1] === '@codexo/exojs-particles' && PUBLISH_ORDER[2] === '@codexo/exojs-tiled') {
-  ok.push('PUBLISH_ORDER is Core → Particles → Tiled');
+if (PUBLISH_ORDER[0] === '@codexo/exojs' && PUBLISH_ORDER[1] === '@codexo/exojs-particles' && PUBLISH_ORDER[2] === '@codexo/exojs-tilemap' && PUBLISH_ORDER[3] === '@codexo/exojs-tiled') {
+  ok.push('PUBLISH_ORDER is Core → Particles → Tilemap → Tiled');
 } else {
-  problems.push(`PUBLISH_ORDER must be Core → Particles → Tiled, got ${PUBLISH_ORDER.join(' → ')}`);
+  problems.push(`PUBLISH_ORDER must be Core → Particles → Tilemap → Tiled, got ${PUBLISH_ORDER.join(' → ')}`);
 }
 
 // --- Report ---

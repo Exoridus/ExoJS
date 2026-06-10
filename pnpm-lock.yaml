@@ -153,6 +153,15 @@ importers:
         specifier: workspace:*
         version: link:../exojs-config
 
+  packages/exojs-tilemap:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+      '@codexo/exojs-config':
+        specifier: workspace:*
+        version: link:../exojs-config
+
   site:
     dependencies:
       '@astrojs/mdx':

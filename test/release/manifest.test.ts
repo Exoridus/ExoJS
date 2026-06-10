@@ -75,7 +75,7 @@ describe('renderChecksums', () => {
       fullZip: { file: 'exojs-v0.12.0-full.zip', sha256: 'zzz', bytes: 1 },
     });
     const lines = body.trimEnd().split('\n');
-    expect(lines).toHaveLength(3);
+    expect(lines).toHaveLength(4);
     expect(body).not.toContain('full.zip');
     for (const line of lines) expect(line).toMatch(/^[a-f0-9]{64} {2}codexo-/);
   });

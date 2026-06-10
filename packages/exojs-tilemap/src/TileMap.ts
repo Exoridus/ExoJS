@@ -1,0 +1,305 @@
+import { TileLayer } from './TileLayer';
+import type { TileLayerOptions } from './TileLayer';
+import { TileSet } from './TileSet';
+import type { TileProperties, ResolvedTile } from './types';
+import { validatePositiveInteger } from './types';
+
+/**
+ * Options for constructing a {@link TileMap}.
+ * @advanced
+ */
+export interface TileMapOptions {
+  /** Map name (for debugging). */
+  readonly name?: string;
+  /** Map width in tiles. */
+  readonly width: number;
+  /** Map height in tiles. */
+  readonly height: number;
+  /** Width of each tile in pixels. */
+  readonly tileWidth: number;
+  /** Height of each tile in pixels. */
+  readonly tileHeight: number;
+  /** Tilesets available to this map. */
+  readonly tilesets?: readonly TileSet[];
+  /** Layers (constructed externally and owned by the map after construction). */
+  readonly layers?: readonly TileLayer[];
+  /** Chunk width for layers (default 32). */
+  readonly chunkWidth?: number;
+  /** Chunk height for layers (default 32). */
+  readonly chunkHeight?: number;
+  /** Map-level properties (copied and frozen). */
+  readonly properties?: TileProperties;
+}
+
+/**
+ * A generic, format-independent tile map.
+ *
+ * Owns a finite grid of {@link TileLayer}s and a shared set of {@link TileSet}s.
+ * Tile data is stored in compact chunked arrays — no per-tile heap objects.
+ *
+ * The map does NOT own tileset textures (those are Loader-owned) and does
+ * NOT own SceneNode children (the future TileMapNode will own those).
+ *
+ * Multiple tilesets are supported: each cell stores a packed tileset index
+ * and local tile ID, so different tilesets may have different tile dimensions.
+ *
+ * @advanced
+ */
+export class TileMap {
+  /** Map name (debug). */
+  public readonly name: string;
+
+  /** Map width in tiles. */
+  public readonly width: number;
+  /** Map height in tiles. */
+  public readonly height: number;
+
+  /** Tile width in pixels. */
+  public readonly tileWidth: number;
+  /** Tile height in pixels. */
+  public readonly tileHeight: number;
+
+  /** Pixel width. */
+  public get pixelWidth(): number { return this.width * this.tileWidth; }
+  /** Pixel height. */
+  public get pixelHeight(): number { return this.height * this.tileHeight; }
+
+  /** Default chunk width for layers. */
+  public readonly chunkWidth: number;
+  /** Default chunk height for layers. */
+  public readonly chunkHeight: number;
+
+  /** Map-level properties (immutable). */
+  public readonly properties: TileProperties;
+
+  private readonly _tilesets: TileSet[];
+  private readonly _layers: TileLayer[] = [];
+  private readonly _layerById: Map<number, TileLayer> = new Map();
+
+  private _revision: number = 0;
+  private _destroyed: boolean = false;
+
+  /**
+   * @throws When dimensions or other options are invalid.
+   */
+  public constructor(options: TileMapOptions) {
+    validatePositiveInteger(options.width, 'map.width');
+    validatePositiveInteger(options.height, 'map.height');
+    validatePositiveInteger(options.tileWidth, 'map.tileWidth');
+    validatePositiveInteger(options.tileHeight, 'map.tileHeight');
+
+    const chunkWidth = options.chunkWidth ?? 32;
+    const chunkHeight = options.chunkHeight ?? 32;
+    validatePositiveInteger(chunkWidth, 'chunkWidth');
+    validatePositiveInteger(chunkHeight, 'chunkHeight');
+
+    this.name = options.name ?? 'TileMap';
+    this.width = options.width;
+    this.height = options.height;
+    this.tileWidth = options.tileWidth;
+    this.tileHeight = options.tileHeight;
+    this.chunkWidth = chunkWidth;
+    this.chunkHeight = chunkHeight;
+
+    this._tilesets = options.tilesets ? [...options.tilesets] : [];
+    this.properties = options.properties
+      ? Object.freeze({ ...options.properties })
+      : Object.freeze({});
+
+    if (options.layers) {
+      for (const layer of options.layers) {
+        this._addLayer(layer);
+      }
+    }
+  }
+
+  // ── Tilesets ──────────────────────────────────────────────────────────
+
+  /** Immutable list of tilesets available to this map. */
+  public get tilesets(): readonly TileSet[] {
+    return this._tilesets;
+  }
+
+  /**
+   * Add a tileset. Tilesets must have unique names.
+   * @throws If a tileset with the same name already exists, or the map is destroyed.
+   */
+  public addTileset(tileset: TileSet): void {
+    this._checkDestroyed();
+    if (this._tilesets.some(ts => ts.name === tileset.name)) {
+      throw new Error(`Tileset "${tileset.name}" already exists in map "${this.name}".`);
+    }
+    this._tilesets.push(tileset);
+    this._revision++;
+  }
+
+  /**
+   * Get a tileset by name, or undefined.
+   */
+  public getTileset(name: string): TileSet | undefined {
+    return this._tilesets.find(ts => ts.name === name);
+  }
+
+  // ── Layers ────────────────────────────────────────────────────────────
+
+  /** Immutable snapshot of layers (ordered). */
+  public get layers(): readonly TileLayer[] {
+    return this._layers;
+  }
+
+  private _addLayer(layer: TileLayer): void {
+    if (this._layerById.has(layer.id)) {
+      throw new Error(
+        `Layer ID ${layer.id} already exists in map "${this.name}".`,
+      );
+    }
+    this._layerById.set(layer.id, layer);
+    this._layers.push(layer);
+  }
+
+  /**
+   * Add a layer after construction.
+   * @throws If a layer with the same ID already exists.
+   */
+  public addLayer(layer: TileLayer): void {
+    this._checkDestroyed();
+    this._addLayer(layer);
+    this._revision++;
+  }
+
+  /**
+   * Get a layer by ID.
+   */
+  public getLayerById(id: number): TileLayer | undefined {
+    return this._layerById.get(id);
+  }
+
+  /**
+   * Get a layer by name. Returns the first match in insertion order.
+   */
+  public getLayerByName(name: string): TileLayer | undefined {
+    return this._layers.find(l => l.name === name);
+  }
+
+  /**
+   * Get a tile layer by name. Convenience alias for {@link getLayerByName}.
+   */
+  public getTileLayer(name: string): TileLayer | undefined {
+    return this.getLayerByName(name);
+  }
+
+  /**
+   * Remove a layer by ID. The layer is destroyed.
+   * @returns true if the layer was found and removed.
+   */
+  public removeLayer(id: number): boolean {
+    this._checkDestroyed();
+    const layer = this._layerById.get(id);
+    if (!layer) return false;
+    this._layers.splice(this._layers.indexOf(layer), 1);
+    this._layerById.delete(id);
+    layer.destroy();
+    this._revision++;
+    return true;
+  }
+
+  // ── Queries ───────────────────────────────────────────────────────────
+
+  /**
+   * Get a resolved tile from a given layer at tile coordinates.
+   * Convenience for `map.getLayerById(id)?.getTileAt(tx, ty)`.
+   * Returns null for an empty cell, out-of-bounds, or missing layer.
+   */
+  public getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null {
+    const layer = this._layerById.get(layerId);
+    if (!layer) return null;
+    return layer.getTileAt(tx, ty);
+  }
+
+  /**
+   * Set a tile on a given layer at tile coordinates.
+   * Convenience for `map.getLayerById(id)?.setTileAt(tx, ty, tile)`.
+   * @throws If the layer does not exist, coordinates are out of bounds,
+   *         or the tile reference is invalid.
+   */
+  public setTileAt(layerId: number, tx: number, ty: number, tile: ResolvedTile): void {
+    const layer = this._layerById.get(layerId);
+    if (!layer) throw new Error(`Layer ${layerId} not found in map "${this.name}".`);
+    layer.setTileAt(tx, ty, tile);
+  }
+
+  /**
+   * Clear a tile on a given layer at tile coordinates.
+   * Convenience for `map.getLayerById(id)?.clearTileAt(tx, ty)`.
+   * @throws If the layer does not exist or coordinates are out of bounds.
+   */
+  public clearTileAt(layerId: number, tx: number, ty: number): void {
+    const layer = this._layerById.get(layerId);
+    if (!layer) throw new Error(`Layer ${layerId} not found in map "${this.name}".`);
+    layer.clearTileAt(tx, ty);
+  }
+
+  // ── Coordinate conversion (base layer) ────────────────────────────────
+
+  /**
+   * Convert a tile coordinate to the pixel position of its top-left corner
+   * in map-local space (ignoring layer offsets).
+   */
+  public tileToPixel(tx: number, ty: number): { x: number; y: number } {
+    return {
+      x: tx * this.tileWidth,
+      y: ty * this.tileHeight,
+    };
+  }
+
+  /**
+   * Convert a pixel position in map-local space to the tile coordinate
+   * that contains it. Uses `floor`. May return coordinates outside map bounds.
+   */
+  public pixelToTile(px: number, py: number): { tx: number; ty: number } {
+    return {
+      tx: Math.floor(px / this.tileWidth),
+      ty: Math.floor(py / this.tileHeight),
+    };
+  }
+
+  // ── Revision / lifecycle ──────────────────────────────────────────────
+
+  /**
+   * Monotonic map revision counter. Increments on structural changes only
+   * (add/remove layer, add tileset). Cell mutations are tracked per-chunk
+   * and per-layer; the renderer reads chunk-level revisions directly.
+   * @advanced
+   */
+  public get revision(): number {
+    return this._revision;
+  }
+
+  /** Whether the map has been destroyed. */
+  public get destroyed(): boolean {
+    return this._destroyed;
+  }
+
+  private _checkDestroyed(): void {
+    if (this._destroyed) {
+      throw new Error(`TileMap "${this.name}" has been destroyed.`);
+    }
+  }
+
+  /**
+   * Destroy the map and all owned layers and chunk storage.
+   *
+   * Is idempotent. Does NOT destroy tileset textures (Loader-owned) or
+   * any SceneNodes (those do not exist yet in this slice).
+   */
+  public destroy(): void {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    for (const layer of this._layers) {
+      layer.destroy();
+    }
+    this._layers.length = 0;
+    this._layerById.clear();
+    this._tilesets.length = 0;
+  }
+}
