@@ -1,68 +1,60 @@
 # @codexo/exojs-tiled
 
-Official ExoJS extension for parsing [Tiled](https://mapeditor.org) maps (`.tmj` JSON format)
-into a typed, validated source model.
+Official ExoJS extension for loading [Tiled](https://mapeditor.org) maps (`.tmj` JSON format)
+into a generic runtime `TileMap` or a typed parsed source model.
 
 ## Installation
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-tiled @codexo/exojs-tilemap
+npm install @codexo/exojs @codexo/exojs-tiled
 ```
 
-`@codexo/exojs` and `@codexo/exojs-tilemap` are peer dependencies.
-All three packages must be at the same version (`0.12.x`).
+`@codexo/exojs` is a peer dependency. `@codexo/exojs-tilemap` is a regular dependency and is
+installed transitively by `@codexo/exojs-tiled` — you do not need to install it manually.
+
+If you want the generic tilemap runtime without the Tiled adapter:
+
+```sh
+npm install @codexo/exojs @codexo/exojs-tilemap
+```
 
 ## What this package provides
 
-**Phase C1 — Source model and parsing:**
-
-- `TiledMap` — parsed Tiled map; validates GID coverage and tileset ranges on construction
+- `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(TileMap, url)`
+- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(TiledMap, url)`
 - `TiledTileset` — parsed tileset (atlas-image or collection-of-images); holds resolved textures
 - `TiledLayer` hierarchy — `TiledTileLayer`, `TiledObjectLayer`, `TiledImageLayer`, `TiledGroupLayer`
 - `TiledObject` — parsed object (point, ellipse, polygon, polyline, text, tile-ref, rectangle)
 - `TiledFormatError` — typed error thrown on any structural problem in `.tmj`/`.tsj` data
 - `tiledExtension` — extension descriptor; depends on `tilemapExtension` automatically
-- Loader integration: `loader.load(TiledMap, url)` fetches and parses a `.tmj` file,
-  resolves external `.tsj` tilesets, and loads tileset textures through the Loader cache
 
-> **Not yet available:** `TiledMap → TileMap` runtime conversion, rendering via `TileMapNode` /
-> `TileLayerNode`, `.tmj` file-extension auto-routing, and infinite-map runtime support.
-> These are scheduled for the next phase (C2).
+## Usage — common case
 
-## Usage — side-effect-free root entry
+Register the extension and load a `.tmj` map into a generic runtime `TileMap`:
 
 ```ts
 import { Application } from '@codexo/exojs';
-import { TiledMap, tiledExtension } from '@codexo/exojs-tiled';
+import { TileMap, tiledExtension } from '@codexo/exojs-tiled';
 
 const app = new Application({ extensions: [tiledExtension] });
 
-class GameScene extends Scene {
-    map!: TiledMap;
-
-    override async load(loader) {
-        // Token-based load: requires the TiledMap constructor as the first argument.
-        await loader.load(TiledMap, { level1: '/maps/level1.tmj' });
-    }
-
-    override create(loader) {
-        const map = loader.get(TiledMap, 'level1');
-
-        // Inspect the parsed source model:
-        console.log(map.width, map.height);               // tile dimensions
-        console.log(map.tilesets[0].name);                // tileset name
-        console.log(map.tilesets[0].texture);             // loaded Texture (Loader-owned)
-        console.log(map.findTilesetForGid(3));            // tileset owning GID 3
-
-        const ground = map.layers.find(l => l.name === 'Ground');
-        if (ground?.type === 'tilelayer') {
-            console.log(ground.data);                     // flat GID array
-        }
-    }
-}
+const map = await app.loader.load(TileMap, 'maps/world.tmj');
+// map is a @codexo/exojs-tilemap TileMap
 ```
 
-Importing from the root entry does **not** register the extension globally.
+## Usage — advanced parsed-source case
+
+Load the fully resolved Tiled source model and convert it manually:
+
+```ts
+import { TiledMap } from '@codexo/exojs-tiled';
+
+const source = await app.loader.load(TiledMap, 'maps/world.tmj');
+const map = source.toTileMap();
+```
+
+Both paths are semantically equivalent. The runtime binding (`TileMap`) uses the Loader-managed
+source-model sub-load internally, so concurrent or duplicate loads are deduplicated.
 
 ## `/register` convenience entry
 
@@ -75,32 +67,40 @@ receive both extensions automatically.
 import '@codexo/exojs-tiled/register';
 
 // All named exports are also re-exported from /register:
-import { TiledMap, tiledExtension } from '@codexo/exojs-tiled/register';
+import { TileMap, TiledMap, tiledExtension } from '@codexo/exojs-tiled/register';
 ```
 
 ## Extension dependency
 
 `tiledExtension.dependencies` includes `tilemapExtension` from `@codexo/exojs-tilemap`.
-You do not need to register `tilemapExtension` separately — `buildSnapshot` and
-`ExtensionRegistry.register` traverse the dependency graph automatically.
+Registering `tiledExtension` is sufficient — `buildSnapshot` and `ExtensionRegistry.register`
+traverse the dependency graph automatically.
 
 ## Asset loading
 
-`loader.load(TiledMap, source)` fetches and validates the `.tmj` file, then:
+`loader.load(TileMap, url)` (common path) and `loader.load(TiledMap, url)` (advanced path) both:
 
-1. Resolves each tileset entry (fetches external `.tsj` files via the Loader cache).
-2. Loads atlas images (`tileset.image`) and per-tile images (collection-of-images tilesets)
+1. Fetch and validate the `.tmj` file.
+2. Resolve each tileset entry (fetches external `.tsj` files via the Loader cache).
+3. Load atlas images (`tileset.image`) and per-tile images (collection-of-images tilesets)
    via `loader.load(Texture, …)` — the Loader deduplicates identical URLs.
-3. Validates GID ranges (no duplicates, no overlaps, all layer GIDs covered) — throws
+4. Validate GID ranges (no duplicates, no overlaps, all layer GIDs covered) — throws
    `TiledFormatError` on any inconsistency.
 
-### Token-only loading
+The runtime binding additionally calls `TiledMap.toTileMap()` to produce the generic `TileMap`.
 
-`tiledMapBinding` does **not** claim the `.tmj` file extension. This means:
+### Load options
 
-- `loader.load(TiledMap, url)` — works; loads and parses the TMJ.
-- `loader.load(url)` without a type token — does **not** resolve to `TiledMap` in this phase.
-- `.tmj` extension auto-routing is reserved for the C2 `TileMap` runtime binding.
+```ts
+await loader.load(TileMap, 'maps/world.tmj', { strict: true });
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `format` | `'tiled'` | — | Reserved discriminant; not currently used |
+| `strict` | `boolean` | `false` | Throw on unknown `.tmj`/`.tsj` fields |
+
+Options are optional. Only result-changing values affect the Loader identity key.
 
 ## Parsed API overview
 
@@ -121,6 +121,7 @@ map.tilesets          // TiledTileset[] — sorted by firstGid ascending
 map.properties        // TiledPropertyData[] — custom properties
 map.findTilesetForGid(gid)  // → TiledTileset | undefined (masks flip bits automatically)
 map.getProperty(name)       // → TiledPropertyData | undefined
+map.toTileMap()             // → TileMap — synchronous runtime conversion
 map.destroy()               // no-op; textures are Loader-owned
 ```
 
@@ -168,7 +169,7 @@ The Loader handles texture lifecycle (including deduplication across maps that s
 
 | `@codexo/exojs-tiled` | `@codexo/exojs` |
 |---|---|
-| 0.12.x | 0.12.x |
+| 0.13.x | 0.13.x |
 
 ## Links
 

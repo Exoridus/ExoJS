@@ -108,24 +108,55 @@ type PathExtension<S extends string> = S extends `${string}.${infer E}?${string}
 export type LoadByPath<S extends string> = PathExtension<S> extends keyof ExtensionTypeMap ? ExtensionTypeMap[PathExtension<S>] : unknown;
 
 /**
+ * Additional asset types accepted by the **token form** of {@link Loader.load}
+ * (`load(MyType, 'file.ext')`) for a given file extension, beyond the
+ * path-only type registered in {@link ExtensionTypeMap}.
+ *
+ * Augment via declaration merging when a format package ships an advanced
+ * source-model token that shares a file extension with its common-case
+ * runtime type. The path-only form (`load('file.ext')`) is unaffected and
+ * keeps resolving to the {@link ExtensionTypeMap} entry alone:
+ * ```ts
+ * declare module '@codexo/exojs' {
+ *   interface ExtensionTypeMap { tmj: TileMap }       // load('world.tmj') → TileMap
+ *   interface ExtensionTokenTypeMap { tmj: TiledMap } // load(TiledMap, 'world.tmj') also allowed
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ExtensionTokenTypeMap {}
+
+/** Resolves the additional token types allowed for extension `E`, or `never` when none are registered. */
+type TokenTypesFor<E> = E extends keyof ExtensionTokenTypeMap ? ExtensionTokenTypeMap[E] : never;
+
+/**
  * Constrains a {@link Loadable} token against the types registered for a
  * given path's extension. When the extension is in {@link ExtensionTypeMap},
- * `T` must produce a value assignable to the registered union — otherwise
- * resolves to `never`, triggering a compile-time error.
+ * `T` must produce a value assignable to the registered union (including any
+ * extra token types from {@link ExtensionTokenTypeMap}) — otherwise resolves
+ * to `never`, triggering a compile-time error.
  *
- * For paths with an unregistered extension the constraint is skipped and any
- * `T` is accepted (runtime behaviour is unchanged).
+ * For paths with an unregistered extension — including non-literal `string`
+ * paths and extension-less paths, where no extension can be derived — the
+ * constraint is skipped and any `T` is accepted (runtime behaviour is
+ * unchanged).
  *
  * ```ts
  * // ExtensionTypeMap: { ogg: Sound | Video }
  * loader.load(Sound, 'effect.ogg')      // ✓ Sound ∈ Sound | Video
  * loader.load(BitmapText, 'effect.ogg') // ✗ BitmapText ∉ Sound | Video
  * loader.load(Sound, 'theme.custom')    // ✓ .custom not in map → unconstrained
+ * loader.load(Sound, dynamicPath)       // ✓ string path → unconstrained
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ConstrainedLoadable<T extends abstract new (...args: any[]) => any, S extends string> =
-  PathExtension<S> extends keyof ExtensionTypeMap ? (LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>] ? T : never) : T;
+export type ConstrainedLoadable<T extends abstract new (...args: any[]) => any, S extends string> = [PathExtension<S>] extends [never]
+  ? T
+  : PathExtension<S> extends keyof ExtensionTypeMap
+    ? LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>] | TokenTypesFor<PathExtension<S>>
+      ? T
+      : never
+    : T;
 
 /**
  * Context object passed to custom asset-type load handlers registered via

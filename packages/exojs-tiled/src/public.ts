@@ -88,6 +88,10 @@ declare module '@codexo/exojs' {
     /** `.tmj` path-only loads resolve to the generic runtime {@link TileMap}. */
     tmj: TileMap;
   }
+  interface ExtensionTokenTypeMap {
+    /** The advanced parsed-source token is also accepted for `.tmj`: `load(TiledMap, 'world.tmj')`. */
+    tmj: TiledMap;
+  }
   interface AssetDefinitions {
     tileMap: {
       resource: TileMap;
