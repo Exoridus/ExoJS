@@ -1058,14 +1058,14 @@ export class Loader {
    * Validates all keys BEFORE mutating any map. Any already-registered key
    * throws before any mutation (no override in 0.12).
    *
-   * `Type` and `Options` are inferred from the binding's `AssetBinding<Type, Options>`
+   * `Result` and `Options` are inferred from the binding's `AssetBinding<Result, Options>`
    * contract. A declarative handler's optional `getIdentityKey` is forwarded into
    * the internal {@link HandlerEntry} so it participates in in-flight deduplication.
    * @internal
    */
-  public bindAsset<Type extends AssetConstructor = AssetConstructor, Options = undefined>(
-    keys: { type: Type; typeNames?: readonly string[]; extensions?: readonly string[] },
-    handler: AssetHandler<InstanceType<Type>, Options>,
+  public bindAsset<Result = unknown, Options = undefined>(
+    keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[] },
+    handler: AssetHandler<Result, Options>,
   ): void {
     const normalizedExts: string[] = [];
     const resolvedNames: string[] = keys.typeNames !== undefined ? [...keys.typeNames] : [];
@@ -1109,7 +1109,7 @@ export class Loader {
     // `{ source, ...fields }`. The public AssetHandler<Result, Options> interface
     // uses `AssetLoadRequest<Options> = { source, options? }`. This single `toRequest`
     // helper is the only place where the erased flat config is cast to the typed
-    // request — justified by the `AssetBinding<Type, Options>` contract that
+    // request — justified by the `AssetBinding<Result, Options>` contract that
     // associates this handler's Options with the registered constructor.
     //
     // `options` is intentionally omitted (not set to `undefined`) when the flat

@@ -116,7 +116,7 @@ describe('AssetHandler type contracts', () => {
 });
 
 describe('AssetBinding type contracts', () => {
-  it('binding derives result from constructor via satisfies', () => {
+  it('binding with result-typed satisfies compiles and preserves constructor type', () => {
     const binding = {
       type: ExampleAsset,
       typeNames: ['example' as const],
@@ -134,7 +134,7 @@ describe('AssetBinding type contracts', () => {
           },
         };
       },
-    } satisfies AssetBinding<typeof ExampleAsset, ExampleLoadOptions>;
+    } satisfies AssetBinding<ExampleAsset, ExampleLoadOptions>;
 
     expectTypeOf(binding.type).toEqualTypeOf<typeof ExampleAsset>();
   });
@@ -151,7 +151,24 @@ describe('AssetBinding type contracts', () => {
           },
         };
       },
-    } satisfies AssetBinding<typeof ExampleAsset, ExampleLoadOptions>;
+    } satisfies AssetBinding<ExampleAsset, ExampleLoadOptions>;
+
+    void _binding;
+  });
+
+  it('binding rejects mismatched constructor (type field produces wrong result type)', () => {
+    const _binding = {
+      // @ts-expect-error — OtherAsset constructor produces OtherAsset instances, not ExampleAsset
+      type: OtherAsset,
+
+      create() {
+        return {
+          async load(_request: AssetLoadRequest): Promise<ExampleAsset> {
+            return new ExampleAsset();
+          },
+        };
+      },
+    } satisfies AssetBinding<ExampleAsset>;
 
     void _binding;
   });
@@ -168,7 +185,7 @@ describe('AssetBinding type contracts', () => {
           },
         };
       },
-    } satisfies AssetBinding<typeof ExampleAsset>;
+    } satisfies AssetBinding<ExampleAsset>;
 
     void _binding;
   });
@@ -186,7 +203,7 @@ describe('AssetBinding type contracts', () => {
           },
         };
       },
-    } satisfies AssetBinding<typeof ExampleAsset>;
+    } satisfies AssetBinding<ExampleAsset>;
 
     void _binding;
   });
@@ -205,7 +222,7 @@ describe('declarative bindAsset identity propagation', () => {
 
   function buildExampleBinding(
     onLoad: (opts: ResolvedExampleOptions) => void,
-  ): AssetBinding<typeof ExampleAsset, ExampleLoadOptions> {
+  ): AssetBinding<ExampleAsset, ExampleLoadOptions> {
     return {
       type: ExampleAsset,
       typeNames: ['example'],
@@ -289,7 +306,7 @@ describe('declarative bindAsset identity propagation', () => {
   it('control-only option (trace) does not affect identity', async () => {
     let loadCount = 0;
 
-    const bindingWithTrace: AssetBinding<typeof ExampleAsset, ExampleLoadOptions> = {
+    const bindingWithTrace: AssetBinding<ExampleAsset, ExampleLoadOptions> = {
       type: ExampleAsset,
       typeNames: ['traceExample'],
 
@@ -326,7 +343,7 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler without getIdentityKey preserves source-based identity', async () => {
     let loadCount = 0;
 
-    const noIdentityBinding: AssetBinding<typeof ExampleAsset> = {
+    const noIdentityBinding: AssetBinding<ExampleAsset> = {
       type: ExampleAsset,
       typeNames: ['simpleExample'],
 
@@ -355,7 +372,7 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler lifecycle: destroy() is called on loader.destroy()', async () => {
     let destroyed = false;
 
-    const destroyableBinding: AssetBinding<typeof ExampleAsset> = {
+    const destroyableBinding: AssetBinding<ExampleAsset> = {
       type: ExampleAsset,
       typeNames: ['destroyable'],
 
@@ -380,7 +397,7 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler receives options nested under request.options via declarative path', async () => {
     let seenRequest: AssetLoadRequest<ExampleLoadOptions> | undefined;
 
-    const capturingBinding: AssetBinding<typeof ExampleAsset, ExampleLoadOptions> = {
+    const capturingBinding: AssetBinding<ExampleAsset, ExampleLoadOptions> = {
       type: ExampleAsset,
       typeNames: ['captureExample'],
 
@@ -396,7 +413,9 @@ describe('declarative bindAsset identity propagation', () => {
 
     materializeAssetBindings(loader, [capturingBinding]);
 
-    await loader.load(ExampleAsset, 'thing.dat', { format: 'alt', strict: false } as ExampleLoadOptions).catch(() => undefined);
+    await expect(
+      loader.load(ExampleAsset, 'thing.dat', { format: 'alt', strict: false } as ExampleLoadOptions),
+    ).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seenRequest?.source).toBe('thing.dat');
     expect(seenRequest?.options).toEqual({ format: 'alt', strict: false });
@@ -406,7 +425,7 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler receives no options key when none are passed (declarative path)', async () => {
     let seenRequest: AssetLoadRequest<ExampleLoadOptions> | undefined;
 
-    const capturingBinding: AssetBinding<typeof ExampleAsset, ExampleLoadOptions> = {
+    const capturingBinding: AssetBinding<ExampleAsset, ExampleLoadOptions> = {
       type: ExampleAsset,
       typeNames: ['captureNoOpts'],
 
@@ -422,7 +441,7 @@ describe('declarative bindAsset identity propagation', () => {
 
     materializeAssetBindings(loader, [capturingBinding]);
 
-    await loader.load(ExampleAsset, 'thing.dat').catch(() => undefined);
+    await expect(loader.load(ExampleAsset, 'thing.dat')).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seenRequest?.source).toBe('thing.dat');
     expect(seenRequest?.options).toBeUndefined();

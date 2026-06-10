@@ -69,19 +69,17 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
  * an {@link AssetHandler} instance that the Loader owns for its entire lifetime.
  * The handler may hold loader-local state (Workers, WASM modules, parsed caches).
  *
- * `Type` is the asset constructor (e.g. `typeof TileMap`); the result type is
- * derived automatically as `InstanceType<Type>`. `Options` is the typed options
- * object, defaulting to `undefined` (no options).
+ * `Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the
+ * typed options object, defaulting to `undefined` (no options). The runtime `type`
+ * field must be a constructor that produces `Result`; the handler returned by
+ * `create` must also produce `Result` — both relationships are enforced by TypeScript.
  *
- * Use `satisfies AssetBinding<typeof MyAsset, MyLoadOptions>` on an object literal
- * to get typed options in the handler and enforce the result type without repeating it.
+ * Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on an object literal to get
+ * typed options in the handler and enforce the result type without repeating it.
  * @advanced
  */
-export interface AssetBinding<
-  Type extends AssetConstructor = AssetConstructor,
-  Options = undefined,
-> {
-  readonly type: Type;
+export interface AssetBinding<Result = unknown, Options = undefined> {
+  readonly type: AssetConstructor<Result>;
   /**
    * Config-map type names that resolve to this handler, e.g. `['tiledMap']`.
    * Most bindings declare exactly one name; a binding may declare several when a
@@ -90,7 +88,7 @@ export interface AssetBinding<
    */
   readonly typeNames?: readonly string[];
   readonly extensions?: readonly string[];
-  create(loader: Loader): AssetHandler<InstanceType<Type>, Options>;
+  create(loader: Loader): AssetHandler<Result, Options>;
 }
 
 /**
