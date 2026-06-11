@@ -1,7 +1,10 @@
+import { warnOnce } from '#core/dev';
 import type { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
+import { buildPixelSnapContext, type RenderQuad, snapQuadsInto } from '#rendering/pixelSnap';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
+import type { View } from '#rendering/View';
 
 import type { NineSliceInsets, NineSliceModes, NineSliceOptions, NineSliceQuad } from './nineSlice';
 import {
@@ -43,6 +46,7 @@ export class NineSliceSprite extends Drawable {
 
   private _quads: NineSliceQuad[] = [];
   private _geometryDirty = true;
+  private readonly _renderQuads: RenderQuad[] = [];
 
   public constructor(texture: Texture | TextureRegion, options: NineSliceOptions) {
     super();
@@ -220,6 +224,36 @@ export class NineSliceSprite extends Drawable {
     }
 
     return this._quads;
+  }
+
+  /**
+   * Render-time quads for the active pass. In `'geometry'` pixel-snap mode (and
+   * only when the combined node+view transform is axis-aligned) the shared
+   * boundary plan is snapped to the render target's device-pixel grid via the
+   * common {@link snapQuadsInto} helper, so every corner/edge/center quad reuses
+   * the exact same snapped boundary value and no seams can open. The content
+   * quad cache ({@link quads}) is never rebuilt by snapping — camera movement
+   * reuses it — and snapped quads are written into a reused buffer. Returns the
+   * unsnapped content quads for `'none'`/`'position'` or under a rotation/skew
+   * downgrade.
+   * @internal
+   */
+  public getRenderQuads(view: View, targetPxWidth: number, targetPxHeight: number): readonly NineSliceQuad[] {
+    const base = this.quads;
+
+    if (base.length === 0) {
+      return base;
+    }
+
+    const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
+
+    if (!ctx.axisAligned) {
+      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+
+      return base;
+    }
+
+    return snapQuadsInto(base, ctx, this._renderQuads);
   }
 
   // -----------------------------------------------------------------------

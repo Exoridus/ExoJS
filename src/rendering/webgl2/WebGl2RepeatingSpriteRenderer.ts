@@ -1,6 +1,7 @@
+import { Rectangle } from '#math/Rectangle';
 import { Shader } from '#rendering/shader/Shader';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
-import { computeShaderTiling } from '#rendering/sprite/repeatingSpritePlan';
+import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
@@ -186,6 +187,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private _connection: RendererConnection | null = null;
 
   private readonly _transformUnitScratch = new Int32Array([transformTextureUnit]);
+  private readonly _snapBounds = new Rectangle();
   private _currentView: unknown = null;
   private _currentViewId = -1;
 
@@ -259,9 +261,21 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const texture = sprite.texture;
     const srcW    = sprite.region.width;
     const srcH    = sprite.region.height;
-    const destW   = sprite.width;
-    const destH   = sprite.height;
+    let   destW   = sprite.width;
+    let   destH   = sprite.height;
     const flipY   = texture instanceof Texture && texture.flipY;
+
+    // 'geometry' mode: snap the destination quad to the device grid. Repetition
+    // stays shader-based; only the outer rectangle (and the tiling derived from
+    // it) moves. Position/none leave the destination unchanged.
+    if (sprite.pixelSnapMode === 'geometry') {
+      const backend = this.getBackend();
+      const snap = backend._getSnapPixelSize();
+      const rb = sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
+
+      destW = rb.width;
+      destH = rb.height;
+    }
 
     const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
     const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
@@ -295,7 +309,16 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   }
 
   private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
-    const quads  = sprite.quads;
+    let quads: readonly RepeatingSpriteQuad[] = sprite.quads;
+
+    // 'geometry' mode: snap shared segment boundaries once (gap-free), like NineSlice.
+    if (sprite.pixelSnapMode === 'geometry') {
+      const backend = this.getBackend();
+      const snap = backend._getSnapPixelSize();
+
+      quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
+    }
+
     const flipY  = (sprite.texture instanceof Texture) && sprite.texture.flipY;
     const tint   = sprite.tint.toRgba();
 

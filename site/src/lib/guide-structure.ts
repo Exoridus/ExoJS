@@ -320,6 +320,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
                 apiLinks: ['render-target', 'render-texture'],
             },
+            {
+                slug: 'pixel-snapping',
+                level: 'intermediate',
+                learningGoals: [
+                    'snap rendered sprites, panels, and tilemaps to the device-pixel grid',
+                    'choose between position and geometry snapping',
+                    'rely on the render-only contract: logical state never changes',
+                ],
+                prerequisites: ['rendering/sprites'],
+                apiLinks: ['drawable', 'sprite', 'view'],
+            },
         ],
     },
     {

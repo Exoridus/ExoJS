@@ -7,6 +7,7 @@ import { Vector } from '#math/Vector';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
 import type { RenderGroup } from '#rendering/plan/RenderInstruction';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -153,6 +154,7 @@ export class WebGl2Backend implements RenderBackend {
   private _canvas: HTMLCanvasElement;
   private _contextLost: boolean;
   private _renderTarget: RenderTarget;
+  private readonly _snapTransform: Matrix = new Matrix();
   private _renderer: Renderer | null = null;
   private _shader: Shader | null = null;
   private _blendMode: BlendModes | null = null;
@@ -310,7 +312,38 @@ export class WebGl2Backend implements RenderBackend {
   public _writeTransformCommand(command: DrawCommand): void {
     const drawable = command.drawable;
 
-    this._transformBuffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
+    this._transformBuffer.write(command.nodeIndex, this._resolveSnapTransform(drawable), drawable.tint);
+  }
+
+  /**
+   * Resolve the world transform to upload for `drawable`, applying render-only
+   * pixel snapping against the active render target's device-pixel grid when the
+   * drawable opts in. Returns the live (unsnapped) global transform for the
+   * `'none'` default; never mutates logical state.
+   * @internal
+   */
+  private _resolveSnapTransform(drawable: Drawable): Matrix {
+    const target = this._renderTarget;
+    const width = target.root ? this._canvas.width : target.width;
+    const height = target.root ? this._canvas.height : target.height;
+
+    return resolveUploadTransform(drawable, target.view, width, height, this._snapTransform);
+  }
+
+  /**
+   * Device-pixel dimensions of the active render target — `canvas.width/height`
+   * (css × pixelRatio) for the root, or the target's own size for an offscreen
+   * {@link RenderTexture}. Used by batched renderers to snap shared geometry
+   * boundaries to the same device grid the transform seam snaps the origin to.
+   * @internal
+   */
+  public _getSnapPixelSize(): { readonly width: number; readonly height: number } {
+    const target = this._renderTarget;
+
+    return {
+      width: target.root ? this._canvas.width : target.width,
+      height: target.root ? this._canvas.height : target.height,
+    };
   }
 
   /**
@@ -324,7 +357,7 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _pushTransform(drawable: Drawable): number {
-    return this._transformBuffer.push(drawable.getGlobalTransform(), drawable.tint);
+    return this._transformBuffer.push(this._resolveSnapTransform(drawable), drawable.tint);
   }
 
   /** @internal */

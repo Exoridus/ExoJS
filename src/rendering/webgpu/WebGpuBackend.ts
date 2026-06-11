@@ -4,12 +4,13 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
-import type { Matrix } from '#math/Matrix';
+import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
 import type { RenderGroup } from '#rendering/plan/RenderInstruction';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -105,6 +106,7 @@ export class WebGpuBackend implements RenderBackend {
   private _format: GPUTextureFormat | null = null;
   private _initializePromise: Promise<this> | null = null;
   private _renderTarget: RenderTarget;
+  private readonly _snapTransform: Matrix = new Matrix();
   private _renderer: Renderer | null = null;
   private _texture: Texture | RenderTexture | null = null;
   private _clearRequested = false;
@@ -258,7 +260,7 @@ export class WebGpuBackend implements RenderBackend {
       const command = instructions[i];
 
       if (drawCommandUsesSharedTransform(command, this)) {
-        storage.writeCommand(command);
+        storage.writeCommand(command, this._resolveSnapTransform(command.drawable));
       } else {
         storage.recordSkippedWrite();
       }
@@ -686,7 +688,34 @@ export class WebGpuBackend implements RenderBackend {
    * @internal
    */
   public _pushTransform(drawable: Drawable): number {
-    return this._getTransformStorage().push(drawable);
+    return this._getTransformStorage().push(drawable, this._resolveSnapTransform(drawable));
+  }
+
+  /**
+   * Resolve the world transform to upload for `drawable`, applying render-only
+   * pixel snapping against the active render target's device-pixel grid when the
+   * drawable opts in. Returns the live (unsnapped) global transform for the
+   * `'none'` default; never mutates logical state.
+   * @internal
+   */
+  private _resolveSnapTransform(drawable: Drawable): Matrix {
+    const target = this._renderTarget;
+    const root = target === this._rootRenderTarget;
+    const width = root ? this._canvas.width : target.width;
+    const height = root ? this._canvas.height : target.height;
+
+    return resolveUploadTransform(drawable, target.view, width, height, this._snapTransform);
+  }
+
+  /**
+   * Device-pixel dimensions of the active render target — `canvas.width/height`
+   * (css × pixelRatio) for the root, or the target's own size for an offscreen
+   * {@link RenderTexture}. Used by batched renderers to snap shared geometry
+   * boundaries to the same device grid the transform seam snaps the origin to.
+   * @internal
+   */
+  public _getSnapPixelSize(): { readonly width: number; readonly height: number } {
+    return this._getAttachmentPixelSize(this._renderTarget);
   }
 
   private _setActiveRenderer(renderer: Renderer | null): void {

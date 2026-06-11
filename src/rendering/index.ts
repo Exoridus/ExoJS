@@ -7,6 +7,7 @@ export type { CameraOptions } from './Camera';
 export { Camera } from './Camera';
 export { Container } from './Container';
 export { Drawable } from './Drawable';
+export type { PixelSnapMode } from './pixelSnap';
 export type { RenderBackend } from './RenderBackend';
 export { RenderBackendType } from './RenderBackendType';
 export type { DrawableConstructor, Renderer } from './Renderer';

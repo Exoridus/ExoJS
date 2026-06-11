@@ -246,6 +246,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "OscillatorType: type alias",
   "PitchShiftFilter: class",
   "PitchShiftFilterOptions: interface",
+  "PixelSnapMode: type alias",
   "PlayOptions: interface",
   "PlayStationGamepadMapping: class",
   "PlaybackOptions: interface",

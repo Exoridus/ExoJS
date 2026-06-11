@@ -1,8 +1,9 @@
 import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
-import type { RenderPlanBuilder } from '@codexo/exojs/rendering';
+import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/rendering';
 
 import type { TileLayer } from './TileLayer';
+import { assertPixelSnapMode } from './pixelSnap';
 import { TileChunkNode } from './TileChunkNode';
 
 /**
@@ -44,6 +45,7 @@ export class TileLayerNode extends Container {
   private readonly _cullChunks: boolean;
   private readonly _chunkNodes: TileChunkNode[] = [];
   private _syncedOpacity = -1;
+  private _pixelSnapMode: PixelSnapMode = 'none';
 
   public constructor(layer: TileLayer, options?: TileLayerNodeOptions) {
     super();
@@ -58,6 +60,39 @@ export class TileLayerNode extends Container {
   /** The runtime layer this node renders. */
   public get layer(): TileLayer {
     return this._layer;
+  }
+
+  /**
+   * Render-only pixel-snap mode applied to every chunk node in this layer (and
+   * to chunks rebuilt later by {@link refresh}). Each chunk's rendered origin is
+   * snapped to the active render target's device-pixel grid; because chunk
+   * origins are integer multiples of the integer tile pitch from the same layer
+   * origin, the whole grid stays exact and adjacent chunks cannot drift apart.
+   *
+   * Purely visual: tile data, the layer offset, chunk content revisions, and
+   * culling bounds are never changed. `'geometry'` and `'position'` both resolve
+   * to coherent origin snapping for tile chunks (chunk quads are already on the
+   * integer pixel grid by construction). Setting the current value is a no-op;
+   * an invalid value throws and leaves the prior mode unchanged.
+   *
+   * @default 'none'
+   * @stable
+   */
+  public get pixelSnapMode(): PixelSnapMode {
+    return this._pixelSnapMode;
+  }
+
+  public set pixelSnapMode(mode: PixelSnapMode) {
+    if (mode === this._pixelSnapMode) {
+      return;
+    }
+
+    assertPixelSnapMode(mode);
+    this._pixelSnapMode = mode;
+
+    for (const chunk of this._chunkNodes) {
+      chunk.pixelSnapMode = mode;
+    }
   }
 
   /**
@@ -135,6 +170,10 @@ export class TileLayerNode extends Container {
       );
 
       node.cullable = this._cullChunks;
+
+      if (this._pixelSnapMode !== 'none') {
+        node.pixelSnapMode = this._pixelSnapMode;
+      }
 
       this._chunkNodes.push(node);
       this.addChild(node);
