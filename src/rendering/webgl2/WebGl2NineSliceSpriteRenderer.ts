@@ -153,19 +153,16 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     }
 
     // A single sprite may produce more quads than the fixed batch buffer can hold.
-    // Process in chunks, flushing between each chunk.
+    // Process in [start, end) chunks, flushing between each. Iterating by index
+    // range (rather than `quads.slice(...)`) keeps the overflow path allocation-free.
     let offset = 0;
 
     while (offset < quads.length) {
-      const remaining = quads.length - offset;
-      const chunkSize = Math.min(remaining, this._batchSize);
-      const chunk = (offset === 0 && chunkSize === quads.length)
-        ? quads
-        : quads.slice(offset, offset + chunkSize);
+      const chunkEnd = Math.min(offset + this._batchSize, quads.length);
 
-      this._writeQuadChunk(chunk, texture, tintRgba, nodeIndex);
+      this._writeQuadChunk(quads, offset, chunkEnd, texture, tintRgba, nodeIndex);
 
-      offset += chunkSize;
+      offset = chunkEnd;
 
       if (offset < quads.length) {
         this.flush();
@@ -180,6 +177,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
   private _writeQuadChunk(
     quads: readonly NineSliceQuad[],
+    start: number,
+    end: number,
     texture: Texture | RenderTexture,
     tintRgba: number,
     nodeIndex: number,
@@ -188,7 +187,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const u32 = this._instanceUint32;
     const flipY = texture.flipY;
 
-    for (const q of quads) {
+    for (let i = start; i < end; i++) {
+      const q = quads[i];
       const idx = this._quadIndex * wordsPerInstance;
 
       f32[idx + 0] = q.x0;
