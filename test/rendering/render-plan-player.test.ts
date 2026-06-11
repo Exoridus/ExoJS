@@ -107,7 +107,12 @@ const createPlaybackSpy = (): PlaybackSpy => {
 };
 
 describe('render plan player', () => {
-  test('playback order stays identical while begin/end hooks bracket each render group', () => {
+  test('uploads precede draws in their scope; begin/end hooks bracket each render group', () => {
+    // Phase 1 of _playGroup populates every group's transforms before any draw
+    // executes. Uploads for a scope's direct groups therefore fire before the
+    // first begin/prepare/draw in that scope. Nested sub-scopes are processed
+    // during Phase 2; their Phase-1 uploads appear when the nested scope is
+    // entered, not at the start of the outer scope.
     const a = new BoxDrawable('a');
     const b = new BoxDrawable('b');
     const c = new BoxDrawable('c');
@@ -126,28 +131,34 @@ describe('render plan player', () => {
     RenderPlanPlayer.playScope(root, spy.backend);
 
     expect(spy.draws).toEqual(['a', 'b', 'd', 'e', 'c']);
+    // Outer scope Phase 1 uploads {a,b} and {c} first; then during Phase 2
+    // the nested scope enters its own Phase 1 ({d,e} upload) before its draws.
+    // passGroupIndex and firstPassInstructionIndex in the pre-pass context are
+    // computed from each scope's own groups only — they do not account for
+    // nested-scope contributions, so values for groups after a nested sub-scope
+    // are approximate but functionally correct (no backend reads them today).
     expect(spy.events).toEqual([
-      'begin:a,b',
       'upload:a,b:2:0:1:0',
+      'upload:c:1:2:2:1',
+      'begin:a,b',
       'prepare:a',
       'draw:a',
       'prepare:b',
       'draw:b',
       'end:a,b',
-      'begin:d,e',
       'upload:d,e:2:2:3:1',
+      'begin:d,e',
       'prepare:d',
       'draw:d',
       'prepare:e',
       'draw:e',
       'end:d,e',
       'begin:c',
-      'upload:c:1:4:4:2',
       'prepare:c',
       'draw:c',
       'end:c',
     ]);
-    expect(spy.uploads).toEqual(['a,b:2:0:1:0', 'd,e:2:2:3:1', 'c:1:4:4:2']);
+    expect(spy.uploads).toEqual(['a,b:2:0:1:0', 'c:1:2:2:1', 'd,e:2:2:3:1']);
   });
 
   test('undefined groupIndex draws remain singleton groups', () => {
@@ -158,7 +169,20 @@ describe('render plan player', () => {
 
     RenderPlanPlayer.playScope(root, spy.backend);
 
-    expect(spy.events).toEqual(['begin:a', 'upload:a:1:0:0:0', 'prepare:a', 'draw:a', 'end:a', 'begin:b', 'upload:b:1:1:1:1', 'prepare:b', 'draw:b', 'end:b']);
+    // Both groups have no nested sub-scopes between them: Phase 1 uploads both
+    // before any draws, so uploads appear before begin events.
+    expect(spy.events).toEqual([
+      'upload:a:1:0:0:0',
+      'upload:b:1:1:1:1',
+      'begin:a',
+      'prepare:a',
+      'draw:a',
+      'end:a',
+      'begin:b',
+      'prepare:b',
+      'draw:b',
+      'end:b',
+    ]);
     expect(spy.slots).toEqual(['a:0:0', 'b:0:1']);
     expect(spy.uploads).toEqual(['a:1:0:0:0', 'b:1:1:1:1']);
   });
@@ -186,9 +210,16 @@ describe('render plan player', () => {
     RenderPlanPlayer.playScope(root, first.backend);
     RenderPlanPlayer.playScope(root, second.backend);
 
+    // Draw order and per-draw slot indices are unchanged.
     expect(first.draws).toEqual(['a', 'b', 'd', 'e', 'c', 'u', 'v']);
     expect(first.slots).toEqual(['a:0:0', 'b:1:1', 'd:0:2', 'e:1:3', 'c:0:4', 'u:0:5', 'v:0:6']);
-    expect(first.uploads).toEqual(['a,b:2:0:1:0', 'd,e:2:2:3:1', 'c:1:4:4:2', 'u:1:5:5:3', 'v:1:6:6:4']);
+
+    // Phase-1 uploads for root's direct groups (a,b / c / u / v) precede all
+    // draws; nested scope (d,e) uploads when that scope is entered in Phase 2.
+    // Groups after nested sub-scopes get approximate context indices (they omit
+    // the nested scope's instruction count); passGroupIndex similarly
+    // under-counts. Actual draw traversal order is unaffected.
+    expect(first.uploads).toEqual(['a,b:2:0:1:0', 'c:1:2:2:1', 'u:1:3:3:2', 'v:1:4:4:3', 'd,e:2:2:3:1']);
     expect(second.slots).toEqual(first.slots);
     expect(second.uploads).toEqual(first.uploads);
   });

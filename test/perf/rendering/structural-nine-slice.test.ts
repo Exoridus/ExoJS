@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildNineSliceScene, makeTextures } from './fixtures';
-import { createWebGl2Harness, measureSteadyFrame, type WebGl2Harness } from './harness';
+import { createWebGl2Harness, measureFrame, measureSteadyFrame, type WebGl2Harness } from './harness';
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
   const harness = createWebGl2Harness();
@@ -98,6 +98,47 @@ describe('structural — NineSlice', () => {
       // Two texture blocks → exactly one texture-change flush.
       expect(m.drawCalls).toBe(2);
       twoTextures.root.destroy();
+    });
+  });
+
+  it('100 cyclic-texture flushes: transform upload coalesced to 1, not O(flushes)', () => {
+    // Without the phase-split fix in RenderPlanPlayer, each group upload changes
+    // the transform-buffer hash while a prior batch is still open. The next flush
+    // detects the changed hash and re-uploads the growing buffer, producing
+    // O(flushes²) bytes (~240 KB for 100 sprites). After the fix the buffer is
+    // fully populated before any draws execute, so the first flush uploads once
+    // and every subsequent flush finds the same hash and skips.
+    //
+    // Note: the very first render allocates the DataTexture via gl.texImage2D.
+    // The recorder's isSub heuristic misidentifies texImage2D as texSubImage2D
+    // (both have 9 numeric args), so width=capacity (not 3) → the alloc call is
+    // NOT counted as a transform upload. We therefore warm up one frame, mutate
+    // transforms, then measure: the first post-mutation frame must be exactly one
+    // texSubImage2D upload (width=3, counted), not N uploads as pre-fix.
+    withHarness(harness => {
+      const { root, sprites } = buildNineSliceScene({ count: 100, textures: makeTextures(8), assign: 'cycle', fill: 'stretch' });
+
+      // Warmup: allocates the DataTexture (texImage2D, not counted).
+      measureFrame(harness, root);
+
+      // Dirty transforms so the next frame must re-upload.
+      sprites.forEach((s, i) => s.setPosition(i * 2, 0));
+
+      // Post-mutation frame: exactly one texSubImage2D covers all 100 rows.
+      const changed = measureFrame(harness, root);
+
+      expect(changed.transformUploads).toBe(1);
+      expect(changed.transformRows).toBe(100);
+      // 100 transforms × 3 rgba32f texels × 16 bytes/texel = 4 800 bytes.
+      expect(changed.transformUploadBytes).toBe(100 * 48);
+
+      // Second post-mutation frame: hash stable → zero re-uploads.
+      const steady = measureFrame(harness, root);
+
+      expect(steady.transformUploads).toBe(0);
+      expect(steady.transformUploadBytes).toBe(0);
+
+      root.destroy();
     });
   });
 });
