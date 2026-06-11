@@ -43,57 +43,34 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
-      # Path filtering only narrows pull-request runs. Pushes to main, tag
-      # releases (via release.yml), and manual dispatches skip this step and
-      # fall through to the "run everything" branch below, so a release is
-      # never partially checked.
-      - name: Filter changed paths
-        id: filter
+      # On pull requests, list every changed file (dorny/paths-filter resolves
+      # the base / merge-base robustly) and hand the list to
+      # scripts/ci/select-lanes.mjs, which decides the effective lanes. Pushes to
+      # main, tag releases (via release.yml) and manual dispatches skip this step;
+      # select-lanes then runs every lane, so a release is never partially
+      # checked.
+      #
+      # The path-to-lane mapping lives in scripts/ci/select-lanes.mjs — NOT in
+      # this YAML — so it is a single source of truth that
+      # test/ci/select-lanes.test.ts can assert deterministically.
+      - name: List changed files
+        id: changed
         if: ${{ github.event_name == 'pull_request' }}
         uses: dorny/paths-filter@v3
         with:
+          list-files: json
           filters: |
-            engine:
-              - 'src/**'
-              - 'test/**'
-              - 'scripts/**'
-              - 'rollup.config.ts'
-              - 'vitest.config.ts'
-              - 'tsconfig.json'
-              - 'tsconfig.test.json'
-              - 'tsconfig.eslint.json'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - '.github/workflows/**'
-            site:
-              - 'site/**'
-              - 'examples/**'
-              - 'packages/**'
-              - 'tsconfig.guides.json'
-              - 'tsconfig.examples.json'
-              - 'tsconfig.eslint.json'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - '.github/workflows/**'
+            all:
+              - '**'
 
       - name: Decide effective lanes
         id: decide
         env:
-          FILTER_OUTCOME: ${{ steps.filter.outcome }}
-          FILTER_ENGINE: ${{ steps.filter.outputs.engine }}
-          FILTER_SITE: ${{ steps.filter.outputs.site }}
-        run: |
-          if [ "$FILTER_OUTCOME" = "success" ]; then
-            engine="$FILTER_ENGINE"
-            site="$FILTER_SITE"
-          else
-            # Not a pull request (push to main, tag release, dispatch): run all lanes.
-            engine=true
-            site=true
-          fi
-          echo "engine=$engine" >> "$GITHUB_OUTPUT"
-          echo "site=$site" >> "$GITHUB_OUTPUT"
-          echo "Effective lanes — engine=$engine site=$site"
+          EVENT_NAME: ${{ github.event_name }}
+          CHANGED_FILES: ${{ steps.changed.outputs.all_files }}
+        # Dependency-free ESM, run with the runner's ambient node — deliberately
+        # no pnpm install in this always-on detector job.
+        run: node scripts/ci/select-lanes.mjs >> "$GITHUB_OUTPUT"
 
   typecheck:
     name: Typecheck
@@ -127,6 +104,14 @@ jobs:
 
       - name: Typecheck guides
         run: pnpm typecheck:guides
+
+      # Root `pnpm typecheck` only covers src/**; the extension packages own a
+      # separate tsconfig each, so typecheck them explicitly. (Package lint is
+      # intentionally NOT run here — the packages' eslint typed-linting config is
+      # not wired up yet and crashes; tracked separately, out of scope for the
+      # path-coverage fix.)
+      - name: Typecheck extension packages
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" typecheck
 
   lint:
     name: Lint
@@ -375,14 +360,35 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Build
+      # Core build first (verify:exports inspects the core dist tree).
+      - name: Build core
         run: pnpm build
 
-      - name: Verify package exports
+      # The extension packages each have their own rollup build; pnpm runs them
+      # in workspace-dependency order (tilemap before tiled). A broken package
+      # build is now caught here instead of only at release time.
+      - name: Build extension packages
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" build
+
+      - name: Verify core package exports
         run: pnpm verify:exports
 
-      - name: Package dry run
+      # Lockstep versions + peer-range coherence + deterministic publish-order
+      # matrix across all four published packages (the same gates release.yml
+      # runs before a publish).
+      - name: Verify lockstep versions and peer ranges
+        run: pnpm verify:lockstep
+
+      - name: Verify release publish matrix
+        run: pnpm verify:release-matrix
+
+      - name: Core package dry run
         run: pnpm pack --dry-run
+
+      # Pack each extension package (dry run) so a broken `files`/`exports` set in
+      # a package manifest is caught here, not at release time.
+      - name: Extension package dry runs
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" pack --dry-run
 
   site-build:
     name: Site build
@@ -437,6 +443,8 @@ jobs:
     steps:
       - name: Evaluate required job results
         env:
+          ENGINE: ${{ needs.changes.outputs.engine }}
+          SITE: ${{ needs.changes.outputs.site }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           LINT_RESULT: ${{ needs.lint.result }}
@@ -445,6 +453,7 @@ jobs:
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
         run: |
+          echo "areas: engine=$ENGINE site=$SITE"
           echo "changes: $CHANGES_RESULT"
           echo "typecheck: $TYPECHECK_RESULT"
           echo "lint: $LINT_RESULT"
@@ -453,28 +462,66 @@ jobs:
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
 
-          # Path filtering can legitimately skip whole lanes (e.g. a docs-only
-          # PR skips the engine lanes; an engine-only PR skips the site build),
-          # so "skipped" is an acceptable result. Only a real "failure" or
-          # "cancelled" fails the gate. The changes job must not be skipped — a
-          # skipped detector would silently skip everything and false-green.
           failed=0
+
+          # The change detector must run — a skipped detector would silently
+          # false-green every downstream lane.
           if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "::error::Detect changes did not succeed (result: $CHANGES_RESULT)."
             failed=1
           fi
-          for result in \
-            "$TYPECHECK_RESULT" \
-            "$LINT_RESULT" \
-            "$UNIT_TESTS_RESULT" \
-            "$BROWSER_TESTS_RESULT" \
-            "$PACKAGE_VERIFY_RESULT" \
-            "$SITE_BUILD_RESULT"; do
+
+          # A real "failure" or "cancelled" in any required lane fails the gate.
+          # "skipped" is tolerated HERE because path filtering can legitimately
+          # skip a whole area (a docs-only PR skips the engine lanes; an
+          # engine-only PR skips the site build). Wrongly-skipped IMPACTED lanes
+          # are caught by the contract checks below.
+          for entry in \
+            "typecheck=$TYPECHECK_RESULT" \
+            "lint=$LINT_RESULT" \
+            "unit-tests=$UNIT_TESTS_RESULT" \
+            "browser-tests=$BROWSER_TESTS_RESULT" \
+            "package-verify=$PACKAGE_VERIFY_RESULT" \
+            "site-build=$SITE_BUILD_RESULT"; do
+            name="${entry%%=*}"
+            result="${entry#*=}"
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "::error::Required job '$name' $result."
               failed=1
             fi
           done
 
+          # Contract enforcement (the core of this fix): when the detector
+          # classifies a change as engine-impacting, the engine lanes MUST have
+          # run. A "skipped" here means the path filter wrongly excluded an
+          # impacted change — exactly the defect that let package-only PRs go
+          # green while their unit / package / browser lanes were skipped.
+          if [ "$ENGINE" = "true" ]; then
+            for entry in \
+              "unit-tests=$UNIT_TESTS_RESULT" \
+              "browser-tests=$BROWSER_TESTS_RESULT" \
+              "package-verify=$PACKAGE_VERIFY_RESULT"; do
+              name="${entry%%=*}"
+              result="${entry#*=}"
+              if [ "$result" = "skipped" ]; then
+                echo "::error::Engine change detected but required lane '$name' was skipped (path-filter regression)."
+                failed=1
+              fi
+            done
+          fi
+
+          # Likewise a site-impacting change must build the site — unless the
+          # package build failed first, in which case site-build is intentionally
+          # skipped and the package-verify failure is already counted above.
+          if [ "$SITE" = "true" ] && [ "$PACKAGE_VERIFY_RESULT" != "failure" ]; then
+            if [ "$SITE_BUILD_RESULT" = "skipped" ]; then
+              echo "::error::Site change detected but 'site-build' was skipped (path-filter regression)."
+              failed=1
+            fi
+          fi
+
           if [ "$failed" -ne 0 ]; then
-            echo "::error::At least one required CI job failed or was cancelled."
+            echo "::error::At least one required CI check failed, was cancelled, or was wrongly skipped."
             exit 1
           fi
+          echo "All required CI checks satisfied."
