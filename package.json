@@ -95,7 +95,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run --project=exojs --project=exojs-particles --project=exojs-tilemap --project=exojs-tiled --project=rendering-perf",
     "test:core": "vitest run --project=exojs",
-    "test:coverage": "vitest run --coverage --project=exojs",
+    "test:coverage": "vitest run --coverage --project=exojs --project=exojs-particles --project=exojs-tilemap --project=exojs-tiled --project=rendering-perf",
     "test:watch": "vitest --project=exojs",
     "test:browser": "pnpm run test:browser:webgl && pnpm run test:browser:webgpu && pnpm run test:browser:webgl:firefox && pnpm run test:browser:webgpu:firefox",
     "test:browser:webgl": "vitest run --project=browser-webgl-chromium",
