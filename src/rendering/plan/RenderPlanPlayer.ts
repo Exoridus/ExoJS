@@ -85,6 +85,33 @@ export class RenderPlanPlayer {
     let currentGroup: RenderGroup | null = null;
     let currentInstructionIndex = 0;
 
+    // Phase 1 — populate the CPU transform buffer for all groups in this scope
+    // before any renderer draws execute. Without this separation, each
+    // per-group upload changes the buffer hash while a renderer holds an
+    // in-flight batch; the next flush detects the changed hash and re-uploads
+    // the growing buffer, producing O(groups²) GPU transform writes per pass
+    // (measured: ~240 KB/frame for 100 NineSlice sprites across 8 textures,
+    // ~600 MB/frame for 5000 RepeatingSprites). Writing every group's
+    // transforms first ensures the hash is stable by the time the first flush
+    // calls bindTransformBufferTexture/getTransformStorageBuffer, so all
+    // subsequent flushes within the same scope find an unchanged hash and skip
+    // the upload entirely.
+    if (hooks._prepareRenderGroupUpload !== undefined) {
+      let preInstructionIndex = context.passInstructionIndex;
+
+      for (let gi = 0; gi < groups.length; gi++) {
+        const group = groups[gi];
+
+        hooks._prepareRenderGroupUpload(
+          group,
+          this._createRenderGroupPlaybackContext(group.instructions.length, preInstructionIndex, context.passGroupIndex + gi),
+        );
+        preInstructionIndex += group.instructions.length;
+      }
+    }
+
+    // Phase 2 — execute draws in document order. Transform writes are already
+    // done; _prepareRenderGroupUpload is intentionally not called a second time.
     for (const entry of scope.entries) {
       if (entry.kind === RenderEntryKind.Draw) {
         if (currentGroup === null) {
@@ -92,10 +119,6 @@ export class RenderPlanPlayer {
           currentInstructionIndex = 0;
 
           hooks._beginRenderGroup?.(currentGroup);
-          hooks._prepareRenderGroupUpload?.(
-            currentGroup,
-            this._createRenderGroupPlaybackContext(currentGroup.instructions.length, context.passInstructionIndex, context.passGroupIndex),
-          );
           context.passGroupIndex++;
         }
 
