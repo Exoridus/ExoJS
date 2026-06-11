@@ -1,8 +1,11 @@
+import { warnOnce } from '#core/dev';
 import type { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
+import { buildPixelSnapContext, type RenderQuad, snapBoundsInto, snapQuadsInto } from '#rendering/pixelSnap';
 import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
+import type { View } from '#rendering/View';
 
 import type { RepeatingSpriteOptions, RepeatingSpriteQuad } from './repeatingSpritePlan';
 import {
@@ -46,6 +49,7 @@ export class RepeatingSprite extends Drawable {
 
   private _quads: RepeatingSpriteQuad[] = [];
   private _geometryDirty = true;
+  private readonly _renderQuads: RenderQuad[] = [];
 
   public constructor(source: Texture | TextureRegion, options?: RepeatingSpriteOptions) {
     super();
@@ -279,6 +283,57 @@ export class RepeatingSprite extends Drawable {
       this._rebuildGeometry();
     }
     return this._quads;
+  }
+
+  /**
+   * Render-time quads for the **geometry strategy**, device-pixel-snapped in
+   * `'geometry'` pixel-snap mode (axis-aligned only). Like NineSlice, every
+   * shared repeat-segment boundary is snapped once by {@link snapQuadsInto}, so
+   * adjacent segments stay gap-free; the content cache ({@link quads}) is never
+   * rebuilt by snapping. Returns the unsnapped quads otherwise.
+   * @internal
+   */
+  public getRenderQuads(view: View, targetPxWidth: number, targetPxHeight: number): readonly RepeatingSpriteQuad[] {
+    const base = this.quads;
+
+    if (this.pixelSnapMode !== 'geometry' || base.length === 0) {
+      return base;
+    }
+
+    const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
+
+    if (!ctx.axisAligned) {
+      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+
+      return base;
+    }
+
+    return snapQuadsInto(base, ctx, this._renderQuads);
+  }
+
+  /**
+   * Render-time destination bounds for the **shader strategy**, written into
+   * `out`. In `'geometry'` pixel-snap mode (axis-aligned only) the destination
+   * quad edges are snapped to the device grid; repetition stays shader-based, so
+   * only the outer rectangle moves. Returns the logical local bounds otherwise.
+   * @internal
+   */
+  public getRenderBounds(view: View, targetPxWidth: number, targetPxHeight: number, out: Rectangle): Rectangle {
+    const base = this.getLocalBounds();
+
+    if (this.pixelSnapMode !== 'geometry') {
+      return base;
+    }
+
+    const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
+
+    if (!ctx.axisAligned) {
+      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+
+      return base;
+    }
+
+    return snapBoundsInto(base, ctx, out);
   }
 
   // -----------------------------------------------------------------------

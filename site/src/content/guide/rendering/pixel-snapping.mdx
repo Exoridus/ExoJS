@@ -1,0 +1,101 @@
+---
+title: 'Pixel snapping'
+description: 'Keep sprites, panels, and tilemaps crisp by snapping rendered output to the device-pixel grid — render-only, camera- and DPR-aware.'
+---
+
+# Pixel snapping
+
+When a drawable lands between device pixels — a camera at a fractional offset, a tween easing to rest, a 1.25× zoom on a high-DPR display — texel edges fall across pixel boundaries and crisp art starts to shimmer and blur. Every [`Drawable`](/ExoJS/en/api/drawable/) carries a `pixelSnapMode` property that fixes this at render time:
+
+```ts
+import type { NineSliceSprite, Sprite } from '@codexo/exojs';
+import type { TileMapNode } from '@codexo/exojs-tilemap';
+
+declare const sprite: Sprite;
+declare const panel: NineSliceSprite;
+declare const mapNode: TileMapNode;
+
+sprite.pixelSnapMode = 'position';  // snap the rendered origin
+panel.pixelSnapMode = 'geometry';   // panel is a NineSliceSprite — also snap its slice edges
+mapNode.pixelSnapMode = 'geometry'; // mapNode is a TileMapNode (or TileMapView) — cascades to chunks
+```
+
+The value is the `PixelSnapMode` union exported from `@codexo/exojs` — `'none' | 'position' | 'geometry'` — and defaults to `'none'` (existing behaviour). Setting the current value is a no-op; setting anything outside the union throws and leaves the prior mode unchanged.
+
+## Render-only, by contract
+
+Snapping adjusts only the per-frame data handed to the GPU. It never mutates logical state:
+
+- position, scale, and `getGlobalTransform()` keep their exact fractional values
+- collision tests and `getBounds()` are unchanged
+- tween and physics state never see snapped values
+
+A tween moving a snapped sprite still animates its logical position smoothly — only the rendered quad steps in whole device pixels. You can toggle modes at any time without feedback loops or drift.
+
+## The two snapping modes
+
+`'position'` snaps the drawable's rendered origin to the nearest device pixel. Only the translation of the uploaded world matrix is adjusted — the linear part is untouched — so it is safe under **any** transform: rotation, skew, and non-uniform scale included.
+
+`'geometry'` does that and additionally snaps the drawable's shared boundary plan: nine-slice edges, repeat-segment boundaries, the sprite quad, tilemap chunk and layer origins. Every boundary goes through the same pure rounding function, so two neighbours that share a boundary value snap to the same result — seams cannot open between adjacent slices, segments, or chunks.
+
+```ts
+import { NineSliceSprite, RepeatingSprite, Texture } from '@codexo/exojs';
+
+declare const uiTexture: Texture;
+
+const panel = new NineSliceSprite(uiTexture, { slices: 12, width: 240, height: 96 });
+panel.pixelSnapMode = 'geometry'; // slice edges land on whole device pixels
+
+const backdrop = new RepeatingSprite(uiTexture, { width: 640, height: 360 });
+backdrop.pixelSnapMode = 'geometry'; // repeat boundaries stay seam-free
+```
+
+## Device pixels, not world units
+
+Snapping targets the **device-pixel grid of the active render target** — world position × [`View`](/ExoJS/en/api/view/) scale × pixel ratio — not integer world units. One world unit only equals one device pixel when the camera zoom and `pixelRatio` are both 1; under zoom or a high-DPR backbuffer the engine projects into device space, rounds there, and projects back. The result is camera- and DPR-aware by construction, and stays correct inside `RenderTexture` targets and split-screen viewport rectangles. See [Resize, DPR, and canvas](/ExoJS/en/guide/getting-started/resize-dpr-and-canvas/) and [Coordinates and views](/ExoJS/en/guide/runtime/coordinates-and-views/) for the underlying mapping.
+
+## Rotation downgrades `geometry` — no errors
+
+`'geometry'` is guaranteed only while the combined node + view transform is **axis-aligned**. Under rotation or skew (on the node, any ancestor, or the camera) it automatically downgrades to `'position'` for the affected frames — no error, no throw; dev builds log a one-time console warning. Axis-aligned non-uniform scale is fully supported: snapping is computed per axis.
+
+## Supported drawables
+
+| Type             | `'position'` | `'geometry'`                                                                                                |
+| ---------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| `Sprite`         | yes          | snaps the textured quad's edges                                                                              |
+| `NineSliceSprite` | yes         | snaps every slice boundary; corners stay pixel-exact                                                         |
+| `RepeatingSprite` | yes         | snaps repeat-segment boundaries (atlas-region sources); bare-`Texture` sources snap the destination quad while repetition stays shader-based |
+| Tilemap nodes    | yes          | snaps chunk/layer origins; integer tile pitch keeps every tile edge exact across chunks                      |
+
+`'position'` is honoured by **every** drawable — it is applied once at the backend's transform-upload seam, identically on WebGL2 and WebGPU. `'geometry'` adds boundary snapping only for the types above; on other drawables it currently behaves like `'position'`.
+
+## Tilemaps
+
+`@codexo/exojs-tilemap` exposes the same property on its scene nodes — `TileMapNode`, `TileMapView`, and `TileLayerNode`. Setting it cascades to every chunk node, current and rebuilt:
+
+```ts
+import { TileLayerNode, TileMap, TileMapNode, TileMapView } from '@codexo/exojs-tilemap';
+
+declare const map: TileMap;
+
+const mapNode = new TileMapNode(map);
+mapNode.pixelSnapMode = 'geometry'; // forwarded to every TileLayerNode and chunk
+
+declare const mapView: TileMapView;
+declare const groundLayer: TileLayerNode;
+
+mapView.pixelSnapMode = 'geometry';     // same property on a composed view (bands)
+groundLayer.pixelSnapMode = 'position'; // or per individual layer node
+```
+
+Chunk origins snap on the shared device grid, and a chunk's internal tile geometry uses integer tile pitch — so snapping the origin keeps every tile edge exact, and adjacent chunks and layers cannot drift apart. Tile data, layer offsets, chunk revisions, and culling are unaffected.
+
+## Limitations and non-goals
+
+- **Not a layout system.** There is no screen-space/UI layout rounding — logical widths, heights, and positions are never rounded for you.
+- **No shader-based snapping.** Snapping happens on the CPU during render-data preparation, with one deterministic rounding policy (`Math.round` to the nearest device pixel) shared by both backends.
+- **Logical bounds stay logical.** `getBounds()` reports unsnapped values; the rasterised result may differ from them by less than one device pixel.
+
+## Where to go next
+
+The next section, [Effects](/ExoJS/en/guide/effects/filters/), builds directly on the rendering chapters — filters, particles, and post-processing chains that layer mood and motion onto a scene.

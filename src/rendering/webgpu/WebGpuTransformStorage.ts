@@ -1,3 +1,4 @@
+import type { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
 import { TransformBuffer } from '#rendering/TransformBuffer';
@@ -25,10 +26,10 @@ export class WebGpuTransformStorage {
     this._buffer.begin(nodeCount);
   }
 
-  public writeCommand(command: DrawCommand): void {
+  public writeCommand(command: DrawCommand, transform?: Matrix): void {
     const drawable = command.drawable;
 
-    this._buffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint);
+    this._buffer.write(command.nodeIndex, transform ?? drawable.getGlobalTransform(), drawable.tint);
   }
 
   /**
@@ -46,8 +47,8 @@ export class WebGpuTransformStorage {
    * `nodeIndex` — a direct `backend.draw(drawable)` outside the plan player —
    * so a batch of synthetic draws does not collide on a single row.
    */
-  public push(drawable: Drawable): number {
-    return this._buffer.push(drawable.getGlobalTransform(), drawable.tint);
+  public push(drawable: Drawable, transform?: Matrix): number {
+    return this._buffer.push(transform ?? drawable.getGlobalTransform(), drawable.tint);
   }
 
   /**

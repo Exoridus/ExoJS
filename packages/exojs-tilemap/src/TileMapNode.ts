@@ -1,7 +1,9 @@
 import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
+import type { PixelSnapMode } from '@codexo/exojs/rendering';
 
 import type { TileMap } from './TileMap';
+import { assertPixelSnapMode } from './pixelSnap';
 import { TileLayerNode } from './TileLayerNode';
 
 /**
@@ -40,6 +42,7 @@ export class TileMapNode extends Container {
   private readonly _map: TileMap;
   private readonly _cullChunks: boolean;
   private readonly _layerNodes: TileLayerNode[] = [];
+  private _pixelSnapMode: PixelSnapMode = 'none';
 
   public constructor(map: TileMap, options?: TileMapNodeOptions) {
     super();
@@ -53,6 +56,35 @@ export class TileMapNode extends Container {
   /** The runtime map this node renders. */
   public get map(): TileMap {
     return this._map;
+  }
+
+  /**
+   * Render-only pixel-snap mode applied to every layer (and forwarded to every
+   * chunk node, current and rebuilt). Snaps tile chunk origins to the active
+   * render target's device-pixel grid for crisp tiles; with integer tile pitch
+   * the grid stays exact and adjacent chunks/layers cannot drift apart. Purely
+   * visual — tile data, layer offsets, chunk revisions, and culling are
+   * unchanged. Setting the current value is a no-op; an invalid value throws and
+   * leaves the prior mode unchanged.
+   *
+   * @default 'none'
+   * @stable
+   */
+  public get pixelSnapMode(): PixelSnapMode {
+    return this._pixelSnapMode;
+  }
+
+  public set pixelSnapMode(mode: PixelSnapMode) {
+    if (mode === this._pixelSnapMode) {
+      return;
+    }
+
+    assertPixelSnapMode(mode);
+    this._pixelSnapMode = mode;
+
+    for (const node of this._layerNodes) {
+      node.pixelSnapMode = mode;
+    }
   }
 
   /** The layer render nodes, in map layer order. */
@@ -107,6 +139,10 @@ export class TileMapNode extends Container {
   private _buildLayerNodes(): void {
     for (const layer of this._map.layers) {
       const node = new TileLayerNode(layer, { cullable: this._cullChunks });
+
+      if (this._pixelSnapMode !== 'none') {
+        node.pixelSnapMode = this._pixelSnapMode;
+      }
 
       this._layerNodes.push(node);
       this.addChild(node);

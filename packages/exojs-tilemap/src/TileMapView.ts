@@ -1,3 +1,6 @@
+import type { PixelSnapMode } from '@codexo/exojs/rendering';
+
+import { assertPixelSnapMode } from './pixelSnap';
 import type { TileLayer } from './TileLayer';
 import { TileLayerNode } from './TileLayerNode';
 import type { TileMap } from './TileMap';
@@ -103,6 +106,7 @@ export class TileMapView {
   private readonly _directLayerNodes: TileLayerNode[] = [];
 
   private _destroyed = false;
+  private _pixelSnapMode: PixelSnapMode = 'none';
 
   /**
    * @param map     The runtime map to compose. Referenced, never owned.
@@ -152,6 +156,36 @@ export class TileMapView {
   /** Whether this view has been destroyed. */
   public get destroyed(): boolean {
     return this._destroyed;
+  }
+
+  /**
+   * Render-only pixel-snap mode applied to every layer node this view owns (and
+   * forwarded to every chunk drawable, current and rebuilt by
+   * {@link refreshLayers}). Snaps tile chunk origins to the active render
+   * target's device-pixel grid for crisp tiles; with integer tile pitch the grid
+   * stays exact and adjacent chunks cannot drift apart. Purely visual — tile
+   * data, layer offsets, chunk revisions, and culling are unchanged. Setting the
+   * current value is a no-op; an invalid value throws and leaves the prior mode
+   * unchanged.
+   *
+   * @default 'none'
+   * @stable
+   */
+  public get pixelSnapMode(): PixelSnapMode {
+    return this._pixelSnapMode;
+  }
+
+  public set pixelSnapMode(mode: PixelSnapMode) {
+    if (mode === this._pixelSnapMode) {
+      return;
+    }
+
+    assertPixelSnapMode(mode);
+    this._pixelSnapMode = mode;
+
+    for (const node of this._layerNodes) {
+      node.pixelSnapMode = mode;
+    }
   }
 
   /**
@@ -242,6 +276,11 @@ export class TileMapView {
 
       if (!node) {
         node = new TileLayerNode(layer, { cullable: this._cullable });
+
+        if (this._pixelSnapMode !== 'none') {
+          node.pixelSnapMode = this._pixelSnapMode;
+        }
+
         this._layerNodeById.set(layer.id, node);
         this._assignNewNode(node, layer);
       }

@@ -1,12 +1,15 @@
+import { warnOnce } from '#core/dev';
 import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import { Drawable } from '#rendering/Drawable';
 import type { Material } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { buildPixelSnapContext, snapBoundsInto } from '#rendering/pixelSnap';
 import { RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import type { View } from '#rendering/View';
 
 /**
  * Internal dirty-flag bitmask used by {@link Sprite} to lazily recompute
@@ -142,6 +145,35 @@ export class Sprite extends Drawable {
     }
 
     return this._vertices;
+  }
+
+  /**
+   * Local-space quad bounds for the active pass, written into `out`. In
+   * `'geometry'` pixel-snap mode (and only when the combined node+view transform
+   * is axis-aligned) the quad edges are snapped to the render target's
+   * device-pixel grid via the shared {@link snapLocalBoundary} helper — combined
+   * with the device-snapped origin from the transform seam, all four corners
+   * land on whole device pixels. The logical local bounds (used by collision /
+   * `getBounds`) are never changed. Returns the unsnapped local bounds for
+   * `'none'`/`'position'` or under a rotation/skew downgrade.
+   * @internal
+   */
+  public getRenderBounds(view: View, targetPxWidth: number, targetPxHeight: number, out: Rectangle): Rectangle {
+    const base = this.getLocalBounds();
+
+    if (this.pixelSnapMode !== 'geometry') {
+      return base;
+    }
+
+    const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
+
+    if (!ctx.axisAligned) {
+      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+
+      return base;
+    }
+
+    return snapBoundsInto(base, ctx, out);
   }
 
   /**

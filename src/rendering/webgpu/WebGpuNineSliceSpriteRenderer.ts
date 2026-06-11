@@ -1,5 +1,6 @@
 /// <reference types="@webgpu/types" />
 
+import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -180,7 +181,13 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
-    const quads = sprite.quads;
+    let quads: readonly NineSliceQuad[] = sprite.quads;
+
+    if (sprite.pixelSnapMode === 'geometry') {
+      const snap = backend._getSnapPixelSize();
+
+      quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
+    }
 
     if (quads.length === 0) {
       return;

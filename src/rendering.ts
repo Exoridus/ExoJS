@@ -3,6 +3,7 @@
 // extension packages. Prefer the root barrel for ordinary application code.
 
 export { Drawable } from '#rendering/Drawable';
+export type { PixelSnapMode } from '#rendering/pixelSnap';
 export type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 export type { RenderBackend } from '#rendering/RenderBackend';
 export { RenderBackendType } from '#rendering/RenderBackendType';

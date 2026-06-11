@@ -111,13 +111,19 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
   }
 
   public render(sprite: NineSliceSprite): void {
-    const quads = sprite.quads;
+    const backend = this.getBackend();
+    let quads: readonly NineSliceQuad[] = sprite.quads;
+
+    if (sprite.pixelSnapMode === 'geometry') {
+      const snap = backend._getSnapPixelSize();
+
+      quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
+    }
 
     if (quads.length === 0) {
       return;
     }
 
-    const backend = this.getBackend();
     const texture = sprite.texture;
     const blendMode = sprite.blendMode;
     const tintRgba = sprite.tint.toRgba();

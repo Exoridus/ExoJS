@@ -1,5 +1,6 @@
 /// <reference types="@webgpu/types" />
 
+import { Rectangle } from '#math/Rectangle';
 import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { Sprite } from '#rendering/sprite/Sprite';
@@ -225,6 +226,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private _customBaseTextureLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
+  // Reusable scratch for device-snapped local bounds ('geometry' mode), and the
+  // bounds resolved for the sprite currently being packed (snapped or logical).
+  private readonly _snapBounds: Rectangle = new Rectangle();
+  private _activeBounds: Rectangle | null = null;
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) {
@@ -359,11 +364,29 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
 
+    this._activeBounds = this._resolveBounds(sprite, backend);
+
     if (material === null) {
       this._renderDefault(sprite, texture, backend, nodeIndex);
     } else {
       this._renderCustom(sprite, texture, material, backend, nodeIndex);
     }
+  }
+
+  /**
+   * Local bounds to upload for `sprite` this draw: device-pixel-snapped in
+   * `'geometry'` pixel-snap mode (axis-aligned only), otherwise the sprite's
+   * logical local bounds. Reuses a scratch rectangle and never mutates logical
+   * state. Consumed synchronously by {@link _packInstance}.
+   */
+  private _resolveBounds(sprite: Sprite, backend: WebGpuBackend): Rectangle {
+    if (sprite.pixelSnapMode !== 'geometry') {
+      return sprite.getLocalBounds();
+    }
+
+    const snap = backend._getSnapPixelSize();
+
+    return sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
   }
 
   /** Default multi-texture path: rotate the base texture through 8 slots. */
@@ -587,8 +610,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
 
-    // localBounds: left, top, right, bottom (words 0..3, offset 0)
-    const bounds = sprite.getLocalBounds();
+    // localBounds: left, top, right, bottom (words 0..3, offset 0) — device-snapped in
+    // 'geometry' pixel-snap mode, otherwise the logical local bounds.
+    const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
     f32[offset + 0] = bounds.left;
     f32[offset + 1] = bounds.top;

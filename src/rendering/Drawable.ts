@@ -1,6 +1,7 @@
 import { Color } from '#core/Color';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 
+import { isPixelSnapMode, type PixelSnapMode } from './pixelSnap';
 import { RenderNode } from './RenderNode';
 import { BlendModes } from './types';
 
@@ -14,6 +15,7 @@ import { BlendModes } from './types';
 export class Drawable extends RenderNode {
   private _tint: Color = Color.white.clone();
   private _blendMode: BlendModes = BlendModes.Normal;
+  private _pixelSnapMode: PixelSnapMode = 'none';
 
   public get tint(): Color {
     return this._tint;
@@ -29,6 +31,42 @@ export class Drawable extends RenderNode {
 
   public set blendMode(blendMode: BlendModes) {
     this.setBlendMode(blendMode);
+  }
+
+  /**
+   * Render-only pixel-snapping policy for this drawable. Aligns the rendered
+   * origin (`'position'`) or origin plus shared geometry boundaries
+   * (`'geometry'`) to the active render target's device-pixel grid. Purely
+   * visual: logical `x`/`y`, transforms, bounds, collision, tween and physics
+   * state are never affected, and {@link getBounds}/{@link getGlobalTransform}
+   * keep returning logical values.
+   *
+   * `'geometry'` is guaranteed only for axis-aligned transforms; rotation or
+   * skew (on this node, an ancestor, or the view) downgrade it to `'position'`
+   * for the affected frame, with no logical-state change. Snapping targets
+   * device pixels (× view scale × pixel ratio), not integer world units.
+   *
+   * Setting the current value is a no-op. Setting a value outside the
+   * {@link PixelSnapMode} union throws and leaves the prior mode unchanged.
+   *
+   * @default 'none'
+   * @stable
+   */
+  public get pixelSnapMode(): PixelSnapMode {
+    return this._pixelSnapMode;
+  }
+
+  public set pixelSnapMode(mode: PixelSnapMode) {
+    if (mode === this._pixelSnapMode) {
+      return;
+    }
+
+    if (!isPixelSnapMode(mode)) {
+      throw new Error(`Drawable.pixelSnapMode must be 'none', 'position', or 'geometry' (got ${String(mode)}).`);
+    }
+
+    this._pixelSnapMode = mode;
+    this.invalidateCache();
   }
 
   /**
