@@ -51,6 +51,23 @@ export function orientCode(transform: TileTransform): number {
   return (transform.flipX ? 1 : 0) | (transform.flipY ? 2 : 0) | (transform.diagonal ? 4 : 0);
 }
 
+// Test/perf-only instrumentation: counts CPU chunk-geometry rebuilds. A rebuild
+// happens once per {@link buildChunkPages} call — i.e. when a chunk node sees a
+// changed `chunk.revision`. Lets benchmarks/regression tests assert that a camera
+// pan rebuilds nothing and a single tile mutation rebuilds exactly one chunk.
+// Near-zero cost (one integer increment on the already-expensive rebuild path).
+let tileGeometryRebuildCount = 0;
+
+/** Read the cumulative chunk-geometry rebuild count. @internal */
+export function getTileGeometryRebuildCount(): number {
+  return tileGeometryRebuildCount;
+}
+
+/** Reset the chunk-geometry rebuild counter (call before a measured frame). @internal */
+export function resetTileGeometryRebuildCount(): void {
+  tileGeometryRebuildCount = 0;
+}
+
 /**
  * Build per-tileset page geometry for a single chunk.
  *
@@ -78,6 +95,8 @@ export function buildChunkPages(
   tileWidth: number,
   tileHeight: number,
 ): ChunkPage[] {
+  tileGeometryRebuildCount++;
+
   if (chunk.empty) {
     return [];
   }
