@@ -38,6 +38,22 @@ const browserBase = {
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
 } as const;
 
+// Inverse of `shaderStubPlugin`: loads `.vert`/`.frag` as their REAL source text
+// (mirroring the production `rollup-plugin-string`). The renderer performance
+// harness (`test/perf/rendering/`) runs the real WebGL2 renderers in jsdom and
+// reflects attribute/uniform names from the actual GLSL, so the stub's empty
+// string would break `shader.getAttribute(...)` lookups.
+const realShaderPlugin = {
+  name: 'exojs-real-shader',
+  transform(code: string, id: string): { code: string } | undefined {
+    if (id.endsWith('.vert') || id.endsWith('.frag')) {
+      return { code: `export default ${JSON.stringify(code)}` };
+    }
+
+    return undefined;
+  },
+};
+
 // Per-project browser headedness:
 //  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
 //  - WebGL2 Firefox:  headless.
@@ -64,7 +80,7 @@ export default defineConfig({
         name: 'exojs',
         alias: aliasConfig,
         include: ['test/**/*.test.ts'],
-        exclude: ['test/rendering/browser/**/*.test.ts'],
+        exclude: ['test/rendering/browser/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-particles',
@@ -81,6 +97,20 @@ export default defineConfig({
         alias: aliasConfig,
         include: ['packages/exojs-tiled/test/**/*.test.ts'],
       }),
+
+      // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
+      // Runs the real WebGL2 renderers against a recording fake GL context for
+      // deterministic, GPU-free structural metrics. Uses the real-shader loader
+      // instead of the stub so GLSL reflection resolves. Structural regression
+      // tests run in normal CI; the opt-in sweep self-skips unless EXOJS_PERF_PROFILE.
+      {
+        ...createJsdomTestProject({
+          name: 'rendering-perf',
+          alias: aliasConfig,
+          include: ['test/perf/rendering/**/*.test.ts'],
+        }),
+        plugins: [realShaderPlugin],
+      },
 
       // ── browser-webgl-chromium — WebGL2 via Chromium headless ────────────
       {
