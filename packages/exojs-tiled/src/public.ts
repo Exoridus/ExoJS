@@ -104,11 +104,11 @@ declare module '@codexo/exojs' {
   interface AssetDefinitions {
     tileMap: {
       resource: TileMap;
-      config: { source: string; format?: 'tiled'; strict?: boolean };
+      config: { source: string; format?: 'tiled' };
     };
     tiledMap: {
       resource: TiledMap;
-      config: { source: string; format?: 'tiled'; strict?: boolean };
+      config: { source: string; format?: 'tiled' };
     };
   }
 }

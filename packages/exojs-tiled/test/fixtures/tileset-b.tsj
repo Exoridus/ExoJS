@@ -1,0 +1,14 @@
+{
+  "name": "tiles-b",
+  "image": "tiles-b.png",
+  "imagewidth": 80,
+  "imageheight": 20,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "columns": 4,
+  "tilecount": 4,
+  "spacing": 4,
+  "margin": 2,
+  "tiledversion": "1.10.2",
+  "version": "1.10"
+}

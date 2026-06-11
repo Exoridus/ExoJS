@@ -30,7 +30,7 @@ export const tiledRuntimeMapBinding = {
     return {
       getIdentityKey(req) {
         const o = resolveTiledOptions(req.options);
-        return `${req.source}|${o.format}|${o.strict}`;
+        return `${req.source}|${o.format}`;
       },
       async load(req, ctx) {
         const tiledMap = await ctx.loader.load(TiledMap, req.source, req.options);

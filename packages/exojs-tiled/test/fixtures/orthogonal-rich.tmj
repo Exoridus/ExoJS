@@ -1,0 +1,126 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.10.2",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "width": 4,
+  "height": 2,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "infinite": false,
+  "backgroundcolor": "#223344",
+  "properties": [
+    { "name": "mood", "type": "string", "value": "calm" }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "Ground",
+      "type": "tilelayer",
+      "visible": true,
+      "opacity": 0.5,
+      "x": 0,
+      "y": 0,
+      "offsetx": 8,
+      "offsety": -4,
+      "width": 4,
+      "height": 2,
+      "properties": [
+        { "name": "role", "type": "string", "value": "base" }
+      ],
+      "data": [
+        1, 2147483649, 1073741825, 3221225473,
+        536870913, 2684354561, 1610612737, 3758096385
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Spawns",
+      "type": "objectgroup",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "draworder": "topdown",
+      "objects": [
+        {
+          "id": 1, "name": "hero", "type": "spawn",
+          "x": 16, "y": 16, "width": 0, "height": 0,
+          "rotation": 0, "visible": true, "point": true
+        },
+        {
+          "id": 2, "name": "chest", "type": "prop",
+          "x": 32, "y": 0, "width": 16, "height": 16,
+          "rotation": 0, "visible": true, "gid": 2
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Background",
+      "type": "imagelayer",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "image": "bg.png",
+      "repeatx": true,
+      "repeaty": false
+    },
+    {
+      "id": 4,
+      "name": "Decor",
+      "type": "group",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "layers": [
+        {
+          "id": 5,
+          "name": "DecorTiles",
+          "type": "tilelayer",
+          "visible": true,
+          "opacity": 1,
+          "x": 0,
+          "y": 0,
+          "width": 4,
+          "height": 2,
+          "data": [9, 0, 0, 0, 0, 0, 0, 0]
+        }
+      ]
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "tiles-a",
+      "image": "tiles-a.png",
+      "imagewidth": 64,
+      "imageheight": 32,
+      "tilewidth": 16,
+      "tileheight": 16,
+      "columns": 4,
+      "tilecount": 8,
+      "spacing": 0,
+      "margin": 0,
+      "properties": [
+        { "name": "author", "type": "string", "value": "exo" }
+      ],
+      "tiles": [
+        {
+          "id": 0,
+          "type": "floor",
+          "properties": [
+            { "name": "solid", "type": "bool", "value": true }
+          ]
+        }
+      ]
+    },
+    {
+      "firstgid": 9,
+      "source": "tileset-b.tsj"
+    }
+  ]
+}

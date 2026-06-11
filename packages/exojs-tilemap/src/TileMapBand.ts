@@ -37,6 +37,7 @@ import type { TileLayerNode } from './TileLayerNode';
 export class TileMapBand extends Container {
   private readonly _name: string;
   private readonly _layerNodes: TileLayerNode[];
+  private _destroyed = false;
 
   /**
    * @param name       The band name (unique within its owning view).
@@ -160,8 +161,16 @@ export class TileMapBand extends Container {
    * Destroy the band: detach it from its application parent, then destroy the
    * tile-layer nodes it owns (freeing their chunk geometry). Application actors,
    * sibling bands, the map, layers, and tileset textures are untouched.
+   *
+   * Idempotent: a second call (e.g. when {@link TileMapView.destroy} runs after
+   * the application already destroyed this band directly) is a safe no-op.
    */
   public override destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+    this._destroyed = true;
+
     this.parent?.removeChild(this);
 
     const owned = [...this._layerNodes];

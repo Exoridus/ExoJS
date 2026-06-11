@@ -102,15 +102,35 @@ export class TiledMap {
    * Convert this parsed Tiled source model into a format-independent runtime
    * {@link TileMap} from `@codexo/exojs-tilemap`.
    *
-   * Only finite orthogonal maps with atlas tilesets are supported. Passing a
-   * map with collection-of-images tilesets throws {@link TiledFormatError}.
-   * Object, image, and group layers are not yet converted (Phase C2 scope:
-   * tile layers only; group layer children are flattened into the result).
+   * Only finite orthogonal maps with atlas tilesets are supported. A
+   * non-orthogonal or infinite map, or a collection-of-images tileset, throws
+   * {@link TiledFormatError} rather than silently producing wrong (misplaced)
+   * or empty geometry. Object, image, and group layers are not yet converted
+   * (Phase C2 scope: tile layers only; group layer children are flattened into
+   * the result).
    *
    * The returned `TileMap` does **not** own the tileset textures — they remain
    * in the Loader cache. Destroying the returned map does not unload textures.
    */
   public toTileMap(): TileMap {
+    // The runtime TileMap is finite + orthogonal in this release. Reject maps
+    // we cannot convert faithfully rather than silently producing misplaced
+    // (isometric/staggered/hexagonal) or empty (infinite/chunked) geometry.
+    if (this.orientation !== 'orthogonal') {
+      throw new TiledFormatError(
+        this.source,
+        'orientation',
+        `toTileMap() supports only orthogonal maps in this release, got "${this.orientation}"`,
+      );
+    }
+    if (this.infinite) {
+      throw new TiledFormatError(
+        this.source,
+        'infinite',
+        'toTileMap() supports only finite maps in this release; infinite (chunked) maps are not yet convertible',
+      );
+    }
+
     // Build runtime tilesets. Tilesets with a per-tile image collection are
     // not yet supported; collection-of-images tilesets throw TiledFormatError.
     // Tilesets with no image at all (no texture, no tileTextures) are silently

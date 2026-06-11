@@ -6,24 +6,29 @@
 export interface TiledLoadOptions {
   /**
    * Explicit format hint for ambiguous file extensions.
-   * `.tmj` paths need no hint; required for `.json` paths that contain Tiled
-   * map data (`loader.load(TileMap, 'world.json', { format: 'tiled' })`).
-   * A mismatched hint (e.g. `format: 'ldtk'` for a `.tmj` file) is an error.
+   *
+   * `.tmj`/`.tsj` paths are recognised by extension and need no hint. Provide
+   * `format: 'tiled'` when loading Tiled map data from a generic `.json` path:
+   * `loader.load(TileMap, 'world.json', { format: 'tiled' })`. `'tiled'` is the
+   * only accepted value, so a foreign format (e.g. `'ldtk'`) is a compile error
+   * rather than a silent runtime fall-through.
+   *
+   * The hint participates in the asset identity key, so the same source loaded
+   * under different (future) formats resolves to distinct cache entries.
    */
   readonly format?: 'tiled';
-  /**
-   * When `true` (the default), validation errors in the Tiled map are fatal.
-   * Set to `false` to tolerate minor spec deviations at the cost of potentially
-   * incorrect map data; affects cache identity (a strict and a non-strict load
-   * of the same URL are treated as distinct assets).
-   */
-  readonly strict?: boolean;
 }
 
-/** Applies defaults and returns a normalized options object. */
-export function resolveTiledOptions(options: TiledLoadOptions | undefined): { format: 'tiled'; strict: boolean } {
+/**
+ * Applies defaults and returns a normalized options object.
+ *
+ * Tiled parsing is unconditionally strict: {@link validateTiledMapData} throws
+ * a `TiledFormatError` on any malformed *known* field and silently preserves
+ * unknown fields. There is intentionally no `strict` toggle — a permissive
+ * parse mode is a potential v0.14 follow-up, not part of v0.13.
+ */
+export function resolveTiledOptions(options: TiledLoadOptions | undefined): { format: 'tiled' } {
   return {
     format: options?.format ?? 'tiled',
-    strict: options?.strict ?? true,
   };
 }

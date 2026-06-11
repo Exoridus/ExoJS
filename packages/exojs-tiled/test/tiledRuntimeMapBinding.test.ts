@@ -85,21 +85,14 @@ describe('tiledRuntimeMapBinding descriptor', () => {
 describe('tiledRuntimeMapBinding.getIdentityKey', () => {
   const handler = tiledRuntimeMapBinding.create();
 
-  it('includes source, format, and strict in the key', () => {
+  it('includes source and format in the key', () => {
     const key = handler.getIdentityKey!({ source: 'world.tmj' });
-    expect(key).toBe('world.tmj|tiled|true');
+    expect(key).toBe('world.tmj|tiled');
   });
 
   it('uses explicit format when provided', () => {
     const key = handler.getIdentityKey!({ source: 'world.tmj', options: { format: 'tiled' } });
-    expect(key).toBe('world.tmj|tiled|true');
-  });
-
-  it('strict:false produces a distinct key', () => {
-    const defaultKey = handler.getIdentityKey!({ source: 'world.tmj' });
-    const lenientKey = handler.getIdentityKey!({ source: 'world.tmj', options: { strict: false } });
-    expect(lenientKey).toBe('world.tmj|tiled|false');
-    expect(lenientKey).not.toBe(defaultKey);
+    expect(key).toBe('world.tmj|tiled');
   });
 
   it('different sources produce different keys', () => {
@@ -193,7 +186,7 @@ describe('tiledRuntimeMapBinding.load — options passthrough', () => {
 
   it('passes options to the TiledMap sub-load', async () => {
     const handler = tiledRuntimeMapBinding.create();
-    const opts = { format: 'tiled' as const, strict: false };
+    const opts = { format: 'tiled' as const };
     await handler.load({ source: 'world.tmj', options: opts }, context);
     expect(loaderLoad).toHaveBeenCalledWith(TiledMap, 'world.tmj', opts);
   });

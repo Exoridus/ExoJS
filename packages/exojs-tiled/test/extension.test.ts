@@ -92,13 +92,8 @@ describe('@codexo/exojs-tiled asset handler — tiledMapBinding', () => {
 describe('tiledMapBinding.getIdentityKey', () => {
   const handler = tiledMapBinding.create();
 
-  it('includes source, format, and strict in the key', () => {
-    expect(handler.getIdentityKey!({ source: 'world.tmj' })).toBe('world.tmj|tiled|true');
-  });
-
-  it('strict:false produces a distinct key', () => {
-    const key = handler.getIdentityKey!({ source: 'world.tmj', options: { strict: false } });
-    expect(key).toBe('world.tmj|tiled|false');
+  it('includes source and format in the key', () => {
+    expect(handler.getIdentityKey!({ source: 'world.tmj' })).toBe('world.tmj|tiled');
   });
 });
 
