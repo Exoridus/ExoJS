@@ -152,6 +152,11 @@ import '@codexo/exojs-tilemap/register';
   are bottom-left aligned (Tiled orthogonal convention).
 - **WebGL2 and WebGPU** share one CPU geometry builder and produce identical output (golden
   parity tested on both backends).
+- **Sampling.** Tile UVs are exact (no half-texel inset), which assumes **nearest** atlas
+  filtering — the typical pixel-art case. Under linear or mipmap filtering, author tilesets with
+  extruded tile margins to avoid neighbour bleed at tile edges (extrusion-aware tilemap UV
+  insetting is a planned follow-up; the `NineSlice` / `RepeatingSprite` geometry paths already
+  inset).
 
 ## Ownership & lifecycle
 

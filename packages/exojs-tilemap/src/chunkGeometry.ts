@@ -141,6 +141,12 @@ export function buildChunkPages(
       // Absolute source pixel rect = tileset-region offset + in-atlas tile rect.
       const sx = region.x + rect.x;
       const sy = region.y + rect.y;
+      // Exact tile UVs, no half-texel inset. This assumes NEAREST filtering on
+      // the tileset atlas (the typical pixel-art case). Under LINEAR/mipmap
+      // filtering an atlas WITHOUT extrusion padding can bleed neighbouring
+      // tiles at the edges; author tilesets with extruded margins for linear
+      // sampling. (Extrusion-aware tilemap UV insetting — already done on the
+      // NineSlice/RepeatingSprite geometry paths — is a v0.14 follow-up.)
       const u0 = sx / textureWidth;
       const v0 = sy / textureHeight;
       const u1 = (sx + rect.width) / textureWidth;

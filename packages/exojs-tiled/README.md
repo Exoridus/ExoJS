@@ -103,15 +103,16 @@ The runtime binding additionally calls `TiledMap.toTileMap()` to produce the gen
 ### Load options
 
 ```ts
-await loader.load(TileMap, 'maps/world.tmj', { strict: true });
+// `.tmj`/`.tsj` are recognised by extension; a format hint is only needed for
+// Tiled data served from a generic `.json` path:
+await loader.load(TileMap, 'maps/world.json', { format: 'tiled' });
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `format` | `'tiled'` | — | Reserved discriminant; not currently used |
-| `strict` | `boolean` | `false` | Throw on unknown `.tmj`/`.tsj` fields |
+| `format` | `'tiled'` | `'tiled'` | Format hint for ambiguous `.json` paths. `.tmj`/`.tsj` are recognised by extension. `'tiled'` is the only accepted value (a foreign format is a compile error). Participates in the asset identity key. |
 
-Options are optional. Only result-changing values affect the Loader identity key.
+Options are optional. Parsing is always strict: `validateTiledMapData` throws a `TiledFormatError` on any malformed *known* field, and silently preserves *unknown* fields (so real-world Tiled files using features ExoJS does not model still load).
 
 ## Parsed API overview
 

@@ -411,6 +411,26 @@ describe('TileMapView ownership & destruction', () => {
     expect(view.destroyed).toBe(true);
   });
 
+  it('band.destroy() is idempotent and safe before a later view.destroy()', () => {
+    // Regression: TileMapBand had no destroyed guard, so a direct band.destroy()
+    // followed by view.destroy() (which re-invokes band.destroy()) re-ran
+    // Container.destroy() — itself not idempotent. The guard makes both safe.
+    const { view, worldRoot, actors, hero } = makeScene();
+    const groundBand = view.band('ground');
+
+    groundBand.destroy();
+    expect(groundBand.layerNodes).toHaveLength(0);
+    expect(() => groundBand.destroy()).not.toThrow();
+
+    // view.destroy() re-invokes band.destroy() on the already-destroyed band.
+    expect(() => view.destroy()).not.toThrow();
+    expect(view.destroyed).toBe(true);
+
+    // Application actors are untouched throughout.
+    expect(actors.parent).toBe(worldRoot);
+    expect(hero.parent).toBe(actors);
+  });
+
   it('destroying one band leaves the sibling band, actors, and map intact', () => {
     const { map, tileset, view, worldRoot, actors } = makeScene();
     const groundBand = view.band('ground');

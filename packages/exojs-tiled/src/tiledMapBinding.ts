@@ -20,7 +20,7 @@ export const tiledMapBinding = {
     return {
       getIdentityKey(req) {
         const o = resolveTiledOptions(req.options);
-        return `${req.source}|${o.format}|${o.strict}`;
+        return `${req.source}|${o.format}`;
       },
       async load(req, ctx) {
         return loadTiledMap(req.source, ctx);
