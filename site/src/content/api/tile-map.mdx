@@ -1,0 +1,69 @@
+---
+title: "TileMap"
+description: "A generic, format-independent tile map. Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays — no per-tile heap objects. The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children (the future TileMapNode will own those). Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions."
+symbol: "TileMap"
+kind: "class"
+subsystem: "tilemap"
+importPath: "@codexo/exojs-tilemap"
+memberCount: 29
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tilemap/src/TileMap.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L49"
+---
+## Import
+
+`import { TileMap } from '@codexo/exojs-tilemap'`
+
+A generic, format-independent tile map.
+
+Owns a finite grid of TileLayers and a shared set of TileSets.
+Tile data is stored in compact chunked arrays — no per-tile heap objects.
+
+The map does NOT own tileset textures (those are Loader-owned) and does
+NOT own SceneNode children (the future TileMapNode will own those).
+
+Multiple tilesets are supported: each cell stores a packed tileset index
+and local tile ID, so different tilesets may have different tile dimensions.
+
+## Constructors
+
+- `new(options: TileMapOptions): TileMap`
+
+## Methods
+
+- `addLayer(layer: TileLayer): void`
+- `addTileset(tileset: TileSet): void`
+- `clearTileAt(layerId: number, tx: number, ty: number): void`
+- `createView(options?: TileMapViewOptions): TileMapView`
+- `destroy(): void`
+- `getLayerById(id: number): TileLayer | undefined`
+- `getLayerByName(name: string): TileLayer | undefined`
+- `getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null`
+- `getTileLayer(name: string): TileLayer | undefined`
+- `getTileset(name: string): TileSet | undefined`
+- `pixelToTile(px: number, py: number): object`
+- `removeLayer(id: number): boolean`
+- `setTileAt(layerId: number, tx: number, ty: number, tile: ResolvedTile): void`
+- `tileToPixel(tx: number, ty: number): object`
+
+## Properties
+
+- `chunkHeight: number`
+- `chunkWidth: number`
+- `height: number`
+- `name: string`
+- `properties: TileProperties`
+- `tileHeight: number`
+- `tileWidth: number`
+- `width: number`
+- `destroyed: boolean`
+- `layers: readonly TileLayer[]`
+- `pixelHeight: number`
+- `pixelWidth: number`
+- `revision: number`
+- `tilesets: readonly TileSet[]`
+
+## Source
+
+[packages/exojs-tilemap/src/TileMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L49)

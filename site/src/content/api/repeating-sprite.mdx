@@ -1,43 +1,39 @@
 ---
-title: "BitmapText"
-description: "Text node that renders from an offline-generated atlas — either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json). The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds. ## Usage ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // instant geometry rebuild label.style.align = 'center'; // immediate rebuild ```"
-symbol: "BitmapText"
+title: "RepeatingSprite"
+description: "A sprite that fills its destination by repeating, mirroring, or stretching a source texture or atlas region. Supports independent per-axis modes (`modeX`, `modeY`) and fit strategies (`fitX`, `fitY`). ## Internal rendering strategy (selected automatically) | Source type | Internal path | |-------------------|-------------------------------------------------------| | Bare `Texture` | **Shader path** — one quad, GPU sampler repeat wrap. | | `TextureRegion` | **Geometry path** — Cartesian-product quads, clamped. | The public class identity and API do not change based on which path the renderer uses."
+symbol: "RepeatingSprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 82
+memberCount: 84
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
-sourcePath: "src/rendering/text/BitmapText.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BitmapText.ts#L151"
+sourcePath: "src/rendering/sprite/RepeatingSprite.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/RepeatingSprite.ts#L38"
 ---
 ## Import
 
-`import { BitmapText } from '@codexo/exojs'`
+`import { RepeatingSprite } from '@codexo/exojs'`
 
-Text node that renders from an offline-generated atlas — either a BMFont
-(AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json).
+A sprite that fills its destination by repeating, mirroring, or stretching
+a source texture or atlas region.
 
-The atlas is pre-built so there is no runtime Canvas 2D rasterisation.
-All layout features (alignment, word-wrap, justify, leading, breakWords,
-whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully
-supported. Outline effects are handled as shader uniforms — no extra draw
-calls, no atlas rebuilds.
+Supports independent per-axis modes (`modeX`, `modeY`) and fit strategies
+(`fitX`, `fitY`).
 
-## Usage
+## Internal rendering strategy (selected automatically)
 
-```ts
-const font  = await loader.load('fonts/ui.fnt');   // BmFont, no setup needed
-const label = new BitmapText('Score: 0', font, \{ msdf: true \});
-scene.addChild(label);
+| Source type       | Internal path                                         |
+|-------------------|-------------------------------------------------------|
+| Bare `Texture`    | **Shader path** — one quad, GPU sampler repeat wrap.  |
+| `TextureRegion`   | **Geometry path** — Cartesian-product quads, clamped. |
 
-label.text         = 'Score: 42';  // instant geometry rebuild
-label.style.align  = 'center';     // immediate rebuild
-```
+The public class identity and API do not change based on which path the
+renderer uses.
 
 ## Constructors
 
-- `new(text: string, font: BmFont, options: BitmapTextOptions): BitmapText`
+- `new(source: Texture | TextureRegion, options?: RepeatingSpriteOptions): RepeatingSprite`
 
 ## Methods
 
@@ -64,15 +60,14 @@ label.style.align  = 'center';     // immediate rebuild
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setFont(font: BmFont): void`
+- `setOffset(offsetX: number, offsetY: number): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSize(width: number, height: number): this`
 - `setSkew(x: number, y: number): this`
 - `setTint(color: Color): this`
-- `syncDirty(): void`
-- `update(_dt: number): void`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
 - `updateTransform(): this`
@@ -92,27 +87,30 @@ label.style.align  = 'center';     // immediate rebuild
 - `cacheAsBitmap: boolean`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
-- `fontScale: number`
+- `fitX: RepeatFit`
+- `fitY: RepeatFit`
+- `height: number`
 - `interactive: boolean`
 - `isAlignedBox: boolean`
-- `layout: LayoutOptions`
 - `mask: MaskSource`
-- `msdf: boolean`
+- `modeX: RepeatMode`
+- `modeY: RepeatMode`
+- `offsetX: number`
+- `offsetY: number`
 - `origin: ObservableVector`
-- `pageQuads: readonly TextPageQuads[]`
 - `parent: Container | null`
 - `pixelSnapMode: PixelSnapMode`
 - `position: ObservableVector`
+- `region: TextureRegion`
 - `rotation: number`
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
-- `style: TextStyle`
-- `text: string`
-- `textBounds: TextSize`
-- `textures: readonly Texture[]`
+- `source: Texture | TextureRegion`
+- `texture: Texture`
 - `tint: Color`
 - `visible: boolean`
+- `width: number`
 - `x: number`
 - `y: number`
 - `zIndex: number`
@@ -131,4 +129,4 @@ label.style.align  = 'center';     // immediate rebuild
 
 ## Source
 
-[src/rendering/text/BitmapText.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BitmapText.ts#L151)
+[src/rendering/sprite/RepeatingSprite.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/RepeatingSprite.ts#L38)

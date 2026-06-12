@@ -1,43 +1,26 @@
 ---
-title: "BitmapText"
-description: "Text node that renders from an offline-generated atlas — either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json). The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds. ## Usage ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // instant geometry rebuild label.style.align = 'center'; // immediate rebuild ```"
-symbol: "BitmapText"
+title: "NineSliceSprite"
+description: "A scalable nine-slice (9-patch) sprite. Corners stay pixel-perfect; edges/center fill by stretch, repeat, or mirror-repeat."
+symbol: "NineSliceSprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
 memberCount: 82
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
-sourcePath: "src/rendering/text/BitmapText.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BitmapText.ts#L151"
+sourcePath: "src/rendering/sprite/NineSliceSprite.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/NineSliceSprite.ts#L39"
 ---
 ## Import
 
-`import { BitmapText } from '@codexo/exojs'`
+`import { NineSliceSprite } from '@codexo/exojs'`
 
-Text node that renders from an offline-generated atlas — either a BMFont
-(AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json).
-
-The atlas is pre-built so there is no runtime Canvas 2D rasterisation.
-All layout features (alignment, word-wrap, justify, leading, breakWords,
-whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully
-supported. Outline effects are handled as shader uniforms — no extra draw
-calls, no atlas rebuilds.
-
-## Usage
-
-```ts
-const font  = await loader.load('fonts/ui.fnt');   // BmFont, no setup needed
-const label = new BitmapText('Score: 0', font, \{ msdf: true \});
-scene.addChild(label);
-
-label.text         = 'Score: 42';  // instant geometry rebuild
-label.style.align  = 'center';     // immediate rebuild
-```
+A scalable nine-slice (9-patch) sprite.
+Corners stay pixel-perfect; edges/center fill by stretch, repeat, or mirror-repeat.
 
 ## Constructors
 
-- `new(text: string, font: BmFont, options: BitmapTextOptions): BitmapText`
+- `new(texture: Texture | TextureRegion, options: NineSliceOptions): NineSliceSprite`
 
 ## Methods
 
@@ -64,15 +47,16 @@ label.style.align  = 'center';     // immediate rebuild
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
-- `setFont(font: BmFont): void`
+- `setBorder(border: number | Partial<NineSliceInsets>): this`
+- `setModes(modes: NineSliceModes): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
+- `setSize(width: number, height: number): this`
 - `setSkew(x: number, y: number): this`
+- `setSlices(slices: number | Partial<NineSliceInsets>): this`
 - `setTint(color: Color): this`
-- `syncDirty(): void`
-- `update(_dt: number): void`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
 - `updateTransform(): this`
@@ -89,30 +73,29 @@ label.style.align  = 'center';     // immediate rebuild
 - `preserveDrawOrder: boolean`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
+- `border: Readonly<NineSliceInsets>`
 - `cacheAsBitmap: boolean`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
-- `fontScale: number`
+- `height: number`
 - `interactive: boolean`
 - `isAlignedBox: boolean`
-- `layout: LayoutOptions`
 - `mask: MaskSource`
-- `msdf: boolean`
+- `modes: Readonly<NineSliceModes>`
 - `origin: ObservableVector`
-- `pageQuads: readonly TextPageQuads[]`
 - `parent: Container | null`
 - `pixelSnapMode: PixelSnapMode`
 - `position: ObservableVector`
+- `region: TextureRegion`
 - `rotation: number`
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
-- `style: TextStyle`
-- `text: string`
-- `textBounds: TextSize`
-- `textures: readonly Texture[]`
+- `slices: Readonly<NineSliceInsets>`
+- `texture: Texture`
 - `tint: Color`
 - `visible: boolean`
+- `width: number`
 - `x: number`
 - `y: number`
 - `zIndex: number`
@@ -131,4 +114,4 @@ label.style.align  = 'center';     // immediate rebuild
 
 ## Source
 
-[src/rendering/text/BitmapText.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BitmapText.ts#L151)
+[src/rendering/sprite/NineSliceSprite.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/NineSliceSprite.ts#L39)

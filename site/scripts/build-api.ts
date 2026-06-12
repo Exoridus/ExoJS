@@ -10,11 +10,11 @@ const repoRoot = path.resolve(siteRoot, '..');
 const outputDir = path.resolve(siteRoot, 'src', 'content', 'api');
 const toPosix = (value: string): string => value.replaceAll('\\', '/');
 
-type Subsystem = 'animation' | 'audio' | 'core' | 'debug' | 'input' | 'math' | 'particles' | 'rendering' | 'resources' | 'tiled';
+type Subsystem = 'animation' | 'audio' | 'core' | 'debug' | 'input' | 'math' | 'particles' | 'rendering' | 'resources' | 'tiled' | 'tilemap';
 type ApiKind = 'class' | 'enum';
 type ApiTier = 'stable' | 'advanced';
 
-const SUBSYSTEMS: ReadonlyArray<Subsystem> = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources', 'tiled'];
+const SUBSYSTEMS: ReadonlyArray<Subsystem> = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources', 'tiled', 'tilemap'];
 
 /**
  * Official extension packages documented as their own API surfaces, alongside
@@ -38,6 +38,13 @@ const EXTENSION_PACKAGES: ReadonlyArray<ExtensionPackage> = [
         entryPoint: 'packages/exojs-particles/src/index.ts',
         tsconfig: 'packages/exojs-particles/tsconfig.json',
         sourceMarker: 'packages/exojs-particles/src/',
+    },
+    {
+        importPath: '@codexo/exojs-tilemap',
+        subsystem: 'tilemap',
+        entryPoint: 'packages/exojs-tilemap/src/index.ts',
+        tsconfig: 'packages/exojs-tilemap/tsconfig.json',
+        sourceMarker: 'packages/exojs-tilemap/src/',
     },
     {
         importPath: '@codexo/exojs-tiled',

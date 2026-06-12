@@ -1,0 +1,53 @@
+---
+title: "TextureRegion"
+description: "An immutable descriptor for a rectangular sub-region of a Texture. Stores the pixel-space source rectangle, pre-computed normalised UV bounds, and optional extrusion/padding metadata for atlas-safe linear filtering. Constructed once and reused across sprites, tile-sets, atlas lookups, and the scalable-sprite repeat planners. All region descriptor fields are stable after construction. Extrusion metadata is copied and frozen during construction — the caller retains no mutable reference to the stored object. The underlying Texture reference is stable, but the Texture's own lifecycle and sampler state remain owned by Texture. Texture dimensions **must** be known at construction time; a texture with zero dimensions will cause the constructor to throw."
+symbol: "TextureRegion"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 11
+tier: "stable"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "src/rendering/texture/TextureRegion.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/TextureRegion.ts#L162"
+---
+## Import
+
+`import { TextureRegion } from '@codexo/exojs'`
+
+An immutable descriptor for a rectangular sub-region of a Texture.
+
+Stores the pixel-space source rectangle, pre-computed normalised UV bounds,
+and optional extrusion/padding metadata for atlas-safe linear filtering.
+Constructed once and reused across sprites, tile-sets, atlas lookups, and
+the scalable-sprite repeat planners.
+
+All region descriptor fields are stable after construction. Extrusion
+metadata is copied and frozen during construction — the caller retains no
+mutable reference to the stored object. The underlying Texture
+reference is stable, but the Texture's own lifecycle and sampler state
+remain owned by Texture.
+
+Texture dimensions **must** be known at construction time; a texture with
+zero dimensions will cause the constructor to throw.
+
+## Constructors
+
+- `new(texture: Texture, options: TextureRegionOptions): TextureRegion`
+
+## Properties
+
+- `extrusion: Readonly<TextureRegionInsets>`
+- `height: number`
+- `texture: Texture`
+- `u0: number`
+- `u1: number`
+- `v0: number`
+- `v1: number`
+- `width: number`
+- `x: number`
+- `y: number`
+
+## Source
+
+[src/rendering/texture/TextureRegion.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/TextureRegion.ts#L162)

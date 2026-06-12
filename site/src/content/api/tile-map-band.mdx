@@ -1,0 +1,143 @@
+---
+title: "TileMapBand"
+description: "A named, ordered group of TileLayerNodes produced by a TileMapView for ergonomic actor interleaving. A band is a plain Container scene node that the application parents wherever it wants (typically directly under its own world root). Bands are composition units only: a band owns **its generated tile-layer nodes** and never application actors. Placing actors *between* bands is done by parenting the bands and the actor containers as siblings in the desired document order: ```ts worldRoot.addChild(view.band('ground'), actors, view.band('roof')); ``` **Rendering order within a band always follows map document order**, not the order layers were listed in the band definition — band membership *selects* layers; it never reorders them. **Ownership:** the band owns the TileLayerNodes it was created with. Destroying the band destroys those layer nodes (and their cached chunk geometry) and detaches the band from its application parent — it never touches application actors, sibling bands, the TileMap, the TileLayers, or Loader-owned tileset textures. Bounds are the union of the band's tile-layer-node bounds (an empty band collapses to a degenerate rect at the band's transformed origin). Bands are created by TileMapView; construct them through TileMapView rather than directly."
+symbol: "TileMapBand"
+kind: "class"
+subsystem: "tilemap"
+importPath: "@codexo/exojs-tilemap"
+memberCount: 85
+tier: "advanced"
+sections: ["Import", "Methods", "Properties", "Events", "Source"]
+sourcePath: "packages/exojs-tilemap/src/TileMapBand.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapBand.ts#L37"
+---
+## Import
+
+`import { TileMapBand } from '@codexo/exojs-tilemap'`
+
+A named, ordered group of TileLayerNodes produced by a
+TileMapView for ergonomic actor interleaving.
+
+A band is a plain Container scene node that the application parents
+wherever it wants (typically directly under its own world root). Bands are
+composition units only: a band owns **its generated tile-layer nodes** and
+never application actors. Placing actors *between* bands is done by parenting
+the bands and the actor containers as siblings in the desired document order:
+
+```ts
+worldRoot.addChild(view.band('ground'), actors, view.band('roof'));
+```
+
+**Rendering order within a band always follows map document order**, not the
+order layers were listed in the band definition — band membership *selects*
+layers; it never reorders them.
+
+**Ownership:** the band owns the TileLayerNodes it was created with.
+Destroying the band destroys those layer nodes (and their cached chunk
+geometry) and detaches the band from its application parent — it never
+touches application actors, sibling bands, the TileMap, the
+TileLayers, or Loader-owned tileset textures.
+
+Bounds are the union of the band's tile-layer-node bounds (an empty band
+collapses to a degenerate rect at the band's transformed origin).
+
+Bands are created by TileMapView; construct them through
+TileMapView rather than directly.
+
+## Methods
+
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `addChild(children: RenderNode[]): this`
+- `addChildAt(child: RenderNode, index: number): this`
+- `addFilter(filter: Filter): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `getBounds(): Rectangle`
+- `getChildAt(index: number): RenderNode`
+- `getChildIndex(child: RenderNode): number`
+- `getGlobalTransform(): Matrix`
+- `getLayerNodeById(id: number): TileLayerNode | undefined`
+- `getLocalBounds(): Rectangle`
+- `getNormals(): Vector[]`
+- `getTransform(): Matrix`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View): boolean`
+- `move(x: number, y: number): this`
+- `project(axis: Vector, result: Interval): Interval`
+- `removeChild(child: RenderNode): this`
+- `removeChildAt(index: number): this`
+- `removeChildren(begin: number, end: number): this`
+- `removeFilter(filter: Filter): this`
+- `render(backend: RenderBackend): this`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setChildIndex(child: RenderNode, index: number): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
+- `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `preserveDrawOrder: boolean`
+- `anchor: ObservableVector`
+- `bottom: number`
+- `cacheAsBitmap: boolean`
+- `children: RenderNode[]`
+- `cullable: boolean`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `isEmpty: boolean`
+- `layerNodes: readonly TileLayerNode[]`
+- `left: number`
+- `mask: MaskSource`
+- `name: string`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `right: number`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `top: number`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
+
+## Events
+
+- `onDrag: Signal<[InteractionEvent]>`
+- `onDragEnd: Signal<[InteractionEvent]>`
+- `onDragStart: Signal<[InteractionEvent]>`
+- `onPointerDown: Signal<[InteractionEvent]>`
+- `onPointerMove: Signal<[InteractionEvent]>`
+- `onPointerOut: Signal<[InteractionEvent]>`
+- `onPointerOver: Signal<[InteractionEvent]>`
+- `onPointerTap: Signal<[InteractionEvent]>`
+- `onPointerUp: Signal<[InteractionEvent]>`
+
+## Source
+
+[packages/exojs-tilemap/src/TileMapBand.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapBand.ts#L37)
