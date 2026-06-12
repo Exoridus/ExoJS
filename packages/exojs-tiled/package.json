@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-tiled",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Tiled map format asset extension for ExoJS.",
   "type": "module",
   "sideEffects": [
@@ -35,7 +35,7 @@
     "test": "vitest run --root ../.. --project=exojs-tiled"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.12.x"
+    "@codexo/exojs": "0.13.x"
   },
   "dependencies": {
     "@codexo/exojs-tilemap": "workspace:*"

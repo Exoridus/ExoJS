@@ -14,7 +14,7 @@ let manifest: ReleaseManifest;
 
 const resolveArtifact = (file: string): string => join(staging, file);
 
-const tarballName = (name: string): string => `${name.replace('@', '').replace('/', '-')}-0.12.0.tgz`;
+const tarballName = (name: string): string => `${name.replace('@', '').replace('/', '-')}-0.13.0.tgz`;
 
 const writeFixtureTarballs = (): ReleaseManifest => {
   const packages = PUBLISH_ORDER.map((name, i) => {
@@ -22,13 +22,14 @@ const writeFixtureTarballs = (): ReleaseManifest => {
     // Distinct bytes per package so a swap would change the hash.
     writeFileSync(join(staging, file), `tarball-${name}-${i}-${'x'.repeat(64 + i)}`);
     const { sha256, bytes } = sha256File(join(staging, file));
-    return { name, version: '0.12.0', file, sha256, bytes };
+    return { name, version: '0.13.0', file, sha256, bytes };
   });
   return {
-    version: '0.12.0',
+    name: pkg,
+    version: '0.13.0',
     revision: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
     shortRevision: 'a1b2c3d',
-    tag: 'v0.12.0',
+    tag: 'v0.13.0',
     generatedAt: new Date().toISOString(),
     publishOrder: [...PUBLISH_ORDER],
     packages,
@@ -48,12 +49,12 @@ afterEach(() => {
 const publishCalls = (invocations: CommandInvocation[]): CommandInvocation[] => invocations.filter(i => i.command === 'npm' && i.args[0] === 'publish');
 const distTagCalls = (invocations: CommandInvocation[]): CommandInvocation[] => invocations.filter(i => i.command === 'npm' && i.args[0] === 'dist-tag');
 const publishedPackages = (invocations: CommandInvocation[]): string[] => publishCalls(invocations).map(i => i.args[1]); // tarball path
-const liveOptions = (): PublishOptions => ({ ...defaultPublishOptions('0.12.0'), dryRun: false, checkExisting: true });
+const liveOptions = (): PublishOptions => ({ ...defaultPublishOptions('0.13.0'), dryRun: false, checkExisting: true });
 
 describe('publishRelease — dry-run', () => {
     it('publishes all four to the temp dist-tag in Core→Particles→Tilemap→Tiled order, every call carries --dry-run', () => {
     const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? fail('E404') : ok()));
-    const report = publishRelease(manifest, defaultPublishOptions('0.12.0'), runner, resolveArtifact);
+    const report = publishRelease(manifest, defaultPublishOptions('0.13.0'), runner, resolveArtifact);
 
     expect(report.ok).toBe(true);
     expect(report.dryRun).toBe(true);
@@ -70,7 +71,7 @@ describe('publishRelease — dry-run', () => {
     for (const call of published) {
       expect(call.args).toContain('--dry-run');
       expect(call.args).toContain('--tag');
-      expect(call.args[call.args.indexOf('--tag') + 1]).toBe('staging-0.12.0');
+      expect(call.args[call.args.indexOf('--tag') + 1]).toBe('staging-0.13.0');
     }
     // Promotion happens but as dry-run (no real latest move).
     expect(report.packages.every(p => p.promote === 'skipped-dry-run')).toBe(true);
@@ -101,7 +102,7 @@ describe('publishRelease — idempotent resume', () => {
     // Core already present; particles + tilemap + tiled not.
     const runner = createRecordingRunner(inv => {
       if (inv.args[0] === 'view') {
-        return inv.args[1].startsWith('@codexo/exojs@') ? ok('0.12.0') : fail('E404');
+        return inv.args[1].startsWith('@codexo/exojs@') ? ok('0.13.0') : fail('E404');
       }
       return ok();
     });
@@ -123,7 +124,7 @@ describe('publishRelease — idempotent resume', () => {
   });
 
   it('a fully-published release re-run promotes everything and publishes nothing', () => {
-    const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? ok('0.12.0') : ok()));
+    const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? ok('0.13.0') : ok()));
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
     expect(report.ok).toBe(true);
