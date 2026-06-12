@@ -25,7 +25,6 @@ const writeFixtureTarballs = (): ReleaseManifest => {
     return { name, version: '0.13.0', file, sha256, bytes };
   });
   return {
-    name: pkg,
     version: '0.13.0',
     revision: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
     shortRevision: 'a1b2c3d',

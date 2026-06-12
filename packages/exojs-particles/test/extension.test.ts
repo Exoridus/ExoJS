@@ -56,10 +56,9 @@ describe('particlesExtension renderer binding — renders through the package', 
     expect(renderer).toBeInstanceOf(WebGpuParticleRenderer);
   });
 
-  it('create() returns undefined for an unsupported backend (binding skipped)', () => {
+  it('create() throws for an unsupported backend', () => {
     const binding = particlesExtension.renderers![0];
-    const renderer = binding.create(mockBackend('unknown' as unknown as RenderBackendType));
-    expect(renderer).toBeUndefined();
+    expect(() => binding.create(mockBackend('unknown' as unknown as RenderBackendType))).toThrow('Unsupported render backend');
   });
 
   it('binding targets the package ParticleSystem (not a Core type)', () => {
