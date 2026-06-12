@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { TextureRegion } from '@codexo/exojs';
-import { Texture } from '@codexo/exojs';
+import { type Texture } from '@codexo/exojs';
+import { describe, expect, it } from 'vitest';
 
 import { TileChunk } from '../src/TileChunk';
 import { TileLayer } from '../src/TileLayer';

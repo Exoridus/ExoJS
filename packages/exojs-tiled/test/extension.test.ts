@@ -1,12 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
-import { tilemapExtension, TileMap } from '@codexo/exojs-tilemap';
-import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
+import { TileMap,tilemapExtension } from '@codexo/exojs-tilemap';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import { buildSnapshot } from '../../../src/extensions/snapshot';
+import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { tiledExtension } from '../src/tiledExtension';
+import { TiledMap } from '../src/TiledMap';
 import { tiledMapBinding } from '../src/tiledMapBinding';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
-import { TiledMap } from '../src/TiledMap';
 
 describe('@codexo/exojs-tiled extension descriptor', () => {
   it('has correct id', () => {

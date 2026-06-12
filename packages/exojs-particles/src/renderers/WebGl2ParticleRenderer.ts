@@ -1,17 +1,18 @@
-﻿import type { ParticleSystem } from '#ParticleSystem';
-import type { BlendModes } from '@codexo/exojs/rendering';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/rendering';
-
-import { Shader } from '@codexo/exojs/rendering';
+﻿import type { BlendModes } from '@codexo/exojs/rendering';
 import type { Texture } from '@codexo/exojs/rendering';
 import type { View } from '@codexo/exojs/rendering';
-import { AbstractWebGl2Renderer } from '@codexo/exojs/rendering';
-import fragmentSource from './glsl/particle.frag';
-import vertexSource from './glsl/particle.vert';
 import type { WebGl2Backend } from '@codexo/exojs/rendering';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/rendering';
+import { Shader } from '@codexo/exojs/rendering';
+import { AbstractWebGl2Renderer } from '@codexo/exojs/rendering';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from '@codexo/exojs/rendering';
 import { createWebGl2ShaderProgram } from '@codexo/exojs/rendering';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/rendering';
+
+import type { ParticleSystem } from '#ParticleSystem';
+
+import fragmentSource from './glsl/particle.frag';
+import vertexSource from './glsl/particle.vert';
 
 /**
  * Instanced particle renderer for WebGL2.

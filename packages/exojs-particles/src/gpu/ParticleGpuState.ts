@@ -1,11 +1,12 @@
 ﻿/// <reference types="@webgpu/types" />
 
 import type { Rectangle } from '@codexo/exojs';
+import type { Texture } from '@codexo/exojs';
+
 import type { UpdateModule } from "#modules/UpdateModule";
 import type { WgslContribution, WgslUniformField } from "#modules/WgslContribution";
 import { wgslUniformByteSize } from "#modules/WgslContribution";
 import type { ParticleSystem } from "#ParticleSystem";
-import type { Texture } from '@codexo/exojs';
 
 /**
  * GPU-side mirror of one {@link ParticleSystem}. Owns:

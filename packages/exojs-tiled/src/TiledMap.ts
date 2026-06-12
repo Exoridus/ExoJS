@@ -1,6 +1,6 @@
 import { TextureRegion } from '@codexo/exojs';
-import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
 import type { ResolvedTile, TileTransform } from '@codexo/exojs-tilemap';
+import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
 
 import type { TiledMapData, TiledOrientation, TiledPropertyData, TiledRenderOrder } from './data';
 import {
@@ -9,7 +9,7 @@ import {
   TILED_FLIPPED_HORIZONTALLY_FLAG,
   TILED_FLIPPED_VERTICALLY_FLAG,
 } from './gid';
-import { createTiledLayer, TiledGroupLayer, TiledObjectLayer, TiledTileLayer, type TiledLayer } from './TiledLayer';
+import { createTiledLayer, TiledGroupLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledTileset } from './TiledTileset';
 import { TiledFormatError } from './validate';
 
@@ -137,9 +137,9 @@ export class TiledMap {
     // skipped — their cells appear as empty in the runtime layer.
     const runtimeTilesets: TileSet[] = [];
     // indexToRuntime[i] = runtime TileSet for tilesets[i], or null if skipped.
-    const indexToRuntime: (TileSet | null)[] = [];
+    const indexToRuntime: Array<TileSet | null> = [];
     for (let i = 0; i < this.tilesets.length; i++) {
-      const tiledTs = this.tilesets[i]!;
+      const tiledTs = this.tilesets[i];
       if (!tiledTs.texture) {
         if (tiledTs.tileTextures.size > 0) {
           throw new TiledFormatError(
@@ -226,10 +226,10 @@ function populateTileLayer(
   layer: TileLayer,
   gids: readonly number[],
   tiledTilesets: readonly TiledTileset[],
-  indexToRuntime: readonly (TileSet | null)[],
+  indexToRuntime: ReadonlyArray<TileSet | null>,
 ): void {
   for (let i = 0; i < gids.length; i++) {
-    const rawGid = gids[i]!;
+    const rawGid = gids[i];
     if (rawGid === 0) continue;
     const baseGid = maskTiledGid(rawGid);
     const transform: TileTransform = {
@@ -240,14 +240,14 @@ function populateTileLayer(
     // Find owning tileset: rightmost with firstGid <= baseGid (tilesets sorted asc).
     let tsIdx = -1;
     for (let t = tiledTilesets.length - 1; t >= 0; t--) {
-      if (baseGid >= tiledTilesets[t]!.firstGid) { tsIdx = t; break; }
+      if (baseGid >= tiledTilesets[t].firstGid) { tsIdx = t; break; }
     }
     if (tsIdx === -1) continue;
     const runtimeTs = indexToRuntime[tsIdx];
     if (!runtimeTs) continue; // tileset was skipped (no atlas image)
     const tile: ResolvedTile = {
       tileset: runtimeTs,
-      localTileId: baseGid - tiledTilesets[tsIdx]!.firstGid,
+      localTileId: baseGid - tiledTilesets[tsIdx].firstGid,
       transform,
     };
     layer.setTileAt(i % layer.width, Math.floor(i / layer.width), tile);

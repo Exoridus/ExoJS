@@ -29,7 +29,7 @@ function buildTileChunkRendererBinding(batchSize: number): RendererBinding {
         return new WebGpuTileChunkRenderer();
       }
 
-      return undefined;
+      throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
     },
   };
 }

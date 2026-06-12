@@ -1,4 +1,4 @@
-import { Color, Rectangle, Texture, Time } from '@codexo/exojs';
+import { Color, Texture, Time } from '@codexo/exojs';
 
 import { ColorGradient } from '../src/distributions/ColorGradient';
 import { Constant } from '../src/distributions/Constant';

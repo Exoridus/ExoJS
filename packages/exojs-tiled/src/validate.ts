@@ -176,9 +176,9 @@ function validateTiledClassPropertyValue(raw: unknown, source: string, path: str
 /** @internal */
 export function validateTiledPropertyData(raw: unknown, source: string, path: string): TiledPropertyData {
   const obj = expectObject(raw, source, path);
-  const name = expectString(obj['name'], source, joinPath(path, 'name'));
+  const name = expectString(obj.name, source, joinPath(path, 'name'));
   const typePath = joinPath(path, 'type');
-  const typeName = obj['type'] === undefined ? 'string' : expectString(obj['type'], source, typePath);
+  const typeName = obj.type === undefined ? 'string' : expectString(obj.type, source, typePath);
 
   if (!PROPERTY_TYPES.includes(typeName as TiledPropertyType)) {
     throw new TiledFormatError(source, typePath, `unknown property type "${typeName}"`);
@@ -193,18 +193,18 @@ export function validateTiledPropertyData(raw: unknown, source: string, path: st
     case 'string':
     case 'color':
     case 'file':
-      value = expectString(obj['value'], source, valuePath);
+      value = expectString(obj.value, source, valuePath);
       break;
     case 'int':
     case 'float':
     case 'object':
-      value = expectNumber(obj['value'], source, valuePath);
+      value = expectNumber(obj.value, source, valuePath);
       break;
     case 'bool':
-      value = expectBoolean(obj['value'], source, valuePath);
+      value = expectBoolean(obj.value, source, valuePath);
       break;
     case 'class':
-      value = validateTiledClassPropertyValue(obj['value'], source, valuePath);
+      value = validateTiledClassPropertyValue(obj.value, source, valuePath);
       break;
   }
 
@@ -220,8 +220,8 @@ function validateTiledPropertiesArray(value: unknown, source: string, path: stri
 function validateTiledPointData(raw: unknown, source: string, path: string): TiledPointData {
   const obj = expectObject(raw, source, path);
   return {
-    x: expectNumber(obj['x'], source, joinPath(path, 'x')),
-    y: expectNumber(obj['y'], source, joinPath(path, 'y')),
+    x: expectNumber(obj.x, source, joinPath(path, 'x')),
+    y: expectNumber(obj.y, source, joinPath(path, 'y')),
   };
 }
 
@@ -233,23 +233,23 @@ function validateTiledPointArray(value: unknown, source: string, path: string): 
 export function validateTiledAnimationFrameData(raw: unknown, source: string, path: string): TiledAnimationFrameData {
   const obj = expectObject(raw, source, path);
   return {
-    tileid: expectNonNegativeInteger(obj['tileid'], source, joinPath(path, 'tileid')),
-    duration: expectNonNegativeInteger(obj['duration'], source, joinPath(path, 'duration')),
+    tileid: expectNonNegativeInteger(obj.tileid, source, joinPath(path, 'tileid')),
+    duration: expectNonNegativeInteger(obj.duration, source, joinPath(path, 'duration')),
   };
 }
 
 // ── Text objects ─────────────────────────────────────────────────────────────
 
-const HALIGN_VALUES: readonly TiledTextData['halign'][] = ['center', 'right', 'justify', 'left'];
-const VALIGN_VALUES: readonly TiledTextData['valign'][] = ['center', 'bottom', 'top'];
+const HALIGN_VALUES: ReadonlyArray<TiledTextData['halign']> = ['center', 'right', 'justify', 'left'];
+const VALIGN_VALUES: ReadonlyArray<TiledTextData['valign']> = ['center', 'bottom', 'top'];
 
 function validateTiledTextData(raw: unknown, source: string, path: string): TiledTextData {
   const obj = expectObject(raw, source, path);
-  const text = expectString(obj['text'], source, joinPath(path, 'text'));
+  const text = expectString(obj.text, source, joinPath(path, 'text'));
 
   let halign: TiledTextData['halign'];
-  if (obj['halign'] !== undefined) {
-    const value = expectString(obj['halign'], source, joinPath(path, 'halign'));
+  if (obj.halign !== undefined) {
+    const value = expectString(obj.halign, source, joinPath(path, 'halign'));
     if (!HALIGN_VALUES.includes(value as TiledTextData['halign'])) {
       throw new TiledFormatError(source, joinPath(path, 'halign'), `unknown horizontal alignment "${value}"`);
     }
@@ -257,8 +257,8 @@ function validateTiledTextData(raw: unknown, source: string, path: string): Tile
   }
 
   let valign: TiledTextData['valign'];
-  if (obj['valign'] !== undefined) {
-    const value = expectString(obj['valign'], source, joinPath(path, 'valign'));
+  if (obj.valign !== undefined) {
+    const value = expectString(obj.valign, source, joinPath(path, 'valign'));
     if (!VALIGN_VALUES.includes(value as TiledTextData['valign'])) {
       throw new TiledFormatError(source, joinPath(path, 'valign'), `unknown vertical alignment "${value}"`);
     }
@@ -288,23 +288,23 @@ export function validateTiledObjectData(raw: unknown, source: string, path: stri
   const obj = expectObject(raw, source, path);
 
   return {
-    id: expectNonNegativeInteger(obj['id'], source, joinPath(path, 'id')),
-    name: expectString(obj['name'], source, joinPath(path, 'name')),
-    type: expectString(obj['type'], source, joinPath(path, 'type')),
-    x: expectNumber(obj['x'], source, joinPath(path, 'x')),
-    y: expectNumber(obj['y'], source, joinPath(path, 'y')),
-    width: expectNumber(obj['width'], source, joinPath(path, 'width')),
-    height: expectNumber(obj['height'], source, joinPath(path, 'height')),
-    rotation: expectNumber(obj['rotation'], source, joinPath(path, 'rotation')),
-    visible: expectBoolean(obj['visible'], source, joinPath(path, 'visible')),
+    id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
+    name: expectString(obj.name, source, joinPath(path, 'name')),
+    type: expectString(obj.type, source, joinPath(path, 'type')),
+    x: expectNumber(obj.x, source, joinPath(path, 'x')),
+    y: expectNumber(obj.y, source, joinPath(path, 'y')),
+    width: expectNumber(obj.width, source, joinPath(path, 'width')),
+    height: expectNumber(obj.height, source, joinPath(path, 'height')),
+    rotation: expectNumber(obj.rotation, source, joinPath(path, 'rotation')),
+    visible: expectBoolean(obj.visible, source, joinPath(path, 'visible')),
     gid: optionalNonNegativeInteger(obj, 'gid', source, path),
     point: optionalBoolean(obj, 'point', source, path),
     ellipse: optionalBoolean(obj, 'ellipse', source, path),
-    polygon: obj['polygon'] === undefined ? undefined : validateTiledPointArray(obj['polygon'], source, joinPath(path, 'polygon')),
-    polyline: obj['polyline'] === undefined ? undefined : validateTiledPointArray(obj['polyline'], source, joinPath(path, 'polyline')),
-    text: obj['text'] === undefined ? undefined : validateTiledTextData(obj['text'], source, joinPath(path, 'text')),
+    polygon: obj.polygon === undefined ? undefined : validateTiledPointArray(obj.polygon, source, joinPath(path, 'polygon')),
+    polyline: obj.polyline === undefined ? undefined : validateTiledPointArray(obj.polyline, source, joinPath(path, 'polyline')),
+    text: obj.text === undefined ? undefined : validateTiledTextData(obj.text, source, joinPath(path, 'text')),
     template: optionalString(obj, 'template', source, path),
-    properties: validateTiledPropertiesArray(obj['properties'], source, joinPath(path, 'properties')),
+    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
   };
 }
 
@@ -312,23 +312,23 @@ export function validateTiledObjectData(raw: unknown, source: string, path: stri
 
 const LAYER_TYPES = ['tilelayer', 'objectgroup', 'imagelayer', 'group'] as const;
 const SUPPORTED_TILE_LAYER_ENCODINGS = new Set<string>(['csv']);
-const DRAW_ORDERS: readonly NonNullable<TiledObjectLayerData['draworder']>[] = ['topdown', 'index'];
+const DRAW_ORDERS: ReadonlyArray<NonNullable<TiledObjectLayerData['draworder']>> = ['topdown', 'index'];
 
 function validateTiledLayerBase(obj: Record<string, unknown>, source: string, path: string): TiledLayerDataBase {
   return {
-    id: expectNonNegativeInteger(obj['id'], source, joinPath(path, 'id')),
-    name: expectString(obj['name'], source, joinPath(path, 'name')),
+    id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
+    name: expectString(obj.name, source, joinPath(path, 'name')),
     class: optionalString(obj, 'class', source, path),
-    visible: expectBoolean(obj['visible'], source, joinPath(path, 'visible')),
-    opacity: expectNumber(obj['opacity'], source, joinPath(path, 'opacity')),
-    x: expectNumber(obj['x'], source, joinPath(path, 'x')),
-    y: expectNumber(obj['y'], source, joinPath(path, 'y')),
+    visible: expectBoolean(obj.visible, source, joinPath(path, 'visible')),
+    opacity: expectNumber(obj.opacity, source, joinPath(path, 'opacity')),
+    x: expectNumber(obj.x, source, joinPath(path, 'x')),
+    y: expectNumber(obj.y, source, joinPath(path, 'y')),
     offsetx: optionalNumber(obj, 'offsetx', source, path),
     offsety: optionalNumber(obj, 'offsety', source, path),
     parallaxx: optionalNumber(obj, 'parallaxx', source, path),
     parallaxy: optionalNumber(obj, 'parallaxy', source, path),
     tintcolor: optionalString(obj, 'tintcolor', source, path),
-    properties: validateTiledPropertiesArray(obj['properties'], source, joinPath(path, 'properties')),
+    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
   };
 }
 
@@ -339,29 +339,29 @@ function validateTiledGidArray(value: unknown, source: string, path: string): re
 function validateTiledChunkData(raw: unknown, source: string, path: string): TiledChunkData {
   const obj = expectObject(raw, source, path);
   return {
-    x: expectInteger(obj['x'], source, joinPath(path, 'x')),
-    y: expectInteger(obj['y'], source, joinPath(path, 'y')),
-    width: expectPositiveInteger(obj['width'], source, joinPath(path, 'width')),
-    height: expectPositiveInteger(obj['height'], source, joinPath(path, 'height')),
-    data: validateTiledGidArray(obj['data'], source, joinPath(path, 'data')),
+    x: expectInteger(obj.x, source, joinPath(path, 'x')),
+    y: expectInteger(obj.y, source, joinPath(path, 'y')),
+    width: expectPositiveInteger(obj.width, source, joinPath(path, 'width')),
+    height: expectPositiveInteger(obj.height, source, joinPath(path, 'height')),
+    data: validateTiledGidArray(obj.data, source, joinPath(path, 'data')),
   };
 }
 
 function validateTiledTileLayerData(obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledTileLayerData {
-  if (obj['compression'] !== undefined) {
-    throw new TiledFormatError(source, joinPath(path, 'compression'), `compressed tile layer data is not supported (compression: ${JSON.stringify(obj['compression'])})`);
+  if (obj.compression !== undefined) {
+    throw new TiledFormatError(source, joinPath(path, 'compression'), `compressed tile layer data is not supported (compression: ${JSON.stringify(obj.compression)})`);
   }
 
-  const encoding = obj['encoding'];
+  const encoding = obj.encoding;
   if (encoding !== undefined && !(typeof encoding === 'string' && SUPPORTED_TILE_LAYER_ENCODINGS.has(encoding))) {
     throw new TiledFormatError(source, joinPath(path, 'encoding'), `unsupported tile layer encoding ${JSON.stringify(encoding)} (only plain CSV/array data is supported)`);
   }
 
-  const width = expectNonNegativeInteger(obj['width'], source, joinPath(path, 'width'));
-  const height = expectNonNegativeInteger(obj['height'], source, joinPath(path, 'height'));
+  const width = expectNonNegativeInteger(obj.width, source, joinPath(path, 'width'));
+  const height = expectNonNegativeInteger(obj.height, source, joinPath(path, 'height'));
 
-  const hasData = obj['data'] !== undefined;
-  const hasChunks = obj['chunks'] !== undefined;
+  const hasData = obj.data !== undefined;
+  const hasChunks = obj.chunks !== undefined;
 
   if (hasData === hasChunks) {
     throw new TiledFormatError(source, path, hasData ? 'tile layer has both "data" and "chunks"' : 'tile layer has neither "data" nor "chunks"');
@@ -372,15 +372,15 @@ function validateTiledTileLayerData(obj: Record<string, unknown>, base: TiledLay
     type: 'tilelayer',
     width,
     height,
-    data: hasData ? validateTiledGidArray(obj['data'], source, joinPath(path, 'data')) : undefined,
-    chunks: hasChunks ? mapArray(obj['chunks'], source, joinPath(path, 'chunks'), (item, itemPath) => validateTiledChunkData(item, source, itemPath)) : undefined,
+    data: hasData ? validateTiledGidArray(obj.data, source, joinPath(path, 'data')) : undefined,
+    chunks: hasChunks ? mapArray(obj.chunks, source, joinPath(path, 'chunks'), (item, itemPath) => validateTiledChunkData(item, source, itemPath)) : undefined,
   };
 }
 
 function validateTiledObjectLayerData(obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledObjectLayerData {
   let draworder: TiledObjectLayerData['draworder'];
-  if (obj['draworder'] !== undefined) {
-    const value = expectString(obj['draworder'], source, joinPath(path, 'draworder'));
+  if (obj.draworder !== undefined) {
+    const value = expectString(obj.draworder, source, joinPath(path, 'draworder'));
     if (!DRAW_ORDERS.includes(value as NonNullable<TiledObjectLayerData['draworder']>)) {
       throw new TiledFormatError(source, joinPath(path, 'draworder'), `unknown draw order "${value}"`);
     }
@@ -391,7 +391,7 @@ function validateTiledObjectLayerData(obj: Record<string, unknown>, base: TiledL
     ...base,
     type: 'objectgroup',
     draworder,
-    objects: mapArray(obj['objects'], source, joinPath(path, 'objects'), (item, itemPath) => validateTiledObjectData(item, source, itemPath)),
+    objects: mapArray(obj.objects, source, joinPath(path, 'objects'), (item, itemPath) => validateTiledObjectData(item, source, itemPath)),
   };
 }
 
@@ -399,7 +399,7 @@ function validateTiledImageLayerData(obj: Record<string, unknown>, base: TiledLa
   return {
     ...base,
     type: 'imagelayer',
-    image: obj['image'] === undefined ? '' : expectString(obj['image'], source, joinPath(path, 'image')),
+    image: obj.image === undefined ? '' : expectString(obj.image, source, joinPath(path, 'image')),
     repeatx: optionalBoolean(obj, 'repeatx', source, path),
     repeaty: optionalBoolean(obj, 'repeaty', source, path),
   };
@@ -409,14 +409,14 @@ function validateTiledGroupLayerData(obj: Record<string, unknown>, base: TiledLa
   return {
     ...base,
     type: 'group',
-    layers: mapArray(obj['layers'], source, joinPath(path, 'layers'), (item, itemPath) => validateTiledLayerData(item, source, itemPath)),
+    layers: mapArray(obj.layers, source, joinPath(path, 'layers'), (item, itemPath) => validateTiledLayerData(item, source, itemPath)),
   };
 }
 
 /** @internal */
 export function validateTiledLayerData(raw: unknown, source: string, path: string): TiledLayerData {
   const obj = expectObject(raw, source, path);
-  const type = expectString(obj['type'], source, joinPath(path, 'type'));
+  const type = expectString(obj.type, source, joinPath(path, 'type'));
   const base = validateTiledLayerBase(obj, source, path);
 
   switch (type) {
@@ -468,9 +468,9 @@ export function validateTiledTileData(raw: unknown, source: string, path: string
   const obj = expectObject(raw, source, path);
 
   let objectgroup: TiledObjectLayerData | undefined;
-  if (obj['objectgroup'] !== undefined) {
+  if (obj.objectgroup !== undefined) {
     const objectgroupPath = joinPath(path, 'objectgroup');
-    const layer = validateTiledLayerData(obj['objectgroup'], source, objectgroupPath);
+    const layer = validateTiledLayerData(obj.objectgroup, source, objectgroupPath);
     if (layer.type !== 'objectgroup') {
       throw new TiledFormatError(source, objectgroupPath, `expected an "objectgroup" layer, got "${layer.type}"`);
     }
@@ -478,10 +478,10 @@ export function validateTiledTileData(raw: unknown, source: string, path: string
   }
 
   return {
-    id: expectNonNegativeInteger(obj['id'], source, joinPath(path, 'id')),
+    id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
     type: optionalString(obj, 'type', source, path),
-    properties: validateTiledPropertiesArray(obj['properties'], source, joinPath(path, 'properties')),
-    animation: optionalMapArray(obj['animation'], source, joinPath(path, 'animation'), (item, itemPath) => validateTiledAnimationFrameData(item, source, itemPath)),
+    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
+    animation: optionalMapArray(obj.animation, source, joinPath(path, 'animation'), (item, itemPath) => validateTiledAnimationFrameData(item, source, itemPath)),
     objectgroup,
     image: optionalString(obj, 'image', source, path),
     imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
@@ -501,23 +501,23 @@ function validateTiledVersion(value: unknown, source: string, path: string): str
 /** @internal */
 export function validateTiledTilesetData(obj: Record<string, unknown>, source: string, path: string): TiledTilesetData {
   return {
-    name: expectString(obj['name'], source, joinPath(path, 'name')),
+    name: expectString(obj.name, source, joinPath(path, 'name')),
     class: optionalString(obj, 'class', source, path),
-    tilewidth: expectPositiveInteger(obj['tilewidth'], source, joinPath(path, 'tilewidth')),
-    tileheight: expectPositiveInteger(obj['tileheight'], source, joinPath(path, 'tileheight')),
-    tilecount: expectNonNegativeInteger(obj['tilecount'], source, joinPath(path, 'tilecount')),
-    columns: expectNonNegativeInteger(obj['columns'], source, joinPath(path, 'columns')),
+    tilewidth: expectPositiveInteger(obj.tilewidth, source, joinPath(path, 'tilewidth')),
+    tileheight: expectPositiveInteger(obj.tileheight, source, joinPath(path, 'tileheight')),
+    tilecount: expectNonNegativeInteger(obj.tilecount, source, joinPath(path, 'tilecount')),
+    columns: expectNonNegativeInteger(obj.columns, source, joinPath(path, 'columns')),
     spacing: optionalNonNegativeInteger(obj, 'spacing', source, path),
     margin: optionalNonNegativeInteger(obj, 'margin', source, path),
     image: optionalString(obj, 'image', source, path),
     imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
     imageheight: optionalNonNegativeInteger(obj, 'imageheight', source, path),
-    tileoffset: obj['tileoffset'] === undefined ? undefined : validateTiledPointData(obj['tileoffset'], source, joinPath(path, 'tileoffset')),
+    tileoffset: obj.tileoffset === undefined ? undefined : validateTiledPointData(obj.tileoffset, source, joinPath(path, 'tileoffset')),
     objectalignment: optionalString(obj, 'objectalignment', source, path),
-    tiles: optionalMapArray(obj['tiles'], source, joinPath(path, 'tiles'), (item, itemPath) => validateTiledTileData(item, source, itemPath)),
-    properties: validateTiledPropertiesArray(obj['properties'], source, joinPath(path, 'properties')),
+    tiles: optionalMapArray(obj.tiles, source, joinPath(path, 'tiles'), (item, itemPath) => validateTiledTileData(item, source, itemPath)),
+    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
     tiledversion: optionalString(obj, 'tiledversion', source, path),
-    version: obj['version'] === undefined ? undefined : validateTiledVersion(obj['version'], source, joinPath(path, 'version')),
+    version: obj.version === undefined ? undefined : validateTiledVersion(obj.version, source, joinPath(path, 'version')),
   };
 }
 
@@ -528,10 +528,10 @@ export function validateTiledTilesetData(obj: Record<string, unknown>, source: s
  */
 export function validateTiledTilesetRefData(raw: unknown, source: string, path: string): TiledTilesetRefData {
   const obj = expectObject(raw, source, path);
-  const firstgid = expectPositiveInteger(obj['firstgid'], source, joinPath(path, 'firstgid'));
+  const firstgid = expectPositiveInteger(obj.firstgid, source, joinPath(path, 'firstgid'));
 
   if ('source' in obj) {
-    return { firstgid, source: expectString(obj['source'], source, joinPath(path, 'source')) };
+    return { firstgid, source: expectString(obj.source, source, joinPath(path, 'source')) };
   }
 
   return { ...validateTiledTilesetData(obj, source, path), firstgid };
@@ -551,30 +551,30 @@ const RENDER_ORDERS: readonly TiledRenderOrder[] = ['right-down', 'right-up', 'l
 export function validateTiledMapData(raw: unknown, source: string): TiledMapData {
   const obj = expectObject(raw, source, '');
 
-  const type = expectString(obj['type'], source, 'type');
+  const type = expectString(obj.type, source, 'type');
   if (type !== 'map') {
     throw new TiledFormatError(source, 'type', `expected "map", got "${type}"`);
   }
 
-  const version = validateTiledVersion(obj['version'], source, 'version');
+  const version = validateTiledVersion(obj.version, source, 'version');
 
-  const orientationValue = expectString(obj['orientation'], source, 'orientation');
+  const orientationValue = expectString(obj.orientation, source, 'orientation');
   if (!ORIENTATIONS.includes(orientationValue as TiledOrientation)) {
     throw new TiledFormatError(source, 'orientation', `unknown orientation "${orientationValue}" (expected one of ${ORIENTATIONS.join(', ')})`);
   }
   const orientation = orientationValue as TiledOrientation;
 
   let renderorder: TiledRenderOrder | undefined;
-  if (obj['renderorder'] !== undefined) {
-    const value = expectString(obj['renderorder'], source, 'renderorder');
+  if (obj.renderorder !== undefined) {
+    const value = expectString(obj.renderorder, source, 'renderorder');
     if (!RENDER_ORDERS.includes(value as TiledRenderOrder)) {
       throw new TiledFormatError(source, 'renderorder', `unknown render order "${value}" (expected one of ${RENDER_ORDERS.join(', ')})`);
     }
     renderorder = value as TiledRenderOrder;
   }
 
-  const infinite = expectBoolean(obj['infinite'], source, 'infinite');
-  const layers = mapArray(obj['layers'], source, 'layers', (item, itemPath) => validateTiledLayerData(item, source, itemPath));
+  const infinite = expectBoolean(obj.infinite, source, 'infinite');
+  const layers = mapArray(obj.layers, source, 'layers', (item, itemPath) => validateTiledLayerData(item, source, itemPath));
   checkTiledLayerInfiniteConsistency(layers, infinite, source, 'layers');
 
   return {
@@ -584,18 +584,18 @@ export function validateTiledMapData(raw: unknown, source: string): TiledMapData
     class: optionalString(obj, 'class', source, ''),
     orientation,
     renderorder,
-    width: expectNonNegativeInteger(obj['width'], source, 'width'),
-    height: expectNonNegativeInteger(obj['height'], source, 'height'),
-    tilewidth: expectPositiveInteger(obj['tilewidth'], source, 'tilewidth'),
-    tileheight: expectPositiveInteger(obj['tileheight'], source, 'tileheight'),
+    width: expectNonNegativeInteger(obj.width, source, 'width'),
+    height: expectNonNegativeInteger(obj.height, source, 'height'),
+    tilewidth: expectPositiveInteger(obj.tilewidth, source, 'tilewidth'),
+    tileheight: expectPositiveInteger(obj.tileheight, source, 'tileheight'),
     infinite,
     compressionlevel: optionalInteger(obj, 'compressionlevel', source, ''),
     nextlayerid: optionalNonNegativeInteger(obj, 'nextlayerid', source, ''),
     nextobjectid: optionalNonNegativeInteger(obj, 'nextobjectid', source, ''),
     backgroundcolor: optionalString(obj, 'backgroundcolor', source, ''),
     layers,
-    tilesets: mapArray(obj['tilesets'], source, 'tilesets', (item, itemPath) => validateTiledTilesetRefData(item, source, itemPath)),
-    properties: validateTiledPropertiesArray(obj['properties'], source, 'properties'),
+    tilesets: mapArray(obj.tilesets, source, 'tilesets', (item, itemPath) => validateTiledTilesetRefData(item, source, itemPath)),
+    properties: validateTiledPropertiesArray(obj.properties, source, 'properties'),
   };
 }
 

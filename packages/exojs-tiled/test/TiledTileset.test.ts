@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { Texture } from '@codexo/exojs';
+import { describe, expect, it } from 'vitest';
 
 import { TiledTileset } from '../src/TiledTileset';
 

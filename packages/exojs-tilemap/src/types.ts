@@ -1,4 +1,3 @@
-import type { TextureRegion } from '@codexo/exojs';
 import type { TileSet } from './TileSet';
 
 // ── Properties ────────────────────────────────────────────────────────────

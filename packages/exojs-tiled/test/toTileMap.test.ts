@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { vi, beforeEach, describe, expect, it } from 'vitest';
-import { Texture, type AssetLoaderContext } from '@codexo/exojs';
-import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+
+import { type AssetLoaderContext,Texture } from '@codexo/exojs';
+import { type TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
-import { TiledMap } from '../src/TiledMap';
 import { TiledGroupLayer, TiledImageLayer, TiledObjectLayer, TiledTileLayer } from '../src/TiledLayer';
+import { TiledMap } from '../src/TiledMap';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
 import { TiledFormatError } from '../src/validate';
 
@@ -68,7 +69,7 @@ const richFixtures = {
 
 // Expected flip transforms for the 8 Ground cells, in row-major order. The
 // fixture encodes all 8 (flipX, flipY, diagonal) combinations on base gid 1.
-const EXPECTED_FLIPS: ReadonlyArray<{ flipX: boolean; flipY: boolean; diagonal: boolean }> = [
+const EXPECTED_FLIPS: readonly { flipX: boolean; flipY: boolean; diagonal: boolean }[] = [
   { flipX: false, flipY: false, diagonal: false },
   { flipX: true, flipY: false, diagonal: false },
   { flipX: false, flipY: true, diagonal: false },

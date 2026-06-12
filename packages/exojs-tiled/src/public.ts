@@ -1,23 +1,17 @@
 // Side-effect-free public API for @codexo/exojs-tiled.
 // No registration is performed on import.
 
-export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension } from '@codexo/exojs/extensions';
 export { type TiledLoadOptions } from './tiledOptions';
+export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension } from '@codexo/exojs/extensions';
 
 // ── Runtime facade (re-exports from @codexo/exojs-tilemap) ─────────────────
 // These are re-exports of the *same* module bindings — `instanceof TileMap`
 // holds whether the class was imported from @codexo/exojs-tilemap or here.
-export {
-  TileLayer,
-  TileLayerNode,
-  TileMap,
-  TileMapBand,
-  TileMapNode,
-  TileMapView,
-  TileSet,
-  tilemapExtension,
-  TILE_TRANSFORM_IDENTITY,
-} from '@codexo/exojs-tilemap';
+export type { TiledBuildInfo } from './tiledBuildInfo';
+export { tiledBuildInfo } from './tiledBuildInfo';
+export { tiledExtension } from './tiledExtension';
+export { tiledMapBinding } from './tiledMapBinding';
+export { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
 export type {
   ChunkCoord,
   PackedTile,
@@ -36,13 +30,17 @@ export type {
   TileSetOptions,
   TileTransform,
 } from '@codexo/exojs-tilemap';
-
-export { tiledExtension } from './tiledExtension';
-export { tiledMapBinding } from './tiledMapBinding';
-export { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
-
-export type { TiledBuildInfo } from './tiledBuildInfo';
-export { tiledBuildInfo } from './tiledBuildInfo';
+export {
+  TILE_TRANSFORM_IDENTITY,
+  TileLayer,
+  TileLayerNode,
+  TileMap,
+  TileMapBand,
+  tilemapExtension,
+  TileMapNode,
+  TileMapView,
+  TileSet,
+} from '@codexo/exojs-tilemap';
 
 // ── Raw Tiled JSON (TMJ/TSJ) types ──────────────────────────────────────────
 export type {
@@ -71,8 +69,7 @@ export type {
 } from './data';
 
 // ── Parsed source model ─────────────────────────────────────────────────────
-export { TiledMap } from './TiledMap';
-export { TiledObject } from './TiledObject';
+export type { TiledLayerType } from './TiledLayer';
 export {
   createTiledLayer,
   TiledGroupLayer,
@@ -81,15 +78,17 @@ export {
   TiledObjectLayer,
   TiledTileLayer,
 } from './TiledLayer';
-export type { TiledLayerType } from './TiledLayer';
-export { TiledTileset } from './TiledTileset';
+export { TiledMap } from './TiledMap';
+export { TiledObject } from './TiledObject';
 export type { TiledTilesetResources } from './TiledTileset';
+export { TiledTileset } from './TiledTileset';
 
 // ── Validation ───────────────────────────────────────────────────────────────
 export { TiledFormatError } from './validate';
 
 // ── Module augmentation — typed load calls ───────────────────────────────────
 import type { TileMap } from '@codexo/exojs-tilemap';
+
 import type { TiledMap } from './TiledMap';
 
 declare module '@codexo/exojs' {

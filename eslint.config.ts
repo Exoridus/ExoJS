@@ -278,6 +278,309 @@ export default defineConfig([
     },
   },
 
+  // Extension package source (runtime packages: particles, tilemap, tiled).
+  // Each package owns its tsconfig.json; projectService resolves the nearest
+  // tsconfig that includes the file being linted. This REPLACES the previous
+  // state where typed @typescript-eslint rules crashed with exit code 2 because
+  // no parserOptions.project / projectService was configured for these files.
+  {
+    files: ['packages/exojs-*/src/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.es2024,
+      },
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
+      security,
+      unicorn,
+    },
+    rules: {
+      // Import management
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+
+      // Core ESLint
+      complexity: ['error', 20],
+      curly: 'error',
+      'default-case-last': 'error',
+      eqeqeq: ['error', 'always'],
+      'guard-for-in': 'error',
+      'max-lines': ['warn', { max: 999, skipBlankLines: true, skipComments: true }],
+      'no-bitwise': 'off',
+      'no-caller': 'error',
+      'no-console': 'warn',
+      'no-eval': 'error',
+      'no-extra-bind': 'error',
+      'no-label-var': 'error',
+      'no-nested-ternary': 'warn',
+      'no-new-func': 'error',
+      'no-new-wrappers': 'error',
+      'no-promise-executor-return': 'error',
+      'no-self-compare': 'error',
+      'no-sequences': 'error',
+      'no-template-curly-in-string': 'error',
+      'no-undef-init': 'error',
+      'no-unmodified-loop-condition': 'error',
+      'no-unreachable-loop': 'error',
+      'no-useless-assignment': 'warn',
+      'no-useless-escape': 'warn',
+      'no-useless-return': 'error',
+      'object-shorthand': 'error',
+      'prefer-object-spread': 'error',
+      'prefer-promise-reject-errors': 'error',
+      'prefer-template': 'error',
+      radix: 'error',
+      'no-shadow': 'off',
+      'dot-notation': 'off',
+
+      // TypeScript correctness
+      '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/ban-ts-comment': [
+        'error',
+        {
+          'ts-expect-error': 'allow-with-description',
+          'ts-ignore': false,
+          'ts-nocheck': false,
+          'ts-check': false,
+        },
+      ],
+      '@typescript-eslint/class-literal-property-style': 'warn',
+      '@typescript-eslint/consistent-indexed-object-style': ['error', 'record'],
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        {
+          assertionStyle: 'as',
+          objectLiteralTypeAssertions: 'never',
+        },
+      ],
+      '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
+      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
+      '@typescript-eslint/default-param-last': 'error',
+      '@typescript-eslint/explicit-function-return-type': [
+        'error',
+        {
+          allowExpressions: true,
+          allowTypedFunctionExpressions: true,
+          allowHigherOrderFunctions: true,
+        },
+      ],
+      '@typescript-eslint/explicit-member-accessibility': 'warn',
+      '@typescript-eslint/no-base-to-string': 'error',
+      '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
+      '@typescript-eslint/no-deprecated': 'warn',
+      '@typescript-eslint/no-duplicate-enum-values': 'error',
+      '@typescript-eslint/no-duplicate-type-constituents': 'error',
+      '@typescript-eslint/no-empty-function': [
+        'warn',
+        {
+          allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
+        },
+      ],
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-for-in-array': 'error',
+      '@typescript-eslint/no-meaningless-void-operator': 'error',
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        {
+          checksVoidReturn: {
+            arguments: false,
+            attributes: false,
+          },
+        },
+      ],
+      '@typescript-eslint/no-mixed-enums': 'error',
+      '@typescript-eslint/no-non-null-asserted-nullish-coalescing': 'error',
+      '@typescript-eslint/no-non-null-asserted-optional-chain': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-redundant-type-constituents': 'warn',
+      '@typescript-eslint/no-require-imports': 'warn',
+      '@typescript-eslint/no-shadow': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
+      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
+      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
+      '@typescript-eslint/only-throw-error': 'error',
+      '@typescript-eslint/prefer-for-of': 'off',
+      '@typescript-eslint/prefer-function-type': 'error',
+      '@typescript-eslint/prefer-includes': 'error',
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      '@typescript-eslint/prefer-optional-chain': 'warn',
+      '@typescript-eslint/prefer-promise-reject-errors': 'error',
+      '@typescript-eslint/prefer-readonly': 'off',
+      '@typescript-eslint/prefer-reduce-type-parameter': 'error',
+      '@typescript-eslint/prefer-regexp-exec': 'off',
+      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
+      '@typescript-eslint/prefer-ts-expect-error': 'error',
+      '@typescript-eslint/require-await': 'warn',
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        {
+          allowNumber: true,
+          allowBoolean: false,
+          allowAny: false,
+          allowNullish: false,
+          allowRegExp: false,
+        },
+      ],
+      '@typescript-eslint/return-await': ['error', 'in-try-catch'],
+      '@typescript-eslint/strict-boolean-expressions': 'warn',
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/unbound-method': 'warn',
+      '@typescript-eslint/unified-signatures': 'warn',
+
+      // Engine-standard naming convention
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: 'variableLike',
+          format: ['strictCamelCase'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        {
+          selector: 'memberLike',
+          format: ['strictCamelCase'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        {
+          selector: 'typeLike',
+          format: ['StrictPascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        {
+          selector: 'enumMember',
+          format: null,
+          custom: {
+            regex: '^[A-Z][A-Za-z0-9]*$|^[a-z][A-Za-z0-9]*$|^[A-Z][A-Z0-9_]*$',
+            match: true,
+          },
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+      ],
+
+      // Security
+      ...security.configs.recommended.rules,
+      'security/detect-object-injection': 'off',
+      'security/detect-non-literal-fs-filename': 'off',
+      'security/detect-non-literal-regexp': 'off',
+      'security/detect-possible-timing-attacks': 'off',
+      'security/detect-bidi-characters': 'error',
+
+      // Unicorn
+      'unicorn/error-message': 'error',
+      'unicorn/no-array-for-each': 'warn',
+      'unicorn/no-instanceof-array': 'error',
+      'unicorn/no-typeof-undefined': 'error',
+      'unicorn/no-useless-undefined': 'error',
+      'unicorn/no-zero-fractions': 'error',
+      'unicorn/prefer-array-find': 'error',
+      'unicorn/prefer-array-some': 'error',
+      'unicorn/prefer-default-parameters': 'error',
+      'unicorn/prefer-node-protocol': 'error',
+      'unicorn/prefer-spread': 'warn',
+      'unicorn/prefer-string-replace-all': 'error',
+      'unicorn/prefer-ternary': 'warn',
+      'unicorn/throw-new-error': 'error',
+    },
+  },
+
+  // Extension package tests — disable type-aware rules (package tsconfigs
+  // exclude test/), then apply relaxed structural rules matching the core test
+  // policy. Excludes create-exo-app (standalone scaffolding CLI, no ESLint
+  // integration).
+  {
+    files: ['packages/exojs-*/test/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['packages/exojs-*/test/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        projectService: false,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.jest,
+        ...globals.es2024,
+      },
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/class-literal-property-style': 'off',
+      '@typescript-eslint/no-base-to-string': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
+      '@typescript-eslint/no-redundant-type-constituents': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/dot-notation': 'off',
+      'dot-notation': 'off',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        {
+          prefer: 'type-imports',
+          fixStyle: 'inline-type-imports',
+          disallowTypeAnnotations: false,
+        },
+      ],
+      'no-console': 'off',
+      'max-lines': 'off',
+    },
+  },
+
   // ---------------------------------------------------------------------------
   // Per-subsystem overrides for src/. Scoped narrowly because these directories
   // either have hot-path lifecycle invariants, browser-API variance, or typed-
@@ -476,7 +779,23 @@ export default defineConfig([
 
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
   {
-    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/exojs-particles/src/typings.d.ts', 'packages/exojs-tiled/src/typings.d.ts'],
+    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/exojs-particles/src/typings.d.ts', 'packages/exojs-tilemap/src/typings.d.ts', 'packages/exojs-tiled/src/typings.d.ts'],
+    rules: {
+      '@typescript-eslint/naming-convention': 'off',
+    },
+  },
+
+  // Extension bitmask / validation constants follow ALL_CAPS convention.
+  {
+    files: [
+      'packages/exojs-tilemap/src/types.ts',
+      'packages/exojs-tilemap/src/TileLayer.ts',
+      'packages/exojs-tilemap/src/webgl2/WebGl2TileChunkRenderer.ts',
+      'packages/exojs-tilemap/src/webgpu/WebGpuTileChunkRenderer.ts',
+      'packages/exojs-tiled/src/gid.ts',
+      'packages/exojs-tiled/src/url.ts',
+      'packages/exojs-tiled/src/validate.ts',
+    ],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
@@ -486,6 +805,68 @@ export default defineConfig([
     files: ['src/core/Application.ts', 'src/core/SceneManager.ts', 'src/animation/Tween.ts', 'src/rendering/webgl2/WebGl2Backend.ts'],
     rules: {
       'no-console': 'off',
+    },
+  },
+
+  // Extension renderer / GPU hot paths — same relaxed policy as core rendering.
+  {
+    files: ['packages/exojs-tilemap/src/webgl2/**/*.ts', 'packages/exojs-tilemap/src/webgpu/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      complexity: 'off',
+    },
+  },
+
+  // Extension tilemap core — geometry and data-path relaxations.
+  {
+    files: ['packages/exojs-tilemap/src/chunkGeometry.ts', 'packages/exojs-tilemap/src/TileChunk.ts', 'packages/exojs-tilemap/src/TileSet.ts', 'packages/exojs-tilemap/src/TileMapView.ts', 'packages/exojs-tilemap/src/TileLayer.ts', 'packages/exojs-tilemap/src/tilemapExtension.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+    },
+  },
+
+  // Extension particle renderer / GPU hot paths.
+  {
+    files: ['packages/exojs-particles/src/renderers/**/*.ts', 'packages/exojs-particles/src/gpu/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+    },
+  },
+
+  // Extension particle modules with intentionally empty lifecycle stubs.
+  {
+    files: ['packages/exojs-particles/src/modules/DeathModule.ts', 'packages/exojs-particles/src/modules/SpawnModule.ts', 'packages/exojs-particles/src/modules/UpdateModule.ts'],
+    rules: {
+      '@typescript-eslint/no-empty-function': 'off',
+    },
+  },
+
+  // Particle system class — combined overload is a public API decision.
+  {
+    files: ['packages/exojs-particles/src/ParticleSystem.ts'],
+    rules: {
+      '@typescript-eslint/unified-signatures': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+
+  // Particle extension descriptor — backend-type comparison is intentional.
+  {
+    files: ['packages/exojs-particles/src/particlesExtension.ts', 'packages/exojs-particles/src/modules/BurstSpawn.ts'],
+    rules: {
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
     },
   },
 

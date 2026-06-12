@@ -1,12 +1,11 @@
+import { TextureRegion } from '@codexo/exojs';
+import { type Texture } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
-import { TextureRegion } from '@codexo/exojs';
-import { Texture } from '@codexo/exojs';
-
 import { buildChunkPages, orientCode } from '../src/chunkGeometry';
+import type { ReadonlyTileChunk } from '../src/TileChunk';
 import { TileLayer } from '../src/TileLayer';
 import { TileSet } from '../src/TileSet';
-import type { ReadonlyTileChunk } from '../src/TileChunk';
 import { packTile, TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────

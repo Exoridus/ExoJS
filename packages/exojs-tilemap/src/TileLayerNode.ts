@@ -2,9 +2,9 @@ import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
 import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/rendering';
 
-import type { TileLayer } from './TileLayer';
 import { assertPixelSnapMode } from './pixelSnap';
 import { TileChunkNode } from './TileChunkNode';
+import type { TileLayer } from './TileLayer';
 
 /**
  * Options for a {@link TileLayerNode}. All optional; reserved for forward

@@ -106,10 +106,7 @@ jobs:
         run: pnpm typecheck:guides
 
       # Root `pnpm typecheck` only covers src/**; the extension packages own a
-      # separate tsconfig each, so typecheck them explicitly. (Package lint is
-      # intentionally NOT run here — the packages' eslint typed-linting config is
-      # not wired up yet and crashes; tracked separately, out of scope for the
-      # path-coverage fix.)
+      # separate tsconfig each, so typecheck them explicitly.
       - name: Typecheck extension packages
         run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" typecheck
 
@@ -141,7 +138,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm lint:all
 
   unit-tests:
     name: Unit Tests (Coverage)
@@ -389,6 +386,11 @@ jobs:
       # a package manifest is caught here, not at release time.
       - name: Extension package dry runs
         run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" pack --dry-run
+
+      # Verify commit-tracked API docs match a fresh generation from source.
+      # (dry-run check that leaves the working tree unchanged.)
+      - name: Check API doc sync
+        run: pnpm docs:api:check
 
   site-build:
     name: Site build

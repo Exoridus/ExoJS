@@ -1,9 +1,10 @@
-import { describe, expect, it, beforeEach } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import type { RenderBackend } from '@codexo/exojs/rendering';
 import { RenderBackendType } from '@codexo/exojs/rendering';
+import { beforeEach,describe, expect, it } from 'vitest';
+
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
-import { particlesExtension, createParticlesExtension } from '../src/particlesExtension';
+import { createParticlesExtension,particlesExtension } from '../src/particlesExtension';
 import { ParticleSystem } from '../src/ParticleSystem';
 import { WebGl2ParticleRenderer } from '../src/renderers/WebGl2ParticleRenderer';
 import { WebGpuParticleRenderer } from '../src/renderers/WebGpuParticleRenderer';

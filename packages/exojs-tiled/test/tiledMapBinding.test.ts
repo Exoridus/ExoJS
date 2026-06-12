@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { vi, beforeEach, describe, expect, it } from 'vitest';
-import { Texture, type AssetLoaderContext } from '@codexo/exojs';
-import { TileMap } from '@codexo/exojs-tilemap';
+
+import { type AssetLoaderContext,Texture } from '@codexo/exojs';
+import { beforeEach, describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
 import { TiledMap } from '../src/TiledMap';

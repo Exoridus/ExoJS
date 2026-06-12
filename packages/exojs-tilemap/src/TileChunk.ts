@@ -74,7 +74,7 @@ export class TileChunk implements ReadonlyTileChunk {
   private _empty: boolean | null = null;
 
   /** Monotonic revision counter — incremented on every mutation. */
-  private _revision: number = 0;
+  private _revision = 0;
 
   /**
    * @param cx Signed chunk X coordinate (must be finite safe integer).
@@ -152,7 +152,7 @@ export class TileChunk implements ReadonlyTileChunk {
   /** @inheritdoc */
   public getRawAt(lx: number, ly: number): PackedTile {
     this._validateLocalCoord(lx, ly);
-    return this._tiles[this._index(lx, ly)]!;
+    return this._tiles[this._index(lx, ly)];
   }
 
   /** @inheritdoc */
@@ -214,7 +214,7 @@ export class TileChunk implements ReadonlyTileChunk {
     this._validateLocalCoord(lx, ly);
     this._validatePacked(packed);
     const i = this._index(lx, ly);
-    const prev = this._tiles[i]!;
+    const prev = this._tiles[i];
     if (prev === packed) return false;
     this._tiles[i] = packed;
     this._revision++;

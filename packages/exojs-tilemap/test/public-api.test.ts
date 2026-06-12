@@ -1,14 +1,12 @@
-import { describe, expect, it } from 'vitest';
-
 import { TextureRegion } from '@codexo/exojs';
-import { Texture } from '@codexo/exojs';
-
-import { TileLayer } from '../src/TileLayer';
-import { TileSet } from '../src/TileSet';
-import { TILE_TRANSFORM_IDENTITY } from '../src/types';
+import { type Texture } from '@codexo/exojs';
+import { describe, expect, it } from 'vitest';
 
 // Compile-time imports: verify these types are reachable from the package barrel.
 import type { PackedTile, ReadonlyTileChunk } from '../src/index';
+import { TileLayer } from '../src/TileLayer';
+import { TileSet } from '../src/TileSet';
+import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 function fakeTexture(): Texture {
   return {
