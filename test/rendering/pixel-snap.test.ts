@@ -23,14 +23,12 @@ import { View } from '#rendering/View';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 64, h = 64): Texture =>
-  ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 64, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
 
 /** An axis-aligned, non-following view covering a `w × h` world region 1:1. */
 const makeView = (w = 100, h = 100): View => new View(w / 2, h / 2, w, h);
 
-const quad = (x0: number, y0: number, x1: number, y1: number): RenderQuad =>
-  ({ x0, y0, x1, y1, u0: 0, v0: 0, u1: 1, v1: 1 });
+const quad = (x0: number, y0: number, x1: number, y1: number): RenderQuad => ({ x0, y0, x1, y1, u0: 0, v0: 0, u1: 1, v1: 1 });
 
 /** A minimal axis-aligned context for the pure boundary-snapping helpers. */
 const ctxOf = (scaleX: number, scaleY: number): PixelSnapContext => ({
@@ -112,7 +110,12 @@ describe('snapLocalBoundary', () => {
   });
 
   test('the snapped value lands on a whole device pixel', () => {
-    for (const [l, s] of [[10.3, 2], [7.7, 3], [123.456, 1], [5.2, 0.5]] as const) {
+    for (const [l, s] of [
+      [10.3, 2],
+      [7.7, 3],
+      [123.456, 1],
+      [5.2, 0.5],
+    ] as const) {
       expect(snapLocalBoundary(l, s) * s).toBeCloseTo(Math.round(l * s), 6);
     }
   });

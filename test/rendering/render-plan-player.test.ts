@@ -171,18 +171,7 @@ describe('render plan player', () => {
 
     // Both groups have no nested sub-scopes between them: Phase 1 uploads both
     // before any draws, so uploads appear before begin events.
-    expect(spy.events).toEqual([
-      'upload:a:1:0:0:0',
-      'upload:b:1:1:1:1',
-      'begin:a',
-      'prepare:a',
-      'draw:a',
-      'end:a',
-      'begin:b',
-      'prepare:b',
-      'draw:b',
-      'end:b',
-    ]);
+    expect(spy.events).toEqual(['upload:a:1:0:0:0', 'upload:b:1:1:1:1', 'begin:a', 'prepare:a', 'draw:a', 'end:a', 'begin:b', 'prepare:b', 'draw:b', 'end:b']);
     expect(spy.slots).toEqual(['a:0:0', 'b:0:1']);
     expect(spy.uploads).toEqual(['a:1:0:0:0', 'b:1:1:1:1']);
   });

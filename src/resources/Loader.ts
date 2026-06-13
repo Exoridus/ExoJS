@@ -1160,9 +1160,7 @@ export class Loader {
 
     this._handlerFunctions.set(keys.type, {
       load: (config, ctx) => handler.load(toRequest(config), ctx),
-      getIdentityKey: boundIdentityKey
-        ? (config) => boundIdentityKey(toRequest(config))
-        : undefined,
+      getIdentityKey: boundIdentityKey ? config => boundIdentityKey(toRequest(config)) : undefined,
     });
 
     for (const name of resolvedNames) {

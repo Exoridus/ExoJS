@@ -54,53 +54,35 @@ function isFiniteNumber(value: number): boolean {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-export function validateSlices(
-  slices: NineSliceInsets,
-  regionWidth: number,
-  regionHeight: number,
-): void {
+export function validateSlices(slices: NineSliceInsets, regionWidth: number, regionHeight: number): void {
   const { left, top, right, bottom } = slices;
 
-  if (!isFiniteNumber(left) || !isFiniteNumber(top) ||
-      !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
-    throw new Error(
-      `NineSliceSprite: slice values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
-    );
+  if (!isFiniteNumber(left) || !isFiniteNumber(top) || !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
+    throw new Error(`NineSliceSprite: slice values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
   }
 
   if (left < 0 || top < 0 || right < 0 || bottom < 0) {
-    throw new Error(
-      `NineSliceSprite: slice values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
-    );
+    throw new Error(`NineSliceSprite: slice values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
   }
 
   if (left + right > regionWidth) {
-    throw new Error(
-      `NineSliceSprite: slices.left (${left}) + slices.right (${right}) exceeds region width (${regionWidth}).`,
-    );
+    throw new Error(`NineSliceSprite: slices.left (${left}) + slices.right (${right}) exceeds region width (${regionWidth}).`);
   }
 
   if (top + bottom > regionHeight) {
-    throw new Error(
-      `NineSliceSprite: slices.top (${top}) + slices.bottom (${bottom}) exceeds region height (${regionHeight}).`,
-    );
+    throw new Error(`NineSliceSprite: slices.top (${top}) + slices.bottom (${bottom}) exceeds region height (${regionHeight}).`);
   }
 }
 
 export function validateBorder(border: NineSliceInsets): void {
   const { left, top, right, bottom } = border;
 
-  if (!isFiniteNumber(left) || !isFiniteNumber(top) ||
-      !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
-    throw new Error(
-      `NineSliceSprite: border values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
-    );
+  if (!isFiniteNumber(left) || !isFiniteNumber(top) || !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
+    throw new Error(`NineSliceSprite: border values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
   }
 
   if (left < 0 || top < 0 || right < 0 || bottom < 0) {
-    throw new Error(
-      `NineSliceSprite: border values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
-    );
+    throw new Error(`NineSliceSprite: border values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
   }
 }
 
@@ -109,10 +91,7 @@ export function validateBorder(border: NineSliceInsets): void {
 // ---------------------------------------------------------------------------
 
 /** Normalise a uniform number or partial insets object into a full {@link NineSliceInsets}. */
-export function normalizeInsets(
-  value: number | Partial<NineSliceInsets>,
-  fallback?: NineSliceInsets,
-): NineSliceInsets {
+export function normalizeInsets(value: number | Partial<NineSliceInsets>, fallback?: NineSliceInsets): NineSliceInsets {
   if (typeof value === 'number') {
     return Object.freeze({ left: value, top: value, right: value, bottom: value });
   }
@@ -130,17 +109,13 @@ const validRepeatFits = new Set<string>(['clip', 'round']);
 
 function validateModeField(value: unknown, label: string): void {
   if (typeof value !== 'string' || !validRepeatModes.has(value)) {
-    throw new Error(
-      `NineSliceSprite: ${label} must be "stretch", "repeat", or "mirror-repeat".`,
-    );
+    throw new Error(`NineSliceSprite: ${label} must be "stretch", "repeat", or "mirror-repeat".`);
   }
 }
 
 function validateFitField(value: unknown, label: string): void {
   if (typeof value !== 'string' || !validRepeatFits.has(value)) {
-    throw new Error(
-      `NineSliceSprite: ${label} must be "clip" or "round".`,
-    );
+    throw new Error(`NineSliceSprite: ${label} must be "clip" or "round".`);
   }
 }
 
@@ -151,14 +126,38 @@ export function normalizeModes(modes: NineSliceModes | undefined): Readonly<Nine
 
   const normalized: Record<string, unknown> = {};
 
-  if (modes.edges !== undefined) { validateModeField(modes.edges, 'modes.edges'); normalized.edges = modes.edges; }
-  if (modes.center !== undefined) { validateModeField(modes.center, 'modes.center'); normalized.center = modes.center; }
-  if (modes.top !== undefined) { validateModeField(modes.top, 'modes.top'); normalized.top = modes.top; }
-  if (modes.right !== undefined) { validateModeField(modes.right, 'modes.right'); normalized.right = modes.right; }
-  if (modes.bottom !== undefined) { validateModeField(modes.bottom, 'modes.bottom'); normalized.bottom = modes.bottom; }
-  if (modes.left !== undefined) { validateModeField(modes.left, 'modes.left'); normalized.left = modes.left; }
-  if (modes.edgeFit !== undefined) { validateFitField(modes.edgeFit, 'modes.edgeFit'); normalized.edgeFit = modes.edgeFit; }
-  if (modes.centerFit !== undefined) { validateFitField(modes.centerFit, 'modes.centerFit'); normalized.centerFit = modes.centerFit; }
+  if (modes.edges !== undefined) {
+    validateModeField(modes.edges, 'modes.edges');
+    normalized.edges = modes.edges;
+  }
+  if (modes.center !== undefined) {
+    validateModeField(modes.center, 'modes.center');
+    normalized.center = modes.center;
+  }
+  if (modes.top !== undefined) {
+    validateModeField(modes.top, 'modes.top');
+    normalized.top = modes.top;
+  }
+  if (modes.right !== undefined) {
+    validateModeField(modes.right, 'modes.right');
+    normalized.right = modes.right;
+  }
+  if (modes.bottom !== undefined) {
+    validateModeField(modes.bottom, 'modes.bottom');
+    normalized.bottom = modes.bottom;
+  }
+  if (modes.left !== undefined) {
+    validateModeField(modes.left, 'modes.left');
+    normalized.left = modes.left;
+  }
+  if (modes.edgeFit !== undefined) {
+    validateFitField(modes.edgeFit, 'modes.edgeFit');
+    normalized.edgeFit = modes.edgeFit;
+  }
+  if (modes.centerFit !== undefined) {
+    validateFitField(modes.centerFit, 'modes.centerFit');
+    normalized.centerFit = modes.centerFit;
+  }
 
   return Object.freeze(normalized);
 }
@@ -170,14 +169,16 @@ export function equalInsets(a: Readonly<NineSliceInsets>, b: Readonly<NineSliceI
 }
 
 export function equalModes(a: Readonly<NineSliceModes>, b: Readonly<NineSliceModes>): boolean {
-  return a.edges === b.edges
-    && a.center === b.center
-    && a.top === b.top
-    && a.right === b.right
-    && a.bottom === b.bottom
-    && a.left === b.left
-    && a.edgeFit === b.edgeFit
-    && a.centerFit === b.centerFit;
+  return (
+    a.edges === b.edges &&
+    a.center === b.center &&
+    a.top === b.top &&
+    a.right === b.right &&
+    a.bottom === b.bottom &&
+    a.left === b.left &&
+    a.edgeFit === b.edgeFit &&
+    a.centerFit === b.centerFit
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -231,10 +232,7 @@ interface UvGrid {
  * filtering from sampling across slice seams. Outer boundaries use the full
  * region UV range when extrusion is present, or a half-texel inset otherwise.
  */
-function computeSliceUvGrid(
-  region: TextureRegion,
-  slices: NineSliceInsets,
-): UvGrid {
+function computeSliceUvGrid(region: TextureRegion, slices: NineSliceInsets): UvGrid {
   const tw = region.texture.width;
   const th = region.texture.height;
 
@@ -246,12 +244,8 @@ function computeSliceUvGrid(
   const ext = region.extrusion;
 
   // Outer boundary insets: use extrusion if available, otherwise half-texel.
-  const outerInsetU = ext.left > 0 || ext.right > 0
-    ? 0
-    : halfTexelInset / tw;
-  const outerInsetV = ext.top > 0 || ext.bottom > 0
-    ? 0
-    : halfTexelInset / th;
+  const outerInsetU = ext.left > 0 || ext.right > 0 ? 0 : halfTexelInset / tw;
+  const outerInsetV = ext.top > 0 || ext.bottom > 0 ? 0 : halfTexelInset / th;
 
   // Inner slice boundary insets: always apply half-texel to prevent
   // bilinear bleed across internal slice seams.
@@ -278,11 +272,11 @@ function computeSliceUvGrid(
 
   return {
     col0: { u0: uOuter0, u1 },
-    col1: { u0: u1,     u1: u2 },
-    col2: { u0: u2,     u1: uOuter1 },
+    col1: { u0: u1, u1: u2 },
+    col2: { u0: u2, u1: uOuter1 },
     row0: { u0: vOuter0, u1: v1 },
-    row1: { u0: v1,     u1: v2 },
-    row2: { u0: v2,     u1: vOuter1 },
+    row1: { u0: v1, u1: v2 },
+    row2: { u0: v2, u1: vOuter1 },
   };
 }
 
@@ -303,31 +297,21 @@ interface CompressedBorders {
   readonly bb: number;
 }
 
-function compressBorders(
-  border: NineSliceInsets,
-  width: number,
-  height: number,
-): CompressedBorders {
+function compressBorders(border: NineSliceInsets, width: number, height: number): CompressedBorders {
   let bl = border.left;
   let br = border.right;
   let bt = border.top;
   let bb = border.bottom;
 
   if (bl + br > width && bl + br > 0) {
-    warnOnce(
-      'nine-slice:h-compress',
-      'NineSliceSprite: horizontal borders exceed destination width; proportionally compressing.',
-    );
+    warnOnce('nine-slice:h-compress', 'NineSliceSprite: horizontal borders exceed destination width; proportionally compressing.');
     const k = width / (bl + br);
     bl *= k;
     br *= k;
   }
 
   if (bt + bb > height && bt + bb > 0) {
-    warnOnce(
-      'nine-slice:v-compress',
-      'NineSliceSprite: vertical borders exceed destination height; proportionally compressing.',
-    );
+    warnOnce('nine-slice:v-compress', 'NineSliceSprite: vertical borders exceed destination height; proportionally compressing.');
     const k = height / (bt + bb);
     bt *= k;
     bb *= k;

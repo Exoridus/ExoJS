@@ -6,8 +6,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 128, h = 64): Texture =>
-  ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
 
 const makeRegion = (texture: Texture, x = 0, y = 0, width?: number, height?: number): TextureRegion =>
   new TextureRegion(texture, { x, y, width: width ?? texture.width, height: height ?? texture.height });
@@ -116,7 +115,9 @@ describe('normalizeInsets', () => {
 
   test('result is frozen', () => {
     const result = normalizeInsets({ left: 1, top: 2, right: 3, bottom: 4 });
-    expect(() => { (result as Record<string, number>).left = 99; }).toThrow();
+    expect(() => {
+      (result as Record<string, number>).left = 99;
+    }).toThrow();
   });
 });
 
@@ -484,17 +485,23 @@ describe('buildNineSliceQuads — per-edge mode overrides', () => {
     // Top should have exactly 1 quad (stretch), bottom should have multiple (repeat)
     // Top edge with 'stretch' override: should produce exactly 1 quad.
     // Edge is between dx1=10 and dx2=190. Corners are at x0=0,x1=10 (TL) and x0=190,x1=200 (TR).
-    const topQuads = quads.filter(q =>
-      q.y0 === 0 && Math.abs(q.y1 - 10) < 1e-6
-      && q.x0 > 0 && q.x1 < 200
-      && !(Math.abs(q.x0 - 0) < 1e-6 && Math.abs(q.x1 - 10) < 1e-6) // not TL
-      && !(Math.abs(q.x0 - 190) < 1e-6 && Math.abs(q.x1 - 200) < 1e-6) // not TR
+    const topQuads = quads.filter(
+      q =>
+        q.y0 === 0 &&
+        Math.abs(q.y1 - 10) < 1e-6 &&
+        q.x0 > 0 &&
+        q.x1 < 200 &&
+        !(Math.abs(q.x0 - 0) < 1e-6 && Math.abs(q.x1 - 10) < 1e-6) && // not TL
+        !(Math.abs(q.x0 - 190) < 1e-6 && Math.abs(q.x1 - 200) < 1e-6), // not TR
     );
-    const bottomQuads = quads.filter(q =>
-      Math.abs(q.y0 - 90) < 1e-6 && Math.abs(q.y1 - 100) < 1e-6
-      && q.x0 > 0 && q.x1 < 200
-      && !(Math.abs(q.x0 - 0) < 1e-6 && Math.abs(q.x1 - 10) < 1e-6) // not BL
-      && !(Math.abs(q.x0 - 190) < 1e-6 && Math.abs(q.x1 - 200) < 1e-6) // not BR
+    const bottomQuads = quads.filter(
+      q =>
+        Math.abs(q.y0 - 90) < 1e-6 &&
+        Math.abs(q.y1 - 100) < 1e-6 &&
+        q.x0 > 0 &&
+        q.x1 < 200 &&
+        !(Math.abs(q.x0 - 0) < 1e-6 && Math.abs(q.x1 - 10) < 1e-6) && // not BL
+        !(Math.abs(q.x0 - 190) < 1e-6 && Math.abs(q.x1 - 200) < 1e-6), // not BR
     );
     expect(topQuads.length).toBe(1);
     expect(bottomQuads.length).toBeGreaterThan(1);

@@ -62,14 +62,14 @@ const RUNTIME_PACKAGES = ['exojs-config', 'exojs-particles', 'exojs-tilemap', 'e
  * the `site` area, because package READMEs feed the generated package API pages.
  * @param {string} file
  */
-const isPackageDocPath = (file) => /^packages\/[^/]+\/(README\.md|CHANGELOG\.md|LICENSE)$/.test(file);
+const isPackageDocPath = file => /^packages\/[^/]+\/(README\.md|CHANGELOG\.md|LICENSE)$/.test(file);
 
 /**
  * Engine area: core runtime code, shared root tooling, and runtime-package CODE.
  * Gates the unit/coverage, package-build-and-verify and browser lanes.
  * @param {string} file
  */
-const isEnginePath = (file) => {
+const isEnginePath = file => {
   // Core engine source, in-repo tests (incl. the browser/perf suites that import
   // package source through the vitest aliases), and repo automation scripts.
   if (file.startsWith('src/')) return true;
@@ -96,7 +96,7 @@ const isEnginePath = (file) => {
  * or example builds.
  * @param {string} file
  */
-const isSitePath = (file) => {
+const isSitePath = file => {
   if (file.startsWith('site/')) return true;
   if (file.startsWith('examples/')) return true;
   if (file.startsWith('packages/')) return true;
@@ -168,7 +168,10 @@ function parseChangedFiles(raw) {
       // Fall through to newline parsing below.
     }
   }
-  return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -181,10 +184,7 @@ function parseChangedFiles(raw) {
  */
 function main() {
   const eventName = process.env['EVENT_NAME'] ?? '';
-  const areas =
-    eventName === 'pull_request'
-      ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES']))
-      : { engine: true, site: true };
+  const areas = eventName === 'pull_request' ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES'])) : { engine: true, site: true };
 
   // Human-readable trace to the job log (stderr keeps it out of $GITHUB_OUTPUT).
   process.stderr.write(`select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site}\n`);

@@ -51,7 +51,7 @@ const publishedPackages = (invocations: CommandInvocation[]): string[] => publis
 const liveOptions = (): PublishOptions => ({ ...defaultPublishOptions('0.13.0'), dryRun: false, checkExisting: true });
 
 describe('publishRelease — dry-run', () => {
-    it('publishes all four to the temp dist-tag in Core→Particles→Tilemap→Tiled order, every call carries --dry-run', () => {
+  it('publishes all four to the temp dist-tag in Core→Particles→Tilemap→Tiled order, every call carries --dry-run', () => {
     const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? fail('E404') : ok()));
     const report = publishRelease(manifest, defaultPublishOptions('0.13.0'), runner, resolveArtifact);
 
@@ -78,7 +78,7 @@ describe('publishRelease — dry-run', () => {
 });
 
 describe('publishRelease — live happy path', () => {
-    it('publishes then promotes all four to latest', () => {
+  it('publishes then promotes all four to latest', () => {
     const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? fail('E404') : ok()));
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 

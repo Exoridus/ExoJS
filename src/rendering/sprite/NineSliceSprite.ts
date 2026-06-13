@@ -7,21 +7,11 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import type { View } from '#rendering/View';
 
 import type { NineSliceInsets, NineSliceModes, NineSliceOptions, NineSliceQuad } from './nineSlice';
-import {
-  buildNineSliceQuads,
-  equalInsets,
-  equalModes,
-  normalizeInsets,
-  normalizeModes,
-  validateBorder,
-  validateSlices,
-} from './nineSlice';
+import { buildNineSliceQuads, equalInsets, equalModes, normalizeInsets, normalizeModes, validateBorder, validateSlices } from './nineSlice';
 
 function validateSizeInput(width: number, height: number): void {
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
-    throw new Error(
-      `NineSliceSprite: width and height must be finite numbers (got ${width}, ${height}).`,
-    );
+    throw new Error(`NineSliceSprite: width and height must be finite numbers (got ${width}, ${height}).`);
   }
   if (width < 0) {
     throw new Error(`NineSliceSprite: width must be non-negative (got ${width}).`);
@@ -51,14 +41,15 @@ export class NineSliceSprite extends Drawable {
   public constructor(texture: Texture | TextureRegion, options: NineSliceOptions) {
     super();
 
-    this._region = texture instanceof TextureRegion
-      ? texture
-      : new TextureRegion(texture, {
-          x: 0,
-          y: 0,
-          width: texture.width,
-          height: texture.height,
-        });
+    this._region =
+      texture instanceof TextureRegion
+        ? texture
+        : new TextureRegion(texture, {
+            x: 0,
+            y: 0,
+            width: texture.width,
+            height: texture.height,
+          });
 
     const region = this._region;
 
@@ -68,9 +59,7 @@ export class NineSliceSprite extends Drawable {
     this._slices = rawSlices;
 
     // Validate and own border
-    const rawBorder = options.border !== undefined
-      ? normalizeInsets(options.border)
-      : normalizeInsets(options.slices);
+    const rawBorder = options.border !== undefined ? normalizeInsets(options.border) : normalizeInsets(options.slices);
     validateBorder(rawBorder);
     this._border = rawBorder;
 
@@ -248,7 +237,10 @@ export class NineSliceSprite extends Drawable {
     const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
 
     if (!ctx.axisAligned) {
-      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+      warnOnce(
+        'pixel-snap:geometry-downgrade',
+        'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.',
+      );
 
       return base;
     }
@@ -261,14 +253,7 @@ export class NineSliceSprite extends Drawable {
   // -----------------------------------------------------------------------
 
   private _rebuildGeometry(): void {
-    this._quads = buildNineSliceQuads(
-      this._region,
-      this._slices,
-      this._border,
-      this._width,
-      this._height,
-      this._modes,
-    );
+    this._quads = buildNineSliceQuads(this._region, this._slices, this._border, this._width, this._height, this._modes);
     this._geometryDirty = false;
   }
 }

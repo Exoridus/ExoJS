@@ -134,17 +134,13 @@ describe('Extension dependency graph', () => {
     it('direct same-ID/different-object roots', () => {
       const a1 = extension('A');
       const a2 = extension('A');
-      expect(() => buildSnapshot([a1, a2])).toThrow(
-        'Extension "A" was provided by multiple descriptor objects.',
-      );
+      expect(() => buildSnapshot([a1, a2])).toThrow('Extension "A" was provided by multiple descriptor objects.');
     });
 
     it('nested same-ID/different-object — rejected on entry', () => {
       const a2 = extension('A');
       const a1: Extension = { id: 'A', dependencies: [a2] };
-      expect(() => buildSnapshot([a1])).toThrow(
-        'Extension "A" was provided by multiple descriptor objects.',
-      );
+      expect(() => buildSnapshot([a1])).toThrow('Extension "A" was provided by multiple descriptor objects.');
     });
 
     it('nested same-ID/different-object caught before any binding materialisation', () => {
@@ -160,9 +156,7 @@ describe('Extension dependency graph', () => {
       const altShared = extension('shared');
       const A = extension('A', [shared]);
       const B = extension('B', [altShared]);
-      expect(() => buildSnapshot([A, B])).toThrow(
-        'Extension "shared" was provided by multiple descriptor objects.',
-      );
+      expect(() => buildSnapshot([A, B])).toThrow('Extension "shared" was provided by multiple descriptor objects.');
     });
 
     it('same-ID/same-object always deduped (roots)', () => {
@@ -185,9 +179,7 @@ describe('Extension dependency graph', () => {
     it('self-cycle', () => {
       const a: Extension = { id: 'A' };
       (a as { dependencies: Extension[] }).dependencies = [a];
-      expect(() => buildSnapshot([a])).toThrow(
-        'Extension dependency cycle detected: A → A',
-      );
+      expect(() => buildSnapshot([a])).toThrow('Extension dependency cycle detected: A → A');
     });
 
     it('two-node cycle', () => {
@@ -195,9 +187,7 @@ describe('Extension dependency graph', () => {
       const b: Extension = { id: 'B', dependencies: [] };
       (a as { dependencies: Extension[] }).dependencies = [b];
       (b as { dependencies: Extension[] }).dependencies = [a];
-      expect(() => buildSnapshot([a])).toThrow(
-        'Extension dependency cycle detected: A → B → A',
-      );
+      expect(() => buildSnapshot([a])).toThrow('Extension dependency cycle detected: A → B → A');
     });
 
     it('three-node cycle', () => {
@@ -207,9 +197,7 @@ describe('Extension dependency graph', () => {
       (a as { dependencies: Extension[] }).dependencies = [b];
       (b as { dependencies: Extension[] }).dependencies = [c];
       (c as { dependencies: Extension[] }).dependencies = [a];
-      expect(() => buildSnapshot([a])).toThrow(
-        'Extension dependency cycle detected: A → B → C → A',
-      );
+      expect(() => buildSnapshot([a])).toThrow('Extension dependency cycle detected: A → B → C → A');
     });
 
     it('cycle error includes complete path with repeated start at end', () => {
@@ -236,9 +224,7 @@ describe('Extension dependency graph', () => {
       const y: Extension = { id: 'Y', dependencies: [] };
       (y as { dependencies: Extension[] }).dependencies = [y]; // self-cycle
       const root = extension('root', [x, y]);
-      expect(() => buildSnapshot([root])).toThrow(
-        'Extension dependency cycle detected: Y → Y',
-      );
+      expect(() => buildSnapshot([root])).toThrow('Extension dependency cycle detected: Y → Y');
     });
 
     it('cycle detection prevents partial snapshot materialisation', () => {
@@ -315,9 +301,7 @@ describe('Extension dependency graph', () => {
       const snapshot = buildSnapshot([extA, extB]);
       const backend = createStubBackend();
 
-      expect(() => materializeRendererBindings(backend, [...snapshot.renderers])).toThrow(
-        'Two bindings target the same drawable type DrawableX',
-      );
+      expect(() => materializeRendererBindings(backend, [...snapshot.renderers])).toThrow('Two bindings target the same drawable type DrawableX');
     });
 
     it('dependency dedup happens before binding-conflict validation', () => {

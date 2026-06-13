@@ -220,9 +220,7 @@ describe('declarative bindAsset identity propagation', () => {
     loader = new Loader();
   });
 
-  function buildExampleBinding(
-    onLoad: (opts: ResolvedExampleOptions) => void,
-  ): AssetBinding<ExampleAsset, ExampleLoadOptions> {
+  function buildExampleBinding(onLoad: (opts: ResolvedExampleOptions) => void): AssetBinding<ExampleAsset, ExampleLoadOptions> {
     return {
       type: ExampleAsset,
       typeNames: ['example'],
@@ -413,9 +411,7 @@ describe('declarative bindAsset identity propagation', () => {
 
     materializeAssetBindings(loader, [capturingBinding]);
 
-    await expect(
-      loader.load(ExampleAsset, 'thing.dat', { format: 'alt', strict: false } as ExampleLoadOptions),
-    ).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(loader.load(ExampleAsset, 'thing.dat', { format: 'alt', strict: false } as ExampleLoadOptions)).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seenRequest?.source).toBe('thing.dat');
     expect(seenRequest?.options).toEqual({ format: 'alt', strict: false });
