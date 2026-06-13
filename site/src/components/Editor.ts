@@ -35,6 +35,7 @@ export class Editor extends LitElement {
     @state() private _canvasWidth = 0;
     @state() private _canvasHeight = 0;
     @state() private _previewZoom = 1;
+    @state() private _previewExpanded = false;
     @state() private _cursorLine = 1;
     @state() private _cursorColumn = 1;
     @state() private _selectionLength = 0;
@@ -127,7 +128,7 @@ export class Editor extends LitElement {
         const availability = getExampleAvailability(activeExample);
 
         return html`
-            <section class="preview-frame" aria-label="Example preview">
+            <section class="preview-frame${this._previewExpanded ? ' preview-frame--expanded' : ''}" aria-label="Example preview">
                 <exo-preview-toolbar
                     .exampleTitle=${activeExample?.title ?? ''}
                     .capabilities=${activeExample?.capabilities ?? []}
@@ -136,8 +137,10 @@ export class Editor extends LitElement {
                     .zoom=${this._previewZoom}
                     .selectedVersionId=${this.selectedVersionId}
                     .disabled=${!this._sourceCode}
+                    .expanded=${this._previewExpanded}
                     @request-reload=${this._onRequestReload}
                     @request-open-tab=${this._onRequestOpenTab}
+                    @request-toggle-expand=${this._onToggleExpand}
                 ></exo-preview-toolbar>
                 <div class="preview-surface">
                     <exo-preview
@@ -231,6 +234,28 @@ export class Editor extends LitElement {
 
     private _onRequestOpenTab(): void {
         this._previewElement?.openPreviewInTab();
+    }
+
+    private _onToggleExpand(): void {
+        this._previewExpanded = !this._previewExpanded;
+        void this.updateComplete.then(() => this._syncExpandedWidth());
+    }
+
+    // Width break-out for the expanded preview: measure the frame's natural
+    // right edge and extend it rightward to the viewport edge via a negative
+    // margin. The left edge stays put (so it never overlaps the sidebar) and
+    // the editor stays in flow below. Height is handled in CSS.
+    private _syncExpandedWidth(): void {
+        const frame = this.renderRoot.querySelector('.preview-frame');
+        if (!(frame instanceof HTMLElement)) return;
+
+        frame.style.removeProperty('margin-right');
+        if (!this._previewExpanded) return;
+
+        const rect = frame.getBoundingClientRect();
+        const gap = 16;
+        const extend = Math.max(0, window.innerWidth - rect.right - gap);
+        frame.style.marginRight = `${-extend}px`;
     }
 
     public triggerReload(): void {

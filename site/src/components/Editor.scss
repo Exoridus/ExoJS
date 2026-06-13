@@ -22,6 +22,16 @@
     box-shadow: var(--shadow-2);
 }
 
+.preview-frame--expanded {
+    margin-bottom: var(--s-4);
+}
+
+.preview-frame--expanded .preview-surface {
+    // In-flow "focus" expand: the preview grows tall (and full content-width);
+    // the editor stays below and the sidebar stays in place. Not an overlay.
+    min-height: min(80vh, 760px);
+}
+
 .preview-surface {
     position: relative;
     display: flex;

@@ -2,13 +2,22 @@
 import AppShell from '../../layouts/AppShell.astro';
 import { Code } from 'astro:components';
 import { appInfo } from '../../lib/app-info';
-import { getAllExamples } from '../../lib/examples-catalog';
+import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
+import { getExampleExecutionSource } from '../../lib/example-sources';
 import { GUIDE_PARTS } from '../../lib/guide-structure';
 
 const majorVersion = Number.parseInt(appInfo.version.split('.')[0] ?? '0', 10);
 const releaseStage = Number.isFinite(majorVersion) && majorVersion < 1 ? 'Pre-1.0' : 'Stable';
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const demoCount = getAllExamples().length;
+
+// Live hero example — an ambient particle showcase that runs everywhere
+// (WebGL2, no input or audio gesture needed) so the landing shows the real
+// engine rendering in the page, not a video.
+const heroExample = getExamplesForChapter('particles').find(entry => entry.slug === 'bonfire');
+const heroExampleTitle = heroExample?.title ?? 'Bonfire';
+const heroExampleSource = getExampleExecutionSource('particles', 'bonfire');
+const heroExampleCaps = JSON.stringify(heroExample?.capabilities ?? []);
 
 const heroSnippet = `import {
   Application, Keyboard, Scene,
@@ -141,6 +150,21 @@ const examples = [
             </div>
         </section>
 
+        <section class="live-hero" aria-label="Live example">
+            <div class="live-hero-head">
+                <span class="live-tag"><span class="live-dot"></span>Live — rendering in your browser</span>
+                <h2>{heroExampleTitle}</h2>
+                <p>Not a video or a GIF — this is the engine running in the page. Hit play, then open it in the Playground and edit it live.</p>
+            </div>
+            <div class="live-hero-stage">
+                <guide-example-preview chapter="particles" slug="bonfire" title={heroExampleTitle} sourcecode={heroExampleSource} capabilities={heroExampleCaps}></guide-example-preview>
+            </div>
+            <div class="live-hero-actions">
+                <a class="btn btn-ghost" href={`${import.meta.env.BASE_URL}en/playground/?example=particles/bonfire`}>Open in Playground</a>
+                <a class="btn btn-link" href={`${import.meta.env.BASE_URL}en/playground/`}>Browse all {demoCount} demos</a>
+            </div>
+        </section>
+
         <div class="cap-strip">
             <article class="cap">
                 <span class="cap-icon">SCN</span>
@@ -220,6 +244,10 @@ const examples = [
         </section>
     </div>
 </AppShell>
+
+<script>
+    import '../../components/GuideExamplePreview';
+</script>
 
 <style>
     .home {
@@ -486,6 +514,67 @@ const examples = [
         box-shadow: none !important;
         font-size: 13px;
         line-height: 1.7;
+    }
+
+    .live-hero {
+        max-width: 1180px;
+        margin: var(--s-10) auto 0;
+        padding: 0 var(--s-7);
+    }
+
+    .live-hero-head {
+        margin-bottom: var(--s-5);
+    }
+
+    .live-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: var(--s-3);
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--accent);
+    }
+
+    .live-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .live-hero-head h2 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+    }
+
+    .live-hero-head p {
+        margin: 0;
+        color: var(--fg-muted);
+        max-width: 640px;
+        line-height: 1.55;
+    }
+
+    .live-hero-stage {
+        border: 1px solid var(--line);
+        border-radius: var(--r-4);
+        overflow: hidden;
+        box-shadow: var(--shadow-2);
+        background: var(--bg-code);
+    }
+
+    .live-hero-stage guide-example-preview {
+        display: block;
+    }
+
+    .live-hero-actions {
+        display: flex;
+        gap: var(--s-3);
+        align-items: center;
+        margin-top: var(--s-4);
     }
 
     .cap-strip {

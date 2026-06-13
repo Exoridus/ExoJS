@@ -9,10 +9,10 @@
                 overflow: hidden;
                 background: #0b0d12;
             }
+            /* Examples use sizingMode:'fit', so the engine sets width/height:100%
+               + object-fit:contain on the canvas itself — no host override needed. */
             canvas {
                 transform: translateZ(0);
-                width: 100%;
-                height: 100%;
                 outline-style: none;
             }
         </style>

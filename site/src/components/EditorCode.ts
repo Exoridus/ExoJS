@@ -553,6 +553,13 @@ export class EditorCode extends LitElement {
             );
             this._hoverMouseListeners.push(
                 this.editorView.onMouseLeave(() => {
+                    // Keep the popup open while the pointer transits from the word
+                    // to the hover widget; native sticky holds it once it arrives.
+                    // (Does not cancel the hover timer — that aggressive-leave fix stands.)
+                    if (shownForKey !== '') {
+                        const c = getCtrl();
+                        if (c) c['shouldKeepOpenOnEditorMouseMoveOrLeave'] = true;
+                    }
                     lastHoverWordKey = '';
                     shownForKey = '';
                 })

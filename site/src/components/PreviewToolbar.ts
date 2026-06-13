@@ -13,6 +13,7 @@ export class PreviewToolbar extends LitElement {
     @property({ type: Number }) public zoom = 1;
     @property({ type: String }) public selectedVersionId = '';
     @property({ type: Boolean }) public disabled = false;
+    @property({ type: Boolean }) public expanded = false;
     @property({ attribute: false }) public capabilities: Array<Capability> = [];
 
     public render(): ReturnType<LitElement['render']> {
@@ -34,6 +35,16 @@ export class PreviewToolbar extends LitElement {
                 ${this.capabilities.slice(0, 2).map(capability => html`<span class="cap">${capability}</span>`)}
             </div>
             <div class="actions">
+                <button
+                    class="button button--ghost"
+                    type="button"
+                    title=${this.expanded ? 'Collapse preview' : 'Expand preview to fill the screen'}
+                    aria-label=${this.expanded ? 'Collapse preview' : 'Expand preview'}
+                    ?disabled=${this.disabled}
+                    @click=${this._onToggleExpand}
+                >
+                    ${this.expanded ? 'Collapse' : 'Expand'}
+                </button>
                 <button
                     class="button button--ghost"
                     type="button"
@@ -67,6 +78,11 @@ export class PreviewToolbar extends LitElement {
     private _onOpenInTab(): void {
         if (this.disabled) return;
         this.dispatchEvent(new CustomEvent('request-open-tab', { bubbles: true, composed: true }));
+    }
+
+    private _onToggleExpand(): void {
+        if (this.disabled) return;
+        this.dispatchEvent(new CustomEvent('request-toggle-expand', { bubbles: true, composed: true }));
     }
 }
 
