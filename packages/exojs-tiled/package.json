@@ -2,6 +2,11 @@
   "name": "@codexo/exojs-tiled",
   "version": "0.13.0",
   "description": "Tiled map format asset extension for ExoJS.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/exojs-tiled"
+  },
   "type": "module",
   "sideEffects": [
     "./dist/esm/register.js"

@@ -2,6 +2,11 @@
   "name": "@codexo/exojs-tilemap",
   "version": "0.13.0",
   "description": "Generic, format-independent tilemap runtime for ExoJS.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/exojs-tilemap"
+  },
   "type": "module",
   "sideEffects": [
     "./dist/esm/register.js"

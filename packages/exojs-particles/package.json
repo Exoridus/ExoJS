@@ -2,6 +2,11 @@
   "name": "@codexo/exojs-particles",
   "version": "0.13.0",
   "description": "Particle system extension for ExoJS.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/exojs-particles"
+  },
   "type": "module",
   "sideEffects": [
     "./dist/esm/register.js"
