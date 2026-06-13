@@ -35,6 +35,9 @@ export enum ApplicationStatus {
   Stopped = 4,
 }
 
+/** How {@link Application} sizes its canvas within the parent element. */
+export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink';
+
 export interface CanvasApplicationOptions {
   /** Existing canvas element to use. If omitted, Application creates one. */
   element?: HTMLCanvasElement;
@@ -48,6 +51,23 @@ export interface CanvasApplicationOptions {
   tabIndex?: number;
   /** CSS image-rendering hint applied to the canvas style. */
   imageRendering?: 'auto' | 'pixelated' | 'crisp-edges';
+  /**
+   * Element (or CSS selector) to append the canvas to on construction. If
+   * omitted, the canvas is created but not mounted — append it yourself.
+   */
+  mount?: HTMLElement | string;
+  /**
+   * How the canvas is sized within its parent (needs a parent via `mount`, or
+   * an `element` already in the DOM):
+   * - `'fixed'` (default): exactly `width`×`height`.
+   * - `'fill'`: track the parent's size via `ResizeObserver` and re-render to
+   *   fill it; `width`/`height` are the initial size.
+   * - `'fit'`: render at `width`×`height` and CSS-scale to fit the parent,
+   *   preserving aspect ratio (letterboxed).
+   * - `'shrink'`: like `'fit'` but never upscale beyond `width`×`height` —
+   *   shrinks on smaller screens, stays native on larger ones.
+   */
+  sizingMode?: CanvasSizingMode;
 }
 
 export interface RenderingApplicationOptions {
@@ -186,6 +206,7 @@ export class Application {
   private _documentVisible = true;
   private _cursor = 'default';
   private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
+  private _resizeObserver: ResizeObserver | null = null;
 
   public constructor(appSettings: ApplicationOptions = {}) {
     const canvasOptions = appSettings.canvas ?? {};
@@ -209,6 +230,9 @@ export class Application {
     if (canvasOptions.imageRendering !== undefined) {
       this.canvas.style.imageRendering = canvasOptions.imageRendering;
     }
+
+    this._mountCanvas(canvasOptions.mount);
+    this._applySizingMode(canvasOptions.sizingMode ?? 'fixed');
 
     this.options = {
       clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
@@ -486,6 +510,61 @@ export class Application {
     return this;
   }
 
+  /** Append the canvas to a mount element or CSS selector, if provided. */
+  private _mountCanvas(mount?: HTMLElement | string): void {
+    if (mount === undefined || typeof document === 'undefined') {
+      return;
+    }
+
+    const target = typeof mount === 'string' ? document.querySelector(mount) : mount;
+
+    target?.append(this.canvas);
+  }
+
+  /**
+   * Apply the chosen {@link CanvasSizingMode}. `'fill'` observes the parent and
+   * re-renders to its size; `'fit'`/`'shrink'` set CSS so the fixed-resolution
+   * canvas scales to fit the parent (letterboxed). `'fixed'` is a no-op — the
+   * exact pixel size was already applied.
+   */
+  private _applySizingMode(mode: CanvasSizingMode): void {
+    const style = this.canvas.style;
+
+    switch (mode) {
+      case 'fill': {
+        const target = this.canvas.parentElement;
+
+        if (typeof ResizeObserver === 'undefined' || !target) {
+          break;
+        }
+
+        this._resizeObserver = new ResizeObserver(() => {
+          const width = target.clientWidth;
+          const height = target.clientHeight;
+
+          if (width > 0 && height > 0) {
+            this.resize(width, height);
+          }
+        });
+        this._resizeObserver.observe(target);
+        break;
+      }
+      case 'fit':
+        style.width = '100%';
+        style.height = '100%';
+        style.objectFit = 'contain';
+        break;
+      case 'shrink':
+        style.maxWidth = '100%';
+        style.maxHeight = '100%';
+        style.objectFit = 'contain';
+        break;
+      case 'fixed':
+      default:
+        break;
+    }
+  }
+
   /**
    * Set the canvas cursor. Strings are passed through to `canvas.style.cursor`
    * verbatim (CSS values like `'pointer'`, `'crosshair'`, or `url(...)`).
@@ -523,6 +602,9 @@ export class Application {
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
     }
+
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
 
     this.stop();
     this.loader.destroy();
