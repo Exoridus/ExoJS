@@ -1,7 +1,7 @@
 /**
  * Prepare/verify stage of the coordinated release.
  *
- * Build-once contract: the caller builds the three official packages exactly
+ * Build-once contract: the caller builds the four official packages exactly
  * once; this stage packs them WITHOUT re-running their build (`--ignore-scripts`
  * skips `prepack`), hashes the resulting tarballs, and records the digests in a
  * `release-manifest.json` + `checksums.sha256`. The `publish` stage then
@@ -42,15 +42,16 @@ const readVersion = (packageJsonPath: string): { name: string; version: string }
   return { name: pkg.name, version: pkg.version };
 };
 
-/** Resolves the three official packages in canonical publish order. */
+/** Resolves the four official packages in canonical publish order (PUBLISH_ORDER). */
 export const officialPackages = (rootDir: string): OfficialPackage[] => [
   { name: '@codexo/exojs', dir: rootDir },
   { name: '@codexo/exojs-particles', dir: resolve(rootDir, 'packages/exojs-particles') },
+  { name: '@codexo/exojs-tilemap', dir: resolve(rootDir, 'packages/exojs-tilemap') },
   { name: '@codexo/exojs-tiled', dir: resolve(rootDir, 'packages/exojs-tiled') },
 ];
 
 /**
- * Asserts all three official packages share one lockstep version and returns it.
+ * Asserts all official packages share one lockstep version and returns it.
  * Throws otherwise — a coordinated release must be version-coherent.
  */
 export const assertLockstepVersion = (packages: OfficialPackage[]): string => {
@@ -63,7 +64,7 @@ export const assertLockstepVersion = (packages: OfficialPackage[]): string => {
 };
 
 /**
- * Packs the three official packages into `stagingDir` without rebuilding them
+ * Packs the official packages into `stagingDir` without rebuilding them
  * (`--ignore-scripts` so `prepack` does not fire). Returns the absolute tarball
  * path for each, in publish order. Throws if any pack fails or a tarball is
  * missing — a coordinated release cannot have a hole in the matrix.
@@ -124,7 +125,7 @@ export interface PrepareResult {
 }
 
 /**
- * End-to-end prepare: packs the three tarballs into a clean staging dir, hashes
+ * End-to-end prepare: packs the four tarballs into a clean staging dir, hashes
  * them, and writes `release-manifest.json` + `checksums.sha256`. The caller is
  * responsible for having built the packages first (build-once).
  *

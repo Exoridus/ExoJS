@@ -1,7 +1,7 @@
 /**
  * External consumer smoke for the coordinated release.
  *
- * Installs the three packed tarballs into a throwaway project OUTSIDE the
+ * Installs the four packed tarballs into a throwaway project OUTSIDE the
  * repository (so no workspace/source resolution can leak in) and proves they
  * work for the three audiences a published release must serve:
  *
@@ -11,8 +11,10 @@
  *     against the shipped `.d.ts`. Combined with `attw`'s `bundler 🟢` this is
  *     the Vite-consumer proof without needing Vite installed.
  *
- * Fully offline: the tarballs declare no runtime dependencies, so
- * `npm install --offline` of all three resolves with no registry access.
+ * Fully offline: the only runtime dependency in the set (@codexo/exojs-tiled →
+ * @codexo/exojs-tilemap) is satisfied by the tilemap tarball installed
+ * alongside, so `npm install --offline` of all four resolves with no registry
+ * access.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -47,15 +49,17 @@ const run = (command: string, args: string[], cwd: string): { code: number; outp
 
 const CONSUMER_TS = `import { Application, Scene } from '@codexo/exojs';
 import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles';
+import { TileMap, tilemapExtension } from '@codexo/exojs-tilemap';
 import { TiledMap, tiledExtension } from '@codexo/exojs-tiled';
 
 export class DemoScene extends Scene {}
 
-export function bootstrap(): { app: Application; system: typeof ParticleSystem; map: typeof TiledMap } {
+export function bootstrap(): { app: Application; system: typeof ParticleSystem; tiles: typeof TileMap; map: typeof TiledMap } {
     const app = new Application();
     void particlesExtension;
+    void tilemapExtension;
     void tiledExtension;
-    return { app, system: ParticleSystem, map: TiledMap };
+    return { app, system: ParticleSystem, tiles: TileMap, map: TiledMap };
 }
 `;
 
@@ -79,6 +83,7 @@ const CONSUMER_TSCONFIG = JSON.stringify(
 
 const NODE_SMOKE = `import * as exo from '@codexo/exojs';
 import * as particles from '@codexo/exojs-particles';
+import * as tilemap from '@codexo/exojs-tilemap';
 import * as tiled from '@codexo/exojs-tiled';
 
 const checks = [
@@ -86,8 +91,11 @@ const checks = [
   ['@codexo/exojs Scene', typeof exo.Scene === 'function'],
   ['@codexo/exojs-particles ParticleSystem', typeof particles.ParticleSystem === 'function'],
   ['@codexo/exojs-particles particlesExtension', particles.particlesExtension != null],
+  ['@codexo/exojs-tilemap TileMap', typeof tilemap.TileMap === 'function'],
+  ['@codexo/exojs-tilemap tilemapExtension', tilemap.tilemapExtension != null],
   ['@codexo/exojs-tiled TiledMap', typeof tiled.TiledMap === 'function'],
   ['@codexo/exojs-tiled tiledExtension', tiled.tiledExtension != null],
+  ['facade TileMap identity (tiled === tilemap)', tiled.TileMap === tilemap.TileMap],
 ];
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 if (failed.length > 0) {
@@ -98,7 +106,7 @@ console.log('NODE_OK ' + checks.length);
 `;
 
 /**
- * Runs the external-consumer checks against three tarball paths. Returns one
+ * Runs the external-consumer checks against four tarball paths. Returns one
  * {@link ConsumerCheck} per audience; `ok` overall is the conjunction.
  */
 export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; consumerDir: string; checks: ConsumerCheck[] } => {
@@ -111,12 +119,13 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
       JSON.stringify({ name: 'exo-external-consumer', private: true, type: 'module', version: '1.0.0' }, null, 2),
     );
 
-    // 1. Install all three tarballs offline (no runtime deps → no registry).
+    // 1. Install all four tarballs offline (tiled's tilemap dep resolves
+    // against the tilemap tarball installed alongside → no registry).
     const install = run('npm', ['install', '--no-audit', '--no-fund', '--offline', '--no-save', ...tarballs], consumerDir);
     // `--no-save` keeps package.json clean; pass tarballs positionally.
     const installOk = install.code === 0 && existsSync(join(consumerDir, 'node_modules', '@codexo', 'exojs'));
     checks.push({
-      name: 'install (offline, 3 tarballs)',
+      name: 'install (offline, 4 tarballs)',
       ok: installOk,
       detail: installOk ? undefined : install.output.trim().split('\n').slice(-3).join(' '),
     });
@@ -149,10 +158,15 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
   }
 };
 
-// CLI: pack the three official packages into a temp dir and run the checks.
+// CLI: pack the four official packages into a temp dir and run the checks.
 if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === resolve(process.argv[1] ?? '')) {
   const staging = mkdtempSync(join(tmpdir(), 'exo-cons-pack-'));
-  const dirs = [repoRoot, resolve(repoRoot, 'packages/exojs-particles'), resolve(repoRoot, 'packages/exojs-tiled')];
+  const dirs = [
+    repoRoot,
+    resolve(repoRoot, 'packages/exojs-particles'),
+    resolve(repoRoot, 'packages/exojs-tilemap'),
+    resolve(repoRoot, 'packages/exojs-tiled'),
+  ];
   const version = (JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { version: string }).version;
 
   for (const dir of dirs) {
@@ -162,7 +176,7 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
       process.exit(1);
     }
   }
-  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tiled'].map(n => join(staging, `${n}-${version}.tgz`));
+  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tilemap', 'codexo-exojs-tiled'].map(n => join(staging, `${n}-${version}.tgz`));
 
   process.stdout.write('\n=== verify:external-consumers ===\n');
   const result = verifyExternalConsumers(tarballs);

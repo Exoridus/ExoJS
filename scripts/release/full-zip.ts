@@ -3,8 +3,8 @@
  *
  * A self-contained, offline-servable snapshot of a coordinated release:
  *
- *   npm/      the three official tarballs (Core, Particles, Tiled)
- *   vendor/   each package's ESM tree (exojs, exojs-particles, exojs-tiled)
+ *   npm/      the four official tarballs (Core, Particles, Tilemap, Tiled)
+ *   vendor/   each package's ESM tree (exojs, exojs-particles, exojs-tilemap, exojs-tiled)
  *   examples/ src/** (TS), js/** (transpiled), assets/**, examples.json
  *   site/     the built static site (itself servable; references ./vendor + ./examples)
  *   README.md CHANGELOG.md LICENSE release-manifest.json checksums.sha256
@@ -33,6 +33,7 @@ export interface AssembleOptions {
 const VENDOR_PACKAGES = [
   { name: 'exojs', vendorDir: 'exojs' },
   { name: 'exojs-particles', vendorDir: 'exojs-particles' },
+  { name: 'exojs-tilemap', vendorDir: 'exojs-tilemap' },
   { name: 'exojs-tiled', vendorDir: 'exojs-tiled' },
 ] as const;
 
@@ -136,7 +137,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   rmSync(treeDir, { recursive: true, force: true });
   mkdirSync(treeDir, { recursive: true });
 
-  // npm/ — the three official tarballs.
+  // npm/ — the official tarballs (manifest-driven).
   const npmOut = join(treeDir, 'npm');
   for (const record of options.manifest.packages) {
     copyFile(resolve(options.stagingDir, record.file), npmOut);

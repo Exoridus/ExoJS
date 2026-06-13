@@ -9,12 +9,13 @@
  *     lockstep version.
  *  2. Each extension's peerDependencies["@codexo/exojs"] is "<major>.<minor>.x".
  *  3. create-exo-app is versioned independently (a different version line).
- *  4. release.yml builds all three packages in the PREPARE stage.
- *  5. PREPARE runs `release:prepare` (packs three tarballs + Full ZIP) and
+ *  4. release.yml builds all four packages in the PREPARE stage.
+ *  5. PREPARE runs `release:prepare` (packs four tarballs + Full ZIP) and
  *     uploads the artifacts.
  *  6. PUBLISH consumes those artifacts (`download-artifact` + `release:publish`)
  *     and never rebuilds.
- *  7. The publish order Core → Particles → Tilemap → Tiled is the canonical PUBLISH_ORDER.
+ *  7. The publish order Core → Particles → Tilemap → Tiled is the canonical PUBLISH_ORDER,
+ *     and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
  *
  * Read-only: safe to run in dry-run/CI. Exits non-zero on any inconsistency.
  *
@@ -25,6 +26,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PUBLISH_ORDER } from './release/manifest.ts';
+import { officialPackages } from './release/prepare.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -93,7 +95,7 @@ const requireInWorkflow = (needle: string, label: string): void => {
   }
 };
 
-// 4. PREPARE builds all three official packages exactly once (build-once).
+// 4. PREPARE builds all four official packages exactly once (build-once).
 requireInWorkflow('pnpm build', 'prepare builds core');
 requireInWorkflow('pnpm --filter @codexo/exojs-particles build', 'prepare builds particles');
 requireInWorkflow('pnpm --filter @codexo/exojs-tilemap build', 'prepare builds tilemap');
@@ -125,11 +127,33 @@ if (/run:\s*pnpm build\b/.test(publishSection)) {
   ok.push('publish job does not rebuild the runtime packages');
 }
 
-// 7. Canonical publish order Core → Particles → Tiled (enforced in code).
-if (PUBLISH_ORDER[0] === '@codexo/exojs' && PUBLISH_ORDER[1] === '@codexo/exojs-particles' && PUBLISH_ORDER[2] === '@codexo/exojs-tilemap' && PUBLISH_ORDER[3] === '@codexo/exojs-tiled') {
+// 7. Canonical publish order Core → Particles → Tilemap → Tiled (enforced in code).
+if (
+  PUBLISH_ORDER[0] === '@codexo/exojs' &&
+  PUBLISH_ORDER[1] === '@codexo/exojs-particles' &&
+  PUBLISH_ORDER[2] === '@codexo/exojs-tilemap' &&
+  PUBLISH_ORDER[3] === '@codexo/exojs-tiled'
+) {
   ok.push('PUBLISH_ORDER is Core → Particles → Tilemap → Tiled');
 } else {
   problems.push(`PUBLISH_ORDER must be Core → Particles → Tilemap → Tiled, got ${PUBLISH_ORDER.join(' → ')}`);
+}
+
+// 7b. What `release:prepare` actually packs (officialPackages) must cover the
+// canonical PUBLISH_ORDER exactly — a package missing here would silently never
+// be packed, and therefore never published.
+const packed = officialPackages(rootDir);
+const packedNames = packed.map(p => p.name);
+if (packedNames.length === PUBLISH_ORDER.length && packedNames.every((name, i) => name === PUBLISH_ORDER[i])) {
+  ok.push('officialPackages() packs exactly the PUBLISH_ORDER set, in order');
+} else {
+  problems.push(`officialPackages() must pack ${PUBLISH_ORDER.join(' → ')}, got ${packedNames.join(' → ')}`);
+}
+for (const pkg of packed) {
+  const manifestName = (JSON.parse(readFileSync(resolve(pkg.dir, 'package.json'), 'utf8')) as { name: string }).name;
+  if (manifestName !== pkg.name) {
+    problems.push(`officialPackages() maps ${pkg.name} to a directory whose package.json is "${manifestName}" (${pkg.dir}).`);
+  }
 }
 
 // --- Report ---
