@@ -3,16 +3,16 @@ import { DebugOverlay } from '@codexo/exojs/debug';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 const debug = new DebugOverlay(app);
 debug.layers.hitTest.visible = true;
@@ -26,12 +26,14 @@ class PointerAndHittestScene extends Scene {
     }
 
     override init(loader): void {
+        const { width, height } = this.app.canvas;
+
         this.sprites = [];
         for (let i = 0; i < 5; i++) {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
                 .setAnchor(0.5)
                 .setScale(1.2)
-                .setPosition(300 + i * 60, 300 + (i % 2) * 40);
+                .setPosition(width / 2 - 120 + i * 60, height / 2 - 20 + (i % 2) * 40);
             sprite.zIndex = i;
             sprite.interactive = true;
             sprite.draggable = true;

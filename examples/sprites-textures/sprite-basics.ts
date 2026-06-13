@@ -1,52 +1,73 @@
 import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(18, 20, 28),
     loader: {
         basePath: 'assets/',
     },
 });
 
-document.body.append(app.canvas);
-
 class SpriteBasicsScene extends Scene {
-    private bunny!: Sprite;
-    private tints!: Color[];
-    private tintIndex = 0;
-    private tintTime = 0;
+    private ship!: Sprite;
+    // A single reusable tint colour whose alpha channel we animate each frame.
+    private tint = new Color(120, 200, 255, 1);
+    private elapsed = 0;
+    private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load(Texture, { ship: 'image/ship-a.png' });
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.bunny = new Sprite(loader.get(Texture, 'bunny'));
-        this.bunny.setPosition((width / 2) | 0, (height / 2) | 0);
-        this.bunny.setAnchor(0.5);
-        this.tints = [new Color(255, 120, 120), new Color(120, 255, 160), new Color(120, 180, 255)];
-        this.bunny.setTint(this.tints[this.tintIndex]);
+        this.ship = new Sprite(loader.get(Texture, 'ship'));
+        this.ship.setPosition((width / 2) | 0, (height / 2) | 0);
+        this.ship.setAnchor(0.5);
+        this.ship.setScale(3);
+        this.ship.setTint(this.tint);
+
+        this.hud = mountControls({
+            title: 'Sprite Basics',
+            hint: 'One Sprite, four transforms: position drifts, rotation spins, scale pulses, alpha fades.',
+            status: 'alpha 1.00',
+        });
     }
 
     override update(delta): void {
-        this.bunny.rotate(delta.seconds * 360);
-        this.tintTime += delta.seconds;
+        this.elapsed += delta.seconds;
 
-        if (this.tintTime >= 0.5) {
-            this.tintTime = 0;
-            this.tintIndex = (this.tintIndex + 1) % this.tints.length;
-            this.bunny.setTint(this.tints[this.tintIndex]);
-        }
+        const { width, height } = this.app.canvas;
+
+        // Position: a gentle figure-eight drift around the canvas centre.
+        const driftX = Math.sin(this.elapsed * 0.8) * 90;
+        const driftY = Math.sin(this.elapsed * 1.6) * 50;
+        this.ship.setPosition(width / 2 + driftX, height / 2 + driftY);
+
+        // Rotation: a steady spin (degrees per second).
+        this.ship.rotate(delta.seconds * 90);
+
+        // Scale: a slow breathing pulse between 2.4x and 3.6x.
+        this.ship.setScale(3 + Math.sin(this.elapsed * 1.2) * 0.6);
+
+        // Alpha: fade the tint's alpha channel between 0.2 and 1.0 and re-apply.
+        const alpha = 0.6 + Math.sin(this.elapsed * 2) * 0.4;
+        this.tint.a = alpha;
+        this.ship.setTint(this.tint);
+
+        this.hud.setStatus(`alpha ${alpha.toFixed(2)}`);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this.bunny);
+        context.render(this.ship);
     }
 }
 

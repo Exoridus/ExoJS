@@ -1,28 +1,33 @@
 // Auto-generated from cursor-attractor-particles.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Texture, Vector, } from '@codexo/exojs';
-import { AlphaFadeOverLifetime, AttractToPoint, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';
+import { Application, Color, Scene, Texture, Vector } from '@codexo/exojs';
+import { AlphaFadeOverLifetime, AttractToPoint, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, RepelFromPoint, } from '@codexo/exojs-particles';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
     extensions: [particlesExtension],
 });
-document.body.append(app.canvas);
+// Acceleration magnitude shared by both force modules (units / s²). Only the
+// active mode's module carries this strength; the inactive one is held at 0.
+const forceStrength = 700;
 class CursorAttractorParticlesScene extends Scene {
     system;
     attractor;
+    repeller;
+    mode = 'attract';
+    hud;
     async load(loader) {
-        await loader.load(Texture, { particle: 'image/particle-light.png' });
+        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 32000 });
-        this.system.setPosition(400, 300);
-        this.attractor = new AttractToPoint(0, 0, 700, 260);
+        this.system.setPosition(width / 2, height / 2);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(2200),
             lifetime: new Constant(2.6),
@@ -30,12 +35,58 @@ class CursorAttractorParticlesScene extends Scene {
             velocity: new ConeDirection(0, Math.PI, 10, 100),
             scale: new Constant(new Vector(0.18, 0.18)),
         }));
+        // Both force fields target the same cursor point. We swap behaviour by
+        // moving the strength between them — the inactive module stays at 0 so
+        // it contributes no acceleration. `falloff`/`radius` of 260 softens the
+        // pull/push near the centre instead of slingshotting particles.
+        this.attractor = new AttractToPoint(0, 0, forceStrength, 260);
+        this.repeller = new RepelFromPoint(0, 0, 0, 260);
         this.system.addUpdateModule(this.attractor);
+        this.system.addUpdateModule(this.repeller);
         this.system.addUpdateModule(new AlphaFadeOverLifetime());
         this.app.input.onPointerMove.add(pointer => {
-            this.attractor.x = pointer.x - this.system.position.x;
-            this.attractor.y = pointer.y - this.system.position.y;
+            const localX = pointer.x - this.system.position.x;
+            const localY = pointer.y - this.system.position.y;
+            this.attractor.x = localX;
+            this.attractor.y = localY;
+            this.repeller.x = localX;
+            this.repeller.y = localY;
         });
+        this.hud = mountControls({
+            title: 'Cursor Attractor Particles',
+            controls: [
+                { keys: 'Move', action: 'steer the force field' },
+                { keys: 'Toggle', action: 'switch attract / repel' },
+            ],
+            status: 'Mode: Attract',
+            hint: 'Move the cursor over the canvas to drag the particle field around.',
+        });
+        const toggle = mountControlPanel({ title: 'Force Field' }).addToggle({
+            label: 'Repel (off = attract)',
+            value: false,
+            onChange: repel => this.setMode(repel ? 'repel' : 'attract'),
+        });
+        // A pointer button also flips the mode, so the demo is usable without
+        // the slider panel; keep the toggle UI in sync when that happens.
+        this.app.input.onPointerDown.add(() => {
+            const next = this.mode === 'attract' ? 'repel' : 'attract';
+            this.setMode(next);
+            toggle.set(next === 'repel');
+        });
+        this.setMode('attract');
+    }
+    setMode(mode) {
+        this.mode = mode;
+        if (mode === 'attract') {
+            this.attractor.strength = forceStrength;
+            this.repeller.strength = 0;
+            this.hud.setStatus('Mode: Attract');
+        }
+        else {
+            this.attractor.strength = 0;
+            this.repeller.strength = forceStrength;
+            this.hud.setStatus('Mode: Repel');
+        }
     }
     update(delta) {
         this.system.update(delta);

@@ -3,8 +3,10 @@ import { Application, Color, Scene, Texture, Vector, View } from '@codexo/exojs'
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
@@ -12,7 +14,6 @@ const app = new Application({
     },
     extensions: [particlesExtension],
 });
-document.body.append(app.canvas);
 class ScreenShakeOnExplosionScene extends Scene {
     view;
     ps;
@@ -22,9 +23,10 @@ class ScreenShakeOnExplosionScene extends Scene {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
     init(loader) {
-        this.view = new View(400, 300, 800, 600);
+        const { width, height } = this.app.canvas;
+        this.view = new View(width / 2, height / 2, width, height);
         this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
-        this.ps.setPosition(400, 300);
+        this.ps.setPosition(width / 2, height / 2);
         this.burstPos = new Vector(0, 0);
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 160 }],

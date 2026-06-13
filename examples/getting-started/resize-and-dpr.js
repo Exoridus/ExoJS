@@ -3,8 +3,10 @@ import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs'
 // #region guide:app-setup
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
         pixelRatio: window.devicePixelRatio || 1,
     },
     clearColor: Color.black,
@@ -14,8 +16,10 @@ const app = new Application({
 });
 // #endregion guide:app-setup
 document.body.style.margin = '0';
-document.body.append(app.canvas);
 // #region guide:resize
+// This example demonstrates manual resize handling: the canvas is resized to
+// fill the window on every `resize` event. (For a hands-off alternative, enable
+// the `autosize` canvas option instead.)
 window.addEventListener('resize', () => {
     app.resize(window.innerWidth, window.innerHeight);
 });

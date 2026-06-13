@@ -59,12 +59,47 @@ declare global {
     }
 }
 
-declare module '@examples/runtime' {
-    export function getExampleMeta(): ExampleRuntimeMeta;
-    export function supportsWebGpu(): boolean;
-    export function createInfoElement(maxWidth?: string): HTMLElement;
-    export function showInfo(element: HTMLElement, title: string, detail: string, isError?: boolean): void;
-    export function formatErrorMessage(error: unknown): string;
+/** Corner anchor for example overlays. */
+export type OverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+/** A single controls-legend entry: which key(s) trigger which action. */
+export interface ControlHint {
+    keys?: string | Array<string>;
+    action?: string;
 }
 
-export {};
+/** Handle returned by {@link mountControls}. */
+export interface ControlsHandle {
+    element: HTMLElement;
+    setStatus(text: string): void;
+    setControls(list: Array<ControlHint>): void;
+    setHint(text: string): void;
+    dispose(): void;
+}
+
+/** A single mounted control (slider/toggle/cycle) with a programmatic setter. */
+export interface ControlBinding<T = number> {
+    set(value: T): void;
+}
+
+/** Handle returned by {@link mountControlPanel}. */
+export interface ControlPanelHandle {
+    element: HTMLElement;
+    addSlider(options: { label: string; min?: number; max?: number; step?: number; value?: number; onChange?: (value: number) => void }): ControlBinding<number>;
+    addToggle(options: { label: string; value?: boolean; onChange?: (value: boolean) => void }): ControlBinding<boolean>;
+    addCycle(options: { label: string; options: Array<string>; index?: number; onChange?: (index: number, value: string) => void }): ControlBinding<number>;
+    addButton(options: { label: string; onClick?: () => void }): { element: HTMLButtonElement };
+    dispose(): void;
+}
+
+export function getExampleMeta(): ExampleRuntimeMeta;
+export function supportsWebGpu(): boolean;
+export function createInfoElement(maxWidth?: string): HTMLElement;
+export function showInfo(element: HTMLElement, title: string, detail: string, isError?: boolean): void;
+export function formatErrorMessage(error: unknown): string;
+
+/** Mount a non-blocking title + controls-legend + status overlay. */
+export function mountControls(options?: { title?: string; controls?: Array<ControlHint>; status?: string; hint?: string; corner?: OverlayCorner }): ControlsHandle;
+
+/** Mount a predictable DOM control panel (sliders/toggles/cycles/buttons). */
+export function mountControlPanel(options?: { title?: string; corner?: OverlayCorner }): ControlPanelHandle;

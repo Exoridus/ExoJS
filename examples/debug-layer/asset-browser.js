@@ -8,8 +8,8 @@ function getCategoryData(catKey) {
         return assets.technical;
     return assets.demo[catKey] ?? {};
 }
-const W = 900;
-const H = 680;
+const W = 1280;
+const H = 720;
 const TOOLBAR_H = 110;
 const SIDEBAR_W = 220;
 const ITEM_H = 36;
@@ -74,10 +74,9 @@ const C = {
     black: new Color(0, 0, 0),
 };
 const app = new Application({
-    canvas: { width: W, height: H },
+    canvas: { width: W, height: H, mount: document.body, sizingMode: 'fit' },
     clearColor: C.bg,
 });
-document.body.append(app.canvas);
 class AssetBrowserScene extends Scene {
     cat = 'textures';
     key = null;

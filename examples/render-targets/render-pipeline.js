@@ -2,15 +2,16 @@
 import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
 // blurred version, a composite step draws that to the screen, and a nested UI pipeline overlays a HUD.
 // The blur step toggles on and off via `pass.enabled`; the off-screen targets track the canvas size.
@@ -29,8 +30,9 @@ class RenderPipelineScene extends Scene {
     time = 0;
     init() {
         const screenView = this.app.rendering.screenView;
-        this.sceneRt = new RenderTexture(800, 600);
-        this.blurredRt = new RenderTexture(800, 600);
+        const { width, height } = this.app.canvas;
+        this.sceneRt = new RenderTexture(width, height);
+        this.blurredRt = new RenderTexture(width, height);
         this.composite = new Sprite(this.blurredRt);
         this.blur = new BlurFilter({ radius: 8, quality: 2 });
         this.world = new Container();
@@ -63,12 +65,13 @@ class RenderPipelineScene extends Scene {
         this.detachResize = () => this.app.onResize.remove(handleResize);
     }
     update(delta) {
+        const { width, height } = this.app.canvas;
         this.time += delta.seconds;
         // `enabled` lives on the pass — flip it and the composer skips the step next frame.
         this.blurPass.enabled = Math.floor(this.time / 2.5) % 2 === 0;
         this.orb.clear();
         this.orb.fillColor = new Color(90, 150, 255);
-        this.orb.drawCircle(400 + Math.cos(this.time) * 200, 300 + Math.sin(this.time * 1.3) * 150, 90);
+        this.orb.drawCircle(width / 2 + Math.cos(this.time) * (width * 0.32), height / 2 + Math.sin(this.time * 1.3) * (height * 0.32), 90);
         this.hudBar.clear();
         this.hudBar.fillColor = this.blurPass.enabled ? new Color(120, 230, 150) : new Color(230, 120, 120);
         this.hudBar.drawRectangle(20, 20, 200, 16);

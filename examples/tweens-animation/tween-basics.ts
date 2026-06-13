@@ -2,16 +2,16 @@ import { Application, Color, Scene, Sprite, Text, Texture, Tween } from '@codexo
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class TweenBasicsScene extends Scene {
     private sprite!: Sprite;
@@ -24,11 +24,15 @@ class TweenBasicsScene extends Scene {
     }
 
     override init(loader): void {
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(120, 300);
+        const { width, height } = this.app.canvas;
+        const left = width * 0.1;
+        const right = width * 0.9;
+
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(left, height / 2);
         this.text = new Text('Tween running', { fillColor: Color.white, fontSize: 18 });
         this.text.setPosition(20, 20);
-        this.forward = this.app.tweens.create(this.sprite.position).to({ x: 680 }, 1.2);
-        this.backward = this.app.tweens.create(this.sprite.position).to({ x: 120 }, 1.2);
+        this.forward = this.app.tweens.create(this.sprite.position).to({ x: right }, 1.2);
+        this.backward = this.app.tweens.create(this.sprite.position).to({ x: left }, 1.2);
         this.forward
             .onComplete(() => {
                 this.text.text = 'Completed -> reverse';

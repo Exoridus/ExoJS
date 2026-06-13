@@ -1,14 +1,16 @@
 // Auto-generated from boss-intro-cinematic.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
-const title = 'VOID EMPEROR';
+const titleText = 'VOID EMPEROR';
 class BossIntroCinematicScene extends Scene {
     view;
     bg;
@@ -18,42 +20,107 @@ class BossIntroCinematicScene extends Scene {
     titleState;
     boss;
     music;
+    hud;
+    tapPrompt;
+    width = 0;
+    height = 0;
     async load(loader) {
         await loader.load(Texture, { boss: assets.demo.textures.shipA });
         await loader.load(Music, { track: assets.demo.music.loopMain });
     }
     init(loader) {
-        this.view = new View(220, 300, 800, 600);
+        const { width, height } = this.app.canvas;
+        this.width = width;
+        this.height = height;
+        // Start the camera left of the boss so the push-in sweeps across to it.
+        this.view = new View(width * 0.42, height / 2, width, height);
         this.bg = new Graphics();
         this.bars = new Graphics();
         this.barSize = { v: 0 };
         this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
-        this.title.setPosition(150, 120);
+        this.title.setPosition(width * 0.12, height * 0.2);
         this.titleState = { count: 0 };
         this.boss = new Sprite(loader.get(Texture, 'boss'))
             .setAnchor(0.5)
             .setScale(0.4)
-            .setPosition(560, 320)
+            .setPosition(width * 0.62, height / 2)
             .setTint(new Color(255, 130, 130));
-        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.2).play();
-        this.app.tweens.create(this.barSize).to({ v: 70 }, 0.6).start();
-        this.app.tweens.create(this.view.center).to({ x: 520, y: 300 }, 2.0).start();
+        this.music = loader.get(Music, 'track');
+        this.hud = mountControls({
+            title: 'Boss Intro Cinematic',
+            controls: [
+                { keys: ['R', 'Click'], action: 'replay sequence' },
+            ],
+            status: 'Playing…',
+            hint: 'Push-in, letterbox bars, a typewriter title reveal, and a screen shake punched on the reveal beat.',
+        });
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it and the sting + cinematic start.
+        this.tapPrompt = new Text('Click or press any key to start the cinematic', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 64);
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture; start the cinematic in lockstep with the sting on unlock.
+        this.music.setLoop(true).setVolume(0.2).play();
+        this.app.audio.onUnlock.add(() => this.playSequence());
+        this.inputs.onTrigger(Keyboard.R, () => this.replay());
+        this.app.input.onPointerDown.add(() => this.replay());
+    }
+    replay() {
+        if (this.app.audio.locked) {
+            return;
+        }
+        // Restart the sting from the top so the reveal beat lines up again.
+        this.music.currentTime = 0;
+        this.music.setVolume(0.2);
+        if (this.music.paused) {
+            this.music.play();
+        }
+        this.playSequence();
+        this.hud.setStatus('Replaying…');
+    }
+    playSequence() {
+        const { width, height } = this;
+        // Wipe any in-flight tweens and reset the visible state to frame zero.
+        this.app.tweens.clear();
+        this.view.reset(width * 0.42, height / 2, width, height);
+        this.view.stopShake();
+        this.barSize.v = 0;
+        this.titleState.count = 0;
+        this.title.text = '';
+        this.boss.setScale(0.4);
+        // Letterbox bars slam in.
+        this.app.tweens.create(this.barSize).to({ v: 84 }, 0.6).start();
+        // Slow camera push-in toward the boss.
+        this.app.tweens.create(this.view.center).to({ x: width * 0.55, y: height / 2 }, 2.0).start();
+        // The boss looms larger as the camera arrives.
         this.app.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
+        // Typewriter title reveal — its onStart IS the reveal beat: punch a shake.
         this.app.tweens
             .create(this.titleState)
-            .to({ count: title.length }, 1.0)
+            .to({ count: titleText.length }, 1.0)
             .delay(1.6)
+            .onStart(() => {
+            this.view.shake(18, 520, { frequency: 24, decay: true });
+        })
             .onUpdate(() => {
-            this.title.text = title.slice(0, this.titleState.count | 0);
+            this.title.text = titleText.slice(0, this.titleState.count | 0);
         })
             .start();
+        // Music swells up under the reveal.
         this.app.tweens.create(this.music).to({ volume: 0.85 }, 2.0).start();
     }
+    update(delta) {
+        // Advance the camera shake (and follow/bounds) animation each frame.
+        this.view.update(delta.milliseconds);
+    }
     draw(context) {
+        const { width, height } = this;
         context.backend.clear(new Color(16, 16, 24));
         this.bg.clear();
         this.bg.fillColor = new Color(36, 42, 70);
-        this.bg.drawRectangle(-200, 0, 1600, 600);
+        // Span well past the view edges so the push-in never reveals a seam.
+        this.bg.drawRectangle(-width * 0.25, 0, width * 1.5, height);
         context.backend.setView(this.view);
         context.render(this.bg);
         context.render(this.boss);
@@ -61,9 +128,12 @@ class BossIntroCinematicScene extends Scene {
         context.render(this.title);
         this.bars.clear();
         this.bars.fillColor = Color.black;
-        this.bars.drawRectangle(0, 0, 800, this.barSize.v);
-        this.bars.drawRectangle(0, 600 - this.barSize.v, 800, this.barSize.v);
+        this.bars.drawRectangle(0, 0, width, this.barSize.v);
+        this.bars.drawRectangle(0, height - this.barSize.v, width, this.barSize.v);
         context.render(this.bars);
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 app.start(new BossIntroCinematicScene());

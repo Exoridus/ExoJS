@@ -1,15 +1,17 @@
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
 
-document.body.append(app.canvas);
-
+// A regular pixel grid makes the scanline darkening and barrel warp obvious.
 const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
 
 const glsl = `#version 300 es
@@ -20,18 +22,46 @@ const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @bin
 
 class CrtScanlinesScene extends Scene {
     private sprite!: Sprite;
+    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private enabled = true;
+    private hud!: ReturnType<typeof mountControls>;
+    private panel!: ReturnType<typeof mountControlPanel>;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { grid: PIXEL_GRID });
     }
 
     override init(loader): void {
-        const filter =
+        const { width, height } = this.app.canvas;
+
+        this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl });
-        this.sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(4).setPosition(400, 300);
-        this.sprite.filters = [filter];
+        this.sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(5).setPosition(width / 2, height / 2);
+        this.sprite.filters = [this.filter];
+
+        this.hud = mountControls({
+            title: 'CRT Scanlines',
+            controls: [{ keys: 'CRT', action: 'toggle the scanline / barrel filter' }],
+            status: this.statusText(),
+            hint: 'Toggle the filter off to compare against the raw sprite.',
+        });
+
+        this.panel = mountControlPanel({ title: 'Display' });
+        this.panel.addToggle({
+            label: 'CRT',
+            value: true,
+            onChange: on => {
+                this.enabled = on;
+                this.sprite.filters = on ? [this.filter] : [];
+                this.hud.setStatus(this.statusText());
+            },
+        });
+    }
+
+    private statusText(): string {
+        return this.enabled ? 'CRT: ON (scanlines + barrel + vignette)' : 'CRT: OFF (original sprite)';
     }
 
     override draw(context): void {

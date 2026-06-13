@@ -1,10 +1,13 @@
 // Auto-generated from beat-sync-pulse.ts — edit the .ts source, not this file.
-import { Application, BeatDetector, Color, Music, Scene, Sprite, Texture, Vector, } from '@codexo/exojs';
+import { Application, BeatDetector, Color, Music, Scene, Sprite, Text, Texture, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
@@ -12,25 +15,31 @@ const app = new Application({
     },
     extensions: [particlesExtension],
 });
-document.body.append(app.canvas);
 class BeatSyncPulseScene extends Scene {
     music;
     detector;
     sprite;
     pulse = 0;
+    intensity = 0.28;
+    beats = 0;
     particles;
     burst;
+    hud;
+    tapPrompt;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png', particle: 'image/particle-light.png' });
         await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
     }
     init(loader) {
-        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
-        this.detector = new BeatDetector();
-        this.detector.source = this.music;
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
+        const { width, height } = this.app.canvas;
+        this.music = loader.get(Music, 'track');
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.hud = mountControls({
+            title: 'Beat Sync Pulse',
+            hint: 'The ring and particle burst fire on each detected beat.',
+        });
         this.particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 3500 });
-        this.particles.setPosition(400, 300);
+        this.particles.setPosition(width / 2, height / 2);
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 90 }],
             lifetime: new Constant(0.6),
@@ -40,10 +49,32 @@ class BeatSyncPulseScene extends Scene {
         });
         this.particles.addSpawnModule(this.burst);
         this.particles.addUpdateModule(new AlphaFadeOverLifetime());
-        this.detector.onBeat.add(() => {
-            this.pulse = 0.22;
-            this.burst.reset();
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it and the queued music starts.
+        this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 64);
+        mountControlPanel({ title: 'Tuning' }).addSlider({
+            label: 'Pulse intensity',
+            min: 0.1,
+            max: 0.5,
+            step: 0.01,
+            value: this.intensity,
+            onChange: value => {
+                this.intensity = value;
+            },
         });
+        this.detector = new BeatDetector();
+        this.detector.source = this.music;
+        this.detector.onBeat.add(() => {
+            this.pulse = this.intensity;
+            this.burst.reset();
+            this.beats += 1;
+            this.hud.setStatus(`Beats detected: ${this.beats}`);
+        });
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture, then starts automatically — just call play().
+        this.music.setLoop(true).setVolume(0.8).play();
     }
     update(delta) {
         this.pulse = Math.max(0, this.pulse - delta.seconds * 1.2);
@@ -54,6 +85,9 @@ class BeatSyncPulseScene extends Scene {
         context.backend.clear();
         context.render(this.particles);
         context.render(this.sprite);
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 app.start(new BeatSyncPulseScene());

@@ -2,14 +2,14 @@ import { Application, Color, LinearGradient, RadialGradient, Scene, Sprite } fro
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     backend: { type: 'webgl2' },
 });
-
-document.body.append(app.canvas);
 
 class GradientScene extends Scene {
     private backgroundGradient!: LinearGradient;
@@ -30,7 +30,7 @@ class GradientScene extends Scene {
             [0, 0],
             [1, 1],
         );
-        this.background = new Sprite(this.backgroundGradient.toTexture(520, 280));
+        this.background = new Sprite(this.backgroundGradient.toTexture(760, 360));
         this.background.setOrigin(0.5).setPosition(centerX, centerY);
 
         this.orbGradient = new RadialGradient(

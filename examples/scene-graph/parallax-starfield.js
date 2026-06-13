@@ -2,28 +2,32 @@
 import { Application, Color, Graphics, Scene } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 const speeds = [0.15, 0.35, 0.6];
-const counts = [60, 40, 24];
+const counts = [120, 80, 48];
 const colors = [new Color(120, 140, 200), new Color(170, 190, 255), new Color(255, 255, 255)];
 class ParallaxStarfieldScene extends Scene {
     layers;
-    pointer = { x: 400, y: 300 };
+    pointer = { x: 0, y: 0 };
     init() {
+        const { width, height } = this.app.canvas;
+        const margin = 80;
+        this.pointer = { x: width / 2, y: height / 2 };
         this.layers = counts.map((count, index) => {
             const g = new Graphics();
             g.fillColor = colors[index];
             for (let i = 0; i < count; i++) {
-                const x = Math.random() * 900 - 50;
-                const y = Math.random() * 700 - 50;
+                const x = Math.random() * (width + margin * 2) - margin;
+                const y = Math.random() * (height + margin * 2) - margin;
                 const r = 1 + index;
                 g.drawCircle(x, y, r);
             }
@@ -34,11 +38,12 @@ class ParallaxStarfieldScene extends Scene {
         });
     }
     draw(context) {
+        const { width, height } = this.app.canvas;
         context.backend.clear();
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];
             const factor = speeds[i];
-            layer.setPosition((400 - this.pointer.x) * factor, (300 - this.pointer.y) * factor);
+            layer.setPosition((width / 2 - this.pointer.x) * factor, (height / 2 - this.pointer.y) * factor);
             context.render(layer);
         }
     }

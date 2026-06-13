@@ -2,16 +2,16 @@ import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline,
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class TrailFeedbackScene extends Scene {
     private rt!: RenderTexture;
@@ -26,7 +26,9 @@ class TrailFeedbackScene extends Scene {
     }
 
     override init(loader): void {
-        this.rt = new RenderTexture(800, 600);
+        const { width, height } = this.app.canvas;
+
+        this.rt = new RenderTexture(width, height);
         this.decay = new Sprite(this.rt).setTint(new Color(255, 255, 255, 0.93));
         this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
         this.final = new Sprite(this.rt);
@@ -47,8 +49,9 @@ class TrailFeedbackScene extends Scene {
     }
 
     override update(delta): void {
+        const { width, height } = this.app.canvas;
         this.time += delta.seconds;
-        this.bunny.setPosition(400 + Math.cos(this.time * 2.0) * 230, 300 + Math.sin(this.time * 2.7) * 170);
+        this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
     }
 
     override draw(context): void {

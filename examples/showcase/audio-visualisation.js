@@ -1,32 +1,38 @@
 // Auto-generated from audio-visualisation.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Texture, Time } from '@codexo/exojs';
+import { Application, AudioAnalyser, BeatDetector, Color, Music, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 class AudioVisualisationScene extends Scene {
     music;
     analyser;
+    detector;
     canvas;
     context;
     gradientStyle;
     progressStyle = 'rgba(255, 255, 255, 0.1)';
     texture;
     screen;
-    time;
-    values;
-    styles;
+    hud;
+    tapPrompt;
     async load(loader) {
         await loader.load(Music, { example: assets.demo.audio.musicLoop });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.music = loader.get(Music, 'example');
+        // One analyser tap for spectrum/waveform, one beat detector for the
+        // beat-pulse ring. Both read the same track without altering playback.
         this.analyser = new AudioAnalyser({ source: this.music });
+        this.detector = new BeatDetector();
+        this.detector.source = this.music;
         this.canvas = document.createElement('canvas');
         this.canvas.style.position = 'absolute';
         this.canvas.style.top = '12.5%';
@@ -44,48 +50,31 @@ class AudioVisualisationScene extends Scene {
         this.gradientStyle.addColorStop(1, '#f70');
         this.texture = new Texture(this.canvas);
         this.screen = new Sprite(this.texture);
-        this.time = new Time();
-        this.values = new Float32Array(4);
-        this.styles = ['rgba(255, 255, 255, 1)', 'rgba(0, 0, 255, 1)', 'rgba(0, 255, 0, 1)', 'rgba(255, 0, 0, 1)'];
-        window.__EXAMPLE_PREVIEW_AUTOPLAY__ = () => this.music.play({ loop: true, muted: false, volume: 0.5 });
+        this.hud = mountControls({
+            title: 'Audio Visualisation',
+            controls: [{ keys: 'Click', action: 'play / pause' }],
+            status: 'Playing…',
+            hint: 'Frequency bars, waveform, and a beat-pulse ring — all driven by live AudioAnalyser + BeatDetector data.',
+        });
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it and the queued music starts.
+        this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 64);
         this.app.input.onPointerDown.add(() => {
-            if (this.music.paused) {
-                window.__EXAMPLE_PREVIEW_AUTOPLAY__?.();
+            // The first gesture only unlocks audio (core auto-starts the queued
+            // track); subsequent clicks toggle play / pause.
+            if (this.app.audio.locked) {
                 return;
             }
             this.music.toggle();
+            this.hud.setStatus(this.music.paused ? 'Paused' : 'Playing…');
         });
-    }
-    update(delta) {
-        if (this.music.paused) {
-            return;
-        }
-        this.time.addTime(delta);
-        const freqData = this.analyser.getSpectrum();
-        const len = freqData.length;
-        let average = 0;
-        let low = 0;
-        let mid = 0;
-        let high = 0;
-        for (let i = 0; i < len; i++) {
-            const val = freqData[i] / 255;
-            const iSq = i * i;
-            const i2Sq = i * 2 * (i * 2);
-            const len2 = len * len;
-            average += val;
-            high += val * (iSq / len2);
-            low += val * ((len2 - iSq) / len2);
-            mid += val * (i < len / 2 ? i2Sq / len2 : (len2 - i2Sq) / len2);
-        }
-        this.values[0] = average / len;
-        this.values[1] = low / len;
-        this.values[2] = mid / len;
-        this.values[3] = high / len;
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture, then starts automatically — just call play().
+        this.music.setLoop(true).setVolume(0.8).play();
     }
     draw(context) {
-        if (this.music.paused) {
-            return;
-        }
         const canvas = this.canvas;
         const freqData = this.analyser.getSpectrum();
         const timeDomain = this.analyser.getWaveform();
@@ -94,8 +83,10 @@ class AudioVisualisationScene extends Scene {
         const length = freqData.length;
         const barWidth = Math.ceil(width / length);
         this.context.clearRect(0, 0, width, height);
+        // Progress bar of the looping track.
         this.context.fillStyle = this.progressStyle;
         this.context.fillRect(0, 0, width * this.music.progress, height);
+        // Frequency bars + waveform polyline.
         this.context.fillStyle = this.gradientStyle;
         this.context.beginPath();
         for (let i = 0; i < length; i++) {
@@ -105,14 +96,29 @@ class AudioVisualisationScene extends Scene {
             this.context.fillRect(offsetX, (height / 2 - barHeight / 2) | 0, barWidth, barHeight | 0);
             this.context.lineTo(offsetX, (height * 0.75 - lineHeight / 2) | 0);
         }
-        for (let i = 0; i < 4; i++) {
-            this.context.fillStyle = this.styles[i];
-            this.context.fillRect(0, height - height * this.values[i], width, 2);
-        }
         this.context.stroke();
+        // Beat-pulse ring: radius and opacity follow the detector's beat
+        // envelope, so it expands on every beat and sits perfectly still in
+        // silence (pulse is 0 until a tempo locks).
+        const pulse = this.detector.pulse;
+        const cx = width / 2;
+        const cy = height / 2;
+        const baseRadius = Math.min(width, height) * 0.18;
+        const radius = baseRadius * (1 + pulse * 0.6);
+        this.context.beginPath();
+        this.context.arc(cx, cy, radius, 0, Math.PI * 2);
+        this.context.lineWidth = 6 + pulse * 10;
+        this.context.strokeStyle = `rgba(120, 220, 255, ${0.15 + pulse * 0.7})`;
+        this.context.stroke();
+        // restore the default stroke style for the next frame's waveform.
+        this.context.strokeStyle = '#fff';
+        this.context.lineWidth = 4;
         this.screen.updateTexture();
         context.backend.clear();
         context.render(this.screen);
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 app.start(new AudioVisualisationScene());

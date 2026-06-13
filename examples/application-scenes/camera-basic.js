@@ -2,15 +2,16 @@
 import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 class CameraBasicScene extends Scene {
     bunny;
     grid;
@@ -20,8 +21,8 @@ class CameraBasicScene extends Scene {
         this.bunny = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
     }
     init() {
-        const { width } = this.app.canvas;
-        this.bunny.setAnchor(0.5).setPosition(400, 300);
+        const { width, height } = this.app.canvas;
+        this.bunny.setAnchor(0.5).setPosition(width / 2, height / 2);
         this.grid = new Graphics();
         this.grid.lineWidth = 1;
         this.grid.lineColor = new Color(255, 255, 255, 0.15);
@@ -46,15 +47,16 @@ class CameraBasicScene extends Scene {
         this.app.rendering.camera.rotation += delta.seconds * 15;
     }
     draw(context) {
+        const { width } = this.app.canvas;
         context.backend.clear();
         context.render(this.grid);
         context.render(this.bunny);
         // Render a simple UI bar through the screen-space view
         this.uiBar.clear();
         this.uiBar.fillColor = new Color(0, 0, 0, 0.6);
-        this.uiBar.drawRectangle(0, 0, 800, 40);
+        this.uiBar.drawRectangle(0, 0, width, 40);
         this.uiBar.fillColor = new Color(120, 220, 255);
-        this.uiBar.drawRectangle(0, 38, 800, 2);
+        this.uiBar.drawRectangle(0, 38, width, 2);
         context.render(this.uiBar, { view: context.screenView });
     }
 }

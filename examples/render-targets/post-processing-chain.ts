@@ -14,16 +14,16 @@ import {
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class PostProcessingChainScene extends Scene {
     private scene!: Graphics;
@@ -37,10 +37,12 @@ class PostProcessingChainScene extends Scene {
     private time = 0;
 
     override init(): void {
+        const { width, height } = this.app.canvas;
+
         this.scene = new Graphics();
-        this.a = new RenderTexture(800, 600);
-        this.b = new RenderTexture(800, 600);
-        this.c = new RenderTexture(800, 600);
+        this.a = new RenderTexture(width, height);
+        this.b = new RenderTexture(width, height);
+        this.c = new RenderTexture(width, height);
         this.blur = new BlurFilter({ radius: 6, quality: 2 });
         this.color = new ColorFilter(new Color(140, 190, 255));
         this.final = new Sprite(this.c);
@@ -54,12 +56,13 @@ class PostProcessingChainScene extends Scene {
     }
 
     override update(delta): void {
+        const { width, height } = this.app.canvas;
         this.time += delta.seconds;
         this.scene.clear();
         this.scene.fillColor = new Color(80, 130, 255);
-        this.scene.drawCircle(400 + Math.cos(this.time * 1.6) * 220, 300 + Math.sin(this.time * 1.8) * 160, 78);
+        this.scene.drawCircle(width / 2 + Math.cos(this.time * 1.6) * (width * 0.32), height / 2 + Math.sin(this.time * 1.8) * (height * 0.32), 78);
         this.scene.fillColor = new Color(255, 170, 90);
-        this.scene.drawCircle(400 + Math.cos(this.time * 1.2 + 1) * 210, 300 + Math.sin(this.time * 1.3 + 0.7) * 170, 54);
+        this.scene.drawCircle(width / 2 + Math.cos(this.time * 1.2 + 1) * (width * 0.3), height / 2 + Math.sin(this.time * 1.3 + 0.7) * (height * 0.34), 54);
     }
 
     override draw(context): void {

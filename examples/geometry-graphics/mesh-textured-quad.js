@@ -2,14 +2,15 @@
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 const UV_GRID = assets.technical.filtering.uvGrid256;
-const HALF = 240;
+const HALF = 300;
 class MeshTexturedQuadScene extends Scene {
     quad;
     async load(loader) {

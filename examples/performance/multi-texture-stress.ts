@@ -1,17 +1,17 @@
 import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 
-const GRID_COLUMNS = 32;
-const GRID_ROWS = 18;
+const GRID_COLUMNS = 50;
+const GRID_ROWS = 22;
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: new Color(0.018, 0.02, 0.04, 1),
     backend: { type: 'webgpu' },
 });
-
-document.body.append(app.canvas);
 
 interface TextureInfo {
     texture: Texture;

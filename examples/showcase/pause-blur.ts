@@ -1,9 +1,12 @@
 import { Application, BlurFilter, Color, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
@@ -11,19 +14,30 @@ const app = new Application({
     },
 });
 
-document.body.append(app.canvas);
+const PAUSE_BLUR_RADIUS = 6;
+const PAUSE_FADE_SECONDS = 0.35;
 
 class GameScene extends Scene {
     private sprite!: Sprite;
     private time = 0;
+    private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load(Texture, { ship: 'image/ship-a.png' });
     }
 
     override init(loader): void {
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
+        const { width, height } = this.app.canvas;
+
+        this.sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(2).setPosition(width / 2, height / 2);
         this.addChild(this.sprite);
+
+        this.hud = mountControls({
+            title: 'Pause Blur',
+            controls: [{ keys: 'Esc', action: 'pause / resume' }],
+            hint: 'Press Esc to pause — the scene blurs up behind the menu.',
+        });
+
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             if (pauseScene.app !== null) return;
             await this.app.scene.pushScene(pauseScene, { mode: 'overlay' });
@@ -46,10 +60,19 @@ class PauseScene extends Scene {
     private text!: Text;
 
     override init(): void {
-        this.blur = new BlurFilter({ radius: 5, quality: 2 });
+        const { width, height } = this.app.canvas;
+
+        // Start fully sharp and tween the radius up so the blur genuinely fades
+        // in rather than snapping on. The global TweenManager keeps ticking while
+        // this overlay scene is on the stack.
+        this.blur = new BlurFilter({ radius: 0, quality: 2 });
         gameScene.root.filters = [this.blur];
-        this.text = new Text('PAUSED', { fillColor: Color.white, fontSize: 64, fontWeight: 'bold' });
-        this.text.setPosition(280, 250);
+        this.tweens.create(this.blur).to({ radius: PAUSE_BLUR_RADIUS }, PAUSE_FADE_SECONDS).start();
+
+        this.text = new Text('PAUSED', { fillColor: Color.white, fontSize: 64, fontWeight: 'bold', align: 'center' });
+        this.text.setAnchor(0.5, 0.5);
+        this.text.setPosition(width / 2, height / 2);
+
         this.inputs.onTrigger(Keyboard.Escape, async () => {
             await this.app.scene.popScene();
         });

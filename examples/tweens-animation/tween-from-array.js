@@ -2,39 +2,45 @@
 import { Application, Color, Ease, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
-const waypoints = [
-    { x: 120, y: 320 },
-    { x: 220, y: 180 },
-    { x: 360, y: 140 },
-    { x: 520, y: 200 },
-    { x: 680, y: 320 },
-    { x: 580, y: 430 },
-    { x: 400, y: 470 },
-    { x: 220, y: 410 },
+// A closed loop of waypoints expressed as fractions of the canvas so the path
+// spreads across the wider 16:9 frame instead of staying in an 800×600 box.
+const waypointFractions = [
+    { fx: 0.1, fy: 0.55 },
+    { fx: 0.22, fy: 0.28 },
+    { fx: 0.42, fy: 0.2 },
+    { fx: 0.62, fy: 0.32 },
+    { fx: 0.9, fy: 0.55 },
+    { fx: 0.72, fy: 0.78 },
+    { fx: 0.5, fy: 0.85 },
+    { fx: 0.25, fy: 0.72 },
 ];
 class TweenFromArrayScene extends Scene {
     sprite;
+    waypoints = [];
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(waypoints[0].x, waypoints[0].y);
+        const { width, height } = this.app.canvas;
+        this.waypoints = waypointFractions.map(({ fx, fy }) => ({ x: fx * width, y: fy * height }));
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
         this.buildPath();
     }
     buildPath() {
         let first = null;
         let prev = null;
-        for (let i = 1; i < waypoints.length; i++) {
-            const next = this.app.tweens.create(this.sprite.position).to(waypoints[i], 0.35).easing(Ease.sineInOut);
+        for (let i = 1; i < this.waypoints.length; i++) {
+            const next = this.app.tweens.create(this.sprite.position).to(this.waypoints[i], 0.35).easing(Ease.sineInOut);
             if (first === null)
                 first = next;
             if (prev !== null)
@@ -42,7 +48,7 @@ class TweenFromArrayScene extends Scene {
             prev = next;
         }
         prev.onComplete(() => {
-            this.sprite.setPosition(waypoints[0].x, waypoints[0].y);
+            this.sprite.setPosition(this.waypoints[0].x, this.waypoints[0].y);
             this.buildPath();
         });
         first.start();

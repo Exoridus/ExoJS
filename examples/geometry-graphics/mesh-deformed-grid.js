@@ -2,15 +2,16 @@
 import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 const COLS = 16;
 const ROWS = 16;
-const SIZE = 360;
+const SIZE = 460;
 function buildGrid() {
     const half = SIZE / 2;
     const stepX = SIZE / COLS;

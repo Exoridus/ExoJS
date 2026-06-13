@@ -1,10 +1,12 @@
 import {
     Application,
+    BlendModes,
     Color,
     rand,
     Scene,
     seconds,
     Size,
+    Sprite,
     Texture,
     Timer,
     Vector,
@@ -20,21 +22,28 @@ import {
     ParticleSystem,
     Range,
 } from '@codexo/exojs-particles';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     extensions: [particlesExtension],
 });
 
-document.body.append(app.canvas);
-
-const explosionInterval = seconds(1);
+const autoLaunchInterval = seconds(2.2);
 const tailDuration = 2.5;
 const particlesPerExplosion = 375;
+// Upward launch speed range (px/s, negative = up). Higher = higher apex.
+const launchSpeedMin = 360;
+const launchSpeedMax = 460;
+// Gravity applied to rockets (px/s²). Matches the burst gravity so the shower
+// drifts down at the same rate the rocket decelerated rising.
+const rocketGravity = 200;
 const fireworkColors = [
     new Color(100, 255, 135),
     new Color(175, 255, 135),
@@ -47,12 +56,24 @@ const fireworkColors = [
     new Color(245, 215, 80),
 ];
 
+/** A rising firework shell. Detonates once its upward motion turns over (apex). */
+interface Rocket {
+    sprite: Sprite;
+    position: Vector;
+    velocityY: number;
+    color: Color;
+}
+
 class FireworksScene extends Scene {
     private canvasSize!: Size;
-    private particleSystem!: ParticleSystem;
+    private explosions!: ParticleSystem;
     private burstPosition!: Vector;
     private burst!: BurstSpawn;
-    private explosionTimer!: Timer;
+    private autoLaunchTimer!: Timer;
+    private rocketTexture!: Texture;
+    private rockets: Rocket[] = [];
+    private launchCount = 0;
+    private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { star: assets.demo.textures.particleStar });
@@ -62,7 +83,12 @@ class FireworksScene extends Scene {
         const { width, height } = this.app.canvas;
 
         this.canvasSize = new Size(width, height);
-        this.particleSystem = new ParticleSystem(loader.get(Texture, 'star'), { capacity: 8192 });
+        this.rocketTexture = loader.get(Texture, 'star');
+
+        // Single explosion system shared by every detonation. We reposition and
+        // re-tint a single BurstSpawn, then reset() it to fire one burst.
+        this.explosions = new ParticleSystem(this.rocketTexture, { capacity: 16384 });
+        this.explosions.setBlendMode(BlendModes.Additive);
 
         this.burstPosition = new Vector(0, 0);
         this.burst = new BurstSpawn({
@@ -74,9 +100,9 @@ class FireworksScene extends Scene {
             tint: new Constant(fireworkColors[0]),
         });
 
-        this.particleSystem.addSpawnModule(this.burst);
-        this.particleSystem.addUpdateModule(new ApplyForce(0, 30));
-        this.particleSystem.addUpdateModule(
+        this.explosions.addSpawnModule(this.burst);
+        this.explosions.addUpdateModule(new ApplyForce(0, 30));
+        this.explosions.addUpdateModule(
             new AlphaFadeOverLifetime(
                 new Curve([
                     { t: 0, v: 1 },
@@ -85,33 +111,86 @@ class FireworksScene extends Scene {
             ),
         );
 
-        this.explosionTimer = new Timer(explosionInterval, true);
+        // Click anywhere to launch a rocket from the bottom at that x.
+        this.app.input.onPointerDown.add(pointer => this.launchRocket(pointer.x));
 
-        this.scheduleNextExplosion();
+        // Ambient fallback: keep the sky alive even without clicks.
+        this.autoLaunchTimer = new Timer(autoLaunchInterval, true);
+
+        this.hud = mountControls({
+            title: 'Fireworks',
+            controls: [{ keys: 'Click', action: 'launch a rocket' }],
+            status: 'Launched: 0 · in flight: 0',
+            hint: 'Each rocket rises and bursts at its apex. Rockets also auto-launch every couple of seconds.',
+        });
     }
 
-    private scheduleNextExplosion(): void {
-        const x = rand(80, this.canvasSize.width - 80);
-        const y = rand(80, this.canvasSize.height - 80);
-        const tint = fireworkColors[rand(0, fireworkColors.length - 1) | 0];
+    private launchRocket(x: number): void {
+        const color = fireworkColors[(rand(0, fireworkColors.length - 1) + 0.5) | 0];
+        const sprite = new Sprite(this.rocketTexture);
 
-        this.burstPosition.set(x, y);
-        this.burst.config.tint = new Constant(tint);
+        sprite.setAnchor(0.5).setBlendMode(BlendModes.Additive).setTint(color).setScale(0.7);
+
+        const position = new Vector(x, this.canvasSize.height);
+
+        sprite.setPosition(position.x, position.y);
+
+        this.rockets.push({
+            sprite,
+            position,
+            velocityY: -rand(launchSpeedMin, launchSpeedMax),
+            color,
+        });
+
+        this.launchCount++;
+        this.updateStatus();
+    }
+
+    private detonate(rocket: Rocket): void {
+        this.burstPosition.set(rocket.position.x, rocket.position.y);
+        this.burst.config.tint = new Constant(rocket.color);
         this.burst.reset();
     }
 
+    private updateStatus(): void {
+        this.hud.setStatus(`Launched: ${this.launchCount} · in flight: ${this.rockets.length}`);
+    }
+
     override update(delta): void {
-        if (this.explosionTimer.expired) {
-            this.scheduleNextExplosion();
-            this.explosionTimer.restart();
+        const dt = delta.seconds;
+
+        if (this.autoLaunchTimer.expired) {
+            this.launchRocket(rand(80, this.canvasSize.width - 80));
+            this.autoLaunchTimer.restart();
         }
 
-        this.particleSystem.update(delta);
+        // Integrate rockets; detonate the instant a rocket's upward velocity
+        // turns over (its apex), then retire it.
+        for (let i = this.rockets.length - 1; i >= 0; i--) {
+            const rocket = this.rockets[i];
+
+            rocket.velocityY += rocketGravity * dt;
+            rocket.position.y += rocket.velocityY * dt;
+            rocket.sprite.setPosition(rocket.position.x, rocket.position.y);
+
+            if (rocket.velocityY >= 0 || rocket.position.y <= 0) {
+                this.detonate(rocket);
+                rocket.sprite.destroy();
+                this.rockets.splice(i, 1);
+                this.updateStatus();
+            }
+        }
+
+        this.explosions.update(delta);
     }
 
     override draw(context): void {
         context.backend.clear();
-        context.render(this.particleSystem);
+        context.render(this.explosions);
+
+        for (const rocket of this.rockets) {
+            context.render(rocket.sprite);
+        }
     }
 }
 

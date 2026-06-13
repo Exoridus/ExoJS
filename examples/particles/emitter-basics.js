@@ -1,34 +1,58 @@
 // Auto-generated from emitter-basics.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Texture, Vector, } from '@codexo/exojs';
-import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, } from '@codexo/exojs-particles';
+import { Application, Color, Scene, Texture } from '@codexo/exojs';
+import { ApplyForce, ColorGradient, ColorOverLifetime, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, } from '@codexo/exojs-particles';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
     extensions: [particlesExtension],
 });
-document.body.append(app.canvas);
 class EmitterBasicsScene extends Scene {
     system;
+    hud;
     async load(loader) {
-        await loader.load(Texture, { particle: 'image/particle-light.png' });
+        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
-        this.system.setPosition(400, 520);
+        this.system.setPosition(width / 2, height - 80);
+        // Rate, lifetime, and a cone-shaped velocity spread: a fountain that
+        // shoots upward (-π/2) with a ±36° spread and 70–180 px/s speed.
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(180),
             lifetime: new Range(0.6, 1.4),
             velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 70, 180),
-            scale: new Constant(new Vector(0.35, 0.35)),
         }));
+        // Gravity pulls the fountain back down.
         this.system.addUpdateModule(new ApplyForce(0, 240));
-        this.system.addUpdateModule(new AlphaFadeOverLifetime());
+        // Start/end size: each particle grows in fast, then shrinks to nothing
+        // as it ages. ScaleOverLifetime sets the absolute scale every frame from
+        // a curve sampled at elapsed / lifetime.
+        this.system.addUpdateModule(new ScaleOverLifetime(new Curve([
+            { t: 0, v: 0.15 },
+            { t: 0.2, v: 0.55 },
+            { t: 1, v: 0 },
+        ])));
+        // Colour gradient over lifetime: white-hot core → orange → deep red, then
+        // fading to transparent so particles dissolve at the end of their life.
+        this.system.addUpdateModule(new ColorOverLifetime(new ColorGradient([
+            { t: 0, color: new Color(255, 244, 200, 1) },
+            { t: 0.35, color: new Color(255, 168, 64, 1) },
+            { t: 0.75, color: new Color(220, 60, 40, 0.8) },
+            { t: 1, color: new Color(120, 20, 20, 0) },
+        ])));
+        this.hud = mountControls({
+            title: 'Emitter Basics',
+            controls: [{ keys: 'Auto', action: 'continuous fountain emission' }],
+            status: 'Rate 180/s · lifetime 0.6–1.4s · gravity',
+            hint: 'RateSpawn drives emission; ScaleOverLifetime sizes and ColorOverLifetime tints each particle as it ages.',
+        });
     }
     update(delta) {
         this.system.update(delta);

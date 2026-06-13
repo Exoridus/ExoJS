@@ -2,16 +2,16 @@ import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, Texture
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 const glsl = `#version 300 es
 precision mediump float;
@@ -67,14 +67,16 @@ class InfiniteGridScene extends Scene {
     }
 
     override init(loader): void {
-        this.view = new View(0, 0, 800, 600);
+        const { width, height } = this.app.canvas;
+
+        this.view = new View(0, 0, width, height);
         this.sprite = new Sprite(loader.get(Texture, 'uvGrid'));
-        this.sprite.width = 800;
-        this.sprite.height = 600;
+        this.sprite.width = width;
+        this.sprite.height = height;
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uCenter: [0, 0], uViewSize: [800, 600] } })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uCenter: [0, 0], uViewSize: [800, 600] } });
+                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } })
+                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
         this.sprite.filters = [this.filter];
         this.inputs.onActive(Keyboard.A, () => { this.move.x = -1; });
         this.inputs.onStop(Keyboard.A, () => { if (this.move.x < 0) this.move.x = 0; });

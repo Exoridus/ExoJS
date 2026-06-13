@@ -2,16 +2,16 @@ import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, RenderN
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class BloomLiteScene extends Scene {
     private baseRt!: RenderTexture;
@@ -29,9 +29,11 @@ class BloomLiteScene extends Scene {
     }
 
     override init(loader): void {
-        this.baseRt = new RenderTexture(800, 600);
-        this.glowRt = new RenderTexture(800, 600);
-        this.blurredRt = new RenderTexture(800, 600);
+        const { width, height } = this.app.canvas;
+
+        this.baseRt = new RenderTexture(width, height);
+        this.glowRt = new RenderTexture(width, height);
+        this.blurredRt = new RenderTexture(width, height);
         this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(1.9);
         this.baseSprite = new Sprite(this.baseRt);
         this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
@@ -64,8 +66,9 @@ class BloomLiteScene extends Scene {
     }
 
     override update(delta): void {
+        const { width, height } = this.app.canvas;
         this.time += delta.seconds;
-        this.bunny.setPosition(400 + Math.cos(this.time * 1.7) * 190, 300 + Math.sin(this.time * 1.2) * 160);
+        this.bunny.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.32), height / 2 + Math.sin(this.time * 1.2) * (height * 0.32));
     }
 
     override draw(context): void {

@@ -1,13 +1,15 @@
 // Auto-generated from palette-cycling.ts — edit the .ts source, not this file.
 import { Application, Color, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const PALETTE_SIZE = 256;
 function buildPaletteCanvas(offset) {
@@ -35,15 +37,22 @@ class PaletteCyclingScene extends Scene {
     filter;
     sprite;
     offset = 0;
+    hud;
     async load(loader) {
         await loader.load(Texture, { ramp: PRIMARY_RAMP });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
         this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
-        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3);
-        this.sprite.setPosition(400, 300);
+        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(4);
+        this.sprite.setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
+        this.hud = mountControls({
+            title: 'Palette Cycling',
+            status: 'Rotating a 1D LUT each frame remaps the sprite colours.',
+            hint: 'Classic indexed-colour palette cycling: the texture is unchanged, only the lookup shifts.',
+        });
     }
     update(delta) {
         this.offset = (this.offset + delta.seconds * 80) % PALETTE_SIZE;

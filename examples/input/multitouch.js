@@ -1,50 +1,93 @@
 // Auto-generated from multitouch.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(10, 12, 20),
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
-const colors = [new Color(255, 100, 100), new Color(100, 255, 140), new Color(120, 170, 255), new Color(255, 220, 120), new Color(220, 120, 255)];
+const MAX_TOUCHES = 10;
+// Ten distinct hues so up to ten simultaneous fingers each get their own colour.
+const colors = [
+    new Color(255, 100, 100),
+    new Color(255, 170, 90),
+    new Color(255, 230, 120),
+    new Color(170, 255, 120),
+    new Color(100, 255, 160),
+    new Color(100, 230, 255),
+    new Color(120, 170, 255),
+    new Color(170, 130, 255),
+    new Color(230, 120, 255),
+    new Color(255, 130, 200),
+];
 class MultitouchScene extends Scene {
     graphics;
-    pointers;
+    labels = [];
+    pointers = new Map();
+    hud;
     init() {
         this.graphics = new Graphics();
-        this.pointers = new Map();
+        // Reusable label pool — one Text per possible touch, repositioned each frame.
+        for (let i = 0; i < MAX_TOUCHES; i++) {
+            this.labels.push(new Text('', { fillColor: Color.white, fontSize: 16 }).setAnchor(0.5));
+        }
         this.app.input.onPointerDown.add(pointer => {
-            if (this.pointers.size >= 5)
+            if (this.pointers.size >= MAX_TOUCHES || this.pointers.has(pointer.id)) {
                 return;
-            if (!this.pointers.has(pointer.id))
-                this.pointers.set(pointer.id, { x: pointer.x, y: pointer.y });
+            }
+            this.pointers.set(pointer.id, { id: pointer.id, x: pointer.x, y: pointer.y });
+            this.refreshHud();
         });
         this.app.input.onPointerMove.add(pointer => {
-            if (this.pointers.has(pointer.id))
-                this.pointers.set(pointer.id, { x: pointer.x, y: pointer.y });
+            const touch = this.pointers.get(pointer.id);
+            if (touch) {
+                touch.x = pointer.x;
+                touch.y = pointer.y;
+            }
         });
         this.app.input.onPointerUp.add(pointer => {
             this.pointers.delete(pointer.id);
+            this.refreshHud();
         });
         this.app.input.onPointerCancel.add(pointer => {
             this.pointers.delete(pointer.id);
+            this.refreshHud();
         });
+        this.hud = mountControls({
+            title: 'Multitouch',
+            controls: [{ keys: 'Touch', action: 'each finger draws a circle' }],
+            status: 'Active touches: 0 / 10',
+            hint: 'Touchscreen required — use multiple fingers (mouse gives one point).',
+        });
+    }
+    refreshHud() {
+        this.hud.setStatus(`Active touches: ${this.pointers.size} / ${MAX_TOUCHES}`);
     }
     draw(context) {
         context.backend.clear();
         this.graphics.clear();
         let index = 0;
-        for (const point of this.pointers.values()) {
-            this.graphics.fillColor = colors[index % colors.length];
-            this.graphics.drawCircle(point.x, point.y, 24);
+        for (const touch of this.pointers.values()) {
+            const color = colors[index % colors.length];
+            this.graphics.fillColor = color;
+            this.graphics.drawCircle(touch.x, touch.y, 28);
+            const label = this.labels[index];
+            label.text = `${index + 1}·#${touch.id}`;
+            label.setPosition(touch.x, touch.y);
             index++;
         }
         context.render(this.graphics);
+        // Draw the index/id labels on top of their circles.
+        for (let i = 0; i < this.pointers.size; i++) {
+            context.render(this.labels[i]);
+        }
     }
 }
 app.start(new MultitouchScene());

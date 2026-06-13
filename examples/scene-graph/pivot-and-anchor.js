@@ -2,15 +2,16 @@
 import { Application, Color, Graphics, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 const modes = [
     { name: 'corner', anchor: [0, 0], origin: [0, 0] },
     { name: 'center', anchor: [0.5, 0.5], origin: null },
@@ -26,7 +27,8 @@ class PivotAndAnchorScene extends Scene {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setPosition(400, 300);
+        const { width, height } = this.app.canvas;
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setPosition(width / 2, height / 2);
         this.pivotMarker = new Graphics();
         this.label = new Text('', { fillColor: Color.white, fontSize: 18 });
         this.label.setPosition(20, 20);

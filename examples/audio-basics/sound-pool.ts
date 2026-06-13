@@ -1,30 +1,69 @@
-import { Application, Color, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
 
-document.body.append(app.canvas);
+const POOL_SIZE = 12;
+const FIRE_INTERVAL = 0.04;
 
 class SoundPoolScene extends Scene {
     private sound!: Sound;
+    private graphics!: Graphics;
     private label!: Text;
+    private readout!: Text;
+    private tapPrompt!: Text;
     private firing = false;
     private timer = 0;
+    // End-times (seconds, scene clock) of the voices we have started, mirroring
+    // the engine's pool: at most POOL_SIZE play concurrently and the oldest is
+    // evicted when a new one arrives at capacity (FIFO).
+    private voices: number[] = [];
+    private clock = 0;
+    private evictions = 0;
+    private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
         await loader.load(Sound, { shot: assets.demo.audio.uiClick });
     }
 
     override init(loader): void {
+        const { width, height } = this.app.canvas;
+
         this.sound = loader.get(Sound, 'shot');
-        this.sound.poolSize = 24;
-        this.label = new Text('Hold Space to fire SFX rapidly', { fillColor: Color.white, fontSize: 24 });
-        this.label.setPosition(190, 280);
+        this.sound.poolSize = POOL_SIZE;
+
+        this.graphics = new Graphics();
+        this.label = new Text('Hold Space to fire faster than voices finish', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height * 0.22);
+        this.readout = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height * 0.32);
+
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it. Holding Space becomes audible once
+        // a pointer gesture has unlocked the AudioContext.
+        this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 48);
+
+        this.hud = mountControls({
+            title: 'Sound Pool',
+            controls: [
+                { keys: 'Click', action: 'enable audio (once)' },
+                { keys: 'Space', action: 'hold to spawn voices into the pool' },
+            ],
+            status: 'Click or press any key to enable audio, then hold Space.',
+            hint: `The pool caps at ${POOL_SIZE} concurrent voices. Each slot below lights up while a voice plays; at capacity the oldest voice is evicted so playback never stacks unbounded.`,
+        });
 
         this.inputs.onActive(Keyboard.Space, () => {
             this.firing = true;
@@ -34,18 +73,73 @@ class SoundPoolScene extends Scene {
         });
     }
 
+    private spawnVoice(): void {
+        // Retire any voices that have finished naturally.
+        this.voices = this.voices.filter(end => end > this.clock);
+
+        // At capacity the engine evicts the oldest source; mirror that here.
+        if (this.voices.length >= POOL_SIZE) {
+            this.voices.shift();
+            this.evictions += 1;
+        }
+
+        this.voices.push(this.clock + this.sound.duration);
+        this.sound.play();
+    }
+
     override update(delta): void {
-        if (!this.firing) return;
+        this.clock += delta.seconds;
+        // Drop voices that have ended this frame so the meter reads truthfully.
+        this.voices = this.voices.filter(end => end > this.clock);
+
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture; skip firing while audio is still locked.
+        if (!this.firing || this.app.audio.locked) return;
+
         this.timer += delta.seconds;
-        while (this.timer >= 0.05) {
-            this.timer -= 0.05;
-            this.sound.play();
+        while (this.timer >= FIRE_INTERVAL) {
+            this.timer -= FIRE_INTERVAL;
+            this.spawnVoice();
         }
     }
 
     override draw(context): void {
         context.backend.clear();
+        this.graphics.clear();
+
+        const active = this.voices.length;
+
+        // Pool capacity meter: one cell per slot, lit while occupied.
+        const cols = 6;
+        const cell = 70;
+        const gap = 12;
+        const totalW = cols * cell + (cols - 1) * gap;
+        const startX = (this.app.canvas.width - totalW) / 2;
+        const startY = this.app.canvas.height * 0.42;
+
+        for (let i = 0; i < POOL_SIZE; i++) {
+            const col = i % cols;
+            const rowI = Math.floor(i / cols);
+            const x = startX + col * (cell + gap);
+            const y = startY + rowI * (cell + gap);
+
+            if (i < active) {
+                this.graphics.fillColor = new Color(130, 255, 170);
+            } else {
+                this.graphics.fillColor = new Color(50, 55, 60);
+            }
+            this.graphics.drawRectangle(x, y, cell, cell);
+        }
+
+        this.readout.text = `Active voices: ${active} / ${POOL_SIZE}     evicted: ${this.evictions}`;
+
+        context.render(this.graphics);
         context.render(this.label);
+        context.render(this.readout);
+
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 

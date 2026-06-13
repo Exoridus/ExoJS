@@ -2,29 +2,37 @@
 import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 840,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 const message = 'ExoJS gives you explicit rendering control with a compact scene and asset workflow.';
 class TypewriterTextScene extends Scene {
     sound;
     text;
     state;
     last = 0;
+    tapPrompt;
     async load(loader) {
         await loader.load(Sound, { tick: 'audio/ui-click.ogg' });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.sound = loader.get(Sound, 'tick');
-        this.text = new Text('', { fillColor: Color.white, fontSize: 30, lineHeight: 42 }, { maxWidth: 720 });
-        this.text.setPosition(60, 190);
+        this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56 }, { maxWidth: 900 });
+        this.text.setAnchor(0, 0.5).setPosition(width * 0.12, height / 2);
         this.state = { count: 0 };
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it and the queued tick sounds play.
+        this.tapPrompt = new Text('Click or press any key to enable the typing sound', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 64);
         this.app.tweens
             .create(this.state)
             .to({ count: message.length }, 2.4)
@@ -40,6 +48,9 @@ class TypewriterTextScene extends Scene {
     draw(context) {
         context.backend.clear();
         context.render(this.text);
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 app.start(new TypewriterTextScene());

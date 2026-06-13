@@ -2,15 +2,16 @@
 import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 class InterruptAndReplaceScene extends Scene {
     sprite;
     moveTween = null;
@@ -18,7 +19,8 @@ class InterruptAndReplaceScene extends Scene {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
+        const { width, height } = this.app.canvas;
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.app.input.onPointerTap.add(pointer => {
             if (this.moveTween !== null) {
                 this.moveTween.stop();

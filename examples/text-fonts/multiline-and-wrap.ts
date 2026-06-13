@@ -2,13 +2,13 @@ import { Application, Color, Scene, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
-        width: 980,
-        height: 620,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-
-document.body.append(app.canvas);
 
 const paragraph = 'ExoJS text layout can render multiline content with configurable wrapping behavior and style.';
 const longToken = 'ExoJStextlayoutrendersaverylongunbrokentokenwithoutanyspacestobreakon';
@@ -24,20 +24,28 @@ class MultilineAndWrapScene extends Scene {
     private textC!: Text;
 
     override init(): void {
-        this.titleA = new Text('No wrap — single line overflows the bounds', { fillColor: titleColor, fontSize: 16 });
-        this.titleA.setPosition(40, 50);
+        const { width, height } = this.app.canvas;
+
+        // Three wrap modes side by side across the 16:9 canvas: one column each.
+        const colWidth = width / 3;
+        const titleY = height * 0.16;
+        const bodyY = height * 0.16 + 36;
+        const colX = (index: number): number => colWidth * index + (colWidth - 360) / 2;
+
+        this.titleA = new Text('No wrap — single line overflows', { fillColor: titleColor, fontSize: 16 });
+        this.titleA.setPosition(colX(0), titleY);
         this.textA = new Text(paragraph, { fillColor: Color.white, fontSize: 22 });
-        this.textA.setPosition(40, 80);
+        this.textA.setPosition(colX(0), bodyY);
 
-        this.titleB = new Text('Word wrap @ 360px — breaks at word boundaries', { fillColor: titleColor, fontSize: 16 });
-        this.titleB.setPosition(40, 210);
+        this.titleB = new Text('Word wrap @ 360px — at word boundaries', { fillColor: titleColor, fontSize: 16 });
+        this.titleB.setPosition(colX(1), titleY);
         this.textB = new Text(paragraph, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 360 });
-        this.textB.setPosition(40, 240);
+        this.textB.setPosition(colX(1), bodyY);
 
-        this.titleC = new Text('Break words @ 280px — splits a long token', { fillColor: titleColor, fontSize: 16 });
-        this.titleC.setPosition(40, 430);
+        this.titleC = new Text('Break words @ 280px — splits a token', { fillColor: titleColor, fontSize: 16 });
+        this.titleC.setPosition(colX(2), titleY);
         this.textC = new Text(longToken, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 280, breakWords: true });
-        this.textC.setPosition(40, 460);
+        this.textC.setPosition(colX(2), bodyY);
     }
 
     override draw(context): void {

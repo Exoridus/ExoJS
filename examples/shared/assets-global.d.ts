@@ -93,6 +93,11 @@ type ExampleAssetCatalog = {
             readonly musicB: 'demo/audio/demo-loop-b.ogg';
             readonly musicLoop: 'demo/audio/demo-loop-main.ogg';
         };
+        readonly voice: {
+            readonly congratulations: 'demo/voice/congratulations.ogg';
+            readonly missionComplete: 'demo/voice/mission-complete.ogg';
+            readonly objectiveAchieved: 'demo/voice/objective-achieved.ogg';
+        };
         readonly sound: {
             readonly uiClick: 'demo/sound/ui-click.ogg';
             readonly uiConfirm: 'demo/sound/ui-confirm.ogg';

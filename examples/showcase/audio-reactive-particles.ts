@@ -1,39 +1,47 @@
 import {
     Application,
+    AudioAnalyser,
     BeatDetector,
     Color,
     Music,
     Scene,
+    Text,
     Texture,
     Vector,
 } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
-    BurstSpawn,
     ConeDirection,
     Constant,
     particlesExtension,
     ParticleSystem,
+    RateSpawn,
 } from '@codexo/exojs-particles';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     extensions: [particlesExtension],
 });
 
-document.body.append(app.canvas);
-
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
 
 class AudioReactiveParticlesScene extends Scene {
     private music!: Music;
+    private analyser!: AudioAnalyser;
     private detector!: BeatDetector;
     private ps!: ParticleSystem;
-    private burst!: BurstSpawn;
+    private spawn!: RateSpawn;
+    private rate!: Constant<number>;
+    private cone!: ConeDirection;
+    private hud!: ReturnType<typeof mountControls>;
+    private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
         await loader.load(Music, { track: assets.demo.audio.musicLoop });
@@ -41,34 +49,86 @@ class AudioReactiveParticlesScene extends Scene {
     }
 
     override init(loader): void {
-        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
+        const { width, height } = this.app.canvas;
+
+        this.music = loader.get(Music, 'track');
+
+        // Two parallel taps of the same track: the analyser gives per-band
+        // energy (drives emission), the detector gives beats (recolours).
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.music });
         this.detector = new BeatDetector();
         this.detector.source = this.music;
-        this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4200 });
-        this.ps.setPosition(400, 300);
-        this.burst = new BurstSpawn({
-            schedule: [{ time: 0, count: 130 }],
+
+        this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 6000 });
+        this.ps.setPosition(width / 2, height / 2);
+
+        // The rate (density) and the cone speed range (spread) are mutated every
+        // frame from live audio energy. Starting both near zero means a silent
+        // track emits (almost) nothing — the field is genuinely data-driven, not
+        // a timed fountain dressed up as "reactive".
+        this.rate = new Constant(0);
+        this.cone = ConeDirection.omni(20, 40);
+        this.spawn = new RateSpawn({
+            rate: this.rate,
             lifetime: new Constant(0.9),
             position: new Constant(new Vector(0, 0)),
-            velocity: ConeDirection.omni(100, 300),
+            velocity: this.cone,
             scale: new Constant(new Vector(0.22, 0.22)),
             tint: new Constant(colors[0]),
         });
-        this.ps.addSpawnModule(this.burst);
+        this.ps.addSpawnModule(this.spawn);
         this.ps.addUpdateModule(new AlphaFadeOverLifetime());
+
+        // Beats only recolour the stream; they do not fake emission on their own.
         this.detector.onBeat.add(() => {
-            this.burst.config.tint = new Constant(colors[(Math.random() * colors.length) | 0]);
-            this.burst.reset();
+            this.spawn.config.tint = new Constant(colors[(Math.random() * colors.length) | 0]);
         });
+
+        this.hud = mountControls({
+            title: 'Audio Reactive Particles',
+            controls: [{ keys: 'Audio', action: 'bass → density · treble → spread' }],
+            status: 'Listening…',
+            hint: 'Density follows low-band energy; spread follows high-band energy. Silence = still.',
+        });
+
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it and the queued music starts.
+        this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 64);
+
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture, then starts automatically — just call play().
+        this.music.setLoop(true).setVolume(0.8).play();
     }
 
     override update(delta): void {
+        // Low band (bass) drives how MANY particles spawn this second.
+        const low = this.analyser.getBandEnergy(20, 180);
+        // High band (treble) drives how WIDE the velocity cone fans out.
+        const high = this.analyser.getBandEnergy(2000, 16000);
+
+        // bass → density: 0 in silence, up to ~1200 particles/s on heavy bass.
+        this.rate.value = low * low * 1200;
+
+        // treble → spread: a tight slow core grows into a fast wide burst.
+        this.cone.minSpeed = 40 + high * 120;
+        this.cone.maxSpeed = 90 + high * 360;
+
+        if (!this.music.paused) {
+            this.hud.setStatus(`bass ${(low * 100) | 0}%  treble ${(high * 100) | 0}%`);
+        }
+
         this.ps.update(delta);
     }
 
     override draw(context): void {
         context.backend.clear();
         context.render(this.ps);
+
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 

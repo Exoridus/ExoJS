@@ -2,16 +2,16 @@ import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class TweenWithYoyoScene extends Scene {
     private sprite!: Sprite;
@@ -21,7 +21,9 @@ class TweenWithYoyoScene extends Scene {
     }
 
     override init(loader): void {
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
+        const { width, height } = this.app.canvas;
+
+        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.app.tweens.create(this.sprite.scale).to({ x: 1.5, y: 1.5 }, 0.8).yoyo(true).repeat(-1).start();
         this.app.tweens.create(this.sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
     }

@@ -2,15 +2,16 @@
 import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 class CustomRenderPassScene extends Scene {
     back;
     front;
@@ -21,14 +22,15 @@ class CustomRenderPassScene extends Scene {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.back = new Sprite(loader.get(Texture, 'bunny'))
             .setAnchor(0.5)
-            .setPosition(280, 300)
+            .setPosition(width / 2 - 200, height / 2)
             .setScale(2.2)
             .setTint(new Color(120, 170, 255));
         this.front = new Sprite(loader.get(Texture, 'bunny'))
             .setAnchor(0.5)
-            .setPosition(520, 300)
+            .setPosition(width / 2 + 200, height / 2)
             .setScale(2.2)
             .setTint(new Color(255, 180, 120));
         this.between = new Graphics();
@@ -37,10 +39,11 @@ class CustomRenderPassScene extends Scene {
         this.pipeline = new RenderPipeline()
             .addPass(new RenderNodePass(this.back, { clear: Color.black }))
             .addPass(new CallbackRenderPass((context) => {
+            const { width: w, height: h } = this.app.canvas;
             this.between.clear();
             this.between.lineWidth = 10;
             this.between.lineColor = new Color(130, 240, 170);
-            this.between.drawArc(400, 300, 120, this.angle, this.angle + Math.PI * 1.3);
+            this.between.drawArc(w / 2, h / 2, 120, this.angle, this.angle + Math.PI * 1.3);
             this.between.render(context.backend);
         }))
             .addPass(new RenderNodePass(this.front));

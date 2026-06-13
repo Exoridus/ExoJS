@@ -1,19 +1,23 @@
 import { Application, Color, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
 
-document.body.append(app.canvas);
-
+// Each row drives one of the three engine-built-in busses. `master` is the
+// root; `music` and `sound` are its children, so the music/SFX bars scale
+// their own bus while the master bar scales everything downstream.
 const rows = [
-    { name: 'Master', y: 200, color: new Color(255, 180, 120), bus: () => app.audio.master },
-    { name: 'Music', y: 290, color: new Color(120, 200, 255), bus: () => app.audio.music },
-    { name: 'SFX', y: 380, color: new Color(130, 255, 170), bus: () => app.audio.sound },
+    { name: 'Master', color: new Color(255, 180, 120), bus: () => app.audio.master },
+    { name: 'Music', color: new Color(120, 200, 255), bus: () => app.audio.music },
+    { name: 'SFX', color: new Color(130, 255, 170), bus: () => app.audio.sound },
 ];
 
 class AudioBusesScene extends Scene {
@@ -21,7 +25,15 @@ class AudioBusesScene extends Scene {
     private sfx!: Sound;
     private graphics!: Graphics;
     private labels!: Text[];
+    private sfxLabel!: Text;
+    private tapPrompt!: Text;
     private drag = -1;
+    // Layout (canvas-relative), computed in init() once the canvas size is known.
+    private trackX = 0;
+    private trackW = 0;
+    private rowY: number[] = [];
+    private sfxButton = { x: 0, y: 0, w: 0, h: 0 };
+    private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
         await loader.load(Music, { music: assets.demo.audio.musicLoop });
@@ -29,10 +41,37 @@ class AudioBusesScene extends Scene {
     }
 
     override init(loader): void {
-        this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.6).play();
+        const { width, height } = this.app.canvas;
+
+        // Centre the bus mixer horizontally and spread the bars across the wide
+        // 16:9 canvas.
+        this.trackW = width * 0.5;
+        this.trackX = (width - this.trackW) / 2;
+        this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
+        this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
+
+        this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.6);
         this.sfx = loader.get(Sound, 'sfx');
+
         this.graphics = new Graphics();
-        this.labels = rows.map(row => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(150, row.y - 34));
+        this.labels = rows.map((_, i) => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.trackX - 50, this.rowY[i] - 34));
+        this.sfxLabel = new Text('Play SFX  ▶', { fillColor: new Color(20, 20, 20), fontSize: 20 }).setPosition(this.sfxButton.x + 92, this.sfxButton.y + 7);
+
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it and the queued music starts.
+        this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 48);
+
+        this.hud = mountControls({
+            title: 'Audio Buses',
+            controls: [
+                { keys: 'Drag', action: 'a bus bar to set its volume' },
+                { keys: 'Click', action: '"Play SFX" (button near the bottom) to fire a clip' },
+            ],
+            status: 'Click or press any key to start the music…',
+            hint: 'Master scales every bus; Music and SFX scale only their own. Bars show live volume, labels show it in dB.',
+        });
 
         this.app.input.onPointerDown.add(p => {
             this.drag = this.rowFromY(p.y);
@@ -45,39 +84,63 @@ class AudioBusesScene extends Scene {
             this.drag = -1;
         });
         this.app.input.onPointerTap.add(p => {
-            if (p.y > 460) this.sfx.play();
+            if (this.insideSfxButton(p.x, p.y)) {
+                this.sfx.play();
+                this.hud.setStatus('SFX fired on the SFX bus — try lowering Master or SFX, then fire again.');
+            }
         });
+
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture, then starts automatically — just call play().
+        this.music.play();
+        this.hud.setStatus('Music playing on the Music bus. Drag a bar to mix.');
     }
 
     private rowFromY(y: number): number {
-        for (let i = 0; i < rows.length; i++) {
-            if (Math.abs(y - rows[i].y) <= 24) return i;
+        for (let i = 0; i < this.rowY.length; i++) {
+            if (Math.abs(y - this.rowY[i]) <= 24) return i;
         }
         return -1;
     }
 
+    private insideSfxButton(x: number, y: number): boolean {
+        return x >= this.sfxButton.x && x <= this.sfxButton.x + this.sfxButton.w && y >= this.sfxButton.y && y <= this.sfxButton.y + this.sfxButton.h;
+    }
+
     private updateSlider(x: number): void {
         if (this.drag < 0) return;
-        const t = Math.max(0, Math.min(1, (x - 200) / 420));
+        const t = Math.max(0, Math.min(1, (x - this.trackX) / this.trackW));
         rows[this.drag].bus().volume = t;
     }
 
     override draw(context): void {
         context.backend.clear();
         this.graphics.clear();
+
         rows.forEach((row, index) => {
             const value = row.bus().volume;
             const db = 20 * Math.log10(Math.max(0.0001, value));
             this.labels[index].text = `${row.name}: ${db.toFixed(1)} dB`;
+
+            // Trough.
             this.graphics.fillColor = new Color(55, 55, 55);
-            this.graphics.drawRectangle(200, row.y - 8, 420, 16);
+            this.graphics.drawRectangle(this.trackX, this.rowY[index] - 8, this.trackW, 16);
+            // Filled level.
             this.graphics.fillColor = row.color;
-            this.graphics.drawRectangle(200, row.y - 8, 420 * value, 16);
+            this.graphics.drawRectangle(this.trackX, this.rowY[index] - 8, this.trackW * value, 16);
         });
+
+        // SFX trigger button.
         this.graphics.fillColor = new Color(200, 200, 200);
-        this.graphics.drawRectangle(250, 485, 300, 36);
+        this.graphics.drawRectangle(this.sfxButton.x, this.sfxButton.y, this.sfxButton.w, this.sfxButton.h);
+
         context.render(this.graphics);
         for (const label of this.labels) context.render(label);
+        context.render(this.sfxLabel);
+
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 

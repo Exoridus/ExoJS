@@ -2,12 +2,13 @@
 import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 class PlaySoundScene extends Scene {
     sound;
     text;
@@ -15,9 +16,11 @@ class PlaySoundScene extends Scene {
         await loader.load(Sound, { click: assets.demo.audio.uiClick });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.sound = loader.get(Sound, 'click');
-        this.text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24 });
-        this.text.setPosition(220, 280);
+        this.text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height / 2);
         this.app.input.onPointerTap.add(() => {
             this.sound.play();
         });

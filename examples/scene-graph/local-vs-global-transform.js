@@ -2,15 +2,16 @@
 import { Application, Color, Container, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 class LocalVsGlobalTransformScene extends Scene {
     parent;
     localSprite;
@@ -21,23 +22,24 @@ class LocalVsGlobalTransformScene extends Scene {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'bunny');
-        this.parent = new Container().setPosition(250, 300);
+        this.parent = new Container().setPosition(width / 4, height / 2);
         this.localSprite = new Sprite(texture)
             .setAnchor(0.5)
             .setScale(0.8)
-            .setPosition(120, 0)
+            .setPosition(160, 0)
             .setTint(new Color(120, 190, 255));
         this.globalSprite = new Sprite(texture)
             .setAnchor(0.5)
             .setScale(0.8)
-            .setPosition(580, 300)
+            .setPosition((width * 3) / 4, height / 2)
             .setTint(new Color(255, 190, 120));
         this.parent.addChild(this.localSprite);
         this.localLabel = new Text('inherited rotation', { fillColor: Color.white, fontSize: 16 });
-        this.localLabel.setPosition(180, 80);
+        this.localLabel.setPosition(width / 4 - 60, height / 2 - 220);
         this.globalLabel = new Text('screen-space', { fillColor: Color.white, fontSize: 16 });
-        this.globalLabel.setPosition(520, 80);
+        this.globalLabel.setPosition((width * 3) / 4 - 50, height / 2 - 220);
     }
     update(delta) {
         this.parent.rotate(delta.seconds * 60);

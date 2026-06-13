@@ -2,15 +2,16 @@
 import { Application, CallbackRenderPass, Color, RenderBackendType, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter, } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 uv=vUv; uv.y += sin(uv.x*18.0+uTime*2.8)*0.025; vec4 c=texture(uTexture,uv); fragColor=vec4(c.rgb*vec3(0.72,0.85,1.0),c.a*0.85); }`;
@@ -34,9 +35,12 @@ class WaterMirrorScene extends Scene {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this.rt = new RenderTexture(800, 280);
-        this.source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 180).setScale(2);
-        this.mirror = new Sprite(this.rt).setPosition(0, 320).setScale(1, -1);
+        const { width, height } = this.app.canvas;
+        const half = height / 2;
+        this.rt = new RenderTexture(width, half);
+        this.source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, half / 2).setScale(2.6);
+        // Flip the captured top half down into the bottom half for the mirrored reflection.
+        this.mirror = new Sprite(this.rt).setPosition(0, height).setScale(1, -1);
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
@@ -53,8 +57,10 @@ class WaterMirrorScene extends Scene {
             .addPass(new RenderNodePass(this.mirror));
     }
     update(delta) {
+        const { width, height } = this.app.canvas;
+        const quarter = height / 4;
         this.time += delta.seconds;
-        this.source.setPosition(400 + Math.cos(this.time * 1.7) * 170, 180 + Math.sin(this.time * 1.3) * 60);
+        this.source.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.3), quarter + Math.sin(this.time * 1.3) * (quarter * 0.55));
         this.filter.uniforms.uTime = this.time;
     }
     draw(context) {

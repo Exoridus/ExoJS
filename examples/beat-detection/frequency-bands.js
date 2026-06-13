@@ -1,48 +1,123 @@
 // Auto-generated from frequency-bands.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, Color, Graphics, Music, Scene } from '@codexo/exojs';
+import { Application, AudioAnalyser, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(14, 16, 22),
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
+// Eight perceptual frequency bands spanning the audible range, from the lowest
+// rumble to the airy top end. The FFT bins are linearly spaced over 0..nyquist,
+// so bucketing them onto log-spaced edges gives each band an equal share of the
+// frequency *octaves* — the way the ear hears it — instead of cramming the bass
+// into two bins and the treble into hundreds.
+const BAND_LABELS = ['Sub-bass', 'Bass', 'Low-mid', 'Mid', 'Upper-mid', 'Presence', 'Treble', 'Brilliance'];
+const BAND_COUNT = BAND_LABELS.length;
+// Warm-to-cool ramp so the spectrum reads left (low) to right (high).
+const BAND_COLORS = [
+    new Color(255, 92, 92),
+    new Color(255, 142, 84),
+    new Color(255, 198, 88),
+    new Color(186, 230, 96),
+    new Color(108, 224, 150),
+    new Color(96, 214, 224),
+    new Color(118, 168, 255),
+    new Color(176, 140, 255),
+];
 class FrequencyBandsScene extends Scene {
     music;
     analyser;
     bars;
-    levels = { low: 0, mid: 0, high: 0 };
+    labels = [];
+    bandEdges = [];
+    levels = new Array(BAND_COUNT).fill(0);
+    hud;
+    tapPrompt;
     async load(loader) {
         await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
     }
     init(loader) {
-        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
-        this.analyser = new AudioAnalyser({ fftSize: 1024 });
+        this.music = loader.get(Music, 'track');
+        this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
         this.analyser.source = this.music;
+        // Log-spaced bin boundaries across the spectrum. Index 0 (DC) is skipped
+        // so the lowest band starts at the first meaningful bin.
+        const binCount = this.analyser.frequencyBinCount;
+        const minBin = 1;
+        const maxBin = binCount;
+        for (let i = 0; i <= BAND_COUNT; i++) {
+            const t = i / BAND_COUNT;
+            this.bandEdges.push(Math.round(minBin * Math.pow(maxBin / minBin, t)));
+        }
         this.bars = new Graphics();
+        const { width, height } = this.app.canvas;
+        const gap = 16;
+        const slotWidth = (width - gap) / BAND_COUNT;
+        const barWidth = slotWidth - gap;
+        for (let i = 0; i < BAND_COUNT; i++) {
+            const label = new Text(BAND_LABELS[i], { fillColor: new Color(190, 198, 214), fontSize: 14 });
+            label.setAnchor(0.5, 0);
+            label.setPosition(gap + slotWidth * i + barWidth / 2, height * 0.78 + 14);
+            this.labels.push(label);
+        }
+        this.hud = mountControls({
+            title: 'Frequency Bands',
+            status: 'Analysing spectrum…',
+            hint: 'Eight log-spaced bands from sub-bass to brilliance, driven by AudioAnalyser.getSpectrum().',
+        });
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it and the queued music starts.
+        this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 48);
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture, then starts automatically — just call play().
+        this.music.setLoop(true).setVolume(0.8).play();
     }
     update() {
-        const v = this.analyser.getLowMidHigh();
-        this.levels.low = v.low;
-        this.levels.mid = v.mid;
-        this.levels.high = v.high;
+        const spectrum = this.analyser.getSpectrum();
+        for (let band = 0; band < BAND_COUNT; band++) {
+            const start = this.bandEdges[band];
+            const end = Math.max(start + 1, this.bandEdges[band + 1]);
+            let sum = 0;
+            for (let bin = start; bin < end; bin++) {
+                sum += spectrum[bin];
+            }
+            // Mean magnitude of the band, normalised 0..1 (byte spectrum is 0..255).
+            this.levels[band] = sum / ((end - start) * 255);
+        }
     }
     draw(context) {
         context.backend.clear();
+        const { width, height } = this.app.canvas;
+        const gap = 16;
+        const slotWidth = (width - gap) / BAND_COUNT;
+        const barWidth = slotWidth - gap;
+        const baseY = height * 0.78;
+        const maxHeight = height * 0.62;
         this.bars.clear();
-        const values = [this.levels.low, this.levels.mid, this.levels.high];
-        const colors = [new Color(255, 140, 120), new Color(130, 220, 255), new Color(150, 255, 150)];
-        for (let i = 0; i < 3; i++) {
-            this.bars.fillColor = new Color(60, 60, 60);
-            this.bars.drawRectangle(180 + i * 170, 420, 110, -260);
-            this.bars.fillColor = colors[i];
-            this.bars.drawRectangle(180 + i * 170, 420, 110, -260 * values[i]);
+        for (let i = 0; i < BAND_COUNT; i++) {
+            const x = gap + slotWidth * i;
+            // Track behind each bar so silent bands still read as empty meters.
+            this.bars.fillColor = new Color(36, 40, 52);
+            this.bars.drawRectangle(x, baseY, barWidth, -maxHeight);
+            this.bars.fillColor = BAND_COLORS[i];
+            this.bars.drawRectangle(x, baseY, barWidth, -maxHeight * this.levels[i]);
         }
         context.render(this.bars);
+        for (const label of this.labels) {
+            context.render(label);
+        }
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 app.start(new FrequencyBandsScene());

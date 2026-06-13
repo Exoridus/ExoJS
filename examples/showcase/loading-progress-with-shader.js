@@ -2,15 +2,16 @@
 import { Application, Color, RenderBackendType, Scene, Sprite, Text, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 p=vUv-0.5; float r=length(p); float a=atan(p.y,p.x); float t=(a+3.1415926)/(6.2831852);
@@ -34,10 +35,11 @@ class LoadingProgressWithShaderScene extends Scene {
         await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.progress = { v: 0 };
-        this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
-        this.label.setPosition(360, 410);
-        this.ring = new Sprite(loader.get(Texture, 'uvGrid')).setScale(2.2).setPosition(310, 130);
+        this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
+        this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
+        this.ring = new Sprite(loader.get(Texture, 'uvGrid')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })

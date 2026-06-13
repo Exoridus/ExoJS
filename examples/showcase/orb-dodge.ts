@@ -1,11 +1,11 @@
 import { Application, Color, Container, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
+const CANVAS_WIDTH = 1280;
+const CANVAS_HEIGHT = 720;
 const PLAYER_RADIUS = 18;
 const PLAYER_SPEED = 260;
 const ORB_RADIUS = 14;
-const SPAWN_INTERVAL = 1.2;
+const SPAWN_INTERVAL = 0.9;
 const ORB_SPEED_MIN = 80;
 const ORB_SPEED_MAX = 200;
 
@@ -14,11 +14,11 @@ const app = new Application({
     canvas: {
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: new Color(10, 14, 26),
 });
-
-document.body.append(app.canvas);
 // #endregion guide:application-setup
 
 interface OrbData {
@@ -98,8 +98,8 @@ class PlayScene extends Scene {
             case 2: ox = Math.random() * CANVAS_WIDTH; oy = CANVAS_HEIGHT + ORB_RADIUS; break;
             default: ox = -ORB_RADIUS; oy = Math.random() * CANVAS_HEIGHT; break;
         }
-        const tx = CANVAS_WIDTH / 2 + (Math.random() - 0.5) * 300;
-        const ty = CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * 300;
+        const tx = CANVAS_WIDTH / 2 + (Math.random() - 0.5) * (CANVAS_WIDTH * 0.6);
+        const ty = CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * (CANVAS_HEIGHT * 0.6);
         const dist = Math.hypot(tx - ox, ty - oy) || 1;
         const speed = ORB_SPEED_MIN + Math.random() * (ORB_SPEED_MAX - ORB_SPEED_MIN);
 

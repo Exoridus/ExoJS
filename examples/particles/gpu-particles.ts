@@ -1,11 +1,4 @@
-import {
-    Application,
-    Color,
-    Scene,
-    Text,
-    Texture,
-    Vector,
-} from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Texture, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -16,11 +9,14 @@ import {
     Range,
     RateSpawn,
 } from '@codexo/exojs-particles';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
@@ -29,42 +25,57 @@ const app = new Application({
     extensions: [particlesExtension],
 });
 
-document.body.append(app.canvas);
+// WebGPU runs the whole simulation on a compute shader, so it sustains hundreds
+// of thousands of particles smoothly; WebGL2 falls back to a CPU integrator, so
+// it uses a much smaller budget to stay at a comfortable frame rate. Both stay
+// well within what a modern machine handles without lag.
+const isWebGpu = app.backend.backendType === RenderBackendType.WebGpu;
+const CAPACITY = isWebGpu ? 320_000 : 20_000;
+const RATE = isWebGpu ? 75_000 : 3_000;
 
 class GpuParticlesScene extends Scene {
     private system!: ParticleSystem;
-    private label!: Text;
+    private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { particle: 'image/particle-light.png' });
     }
 
     override init(loader): void {
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 60000 });
-        this.system.setPosition(400, 520);
+        const { width, height } = this.app.canvas;
+
+        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: CAPACITY });
+        this.system.setPosition(width / 2, height - 80);
         this.system.addSpawnModule(
             new RateSpawn({
-                rate: new Constant(5000),
-                lifetime: new Range(0.8, 1.6),
+                rate: new Constant(RATE),
+                lifetime: new Range(2.6, 3.8),
                 velocity: new ConeDirection(-Math.PI / 2, Math.PI / 4, 120, 340),
                 scale: new Constant(new Vector(0.22, 0.22)),
             }),
         );
         this.system.addUpdateModule(new ApplyForce(0, 320));
         this.system.addUpdateModule(new AlphaFadeOverLifetime());
-        this.label = new Text('', { fillColor: Color.white, fontSize: 16 });
-        this.label.setPosition(16, 16);
+
+        this.hud = mountControls({
+            title: 'GPU Particles',
+            hint: isWebGpu
+                ? 'WebGPU compute simulation — hundreds of thousands of particles, no CPU per-particle work.'
+                : 'WebGL2 CPU fallback — a smaller budget keeps the CPU integrator smooth.',
+        });
     }
 
     override update(delta): void {
         this.system.update(delta);
-        this.label.text = `alive: ${this.system.aliveCount}  gpuMode: ${this.system.gpuMode}`;
+
+        const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
+
+        this.hud.setStatus(`${this.system.aliveCount.toLocaleString()} live / ${CAPACITY.toLocaleString()} cap · ${backend}`);
     }
 
     override draw(context): void {
         context.backend.clear();
         context.render(this.system);
-        context.render(this.label);
     }
 }
 

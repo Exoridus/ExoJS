@@ -2,16 +2,16 @@ import { Application, Color, RenderBackendType, Scene, Text, WebGl2ShaderFilter,
 
 const app = new Application({
     canvas: {
-        width: 900,
-        height: 520,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 const glsl = `#version 300 es
 precision mediump float;
@@ -46,8 +46,11 @@ class TextGlitchScene extends Scene {
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
     override init(): void {
-        this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100 });
-        this.text.setPosition(120, 220);
+        const { width, height } = this.app.canvas;
+
+        this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100, align: 'center' });
+        this.text.setAnchor(0.5, 0.5);
+        this.text.setPosition(width / 2, height / 2);
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uShift: 0 } })

@@ -1,59 +1,81 @@
 // Auto-generated from keyboard.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(10, 12, 20),
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
+// Two ways to read the keyboard, shown side by side:
+//
+//   - on-event: `inputs.onStart` / `onStop` fire once on the press / release
+//     transition. Great for discrete actions (here: a recentre tap on Escape).
+//   - per-frame polling: the binding returned by `inputs.onActive` samples the
+//     channel buffer every frame, so reading `binding.active` inside update()
+//     gives the live held-state — no callback bookkeeping required.
+//
+// Both WASD and the arrow keys drive the same square via a single binding per
+// direction (each binding watches two channels at once).
 class KeyboardScene extends Scene {
-    sprite;
-    move = { w: 0, a: 0, s: 0, d: 0 };
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(400, 300);
-        this.inputs.onActive(Keyboard.W, () => {
-            this.move.w = 1;
+    square;
+    position = { x: 400, y: 300 };
+    // The structural shape of an InputBinding's pollable state (the class itself
+    // is internal to the engine, but `active` / `value` are its public surface).
+    up;
+    down;
+    left;
+    right;
+    hud;
+    init() {
+        const { width, height } = this.app.canvas;
+        this.square = new Graphics();
+        this.position = { x: width / 2, y: height / 2 };
+        // Per-frame polling source: one binding per direction, each listening to
+        // both the WASD key and the matching arrow key. We keep the references
+        // and read their live state in update() rather than mutating flags.
+        this.up = this.inputs.onActive([Keyboard.W, Keyboard.Up], () => { });
+        this.down = this.inputs.onActive([Keyboard.S, Keyboard.Down], () => { });
+        this.left = this.inputs.onActive([Keyboard.A, Keyboard.Left], () => { });
+        this.right = this.inputs.onActive([Keyboard.D, Keyboard.Right], () => { });
+        // On-event source: a discrete tap that snaps the square back to centre.
+        this.inputs.onStart(Keyboard.Escape, () => {
+            this.position.x = width / 2;
+            this.position.y = height / 2;
         });
-        this.inputs.onStop(Keyboard.W, () => {
-            this.move.w = 0;
-        });
-        this.inputs.onActive(Keyboard.A, () => {
-            this.move.a = 1;
-        });
-        this.inputs.onStop(Keyboard.A, () => {
-            this.move.a = 0;
-        });
-        this.inputs.onActive(Keyboard.S, () => {
-            this.move.s = 1;
-        });
-        this.inputs.onStop(Keyboard.S, () => {
-            this.move.s = 0;
-        });
-        this.inputs.onActive(Keyboard.D, () => {
-            this.move.d = 1;
-        });
-        this.inputs.onStop(Keyboard.D, () => {
-            this.move.d = 0;
-        });
-        this.inputs.onTrigger(Keyboard.Escape, () => {
-            this.sprite.setPosition(400, 300);
+        this.hud = mountControls({
+            title: 'Keyboard',
+            controls: [
+                { keys: ['W', 'A', 'S', 'D'], action: 'move (per-frame polling)' },
+                { keys: ['↑', '↓', '←', '→'], action: 'move (same bindings)' },
+                { keys: 'Esc', action: 'recentre (on-event)' },
+            ],
+            status: 'Held: none',
+            hint: 'Click the canvas first so it has keyboard focus.',
         });
     }
     update(delta) {
+        const { width, height } = this.app.canvas;
         const speed = 280 * delta.seconds;
-        this.sprite.move((this.move.d - this.move.a) * speed, (this.move.s - this.move.w) * speed);
+        const moveX = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
+        const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);
+        this.position.x = Math.max(20, Math.min(width - 20, this.position.x + moveX * speed));
+        this.position.y = Math.max(20, Math.min(height - 20, this.position.y + moveY * speed));
+        const held = [this.up.active && 'Up', this.down.active && 'Down', this.left.active && 'Left', this.right.active && 'Right'].filter(Boolean);
+        this.hud.setStatus(`Held: ${held.length ? held.join(' + ') : 'none'}`);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this.sprite);
+        this.square.clear();
+        this.square.fillColor = new Color(120, 200, 255);
+        this.square.drawRectangle(this.position.x - 20, this.position.y - 20, 40, 40);
+        context.render(this.square);
     }
 }
 app.start(new KeyboardScene());

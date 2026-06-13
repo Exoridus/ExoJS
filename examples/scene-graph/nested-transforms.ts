@@ -2,16 +2,16 @@ import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class NestedTransformsScene extends Scene {
     private sun!: Graphics;
@@ -21,17 +21,19 @@ class NestedTransformsScene extends Scene {
     private moon!: Graphics;
 
     override init(): void {
+        const { width, height } = this.app.canvas;
+
         this.sun = new Graphics();
         this.sun.fillColor = new Color(255, 220, 90);
         this.sun.drawCircle(0, 0, 30);
 
-        this.planetOrbit = new Container().setPosition(400, 300);
+        this.planetOrbit = new Container().setPosition(width / 2, height / 2);
         this.planet = new Graphics();
         this.planet.fillColor = new Color(120, 190, 255);
         this.planet.drawCircle(0, 0, 16);
-        this.planet.setPosition(160, 0);
+        this.planet.setPosition(220, 0);
 
-        this.moonOrbit = new Container().setPosition(160, 0);
+        this.moonOrbit = new Container().setPosition(220, 0);
         this.moon = new Graphics();
         this.moon.fillColor = new Color(220, 220, 220);
         this.moon.drawCircle(0, 0, 8);

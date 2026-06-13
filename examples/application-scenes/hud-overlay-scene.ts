@@ -2,16 +2,16 @@ import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class GameScene extends Scene {
     private angle = 0;
@@ -26,11 +26,13 @@ class GameScene extends Scene {
     }
 
     override draw(context): void {
+        const { width, height } = this.app.canvas;
+
         context.backend.clear(new Color(20, 32, 58));
         this.ring.clear();
         this.ring.lineWidth = 20;
         this.ring.lineColor = new Color(90, 180, 255);
-        this.ring.drawArc(400, 300, 160, 0, (this.angle * Math.PI) / 180);
+        this.ring.drawArc(width / 2, height / 2, 160, 0, (this.angle * Math.PI) / 180);
         context.render(this.ring);
     }
 }
@@ -46,9 +48,11 @@ class HudScene extends Scene {
     }
 
     override draw(context): void {
+        const { width } = this.app.canvas;
+
         this.bar.clear();
         this.bar.fillColor = new Color(0, 0, 0, 0.45);
-        this.bar.drawRectangle(0, 0, 800, 56);
+        this.bar.drawRectangle(0, 0, width, 56);
         this.bar.fillColor = new Color(80, 220, 120);
         this.bar.drawRectangle(18, 40, 220, 8);
         context.render(this.bar);

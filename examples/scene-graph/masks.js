@@ -2,12 +2,13 @@
 import { Application, Color, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 class MasksScene extends Scene {
     rectSprite;

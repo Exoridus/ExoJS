@@ -1,13 +1,15 @@
 // Auto-generated from color-grading.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 const LUT_SIZE = 17;
 function buildLut3D(transform) {
     const width = LUT_SIZE * LUT_SIZE;
@@ -33,8 +35,11 @@ function buildLut3D(transform) {
     ctx.putImageData(image, 0, 0);
     return canvas;
 }
+// The five named graded looks from the catalog, followed by an explicit pass-
+// through baseline so a viewer can compare each grade against the ungraded
+// source. The baseline is labelled "Identity (off)" so it is never mistaken for
+// a sixth creative look.
 const LOOKS = [
-    { name: 'Identity', transform: (r, g, b) => [r, g, b] },
     {
         name: 'Sepia',
         transform: (r, g, b) => {
@@ -61,6 +66,7 @@ const LOOKS = [
         name: 'Protanopia (red-blind)',
         transform: (r, g, b) => [0.567 * r + 0.433 * g, 0.558 * r + 0.442 * g, 0.242 * g + 0.758 * b],
     },
+    { name: 'Identity (off)', transform: (r, g, b) => [r, g, b] },
 ];
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 class ColorGradingScene extends Scene {
@@ -68,32 +74,47 @@ class ColorGradingScene extends Scene {
     filter;
     index = 0;
     sprite;
-    label;
-    hint;
+    hud;
+    cycle;
     async load(loader) {
         await loader.load(Texture, { ramp: PRIMARY_RAMP });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
         this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.luts[0]);
-        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(2.5);
-        this.sprite.setPosition(400, 320);
+        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3.5);
+        this.sprite.setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
-        this.label = new Text(LOOKS[0].name, { fillColor: Color.white, fontSize: 22 });
-        this.label.setPosition(20, 20);
-        this.hint = new Text('Press SPACE to cycle looks', { fillColor: Color.white, fontSize: 14 });
-        this.hint.setPosition(20, 560);
-        this.inputs.onTrigger(Keyboard.Space, () => {
-            this.index = (this.index + 1) % LOOKS.length;
-            this.filter.setLut(this.luts[this.index]);
-            this.label.text = LOOKS[this.index].name;
+        this.hud = mountControls({
+            title: 'Color Grading',
+            controls: [
+                { keys: 'SPACE', action: 'next look' },
+                { keys: 'Look', action: 'pick a grade' },
+            ],
         });
+        this.cycle = mountControlPanel({ title: 'LUT' }).addCycle({
+            label: 'Look',
+            options: LOOKS.map(look => look.name),
+            index: 0,
+            onChange: index => this.setIndex(index),
+        });
+        this.inputs.onTrigger(Keyboard.Space, () => this.setIndex((this.index + 1) % LOOKS.length));
+        // Apply the initial look so the HUD and sprite agree from frame one.
+        this.applyLook();
+    }
+    setIndex(index) {
+        this.index = ((index % LOOKS.length) + LOOKS.length) % LOOKS.length;
+        this.applyLook();
+    }
+    applyLook() {
+        this.filter.setLut(this.luts[this.index]);
+        this.cycle.set(this.index);
+        this.hud.setStatus(`${LOOKS[this.index].name}  (${this.index + 1}/${LOOKS.length})`);
     }
     draw(context) {
         context.backend.clear();
         context.render(this.sprite);
-        context.render(this.label);
-        context.render(this.hint);
     }
 }
 app.start(new ColorGradingScene());

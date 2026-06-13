@@ -1,13 +1,15 @@
 // Auto-generated from custom-fragment-shader.ts — edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
 const HUE_RAMP = assets.technical.color.hueRamp;
 const glsl = `#version 300 es
 precision mediump float;
@@ -30,16 +32,23 @@ class CustomFragmentShaderScene extends Scene {
     time = 0;
     filter;
     sprite;
+    hud;
     async load(loader) {
         await loader.load(Texture, { hueRamp: HUE_RAMP });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
-        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(3).setPosition(400, 300);
+        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
+        this.hud = mountControls({
+            title: 'Custom Fragment Shader',
+            status: 'A time-driven sine warp drives the sprite UVs each frame.',
+            hint: 'Same GLSL/WGSL source feeds WebGl2ShaderFilter or WebGpuShaderFilter; uTime updates per frame.',
+        });
     }
     update(delta) {
         this.time += delta.seconds;

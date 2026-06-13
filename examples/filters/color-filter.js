@@ -1,64 +1,93 @@
 // Auto-generated from color-filter.ts — edit the .ts source, not this file.
-import { Application, Color, ColorFilter, Keyboard, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, ColorFilter, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-document.body.append(app.canvas);
-const grayGlsl = `#version 300 es
+// A full-hue ramp shows tint / desaturate / invert / brightness on every colour.
+const HUE_RAMP = assets.technical.color.hueRamp;
+// --- Desaturate: collapse RGB to luminance. ---------------------------------
+const desaturateGlsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
 in vec2 vUv;
 out vec4 fragColor;
 void main(){ vec4 c=texture(uTexture,vUv); float l=dot(c.rgb,vec3(0.299,0.587,0.114)); fragColor=vec4(vec3(l),c.a); }`;
-const satGlsl = `#version 300 es
+const desaturateWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler;
+@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); let l=dot(c.rgb,vec3<f32>(0.299,0.587,0.114)); return vec4<f32>(vec3<f32>(l),c.a); }`;
+// --- Invert: 1 - colour (preserves alpha). ----------------------------------
+const invertGlsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
 in vec2 vUv;
 out vec4 fragColor;
-void main(){ vec4 c=texture(uTexture,vUv); float l=dot(c.rgb,vec3(0.299,0.587,0.114)); fragColor=vec4(mix(vec3(l),c.rgb,1.8),c.a); }`;
-const grayWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); let l=dot(c.rgb,vec3<f32>(0.299,0.587,0.114)); return vec4<f32>(vec3<f32>(l),c.a); }`;
-const satWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); let l=dot(c.rgb,vec3<f32>(0.299,0.587,0.114)); return vec4<f32>(mix(vec3<f32>(l),c.rgb,1.8),c.a); }`;
-const HUE_RAMP = assets.technical.color.hueRamp;
+void main(){ vec4 c=texture(uTexture,vUv); fragColor=vec4(vec3(1.0)-c.rgb,c.a); }`;
+const invertWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler;
+@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); return vec4<f32>(vec3<f32>(1.0)-c.rgb,c.a); }`;
+// --- Brightness: scale RGB above 1.0 (ColorFilter can only darken). ---------
+const brightnessGlsl = `#version 300 es
+precision mediump float;
+uniform sampler2D uTexture;
+in vec2 vUv;
+out vec4 fragColor;
+void main(){ vec4 c=texture(uTexture,vUv); fragColor=vec4(min(c.rgb*1.6,vec3(1.0)),c.a); }`;
+const brightnessWgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler;
+@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); return vec4<f32>(min(c.rgb*1.6,vec3<f32>(1.0)),c.a); }`;
+const PRESETS = ['Tint', 'Desaturate', 'Invert', 'Brightness'];
 class ColorFilterScene extends Scene {
     sprite;
     tint;
-    gray;
-    sat;
-    mode = 0;
+    desaturate;
+    invert;
+    brightness;
+    index = 0;
+    hud;
+    cycle;
     async load(loader) {
         await loader.load(Texture, { hueRamp: HUE_RAMP });
     }
     init(loader) {
-        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(3).setPosition(400, 300);
+        const { width, height } = this.app.canvas;
+        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
+        // The built-in ColorFilter multiplies by a solid colour (warm tint here).
         this.tint = new ColorFilter(new Color(255, 160, 120));
-        this.gray =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: grayWgsl })
-                : new WebGl2ShaderFilter({ fragmentSource: grayGlsl });
-        this.sat =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: satWgsl })
-                : new WebGl2ShaderFilter({ fragmentSource: satGlsl });
-        this.applyMode();
-        this.inputs.onTrigger(Keyboard.One, () => {
-            this.mode = 0;
-            this.applyMode();
+        this.desaturate = this.makeShader(desaturateGlsl, desaturateWgsl);
+        this.invert = this.makeShader(invertGlsl, invertWgsl);
+        this.brightness = this.makeShader(brightnessGlsl, brightnessWgsl);
+        this.applyPreset();
+        this.hud = mountControls({
+            title: 'Color Filter',
+            controls: [{ keys: 'Preset', action: 'tint · desaturate · invert · brightness' }],
+            status: this.statusText(),
+            hint: 'Cycle presets with the ‹ › buttons; the active preset is labelled.',
         });
-        this.inputs.onTrigger(Keyboard.Two, () => {
-            this.mode = 1;
-            this.applyMode();
-        });
-        this.inputs.onTrigger(Keyboard.Three, () => {
-            this.mode = 2;
-            this.applyMode();
+        this.cycle = mountControlPanel({ title: 'Colour Grade' }).addCycle({
+            label: 'Preset',
+            options: [...PRESETS],
+            index: this.index,
+            onChange: index => {
+                this.index = index;
+                this.applyPreset();
+            },
         });
     }
-    applyMode() {
-        this.sprite.filters = [this.mode === 0 ? this.tint : this.mode === 1 ? this.gray : this.sat];
+    makeShader(fragmentGlsl, fragmentWgsl) {
+        return app.backend.backendType === RenderBackendType.WebGpu ? new WebGpuShaderFilter({ fragmentSource: fragmentWgsl }) : new WebGl2ShaderFilter({ fragmentSource: fragmentGlsl });
+    }
+    applyPreset() {
+        const filter = [this.tint, this.desaturate, this.invert, this.brightness][this.index];
+        this.sprite.filters = [filter];
+        this.cycle?.set(this.index);
+        this.hud?.setStatus(this.statusText());
+    }
+    statusText() {
+        return `Preset: ${PRESETS[this.index]}  (${this.index + 1}/${PRESETS.length})`;
     }
     draw(context) {
         context.backend.clear();

@@ -1,14 +1,15 @@
-import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
 });
-
-document.body.append(app.canvas);
 
 const LUT_SIZE = 17;
 
@@ -39,8 +40,11 @@ function buildLut3D(transform: TransformFn): HTMLCanvasElement {
     return canvas;
 }
 
+// The five named graded looks from the catalog, followed by an explicit pass-
+// through baseline so a viewer can compare each grade against the ungraded
+// source. The baseline is labelled "Identity (off)" so it is never mistaken for
+// a sixth creative look.
 const LOOKS = [
-    { name: 'Identity', transform: (r: number, g: number, b: number): [number, number, number] => [r, g, b] },
     {
         name: 'Sepia',
         transform: (r: number, g: number, b: number): [number, number, number] => {
@@ -67,6 +71,7 @@ const LOOKS = [
         name: 'Protanopia (red-blind)',
         transform: (r: number, g: number, b: number): [number, number, number] => [0.567 * r + 0.433 * g, 0.558 * r + 0.442 * g, 0.242 * g + 0.758 * b],
     },
+    { name: 'Identity (off)', transform: (r: number, g: number, b: number): [number, number, number] => [r, g, b] },
 ];
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
@@ -76,38 +81,58 @@ class ColorGradingScene extends Scene {
     private filter!: LutFilter;
     private index = 0;
     private sprite!: Sprite;
-    private label!: Text;
-    private hint!: Text;
+    private hud!: ReturnType<typeof mountControls>;
+    private cycle!: { set(value: number): void };
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { ramp: PRIMARY_RAMP });
     }
 
     override init(loader): void {
+        const { width, height } = this.app.canvas;
+
         this.luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
         this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.luts[0]);
 
-        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(2.5);
-        this.sprite.setPosition(400, 320);
+        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3.5);
+        this.sprite.setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
 
-        this.label = new Text(LOOKS[0].name, { fillColor: Color.white, fontSize: 22 });
-        this.label.setPosition(20, 20);
-        this.hint = new Text('Press SPACE to cycle looks', { fillColor: Color.white, fontSize: 14 });
-        this.hint.setPosition(20, 560);
-
-        this.inputs.onTrigger(Keyboard.Space, () => {
-            this.index = (this.index + 1) % LOOKS.length;
-            this.filter.setLut(this.luts[this.index]);
-            this.label.text = LOOKS[this.index].name;
+        this.hud = mountControls({
+            title: 'Color Grading',
+            controls: [
+                { keys: 'SPACE', action: 'next look' },
+                { keys: 'Look', action: 'pick a grade' },
+            ],
         });
+
+        this.cycle = mountControlPanel({ title: 'LUT' }).addCycle({
+            label: 'Look',
+            options: LOOKS.map(look => look.name),
+            index: 0,
+            onChange: index => this.setIndex(index),
+        });
+
+        this.inputs.onTrigger(Keyboard.Space, () => this.setIndex((this.index + 1) % LOOKS.length));
+
+        // Apply the initial look so the HUD and sprite agree from frame one.
+        this.applyLook();
+    }
+
+    private setIndex(index: number): void {
+        this.index = ((index % LOOKS.length) + LOOKS.length) % LOOKS.length;
+        this.applyLook();
+    }
+
+    private applyLook(): void {
+        this.filter.setLut(this.luts[this.index]);
+        this.cycle.set(this.index);
+        this.hud.setStatus(`${LOOKS[this.index].name}  (${this.index + 1}/${LOOKS.length})`);
     }
 
     override draw(context): void {
         context.backend.clear();
         context.render(this.sprite);
-        context.render(this.label);
-        context.render(this.hint);
     }
 }
 

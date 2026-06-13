@@ -1,17 +1,17 @@
 import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 
-const GRID_COLUMNS = 34;
-const GRID_ROWS = 20;
+const GRID_COLUMNS = 56;
+const GRID_ROWS = 30;
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: new Color(0.02, 0.03, 0.06, 1),
     backend: { type: 'webgpu' },
 });
-
-document.body.append(app.canvas);
 
 class SpriteStressScene extends Scene {
     private sprites!: { sprite: Sprite; offsetX: number; offsetY: number; phase: number; baseScale: number; driftX: number; driftY: number; rotationSpeed: number }[];

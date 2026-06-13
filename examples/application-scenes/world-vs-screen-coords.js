@@ -2,15 +2,16 @@
 import { Application, Color, Graphics, Scene, Text, View } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 class WorldScreenScene extends Scene {
     view;
     grid;

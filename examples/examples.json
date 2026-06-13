@@ -175,14 +175,13 @@
             "path": "audio-basics/music-loop.js",
             "language": "typescript",
             "title": "Music Loop",
-            "description": "Play a seamlessly looping music track with controls for volume, playback rate, and loop region.",
+            "description": "Play a seamlessly looping music track with live controls for volume, playback rate, and looping.",
             "backend": "core",
             "tags": [
                 "audio",
                 "music"
             ],
             "capabilities": [
-                "pointer",
                 "audio"
             ]
         },
@@ -297,7 +296,7 @@
             "path": "audio-fx/vocoder.js",
             "language": "typescript",
             "title": "Vocoder",
-            "description": "Process a microphone signal through a vocoder filter to produce robotic, harmonised voice effects.",
+            "description": "Vocode a spoken voice phrase with a synth carrier to produce the classic robot-voice effect — pick a phrase and click to speak.",
             "backend": "core",
             "tags": [
                 "audio",
@@ -476,9 +475,6 @@
                 "fx",
                 "blur",
                 "filter"
-            ],
-            "capabilities": [
-                "pointer"
             ]
         },
         {
@@ -492,9 +488,6 @@
                 "fx",
                 "filter",
                 "shader"
-            ],
-            "capabilities": [
-                "pointer"
             ]
         },
         {
@@ -502,15 +495,12 @@
             "path": "filters/color-filter.js",
             "language": "typescript",
             "title": "Color Filter",
-            "description": "Tint, desaturate, invert, and adjust brightness of a sprite with a colour-matrix filter; cycle presets with arrow keys.",
+            "description": "Tint, desaturate, invert, and adjust the brightness of a sprite; cycle through the presets from the control panel.",
             "backend": "core",
             "tags": [
                 "fx",
                 "color",
                 "filter"
-            ],
-            "capabilities": [
-                "keyboard"
             ]
         },
         {
@@ -932,6 +922,9 @@
             "tags": [
                 "particles",
                 "pointer"
+            ],
+            "capabilities": [
+                "pointer"
             ]
         },
         {
@@ -939,7 +932,7 @@
             "path": "particles/gpu-particles.js",
             "language": "typescript",
             "title": "Gpu Particles",
-            "description": "Run a million particles entirely on the GPU using WebGPU compute shaders — no CPU per-particle updates.",
+            "description": "Run hundreds of thousands of particles on the GPU via WebGPU compute shaders, with a smaller CPU-simulated budget on WebGL2 — the live count shows the active backend.",
             "backend": "core",
             "tags": [
                 "particles",
@@ -1249,6 +1242,8 @@
                 "scene"
             ],
             "capabilities": [
+                "pointer",
+                "keyboard",
                 "audio"
             ]
         },
@@ -1257,7 +1252,7 @@
             "path": "showcase/color-grading.js",
             "language": "typescript",
             "title": "Color Grading",
-            "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) on a single sprite.",
+            "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) plus an Identity bypass, on a single sprite.",
             "backend": "core",
             "tags": [
                 "lut",
@@ -1403,9 +1398,6 @@
             "tags": [
                 "scene",
                 "rendering"
-            ],
-            "capabilities": [
-                "pointer"
             ]
         },
         {

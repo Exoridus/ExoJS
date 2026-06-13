@@ -2,15 +2,16 @@
 import { Application, Color, Container, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 class ZOrderingScene extends Scene {
     group;
     label;
@@ -19,6 +20,7 @@ class ZOrderingScene extends Scene {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
+        const { width, height } = this.app.canvas;
         this.group = new Container();
         this.label = new Text('Press 1, 2, 3', { fillColor: Color.white, fontSize: 18 });
         this.label.setPosition(18, 18);
@@ -26,7 +28,7 @@ class ZOrderingScene extends Scene {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
                 .setAnchor(0.5)
                 .setScale(0.9)
-                .setPosition(340 + index * 60, 300);
+                .setPosition(width / 2 - 60 + index * 60, height / 2);
             sprite.setTint([new Color(255, 120, 120), new Color(120, 255, 170), new Color(120, 170, 255)][index]);
             sprite.zIndex = index;
             this.group.addChild(sprite);

@@ -1,9 +1,12 @@
 import { Application, Color, DelayFilter, Graphics, ReverbFilter, Scene, Sound, Text } from '@codexo/exojs';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 860,
-        height: 620,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
@@ -11,83 +14,143 @@ const app = new Application({
     },
 });
 
-document.body.append(app.canvas);
-
-const sliders = [
-    { key: 'reverbWet', y: 210 },
-    { key: 'delayWet', y: 280 },
-    { key: 'delayTime', y: 350 },
-];
-
 class ReverbAndDelayScene extends Scene {
     private sound!: Sound;
     private reverb!: ReverbFilter;
     private delay!: DelayFilter;
     private gfx!: Graphics;
-    private labels!: Text[];
-    private drag = -1;
+    private prompt!: Text;
+    private tapPrompt!: Text;
+    private flash = 0;
+    private triggers = 0;
+    // Canvas-relative click-pad geometry computed in init().
+    private pad = { x: 0, y: 0, w: 0, h: 0 };
+    private hud!: ReturnType<typeof mountControls>;
+    private panel!: ReturnType<typeof mountControlPanel>;
 
     override async load(loader): Promise<void> {
         await loader.load(Sound, { sfx: 'audio/impact-light.ogg' });
     }
 
     override init(loader): void {
+        const { width, height } = this.app.canvas;
+
+        // A large click pad centred on the canvas.
+        this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
+
         this.sound = loader.get(Sound, 'sfx');
-        this.reverb = new ReverbFilter({ wet: 0.4 });
+
+        // Reverb (room tail) → Delay (echoes) chained on the sound bus.
+        this.reverb = new ReverbFilter({ wet: 0.4, decay: 2 });
         this.delay = new DelayFilter({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });
         app.audio.sound.addFilter(this.reverb);
         app.audio.sound.addFilter(this.delay);
+
         this.gfx = new Graphics();
-        this.labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));
-        this.app.input.onPointerDown.add(p => {
-            this.drag = this.pick(p.y);
-            this.set(p.x);
+        this.prompt = new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, this.pad.y + this.pad.h / 2);
+
+        // Shown while the browser still blocks audio (`app.audio.locked`); the
+        // first click or keypress unlocks it.
+        this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, height - 48);
+
+        this.hud = mountControls({
+            title: 'Reverb and Delay',
+            controls: [{ keys: 'Click', action: 'trigger the impact sound' }],
+            status: 'Click or press any key to start…',
+            hint: 'Each click fires the dry impact through the reverb tail and delay echoes.',
         });
-        this.app.input.onPointerMove.add(p => {
-            this.set(p.x);
+
+        // All four effect parameters are live: reverb wet + decay, delay wet,
+        // delay time + feedback. Ranges mirror the filter clamps in src/audio/filters.
+        this.panel = mountControlPanel({ title: 'Effect chain', corner: 'bottom-left' });
+        this.panel.addSlider({
+            label: 'Reverb wet',
+            min: 0,
+            max: 1,
+            step: 0.01,
+            value: this.reverb.wet,
+            onChange: v => {
+                this.reverb.wet = v;
+            },
         });
-        this.app.input.onPointerUp.add(() => {
-            this.drag = -1;
+        this.panel.addSlider({
+            label: 'Reverb decay',
+            min: 0.5,
+            max: 10,
+            step: 0.1,
+            value: this.reverb.decay,
+            onChange: v => {
+                this.reverb.decay = v;
+            },
         });
-        this.app.input.onPointerTap.add(p => {
-            if (p.y > 470) this.sound.play({ replace: true });
+        this.panel.addSlider({
+            label: 'Delay wet',
+            min: 0,
+            max: 1,
+            step: 0.01,
+            value: this.delay.wet,
+            onChange: v => {
+                this.delay.wet = v;
+            },
         });
+        this.panel.addSlider({
+            label: 'Delay time (s)',
+            min: 0.02,
+            max: 0.82,
+            step: 0.01,
+            value: this.delay.delaySeconds,
+            onChange: v => {
+                this.delay.delaySeconds = v;
+            },
+        });
+        this.panel.addSlider({
+            label: 'Delay feedback',
+            min: 0,
+            max: 0.95,
+            step: 0.01,
+            value: this.delay.feedback,
+            onChange: v => {
+                this.delay.feedback = v;
+            },
+        });
+
+        this.app.input.onPointerTap.add(() => {
+            // The pointer gesture also unlocks the AudioContext; firing while
+            // still locked would be silent, so wait until audio is ready.
+            if (this.app.audio.locked) return;
+            this.sound.play({ replace: true });
+            this.flash = 1;
+            this.triggers += 1;
+            this.hud.setStatus(`Impacts triggered: ${this.triggers}`);
+        });
+
+        this.hud.setStatus('Click anywhere to trigger the impact');
     }
 
-    private pick(y: number): number {
-        for (let i = 0; i < sliders.length; i++) if (Math.abs(y - sliders[i].y) <= 14) return i;
-        return -1;
-    }
-
-    private set(x: number): void {
-        if (this.drag < 0) return;
-        const t = Math.max(0, Math.min(1, (x - 260) / 420));
-        if (this.drag === 0) this.reverb.wet = t;
-        if (this.drag === 1) this.delay.wet = t;
-        if (this.drag === 2) this.delay.delaySeconds = 0.02 + t * 0.8;
+    override update(delta): void {
+        this.flash = Math.max(0, this.flash - delta.seconds * 2.2);
     }
 
     override draw(context): void {
         context.backend.clear();
         this.gfx.clear();
-        const values = [this.reverb.wet, this.delay.wet, this.delay.delaySeconds / 0.82];
-        const names = [
-            `reverb wet: ${this.reverb.wet.toFixed(2)}`,
-            `delay wet: ${this.delay.wet.toFixed(2)}`,
-            `delay time: ${this.delay.delaySeconds.toFixed(2)}s`,
-        ];
-        for (let i = 0; i < sliders.length; i++) {
-            this.gfx.fillColor = new Color(70, 70, 70);
-            this.gfx.drawRectangle(260, sliders[i].y - 6, 420, 12);
-            this.gfx.fillColor = new Color(255, 190, 120);
-            this.gfx.drawRectangle(260, sliders[i].y - 6, 420 * values[i], 12);
-            this.labels[i].text = names[i];
-            this.labels[i].setPosition(110, sliders[i].y - 12);
-            context.render(this.labels[i]);
-        }
-        this.gfx.fillColor = new Color(200, 200, 200);
-        this.gfx.drawRectangle(280, 495, 300, 40);
+
+        // A big click pad that flashes on each trigger so the play action reads.
+        const lit = Math.floor(60 + this.flash * 180);
+        this.gfx.fillColor = new Color(lit, lit, Math.floor(60 + this.flash * 120));
+        this.gfx.drawRectangle(this.pad.x, this.pad.y, this.pad.w, this.pad.h);
+
+        this.prompt.text = this.app.audio.locked ? 'Click or press a key to enable audio' : 'Click to play impact';
         context.render(this.gfx);
+        context.render(this.prompt);
+
+        if (this.app.audio.locked) {
+            context.render(this.tapPrompt);
+        }
     }
 }
 

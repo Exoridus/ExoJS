@@ -1,60 +1,82 @@
 // Auto-generated from rectangles-collision.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture, Time } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
-const collisionRed = new Color(255, 0, 0);
+const CLEAR_TINT = new Color(120, 200, 255);
+const OVERLAP_TINT = new Color(255, 90, 90);
 class RectanglesCollisionScene extends Scene {
-    time;
     boxA;
     boxB;
+    overlap;
+    hud;
     async load(loader) {
         await loader.load(Texture, { gradient: 'image/hue-ramp.png' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.time = new Time();
-        this.boxA = new Sprite(loader.get(Texture, 'gradient'));
-        this.boxA.setPosition(width / 2, height / 2);
-        this.boxA.setAnchor(0.5, 0.5);
-        this.boxB = new Sprite(loader.get(Texture, 'gradient'));
-        this.boxB.setPosition(width / 2, height / 2);
-        this.boxB.setAnchor(0.5, 0.5);
-        this.app.input.onPointerMove.add(pointer => {
-            this.boxB.setPosition(pointer.x, pointer.y);
+        const texture = loader.get(Texture, 'gradient');
+        // Two axis-aligned rectangles (no rotation) so collision is a true AABB
+        // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the
+        // drag offset and the bounds centred on the pointer-grabbed point.
+        this.boxA = this.makeBox(texture, 220, 150);
+        this.boxA.setPosition(width / 2 - 180, height / 2);
+        this.boxB = this.makeBox(texture, 170, 200);
+        this.boxB.setPosition(width / 2 + 180, height / 2);
+        this.overlap = new Graphics();
+        this.hud = mountControls({
+            title: 'Rectangles Collision',
+            controls: [{ keys: 'Drag', action: 'move a rectangle' }],
+            status: 'No overlap',
+            hint: 'Drag either rectangle over the other — the AABB overlap region lights up.',
         });
     }
-    update(delta) {
-        this.time.addTime(delta);
-        this.boxA.setScale(0.25 + (Math.cos(this.time.seconds) * 0.5 + 0.5));
-        this.boxB.setScale(0.25 + (Math.sin(this.time.seconds - Math.PI / 2) * 0.5 + 0.5));
-        this.boxA.setRotation(this.time.seconds * 25);
-        this.boxB.setRotation(this.time.seconds * -100);
-        this.boxA.setTint(Color.white);
-        this.boxB.setTint(Color.white);
-        if (this.boxA.intersectsWith(this.boxB)) {
-            const collision = this.boxA.collidesWith(this.boxB);
-            if (!collision) {
-                return;
-            }
-            const { shapeAinB, shapeBinA } = collision;
-            this.boxA.setTint(shapeAinB ? Color.cyan : collisionRed);
-            this.boxB.setTint(shapeBinA ? Color.cyan : collisionRed);
-            this.boxB.tint.a = 0.5;
+    makeBox(texture, w, h) {
+        const box = new Sprite(texture).setAnchor(0.5);
+        box.width = w;
+        box.height = h;
+        box.setTint(CLEAR_TINT);
+        box.interactive = true;
+        box.draggable = true;
+        return box;
+    }
+    update() {
+        const overlapping = this.boxA.intersectsWith(this.boxB);
+        this.boxA.setTint(overlapping ? OVERLAP_TINT : CLEAR_TINT);
+        this.boxB.setTint(overlapping ? OVERLAP_TINT : CLEAR_TINT);
+        this.overlap.clear();
+        if (overlapping) {
+            const a = this.boxA.getBounds();
+            const b = this.boxB.getBounds();
+            const left = Math.max(a.left, b.left);
+            const top = Math.max(a.top, b.top);
+            const right = Math.min(a.right, b.right);
+            const bottom = Math.min(a.bottom, b.bottom);
+            const w = Math.max(0, right - left);
+            const h = Math.max(0, bottom - top);
+            this.overlap.fillColor = new Color(255, 255, 255, 0.85);
+            this.overlap.drawRectangle(left, top, w, h);
+            this.hud.setStatus(`OVERLAP — ${Math.round(w)}×${Math.round(h)} px`);
+        }
+        else {
+            this.hud.setStatus('No overlap');
         }
     }
     draw(context) {
-        context.backend.clear();
+        context.backend.clear(new Color(18, 22, 30));
         context.render(this.boxA);
         context.render(this.boxB);
+        context.render(this.overlap);
     }
 }
 app.start(new RectanglesCollisionScene());

@@ -3,15 +3,16 @@ import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 const debug = new DebugOverlay(app);
 debug.layers.boundingBoxes.visible = true;
 class BoundingBoxesScene extends Scene {
@@ -21,17 +22,22 @@ class BoundingBoxesScene extends Scene {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
-        this.sprites = Array.from({ length: 7 }, (_, i) => {
+        const { width, height } = this.app.canvas;
+        const count = 7;
+        const margin = width * 0.12;
+        const step = (width - 2 * margin) / (count - 1);
+        this.sprites = Array.from({ length: count }, (_, i) => {
             const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.8);
-            sprite.setPosition(120 + i * 90, 300 + Math.sin(i) * 80);
+            sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
             return { sprite, speed: 0.8 + i * 0.14 };
         });
     }
     update(delta) {
+        const { height } = this.app.canvas;
         this.time += delta.seconds;
         for (const { sprite, speed } of this.sprites) {
             sprite.setRotation(this.time * 35 * speed);
-            sprite.setPosition(sprite.position.x, 300 + Math.sin(this.time * speed) * 100);
+            sprite.setPosition(sprite.position.x, height / 2 + Math.sin(this.time * speed) * 100);
         }
     }
     draw(context) {

@@ -2,18 +2,20 @@
 import { Application, Color, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
-        width: 900,
-        height: 520,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-document.body.append(app.canvas);
 class StrokeAndShadowScene extends Scene {
     title;
     init() {
+        const { width, height } = this.app.canvas;
         this.title = new Text('EXOJS', {
             fillColor: new Color(230, 240, 255),
             fontSize: 120,
@@ -25,7 +27,8 @@ class StrokeAndShadowScene extends Scene {
             shadowOffsetY: 6,
             shadowBlur: 0.4,
         });
-        this.title.setPosition(180, 190);
+        this.title.setAnchor(0.5, 0.5);
+        this.title.setPosition(width / 2, height / 2);
     }
     draw(context) {
         context.backend.clear(new Color(24, 28, 42));

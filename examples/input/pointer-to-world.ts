@@ -1,57 +1,122 @@
 import { Application, Color, Graphics, Scene, View } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(10, 12, 20),
     loader: {
         basePath: 'assets/',
     },
 });
 
-document.body.append(app.canvas);
-
+// The camera continuously pans (a slow figure-eight) and breathes its zoom, so
+// the same screen pixel maps to a moving world point every frame. `screenToWorld`
+// handles all of that — including the view's viewport rectangle — so we never
+// hand-roll the inverse projection. Tap to drop a marker in *world* space; it
+// stays pinned to the world as the camera moves over it.
 class PointerToWorldScene extends Scene {
     private view!: View;
     private grid!: Graphics;
     private markers!: Graphics;
+    private cursor = { x: 0, y: 0 };
+    private world = { x: 0, y: 0 };
+    private markerWorld: Array<{ x: number; y: number }> = [];
+    private elapsed = 0;
+    private userZoom = 1;
+    private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        this.view = new View(260, 180, 800, 600);
+        const { width, height } = this.app.canvas;
+
+        this.view = new View(width / 2, height / 2, width, height);
         this.grid = new Graphics();
         this.markers = new Graphics();
+        this.cursor = { x: width / 2, y: height / 2 };
 
+        // Static world-space grid so the camera motion is visible against it.
+        // Extends well beyond the viewport so the panning camera never runs off it.
         this.grid.lineWidth = 1;
-        this.grid.lineColor = new Color(70, 70, 70);
-        for (let x = -400; x <= 1200; x += 80) this.grid.drawLine(x, -300, x, 1000);
-        for (let y = -300; y <= 1000; y += 80) this.grid.drawLine(-400, y, 1200, y);
+        this.grid.lineColor = new Color(60, 66, 82);
+
+        for (let x = -640; x <= width + 640; x += 80) {
+            this.grid.drawLine(x, -480, x, height + 480);
+        }
+
+        for (let y = -480; y <= height + 480; y += 80) {
+            this.grid.drawLine(-640, y, width + 640, y);
+        }
+
+        this.app.input.onPointerMove.add(pointer => {
+            this.cursor.x = pointer.x;
+            this.cursor.y = pointer.y;
+        });
 
         this.app.input.onPointerTap.add(pointer => {
-            const world = this.toWorld(pointer.x, pointer.y);
-            this.markers.fillColor = new Color(255, 160, 80);
-            this.markers.drawCircle(world.x, world.y, 6);
+            const world = this.view.screenToWorld(pointer.x, pointer.y, this.app.canvas.width, this.app.canvas.height);
+
+            this.markerWorld.push({ x: world.x, y: world.y });
+        });
+
+        // Scroll to nudge a user-controlled zoom that the automatic breath multiplies.
+        this.app.input.onMouseWheel.add(offset => {
+            this.userZoom = Math.max(0.4, Math.min(3, this.userZoom + (offset.y < 0 ? 0.1 : -0.1)));
+        });
+
+        this.hud = mountControls({
+            title: 'Pointer to World',
+            controls: [
+                { keys: 'Move', action: 'read world coordinate' },
+                { keys: 'Click', action: 'drop a world-pinned marker' },
+                { keys: 'Wheel', action: 'zoom' },
+            ],
+            status: '',
+            hint: 'The camera pans and zooms on its own — markers stay fixed in the world.',
         });
     }
 
-    private toWorld(screenX: number, screenY: number): { x: number; y: number } {
-        const width = this.app.canvas.width;
-        const height = this.app.canvas.height;
-        const clipX = (screenX / width) * 2 - 1;
-        const clipY = 1 - (screenY / height) * 2;
-        const matrix = this.view.getInverseTransform();
+    override update(delta): void {
+        const { width, height } = this.app.canvas;
 
-        return {
-            x: matrix.a * clipX + matrix.b * clipY + matrix.x,
-            y: matrix.c * clipX + matrix.d * clipY + matrix.y,
-        };
+        this.elapsed += delta.seconds;
+
+        // Slow figure-eight pan plus a gentle zoom breath.
+        const centerX = width / 2 + Math.sin(this.elapsed * 0.5) * 220;
+        const centerY = height / 2 + Math.sin(this.elapsed * 1.0) * 140;
+
+        this.view.setCenter(centerX, centerY);
+        this.view.setZoom(this.userZoom * (1 + Math.sin(this.elapsed * 0.35) * 0.25));
+        this.view.update(delta.milliseconds);
+
+        // Live world coordinate under the cursor — recomputed every frame because
+        // the mapping changes as the camera moves.
+        this.world = this.view.screenToWorld(this.cursor.x, this.cursor.y, this.app.canvas.width, this.app.canvas.height);
+
+        this.hud.setStatus(`Screen ${Math.round(this.cursor.x)}, ${Math.round(this.cursor.y)} → World ${this.world.x.toFixed(0)}, ${this.world.y.toFixed(0)} · zoom ${this.view.zoomLevel.toFixed(2)}`);
     }
 
     override draw(context): void {
         context.backend.clear();
         context.backend.setView(this.view);
+
         context.render(this.grid);
+
+        // Rebuild markers each frame in their fixed world positions.
+        this.markers.clear();
+        this.markers.fillColor = new Color(255, 160, 80);
+
+        for (const marker of this.markerWorld) {
+            this.markers.drawCircle(marker.x, marker.y, 7);
+        }
+
+        // Highlight the live cursor→world point.
+        this.markers.fillColor = new Color(120, 230, 255);
+        this.markers.drawCircle(this.world.x, this.world.y, 5);
+
         context.render(this.markers);
         context.backend.setView(null);
     }

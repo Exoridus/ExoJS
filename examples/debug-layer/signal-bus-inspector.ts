@@ -2,16 +2,16 @@ import { Application, Color, Scene, seconds, Signal, Text, Timer } from '@codexo
 
 const app = new Application({
     canvas: {
-        width: 820,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class SignalBusInspectorScene extends Scene {
     private signals!: { spawn: Signal; damage: Signal; score: Signal };

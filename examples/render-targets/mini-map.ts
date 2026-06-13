@@ -2,16 +2,16 @@ import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, Rende
 
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
     clearColor: Color.black,
     loader: {
         basePath: 'assets/',
     },
 });
-
-document.body.append(app.canvas);
 
 class MiniMapScene extends Scene {
     private world!: Graphics;
@@ -23,14 +23,18 @@ class MiniMapScene extends Scene {
     private time = 0;
 
     override init(): void {
+        const { width } = this.app.canvas;
+        const miniX = width - 220 - 20;
+        const miniY = 20;
+
         this.world = new Graphics();
         this.player = new Graphics();
         this.miniRt = new RenderTexture(220, 160);
-        this.miniSprite = new Sprite(this.miniRt).setPosition(560, 20);
+        this.miniSprite = new Sprite(this.miniRt).setPosition(miniX, miniY);
         this.miniFrame = new Graphics();
         this.miniFrame.lineWidth = 2;
         this.miniFrame.lineColor = Color.white;
-        this.miniFrame.drawRectangle(560, 20, 220, 160);
+        this.miniFrame.drawRectangle(miniX, miniY, 220, 160);
 
         // The "world" is immediate-mode (grid + player) — a context-aware callback, drawn once
         // into the minimap texture and once to the screen. The sprite + frame are scene nodes.
@@ -59,15 +63,19 @@ class MiniMapScene extends Scene {
     }
 
     private renderWorld(backend): void {
+        const { width, height } = this.app.canvas;
+        const marginX = 80;
+        const marginY = 60;
+
         this.world.clear();
         this.world.lineWidth = 2;
         this.world.lineColor = new Color(60, 70, 90);
-        for (let x = 80; x <= 720; x += 80) this.world.drawLine(x, 60, x, 540);
-        for (let y = 60; y <= 540; y += 80) this.world.drawLine(80, y, 720, y);
+        for (let x = marginX; x <= width - marginX; x += 80) this.world.drawLine(x, marginY, x, height - marginY);
+        for (let y = marginY; y <= height - marginY; y += 80) this.world.drawLine(marginX, y, width - marginX, y);
         this.world.render(backend);
 
-        const x = 400 + Math.cos(this.time) * 250;
-        const y = 300 + Math.sin(this.time * 1.3) * 180;
+        const x = width / 2 + Math.cos(this.time) * (width * 0.4);
+        const y = height / 2 + Math.sin(this.time * 1.3) * (height * 0.4);
         this.player.clear();
         this.player.fillColor = new Color(255, 180, 100);
         this.player.drawCircle(x, y, 18);

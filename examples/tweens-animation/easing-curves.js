@@ -1,50 +1,133 @@
 // Auto-generated from easing-curves.ts — edit the .ts source, not this file.
-import { Application, Color, Ease, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Ease, Graphics, Scene, Text } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
     },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+    clearColor: new Color(18, 21, 30),
 });
-document.body.append(app.canvas);
-const easings = [
+// Every built-in Ease function, in source order.
+const EASINGS = [
     ['linear', Ease.linear],
     ['quadIn', Ease.quadIn],
     ['quadOut', Ease.quadOut],
+    ['quadInOut', Ease.quadInOut],
+    ['cubicIn', Ease.cubicIn],
+    ['cubicOut', Ease.cubicOut],
     ['cubicInOut', Ease.cubicInOut],
+    ['quartIn', Ease.quartIn],
+    ['quartOut', Ease.quartOut],
+    ['quartInOut', Ease.quartInOut],
+    ['quintIn', Ease.quintIn],
+    ['quintOut', Ease.quintOut],
+    ['quintInOut', Ease.quintInOut],
+    ['sineIn', Ease.sineIn],
+    ['sineOut', Ease.sineOut],
     ['sineInOut', Ease.sineInOut],
+    ['expoIn', Ease.expoIn],
+    ['expoOut', Ease.expoOut],
+    ['expoInOut', Ease.expoInOut],
+    ['circIn', Ease.circIn],
+    ['circOut', Ease.circOut],
+    ['circInOut', Ease.circInOut],
+    ['backIn', Ease.backIn],
     ['backOut', Ease.backOut],
+    ['backInOut', Ease.backInOut],
+    ['bounceIn', Ease.bounceIn],
     ['bounceOut', Ease.bounceOut],
+    ['bounceInOut', Ease.bounceInOut],
+    ['elasticIn', Ease.elasticIn],
     ['elasticOut', Ease.elasticOut],
+    ['elasticInOut', Ease.elasticInOut],
 ];
+// 30 easings laid out 10 wide × 3 tall to spread across the wider 16:9 frame.
+const COLS = 10;
+const ROWS = 3;
+const HEADER = 8;
+const SAMPLES = 22;
+// Value range plotted per cell (back/elastic overshoot beyond [0, 1]).
+const V_MIN = -0.45;
+const V_MAX = 1.45;
 class EasingCurvesScene extends Scene {
-    rows;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
-        const texture = loader.get(Texture, 'bunny');
-        this.rows = easings.map(([name, easing], index) => {
-            const y = 70 + index * 64;
-            const sprite = new Sprite(texture)
-                .setAnchor(0.5)
-                .setScale(0.65)
-                .setPosition(90, y + 22);
-            const label = new Text(name, { fillColor: Color.white, fontSize: 14 });
-            label.setPosition(18, y);
-            const tween = this.app.tweens.create(sprite.position).to({ x: 730 }, 1.5).easing(easing).yoyo(true).repeat(-1).start();
-            return { sprite, label, tween };
+    graphics = new Graphics();
+    labels = [];
+    t = 0;
+    direction = 1;
+    cellWidth = 0;
+    cellHeight = 0;
+    init() {
+        const { width, height } = this.app.canvas;
+        this.cellWidth = width / COLS;
+        this.cellHeight = (height - HEADER) / ROWS;
+        this.labels = EASINGS.map(([name], index) => {
+            const { x, y } = this.cell(index);
+            const label = new Text(name, { fillColor: new Color(200, 214, 240), fontSize: 11 });
+            label.setPosition(x + 10, y + 4);
+            return label;
         });
+        mountControls({
+            title: `Easing Curves — all ${EASINGS.length}`,
+            hint: 'Each cell plots f(t) over 0→1; the dot traces the curve as t sweeps back and forth.',
+        });
+    }
+    cell(index) {
+        const col = index % COLS;
+        const row = Math.floor(index / COLS);
+        return { x: col * this.cellWidth, y: HEADER + row * this.cellHeight };
+    }
+    plotY(value, plotTop, plotHeight) {
+        const norm = (value - V_MIN) / (V_MAX - V_MIN);
+        return plotTop + plotHeight * (1 - Math.max(0, Math.min(1, norm)));
+    }
+    update(delta) {
+        this.t += this.direction * delta.seconds * 0.6;
+        if (this.t >= 1) {
+            this.t = 1;
+            this.direction = -1;
+        }
+        else if (this.t <= 0) {
+            this.t = 0;
+            this.direction = 1;
+        }
     }
     draw(context) {
         context.backend.clear();
-        for (const row of this.rows) {
-            context.render(row.sprite);
-            context.render(row.label);
+        const g = this.graphics;
+        g.clear();
+        const plotPadX = 10;
+        const plotW = this.cellWidth - plotPadX * 2;
+        const plotTop = 22;
+        const plotH = this.cellHeight - plotTop - 8;
+        // Plot backgrounds.
+        g.fillColor = new Color(30, 35, 48);
+        for (let i = 0; i < EASINGS.length; i++) {
+            const { x, y } = this.cell(i);
+            g.drawRectangle(x + plotPadX, y + plotTop, plotW, plotH);
+        }
+        // Curve sample dots.
+        g.fillColor = new Color(96, 120, 160);
+        for (let i = 0; i < EASINGS.length; i++) {
+            const { x, y } = this.cell(i);
+            const easing = EASINGS[i][1];
+            for (let s = 0; s <= SAMPLES; s++) {
+                const t = s / SAMPLES;
+                g.drawCircle(x + plotPadX + t * plotW, this.plotY(easing(t), y + plotTop, plotH), 1.4);
+            }
+        }
+        // Moving dot at the current t.
+        g.fillColor = new Color(90, 210, 255);
+        for (let i = 0; i < EASINGS.length; i++) {
+            const { x, y } = this.cell(i);
+            const easing = EASINGS[i][1];
+            g.drawCircle(x + plotPadX + this.t * plotW, this.plotY(easing(this.t), y + plotTop, plotH), 3);
+        }
+        context.render(g);
+        for (const label of this.labels) {
+            context.render(label);
         }
     }
 }
