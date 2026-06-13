@@ -1,5 +1,5 @@
-import { tilemapExtension } from '@codexo/exojs-tilemap';
 import type { AssetBinding, Extension } from '@codexo/exojs/extensions';
+import { tilemapExtension } from '@codexo/exojs-tilemap';
 
 import { tiledMapBinding } from './tiledMapBinding';
 import { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';

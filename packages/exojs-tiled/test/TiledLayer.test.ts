@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { TiledGroupLayerData,TiledObjectLayerData } from '../src/data';
 import {
   createTiledLayer,
   TiledGroupLayer,
@@ -8,7 +9,6 @@ import {
   TiledObjectLayer,
   TiledTileLayer,
 } from '../src/TiledLayer';
-import type { TiledObjectLayerData, TiledGroupLayerData } from '../src/data';
 
 const BASE = {
   id: 1,

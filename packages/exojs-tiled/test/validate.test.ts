@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TiledLayerDataBase } from '../src/data';
 import {
   checkTiledLayerInfiniteConsistency,
   TiledFormatError,

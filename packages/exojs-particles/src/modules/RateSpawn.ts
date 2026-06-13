@@ -1,5 +1,6 @@
 ﻿import { Color } from '@codexo/exojs';
 import { Vector } from '@codexo/exojs';
+
 import type { Distribution } from "#distributions/Distribution";
 import type { ParticleSystem } from "#ParticleSystem";
 

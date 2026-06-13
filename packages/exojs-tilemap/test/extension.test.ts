@@ -1,8 +1,9 @@
-import { describe, expect, it, beforeEach } from 'vitest';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
+import { beforeEach,describe, expect, it } from 'vitest';
+
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
-import { tilemapExtension } from '../src/tilemapExtension';
 import { TileChunkNode } from '../src/TileChunkNode';
+import { tilemapExtension } from '../src/tilemapExtension';
 
 describe('@codexo/exojs-tilemap root', () => {
   it('tilemapExtension has correct id', () => {

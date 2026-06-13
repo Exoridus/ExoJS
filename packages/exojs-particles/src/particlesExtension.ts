@@ -2,9 +2,10 @@ import type { Extension, RendererBinding } from '@codexo/exojs/extensions';
 import type { RenderBackend } from '@codexo/exojs/rendering';
 import { RenderBackendType } from '@codexo/exojs/rendering';
 
-import { ParticleSystem } from './ParticleSystem';
 import { WebGl2ParticleRenderer } from '#renderers/WebGl2ParticleRenderer';
 import { WebGpuParticleRenderer } from '#renderers/WebGpuParticleRenderer';
+
+import { ParticleSystem } from './ParticleSystem';
 
 /** Options for {@link createParticlesExtension}. */
 export interface ParticlesExtensionOptions {
@@ -24,7 +25,7 @@ function buildParticlesRendererBinding(batchSize: number): RendererBinding {
         return new WebGpuParticleRenderer();
       }
 
-      return undefined;
+      throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
     },
   };
 }

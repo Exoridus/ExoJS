@@ -3,10 +3,10 @@
 import type { Time } from '@codexo/exojs';
 import { Rectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs';
-import type { RenderPlanBuilder } from '@codexo/exojs/rendering';
-import type { RenderBackend } from '@codexo/exojs/rendering';
 import { Spritesheet } from '@codexo/exojs';
 import { Texture } from '@codexo/exojs';
+import type { RenderPlanBuilder } from '@codexo/exojs/rendering';
+import type { RenderBackend } from '@codexo/exojs/rendering';
 
 import { ParticleGpuState } from '#gpu/ParticleGpuState';
 import type { DeathModule } from '#modules/DeathModule';

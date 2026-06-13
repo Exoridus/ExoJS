@@ -1,0 +1,56 @@
+---
+title: "TiledObject"
+description: "A parsed Tiled object, placed in an TiledObjectLayer or a tile's collision `objectgroup`. The shape of the object is determined by which of point, ellipse, polygon, polyline, text, or gid is set; if none are set, the object is a plain rectangle spanning `[x, y, width, height]`."
+symbol: "TiledObject"
+kind: "class"
+subsystem: "tiled"
+importPath: "@codexo/exojs-tiled"
+memberCount: 19
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tiled/src/TiledObject.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledObject.ts#L12"
+---
+## Import
+
+`import { TiledObject } from '@codexo/exojs-tiled'`
+
+A parsed Tiled object, placed in an TiledObjectLayer or a tile's
+collision `objectgroup`.
+
+The shape of the object is determined by which of point,
+ellipse, polygon, polyline, text, or
+gid is set; if none are set, the object is a plain rectangle
+spanning `[x, y, width, height]`.
+
+## Constructors
+
+- `new(data: TiledObjectData): TiledObject`
+
+## Methods
+
+- `getProperty(name: string): TiledPropertyData | undefined`
+
+## Properties
+
+- `ellipse: boolean`
+- `gid: number`
+- `height: number`
+- `id: number`
+- `name: string`
+- `point: boolean`
+- `polygon: readonly TiledPointData[]`
+- `polyline: readonly TiledPointData[]`
+- `properties: readonly TiledPropertyData[]`
+- `rotation: number`
+- `template: string`
+- `text: TiledTextData`
+- `type: string`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+
+## Source
+
+[packages/exojs-tiled/src/TiledObject.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledObject.ts#L12)

@@ -1,9 +1,8 @@
-import { TileLayer } from './TileLayer';
-import type { TileLayerOptions } from './TileLayer';
-import { TileMapView } from './TileMapView';
+import { type TileLayer } from './TileLayer';
 import type { TileMapViewOptions } from './TileMapView';
-import { TileSet } from './TileSet';
-import type { TileProperties, ResolvedTile } from './types';
+import { TileMapView } from './TileMapView';
+import { type TileSet } from './TileSet';
+import type { ResolvedTile,TileProperties } from './types';
 import { validatePositiveInteger } from './types';
 
 /**
@@ -76,10 +75,10 @@ export class TileMap {
 
   private readonly _tilesets: TileSet[];
   private readonly _layers: TileLayer[] = [];
-  private readonly _layerById: Map<number, TileLayer> = new Map();
+  private readonly _layerById = new Map<number, TileLayer>();
 
-  private _revision: number = 0;
-  private _destroyed: boolean = false;
+  private _revision = 0;
+  private _destroyed = false;
 
   /**
    * @throws When dimensions or other options are invalid.

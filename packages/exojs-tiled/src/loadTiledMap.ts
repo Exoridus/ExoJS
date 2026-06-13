@@ -1,4 +1,4 @@
-import { Texture, type AssetLoaderContext } from '@codexo/exojs';
+import { type AssetLoaderContext,Texture } from '@codexo/exojs';
 
 import type { TiledTilesetData, TiledTilesetRefData } from './data';
 import { TiledMap } from './TiledMap';

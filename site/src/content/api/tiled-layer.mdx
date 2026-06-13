@@ -1,0 +1,52 @@
+---
+title: "TiledLayer"
+description: "Base class for the four parsed Tiled layer types. Holds the fields shared by every layer (`tilelayer`, `objectgroup`, `imagelayer`, `group`). Use TiledLayer.type (or `instanceof`) to discriminate between TiledTileLayer, TiledObjectLayer, TiledImageLayer, and TiledGroupLayer."
+symbol: "TiledLayer"
+kind: "class"
+subsystem: "tiled"
+importPath: "@codexo/exojs-tiled"
+memberCount: 16
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tiled/src/TiledLayer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts#L24"
+---
+## Import
+
+`import { TiledLayer } from '@codexo/exojs-tiled'`
+
+Base class for the four parsed Tiled layer types. Holds the fields shared
+by every layer (`tilelayer`, `objectgroup`, `imagelayer`, `group`).
+
+Use TiledLayer.type (or `instanceof`) to discriminate between
+TiledTileLayer, TiledObjectLayer, TiledImageLayer,
+and TiledGroupLayer.
+
+## Constructors
+
+- `new(data: TiledLayerDataBase): TiledLayer`
+
+## Methods
+
+- `getProperty(name: string): TiledPropertyData | undefined`
+
+## Properties
+
+- `class: string`
+- `id: number`
+- `name: string`
+- `offsetX: number`
+- `offsetY: number`
+- `opacity: number`
+- `parallaxX: number`
+- `parallaxY: number`
+- `properties: readonly TiledPropertyData[]`
+- `tintColor: string`
+- `type: "tilelayer" | "objectgroup" | "imagelayer" | "group"`
+- `visible: boolean`
+- `x: number`
+- `y: number`
+
+## Source
+
+[packages/exojs-tiled/src/TiledLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts#L24)

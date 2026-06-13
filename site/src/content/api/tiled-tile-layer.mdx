@@ -1,0 +1,54 @@
+---
+title: "TiledTileLayer"
+description: "A tile layer. On a finite map, data holds the flat row-major array of GIDs (`width * height` entries). On an infinite map, chunks holds the sparse list of tile chunks instead; exactly one of the two is defined, matching the owning TiledMap's `infinite` flag."
+symbol: "TiledTileLayer"
+kind: "class"
+subsystem: "tiled"
+importPath: "@codexo/exojs-tiled"
+memberCount: 20
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tiled/src/TiledLayer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts#L69"
+---
+## Import
+
+`import { TiledTileLayer } from '@codexo/exojs-tiled'`
+
+A tile layer. On a finite map, data holds the flat row-major array
+of GIDs (`width * height` entries). On an infinite map, chunks
+holds the sparse list of tile chunks instead; exactly one of the two is
+defined, matching the owning TiledMap's `infinite` flag.
+
+## Constructors
+
+- `new(data: TiledTileLayerData): TiledTileLayer`
+
+## Methods
+
+- `getProperty(name: string): TiledPropertyData | undefined`
+
+## Properties
+
+- `chunks: readonly TiledChunkData[]`
+- `class: string`
+- `data: readonly number[]`
+- `height: number`
+- `id: number`
+- `name: string`
+- `offsetX: number`
+- `offsetY: number`
+- `opacity: number`
+- `parallaxX: number`
+- `parallaxY: number`
+- `properties: readonly TiledPropertyData[]`
+- `tintColor: string`
+- `type: "tilelayer"`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+
+## Source
+
+[packages/exojs-tiled/src/TiledLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts#L69)

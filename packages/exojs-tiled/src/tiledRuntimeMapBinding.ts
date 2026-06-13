@@ -2,7 +2,7 @@ import type { AssetBinding, AssetHandler } from '@codexo/exojs/extensions';
 import { TileMap } from '@codexo/exojs-tilemap';
 
 import { TiledMap } from './TiledMap';
-import { type TiledLoadOptions, resolveTiledOptions } from './tiledOptions';
+import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
 
 /**
  * Declarative asset binding for the runtime {@link TileMap} produced from a

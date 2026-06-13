@@ -12,6 +12,131 @@ merged pull requests and commits since the previous tag (each with its commit /
 PR link); `pnpm release:notes` then renders that section into the published
 GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
 
+## [0.13.0] - Unreleased
+
+The scalable-sprites and tilemap release. `TextureRegion`, `NineSliceSprite`,
+and `RepeatingSprite` bring nine-slice and tiled-repeat rendering to both
+backends. `@codexo/exojs-tilemap` is introduced as a generic, format-independent
+tilemap runtime foundation. `@codexo/exojs-tiled` is expanded from its v0.12
+stub into the parsed Tiled source adapter and runtime conversion layer.
+
+### Added
+
+- **Scalable sprites.** `NineSliceSprite` renders a texture subdivided into
+  nine regions (four corners, four edges, and a centre) with per-edge repeat
+  modes (`stretch`, `repeat`, `mirror-repeat`) and size fits (`clip`, `round`).
+  Dedicated WebGL2 and WebGPU instanced renderers batch by texture and blend
+  mode. Source slices and destination borders are independently configured
+  through `edgeFit` and `centerFit` (#110).
+
+- **`RepeatingSprite`** tiles a `Texture` or `TextureRegion` across a target
+  area with independent `modeX`/`modeY` (`stretch`, `repeat`, `mirror-repeat`)
+  and `fitX`/`fitY` (`clip`, `round`). A bare `Texture` uses the shader/sampler
+  path; a `TextureRegion` uses the geometry path. Dedicated WebGL2 and WebGPU
+  renderers batch by texture and blend mode; sampler and strategy changes
+  create additional batch boundaries (#111).
+
+- **`TextureRegion`.** An immutable structural type identifying a sub-rectangle
+  of a `Texture` without duplicating GPU resources. Used by nine-slice and
+  repeating sprites, tilemap tiles, and any consumer that operates on a
+  sub-area of an atlas (#109).
+
+- **Render-only pixel snapping.** `Drawable.pixelSnapMode` accepts `none`,
+  `position`, or `geometry`, snapping only the visual transform without
+  disturbing the logical model. The effective mode degrades automatically for
+  non-axis-aligned sprites (#116).
+
+- **TransformBuffer upload coalescing.** `RenderPlanPlayer` prepares all
+  transforms for a render scope before draw execution. The first renderer
+  flush uploads the stable transform range; subsequent flushes reuse it
+  through the hash guard, eliminating repeated uploads of growing ranges
+  within a scope (#118).
+
+- **Renderer performance benchmark harness.** Structural metric sweep for
+  `Sprite`, `NineSliceSprite`, `RepeatingSprite`, and `Tilemap` renderers
+  (WebGL2, recording fake GL context for deterministic GPU-free metrics).
+  Profiling mode gated behind `EXOJS_PERF_PROFILE` (#117).
+
+- **`@codexo/exojs-tilemap` — generic tilemap runtime.** `TileMap` manages
+  tilesets, layers, and mutation. `TileLayer` holds a sparse packed-tile array
+  with configurable chunk dimensions (default 32×32). `TileSet` indexes tile
+  definitions by local ID. Scene-graph nodes (`TileMapNode`, `TileLayerNode`)
+  provide per-pixel positioning with `Container` children, chunk-level culling,
+  and `TileMapBand` for actor interleaving. `TileMapView` maps layer selections
+  to bands declaratively. Chunk rendering uses instanced WebGL2 and WebGPU
+  renderers batched by compatible state and tileset texture. `ReadonlyTileChunk`
+  is the public immutable chunk view (#112, #114, #115).
+
+- **`@codexo/exojs-tiled` — Tiled map format adapter.** Loads finite orthogonal
+  TMJ/TSJ maps through `Loader.load(TileMap, 'map.tmj')` for a ready-to-use
+  runtime `TileMap` or `Loader.load(TiledMap, 'map.tmj')` for the structured,
+  dependency-resolved source model. `TiledMap` resolves external tileset
+  references, validates the source against the Tiled schema, and exposes
+  `toTileMap()` for synchronous runtime conversion. Supports multiple tilesets
+  (external and embedded), tile flip flags, custom properties, and sub-URL
+  resolution. Ships `tiledExtension` for one-line setup (#113).
+
+- **Extension descriptor dependencies.** The `Extension` interface accepts
+  `dependencies?: readonly Extension[]`. Each dependency references another
+  extension descriptor object. Dependencies are materialised before dependents;
+  the snapshot resolver deduplicates the same descriptor object, rejects
+  same-ID/different-object conflicts, and detects cycles. This ensures
+  `@codexo/exojs-tiled`'s tilemap foundation is loaded before Tiled bindings
+  are registered (#107).
+
+- **Typed declarative asset bindings.** `AssetBinding<Result, Options>` and
+  `AssetHandler<Result, Options>` carry typed result and option generics.
+  Handlers may provide `getIdentityKey(request)` to define deterministic
+  result-sensitive cache identity. The `Loader.load(type, path)` overloads
+  return the declared `Result` type without manual casting (#108).
+
+### Fixed
+
+- **Extension package CI path coverage.** A PR touching only extension-package
+  source no longer skips the unit, package-verify, and browser lanes (#120).
+
+- **Package ESLint hardening.** Extension package source files are linted
+  with typed `@typescript-eslint` rules through `projectService`, resolving
+  the prior exit-code-2 crash. Package lint is enforced in CI alongside root
+  lint. Genuine import-sorting and type-annotation lint defects in extension
+  tests are fixed.
+
+- **API documentation synchronisation.** `site/scripts/build-api.ts` now
+  processes `@codexo/exojs-tilemap` alongside the other official extension
+  packages. The `tilemap` subsystem appears in the API index and content
+  collection schema. A deterministic `docs:api:check` command verifies that
+  committed API docs match a fresh generation from source.
+
+### Known Limitations
+
+- **Infinite Tiled maps** are parsed but not converted to runtime `TileMap`
+  instances (internal chunk grid requires finite bounds).
+- **Object/image/group layers** parse correctly but do not produce rendered
+  scene nodes — only tile layers are converted.
+- **Tilemap atlas bleeding** may occur at tile edges with linear or mipmap
+  texture filtering when atlas tile regions lack sufficient padding or
+  extrusion, causing neighbouring texel bleeding.
+- **No runtime autotiling.** Tiled terrain/wang sets are not evaluated.
+- **Single-texture batching.** NineSlice, RepeatingSprite, and Tilemap
+  renderers support different textures, but they do not combine several
+  textures into a single multi-texture draw batch. Texture changes therefore
+  create batch boundaries. For RepeatingSprite, sampler and strategy changes
+  also create batch boundaries. For Tilemap, batches are grouped by compatible
+  state and tileset texture.
+
+### Package Graph
+
+After this release the published lockstep package set is:
+
+```
+@codexo/exojs         0.13.0
+@codexo/exojs-particles  0.13.0  (peer @codexo/exojs 0.13.x)
+@codexo/exojs-tilemap    0.13.0  (peer @codexo/exojs 0.13.x)
+@codexo/exojs-tiled      0.13.0  (peer @codexo/exojs 0.13.x, dep @codexo/exojs-tilemap 0.13.0)
+```
+
+`create-exo-app` is independently versioned and not in engine lockstep.
+
 ## [0.12.0] - 2026-06-09
 
 The rendering-architecture and extension-system release. A composable,

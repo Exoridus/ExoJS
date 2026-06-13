@@ -26,7 +26,7 @@ export type TiledPropertyType = 'string' | 'int' | 'float' | 'bool' | 'color' | 
  * The value of a `class`-typed custom property: a nested map of member name
  * to value, recursively allowing further `class` members.
  */
-export type TiledClassPropertyValueData = { readonly [name: string]: string | number | boolean | TiledClassPropertyValueData };
+export interface TiledClassPropertyValueData { readonly [name: string]: string | number | boolean | TiledClassPropertyValueData }
 
 /**
  * One custom property entry as written by Tiled (`properties` arrays on

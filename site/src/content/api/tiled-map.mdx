@@ -1,50 +1,60 @@
 ---
 title: "TiledMap"
-description: "Runtime representation of a loaded Tiled map. Exposes map metadata, layers, and tileset textures. Tileset textures are owned by the Loader cache — `TiledMap.destroy()` does NOT destroy them. Only the initial proof scope is implemented: orthogonal tile layers, basic tilesets, and basic object layers. TMX/XML, infinite maps, and world streaming are not supported."
+description: "A parsed and validated Tiled map (`.tmj`). `TiledMap` represents the parsed Tiled source format. `TileMap` is the format-independent ExoJS runtime map used for rendering, queries, and mutation. Construction validates that tilesets cover a non-overlapping, duplicate-free range of global tile ids, and that every GID referenced by layers (tile layer cells, infinite-map chunks, and tile object `gid`s) falls within one of those ranges. Both checks throw TiledFormatError on failure."
 symbol: "TiledMap"
 kind: "class"
 subsystem: "tiled"
 importPath: "@codexo/exojs-tiled"
-memberCount: 12
+memberCount: 19
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-tiled/src/TiledMap.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledMap.ts#L83"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledMap.ts#L29"
 ---
 ## Import
 
 `import { TiledMap } from '@codexo/exojs-tiled'`
 
-Runtime representation of a loaded Tiled map.
+A parsed and validated Tiled map (`.tmj`).
 
-Exposes map metadata, layers, and tileset textures. Tileset textures
-are owned by the Loader cache — `TiledMap.destroy()` does NOT destroy them.
+`TiledMap` represents the parsed Tiled source format. `TileMap` is the
+format-independent ExoJS runtime map used for rendering, queries, and
+mutation.
 
-Only the initial proof scope is implemented: orthogonal tile layers,
-basic tilesets, and basic object layers. TMX/XML, infinite maps, and
-world streaming are not supported.
+Construction validates that tilesets cover a non-overlapping,
+duplicate-free range of global tile ids, and that every GID referenced by
+layers (tile layer cells, infinite-map chunks, and tile object
+`gid`s) falls within one of those ranges. Both checks throw
+TiledFormatError on failure.
 
 ## Constructors
 
-- `new(data: TiledMapData, tilesetTextures: readonly Texture[]): TiledMap`
+- `new(source: string, data: TiledMapData, tilesets: readonly TiledTileset[]): TiledMap`
 
 ## Methods
 
 - `destroy(): void`
+- `findTilesetForGid(gid: number): TiledTileset | undefined`
+- `getProperty(name: string): TiledPropertyData | undefined`
+- `toTileMap(): TileMap`
 
 ## Properties
 
+- `backgroundColor: string`
+- `class: string`
 - `data: TiledMapData`
 - `height: number`
+- `infinite: boolean`
 - `layers: readonly TiledLayer[]`
+- `orientation: TiledOrientation`
+- `properties: readonly TiledPropertyData[]`
+- `renderOrder: TiledRenderOrder`
+- `source: string`
 - `tileHeight: number`
 - `tilesets: readonly TiledTileset[]`
-- `tilesetTextures: readonly Texture[]`
 - `tileWidth: number`
 - `width: number`
-- `objectLayers: readonly TiledLayer[]`
-- `tileLayers: readonly TiledLayer[]`
 
 ## Source
 
-[packages/exojs-tiled/src/TiledMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledMap.ts#L83)
+[packages/exojs-tiled/src/TiledMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledMap.ts#L29)

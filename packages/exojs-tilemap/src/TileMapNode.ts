@@ -2,9 +2,9 @@ import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
 import type { PixelSnapMode } from '@codexo/exojs/rendering';
 
-import type { TileMap } from './TileMap';
 import { assertPixelSnapMode } from './pixelSnap';
 import { TileLayerNode } from './TileLayerNode';
+import type { TileMap } from './TileMap';
 
 /**
  * Options for a {@link TileMapNode}.

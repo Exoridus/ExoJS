@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-particles",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Particle system extension for ExoJS.",
   "type": "module",
   "sideEffects": [
@@ -42,7 +42,7 @@
     "test": "vitest run --root ../.. --project=exojs-particles"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.12.x"
+    "@codexo/exojs": "0.13.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",

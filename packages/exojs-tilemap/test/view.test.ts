@@ -1,15 +1,14 @@
-import { describe, expect, expectTypeOf, it, vi } from 'vitest';
-
 import { Container } from '@codexo/exojs';
 import { TextureRegion } from '@codexo/exojs';
-import { Texture } from '@codexo/exojs';
+import { type Texture } from '@codexo/exojs';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { TileLayer } from '../src/TileLayer';
 import { TileLayerNode } from '../src/TileLayerNode';
 import { TileMap } from '../src/TileMap';
 import { TileMapBand } from '../src/TileMapBand';
-import { TileMapView } from '../src/TileMapView';
 import type { TileLayerSelector, TileMapBandDefinition, TileMapViewOptions } from '../src/TileMapView';
+import { TileMapView } from '../src/TileMapView';
 import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 

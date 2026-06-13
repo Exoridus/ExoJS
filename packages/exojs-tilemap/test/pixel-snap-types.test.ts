@@ -8,10 +8,9 @@
  * contracts cover exactly what consumers see.
  */
 
-import { describe, expectTypeOf, it } from 'vitest';
-
 import type { Drawable, NineSliceSprite, PixelSnapMode, Sprite } from '@codexo/exojs';
 import type { TileLayerNode, TileMapNode, TileMapView } from '@codexo/exojs-tilemap';
+import { describe, expectTypeOf, it } from 'vitest';
 
 describe('PixelSnapMode type contracts', () => {
   it('is exactly the three documented literal modes', () => {

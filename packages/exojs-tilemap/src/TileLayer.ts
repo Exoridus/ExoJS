@@ -1,17 +1,16 @@
+import type { ReadonlyTileChunk } from './TileChunk';
+import { TileChunk } from './TileChunk';
 import type { TileSet } from './TileSet';
-import type { TileProperties, TileTransform } from './types';
+import type { TileProperties } from './types';
+import type { PackedTile, ResolvedTile } from './types';
 import {
   packTile,
-  TILE_TRANSFORM_IDENTITY,
   unpackTile,
   validateInteger,
   validateNonNegativeInteger,
   validatePositiveInteger,
 } from './types';
-import type { ChunkCoord, PackedTile, ResolvedTile } from './types';
 import { tileToChunkCoord, tileToLocalInChunk } from './types';
-import { TileChunk } from './TileChunk';
-import type { ReadonlyTileChunk } from './TileChunk';
 
 /**
  * Options for constructing a {@link TileLayer}.
@@ -110,17 +109,17 @@ export class TileLayer {
   public readonly tilesets: readonly TileSet[];
 
   /** Chunk storage: chunkKey → mutable TileChunk (internal). */
-  private readonly _chunks: Map<string, TileChunk> = new Map();
+  private readonly _chunks = new Map<string, TileChunk>();
 
   /**
    * Monotonic layer revision counter.
    * Increments on every cell mutation that actually changes a stored value.
    * Does NOT increment on no-op writes or failed mutations.
    */
-  private _revision: number = 0;
+  private _revision = 0;
 
   /** Whether the layer has been destroyed. */
-  private _destroyed: boolean = false;
+  private _destroyed = false;
 
   /**
    * @throws When dimensions, chunk size, or other options are invalid.
@@ -277,7 +276,7 @@ export class TileLayer {
     const decoded = unpackTile(packed);
     if (!decoded) return null;
     if (decoded.tilesetIndex >= this.tilesets.length) return null;
-    const tileset = this.tilesets[decoded.tilesetIndex]!;
+    const tileset = this.tilesets[decoded.tilesetIndex];
     if (decoded.localTileId >= tileset.tileCount) return null;
     return {
       tileset,
@@ -293,7 +292,7 @@ export class TileLayer {
    * Returns the packed form or throws.
    */
   private _validateTileRef(tile: ResolvedTile): PackedTile {
-    if (!tile || !tile.tileset) {
+    if (!tile?.tileset) {
       throw new Error('setTileAt requires a valid ResolvedTile.');
     }
     const tilesetIndex = this.tilesets.indexOf(tile.tileset);
@@ -441,7 +440,7 @@ export class TileLayer {
             const decoded = unpackTile(packed);
             if (!decoded) continue;
             if (decoded.tilesetIndex >= this.tilesets.length) continue;
-            const tileset = this.tilesets[decoded.tilesetIndex]!;
+            const tileset = this.tilesets[decoded.tilesetIndex];
             if (decoded.localTileId >= tileset.tileCount) continue;
             yield {
               tx: chunkStartTx + lx,

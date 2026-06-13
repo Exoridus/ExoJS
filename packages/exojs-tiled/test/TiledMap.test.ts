@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
 import { Texture } from '@codexo/exojs';
-import { TileMap, TileLayer, TileSet } from '@codexo/exojs-tilemap';
+import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { describe, expect, it } from 'vitest';
 
+import { TiledTileLayer } from '../src/TiledLayer';
 import { TiledMap } from '../src/TiledMap';
 import { TiledTileset } from '../src/TiledTileset';
-import { TiledTileLayer } from '../src/TiledLayer';
 import { TiledFormatError, validateTiledMapData } from '../src/validate';
 
 // Raw fixture data (matches test/fixtures/minimal.tmj)

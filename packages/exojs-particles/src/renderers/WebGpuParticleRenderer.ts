@@ -1,13 +1,13 @@
 ﻿/// <reference types="@webgpu/types" />
 
-import type { ParticleSystem } from '#ParticleSystem';
-import { Texture } from '@codexo/exojs/rendering';
 import type { BlendModes } from '@codexo/exojs/rendering';
-import { AbstractWebGpuRenderer } from '@codexo/exojs/rendering';
 import type { WebGpuBackend } from '@codexo/exojs/rendering';
-
+import { Texture } from '@codexo/exojs/rendering';
+import { AbstractWebGpuRenderer } from '@codexo/exojs/rendering';
 import { getWebGpuBlendState } from '@codexo/exojs/rendering';
 import { stencilContentDepthStencilState } from '@codexo/exojs/rendering';
+
+import type { ParticleSystem } from '#ParticleSystem';
 
 const particleShaderSource = `
 struct ProjectionUniforms {

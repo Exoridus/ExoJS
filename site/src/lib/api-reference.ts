@@ -2,7 +2,7 @@ import type { CollectionEntry } from 'astro:content';
 
 export type ApiEntry = CollectionEntry<'api'>;
 
-export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tiled'] as const;
+export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled'] as const;
 
 export type ApiSubsystem = (typeof API_SUBSYSTEM_ORDER)[number];
 
@@ -42,6 +42,10 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     debug: {
         label: 'Debug / Tooling',
         description: 'Debug layers, overlays, and inspection helpers.',
+    },
+    tilemap: {
+        label: 'Tilemap (official extension)',
+        description: 'The @codexo/exojs-tilemap package: generic tilemap runtime, chunks, layers, and views.',
     },
     tiled: {
         label: 'Tiled (official extension)',

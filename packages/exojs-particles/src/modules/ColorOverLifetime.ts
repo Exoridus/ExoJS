@@ -1,6 +1,7 @@
 ﻿/// <reference types="@webgpu/types" />
 
 import { Color } from '@codexo/exojs';
+
 import type { ColorGradient } from "#distributions/ColorGradient";
 import type { ParticleSystem } from "#ParticleSystem";
 

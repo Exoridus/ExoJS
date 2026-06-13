@@ -92,16 +92,16 @@ export class TileMapView {
   /** All canonical layer nodes, in map document order. */
   private readonly _layerNodes: TileLayerNode[] = [];
   /** Layer id → its canonical layer node. */
-  private readonly _layerNodeById: Map<number, TileLayerNode> = new Map();
+  private readonly _layerNodeById = new Map<number, TileLayerNode>();
 
   /** Bands in definition (insertion) order. */
   private readonly _bands: TileMapBand[] = [];
   /** Band name → band. */
-  private readonly _bandByName: Map<string, TileMapBand> = new Map();
+  private readonly _bandByName = new Map<string, TileMapBand>();
   /** Original band definitions (frozen) for re-resolution on refresh. */
   private readonly _bandDefs: ResolvedBandDef[] = [];
   /** Layer node → its owning band (absent = view-owned / unbanded). */
-  private readonly _nodeBand: Map<TileLayerNode, TileMapBand> = new Map();
+  private readonly _nodeBand = new Map<TileLayerNode, TileMapBand>();
   /** Unbanded layer nodes owned directly by the view, in map document order. */
   private readonly _directLayerNodes: TileLayerNode[] = [];
 
@@ -294,7 +294,7 @@ export class TileMapView {
     // 3. Re-order each band's children to map document order.
     const documentIndexById = new Map<number, number>();
 
-    currentLayers.forEach((layer, index) => documentIndexById.set(layer.id, index));
+    for (const [index, layer] of currentLayers.entries()) documentIndexById.set(layer.id, index);
 
     for (const band of this._bands) {
       band._reorder(documentIndexById);
@@ -408,7 +408,7 @@ export class TileMapView {
       );
     }
 
-    return matches[0]!.id;
+    return matches[0].id;
   }
 
   /** Assign a freshly created node to the first band that selects its layer. */

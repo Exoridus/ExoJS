@@ -1,0 +1,52 @@
+---
+title: "TileSet"
+description: "A resolved tileset: a uniform grid of tiles within a texture atlas. Does **not** own its texture — the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter. Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata."
+symbol: "TileSet"
+kind: "class"
+subsystem: "tilemap"
+importPath: "@codexo/exojs-tilemap"
+memberCount: 14
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tilemap/src/TileSet.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileSet.ts#L40"
+---
+## Import
+
+`import { TileSet } from '@codexo/exojs-tilemap'`
+
+A resolved tileset: a uniform grid of tiles within a texture atlas.
+
+Does **not** own its texture — the Loader or application code retains
+texture ownership. Tileset dimensions are validated at construction and
+frozen thereafter.
+
+Multiple tilesets are supported per TileMap; each carries its own
+tile dimensions, spacing, and optional per-tile metadata.
+
+## Constructors
+
+- `new(options: TileSetOptions): TileSet`
+
+## Methods
+
+- `definedTiles(): IterableIterator<TileDefinition>`
+- `getTileDefinition(localTileId: number): TileDefinition | undefined`
+- `getTileRect(localTileId: number): object`
+
+## Properties
+
+- `columns: number`
+- `margin: number`
+- `name: string`
+- `rows: number`
+- `spacing: number`
+- `texture: TextureRegion`
+- `tileCount: number`
+- `tileHeight: number`
+- `tileWidth: number`
+- `allDefinitions: Readonly<Record<number, TileProperties | undefined>>`
+
+## Source
+
+[packages/exojs-tilemap/src/TileSet.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileSet.ts#L40)

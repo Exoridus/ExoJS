@@ -13,16 +13,16 @@ const resolveArtifact = (file: string): string => join(dir, file);
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'exo-manifest-'));
   const packages = PUBLISH_ORDER.map((name, i) => {
-    const file = `${name.replace('@', '').replace('/', '-')}-0.12.0.tgz`;
+    const file = `${name.replace('@', '').replace('/', '-')}-0.13.0.tgz`;
     writeFileSync(join(dir, file), `content-${name}-${i}`);
     const { sha256, bytes } = sha256File(join(dir, file));
-    return { name, version: '0.12.0', file, sha256, bytes };
+    return { name, version: '0.13.0', file, sha256, bytes };
   });
   manifest = {
-    version: '0.12.0',
+    version: '0.13.0',
     revision: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
     shortRevision: 'a1b2c3d',
-    tag: 'v0.12.0',
+    tag: 'v0.13.0',
     generatedAt: '2026-06-08T00:00:00.000Z',
     publishOrder: [...PUBLISH_ORDER],
     packages,
@@ -61,7 +61,7 @@ describe('verifyManifestArtifacts — build-once drift detection', () => {
   it('ignores the fullZip record (a GitHub asset, not an npm tarball)', () => {
     const withZip: ReleaseManifest = {
       ...manifest,
-      fullZip: { file: 'exojs-v0.12.0-full.zip', sha256: 'deadbeef', bytes: 1 },
+      fullZip: { file: 'exojs-v0.13.0-full.zip', sha256: 'deadbeef', bytes: 1 },
     };
     // The zip is not on disk in `dir`, but the drift check must not fail on it.
     expect(verifyManifestArtifacts(withZip, resolveArtifact)).toEqual([]);
@@ -72,7 +72,7 @@ describe('renderChecksums', () => {
   it('emits one sorted `<hex>  <file>` line per tarball, no fullZip', () => {
     const body = renderChecksums({
       ...manifest,
-      fullZip: { file: 'exojs-v0.12.0-full.zip', sha256: 'zzz', bytes: 1 },
+      fullZip: { file: 'exojs-v0.13.0-full.zip', sha256: 'zzz', bytes: 1 },
     });
     const lines = body.trimEnd().split('\n');
     expect(lines).toHaveLength(4);
