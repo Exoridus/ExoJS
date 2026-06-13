@@ -35,9 +35,9 @@ const createInputManager = (slotStrategy: GamepadSlotStrategy = 'sticky'): Input
   return new InputManager(app);
 };
 
-const withMockedGetGamepads = (run: (setSnapshot: (snapshot: (BrowserGamepad | null)[]) => void) => void): void => {
+const withMockedGetGamepads = (run: (setSnapshot: (snapshot: Array<BrowserGamepad | null>) => void) => void): void => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(window.navigator, 'getGamepads');
-  let snapshot: (BrowserGamepad | null)[] = [];
+  let snapshot: Array<BrowserGamepad | null> = [];
 
   Object.defineProperty(window.navigator, 'getGamepads', {
     configurable: true,
@@ -128,7 +128,7 @@ describe('InputManager gamepad lifecycle', () => {
   test('compact strategy: shifts higher-slot pads down and disconnects the trailing slot', () => {
     const inputManager = createInputManager('compact');
     const disconnectOrder: number[] = [];
-    const reassignedEvents: { slot: number; from: number }[] = [];
+    const reassignedEvents: Array<{ slot: number; from: number }> = [];
 
     withMockedGetGamepads(setSnapshot => {
       inputManager.onGamepadDisconnected.add(pad => {

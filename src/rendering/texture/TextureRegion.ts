@@ -78,7 +78,15 @@ function normalizeExtrusion(extrusion: number | TextureRegionInsets | undefined)
   });
 }
 
-function validateExtrusion(extrusion: TextureRegionInsets, x: number, y: number, width: number, height: number, textureWidth: number, textureHeight: number): void {
+function validateExtrusion(
+  extrusion: TextureRegionInsets,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  textureWidth: number,
+  textureHeight: number,
+): void {
   const { left, top, right, bottom } = extrusion;
 
   if (!isFinite(left) || !isFinite(top) || !isFinite(right) || !isFinite(bottom)) {
@@ -92,7 +100,7 @@ function validateExtrusion(extrusion: TextureRegionInsets, x: number, y: number,
   if (left > x || top > y || right > textureWidth - (x + width) || bottom > textureHeight - (y + height)) {
     throw new Error(
       `TextureRegion extrusion exceeds available source texture bounds: left=${left} (>${x}), top=${top} (>${y}), ` +
-      `right=${right} (>${textureWidth - (x + width)}), bottom=${bottom} (>${textureHeight - (y + height)}).`
+        `right=${right} (>${textureWidth - (x + width)}), bottom=${bottom} (>${textureHeight - (y + height)}).`,
     );
   }
 }
@@ -121,15 +129,11 @@ function validateOptions(options: TextureRegionOptions, textureWidth: number, te
   }
 
   if (x + width > textureWidth) {
-    throw new Error(
-      `TextureRegion right edge (${x + width}) exceeds texture width (${textureWidth}).`
-    );
+    throw new Error(`TextureRegion right edge (${x + width}) exceeds texture width (${textureWidth}).`);
   }
 
   if (y + height > textureHeight) {
-    throw new Error(
-      `TextureRegion bottom edge (${y + height}) exceeds texture height (${textureHeight}).`
-    );
+    throw new Error(`TextureRegion bottom edge (${y + height}) exceeds texture height (${textureHeight}).`);
   }
 }
 

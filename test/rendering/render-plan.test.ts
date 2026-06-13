@@ -54,9 +54,9 @@ const createRuntime = () => {
   const stats = createRenderStats();
   const acquired: RenderTexture[] = [];
   const released: RenderTexture[] = [];
-  const drawEvents: { drawable: Drawable; target: RenderTarget }[] = [];
+  const drawEvents: Array<{ drawable: Drawable; target: RenderTarget }> = [];
   const clipEvents: string[] = [];
-  const composeCalls: [RenderTexture, Texture | RenderTexture, number, number, number, number, number][] = [];
+  const composeCalls: Array<[RenderTexture, Texture | RenderTexture, number, number, number, number, number]> = [];
 
   const draw = vi.fn(function (this: RenderBackend, drawable: Drawable) {
     drawEvents.push({ drawable, target: currentTarget });
@@ -167,7 +167,7 @@ const createRuntime = () => {
   };
 };
 
-const filterDrawOrder = (drawEvents: { drawable: Drawable }[], expected: Drawable[]): Drawable[] => {
+const filterDrawOrder = (drawEvents: Array<{ drawable: Drawable }>, expected: Drawable[]): Drawable[] => {
   const expectedSet = new Set(expected);
 
   return drawEvents.map(event => event.drawable).filter(drawable => expectedSet.has(drawable));

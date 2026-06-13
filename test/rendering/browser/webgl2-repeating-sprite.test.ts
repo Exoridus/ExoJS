@@ -263,8 +263,10 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
     const texture = createSolidTexture('#00ff00', 8, 8);
     const root = new Container();
     const sprite = new RepeatingSprite(texture, {
-      width: 48, height: 48,
-      modeX: 'stretch', modeY: 'stretch',
+      width: 48,
+      height: 48,
+      modeX: 'stretch',
+      modeY: 'stretch',
     });
 
     try {
@@ -287,8 +289,10 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
     const texture = createSolidTexture('#0000ff', 16, 16);
     const root = new Container();
     const sprite = new RepeatingSprite(texture, {
-      width: 40, height: 40,
-      modeX: 'mirror-repeat', modeY: 'mirror-repeat',
+      width: 40,
+      height: 40,
+      modeX: 'mirror-repeat',
+      modeY: 'mirror-repeat',
     });
 
     try {
@@ -440,9 +444,12 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
     const region = new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 });
     const root = new Container();
     const sprite = new RepeatingSprite(region, {
-      width: 40, height: 40,
-      modeX: 'repeat', modeY: 'repeat',
-      fitX: 'clip', fitY: 'clip',
+      width: 40,
+      height: 40,
+      modeX: 'repeat',
+      modeY: 'repeat',
+      fitX: 'clip',
+      fitY: 'clip',
     });
 
     try {
@@ -515,9 +522,12 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
     const region = new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 });
     const root = new Container();
     const sprite = new RepeatingSprite(region, {
-      width: 48, height: 48,
-      modeX: 'mirror-repeat', modeY: 'mirror-repeat',
-      fitX: 'round', fitY: 'round',
+      width: 48,
+      height: 48,
+      modeX: 'mirror-repeat',
+      modeY: 'mirror-repeat',
+      fitX: 'round',
+      fitY: 'round',
     });
 
     try {

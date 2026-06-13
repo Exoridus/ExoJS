@@ -63,7 +63,7 @@ const round = (value: number, digits = 4): number => {
   return Math.round(value * factor) / factor;
 };
 
-const CSV_COLUMNS: [string, (r: ScenarioResult) => string | number][] = [
+const CSV_COLUMNS: Array<[string, (r: ScenarioResult) => string | number]> = [
   ['scenario', r => r.scenario],
   ['family', r => r.family],
   ['backend', r => r.backend],

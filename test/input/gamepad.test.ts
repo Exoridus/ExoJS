@@ -134,7 +134,7 @@ describe('Gamepad', () => {
   test('onTrigger fires when bound channel taps within threshold', () => {
     const channels = new Float32Array(ChannelSize.Container);
     const pad = new Gamepad(0, channels);
-    const buttons: { value: number; pressed: boolean; touched: boolean }[] = [{ value: 1, pressed: true, touched: true }];
+    const buttons: Array<{ value: number; pressed: boolean; touched: boolean }> = [{ value: 1, pressed: true, touched: true }];
     const native = {
       id: 'generic',
       index: 0,

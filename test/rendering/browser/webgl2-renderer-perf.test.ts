@@ -295,8 +295,24 @@ const makeSolidTexture = (color: string, size = 16): Texture => {
 
 /** Build N distinct solid-colour textures (colours cycle through a fixed palette). */
 const makeTextures = (count: number, size = 16): Texture[] => {
-  const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff', '#888888',
-    '#ff8800', '#00ff88', '#8800ff', '#88ff00', '#ff0088', '#0088ff', '#884400', '#004488'];
+  const colors = [
+    '#ff0000',
+    '#00ff00',
+    '#0000ff',
+    '#ffff00',
+    '#ff00ff',
+    '#00ffff',
+    '#ffffff',
+    '#888888',
+    '#ff8800',
+    '#00ff88',
+    '#8800ff',
+    '#88ff00',
+    '#ff0088',
+    '#0088ff',
+    '#884400',
+    '#004488',
+  ];
 
   return Array.from({ length: count }, (_, i) => makeSolidTexture(colors[i % colors.length], size));
 };
@@ -327,17 +343,11 @@ interface SpritesScene {
  * `assign='cycle'`   — textures cycled round-robin across sprites.
  * `assign='distinct'` — sprite i gets texture i (count must equal textures.length).
  */
-const buildSprites = (
-  count: number,
-  textures: readonly Texture[],
-  assign: 'shared' | 'cycle' | 'distinct' = 'cycle',
-): SpritesScene => {
+const buildSprites = (count: number, textures: readonly Texture[], assign: 'shared' | 'cycle' | 'distinct' = 'cycle'): SpritesScene => {
   const root = new Container();
 
   for (let i = 0; i < count; i++) {
-    const tex = assign === 'shared'
-      ? textures[0]
-      : textures[i % textures.length];
+    const tex = assign === 'shared' ? textures[0] : textures[i % textures.length];
     const sprite = new Sprite(tex);
 
     scatterInView(sprite, i);
@@ -358,11 +368,7 @@ interface NineSliceScene {
  * 2 × sliceInset (2 × 16 = 32 < 64), so the 64px atlas satisfies validation.
  * Stretch mode produces 9 quads per sprite.
  */
-const buildNineSlices = (
-  count: number,
-  textures: readonly Texture[],
-  assign: 'shared' | 'cycle' = 'cycle',
-): NineSliceScene => {
+const buildNineSlices = (count: number, textures: readonly Texture[], assign: 'shared' | 'cycle' = 'cycle'): NineSliceScene => {
   const root = new Container();
   // NineSlice has no multi-texture merge — each texture switch flushes.
   // Pin document order so the optimizer can't coalesce same-texture sprites
@@ -394,11 +400,7 @@ interface RepeatingScene {
  * Build N shader-path repeating sprites (bare Texture — GPU sampler wrap, one
  * instance per sprite). `assign` is the same as for sprites.
  */
-const buildRepeatingShader = (
-  count: number,
-  textures: readonly Texture[],
-  assign: 'shared' | 'cycle' = 'cycle',
-): RepeatingScene => {
+const buildRepeatingShader = (count: number, textures: readonly Texture[], assign: 'shared' | 'cycle' = 'cycle'): RepeatingScene => {
   const root = new Container();
   // RepeatingSprite (shader path) has no multi-texture merge — each texture
   // switch flushes. Pin document order so the optimizer can't coalesce
@@ -645,9 +647,7 @@ describe('WebGL2 renderer perf — Tilemap', () => {
     backend.view.reset(pixelSize / 2, pixelSize / 2, pixelSize, pixelSize);
 
     const textures = makeTextures(4);
-    const tilesets = textures.map((t, i) =>
-      makeTileset(t, `ts${i}`, 1),
-    );
+    const tilesets = textures.map((t, i) => makeTileset(t, `ts${i}`, 1));
 
     // Assign tilesets in a (tx + ty) % 4 pattern so all four are interleaved.
     const node = buildDenseTilemapNode(32, 32, tilesets, (tx, ty) => (tx + ty) % 4);

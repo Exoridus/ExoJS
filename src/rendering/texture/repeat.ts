@@ -4,18 +4,13 @@
  * Shared by {@link NineSliceSprite} edges/center and {@link RepeatingSprite}.
  * @stable
  */
-export type RepeatMode =
-  | 'stretch'
-  | 'repeat'
-  | 'mirror-repeat';
+export type RepeatMode = 'stretch' | 'repeat' | 'mirror-repeat';
 
 /**
  * How a `'repeat'` or `'mirror-repeat'` run fits its destination span exactly.
  * @stable
  */
-export type RepeatFit =
-  | 'clip'
-  | 'round';
+export type RepeatFit = 'clip' | 'round';
 
 /**
  * A single placement segment produced by the repeat planner.
@@ -74,21 +69,15 @@ export interface RepeatPlan {
  */
 function validateInputs(sourceLength: number, destinationLength: number): void {
   if (!Number.isFinite(sourceLength) || !Number.isFinite(destinationLength)) {
-    throw new Error(
-      `RepeatPlanner: sourceLength and destinationLength must be finite numbers (got ${sourceLength}, ${destinationLength}).`,
-    );
+    throw new Error(`RepeatPlanner: sourceLength and destinationLength must be finite numbers (got ${sourceLength}, ${destinationLength}).`);
   }
 
   if (sourceLength <= 0) {
-    throw new Error(
-      `RepeatPlanner: sourceLength must be positive (got ${sourceLength}).`,
-    );
+    throw new Error(`RepeatPlanner: sourceLength must be positive (got ${sourceLength}).`);
   }
 
   if (destinationLength < 0) {
-    throw new Error(
-      `RepeatPlanner: destinationLength must be non-negative (got ${destinationLength}).`,
-    );
+    throw new Error(`RepeatPlanner: destinationLength must be non-negative (got ${destinationLength}).`);
   }
 }
 
@@ -134,7 +123,7 @@ function buildClipPlan(destinationLength: number, sourceLength: number, mirror: 
     const segLength = Math.min(sourceLength, remaining);
     const sourceFraction = segLength / sourceLength;
 
-    const mirrored = mirror && (index % 2 === 1);
+    const mirrored = mirror && index % 2 === 1;
 
     const segment: RepeatSegment = {
       destinationStart: cursor,
@@ -172,7 +161,7 @@ function buildRoundPlan(destinationLength: number, sourceLength: number, mirror:
   const segments: RepeatSegment[] = [];
 
   for (let i = 0; i < count; i++) {
-    const mirrored = mirror && (i % 2 === 1);
+    const mirrored = mirror && i % 2 === 1;
 
     const segment: RepeatSegment = {
       destinationStart: i * segLength,
@@ -228,12 +217,7 @@ function buildRoundPlan(destinationLength: number, sourceLength: number, mirror:
  * @throws When inputs are non-finite, negative, or zero-length source.
  * @advanced
  */
-export function planRepeat(
-  sourceLength: number,
-  destinationLength: number,
-  mode: RepeatMode,
-  fit: RepeatFit = 'round',
-): RepeatPlan {
+export function planRepeat(sourceLength: number, destinationLength: number, mode: RepeatMode, fit: RepeatFit = 'round'): RepeatPlan {
   validateInputs(sourceLength, destinationLength);
 
   switch (mode) {

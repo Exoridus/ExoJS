@@ -207,20 +207,19 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   }
 
   public render(sprite: RepeatingSprite): void {
-    const strategy  = sprite.resolvedStrategy;
-    const texture   = sprite.texture;
+    const strategy = sprite.resolvedStrategy;
+    const texture = sprite.texture;
     const blendMode = sprite.blendMode;
-    const modeX     = sprite.modeX;
-    const modeY     = sprite.modeY;
+    const modeX = sprite.modeX;
+    const modeY = sprite.modeY;
 
     const hasData = this._shaderQuadCount > 0 || this._geoQuadCount > 0;
 
     if (hasData) {
-      const pathChanged  = this._currentPath !== strategy;
-      const texChanged   = this._currentTexture !== texture;
+      const pathChanged = this._currentPath !== strategy;
+      const texChanged = this._currentTexture !== texture;
       const blendChanged = this._currentBlendMode !== blendMode;
-      const modeChanged  = strategy === 'shader'
-        && (this._currentModeX !== modeX || this._currentModeY !== modeY);
+      const modeChanged = strategy === 'shader' && (this._currentModeX !== modeX || this._currentModeY !== modeY);
 
       if (pathChanged || texChanged || blendChanged || modeChanged) {
         this.flush();
@@ -241,7 +240,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     this._currentPath = strategy;
 
-    const command   = backend.activeDrawCommand;
+    const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
 
     if (nodeIndex > this._maxNodeIndex) {
@@ -259,11 +258,11 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private _writeShaderInstance(sprite: RepeatingSprite, nodeIndex: number): void {
     const texture = sprite.texture;
-    const srcW    = sprite.region.width;
-    const srcH    = sprite.region.height;
-    let   destW   = sprite.width;
-    let   destH   = sprite.height;
-    const flipY   = texture instanceof Texture && texture.flipY;
+    const srcW = sprite.region.width;
+    const srcH = sprite.region.height;
+    let destW = sprite.width;
+    let destH = sprite.height;
+    const flipY = texture instanceof Texture && texture.flipY;
 
     // 'geometry' mode: snap the destination quad to the device grid. Repetition
     // stays shader-based; only the outer rectangle (and the tiling derived from
@@ -319,14 +318,14 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
     }
 
-    const flipY  = (sprite.texture instanceof Texture) && sprite.texture.flipY;
-    const tint   = sprite.tint.toRgba();
+    const flipY = sprite.texture instanceof Texture && sprite.texture.flipY;
+    const tint = sprite.tint.toRgba();
 
     let offset = 0;
 
     while (offset < quads.length) {
       const remaining = quads.length - offset;
-      const chunk     = Math.min(remaining, this._batchSize - this._geoQuadCount);
+      const chunk = Math.min(remaining, this._batchSize - this._geoQuadCount);
 
       if (chunk <= 0) {
         this.flush();
@@ -349,7 +348,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       const u32 = this._geoU32;
 
       for (let i = 0; i < chunk; i++) {
-        const q   = quads[offset + i];
+        const q = quads[offset + i];
         const idx = (this._geoQuadCount + i) * geoWordsPerInstance;
 
         f32[idx + 0] = q.x0;
@@ -357,12 +356,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
         f32[idx + 2] = q.x1;
         f32[idx + 3] = q.y1;
 
-        const uMin  = (q.u0 * 0xffff) & 0xffff;
-        const uMax  = (q.u1 * 0xffff) & 0xffff;
+        const uMin = (q.u0 * 0xffff) & 0xffff;
+        const uMax = (q.u1 * 0xffff) & 0xffff;
         const v0Raw = (q.v0 * 0xffff) & 0xffff;
         const v1Raw = (q.v1 * 0xffff) & 0xffff;
-        const vMin  = flipY ? v1Raw : v0Raw;
-        const vMax  = flipY ? v0Raw : v1Raw;
+        const vMin = flipY ? v1Raw : v0Raw;
+        const vMax = flipY ? v0Raw : v1Raw;
 
         u32[idx + 4] = uMin | (vMin << 16);
         u32[idx + 5] = uMax | (vMax << 16);
@@ -386,7 +385,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const view = backend.view;
 
     if (this._currentView !== view || this._currentViewId !== (view as unknown as { updateId: number }).updateId) {
-      this._currentView   = view;
+      this._currentView = view;
       this._currentViewId = (view as unknown as { updateId: number }).updateId;
       const proj = view.getTransform().toArray(false);
       this._shaderPathShader.getUniform('u_projection').setValue(proj);
@@ -406,16 +405,16 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private _flushShaderBatch(backend: WebGl2Backend): void {
     const conn = this._connection;
-    const buf  = this._shaderBuf;
-    const vao  = this._shaderVao;
+    const buf = this._shaderBuf;
+    const vao = this._shaderVao;
 
     if (!conn || !buf || !vao || this._shaderQuadCount === 0) return;
 
-    const gl       = conn.gl;
-    const texture  = this._currentTexture;
-    const scaleMode = (texture instanceof Texture) ? texture.scaleMode : ScaleModes.Linear;
-    const wrapS    = repeatModeToWrap(this._currentModeX ?? 'repeat');
-    const wrapT    = repeatModeToWrap(this._currentModeY ?? 'repeat');
+    const gl = conn.gl;
+    const texture = this._currentTexture;
+    const scaleMode = texture instanceof Texture ? texture.scaleMode : ScaleModes.Linear;
+    const wrapS = repeatModeToWrap(this._currentModeX ?? 'repeat');
+    const wrapT = repeatModeToWrap(this._currentModeY ?? 'repeat');
 
     // Bind repeat sampler (overrides texture's own wrap params for this unit).
     const samplerHandle = this._getOrCreateSampler(gl, wrapS, wrapT, scaleMode);
@@ -441,8 +440,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private _flushGeoBatch(backend: WebGl2Backend): void {
     const conn = this._connection;
-    const buf  = this._geoBuf;
-    const vao  = this._geoVao;
+    const buf = this._geoBuf;
+    const vao = this._geoVao;
 
     if (!conn || !buf || !vao || this._geoQuadCount === 0) return;
 
@@ -463,21 +462,16 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private _resetBatchState(): void {
     this._shaderQuadCount = 0;
-    this._geoQuadCount    = 0;
-    this._maxNodeIndex    = 0;
-    this._currentTexture  = null;
+    this._geoQuadCount = 0;
+    this._maxNodeIndex = 0;
+    this._currentTexture = null;
     this._currentBlendMode = null;
-    this._currentModeX    = null;
-    this._currentModeY    = null;
-    this._currentPath     = null;
+    this._currentModeX = null;
+    this._currentModeY = null;
+    this._currentPath = null;
   }
 
-  private _getOrCreateSampler(
-    gl: WebGL2RenderingContext,
-    wrapS: WrapModes,
-    wrapT: WrapModes,
-    scaleMode: ScaleModes,
-  ): WebGLSampler {
+  private _getOrCreateSampler(gl: WebGL2RenderingContext, wrapS: WrapModes, wrapT: WrapModes, scaleMode: ScaleModes): WebGLSampler {
     const key = `${wrapS}:${wrapT}:${scaleMode}`;
     const existing = this._samplers.get(key);
     if (existing !== undefined) return existing;
@@ -509,8 +503,9 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._connection = conn;
 
     // Shader-path VAO (uses float4 uvParams, not packed unorm16)
-    this._shaderBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._shaderData, BufferUsage.DynamicDraw)
-      .connect(this._createBufRuntime(conn, 'shader'));
+    this._shaderBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._shaderData, BufferUsage.DynamicDraw).connect(
+      this._createBufRuntime(conn, 'shader'),
+    );
 
     this._shaderVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, shaderStrideBytes, 0, false, 1)
@@ -520,8 +515,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       .connect(this._createVaoRuntime(conn, 'shader'));
 
     // Geometry-path VAO (packed unorm16 UVs, same layout as NineSlice)
-    this._geoBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._geoData, BufferUsage.DynamicDraw)
-      .connect(this._createBufRuntime(conn, 'geo'));
+    this._geoBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._geoData, BufferUsage.DynamicDraw).connect(this._createBufRuntime(conn, 'geo'));
 
     this._geoVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, geoStrideBytes, 0, false, 1)
@@ -569,7 +563,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private _createConnection(gl: WebGL2RenderingContext): RendererConnection {
     const shaderVaoHandle = gl.createVertexArray();
-    const geoVaoHandle    = gl.createVertexArray();
+    const geoVaoHandle = gl.createVertexArray();
 
     if (shaderVaoHandle === null || geoVaoHandle === null) {
       throw new Error('WebGl2RepeatingSpriteRenderer: could not create vertex array object.');
@@ -583,9 +577,11 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     if (handle === null) throw new Error('WebGl2RepeatingSpriteRenderer: could not create render buffer.');
 
     return {
-      bind: (buffer): void => { conn.gl.bindBuffer(buffer.type, handle); },
+      bind: (buffer): void => {
+        conn.gl.bindBuffer(buffer.type, handle);
+      },
       upload: (buffer, offset): void => {
-        const gl   = conn.gl;
+        const gl = conn.gl;
         const data = buffer.data;
         const state = conn.buffers.get(buffer);
 
@@ -634,8 +630,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
           appliedVersion = vao.version;
         }
       },
-      unbind: (): void => { conn.gl.bindVertexArray(null); },
-      draw: (_vao, size, start, type): void => { conn.gl.drawArrays(type, start, size); },
+      unbind: (): void => {
+        conn.gl.bindVertexArray(null);
+      },
+      draw: (_vao, size, start, type): void => {
+        conn.gl.drawArrays(type, start, size);
+      },
       drawInstanced: (_vao, count, start, instanceCount, type): void => {
         conn.gl.drawArraysInstanced(type, start, count, instanceCount);
       },

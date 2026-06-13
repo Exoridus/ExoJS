@@ -118,7 +118,7 @@ describe('BackendTargetPass coordinator routing', () => {
   test('falls back and still restores the previous target when the callback throws', () => {
     const { backend, root, setRenderTarget } = createBackend();
     const target = new RenderTexture(32, 32);
-    const boundTargets: (RenderTarget | null)[] = [];
+    const boundTargets: Array<RenderTarget | null> = [];
 
     setRenderTarget.mockImplementation((boundTarget: RenderTarget | null) => {
       boundTargets.push(boundTarget);

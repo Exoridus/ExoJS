@@ -5,17 +5,9 @@ import { TextureRegion, type TextureRegionInsets } from '#rendering/texture/Text
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 128, h = 64): Texture =>
-  ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
 
-const makeRegion = (
-  texture: Texture,
-  x = 0,
-  y = 0,
-  width?: number,
-  height?: number,
-  extrusion?: number | TextureRegionInsets,
-): TextureRegion =>
+const makeRegion = (texture: Texture, x = 0, y = 0, width?: number, height?: number, extrusion?: number | TextureRegionInsets): TextureRegion =>
   new TextureRegion(texture, {
     x,
     y,
@@ -72,10 +64,10 @@ describe('TextureRegion — UV coordinates', () => {
   test('sub-region UVs are normalised correctly', () => {
     const tex = makeTexture(256, 128);
     const region = makeRegion(tex, 32, 16, 64, 32);
-    expect(region.u0).toBe(32 / 256);   // 0.125
-    expect(region.v0).toBe(16 / 128);   // 0.125
-    expect(region.u1).toBe(96 / 256);   // 0.375
-    expect(region.v1).toBe(48 / 128);   // 0.375
+    expect(region.u0).toBe(32 / 256); // 0.125
+    expect(region.v0).toBe(16 / 128); // 0.125
+    expect(region.u1).toBe(96 / 256); // 0.375
+    expect(region.v1).toBe(48 / 128); // 0.375
   });
 
   test('sub-region UVs for non-square texture', () => {
@@ -90,10 +82,10 @@ describe('TextureRegion — UV coordinates', () => {
   test('UVs are derived from texture dimensions, not source dimensions', () => {
     const tex = makeTexture(512, 256);
     const region = makeRegion(tex, 64, 32, 128, 64);
-    expect(region.u0).toBe(64 / 512);   // 0.125
-    expect(region.v0).toBe(32 / 256);   // 0.125
-    expect(region.u1).toBe(192 / 512);  // 0.375
-    expect(region.v1).toBe(96 / 256);   // 0.375
+    expect(region.u0).toBe(64 / 512); // 0.125
+    expect(region.v0).toBe(32 / 256); // 0.125
+    expect(region.u1).toBe(192 / 512); // 0.375
+    expect(region.v1).toBe(96 / 256); // 0.375
   });
 
   test('U increases with x (left-to-right)', () => {
@@ -206,7 +198,10 @@ describe('TextureRegion — extrusion', () => {
   test('per-side extrusion via TextureRegionInsets', () => {
     const tex = makeTexture(256, 128);
     const region = new TextureRegion(tex, {
-      x: 16, y: 8, width: 64, height: 32,
+      x: 16,
+      y: 8,
+      width: 64,
+      height: 32,
       extrusion: { left: 1, top: 2, right: 3, bottom: 4 },
     });
     expect(region.extrusion).toEqual({ left: 1, top: 2, right: 3, bottom: 4 });
@@ -310,10 +305,16 @@ describe('TextureRegion — validation', () => {
 
   test('throws on per-side negative extrusion', () => {
     const tex = makeTexture(256, 128);
-    expect(() => new TextureRegion(tex, {
-      x: 10, y: 10, width: 64, height: 32,
-      extrusion: { left: 0, top: -1, right: 0, bottom: 0 },
-    })).toThrow();
+    expect(
+      () =>
+        new TextureRegion(tex, {
+          x: 10,
+          y: 10,
+          width: 64,
+          height: 32,
+          extrusion: { left: 0, top: -1, right: 0, bottom: 0 },
+        }),
+    ).toThrow();
   });
 
   test('throws when extrusion exceeds available source bounds', () => {

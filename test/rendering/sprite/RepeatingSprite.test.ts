@@ -6,14 +6,12 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTex = (w = 128, h = 64): Texture =>
-  ({ width: w, height: h, flipY: false }) as unknown as Texture;
+const makeTex = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false }) as unknown as Texture;
 
 const makeRegion = (tex: Texture, x = 0, y = 0, width?: number, height?: number): TextureRegion =>
   new TextureRegion(tex, { x, y, width: width ?? tex.width, height: height ?? tex.height });
 
-const getDirty = (sprite: RepeatingSprite): boolean =>
-  (sprite as unknown as Record<string, unknown>)['_geometryDirty'] as boolean;
+const getDirty = (sprite: RepeatingSprite): boolean => (sprite as unknown as Record<string, unknown>)['_geometryDirty'] as boolean;
 
 // ---------------------------------------------------------------------------
 // Strategy selection
@@ -97,10 +95,14 @@ describe('RepeatingSprite — constructor with Texture', () => {
   test('constructor options override all defaults', () => {
     const tex = makeTex(128, 64);
     const sprite = new RepeatingSprite(tex, {
-      width: 500, height: 250,
-      modeX: 'mirror-repeat', modeY: 'stretch',
-      fitX: 'clip', fitY: 'clip',
-      offsetX: 12, offsetY: -8,
+      width: 500,
+      height: 250,
+      modeX: 'mirror-repeat',
+      modeY: 'stretch',
+      fitX: 'clip',
+      fitY: 'clip',
+      offsetX: 12,
+      offsetY: -8,
     });
     expect(sprite.width).toBe(500);
     expect(sprite.height).toBe(250);
@@ -227,27 +229,37 @@ describe('RepeatingSprite — setter validation (size)', () => {
   test('width setter throws on negative', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.width = -1; }).toThrow(/non-negative/);
+    expect(() => {
+      sprite.width = -1;
+    }).toThrow(/non-negative/);
   });
 
   test('width setter throws on NaN', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.width = NaN; }).toThrow(/finite/);
+    expect(() => {
+      sprite.width = NaN;
+    }).toThrow(/finite/);
   });
 
   test('width setter preserves prior value on rejection', () => {
     const tex = makeTex(128, 64);
     const sprite = new RepeatingSprite(tex);
     const prev = sprite.width;
-    try { sprite.width = -5; } catch { /* expected */ }
+    try {
+      sprite.width = -5;
+    } catch {
+      /* expected */
+    }
     expect(sprite.width).toBe(prev);
   });
 
   test('height setter throws on Infinity', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.height = Infinity; }).toThrow(/finite/);
+    expect(() => {
+      sprite.height = Infinity;
+    }).toThrow(/finite/);
   });
 
   test('setSize throws on negative', () => {
@@ -260,7 +272,11 @@ describe('RepeatingSprite — setter validation (size)', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex, { width: 200, height: 100 });
     void sprite.quads;
-    try { sprite.setSize(Infinity, 50); } catch { /* expected */ }
+    try {
+      sprite.setSize(Infinity, 50);
+    } catch {
+      /* expected */
+    }
     expect(sprite.width).toBe(200);
     expect(sprite.height).toBe(100);
   });
@@ -270,7 +286,11 @@ describe('RepeatingSprite — setter validation (size)', () => {
     const region = makeRegion(tex);
     const sprite = new RepeatingSprite(region);
     void sprite.quads;
-    try { sprite.setSize(-10, 50); } catch { /* expected */ }
+    try {
+      sprite.setSize(-10, 50);
+    } catch {
+      /* expected */
+    }
     expect(getDirty(sprite)).toBe(false);
   });
 });
@@ -283,33 +303,45 @@ describe('RepeatingSprite — setter validation (modes/fits)', () => {
   test('modeX setter throws on invalid value', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.modeX = 'tiling' as never; }).toThrow('modeX');
+    expect(() => {
+      sprite.modeX = 'tiling' as never;
+    }).toThrow('modeX');
   });
 
   test('modeX setter preserves prior value on rejection', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
     const prev = sprite.modeX;
-    try { sprite.modeX = 'bad' as never; } catch { /* expected */ }
+    try {
+      sprite.modeX = 'bad' as never;
+    } catch {
+      /* expected */
+    }
     expect(sprite.modeX).toBe(prev);
   });
 
   test('modeY setter throws on invalid value', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.modeY = null as never; }).toThrow('modeY');
+    expect(() => {
+      sprite.modeY = null as never;
+    }).toThrow('modeY');
   });
 
   test('fitX setter throws on invalid value', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.fitX = 'repeat' as never; }).toThrow('fitX');
+    expect(() => {
+      sprite.fitX = 'repeat' as never;
+    }).toThrow('fitX');
   });
 
   test('fitY setter throws on invalid value', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.fitY = 'tile' as never; }).toThrow('fitY');
+    expect(() => {
+      sprite.fitY = 'tile' as never;
+    }).toThrow('fitY');
   });
 });
 
@@ -321,19 +353,27 @@ describe('RepeatingSprite — setter validation (offset)', () => {
   test('offsetX setter throws on NaN', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.offsetX = NaN; }).toThrow(/finite/);
+    expect(() => {
+      sprite.offsetX = NaN;
+    }).toThrow(/finite/);
   });
 
   test('offsetY setter throws on Infinity', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
-    expect(() => { sprite.offsetY = Infinity; }).toThrow(/finite/);
+    expect(() => {
+      sprite.offsetY = Infinity;
+    }).toThrow(/finite/);
   });
 
   test('setOffset preserves both offsets on rejection', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex, { offsetX: 5, offsetY: 10 });
-    try { sprite.setOffset(NaN, 20); } catch { /* expected */ }
+    try {
+      sprite.setOffset(NaN, 20);
+    } catch {
+      /* expected */
+    }
     expect(sprite.offsetX).toBe(5);
     expect(sprite.offsetY).toBe(10);
   });
@@ -343,7 +383,11 @@ describe('RepeatingSprite — setter validation (offset)', () => {
     const region = makeRegion(tex);
     const sprite = new RepeatingSprite(region);
     void sprite.quads;
-    try { sprite.setOffset(NaN, 0); } catch { /* expected */ }
+    try {
+      sprite.setOffset(NaN, 0);
+    } catch {
+      /* expected */
+    }
     expect(getDirty(sprite)).toBe(false);
   });
 });

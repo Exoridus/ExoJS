@@ -402,7 +402,7 @@ describe('Loader', () => {
     const loader = new Loader({ basePath: '/', concurrency: 1 });
     const firstFetch = createDeferred<Response>();
     const boostedFetch = createDeferred<Response>();
-    const progress: [number, number][] = [];
+    const progress: Array<[number, number]> = [];
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.add(TextAsset, { first: 'first.txt', boosted: 'boosted.txt' });
@@ -776,8 +776,8 @@ describe('Loader', () => {
   test('bundle progress callback and signal report expected totals and final completion', async () => {
     const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
-    const callbackProgress: [number, number][] = [];
-    const signalProgress: [string, number, number][] = [];
+    const callbackProgress: Array<[number, number]> = [];
+    const signalProgress: Array<[string, number, number]> = [];
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.registerManifest(
@@ -1438,8 +1438,8 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     vi.restoreAllMocks();
   });
 
-  function makeMockStore(): { store: CacheStore; saves: { storageName: string; key: string }[] } {
-    const saves: { storageName: string; key: string }[] = [];
+  function makeMockStore(): { store: CacheStore; saves: Array<{ storageName: string; key: string }> } {
+    const saves: Array<{ storageName: string; key: string }> = [];
     const store: CacheStore = {
       load: async () => null,
       save: async (storageName, key) => {

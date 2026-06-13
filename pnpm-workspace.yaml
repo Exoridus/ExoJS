@@ -13,3 +13,11 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   sharp: true
+
+# Supply-chain defense: refuse to install any package version younger than this
+# (minutes → 3 days). The real npm compromises of recent memory published a
+# malicious version and yanked it within hours; this quarantines brand-new
+# versions on every install — local AND CI — complementing the Dependabot
+# cooldown (which only governs Dependabot's own PRs, not manual installs).
+# `--frozen-lockfile` installs of already-pinned versions are unaffected.
+minimumReleaseAge: 4320

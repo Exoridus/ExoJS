@@ -48,7 +48,7 @@ interface MockWebGpuEnv {
   readonly createRenderPipeline: MockInstance;
   readonly createBuffer: MockInstance;
   readonly createSampler: MockInstance;
-  readonly buffers: { destroy: MockInstance; size: number }[];
+  readonly buffers: Array<{ destroy: MockInstance; size: number }>;
   restore(): void;
 }
 
@@ -80,7 +80,7 @@ function createMockWebGpuEnv(): MockWebGpuEnv {
   const createBindGroup = vi.fn(() => ({}) as GPUBindGroup);
   const createRenderPipeline = vi.fn(() => ({}) as GPURenderPipeline);
   const createSampler = vi.fn(() => ({}) as GPUSampler);
-  const buffers: { destroy: MockInstance; size: number }[] = [];
+  const buffers: Array<{ destroy: MockInstance; size: number }> = [];
   const createBuffer = vi.fn((desc: { size: number; usage: number }) => {
     const buf = { destroy: vi.fn(), size: desc.size };
 

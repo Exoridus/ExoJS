@@ -254,7 +254,7 @@ interface IndexedNode {
   order: number;
 }
 
-const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: QuadtreeItem<IndexedNode>[], x: number, y: number): RenderNode | null => {
+const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: Array<QuadtreeItem<IndexedNode>>, x: number, y: number): RenderNode | null => {
   buf.length = 0;
   qt.queryPoint(x, y, buf);
   let bestOrder = -1;
@@ -337,7 +337,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
 {
   const rand = rng(42);
   const PAIRS = 1000;
-  const polygons: [Polygon, Polygon][] = [];
+  const polygons: Array<[Polygon, Polygon]> = [];
 
   scenarioResults.push(
     runProfile({
@@ -395,7 +395,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
   const ITEMS = 1000;
   const QUERIES = 10000;
   let qt: Quadtree<number> | null = null;
-  const queryPoints: [number, number][] = [];
+  const queryPoints: Array<[number, number]> = [];
 
   scenarioResults.push(
     runProfile({

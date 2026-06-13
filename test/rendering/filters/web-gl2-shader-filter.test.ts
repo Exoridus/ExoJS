@@ -610,7 +610,7 @@ describe('WebGl2ShaderFilter', () => {
     // Capture the FIRST setRenderTarget call — BackendTargetPass calls:
     //   1. setRenderTarget(output)   ← the one we want to verify
     //   2. setRenderTarget(previousTarget) after the callback
-    const capturedTargets: (RenderTarget | null)[] = [];
+    const capturedTargets: Array<RenderTarget | null> = [];
 
     backend.execute.mockImplementation(pass => {
       const spy = vi.spyOn(backend as unknown as RenderBackend, 'setRenderTarget').mockImplementation(target => {

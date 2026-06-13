@@ -13,13 +13,13 @@ describe('WebGl2Backend', () => {
 
   interface MockWebGl2BackendInstance {
     readonly onContextLost: {
-      readonly bindings: (() => void)[];
+      readonly bindings: Array<() => void>;
       add(h: () => void): void;
       dispatch(): void;
       destroy(): void;
     };
     readonly onContextRestored: {
-      readonly bindings: (() => void)[];
+      readonly bindings: Array<() => void>;
       add(h: () => void): void;
       dispatch(): void;
       destroy(): void;

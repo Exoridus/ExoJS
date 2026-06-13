@@ -36,7 +36,7 @@ const VIEW = { w: 1280, h: 720 };
 const spriteCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [1000] : [100, 1000, 10000, 50000]);
 const nineCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [100] : [10, 100, 1000]);
 const repeatCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [100] : [100, 1000, 5000]);
-const tilemapSizes = (profile: BenchProfile): { w: number; h: number; label: number }[] =>
+const tilemapSizes = (profile: BenchProfile): Array<{ w: number; h: number; label: number }> =>
   profile === 'quick'
     ? [{ w: 32, h: 32, label: 1024 }]
     : [

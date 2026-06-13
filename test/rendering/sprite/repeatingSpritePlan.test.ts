@@ -12,8 +12,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 // Mock texture helper
 // ---------------------------------------------------------------------------
 
-const makeTex = (w = 128, h = 64) =>
-  ({ width: w, height: h, flipY: false }) as unknown as import('#rendering/texture/Texture').Texture;
+const makeTex = (w = 128, h = 64) => ({ width: w, height: h, flipY: false }) as unknown as import('#rendering/texture/Texture').Texture;
 
 const makeRegion = (w: number, h: number, x = 0, y = 0, tw?: number, th?: number) => {
   const tex = makeTex(tw ?? w + x + 4, th ?? h + y + 4);
@@ -111,9 +110,9 @@ describe('computeShaderTiling', () => {
   });
 
   test('repeat + round: nearest integer', () => {
-    expect(computeShaderTiling(64, 100, 'repeat', 'round')).toBe(2);  // round(100/64) = 2
-    expect(computeShaderTiling(64, 160, 'repeat', 'round')).toBe(3);  // round(160/64) = 3 (2.5 rounds up)
-    expect(computeShaderTiling(64, 130, 'repeat', 'round')).toBe(2);  // round(130/64) = 2
+    expect(computeShaderTiling(64, 100, 'repeat', 'round')).toBe(2); // round(100/64) = 2
+    expect(computeShaderTiling(64, 160, 'repeat', 'round')).toBe(3); // round(160/64) = 3 (2.5 rounds up)
+    expect(computeShaderTiling(64, 130, 'repeat', 'round')).toBe(2); // round(130/64) = 2
   });
 
   test('mirror-repeat + clip: exact ratio', () => {
@@ -256,9 +255,9 @@ describe('buildRepeatingSpriteQuads — atlas region UV', () => {
 
   test('extrusion shifts outer UV inward by zero', () => {
     const tex = makeTex(256, 256);
-    const regionNoExt  = new TextureRegion(tex, { x: 64, y: 64, width: 32, height: 32 });
+    const regionNoExt = new TextureRegion(tex, { x: 64, y: 64, width: 32, height: 32 });
     const regionWithExt = new TextureRegion(tex, { x: 64, y: 64, width: 32, height: 32, extrusion: 1 });
-    const quadsNo  = buildRepeatingSpriteQuads(regionNoExt,  32, 32, 'repeat', 'repeat', 'round', 'round', 0, 0);
+    const quadsNo = buildRepeatingSpriteQuads(regionNoExt, 32, 32, 'repeat', 'repeat', 'round', 'round', 0, 0);
     const quadsWith = buildRepeatingSpriteQuads(regionWithExt, 32, 32, 'repeat', 'repeat', 'round', 'round', 0, 0);
     // With extrusion, no half-texel inset on outer edges → UV touches region boundary
     // Without extrusion, half-texel inset shrinks the range slightly
@@ -282,7 +281,7 @@ describe('buildRepeatingSpriteQuads — offset', () => {
   test('positive offsetX shifts the pattern', () => {
     const r = makeRegion(64, 32);
     const withoutOffset = buildRepeatingSpriteQuads(r, 100, 32, 'repeat', 'stretch', 'clip', 'clip', 0, 0);
-    const withOffset    = buildRepeatingSpriteQuads(r, 100, 32, 'repeat', 'stretch', 'clip', 'clip', 10, 0);
+    const withOffset = buildRepeatingSpriteQuads(r, 100, 32, 'repeat', 'stretch', 'clip', 'clip', 10, 0);
     // The number of quads can change when offset splits a boundary
     expect(withOffset).not.toEqual(withoutOffset);
   });
@@ -299,7 +298,7 @@ describe('buildRepeatingSpriteQuads — offset', () => {
     const r = makeRegion(64, 32);
     // offset = -16 → phase = ((-16 % 64) + 64) % 64 = 48
     const negOffset = buildRepeatingSpriteQuads(r, 100, 32, 'repeat', 'stretch', 'clip', 'clip', -16, 0);
-    const posPhase  = buildRepeatingSpriteQuads(r, 100, 32, 'repeat', 'stretch', 'clip', 'clip', 48, 0);
+    const posPhase = buildRepeatingSpriteQuads(r, 100, 32, 'repeat', 'stretch', 'clip', 'clip', 48, 0);
     expect(negOffset).toEqual(posPhase);
   });
 

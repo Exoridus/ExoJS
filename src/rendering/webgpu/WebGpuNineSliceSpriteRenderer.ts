@@ -277,7 +277,14 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
     const pass = backend._passCoordinator.acquirePass().pass;
 
-    if (this._quadIndex > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null && this._currentTexture !== null) {
+    if (
+      this._quadIndex > 0 &&
+      !maskClipsAll &&
+      this._instanceBuffer !== null &&
+      this._indexBuffer !== null &&
+      this._currentBlendMode !== null &&
+      this._currentTexture !== null
+    ) {
       device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._quadIndex * instanceStrideBytes);
 
       const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);

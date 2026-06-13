@@ -50,7 +50,7 @@ const results: BenchmarkResult[] = [];
 {
   const rand = rng(42);
   const PAIRS = 1000;
-  const polygons: [Polygon, Polygon][] = [];
+  const polygons: Array<[Polygon, Polygon]> = [];
 
   results.push(
     runScenario(
@@ -92,7 +92,7 @@ const results: BenchmarkResult[] = [];
 {
   const rand = rng(99);
   const PAIRS = 10000;
-  const circles: [Circle, Circle][] = [];
+  const circles: Array<[Circle, Circle]> = [];
 
   results.push(
     runScenario(
@@ -133,7 +133,7 @@ const results: BenchmarkResult[] = [];
   const rand = rng(7);
   const ITEMS = 1000;
   const bounds = new Rectangle(0, 0, 5000, 5000);
-  let items: { bounds: Rectangle; payload: number }[] = [];
+  let items: Array<{ bounds: Rectangle; payload: number }> = [];
 
   results.push(
     runScenario(
@@ -175,7 +175,7 @@ const results: BenchmarkResult[] = [];
   const ITEMS = 1000;
   const QUERIES = 10000;
   let qt: Quadtree<number> | null = null;
-  const queryPoints: [number, number][] = [];
+  const queryPoints: Array<[number, number]> = [];
 
   results.push(
     runScenario(
@@ -217,7 +217,7 @@ const results: BenchmarkResult[] = [];
   const rand = rng(31);
   const COUNT = 1000;
   const statics: Rectangle[] = [];
-  const movers: { rect: Rectangle; dx: number; dy: number }[] = [];
+  const movers: Array<{ rect: Rectangle; dx: number; dy: number }> = [];
 
   results.push(
     runScenario(
