@@ -29,6 +29,13 @@ const loadPackageJson = (name: string): Record<string, unknown> =>
 describe('v0.13 release text invariants', () => {
     const section = extractV013Section();
 
+    it('carries a concrete release date in the heading', () => {
+        // `release:notes` (publish job, AFTER npm publish) hard-fails on any
+        // heading that is not `## [0.13.0] - YYYY-MM-DD` — "Unreleased" would
+        // publish npm packages and then abort the GitHub release.
+        expect(readChangelog()).toMatch(/^## \[0\.13\.0\] - \d{4}-\d{2}-\d{2}$/m);
+    });
+
     it('contains no #this placeholder', () => {
         expect(section).not.toMatch(/#this/);
     });

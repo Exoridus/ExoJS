@@ -8,7 +8,7 @@
  *   tsx scripts/release/run.ts publish   [--execute] [--no-check-existing]
  *
  * `prepare` builds (optionally), freezes the exact source revision (failing on
- * a dirty tree or unknown revision), packs exactly three tarballs WITHOUT
+ * a dirty tree or unknown revision), packs exactly four tarballs WITHOUT
  * rebuilding them, hashes them into `release-manifest.json` + `checksums.sha256`,
  * runs attw and the external-consumer smoke against those exact tarballs, and
  * assembles the Full GitHub Release ZIP. `publish` consumes only the prepared
@@ -45,7 +45,12 @@ const die = (message: string): never => {
 };
 
 const ensureBuilt = (): void => {
-  const dists = [resolve(repoRoot, 'dist/esm'), resolve(repoRoot, 'packages/exojs-particles/dist/esm'), resolve(repoRoot, 'packages/exojs-tiled/dist/esm')];
+  const dists = [
+    resolve(repoRoot, 'dist/esm'),
+    resolve(repoRoot, 'packages/exojs-particles/dist/esm'),
+    resolve(repoRoot, 'packages/exojs-tilemap/dist/esm'),
+    resolve(repoRoot, 'packages/exojs-tiled/dist/esm'),
+  ];
   const missing = dists.filter(d => !existsSync(d));
   if (missing.length > 0) {
     die(`Not built — missing ${missing.join(', ')}. Run "pnpm build" + extension builds, or pass --build.`);
@@ -57,6 +62,7 @@ const build = (): void => {
   for (const [label, args, cwd] of [
     ['core', ['build'], repoRoot],
     ['particles', ['--filter', '@codexo/exojs-particles', 'build'], repoRoot],
+    ['tilemap', ['--filter', '@codexo/exojs-tilemap', 'build'], repoRoot],
     ['tiled', ['--filter', '@codexo/exojs-tiled', 'build'], repoRoot],
   ] as const) {
     const r = runner.run({ command: 'pnpm', args: [...args], cwd });
@@ -101,7 +107,7 @@ const doPrepare = (): void => {
 
   const revision = freezeRevision();
 
-  log('\n→ Packing three tarballs (no rebuild) + manifest + checksums…');
+  log('\n→ Packing four tarballs (no rebuild) + manifest + checksums…');
   const prepared = prepareRelease(runner, { rootDir: repoRoot, stagingDir, revision });
   let manifest = prepared.manifest;
   log(`  packed: ${manifest.packages.map(p => `${p.name}@${p.version} (${p.bytes}B)`).join(', ')}`);
