@@ -91,7 +91,7 @@ jobs:
           pnpm verify:release-matrix
 
       # Build core + extensions exactly once. `release:prepare --build` invokes
-      # `pnpm build` + the three extension builds, then packs WITHOUT rebuilding.
+      # `pnpm build` + the four extension builds, then packs WITHOUT rebuilding.
       - name: Build site (vendored ESM for the Full ZIP)
         env:
           EXOJS_PACKAGE_PATH: ..
@@ -101,6 +101,17 @@ jobs:
           pnpm --filter @codexo/exojs-tilemap build
           pnpm --filter @codexo/exojs-tiled build
           pnpm site:build
+
+      # The site build can regenerate tracked content with platform-dependent
+      # output (this killed the v0.12.0 and first v0.13.0 release runs with
+      # "Working tree is dirty" in freezeRevision). The tag is the source of
+      # truth and everything packed comes from untracked dist/ output, so log
+      # the drift for diagnosis and reset tracked files to the tag state.
+      - name: Reset tracked build side-effects (keep tag tree pristine)
+        run: |
+          echo "Tracked drift after builds (empty = clean):"
+          git status --porcelain
+          git checkout -- .
 
       # Build-once prepare: pack 4 tarballs (no rebuild) -> hash -> manifest +
       # checksums -> attw (bundler) -> external consumers -> Full GitHub ZIP.
