@@ -4,7 +4,7 @@ interface AudioContextEventTarget {
   addEventListener?: (type: string, listener: () => void) => void;
 }
 
-const interactionEvents = ['mousedown', 'touchstart', 'touchend'] as const;
+const interactionEvents = ['mousedown', 'touchstart', 'touchend', 'keydown'] as const;
 
 let internalAudioContext: AudioContext | null = null;
 let internalOfflineAudioContext: OfflineAudioContext | null = null;

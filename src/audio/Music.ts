@@ -27,9 +27,21 @@ interface MusicAudioSetup {
 export class Music extends AbstractMedia {
   private readonly _audioElement: HTMLMediaElement;
   private _audioSetup: MusicAudioSetup | null = null;
+  private _pendingPlay = false;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this.setupWithAudioContext(ctx);
+  };
+  private readonly _onUnlockPlay = (): void => {
+    onAudioContextReady.remove(this._onUnlockPlay);
+
+    if (!this._pendingPlay) {
+      return;
+    }
+
+    this._pendingPlay = false;
+    void this._audioElement.play();
+    this.onStart.dispatch();
   };
 
   public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
@@ -129,9 +141,19 @@ export class Music extends AbstractMedia {
       this.applyOptions(options);
     }
 
-    if (this.paused) {
-      this._audioElement.play();
+    if (!this.paused || this._pendingPlay) {
+      return this;
+    }
+
+    if (isAudioContextReady()) {
+      void this._audioElement.play();
       this.onStart.dispatch();
+    } else {
+      // Autoplay policy blocks playback until a user gesture resumes the
+      // AudioContext. Defer and start inside that unlock so the browser
+      // permits it — callers can play() at any time and it just works.
+      this._pendingPlay = true;
+      onAudioContextReady.add(this._onUnlockPlay);
     }
 
     return this;
@@ -140,6 +162,11 @@ export class Music extends AbstractMedia {
   public pause(options?: Partial<PlaybackOptions>): this {
     if (options) {
       this.applyOptions(options);
+    }
+
+    if (this._pendingPlay) {
+      this._pendingPlay = false;
+      onAudioContextReady.remove(this._onUnlockPlay);
     }
 
     if (this.playing) {
@@ -178,7 +205,9 @@ export class Music extends AbstractMedia {
   public override destroy(): void {
     super.destroy();
 
+    this._pendingPlay = false;
     onAudioContextReady.remove(this._onAudioContextReady);
+    onAudioContextReady.remove(this._onUnlockPlay);
 
     if (this._audioSetup) {
       this._audioSetup.sourceNode.disconnect();

@@ -1,3 +1,6 @@
+import { Signal } from '#core/Signal';
+
+import { isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
 import { AudioListener } from './AudioListener';
 import type { Sound } from './Sound';
@@ -21,6 +24,13 @@ export class AudioManager {
   public readonly music: AudioBus;
   public readonly sound: AudioBus;
   public readonly listener: AudioListener;
+  /**
+   * Fires once when the AudioContext transitions to "running" — i.e. the first
+   * user gesture unlocks audio under the browser's autoplay policy. Check
+   * {@link AudioManager.locked} for the current state; sounds played while
+   * locked are deferred and start automatically on that gesture.
+   */
+  public readonly onUnlock = new Signal();
 
   private readonly _registered = new Map<string, AudioBus>();
   private readonly _spatialSounds = new Set<Sound>();
@@ -36,6 +46,10 @@ export class AudioManager {
     this._registered.set('master', this.master);
     this._registered.set('music', this.music);
     this._registered.set('sound', this.sound);
+
+    onAudioContextReady.add((): void => {
+      this.onUnlock.dispatch();
+    });
   }
 
   /**
@@ -53,6 +67,17 @@ export class AudioManager {
     // Wiring to app.onVisibilityChange happens externally — the
     // Application is responsible for calling _applyVisibility() when
     // visibility changes.
+  }
+
+  /**
+   * `true` while audio is blocked by the browser's autoplay policy — no user
+   * gesture has resumed the AudioContext yet. {@link Sound} and {@link Music}
+   * played while locked are deferred and start automatically on the first
+   * gesture, so you can simply call `play()` and (optionally) render a
+   * "tap to start" prompt while this is `true`. Pairs with {@link onUnlock}.
+   */
+  public get locked(): boolean {
+    return !isAudioContextReady();
   }
 
   /** Called once per frame from Application.update(). */

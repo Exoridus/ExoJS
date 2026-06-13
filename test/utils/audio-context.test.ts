@@ -108,4 +108,43 @@ describe('utils/audio-context', () => {
     expect(audioContextCreations).toBe(1);
     expect(addEventListenerSpy).toHaveBeenCalled();
   });
+
+  it('registers keydown alongside pointer events as an unlock gesture', async () => {
+    class TestAudioContext {
+      public state: AudioContextState = 'suspended';
+      public currentTime = 0;
+      public sampleRate = 44100;
+      public destination = {};
+
+      public resume(): Promise<void> {
+        this.state = 'running';
+
+        return Promise.resolve();
+      }
+    }
+
+    class TestOfflineAudioContext {}
+
+    Object.defineProperty(globalThis, 'AudioContext', {
+      configurable: true,
+      value: TestAudioContext,
+    });
+
+    Object.defineProperty(globalThis, 'OfflineAudioContext', {
+      configurable: true,
+      value: TestOfflineAudioContext,
+    });
+
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+
+    const { onAudioContextReady } = await import('#audio/audio-context');
+
+    onAudioContextReady.once(() => undefined);
+
+    const registeredEvents = addEventListenerSpy.mock.calls.map(call => call[0]);
+
+    // keydown lets keyboard-only apps unlock audio (previously pointer-only).
+    expect(registeredEvents).toContain('keydown');
+    expect(registeredEvents).toContain('mousedown');
+  });
 });
