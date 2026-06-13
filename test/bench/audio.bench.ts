@@ -153,7 +153,7 @@ describe('audio', () => {
 
   bench('50 Sound instances play() (1 iteration = 50 play() calls)', async () => {
     const { Sound } = await import('../../src/audio/Sound');
-    const sounds: InstanceType<typeof Sound>[] = [];
+    const sounds: Array<InstanceType<typeof Sound>> = [];
     for (let i = 0; i < 50; i++) sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
     for (const s of sounds) s.play();
     for (const s of sounds) s.destroy();

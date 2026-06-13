@@ -297,7 +297,7 @@ describe('RenderPipeline WebGL2 browser pixels', () => {
       ),
     );
 
-    const samples: [number, number][] = [
+    const samples: Array<[number, number]> = [
       [4, 4],
       [center, center],
       [canvasSize - 4, canvasSize - 4],

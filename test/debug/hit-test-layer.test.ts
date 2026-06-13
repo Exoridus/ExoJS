@@ -179,7 +179,7 @@ describe('HitTestLayer', () => {
     const layer = new HitTestLayer(app);
     const backend = app.backend;
 
-    const colorAssignments: { r: number; g: number; b: number }[] = [];
+    const colorAssignments: Array<{ r: number; g: number; b: number }> = [];
     const originalSetter = Object.getOwnPropertyDescriptor(Graphics.prototype, 'lineColor')?.set;
 
     vi.spyOn(Graphics.prototype, 'lineColor', 'set').mockImplementation(function (this: unknown, c) {
@@ -209,7 +209,7 @@ describe('HitTestLayer', () => {
     const layer = new HitTestLayer(app);
     const backend = app.backend;
 
-    const colorAssignments: { r: number; g: number; b: number }[] = [];
+    const colorAssignments: Array<{ r: number; g: number; b: number }> = [];
     const originalSetter = Object.getOwnPropertyDescriptor(Graphics.prototype, 'lineColor')?.set;
 
     vi.spyOn(Graphics.prototype, 'lineColor', 'set').mockImplementation(function (this: unknown, c) {
@@ -236,7 +236,7 @@ describe('HitTestLayer', () => {
     const layer = new HitTestLayer(app);
     const backend = app.backend;
 
-    const colorAssignments: { r: number; g: number; b: number }[] = [];
+    const colorAssignments: Array<{ r: number; g: number; b: number }> = [];
     const originalSetter = Object.getOwnPropertyDescriptor(Graphics.prototype, 'lineColor')?.set;
 
     vi.spyOn(Graphics.prototype, 'lineColor', 'set').mockImplementation(function (this: unknown, c) {

@@ -28,5 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Pinned, not :latest — a tool whose output gates CI must not silently
+      # change behaviour on a new upstream release (the same lesson as attw@latest).
       - name: Run actionlint
-        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12

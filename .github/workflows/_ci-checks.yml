@@ -140,6 +140,13 @@ jobs:
       - name: Lint
         run: pnpm lint:all
 
+      # Prettier is enforced by the pre-push hook (verify:release), but hooks can
+      # be bypassed (--no-verify) and merged PRs were never format-gated, so
+      # formatting drifted across the v0.13 PRs and blocked the v0.13.0 tag push.
+      # This is the CI backstop. Auto-fixable: a failure means `pnpm format`.
+      - name: Format check
+        run: pnpm format:check
+
   unit-tests:
     name: Unit Tests (Coverage)
     needs: [changes]
@@ -387,10 +394,72 @@ jobs:
       - name: Extension package dry runs
         run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" pack --dry-run
 
+      # publint validates the published package.json itself (exports map, files,
+      # types resolution, module/main coherence) — the layer attw does NOT cover
+      # (attw checks .d.ts resolution; publint checks the manifest contract).
+      # Pinned + via dlx (no permanent dependency), matching the attw pattern.
+      # Runs against the built dist of each package (core + extensions built above).
+      - name: Validate published package manifests (publint)
+        run: pnpm verify:publint
+
       # Verify commit-tracked API docs match a fresh generation from source.
       # (dry-run check that leaves the working tree unchanged.)
       - name: Check API doc sync
         run: pnpm docs:api:check
+
+  release-dry-run:
+    name: Release dry run
+    # PR-only shift-left of the build-once release `prepare` (pack -> attw ->
+    # external consumers). Every tooling bug that broke the v0.13.0 release —
+    # tilemap missing from the pack set, attw output-format drift — would have
+    # failed HERE on a cheap PR instead of mid-flight on an irreversible tag.
+    # `--skip-zip` avoids the site build + 220 MB archive. It does NOT run the
+    # real publish (provenance / dist-tag need real OIDC), so the
+    # repository-field/provenance prerequisite is covered by verify:release-matrix
+    # instead. The tag/release context skips this — release.yml runs the real
+    # prepare there. Path-filtered to release-relevant changes so most PRs skip it.
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Filter release-relevant changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            release:
+              - 'scripts/release/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'packages/*/package.json'
+              - '.github/workflows/release.yml'
+
+      - name: Setup pnpm
+        if: steps.filter.outputs.release == 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        if: steps.filter.outputs.release == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        if: steps.filter.outputs.release == 'true'
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Release prepare (build-once, no publish, no full-zip)
+        if: steps.filter.outputs.release == 'true'
+        run: pnpm release:prepare --build --skip-zip
 
   site-build:
     name: Site build

@@ -33,7 +33,7 @@ interface IndexedNode {
   order: number;
 }
 
-const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: QuadtreeItem<IndexedNode>[], x: number, y: number): RenderNode | null => {
+const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: Array<QuadtreeItem<IndexedNode>>, x: number, y: number): RenderNode | null => {
   buf.length = 0;
   qt.queryPoint(x, y, buf);
   let bestOrder = -1;
@@ -84,7 +84,7 @@ describe('interaction', () => {
 
   bench('quadtree hit-test (1k nodes, index rebuilt each frame, 100 frames)', () => {
     const root = new Container();
-    const buf: QuadtreeItem<IndexedNode>[] = [];
+    const buf: Array<QuadtreeItem<IndexedNode>> = [];
     const worldBounds = new Rectangle(0, 0, 1000, 625);
 
     for (let i = 0; i < NODES; i++) {

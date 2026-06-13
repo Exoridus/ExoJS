@@ -83,8 +83,7 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 18)
   }
 };
 
-const isDeviceLoss = (error: unknown): boolean =>
-  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDeviceOrSkip(ctx, backend);

@@ -30,7 +30,7 @@ describe('collision', () => {
     const rand = rng(42);
     const PAIRS = 1000;
     const ITERATIONS = 60;
-    const polygons: [Polygon, Polygon][] = [];
+    const polygons: Array<[Polygon, Polygon]> = [];
 
     for (let i = 0; i < PAIRS; i++) {
       const ax = rand() * 2000;
@@ -59,7 +59,7 @@ describe('collision', () => {
     const rand = rng(99);
     const PAIRS = 10000;
     const ITERATIONS = 30;
-    const circles: [Circle, Circle][] = [];
+    const circles: Array<[Circle, Circle]> = [];
 
     for (let i = 0; i < PAIRS; i++) {
       const ax = rand() * 5000;
@@ -83,7 +83,7 @@ describe('collision', () => {
     const rand = rng(7);
     const ITEMS = 1000;
     const ITERATIONS = 120;
-    const items: { bounds: Rectangle; payload: number }[] = [];
+    const items: Array<{ bounds: Rectangle; payload: number }> = [];
 
     for (let i = 0; i < ITEMS; i++) {
       items.push({ bounds: new Rectangle(rand() * 4900, rand() * 4900, 20 + rand() * 60, 20 + rand() * 60), payload: i });
@@ -107,7 +107,7 @@ describe('collision', () => {
     const ITEMS = 1000;
     const QUERIES = 10000;
     const ITERATIONS = 30;
-    const queryPoints: [number, number][] = [];
+    const queryPoints: Array<[number, number]> = [];
 
     const qt = new Quadtree<number>(new Rectangle(0, 0, 5000, 5000));
     for (let i = 0; i < ITEMS; i++) {
@@ -134,7 +134,7 @@ describe('collision', () => {
     const COUNT = 1000;
     const ITERATIONS = 120;
     const statics: Rectangle[] = [];
-    const movers: { rect: Rectangle; dx: number; dy: number }[] = [];
+    const movers: Array<{ rect: Rectangle; dx: number; dy: number }> = [];
 
     for (let i = 0; i < COUNT; i++) {
       statics.push(new Rectangle(rand() * 4000, rand() * 4000, 40 + rand() * 80, 40 + rand() * 80));

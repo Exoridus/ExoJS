@@ -779,7 +779,13 @@ export default defineConfig([
 
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
   {
-    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/exojs-particles/src/typings.d.ts', 'packages/exojs-tilemap/src/typings.d.ts', 'packages/exojs-tiled/src/typings.d.ts'],
+    files: [
+      'src/build-constants.d.ts',
+      'src/typings.d.ts',
+      'packages/exojs-particles/src/typings.d.ts',
+      'packages/exojs-tilemap/src/typings.d.ts',
+      'packages/exojs-tiled/src/typings.d.ts',
+    ],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
@@ -825,7 +831,14 @@ export default defineConfig([
 
   // Extension tilemap core — geometry and data-path relaxations.
   {
-    files: ['packages/exojs-tilemap/src/chunkGeometry.ts', 'packages/exojs-tilemap/src/TileChunk.ts', 'packages/exojs-tilemap/src/TileSet.ts', 'packages/exojs-tilemap/src/TileMapView.ts', 'packages/exojs-tilemap/src/TileLayer.ts', 'packages/exojs-tilemap/src/tilemapExtension.ts'],
+    files: [
+      'packages/exojs-tilemap/src/chunkGeometry.ts',
+      'packages/exojs-tilemap/src/TileChunk.ts',
+      'packages/exojs-tilemap/src/TileSet.ts',
+      'packages/exojs-tilemap/src/TileMapView.ts',
+      'packages/exojs-tilemap/src/TileLayer.ts',
+      'packages/exojs-tilemap/src/tilemapExtension.ts',
+    ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
@@ -846,7 +859,11 @@ export default defineConfig([
 
   // Extension particle modules with intentionally empty lifecycle stubs.
   {
-    files: ['packages/exojs-particles/src/modules/DeathModule.ts', 'packages/exojs-particles/src/modules/SpawnModule.ts', 'packages/exojs-particles/src/modules/UpdateModule.ts'],
+    files: [
+      'packages/exojs-particles/src/modules/DeathModule.ts',
+      'packages/exojs-particles/src/modules/SpawnModule.ts',
+      'packages/exojs-particles/src/modules/UpdateModule.ts',
+    ],
     rules: {
       '@typescript-eslint/no-empty-function': 'off',
     },
@@ -934,6 +951,10 @@ export default defineConfig([
       ],
       'no-console': 'off',
       'max-lines': 'off',
+      // Match the src/packages convention: T[] for simple types, Array<T> for
+      // complex element types (unions, inline object literals). The base config
+      // forces always-[] otherwise, which reads poorly for Array<{ ... }>.
+      '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
     },
   },
 

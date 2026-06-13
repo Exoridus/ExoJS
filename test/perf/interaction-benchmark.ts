@@ -60,7 +60,7 @@ interface IndexedNode {
   order: number;
 }
 
-const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: QuadtreeItem<IndexedNode>[], x: number, y: number): RenderNode | null => {
+const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: Array<QuadtreeItem<IndexedNode>>, x: number, y: number): RenderNode | null => {
   buf.length = 0;
   qt.queryPoint(x, y, buf);
 
@@ -144,7 +144,7 @@ const results: BenchmarkResult[] = [];
   let root: Container | null = null;
   const NODES = 1000;
   const QUERIES_PER_FRAME = 100;
-  const buf: QuadtreeItem<IndexedNode>[] = [];
+  const buf: Array<QuadtreeItem<IndexedNode>> = [];
   const worldBounds = new Rectangle(0, 0, 1000, 625);
 
   results.push(

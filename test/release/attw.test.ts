@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { interpretAttwJson } from '../../scripts/release/attw';
 
 /** Minimal attw `--format json` payload: one entrypoint, configurable problems. */
-const payload = (opts: { bundlerResolved?: boolean; problems?: { kind: string; resolutionKind?: string; resolutionOption?: string }[] }): string =>
+const payload = (opts: { bundlerResolved?: boolean; problems?: Array<{ kind: string; resolutionKind?: string; resolutionOption?: string }> }): string =>
   JSON.stringify({
     analysis: {
       packageName: '@codexo/exojs-tilemap',

@@ -92,7 +92,7 @@ describe('WorkletFilter', () => {
 
   it('destroy disconnects all nodes', () => {
     const ctx = getAudioContext();
-    const nodes: { disconnect: MockInstance }[] = [];
+    const nodes: Array<{ disconnect: MockInstance }> = [];
     const originalCreateGain = ctx.createGain.bind(ctx);
     vi.spyOn(ctx, 'createGain').mockImplementation(() => {
       const node = originalCreateGain() as unknown as { connect: MockInstance; disconnect: MockInstance; gain: unknown };

@@ -3,7 +3,7 @@ import { Ease } from '#animation/Easing';
 
 const EPSILON = 1e-10;
 
-const allFunctions: [string, EasingFunction][] = Object.entries(Ease) as [string, EasingFunction][];
+const allFunctions: Array<[string, EasingFunction]> = Object.entries(Ease) as Array<[string, EasingFunction]>;
 
 describe('Easing', () => {
   describe('boundary conditions: f(0) === 0 and f(1) === 1', () => {

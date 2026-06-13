@@ -22,7 +22,7 @@ const createContext = () => {
   } as unknown as RenderPassCoordinator;
 
   const executed: BackendRenderPass[] = [];
-  const cleared: (Color | undefined)[] = [];
+  const cleared: Array<Color | undefined> = [];
   const backend = {
     _passCoordinator: coordinator,
     execute: vi.fn(function (this: RenderBackend, pass: BackendRenderPass) {
@@ -38,7 +38,7 @@ const createContext = () => {
     }),
   } as unknown as RenderBackend;
 
-  const rendered: { node: RenderNode; options: RenderOptions | undefined }[] = [];
+  const rendered: Array<{ node: RenderNode; options: RenderOptions | undefined }> = [];
   const context = {
     backend,
     render: vi.fn((node: RenderNode, options?: RenderOptions) => {

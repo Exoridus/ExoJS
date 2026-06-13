@@ -217,7 +217,7 @@ describe('BoundingBoxesLayer', () => {
     // zIndex 0 → hue 0 (red), zIndex 12 → hue 360%360=0... use zIndex 1 and 2 instead.
     // zIndex 1 → hue 30, zIndex 2 → hue 60. These have clearly distinct rgb values.
 
-    const lineColors: { r: number; g: number; b: number }[] = [];
+    const lineColors: Array<{ r: number; g: number; b: number }> = [];
     const node1 = makeNode({ visible: true, zIndex: 1, boundsW: 10, boundsH: 10 });
     const node2 = makeNode({ visible: true, zIndex: 2, boundsW: 10, boundsH: 10 });
     const root: FakeNode = {

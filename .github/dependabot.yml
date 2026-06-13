@@ -14,6 +14,21 @@ updates:
     labels:
       - dependencies
     groups:
+      # Lockstep families: these must move together. A minor bump of `vitest`
+      # without `@vitest/browser` (or `typescript-eslint` without `eslint`)
+      # produces a PR that fails CI on version skew. Grouped across patch AND
+      # minor; listed before patch-only so they win the match.
+      vitest:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+      eslint:
+        patterns:
+          - 'eslint'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - 'eslint-plugin-*'
+          - 'eslint-config-*'
       patch-only:
         update-types:
           - patch

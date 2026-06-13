@@ -39,7 +39,7 @@ const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entr
 
 // Vertex/fragment pairs as wired up by the WebGl2*Renderer sources; `text.vert`
 // is shared across all three text-fragment variants.
-const programPairs: readonly (readonly [string, string])[] = [
+const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['sprite.vert', 'sprite.frag'],
   ['mesh.vert', 'mesh.frag'],
   ['particle.vert', 'particle.frag'],

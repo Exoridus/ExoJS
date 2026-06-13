@@ -10,21 +10,14 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { TILE_TRANSFORM_IDENTITY,TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import {
-  createQuadrantTexture,
-  createSolidTexture,
-  makeTileset,
-  singleTileMap,
-  wireTilemapRenderers,
-  wireViaTiledExtension,
-} from './_tilemapScene';
+import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
 import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
@@ -92,8 +85,7 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 18)
   }
 };
 
-const isDeviceLoss = (error: unknown): boolean =>
-  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDeviceOrSkip(ctx, backend);

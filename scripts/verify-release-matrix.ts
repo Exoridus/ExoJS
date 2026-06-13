@@ -34,6 +34,7 @@ interface Pkg {
   name: string;
   version: string;
   peer?: string;
+  repository?: unknown;
 }
 
 const readPkg = (relPath: string): Pkg => {
@@ -41,8 +42,9 @@ const readPkg = (relPath: string): Pkg => {
     name: string;
     version: string;
     peerDependencies?: Record<string, string>;
+    repository?: unknown;
   };
-  return { name: raw.name, version: raw.version, peer: raw.peerDependencies?.['@codexo/exojs'] };
+  return { name: raw.name, version: raw.version, peer: raw.peerDependencies?.['@codexo/exojs'], repository: raw.repository };
 };
 
 const problems: string[] = [];
@@ -74,6 +76,18 @@ for (const ext of [particles, tilemap, tiled]) {
     problems.push(`${ext.name}: peer "@codexo/exojs" is "${ext.peer ?? '(missing)'}", expected "${expectedPeer}"`);
   } else {
     ok.push(`${ext.name} peer range "${expectedPeer}"`);
+  }
+}
+
+// 2b. Provenance prerequisite: `npm publish --provenance` (the release publish
+// flag) refuses to build the SLSA attestation without a `repository` field.
+// A missing one aborts the coordinated publish MID-RUN, after earlier packages
+// are already on the registry — exactly the v0.13.0 partial-publish incident.
+for (const pkg of official) {
+  if (pkg.repository == null) {
+    problems.push(`${pkg.name}: missing "repository" field (required by \`npm publish --provenance\`).`);
+  } else {
+    ok.push(`${pkg.name} has a repository field (provenance-ready)`);
   }
 }
 

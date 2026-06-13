@@ -60,7 +60,7 @@ const groupEntry = (scope: GroupScope, seq: number): GroupScopeEntry => ({
   scope,
 });
 
-const groupScope = (entries: (DrawScopeEntry | GroupScopeEntry)[]): GroupScope => ({
+const groupScope = (entries: Array<DrawScopeEntry | GroupScopeEntry>): GroupScope => ({
   kind: RenderEntryKind.Group,
   entries,
   hasMixedZ: false,

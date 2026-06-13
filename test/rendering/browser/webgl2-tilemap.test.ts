@@ -12,7 +12,7 @@
  * Run via:  pnpm test:browser:webgl2
  */
 
-import { TILE_TRANSFORM_IDENTITY,TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -21,14 +21,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import {
-  createQuadrantTexture,
-  createSolidTexture,
-  makeTileset,
-  singleTileMap,
-  wireTilemapRenderers,
-  wireViaTiledExtension,
-} from './_tilemapScene';
+import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -334,7 +327,17 @@ describe('WebGL2 tilemap — batch capacity overflow', () => {
     });
     // One 128×128 chunk → 16384 tiles in a single page, far beyond the 4096
     // instance batch → the renderer must flush in runs without overflowing.
-    const layer = new TileLayer({ id: 1, name: 'l', width: 128, height: 128, tileWidth: 1, tileHeight: 1, chunkWidth: 128, chunkHeight: 128, tilesets: [tileset] });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 128,
+      height: 128,
+      tileWidth: 1,
+      tileHeight: 1,
+      chunkWidth: 128,
+      chunkHeight: 128,
+      tilesets: [tileset],
+    });
     layer.fillRect(0, 0, 128, 128, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     const map = new TileMap({ name: 'm', width: 128, height: 128, tileWidth: 1, tileHeight: 1, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);

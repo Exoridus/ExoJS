@@ -104,8 +104,8 @@ const TRYIT_TAG_RE = /<TryIt\b[\s\S]*?\/>/g;
 const STRING_LITERAL_RE = /['"]([^'"]+)['"]/g;
 
 /** Collect every internal (api|guide) link in a file with its raw form. */
-function collectLinks(body: string): { raw: string; path: string; res: Resolution }[] {
-  const found: { raw: string; path: string; res: Resolution }[] = [];
+function collectLinks(body: string): Array<{ raw: string; path: string; res: Resolution }> {
+  const found: Array<{ raw: string; path: string; res: Resolution }> = [];
   const add = (raw: string): void => {
     const path = normalizeInternal(raw);
     if (path === null) return;

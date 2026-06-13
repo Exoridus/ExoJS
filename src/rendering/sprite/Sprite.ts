@@ -168,7 +168,10 @@ export class Sprite extends Drawable {
     const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
 
     if (!ctx.axisAligned) {
-      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+      warnOnce(
+        'pixel-snap:geometry-downgrade',
+        'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.',
+      );
 
       return base;
     }

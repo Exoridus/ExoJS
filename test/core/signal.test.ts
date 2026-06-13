@@ -73,7 +73,7 @@ describe('Signal', () => {
 
   it('forwards arguments to handlers', () => {
     const signal = new Signal<[number, string]>();
-    const received: [number, string][] = [];
+    const received: Array<[number, string]> = [];
 
     signal.add((value, label) => {
       received.push([value, label]);

@@ -13,101 +13,101 @@ const readChangelog = (): string => readFileSync(changelogPath, 'utf8');
 
 /** Extract the 0.13.0 section text (from its heading to the next `## [` heading). */
 const extractV013Section = (): string => {
-    const content = readChangelog();
-    const startMarker = '## [0.13.0]';
-    const startIndex = content.indexOf(startMarker);
-    if (startIndex === -1) throw new Error('0.13.0 section not found in CHANGELOG.md');
-    const afterStart = content.indexOf('\n', startIndex);
-    const nextSection = content.indexOf('\n## [', afterStart + 1);
-    return content.slice(afterStart + 1, nextSection === -1 ? undefined : nextSection);
+  const content = readChangelog();
+  const startMarker = '## [0.13.0]';
+  const startIndex = content.indexOf(startMarker);
+  if (startIndex === -1) throw new Error('0.13.0 section not found in CHANGELOG.md');
+  const afterStart = content.indexOf('\n', startIndex);
+  const nextSection = content.indexOf('\n## [', afterStart + 1);
+  return content.slice(afterStart + 1, nextSection === -1 ? undefined : nextSection);
 };
 
 /** Load package.json manifests for the 4 lockstep packages. */
 const loadPackageJson = (name: string): Record<string, unknown> =>
-    JSON.parse(readFileSync(resolve(repoRoot, 'packages', name.replace('@codexo/', ''), 'package.json'), 'utf8'));
+  JSON.parse(readFileSync(resolve(repoRoot, 'packages', name.replace('@codexo/', ''), 'package.json'), 'utf8'));
 
 describe('v0.13 release text invariants', () => {
-    const section = extractV013Section();
+  const section = extractV013Section();
 
-    it('carries a concrete release date in the heading', () => {
-        // `release:notes` (publish job, AFTER npm publish) hard-fails on any
-        // heading that is not `## [0.13.0] - YYYY-MM-DD` — "Unreleased" would
-        // publish npm packages and then abort the GitHub release.
-        expect(readChangelog()).toMatch(/^## \[0\.13\.0\] - \d{4}-\d{2}-\d{2}$/m);
-    });
+  it('carries a concrete release date in the heading', () => {
+    // `release:notes` (publish job, AFTER npm publish) hard-fails on any
+    // heading that is not `## [0.13.0] - YYYY-MM-DD` — "Unreleased" would
+    // publish npm packages and then abort the GitHub release.
+    expect(readChangelog()).toMatch(/^## \[0\.13\.0\] - \d{4}-\d{2}-\d{2}$/m);
+  });
 
-    it('contains no #this placeholder', () => {
-        expect(section).not.toMatch(/#this/);
-    });
+  it('contains no #this placeholder', () => {
+    expect(section).not.toMatch(/#this/);
+  });
 
-    it('contains no stale Loader.loadEx reference', () => {
-        expect(section).not.toMatch(/\bloadEx\b/);
-    });
+  it('contains no stale Loader.loadEx reference', () => {
+    expect(section).not.toMatch(/\bloadEx\b/);
+  });
 
-    it('contains no stale Extension.descriptor reference', () => {
-        expect(section).not.toMatch(/Extension\.descriptor/);
-    });
+  it('contains no stale Extension.descriptor reference', () => {
+    expect(section).not.toMatch(/Extension\.descriptor/);
+  });
 
-    it('correctly documents TileLayer chunk default as 32', () => {
-        expect(section).toMatch(/32/);
-        expect(section).not.toMatch(/16×16/);
-    });
+  it('correctly documents TileLayer chunk default as 32', () => {
+    expect(section).toMatch(/32/);
+    expect(section).not.toMatch(/16×16/);
+  });
 
-    it('correctly names AssetHandler.getIdentityKey', () => {
-        expect(section).toMatch(/getIdentityKey/);
-    });
+  it('correctly names AssetHandler.getIdentityKey', () => {
+    expect(section).toMatch(/getIdentityKey/);
+  });
 
-    it('contains the published lockstep versions', () => {
-        expect(section).toMatch(/@codexo\/exojs\s+0\.13\.0/);
-        expect(section).toMatch(/@codexo\/exojs-particles\s+0\.13\.0/);
-        expect(section).toMatch(/@codexo\/exojs-tilemap\s+0\.13\.0/);
-        expect(section).toMatch(/@codexo\/exojs-tiled\s+0\.13\.0/);
-    });
+  it('contains the published lockstep versions', () => {
+    expect(section).toMatch(/@codexo\/exojs\s+0\.13\.0/);
+    expect(section).toMatch(/@codexo\/exojs-particles\s+0\.13\.0/);
+    expect(section).toMatch(/@codexo\/exojs-tilemap\s+0\.13\.0/);
+    expect(section).toMatch(/@codexo\/exojs-tiled\s+0\.13\.0/);
+  });
 
-    it('contains the correct peer dependency ranges', () => {
-        expect(section).toMatch(/0\.13\.x/);
-    });
+  it('contains the correct peer dependency ranges', () => {
+    expect(section).toMatch(/0\.13\.x/);
+  });
 
-    it('contains the Tiled → Tilemap dependency', () => {
-        expect(section).toMatch(/@codexo\/exojs-tilemap\s+0\.13\.0/);
-    });
+  it('contains the Tiled → Tilemap dependency', () => {
+    expect(section).toMatch(/@codexo\/exojs-tilemap\s+0\.13\.0/);
+  });
 
-    it('does not claim particles was newly extracted in v0.13', () => {
-        // The v0.12 section already documents this; the v0.13 section should not
-        // claim Core stopped shipping particles in this version.
-        expect(section).not.toMatch(/Core no longer ships the particles/);
-        expect(section).not.toMatch(/Core no longer includes any Tiled/);
-    });
+  it('does not claim particles was newly extracted in v0.13', () => {
+    // The v0.12 section already documents this; the v0.13 section should not
+    // claim Core stopped shipping particles in this version.
+    expect(section).not.toMatch(/Core no longer ships the particles/);
+    expect(section).not.toMatch(/Core no longer includes any Tiled/);
+  });
 
-    it('does not describe TiledMap as raw parsed source', () => {
-        expect(section).toMatch(/structured/);
-    });
+  it('does not describe TiledMap as raw parsed source', () => {
+    expect(section).toMatch(/structured/);
+  });
 });
 
 describe('package manifest / changelog version coherence', () => {
-    const packages = ['@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled'];
+  const packages = ['@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled'];
 
-    for (const pkg of packages) {
-        it(`${pkg} manifest version is 0.13.0`, () => {
-            const manifest = loadPackageJson(pkg);
-            expect(manifest.version).toBe('0.13.0');
-        });
-
-        it(`${pkg} peer dependency range is 0.13.x`, () => {
-            const manifest = loadPackageJson(pkg);
-            const peers = (manifest.peerDependencies ?? {}) as Record<string, string>;
-            expect(peers['@codexo/exojs']).toBe('0.13.x');
-        });
-    }
-
-    it('@codexo/exojs-tiled has @codexo/exojs-tilemap as a regular dependency', () => {
-        const manifest = loadPackageJson('@codexo/exojs-tiled');
-        const deps = (manifest.dependencies ?? {}) as Record<string, string>;
-        expect(deps['@codexo/exojs-tilemap']).toBeDefined();
+  for (const pkg of packages) {
+    it(`${pkg} manifest version is 0.13.0`, () => {
+      const manifest = loadPackageJson(pkg);
+      expect(manifest.version).toBe('0.13.0');
     });
 
-    it('root package version is 0.13.0', () => {
-        const root = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
-        expect(root.version).toBe('0.13.0');
+    it(`${pkg} peer dependency range is 0.13.x`, () => {
+      const manifest = loadPackageJson(pkg);
+      const peers = (manifest.peerDependencies ?? {}) as Record<string, string>;
+      expect(peers['@codexo/exojs']).toBe('0.13.x');
     });
+  }
+
+  it('@codexo/exojs-tiled has @codexo/exojs-tilemap as a regular dependency', () => {
+    const manifest = loadPackageJson('@codexo/exojs-tiled');
+    const deps = (manifest.dependencies ?? {}) as Record<string, string>;
+    expect(deps['@codexo/exojs-tilemap']).toBeDefined();
+  });
+
+  it('root package version is 0.13.0', () => {
+    const root = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
+    expect(root.version).toBe('0.13.0');
+  });
 });

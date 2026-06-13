@@ -90,16 +90,11 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 18)
 
 // On the software (swiftshader) adapter the WebGPU device can be dropped
 // mid-test. Treat that as an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean =>
-  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene inside a validation error scope.
 // Returns false when the device dropped mid-test (caller should bail).
-const renderScene = async (
-  ctx: { skip: (reason: string) => void },
-  backend: WebGpuBackend,
-  root: RenderNode,
-): Promise<boolean> => {
+const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDeviceOrSkip(ctx, backend);
 
   if (!device) {

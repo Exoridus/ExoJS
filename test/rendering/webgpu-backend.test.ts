@@ -47,8 +47,8 @@ interface MockWebGpuEnvironment {
   readonly createSampler: MockInstance;
   readonly createRenderPipeline: MockInstance;
   readonly pipelineDescriptors: GPURenderPipelineDescriptor[];
-  readonly buffers: { destroy: MockInstance }[];
-  readonly textures: { destroy: MockInstance; createView: MockInstance }[];
+  readonly buffers: Array<{ destroy: MockInstance }>;
+  readonly textures: Array<{ destroy: MockInstance; createView: MockInstance }>;
   /** Resolve this to simulate the GPU device being lost. */
   simulateDeviceLost(info?: Partial<GPUDeviceLostInfo>): void;
   restore(): void;
@@ -130,8 +130,8 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     return texture as unknown as GPUTexture;
   });
   const createSampler = vi.fn(() => ({}) as GPUSampler);
-  const buffers: { destroy: MockInstance }[] = [];
-  const textures: { destroy: MockInstance; createView: MockInstance }[] = [];
+  const buffers: Array<{ destroy: MockInstance }> = [];
+  const textures: Array<{ destroy: MockInstance; createView: MockInstance }> = [];
   let _resolveLost: ((info: GPUDeviceLostInfo) => void) | null = null;
   const lostPromise = new Promise<GPUDeviceLostInfo>(resolve => {
     _resolveLost = resolve;

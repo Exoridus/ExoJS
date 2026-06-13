@@ -8,13 +8,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import type { View } from '#rendering/View';
 
 import type { RepeatingSpriteOptions, RepeatingSpriteQuad } from './repeatingSpritePlan';
-import {
-  buildRepeatingSpriteQuads,
-  validateFit,
-  validateMode,
-  validateOffset,
-  validateSizeInput,
-} from './repeatingSpritePlan';
+import { buildRepeatingSpriteQuads, validateFit, validateMode, validateOffset, validateSizeInput } from './repeatingSpritePlan';
 
 /**
  * A sprite that fills its destination by repeating, mirroring, or stretching
@@ -55,9 +49,7 @@ export class RepeatingSprite extends Drawable {
     super();
 
     this._source = source;
-    this._region = source instanceof TextureRegion
-      ? source
-      : new TextureRegion(source, { x: 0, y: 0, width: source.width, height: source.height });
+    this._region = source instanceof TextureRegion ? source : new TextureRegion(source, { x: 0, y: 0, width: source.width, height: source.height });
 
     const region = this._region;
     const opts = options ?? {};
@@ -303,7 +295,10 @@ export class RepeatingSprite extends Drawable {
     const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
 
     if (!ctx.axisAligned) {
-      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+      warnOnce(
+        'pixel-snap:geometry-downgrade',
+        'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.',
+      );
 
       return base;
     }
@@ -328,7 +323,10 @@ export class RepeatingSprite extends Drawable {
     const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
 
     if (!ctx.axisAligned) {
-      warnOnce('pixel-snap:geometry-downgrade', 'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.');
+      warnOnce(
+        'pixel-snap:geometry-downgrade',
+        'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.',
+      );
 
       return base;
     }

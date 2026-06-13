@@ -13,7 +13,7 @@ interface TestPassOptions {
 
 class TestPass extends RenderPass {
   public readonly executions: RenderingContext[] = [];
-  public readonly resizes: [number, number][] = [];
+  public readonly resizes: Array<[number, number]> = [];
   public destroyCount = 0;
   private readonly _onExecute?: () => void;
   private readonly _onDestroy?: () => void;
