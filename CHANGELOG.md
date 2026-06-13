@@ -12,7 +12,7 @@ merged pull requests and commits since the previous tag (each with its commit /
 PR link); `pnpm release:notes` then renders that section into the published
 GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
 
-## [0.13.0] - Unreleased
+## [0.13.0] - 2026-06-13
 
 The scalable-sprites and tilemap release. `TextureRegion`, `NineSliceSprite`,
 and `RepeatingSprite` bring nine-slice and tiled-repeat rendering to both
