@@ -14,6 +14,42 @@ export function configureUrls(config: { baseUrl: string; iframeUrl?: string; pub
     if (config.examplesDir) _examplesDir = config.examplesDir;
 }
 
+// Derive the site base URL (origin + base path) from the current location by
+// stripping everything from the locale segment (`en`/`de`) onward, so URL
+// builders resolve correctly on any page — not only where an ExampleBrowser
+// has already configured them. Falls back to `fallbackBase` when no locale
+// segment is present (or there is no `window`, e.g. during SSR).
+export function resolveSiteBaseUrl(fallbackBase = '/'): string {
+    if (typeof window === 'undefined') {
+        return fallbackBase;
+    }
+
+    const pathSegments = window.location.pathname.split('/').filter(Boolean);
+    const localeIndex = pathSegments.findIndex(segment => segment === 'en' || segment === 'de');
+
+    if (localeIndex >= 0) {
+        const baseSegments = pathSegments.slice(0, localeIndex);
+        const basePath = baseSegments.length > 0 ? `/${baseSegments.join('/')}/` : '/';
+        return new URL(basePath, window.location.origin).toString();
+    }
+
+    return new URL(fallbackBase || '/', window.location.origin).toString();
+}
+
+// Configure the URL builders with the standard playground layout, resolving the
+// base URL from the current location. Idempotent — safe to call from every
+// component that embeds a live preview (ExampleBrowser, GuideExamplePreview),
+// so a preview works whether or not another host has configured URLs first.
+export function configureUrlsFromLocation(fallbackBase = '/'): void {
+    configureUrls({
+        baseUrl: resolveSiteBaseUrl(fallbackBase),
+        iframeUrl: 'preview.html',
+        assetsDir: 'assets',
+        examplesDir: 'examples',
+        publicDir: '.',
+    });
+}
+
 function buildUrl(path: string, params?: UrlParams): string {
     const url = new URL(path, _baseUrl);
 

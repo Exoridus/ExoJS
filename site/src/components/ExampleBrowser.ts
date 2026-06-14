@@ -1,7 +1,7 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import type { Example, ExamplesMap } from '../lib/types';
-import { configureUrls } from '../lib/url-builder';
+import { configureUrlsFromLocation } from '../lib/url-builder';
 import {
     hasExamplesFor,
     getLoadErrorFor,
@@ -71,19 +71,6 @@ export class ExampleBrowser extends LitElement {
     @query('exo-editor') private _editor?: Editor;
     @query('.mobile-action--examples') private _mobileExamplesButton?: HTMLButtonElement;
 
-    private _resolveSiteBaseUrl(): string {
-        const pathSegments = window.location.pathname.split('/').filter(Boolean);
-        const localeIndex = pathSegments.findIndex(segment => segment === 'en' || segment === 'de');
-
-        if (localeIndex >= 0) {
-            const baseSegments = pathSegments.slice(0, localeIndex);
-            const basePath = baseSegments.length > 0 ? `/${baseSegments.join('/')}/` : '/';
-            return new URL(basePath, window.location.origin).toString();
-        }
-
-        return new URL(this.baseUrl || '/', window.location.origin).toString();
-    }
-
     public override connectedCallback(): void {
         super.connectedCallback();
 
@@ -91,15 +78,7 @@ export class ExampleBrowser extends LitElement {
         this._compactMobileMediaQuery.addEventListener('change', this._compactMobileBreakpointChangeHandler);
         this._isCompactMobile = this._compactMobileMediaQuery.matches;
 
-        const resolvedBaseUrl = this._resolveSiteBaseUrl();
-
-        configureUrls({
-            baseUrl: resolvedBaseUrl,
-            iframeUrl: 'preview.html',
-            assetsDir: 'assets',
-            examplesDir: 'examples',
-            publicDir: '.',
-        });
+        configureUrlsFromLocation(this.baseUrl);
 
         this._unsubscribeExamples = onExamplesLoaded(versionId => this._onCatalogLoaded(versionId));
         this._unsubscribeVersions = onVersionsLoaded(() => this._syncVersionState());

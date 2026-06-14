@@ -2,6 +2,7 @@ import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { Capability } from '../lib/examples-catalog';
 import type { Example } from '../lib/types';
+import { configureUrlsFromLocation } from '../lib/url-builder';
 import './EditorPreview';
 
 @customElement('guide-example-preview')
@@ -84,6 +85,15 @@ export class GuideExamplePreview extends LitElement {
     @property({ type: String }) public sourceCode = '';
     @property({ type: String }) public capabilities = '[]';
     @state() private _started = false;
+
+    public override connectedCallback(): void {
+        super.connectedCallback();
+
+        // This preview can mount on any page (guide embeds, the landing hero)
+        // without an ExampleBrowser present, so configure the URL builders here
+        // — otherwise the iframe URL resolves against an empty base and throws.
+        configureUrlsFromLocation();
+    }
 
     public override render(): ReturnType<LitElement['render']> {
         let parsedCapabilities: Array<Capability> = [];
