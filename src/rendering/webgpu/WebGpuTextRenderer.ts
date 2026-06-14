@@ -254,8 +254,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _pipelineLayout: GPUPipelineLayout | null = null;
 
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
-  // Weak cache: avoids retaining transient atlas textures via strong keys.
-  private _texBindGroups = new WeakMap<Texture, GPUBindGroup>();
+  // Weak cache: avoids retaining transient atlas textures via strong keys. The
+  // bind group is stored alongside the texture view it was built from — a
+  // mutable DataTexture (the glyph atlas) keeps the same view across content
+  // updates but gets a fresh one when the backend recreates the GPU texture on
+  // resize, so the cache is invalidated only then.
+  private _texBindGroups = new WeakMap<Texture, { group: GPUBindGroup; view: GPUTextureView }>();
 
   private _projBuffer: GPUBuffer | null = null;
   private _nodeBuffer: GPUBuffer | null = null;
@@ -578,7 +582,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._frameBindGroupDirty = true;
 
     this._pipelines.clear();
-    this._texBindGroups = new WeakMap<Texture, GPUBindGroup>();
+    this._texBindGroups = new WeakMap<Texture, { group: GPUBindGroup; view: GPUTextureView }>();
 
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
@@ -767,10 +771,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   }
 
   private _getTexBindGroup(device: GPUDevice, backend: WebGpuBackend, texture: Texture): GPUBindGroup {
-    const existing = this._texBindGroups.get(texture);
-    if (existing !== undefined) return existing;
-
+    // Always resolve the binding so the backend syncs the texture first: a glyph
+    // atlas that gained new glyphs (e.g. a scene switch introducing new
+    // characters) uploads its dirty region here. Returning a cached bind group
+    // without this call would leave those new glyphs un-uploaded — they sample
+    // empty atlas texels and render invisibly.
     const { view, sampler } = backend.getTextureBinding(texture);
+
+    const cached = this._texBindGroups.get(texture);
+    if (cached !== undefined && cached.view === view) return cached.group;
+
     const group = device.createBindGroup({
       layout: this._textureBindGroupLayout!,
       entries: [
@@ -778,7 +788,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
         { binding: 1, resource: sampler },
       ],
     });
-    this._texBindGroups.set(texture, group);
+    this._texBindGroups.set(texture, { group, view });
     return group;
   }
 

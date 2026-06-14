@@ -211,9 +211,11 @@ interface CustomShaderResources {
   // User-uniform UBO (re-uploaded per frame).
   userUniformBuffer: GPUBuffer | null;
   userUniformBufferCapacity: number;
-  // Mesh texture bind group cache keyed by texture identity.
-  // WeakMap avoids retaining short-lived textures across long sessions.
-  meshTextureBindGroups: WeakMap<Texture | RenderTexture, GPUBindGroup>;
+  // Mesh texture bind group cache keyed by texture identity, paired with the
+  // texture view it was built from so a mutable texture (DataTexture content
+  // update / resize) invalidates it. WeakMap avoids retaining short-lived
+  // textures across long sessions.
+  meshTextureBindGroups: WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>;
   sampler: GPUSampler;
   // Per-frame state, reset in flush().
   drawCount: number;
@@ -230,7 +232,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
   private readonly _instancedPipelines = new Map<string, GPURenderPipeline>();
   private readonly _staticGeometryCache = new Map<Geometry, StaticGeometryCacheEntry>();
-  private _textureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
+  private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
   private readonly _customShaders = new Map<Material, CustomShaderResources>();
 
   private _device: GPUDevice | null = null;
@@ -761,7 +763,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._instancedNodeIndexBuffer?.destroy();
     this._pipelines.clear();
     this._instancedPipelines.clear();
-    this._textureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
+    this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
 
     for (const entry of this._staticGeometryCache.values()) {
       entry.vertexBuffer.destroy();
@@ -907,19 +909,28 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 
   private _getTextureBindGroup(backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
-    let group = this._textureBindGroups.get(texture);
+    // Resolve the binding every call so a mutable DataTexture (e.g. an
+    // audio spectrogram mutated each frame) uploads its dirty region before it
+    // is sampled. Reuse the cached bind group only while the underlying view is
+    // unchanged — the backend swaps the view when it recreates the GPU texture
+    // on resize. A plain cache hit that skipped this would freeze the texture
+    // on its first-frame contents.
+    const binding = backend.getTextureBinding(texture);
+    const cached = this._textureBindGroups.get(texture);
 
-    if (!group) {
-      const binding = backend.getTextureBinding(texture);
-      group = this._device!.createBindGroup({
-        layout: this._textureBindGroupLayout!,
-        entries: [
-          { binding: 0, resource: binding.view },
-          { binding: 1, resource: binding.sampler },
-        ],
-      });
-      this._textureBindGroups.set(texture, group);
+    if (cached !== undefined && cached.view === binding.view) {
+      return cached.group;
     }
+
+    const group = this._device!.createBindGroup({
+      layout: this._textureBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: binding.view },
+        { binding: 1, resource: binding.sampler },
+      ],
+    });
+
+    this._textureBindGroups.set(texture, { group, view: binding.view });
 
     return group;
   }
@@ -1579,19 +1590,24 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 
   private _getOrCreateMeshTextureBindGroup(resources: CustomShaderResources, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
-    let group = resources.meshTextureBindGroups.get(texture);
+    // Always resolve the binding so a mutable base texture uploads its dirty
+    // region before sampling; reuse the cached group only while the view holds.
+    const binding = backend.getTextureBinding(texture);
+    const cached = resources.meshTextureBindGroups.get(texture);
 
-    if (group === undefined) {
-      const binding = backend.getTextureBinding(texture);
-      group = this._device!.createBindGroup({
-        layout: resources.meshTextureLayout,
-        entries: [
-          { binding: 0, resource: binding.view },
-          { binding: 1, resource: binding.sampler },
-        ],
-      });
-      resources.meshTextureBindGroups.set(texture, group);
+    if (cached !== undefined && cached.view === binding.view) {
+      return cached.group;
     }
+
+    const group = this._device!.createBindGroup({
+      layout: resources.meshTextureLayout,
+      entries: [
+        { binding: 0, resource: binding.view },
+        { binding: 1, resource: binding.sampler },
+      ],
+    });
+
+    resources.meshTextureBindGroups.set(texture, { group, view: binding.view });
 
     return group;
   }
@@ -1706,7 +1722,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     resources.meshUniformBuffer?.destroy();
     resources.userUniformBuffer?.destroy();
     resources.pipelines.clear();
-    resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, GPUBindGroup>();
+    resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
     resources.vertexBuffer = null;
     resources.indexBuffer = null;
     resources.meshUniformBuffer = null;

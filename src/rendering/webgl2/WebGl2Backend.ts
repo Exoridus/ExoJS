@@ -734,6 +734,9 @@ export class WebGl2Backend implements RenderBackend {
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
           break;
         case BlendModes.Darken:
+          // MIN/MAX ignore blendFunc factors, so this cannot account for source
+          // coverage — transparent (premultiplied rgb=0) texels darken to black.
+          // Reliable only for opaque sources. See {@link BlendModes.Darken}.
           gl.blendEquation(gl.MIN);
           gl.blendFunc(gl.ONE, gl.ONE);
           break;
@@ -1235,6 +1238,16 @@ export class WebGl2Backend implements RenderBackend {
         const region = texture._consumeDirtyRegion();
         const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
 
+        // Our DataTexture buffers are tightly packed (no per-row padding), but
+        // WebGL defaults UNPACK_ALIGNMENT to 4. For single-byte (r8) data a
+        // sub-region upload whose width isn't a multiple of 4 would be misread
+        // — or rejected with INVALID_OPERATION for height > 1 — leaving the
+        // region un-uploaded. That is exactly what corrupts a partial glyph-
+        // atlas upload when new glyphs first appear after the initial full
+        // upload (e.g. switching to a scene with new characters). Force tight
+        // packing for the upload, then restore the GL default.
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
         if (needsAlloc || region === null || region.full) {
           gl.texImage2D(gl.TEXTURE_2D, 0, formatInfo.internalFormat, texture.width, texture.height, 0, formatInfo.format, formatInfo.type, texture.buffer);
         } else {
@@ -1256,6 +1269,8 @@ export class WebGl2Backend implements RenderBackend {
 
           gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView);
         }
+
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       } else if (texture instanceof RenderTexture) {
         if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);

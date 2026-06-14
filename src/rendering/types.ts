@@ -8,6 +8,17 @@ export enum BlendModes {
   Subtract = 2,
   Multiply = 3,
   Screen = 4,
+  /**
+   * `min(src, dst)` per channel.
+   *
+   * KNOWN LIMITATION: implemented with the fixed-function `MIN` blend equation,
+   * which ignores the blend factors and therefore cannot account for source
+   * coverage. With premultiplied-alpha drawables, transparent texels (rgb = 0)
+   * resolve to `min(0, dst) = 0`, so transparent regions of a sprite turn black
+   * instead of showing the background. Reliable only for fully opaque sources;
+   * a coverage-correct version needs a shader-side blend. Tracked for a future
+   * render pass. {@link Lighten} is unaffected (`max(0, dst) = dst`).
+   */
   Darken = 5,
   Lighten = 6,
 }

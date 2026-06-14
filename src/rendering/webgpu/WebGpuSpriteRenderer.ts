@@ -187,7 +187,7 @@ interface CustomSpriteResources {
   pipelines: Map<string, GPURenderPipeline>;
   userUniformBuffer: GPUBuffer | null;
   userUniformBufferCapacity: number;
-  baseTextureBindGroups: WeakMap<Texture | RenderTexture, GPUBindGroup>;
+  baseTextureBindGroups: WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>;
 }
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
@@ -964,13 +964,16 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     texture: Texture | RenderTexture,
     device: GPUDevice,
   ): GPUBindGroup {
+    // Resolve the binding every call so a mutable base texture uploads its
+    // dirty region before sampling; reuse the cached group only while the
+    // underlying view is unchanged (the backend swaps it on texture resize).
+    const binding = backend.getTextureBinding(texture);
     const existing = resources.baseTextureBindGroups.get(texture);
 
-    if (existing !== undefined) {
-      return existing;
+    if (existing !== undefined && existing.view === binding.view) {
+      return existing.group;
     }
 
-    const binding = backend.getTextureBinding(texture);
     const group = device.createBindGroup({
       layout: this._customBaseTextureLayout!,
       entries: [
@@ -979,7 +982,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       ],
     });
 
-    resources.baseTextureBindGroups.set(texture, group);
+    resources.baseTextureBindGroups.set(texture, { group, view: binding.view });
 
     return group;
   }

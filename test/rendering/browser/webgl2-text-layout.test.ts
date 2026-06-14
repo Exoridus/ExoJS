@@ -360,4 +360,49 @@ describe('Text layout WebGL2 browser', () => {
       backend.destroy();
     }
   });
+
+  // Regression: a second Text reusing the shared atlas with characters the first
+  // never rasterized triggers a *partial* sub-region upload of the R8 atlas (the
+  // first render does a full upload). With the WebGL default UNPACK_ALIGNMENT of
+  // 4, a sub-region whose row width isn't a multiple of 4 and spans more than one
+  // row is rejected with INVALID_OPERATION — the new glyphs never reach the GPU
+  // and render invisibly. This is exactly what broke switching to a scene whose
+  // text introduces new characters. The existing tests miss it because each
+  // resets the atlas pool, so every upload is full.
+  //
+  // SwiftShader (the headless software GL) doesn't enforce the alignment size
+  // check, so it can't reproduce the driver-level INVALID_OPERATION. We instead
+  // assert the backend's guard directly: a partial DataTexture upload must set
+  // UNPACK_ALIGNMENT to 1 (tight packing) before its texSubImage2D.
+  test('uploads a new glyph batch as a tightly-packed partial sub-region (UNPACK_ALIGNMENT = 1)', async () => {
+    const backend = await createBackend(256, 64);
+    const gl = backend.context;
+    // The first Text populates and fully uploads the shared atlas. The Text
+    // constructor rasterizes eagerly, so `second` must be created *after* the
+    // first upload — only then are its (disjoint) glyphs new to the atlas,
+    // forcing the partial sub-region upload rather than a fresh full upload.
+    const first = new Text('il', { fillColor: Color.white, fontSize: 30 });
+    let second: Text | null = null;
+
+    try {
+      render(backend, first);
+
+      const pixelStoreiSpy = vi.spyOn(gl, 'pixelStorei');
+      const texSubImage2DSpy = vi.spyOn(gl, 'texSubImage2D');
+
+      // Nothing in "WMQ" appears in "il": only-new glyphs into existing atlas.
+      second = new Text('WMQ', { fillColor: Color.white, fontSize: 30 });
+      render(backend, second);
+
+      // The new glyphs went up as a partial sub-region (not a full re-alloc)…
+      expect(texSubImage2DSpy).toHaveBeenCalled();
+      // …with tight row packing, so the misaligned R8 rows upload intact.
+      expect(pixelStoreiSpy).toHaveBeenCalledWith(gl.UNPACK_ALIGNMENT, 1);
+    } finally {
+      vi.restoreAllMocks();
+      first.destroy();
+      second?.destroy();
+      backend.destroy();
+    }
+  });
 });

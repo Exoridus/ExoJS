@@ -61,6 +61,9 @@ export function getWebGpuBlendState(blendMode: BlendModes): GPUBlendState {
         },
       };
     case BlendModes.Darken:
+      // `min`/`max` ignore the blend factors, so this cannot account for source
+      // coverage — transparent (premultiplied rgb=0) texels darken to black.
+      // Reliable only for opaque sources. See {@link BlendModes.Darken}.
       return {
         color: {
           operation: 'min',

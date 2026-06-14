@@ -298,4 +298,44 @@ describe('WebGPU mesh tint and texture sampling', () => {
       backend.destroy();
     }
   });
+
+  // Regression: the mesh renderer caches the texture bind group per Texture.
+  // Resolving the binding is what syncs a DataTexture's dirty region to the GPU,
+  // so a plain cache hit that skipped it froze a mutated DataTexture on its
+  // first-frame contents — e.g. an audio spectrogram updated every frame would
+  // never change after the first draw. The fix re-resolves the binding each draw
+  // (reusing the bind group only while the view is unchanged).
+  test('re-uploads a DataTexture mutated between draws (no stale mesh bind-group cache)', async ctx => {
+    const backend = await setupBackend(ctx);
+    const texture = new DataTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8',
+      data: new Uint8Array([255, 0, 0, 255]), // start red
+      samplerOptions: { scaleMode: ScaleModes.Nearest },
+    });
+    const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
+
+    try {
+      if (!(await renderMesh(ctx, backend, mesh))) {
+        return;
+      }
+
+      expectPixelNear(readCanvas(backend)(32, 32), [255, 0, 0, 255]); // first draw: red
+
+      // Mutate the texel and flush the dirty region; the next draw must show it.
+      texture.buffer.set([0, 0, 255, 255]); // blue
+      texture.commitRect(0, 0, 1, 1);
+
+      if (!(await renderMesh(ctx, backend, mesh))) {
+        return;
+      }
+
+      expectPixelNear(readCanvas(backend)(32, 32), [0, 0, 255, 255]); // second draw: blue
+    } finally {
+      mesh.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
 });
