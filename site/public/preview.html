@@ -2,20 +2,47 @@
 <html>
     <head>
         <style>
-            body,
             html {
                 margin: 0;
+                width: 100%;
                 height: 100%;
                 overflow: hidden;
                 background: #0b0d12;
             }
-            /* Examples use sizingMode:'fit', so the engine sets width/height:100%
-               + object-fit:contain on the canvas itself — no host override needed. */
+            /* The example mounts its canvas and DOM overlays into <body>. We make
+               <body> a fixed 1280x720 "stage" so every example keeps the same
+               coordinate space, then uniformly scale that stage to fit the iframe.
+               Because a CSS transform establishes the containing block for
+               position:fixed, the example's overlays (mountControls) scale and
+               stay aligned with the canvas instead of being clipped by a letterbox
+               — and nothing needs to change per example. */
+            body {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 1280px;
+                height: 720px;
+                margin: 0;
+                transform: translate(-50%, -50%) scale(var(--preview-scale, 1));
+                transform-origin: center center;
+            }
             canvas {
-                transform: translateZ(0);
                 outline-style: none;
             }
         </style>
+        <script>
+            // Fit the 1280x720 stage to the iframe while preserving 16:9 — scale
+            // by the limiting dimension so the stage (canvas + overlays) never
+            // overflows or clips. Recomputed on every iframe resize.
+            (function () {
+                function fitStage() {
+                    var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+                    document.documentElement.style.setProperty('--preview-scale', String(scale));
+                }
+                window.addEventListener('resize', fitStage);
+                fitStage();
+            })();
+        </script>
         <script>
             (function () {
                 var params = new URLSearchParams(window.location.search);
