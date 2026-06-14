@@ -387,3 +387,72 @@ describe('Gesture — long press', () => {
     im.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 10. Coordinate mapping when the canvas is displayed at a different size
+//     (sizingMode 'fit'/'shrink' or a CSS transform: scale)
+// ---------------------------------------------------------------------------
+
+describe('Pointer coordinate mapping — scaled canvas', () => {
+  // Backing store 800x600, but displayed (CSS) at 400x300 — e.g. object-fit
+  // contain or transform: scale(0.5). getBoundingClientRect reflects the
+  // displayed (CSS) size; raw pointer coordinates must map back to
+  // backing-store pixels so picking matches node positions / screenToWorld.
+  const createScaledCanvas = (): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+
+    canvas.width = 800;
+    canvas.height = 600;
+
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 300,
+      width: 400,
+      height: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    return canvas;
+  };
+
+  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Record<number, Pointer> }).pointers[id];
+
+  test('constructor maps CSS-display coordinates to backing-store pixels', () => {
+    const canvas = createScaledCanvas();
+    const im = createInputManager(canvas);
+
+    // Display center (200,150) → canvas-local center (400,300) — 2x, since the
+    // canvas is shown at half its backing-store size.
+    pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 200, clientY: 150, isPrimary: true });
+
+    const pointer = getPointer(im, 1);
+
+    expect(pointer.x).toBeCloseTo(400, 5);
+    expect(pointer.y).toBeCloseTo(300, 5);
+
+    // The normalized channel is scale-invariant and stays correct regardless.
+    expect(ch(im, Pointer.X)).toBeCloseTo(0.5, 5);
+    expect(ch(im, Pointer.Y)).toBeCloseTo(0.5, 5);
+
+    im.destroy();
+  });
+
+  test('pointermove keeps the mapping (handleEvent path)', () => {
+    const canvas = createScaledCanvas();
+    const im = createInputManager(canvas);
+
+    pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 0, clientY: 0, isPrimary: true });
+    pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 100, clientY: 75, isPrimary: true });
+
+    const pointer = getPointer(im, 1);
+
+    expect(pointer.x).toBeCloseTo(200, 5); // 100 * 800/400
+    expect(pointer.y).toBeCloseTo(150, 5); // 75 * 600/300
+
+    im.destroy();
+  });
+});

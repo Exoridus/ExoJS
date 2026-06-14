@@ -56,9 +56,13 @@ export enum PointerState {
  * be polled by {@link Input} bindings or read directly by interaction-aware
  * scene nodes.
  *
- * Coordinates are stored in canvas-local pixel space. The channel writes
- * are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic
- * sampling.
+ * Coordinates are stored in canvas-local (backing-store) pixel space — i.e.
+ * `app.canvas.width`/`height` units, matching {@link View.screenToWorld} and
+ * node positions. The CSS-pixel event coordinates are scaled by
+ * `canvas.width / boundingRect.width`, so picking stays correct when the canvas
+ * is displayed at a different size (sizingMode `'fit'`/`'shrink'`, or a CSS
+ * transform). The channel writes are normalized to 0..1 (position, size, twist,
+ * tilt) for backend-agnostic sampling.
  *
  * Pointers are owned by the {@link InputManager}, which assigns them a slot
  * index in 0..15 (see {@link maxPointers}) and exposes their per-slot
@@ -85,7 +89,9 @@ export class Pointer {
 
   public constructor(event: PointerEvent, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number) {
     const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
-    const { left, top } = canvas.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
 
     this._canvas = canvas;
     this._channels = channels;
@@ -94,8 +100,8 @@ export class Pointer {
 
     this.id = pointerId;
     this.type = pointerType;
-    this.position = new Vector(clientX - left, clientY - top);
-    this.size = new Size(width, height);
+    this.position = new Vector((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
+    this.size = new Size(width * scaleX, height * scaleY);
     this.tilt = new Vector(tiltX, tiltY);
     this._buttons = buttons;
     this._pressure = pressure;
@@ -212,10 +218,13 @@ export class Pointer {
 
   private handleEvent(event: PointerEvent): this {
     const { clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
-    const { left, top } = this._canvas!.getBoundingClientRect();
+    const canvas = this._canvas!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
 
-    this.position.set(clientX - left, clientY - top);
-    this.size.set(width, height);
+    this.position.set((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
+    this.size.set(width * scaleX, height * scaleY);
     this.tilt.set(tiltX, tiltY);
     this._buttons = buttons;
     this._pressure = pressure;
@@ -235,9 +244,11 @@ export class Pointer {
     }
 
     const base = this._channelBase;
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width || canvas.clientWidth || canvas.width || 1;
-    const h = rect.height || canvas.clientHeight || canvas.height || 1;
+    // position/size are already in canvas-local (backing-store) pixels, so
+    // normalize by the backing-store size — not the CSS display rect, which
+    // differs when the canvas is scaled to fit.
+    const w = canvas.width || 1;
+    const h = canvas.height || 1;
 
     if (!active) {
       // Zero the entire slot for a clean release.
