@@ -1,0 +1,48 @@
+---
+title: "ObjectLayer"
+description: "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). Query with query."
+symbol: "ObjectLayer"
+kind: "class"
+subsystem: "tilemap"
+importPath: "@codexo/exojs-tilemap"
+memberCount: 14
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tilemap/src/ObjectLayer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L121"
+---
+## Import
+
+`import { ObjectLayer } from '@codexo/exojs-tilemap'`
+
+A data-only layer of TileMapObjects — spawn points, trigger zones,
+collision regions, markers. Object layers are not rendered by the tile
+renderer; they are parsed and exposed for gameplay use (e.g. building physics
+colliders, placing entities). Query with query.
+
+## Constructors
+
+- `new(options: ObjectLayerOptions): ObjectLayer`
+
+## Methods
+
+- `getObjectById(id: number): TileMapObject | undefined`
+- `getObjectByName(name: string): TileMapObject | undefined`
+- `query(filter: ObjectQuery): TileMapObject[]`
+
+## Properties
+
+- `class: string`
+- `id: number`
+- `kind: "object"`
+- `name: string`
+- `objects: readonly TileMapObject[]`
+- `offsetX: number`
+- `offsetY: number`
+- `opacity: number`
+- `properties: TileProperties`
+- `visible: boolean`
+
+## Source
+
+[packages/exojs-tilemap/src/ObjectLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L121)

@@ -1,6 +1,6 @@
 import { TextureRegion } from '@codexo/exojs';
-import type { ResolvedTile, TileTransform } from '@codexo/exojs-tilemap';
-import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import type { ObjectPoint, ResolvedTile, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
+import { ObjectLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
 
 import type { TiledMapData, TiledOrientation, TiledPropertyData, TiledRenderOrder } from './data';
 import {
@@ -10,6 +10,7 @@ import {
   TILED_FLIPPED_VERTICALLY_FLAG,
 } from './gid';
 import { createTiledLayer, TiledGroupLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
+import type { TiledObject } from './TiledObject';
 import type { TiledTileset } from './TiledTileset';
 import { TiledFormatError } from './validate';
 
@@ -105,9 +106,9 @@ export class TiledMap {
    * Only finite orthogonal maps with atlas tilesets are supported. A
    * non-orthogonal or infinite map, or a collection-of-images tileset, throws
    * {@link TiledFormatError} rather than silently producing wrong (misplaced)
-   * or empty geometry. Object, image, and group layers are not yet converted
-   * (Phase C2 scope: tile layers only; group layer children are flattened into
-   * the result).
+   * or empty geometry. Tile layers become renderable `TileLayer`s and object
+   * groups become data-only `ObjectLayer`s; group layer children are flattened
+   * in document order. Image layers are not yet converted.
    *
    * The returned `TileMap` does **not** own the tileset textures — they remain
    * in the Loader cache. Destroying the returned map does not unload textures.
@@ -170,8 +171,9 @@ export class TiledMap {
       indexToRuntime.push(rts);
     }
 
-    // Collect and convert tile layers, flattening group layers.
+    // Collect and convert tile + object layers, flattening group layers.
     const runtimeLayers: TileLayer[] = [];
+    const runtimeObjectLayers: ObjectLayer[] = [];
     const convertLayers = (layers: readonly TiledLayer[]): void => {
       for (const layer of layers) {
         if (layer instanceof TiledGroupLayer) {
@@ -194,8 +196,10 @@ export class TiledMap {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime);
           }
           runtimeLayers.push(rLayer);
+        } else if (layer instanceof TiledObjectLayer) {
+          runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime));
         }
-        // ObjectLayer, ImageLayer: not converted in Phase C2 (tile layers only).
+        // ImageLayer: not yet converted.
       }
     };
     convertLayers(this.layers);
@@ -208,6 +212,7 @@ export class TiledMap {
       tileHeight: this.tileHeight,
       tilesets: runtimeTilesets,
       layers: runtimeLayers,
+      objectLayers: runtimeObjectLayers,
     });
   }
 
@@ -221,6 +226,37 @@ export class TiledMap {
   }
 }
 
+/**
+ * Resolve a raw (flag-bearing) Tiled GID to a runtime {@link ResolvedTile}, or
+ * `null` for an empty cell or a GID whose tileset was skipped (no atlas image).
+ */
+function resolveGid(
+  rawGid: number,
+  tiledTilesets: readonly TiledTileset[],
+  indexToRuntime: ReadonlyArray<TileSet | null>,
+): ResolvedTile | null {
+  if (rawGid === 0) return null;
+  const baseGid = maskTiledGid(rawGid);
+  const transform: TileTransform = {
+    flipX: (rawGid >>> 0 & TILED_FLIPPED_HORIZONTALLY_FLAG) !== 0,
+    flipY: (rawGid >>> 0 & TILED_FLIPPED_VERTICALLY_FLAG) !== 0,
+    diagonal: (rawGid >>> 0 & TILED_FLIPPED_DIAGONALLY_FLAG) !== 0,
+  };
+  // Find owning tileset: rightmost with firstGid <= baseGid (tilesets sorted asc).
+  let tsIdx = -1;
+  for (let t = tiledTilesets.length - 1; t >= 0; t--) {
+    if (baseGid >= tiledTilesets[t].firstGid) { tsIdx = t; break; }
+  }
+  if (tsIdx === -1) return null;
+  const runtimeTs = indexToRuntime[tsIdx];
+  if (!runtimeTs) return null; // tileset was skipped (no atlas image)
+  return {
+    tileset: runtimeTs,
+    localTileId: baseGid - tiledTilesets[tsIdx].firstGid,
+    transform,
+  };
+}
+
 /** Fill a `TileLayer` from a flat GID array decoded from a Tiled tile layer. */
 function populateTileLayer(
   layer: TileLayer,
@@ -229,29 +265,98 @@ function populateTileLayer(
   indexToRuntime: ReadonlyArray<TileSet | null>,
 ): void {
   for (let i = 0; i < gids.length; i++) {
-    const rawGid = gids[i];
-    if (rawGid === 0) continue;
-    const baseGid = maskTiledGid(rawGid);
-    const transform: TileTransform = {
-      flipX: (rawGid >>> 0 & TILED_FLIPPED_HORIZONTALLY_FLAG) !== 0,
-      flipY: (rawGid >>> 0 & TILED_FLIPPED_VERTICALLY_FLAG) !== 0,
-      diagonal: (rawGid >>> 0 & TILED_FLIPPED_DIAGONALLY_FLAG) !== 0,
-    };
-    // Find owning tileset: rightmost with firstGid <= baseGid (tilesets sorted asc).
-    let tsIdx = -1;
-    for (let t = tiledTilesets.length - 1; t >= 0; t--) {
-      if (baseGid >= tiledTilesets[t].firstGid) { tsIdx = t; break; }
-    }
-    if (tsIdx === -1) continue;
-    const runtimeTs = indexToRuntime[tsIdx];
-    if (!runtimeTs) continue; // tileset was skipped (no atlas image)
-    const tile: ResolvedTile = {
-      tileset: runtimeTs,
-      localTileId: baseGid - tiledTilesets[tsIdx].firstGid,
-      transform,
-    };
+    const tile = resolveGid(gids[i], tiledTilesets, indexToRuntime);
+    if (!tile) continue;
     layer.setTileAt(i % layer.width, Math.floor(i / layer.width), tile);
   }
+}
+
+/** Convert a parsed `TiledObjectLayer` into a runtime data-only `ObjectLayer`. */
+function convertObjectLayer(
+  layer: TiledObjectLayer,
+  tiledTilesets: readonly TiledTileset[],
+  indexToRuntime: ReadonlyArray<TileSet | null>,
+): ObjectLayer {
+  const objects: TileMapObject[] = [];
+  for (const object of layer.objects) {
+    const converted = convertObject(object, tiledTilesets, indexToRuntime);
+    if (converted) objects.push(converted);
+  }
+  return new ObjectLayer({
+    id: layer.id,
+    name: layer.name,
+    class: layer.class,
+    visible: layer.visible,
+    opacity: layer.opacity,
+    offsetX: layer.offsetX,
+    offsetY: layer.offsetY,
+    objects,
+    properties: convertProperties(layer.properties),
+  });
+}
+
+/**
+ * Convert one `TiledObject` to a `TileMapObject`. Text objects (and tile
+ * objects whose tileset was skipped) are dropped — returns `null`.
+ */
+function convertObject(
+  object: TiledObject,
+  tiledTilesets: readonly TiledTileset[],
+  indexToRuntime: ReadonlyArray<TileSet | null>,
+): TileMapObject | null {
+  if (object.text) {
+    return null; // text objects are not represented in the data-only model
+  }
+
+  const base = {
+    id: object.id,
+    name: object.name,
+    type: object.type,
+    x: object.x,
+    y: object.y,
+    width: object.width,
+    height: object.height,
+    rotation: object.rotation,
+    visible: object.visible,
+    properties: convertProperties(object.properties),
+  };
+
+  if (object.gid !== undefined) {
+    const tile = resolveGid(object.gid, tiledTilesets, indexToRuntime);
+    if (!tile) return null;
+    return { ...base, kind: 'tile', tile };
+  }
+  if (object.point) {
+    return { ...base, kind: 'point' };
+  }
+  if (object.ellipse) {
+    return { ...base, kind: 'ellipse' };
+  }
+  if (object.polygon) {
+    return { ...base, kind: 'polygon', points: toPoints(object.polygon) };
+  }
+  if (object.polyline) {
+    return { ...base, kind: 'polyline', points: toPoints(object.polyline) };
+  }
+  return { ...base, kind: 'rectangle' };
+}
+
+const toPoints = (points: ReadonlyArray<{ x: number; y: number }>): ObjectPoint[] => points.map(p => ({ x: p.x, y: p.y }));
+
+/**
+ * Project Tiled custom properties to the generic flat property bag. Class /
+ * object-valued properties are not representable and are skipped.
+ */
+function convertProperties(properties: readonly TiledPropertyData[]): TileProperties {
+  if (properties.length === 0) return Object.freeze({});
+  const out: Record<string, TilePropertyValue> = {};
+  for (const property of properties) {
+    const value = property.value;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      out[property.name] = value;
+    }
+  }
+  return Object.freeze(out);
 }
 
 function sortAndValidateTilesetRanges(tilesets: readonly TiledTileset[], source: string): readonly TiledTileset[] {
