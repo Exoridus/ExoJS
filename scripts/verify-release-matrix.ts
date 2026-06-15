@@ -5,17 +5,17 @@
  * handles every official package, in the right order, with coherent versions,
  * via the two-stage build-once pipeline:
  *
- *  1. The four official packages (@codexo/exojs, -particles, -tilemap, -tiled) share one
- *     lockstep version.
+ *  1. The five official packages (@codexo/exojs, -particles, -tilemap, -tiled, -physics)
+ *     share one lockstep version.
  *  2. Each extension's peerDependencies["@codexo/exojs"] is "<major>.<minor>.x".
  *  3. create-exo-app is versioned independently (a different version line).
- *  4. release.yml builds all four packages in the PREPARE stage.
- *  5. PREPARE runs `release:prepare` (packs four tarballs + Full ZIP) and
+ *  4. release.yml builds all five packages in the PREPARE stage.
+ *  5. PREPARE runs `release:prepare` (packs five tarballs + Full ZIP) and
  *     uploads the artifacts.
  *  6. PUBLISH consumes those artifacts (`download-artifact` + `release:publish`)
  *     and never rebuilds.
- *  7. The publish order Core → Particles → Tilemap → Tiled is the canonical PUBLISH_ORDER,
- *     and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
+ *  7. The publish order Core → Particles → Tilemap → Tiled → Physics is the canonical
+ *     PUBLISH_ORDER, and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
  *
  * Read-only: safe to run in dry-run/CI. Exits non-zero on any inconsistency.
  *
