@@ -54,9 +54,10 @@ const core = readPkg('package.json');
 const particles = readPkg('packages/exojs-particles/package.json');
 const tilemap = readPkg('packages/exojs-tilemap/package.json');
 const tiled = readPkg('packages/exojs-tiled/package.json');
+const physics = readPkg('packages/exojs-physics/package.json');
 const createExoApp = readPkg('packages/create-exo-app/package.json');
 
-const official = [core, particles, tilemap, tiled];
+const official = [core, particles, tilemap, tiled, physics];
 
 // 1. Lockstep version.
 const versions = new Set(official.map(p => p.version));
@@ -71,7 +72,7 @@ const [major, minor] = version.split('.');
 const expectedPeer = `${major}.${minor}.x`;
 
 // 2. Extension peer ranges.
-for (const ext of [particles, tilemap, tiled]) {
+for (const ext of [particles, tilemap, tiled, physics]) {
   if (ext.peer !== expectedPeer) {
     problems.push(`${ext.name}: peer "@codexo/exojs" is "${ext.peer ?? '(missing)'}", expected "${expectedPeer}"`);
   } else {
@@ -114,6 +115,7 @@ requireInWorkflow('pnpm build', 'prepare builds core');
 requireInWorkflow('pnpm --filter @codexo/exojs-particles build', 'prepare builds particles');
 requireInWorkflow('pnpm --filter @codexo/exojs-tilemap build', 'prepare builds tilemap');
 requireInWorkflow('pnpm --filter @codexo/exojs-tiled build', 'prepare builds tiled');
+requireInWorkflow('pnpm --filter @codexo/exojs-physics build', 'prepare builds physics');
 
 // 5. PREPARE packs/hashes/zips and uploads the artifacts.
 requireInWorkflow('pnpm release:prepare', 'prepare packs tarballs + Full ZIP (release:prepare)');
@@ -146,11 +148,12 @@ if (
   PUBLISH_ORDER[0] === '@codexo/exojs' &&
   PUBLISH_ORDER[1] === '@codexo/exojs-particles' &&
   PUBLISH_ORDER[2] === '@codexo/exojs-tilemap' &&
-  PUBLISH_ORDER[3] === '@codexo/exojs-tiled'
+  PUBLISH_ORDER[3] === '@codexo/exojs-tiled' &&
+  PUBLISH_ORDER[4] === '@codexo/exojs-physics'
 ) {
-  ok.push('PUBLISH_ORDER is Core → Particles → Tilemap → Tiled');
+  ok.push('PUBLISH_ORDER is Core → Particles → Tilemap → Tiled → Physics');
 } else {
-  problems.push(`PUBLISH_ORDER must be Core → Particles → Tilemap → Tiled, got ${PUBLISH_ORDER.join(' → ')}`);
+  problems.push(`PUBLISH_ORDER must be Core → Particles → Tilemap → Tiled → Physics, got ${PUBLISH_ORDER.join(' → ')}`);
 }
 
 // 7b. What `release:prepare` actually packs (officialPackages) must cover the

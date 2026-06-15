@@ -97,6 +97,11 @@ export default defineConfig({
         alias: aliasConfig,
         include: ['packages/exojs-tiled/test/**/*.test.ts'],
       }),
+      createJsdomTestProject({
+        name: 'exojs-physics',
+        alias: aliasConfig,
+        include: ['packages/exojs-physics/test/**/*.test.ts'],
+      }),
 
       // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for

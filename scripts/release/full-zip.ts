@@ -35,6 +35,7 @@ const VENDOR_PACKAGES = [
   { name: 'exojs-particles', vendorDir: 'exojs-particles' },
   { name: 'exojs-tilemap', vendorDir: 'exojs-tilemap' },
   { name: 'exojs-tiled', vendorDir: 'exojs-tiled' },
+  { name: 'exojs-physics', vendorDir: 'exojs-physics' },
 ] as const;
 
 const FORBIDDEN_PATTERNS: Array<{ label: string; test: (text: string) => boolean }> = [

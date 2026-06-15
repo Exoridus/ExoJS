@@ -50,6 +50,7 @@ const ensureBuilt = (): void => {
     resolve(repoRoot, 'packages/exojs-particles/dist/esm'),
     resolve(repoRoot, 'packages/exojs-tilemap/dist/esm'),
     resolve(repoRoot, 'packages/exojs-tiled/dist/esm'),
+    resolve(repoRoot, 'packages/exojs-physics/dist/esm'),
   ];
   const missing = dists.filter(d => !existsSync(d));
   if (missing.length > 0) {
@@ -64,6 +65,7 @@ const build = (): void => {
     ['particles', ['--filter', '@codexo/exojs-particles', 'build'], repoRoot],
     ['tilemap', ['--filter', '@codexo/exojs-tilemap', 'build'], repoRoot],
     ['tiled', ['--filter', '@codexo/exojs-tiled', 'build'], repoRoot],
+    ['physics', ['--filter', '@codexo/exojs-physics', 'build'], repoRoot],
   ] as const) {
     const r = runner.run({ command: 'pnpm', args: [...args], cwd });
     if (r.code !== 0) die(`build failed for ${label}:\n${r.stderr || r.stdout}`);
@@ -107,7 +109,7 @@ const doPrepare = (): void => {
 
   const revision = freezeRevision();
 
-  log('\n→ Packing four tarballs (no rebuild) + manifest + checksums…');
+  log('\n→ Packing five tarballs (no rebuild) + manifest + checksums…');
   const prepared = prepareRelease(runner, { rootDir: repoRoot, stagingDir, revision });
   let manifest = prepared.manifest;
   log(`  packed: ${manifest.packages.map(p => `${p.name}@${p.version} (${p.bytes}B)`).join(', ')}`);

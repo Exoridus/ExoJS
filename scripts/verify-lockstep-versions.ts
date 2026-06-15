@@ -31,6 +31,7 @@ const extensionPkgs = [
   readPackage('packages/exojs-particles/package.json'),
   readPackage('packages/exojs-tilemap/package.json'),
   readPackage('packages/exojs-tiled/package.json'),
+  readPackage('packages/exojs-physics/package.json'),
 ];
 const packages = [corePkg, ...extensionPkgs];
 
@@ -66,4 +67,4 @@ if (peerProblems.length > 0) {
   process.exit(1);
 }
 
-process.stdout.write(`verify-lockstep: all 4 packages at v${versions[0]}; extension peer ranges = "${expectedPeer}" ✓\n`);
+process.stdout.write(`verify-lockstep: all 5 packages at v${versions[0]}; extension peer ranges = "${expectedPeer}" ✓\n`);
