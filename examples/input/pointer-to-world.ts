@@ -15,10 +15,11 @@ const app = new Application({
 });
 
 // The camera continuously pans (a slow figure-eight) and breathes its zoom, so
-// the same screen pixel maps to a moving world point every frame. `screenToWorld`
-// handles all of that — including the view's viewport rectangle — so we never
-// hand-roll the inverse projection. Tap to drop a marker in *world* space; it
-// stays pinned to the world as the camera moves over it.
+// the same design-space pixel maps to a moving world point every frame.
+// `screenToWorld(x, y)` undoes the camera transform — pointer coordinates are
+// already in design space (`0..app.width`) — so we never hand-roll the inverse
+// projection. Tap to drop a marker in *world* space; it stays pinned to the
+// world as the camera moves over it.
 class PointerToWorldScene extends Scene {
     private view!: View;
     private grid!: Graphics;
@@ -31,7 +32,8 @@ class PointerToWorldScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const width = this.app.width;
+        const height = this.app.height;
 
         this.view = new View(width / 2, height / 2, width, height);
         this.grid = new Graphics();
@@ -57,7 +59,7 @@ class PointerToWorldScene extends Scene {
         });
 
         this.app.input.onPointerTap.add(pointer => {
-            const world = this.view.screenToWorld(pointer.x, pointer.y, this.app.canvas.width, this.app.canvas.height);
+            const world = this.view.screenToWorld(pointer.x, pointer.y);
 
             this.markerWorld.push({ x: world.x, y: world.y });
         });
@@ -80,7 +82,8 @@ class PointerToWorldScene extends Scene {
     }
 
     override update(delta): void {
-        const { width, height } = this.app.canvas;
+        const width = this.app.width;
+        const height = this.app.height;
 
         this.elapsed += delta.seconds;
 
@@ -94,7 +97,7 @@ class PointerToWorldScene extends Scene {
 
         // Live world coordinate under the cursor — recomputed every frame because
         // the mapping changes as the camera moves.
-        this.world = this.view.screenToWorld(this.cursor.x, this.cursor.y, this.app.canvas.width, this.app.canvas.height);
+        this.world = this.view.screenToWorld(this.cursor.x, this.cursor.y);
 
         this.hud.setStatus(`Screen ${Math.round(this.cursor.x)}, ${Math.round(this.cursor.y)} → World ${this.world.x.toFixed(0)}, ${this.world.y.toFixed(0)} · zoom ${this.view.zoomLevel.toFixed(2)}`);
     }

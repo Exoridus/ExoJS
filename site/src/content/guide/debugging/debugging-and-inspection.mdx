@@ -111,10 +111,10 @@ class GameScene extends Scene {
         this.inspector.visible = true;
 
         this._screenView = new View(
-            this.app.canvas.width / 2,
-            this.app.canvas.height / 2,
-            this.app.canvas.width,
-            this.app.canvas.height,
+            this.app.width / 2,
+            this.app.height / 2,
+            this.app.width,
+            this.app.height,
         );
 
         this.app.onFrame.add(delta => {

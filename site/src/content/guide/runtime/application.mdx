@@ -69,24 +69,24 @@ Either way, `app.canvas` is the active `HTMLCanvasElement`. CSS rules, ResizeObs
 
 ## High-DPI and pixel ratio
 
-Pass `canvas.pixelRatio` to scale the backing buffer relative to logical CSS pixels. A value of `window.devicePixelRatio` produces crisp rendering on high-DPI screens:
+`canvas.pixelRatio` scales the backing buffer relative to logical CSS pixels. By default it is the host's `window.devicePixelRatio` **clamped to `2`**, so rendering is crisp on Retina/HiDPI screens out of the box. Pass an explicit value to override:
 
 ```js
 const app = new Application({
     canvas: {
         width: 1280,
         height: 720,
-        pixelRatio: window.devicePixelRatio,
+        pixelRatio: window.devicePixelRatio, // full native density (uncapped)
     },
 });
 ```
 
-- `width` / `height` are the **logical canvas dimensions** in CSS pixels.
-- The backing buffer is `width × pixelRatio` by `height × pixelRatio`.
+- `width` / `height` are the **logical canvas dimensions** in CSS pixels — also exposed as `app.width` / `app.height`.
+- The backing buffer is `width × pixelRatio` by `height × pixelRatio`; `app.pixelRatio` holds the resolved ratio.
 - `canvas.style.width / height` is always set to the logical dimensions.
 - `app.resize(w, h)` takes logical dimensions and re-applies the stored pixel ratio.
 
-Default `pixelRatio` is `1` — no scaling — which preserves the old behaviour.
+Pass `pixelRatio: 1` to force logical-pixel rendering, or `window.devicePixelRatio` to opt into full native density above the default `2×` cap (the cap keeps DPR-3 phones from paying a 9× fill-rate cost).
 
 For pixel-art games where you want crisp upscaling without browser blurring, combine `pixelRatio` with the `imageRendering` hint:
 

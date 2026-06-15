@@ -21,7 +21,8 @@ class WorldScreenScene extends Scene {
     private pointer = { x: 0, y: 0 };
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const width = this.app.width;
+        const height = this.app.height;
 
         this.view = new View(260, 160, width, height);
         this.grid = new Graphics();
@@ -65,16 +66,9 @@ class WorldScreenScene extends Scene {
     }
 
     private toWorld(screenX, screenY): { x: number; y: number } {
-        const width = this.app.canvas.width;
-        const height = this.app.canvas.height;
-        const clipX = (screenX / width) * 2 - 1;
-        const clipY = 1 - (screenY / height) * 2;
-        const inverse = this.view.getInverseTransform();
-
-        return {
-            x: inverse.a * clipX + inverse.b * clipY + inverse.x,
-            y: inverse.c * clipX + inverse.d * clipY + inverse.y,
-        };
+        // Pointer coordinates are already in design space, so screenToWorld only
+        // has to undo this view's camera transform (pan/zoom) to reach world space.
+        return this.view.screenToWorld(screenX, screenY);
     }
 }
 

@@ -23,7 +23,8 @@ class MouseParallaxScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const width = this.app.width;
+        const height = this.app.height;
         this.pointer = { x: width / 2, y: height / 2 };
 
         // Spread the circle field across the full 16:9 canvas: 16 columns wide so
@@ -54,7 +55,8 @@ class MouseParallaxScene extends Scene {
     }
 
     override draw(context): void {
-        const { width, height } = this.app.canvas;
+        const width = this.app.width;
+        const height = this.app.height;
 
         context.backend.clear(new Color(18, 22, 34));
         for (let i = 0; i < this.layers.length; i++) {

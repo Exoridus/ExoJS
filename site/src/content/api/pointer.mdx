@@ -1,6 +1,6 @@
 ---
 title: "Pointer"
-description: "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes. Coordinates are stored in canvas-local pixel space. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling. Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants."
+description: "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes. Coordinates are stored in logical/design pixel space — i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling. Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants."
 symbol: "Pointer"
 kind: "class"
 subsystem: "input"
@@ -9,7 +9,7 @@ memberCount: 28
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/Pointer.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts#L67"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts#L75"
 ---
 ## Import
 
@@ -21,9 +21,16 @@ pressure, tilt, etc.) into the engine's shared channels buffer so it can
 be polled by Input bindings or read directly by interaction-aware
 scene nodes.
 
-Coordinates are stored in canvas-local pixel space. The channel writes
-are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic
-sampling.
+Coordinates are stored in logical/design pixel space — i.e. `app.width`/
+`app.height` units (`0..app.width` × `0..app.height`), matching node
+positions, the 2-argument View.screenToWorld, and the active camera.
+The CSS-pixel event coordinates are mapped through the application's content
+viewport, so the value is independent of Application.pixelRatio and of
+however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`,
+or a CSS transform): a click at the right edge always reads `app.width`. In
+`'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel
+writes are normalized to 0..1 (position, size, twist, tilt) for
+backend-agnostic sampling.
 
 Pointers are owned by the InputManager, which assigns them a slot
 index in 0..15 (see maxPointers) and exposes their per-slot
@@ -31,7 +38,7 @@ channel offsets via the Pointer class namespace constants.
 
 ## Constructors
 
-- `new(event: PointerEvent, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number): Pointer`
+- `new(event: PointerEvent, app: Application, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number): Pointer`
 
 ## Methods
 
@@ -68,4 +75,4 @@ channel offsets via the Pointer class namespace constants.
 
 ## Source
 
-[src/input/Pointer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts#L67)
+[src/input/Pointer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts#L75)

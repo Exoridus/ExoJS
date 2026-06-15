@@ -19,7 +19,7 @@ For everything else you want the canvas to track its container. The size you dra
 
 ## Crisp rendering with `pixelRatio`
 
-On a high-DPI display, a canvas sized in CSS pixels is stretched across more physical pixels, so anything drawn at the CSS resolution looks soft. The `pixelRatio` canvas option fixes this: it scales the canvas backing store up by that factor while the CSS display size stays the same. Set it to the display's `devicePixelRatio` for native sharpness:
+On a high-DPI display, a canvas sized in CSS pixels is stretched across more physical pixels, so anything drawn at the CSS resolution looks soft. The `pixelRatio` canvas option scales the canvas backing store up by that factor while the CSS display size stays the same. It defaults to the display's `devicePixelRatio` (clamped to `2`), so output is crisp out of the box; set it explicitly to override:
 
 <SourceSnippet
   source="examples/getting-started/resize-and-dpr.ts"
@@ -27,7 +27,7 @@ On a high-DPI display, a canvas sized in CSS pixels is stretched across more phy
   title="Application with pixelRatio"
 />
 
-With `pixelRatio: 2`, an 800×600 canvas renders into a 1600×1200 backing store but still displays at 800×600 CSS pixels — twice the detail per pixel, so sprites and text stay crisp. At `pixelRatio: 1` (the default) the backing store matches the CSS size.
+With `pixelRatio: 2`, an 800×600 canvas renders into a 1600×1200 backing store but still displays at 800×600 CSS pixels — twice the detail per pixel, so sprites and text stay crisp. Pass `pixelRatio: 1` to force a backing store that matches the CSS size.
 
 ## Fitting the window
 
