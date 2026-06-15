@@ -302,3 +302,41 @@ describe('TiledMap.toTileMap() — rejects maps it cannot convert faithfully', (
     expect(() => map.toTileMap()).toThrow(/infinite|finite/);
   });
 });
+
+describe('TiledMap.toTileMap() — object layers', () => {
+  const { context } = makeContext(richFixtures);
+
+  it('converts an objectgroup into a data-only ObjectLayer', async () => {
+    const tiled = await loadTiledMap('orthogonal-rich.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    expect(runtime.objectLayers).toHaveLength(1);
+    const layer = runtime.getObjectLayer('Spawns');
+    expect(layer).toBeDefined();
+    expect(layer?.objects).toHaveLength(2);
+  });
+
+  it('maps a point object and a gid object to the right kinds with resolved tiles', async () => {
+    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const layer = runtime.getObjectLayer('Spawns');
+
+    const hero = layer?.getObjectByName('hero');
+    expect(hero?.kind).toBe('point');
+    expect(hero?.type).toBe('spawn');
+
+    const chest = layer?.getObjectByName('chest');
+    expect(chest?.kind).toBe('tile');
+    if (chest?.kind === 'tile') {
+      expect(chest.tile.tileset).toBeDefined();
+      expect(chest.tile.localTileId).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('query selects objects by class/type', async () => {
+    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const layer = runtime.getObjectLayer('Spawns');
+
+    expect(layer?.query({ type: 'spawn' })).toHaveLength(1);
+    expect(layer?.query({ kind: 'tile' })).toHaveLength(1);
+  });
+});

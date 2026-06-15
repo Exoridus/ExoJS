@@ -5,11 +5,11 @@ symbol: "TileMap"
 kind: "class"
 subsystem: "tilemap"
 importPath: "@codexo/exojs-tilemap"
-memberCount: 29
+memberCount: 32
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-tilemap/src/TileMap.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L49"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L52"
 ---
 ## Import
 
@@ -33,12 +33,14 @@ and local tile ID, so different tilesets may have different tile dimensions.
 ## Methods
 
 - `addLayer(layer: TileLayer): void`
+- `addObjectLayer(layer: ObjectLayer): void`
 - `addTileset(tileset: TileSet): void`
 - `clearTileAt(layerId: number, tx: number, ty: number): void`
 - `createView(options?: TileMapViewOptions): TileMapView`
 - `destroy(): void`
 - `getLayerById(id: number): TileLayer | undefined`
 - `getLayerByName(name: string): TileLayer | undefined`
+- `getObjectLayer(name: string): ObjectLayer | undefined`
 - `getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null`
 - `getTileLayer(name: string): TileLayer | undefined`
 - `getTileset(name: string): TileSet | undefined`
@@ -59,6 +61,7 @@ and local tile ID, so different tilesets may have different tile dimensions.
 - `width: number`
 - `destroyed: boolean`
 - `layers: readonly TileLayer[]`
+- `objectLayers: readonly ObjectLayer[]`
 - `pixelHeight: number`
 - `pixelWidth: number`
 - `revision: number`
@@ -66,4 +69,4 @@ and local tile ID, so different tilesets may have different tile dimensions.
 
 ## Source
 
-[packages/exojs-tilemap/src/TileMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L49)
+[packages/exojs-tilemap/src/TileMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L52)

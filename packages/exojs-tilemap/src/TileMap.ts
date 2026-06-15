@@ -1,3 +1,4 @@
+import type { ObjectLayer } from './ObjectLayer';
 import { type TileLayer } from './TileLayer';
 import type { TileMapViewOptions } from './TileMapView';
 import { TileMapView } from './TileMapView';
@@ -24,6 +25,8 @@ export interface TileMapOptions {
   readonly tilesets?: readonly TileSet[];
   /** Layers (constructed externally and owned by the map after construction). */
   readonly layers?: readonly TileLayer[];
+  /** Object layers (data-only; spawn points, triggers, collision regions). */
+  readonly objectLayers?: readonly ObjectLayer[];
   /** Chunk width for layers (default 32). */
   readonly chunkWidth?: number;
   /** Chunk height for layers (default 32). */
@@ -76,6 +79,7 @@ export class TileMap {
   private readonly _tilesets: TileSet[];
   private readonly _layers: TileLayer[] = [];
   private readonly _layerById = new Map<number, TileLayer>();
+  private readonly _objectLayers: ObjectLayer[] = [];
 
   private _revision = 0;
   private _destroyed = false;
@@ -111,6 +115,10 @@ export class TileMap {
       for (const layer of options.layers) {
         this._addLayer(layer);
       }
+    }
+
+    if (options.objectLayers) {
+      this._objectLayers.push(...options.objectLayers);
     }
   }
 
@@ -202,6 +210,30 @@ export class TileMap {
     layer.destroy();
     this._revision++;
     return true;
+  }
+
+  // ── Object layers (data-only) ─────────────────────────────────────────
+
+  /** Immutable snapshot of object layers (insertion order). */
+  public get objectLayers(): readonly ObjectLayer[] {
+    return this._objectLayers;
+  }
+
+  /**
+   * Add an object layer after construction.
+   * @throws If the map is destroyed.
+   */
+  public addObjectLayer(layer: ObjectLayer): void {
+    this._checkDestroyed();
+    this._objectLayers.push(layer);
+    this._revision++;
+  }
+
+  /**
+   * Get an object layer by name (first match in insertion order), or undefined.
+   */
+  public getObjectLayer(name: string): ObjectLayer | undefined {
+    return this._objectLayers.find(layer => layer.name === name);
   }
 
   // ── Scene composition ─────────────────────────────────────────────────
@@ -320,6 +352,7 @@ export class TileMap {
     }
     this._layers.length = 0;
     this._layerById.clear();
+    this._objectLayers.length = 0;
     this._tilesets.length = 0;
   }
 }

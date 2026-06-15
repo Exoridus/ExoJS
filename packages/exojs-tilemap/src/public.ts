@@ -3,6 +3,21 @@
 
 export { tilemapExtension } from './tilemapExtension';
 export type { Extension } from '@codexo/exojs/extensions';
+// Object layers: data-only spawn points / triggers / collision regions.
+export type {
+  EllipseObject,
+  ObjectLayerOptions,
+  ObjectPoint,
+  ObjectQuery,
+  PointObject,
+  PolygonObject,
+  PolylineObject,
+  RectangleObject,
+  TileMapObject,
+  TileMapObjectKind,
+  TileObject,
+} from './ObjectLayer';
+export { ObjectLayer } from './ObjectLayer';
 // The mutable TileChunk implementation is package-internal —
 // only the ReadonlyTileChunk interface is exported publicly.
 export type { ReadonlyTileChunk } from './TileChunk';
