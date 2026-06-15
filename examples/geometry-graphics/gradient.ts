@@ -18,8 +18,8 @@ class GradientScene extends Scene {
     private orb!: Sprite;
 
     override init(): void {
-        const centerX = this.app.canvas.width / 2;
-        const centerY = this.app.canvas.height / 2;
+        const centerX = this.app.width / 2;
+        const centerY = this.app.height / 2;
 
         this.backgroundGradient = new LinearGradient(
             [

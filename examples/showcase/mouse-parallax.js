@@ -20,7 +20,8 @@ class MouseParallaxScene extends Scene {
     pointer = { x: 0, y: 0 };
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const width = this.app.width;
+        const height = this.app.height;
         this.pointer = { x: width / 2, y: height / 2 };
         // Spread the circle field across the full 16:9 canvas: 16 columns wide so
         // the layers fill the extra horizontal space instead of bunching on the left.
@@ -46,7 +47,8 @@ class MouseParallaxScene extends Scene {
         });
     }
     draw(context) {
-        const { width, height } = this.app.canvas;
+        const width = this.app.width;
+        const height = this.app.height;
         context.backend.clear(new Color(18, 22, 34));
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];

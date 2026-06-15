@@ -44,6 +44,7 @@ Defaults: center `(0, 0)`, size `\{ width: 0, height: 0 \}`, full viewport
 - `reset(centerX: number, centerY: number, width: number, height: number): this`
 - `resize(width: number, height: number): this`
 - `rotate(degrees: number): this`
+- `screenToWorld(x: number, y: number): PointLike`
 - `screenToWorld(screenX: number, screenY: number, canvasWidth: number, canvasHeight: number): PointLike`
 - `setBounds(bounds: Rectangle | null): this`
 - `setCenter(x: number, y: number): this`
@@ -54,6 +55,7 @@ Defaults: center `(0, 0)`, size `\{ width: 0, height: 0 \}`, full viewport
 - `update(deltaMilliseconds: number): this`
 - `updateBounds(): this`
 - `updateTransform(): this`
+- `worldToScreen(worldX: number, worldY: number): PointLike`
 - `worldToScreen(worldX: number, worldY: number, canvasWidth: number, canvasHeight: number): PointLike`
 - `zoom(factor: number): this`
 - `zoomIn(amount: number): this`

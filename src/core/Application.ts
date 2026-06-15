@@ -8,6 +8,7 @@ import type { GamepadDefinition } from '#input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputManager';
 import { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
+import type { PointLike } from '#math/PointLike';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderingContext, type RenderToOptions } from '#rendering/RenderingContext';
@@ -22,6 +23,7 @@ import { Loader, type LoaderOptions } from '#resources/Loader';
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
+import { computeLetterboxLayout } from './letterbox';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
 import { Signal } from './Signal';
@@ -36,7 +38,7 @@ export enum ApplicationStatus {
 }
 
 /** How {@link Application} sizes its canvas within the parent element. */
-export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink';
+export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink' | 'letterbox';
 
 export interface CanvasApplicationOptions {
   /** Existing canvas element to use. If omitted, Application creates one. */
@@ -45,7 +47,13 @@ export interface CanvasApplicationOptions {
   width?: number;
   /** Logical canvas height. Default: 600. */
   height?: number;
-  /** Device/render pixel ratio applied to the backing buffer. Default: 1. */
+  /**
+   * Device/render pixel ratio applied to the backing buffer. Default: the
+   * host `devicePixelRatio` clamped to `2` (crisp on Retina/HiDPI out of the
+   * box, capped so DPR-3 phones don't pay a 9× fill-rate cost). Pass an
+   * explicit value to override — e.g. `window.devicePixelRatio` for full
+   * native density, or `1` to force logical-pixel rendering.
+   */
   pixelRatio?: number;
   /** Canvas tabIndex. Default: -1, preserving current behavior. */
   tabIndex?: number;
@@ -66,6 +74,11 @@ export interface CanvasApplicationOptions {
    *   preserving aspect ratio (letterboxed).
    * - `'shrink'`: like `'fit'` but never upscale beyond `width`×`height` —
    *   shrinks on smaller screens, stays native on larger ones.
+   * - `'letterbox'`: track the parent's size, render the backing store at the
+   *   parent size × `pixelRatio` (always crisp, no CSS upscale-blur), and keep
+   *   the camera locked to the fixed `width`×`height` design space, centered
+   *   and letterboxed with bars (no crop, no stretch). The "author once at a
+   *   reference resolution" model.
    */
   sizingMode?: CanvasSizingMode;
 }
@@ -120,6 +133,28 @@ export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBack
 const maxDeltaMs = 100;
 
 const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
+
+/**
+ * Upper bound for the auto-resolved device-pixel ratio. Caps the backing-store
+ * blow-up on very high-density screens (e.g. DPR-3 phones would otherwise
+ * allocate 9× the logical pixels → fill-rate / memory pressure and frame drops)
+ * while keeping rendering crisp where it matters. Bypassed by an explicit
+ * `canvas.pixelRatio` option.
+ */
+const maxAutoPixelRatio = 2;
+
+/**
+ * Resolve the auto device-pixel ratio used when `pixelRatio` is not specified.
+ * Returns the host's `devicePixelRatio` clamped to {@link maxAutoPixelRatio}
+ * (crisp on Retina/HiDPI out of the box, without a runaway fill-rate cost on
+ * DPR-3 devices); falls back to `1` in non-browser / SSR / test environments.
+ */
+const resolveAutoPixelRatio = (): number => {
+  const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio;
+
+  return typeof dpr === 'number' && dpr > 0 ? Math.min(dpr, maxAutoPixelRatio) : 1;
+};
+
 const defaultBackendConfig: AutoBackendConfig = { type: 'auto' };
 const defaultCanvasSettings = {
   width: 800,
@@ -196,6 +231,8 @@ export class Application {
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
+  private _designWidth: number = defaultCanvasSettings.width;
+  private _designHeight: number = defaultCanvasSettings.height;
   private _frameCount = 0;
   private _frameRequest = 0;
   private _backendType: 'webgl2' | 'webgpu';
@@ -217,7 +254,9 @@ export class Application {
 
     const logicalWidth = canvasOptions.width ?? defaultCanvasSettings.width;
     const logicalHeight = canvasOptions.height ?? defaultCanvasSettings.height;
-    this._pixelRatio = canvasOptions.pixelRatio ?? defaultCanvasSettings.pixelRatio;
+    this._pixelRatio = canvasOptions.pixelRatio ?? resolveAutoPixelRatio();
+    this._designWidth = logicalWidth;
+    this._designHeight = logicalHeight;
     this.canvas = canvas;
     this._applyCanvasSize(logicalWidth, logicalHeight);
 
@@ -379,6 +418,62 @@ export class Application {
   }
 
   /**
+   * Logical (design-space) canvas width — the value passed as `canvas.width`
+   * at construction / {@link resize}, independent of {@link pixelRatio}. Use
+   * this for layout math (e.g. `app.width / 2` to center) instead of
+   * `app.canvas.width`, which is the physical backing-store size
+   * (`app.width × app.pixelRatio`) and therefore larger on HiDPI displays.
+   */
+  public get width(): number {
+    return this._designWidth;
+  }
+
+  /** Logical (design-space) canvas height. See {@link Application.width}. */
+  public get height(): number {
+    return this._designHeight;
+  }
+
+  /**
+   * Device/render pixel ratio applied to the backing buffer. Defaults to the
+   * host `devicePixelRatio` clamped to `2` (crisp on HiDPI out of the box, but
+   * capped to avoid a runaway fill-rate cost on DPR-3 phones) unless an
+   * explicit `canvas.pixelRatio` option was given. Holds the invariant
+   * `app.canvas.width === Math.round(app.width × app.pixelRatio)`.
+   */
+  public get pixelRatio(): number {
+    return this._pixelRatio;
+  }
+
+  /**
+   * Convert a logical/design-space pixel coordinate — the space of
+   * {@link Pointer.x}/{@link Pointer.y} and node positions, e.g. `0..app.width`
+   * — to a world position using the active camera. At the default centered
+   * camera this is the identity; with a panned/zoomed/rotated camera it undoes
+   * the transform. Equivalent to `app.rendering.camera.screenToWorld(x, y)`.
+   */
+  public screenToWorld(x: number, y: number): PointLike {
+    return this._rendering.camera.screenToWorld(x, y);
+  }
+
+  /**
+   * Map a canvas backing-store pixel coordinate into design space. Because the
+   * canvas always renders the full design space across its backing store (in
+   * `'letterbox'` mode the canvas itself is the content area, bars excluded),
+   * this is a straight backing-store → design scale. Pointer positions are
+   * expressed in logical/design pixels via this mapping.
+   * @internal
+   */
+  public _backingStoreToDesign(backingStoreX: number, backingStoreY: number): PointLike {
+    const backingWidth = this.canvas.width || 1;
+    const backingHeight = this.canvas.height || 1;
+
+    return {
+      x: (backingStoreX / backingWidth) * this._designWidth,
+      y: (backingStoreY / backingHeight) * this._designHeight,
+    };
+  }
+
+  /**
    * Initialize the render backend, await capability detection, set the
    * initial scene, and start the per-frame loop. Idempotent — if the
    * application is already running the call is a no-op. On error the
@@ -495,6 +590,8 @@ export class Application {
    * notified.
    */
   public resize(width: number, height: number): this {
+    this._designWidth = width;
+    this._designHeight = height;
     this._applyCanvasSize(width, height);
     this.options.canvas = {
       ...(this.options.canvas ?? {}),
@@ -524,8 +621,10 @@ export class Application {
   /**
    * Apply the chosen {@link CanvasSizingMode}. `'fill'` observes the parent and
    * re-renders to its size; `'fit'`/`'shrink'` set CSS so the fixed-resolution
-   * canvas scales to fit the parent (letterboxed). `'fixed'` is a no-op — the
-   * exact pixel size was already applied.
+   * canvas scales to fit the parent (letterboxed via CSS object-fit);
+   * `'letterbox'` observes the parent and sizes a native-resolution,
+   * design-aspect canvas centered within it, the parent background showing as
+   * bars. `'fixed'` is a no-op — the exact pixel size was already applied.
    */
   private _applySizingMode(mode: CanvasSizingMode): void {
     const style = this.canvas.style;
@@ -549,6 +648,34 @@ export class Application {
         this._resizeObserver.observe(target);
         break;
       }
+      case 'letterbox': {
+        const target = this.canvas.parentElement;
+
+        if (typeof ResizeObserver === 'undefined' || !target) {
+          break;
+        }
+
+        // Center the canvas in the parent and let the parent background show as
+        // letterbox bars around it.
+        const parentStyle = target.style;
+
+        parentStyle.display = 'flex';
+        parentStyle.alignItems = 'center';
+        parentStyle.justifyContent = 'center';
+        parentStyle.overflow = 'hidden';
+        parentStyle.background = '#000';
+
+        this._resizeObserver = new ResizeObserver(() => {
+          const width = target.clientWidth;
+          const height = target.clientHeight;
+
+          if (width > 0 && height > 0) {
+            this._applyLetterboxLayout(width, height);
+          }
+        });
+        this._resizeObserver.observe(target);
+        break;
+      }
       case 'fit':
         style.width = '100%';
         style.height = '100%';
@@ -563,6 +690,25 @@ export class Application {
       default:
         break;
     }
+  }
+
+  /**
+   * Recompute the `'letterbox'` layout for a parent of the given CSS size.
+   * Fits the fixed `width`×`height` design space into the parent preserving
+   * aspect ratio, sizes the canvas to that content rectangle (backing store at
+   * `content × pixelRatio` — always native-crisp, never upscale-blurred), and
+   * lets the parent's background show through as letterbox bars around the
+   * centered canvas. The render target and camera stay at the design size, so
+   * the design space exactly fills the backing store (no crop, no stretch) and
+   * the camera's gameplay center / zoom survive a window resize untouched.
+   */
+  private _applyLetterboxLayout(parentWidthCss: number, parentHeightCss: number): void {
+    const layout = computeLetterboxLayout(parentWidthCss, parentHeightCss, this._designWidth, this._designHeight, this._pixelRatio);
+
+    this.canvas.width = layout.backingWidth;
+    this.canvas.height = layout.backingHeight;
+    this.canvas.style.width = `${layout.contentWidthCss}px`;
+    this.canvas.style.height = `${layout.contentHeightCss}px`;
   }
 
   /**

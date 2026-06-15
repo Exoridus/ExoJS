@@ -332,7 +332,16 @@ export class InteractionManager {
 
   private _processQueue(queue: PointerQueue): void {
     const { pointer, events } = queue;
-    const { id, x, y } = pointer;
+    const { id } = pointer;
+
+    // Pointer coordinates are in design space; convert to world space via the
+    // active camera so hit-testing, dragging and event coordinates all agree
+    // with node positions (correct under pixelRatio > 1, letterboxing, and a
+    // panned / zoomed / rotated camera). At the default centered camera this is
+    // the identity, so legacy screen-space behaviour is preserved.
+    const world = this._app.rendering.camera.screenToWorld(pointer.x, pointer.y);
+    const x = world.x;
+    const y = world.y;
 
     // Determine the hit node. Captured pointers short-circuit hit-testing.
     const captured = this._capturedPointers.get(id) ?? null;
@@ -611,11 +620,10 @@ export class InteractionManager {
 
   /** Build a fresh Quadtree sized to encompass the canvas + current scene root. */
   private _createQuadtree(): Quadtree<IndexedNode> {
-    const canvas = this._app.canvas;
-    // Seed in canvas-local (backing-store) pixels to match pointer coordinates
-    // and node bounds; the CSS display rect differs when the canvas is scaled.
-    const width = canvas.width || 800;
-    const height = canvas.height || 600;
+    // Seed in design/world units (matching node bounds and the camera-converted
+    // pointer coordinates); unioned below with the scene root's world bounds.
+    const width = this._app.width || 800;
+    const height = this._app.height || 600;
     const bounds = new Rectangle(0, 0, width, height);
     const root = this._app.scene.currentScene?.root;
 

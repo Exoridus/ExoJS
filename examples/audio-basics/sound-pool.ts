@@ -114,8 +114,8 @@ class SoundPoolScene extends Scene {
         const cell = 70;
         const gap = 12;
         const totalW = cols * cell + (cols - 1) * gap;
-        const startX = (this.app.canvas.width - totalW) / 2;
-        const startY = this.app.canvas.height * 0.42;
+        const startX = (this.app.width - totalW) / 2;
+        const startY = this.app.height * 0.42;
 
         for (let i = 0; i < POOL_SIZE; i++) {
             const col = i % cols;

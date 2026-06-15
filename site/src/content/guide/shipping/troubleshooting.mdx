@@ -161,7 +161,7 @@ If you're using the `audio-reactive` template from `create-exo-app`, it already 
 
 Using an old property name silently produces no error but the style is ignored. Check the [Text guide](/ExoJS/en/guide/rendering/text/) for the current `TextStyle` keys.
 
-**DPI / DevicePixelRatio scaling.** At high DPI (e.g., Retina displays), text and sprites look soft if the canvas backing store matches the CSS size. Set the `pixelRatio` canvas option to the display's `window.devicePixelRatio` so the canvas renders at native resolution. It defaults to `1`, so crisp HiDPI output is opt-in — see [Resize, DPR & the canvas](/ExoJS/en/guide/getting-started/resize-dpr-and-canvas/) for the full pattern.
+**DPI / DevicePixelRatio scaling.** At high DPI (e.g., Retina displays), text and sprites look soft if the canvas backing store matches the CSS size. By default `pixelRatio` is the display's `devicePixelRatio` clamped to `2`, so output is crisp out of the box — if it looks soft, check you haven't set `pixelRatio: 1`. On a DPR-3 device that needs full native density, set `pixelRatio: window.devicePixelRatio` explicitly to bypass the cap. See [Resize, DPR & the canvas](/ExoJS/en/guide/getting-started/resize-dpr-and-canvas/) for the full pattern.
 
 ## Performance problems
 

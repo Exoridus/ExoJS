@@ -396,41 +396,102 @@ export class View {
   }
 
   /**
-   * Convert a canvas pixel coordinate to a world-space position for this view.
-   * Accounts for the view's viewport rectangle, so it works correctly in
-   * multi-view / split-screen setups.
+   * Convert a logical/design-space pixel coordinate to a world-space position.
    *
-   * @param screenX     - X pixel relative to the canvas top-left corner.
-   * @param screenY     - Y pixel relative to the canvas top-left corner.
-   * @param canvasWidth - Canvas width in pixels (e.g. `app.canvas.width`).
-   * @param canvasHeight - Canvas height in pixels (e.g. `app.canvas.height`).
+   * The 2-argument form treats `(x, y)` as coordinates in the view's own
+   * design space (`0..view.width` × `0..view.height`) — the same space as
+   * {@link Pointer.x}/{@link Pointer.y} and node positions — and applies only
+   * the inverse camera transform. The viewport rectangle is intentionally
+   * ignored, because design-space input already lives inside the camera's
+   * projection (any letterbox offset was removed upstream when the pointer was
+   * mapped). At the default centered camera this is the identity.
+   *
+   * @param x - X coordinate in design/logical pixels (`0..view.width`).
+   * @param y - Y coordinate in design/logical pixels (`0..view.height`).
    */
-  public screenToWorld(screenX: number, screenY: number, canvasWidth: number, canvasHeight: number): PointLike {
-    const vw = this._viewport.width * canvasWidth;
-    const vh = this._viewport.height * canvasHeight;
-    const clipX = ((screenX - this._viewport.x * canvasWidth) / vw) * 2 - 1;
-    const clipY = 1 - ((screenY - this._viewport.y * canvasHeight) / vh) * 2;
-    const inv = this.getInverseTransform();
+  public screenToWorld(x: number, y: number): PointLike;
+  /**
+   * Convert a raw canvas backing-store pixel coordinate to a world-space
+   * position. Accounts for the view's viewport rectangle, so it works
+   * correctly in multi-view / split-screen and letterboxed setups.
+   *
+   * @param screenX      - X pixel relative to the canvas top-left corner.
+   * @param screenY      - Y pixel relative to the canvas top-left corner.
+   * @param canvasWidth  - Canvas backing-store width in pixels (`app.canvas.width`).
+   * @param canvasHeight - Canvas backing-store height in pixels (`app.canvas.height`).
+   */
+  public screenToWorld(screenX: number, screenY: number, canvasWidth: number, canvasHeight: number): PointLike;
+  public screenToWorld(screenX: number, screenY: number, canvasWidth?: number, canvasHeight?: number): PointLike {
+    let clipX: number;
+    let clipY: number;
+
+    if (canvasWidth === undefined || canvasHeight === undefined) {
+      const w = this.width || 1;
+      const h = this.height || 1;
+
+      clipX = (screenX / w) * 2 - 1;
+      clipY = 1 - (screenY / h) * 2;
+    } else {
+      const vw = this._viewport.width * canvasWidth;
+      const vh = this._viewport.height * canvasHeight;
+
+      clipX = ((screenX - this._viewport.x * canvasWidth) / vw) * 2 - 1;
+      clipY = 1 - ((screenY - this._viewport.y * canvasHeight) / vh) * 2;
+    }
+
+    // Solve the forward transform `clip = M · world` directly for `world`,
+    // including the translation, so this is an exact inverse of worldToScreen
+    // (returns absolute world coordinates, identity at the default centered
+    // camera). The shared Matrix.getInverse drops the translation for this
+    // projection matrix, so it is deliberately not used here.
+    const m = this.getTransform();
+    const det = m.a * m.d - m.b * m.c;
+
+    if (det === 0) {
+      return { x: 0, y: 0 };
+    }
+
+    const dx = clipX - m.x;
+    const dy = clipY - m.y;
 
     return {
-      x: inv.a * clipX + inv.b * clipY + inv.x,
-      y: inv.c * clipX + inv.d * clipY + inv.y,
+      x: (dx * m.d - dy * m.b) / det,
+      y: (dy * m.a - dx * m.c) / det,
     };
   }
 
   /**
-   * Convert a world-space position to canvas pixel coordinates for this view.
-   * Accounts for the view's viewport rectangle.
+   * Convert a world-space position to logical/design-space pixel coordinates
+   * (`0..view.width` × `0..view.height`). Inverse of the 2-argument
+   * {@link screenToWorld}; the viewport is ignored. At the default centered
+   * camera this is the identity.
    *
-   * @param worldX      - World X coordinate.
-   * @param worldY      - World Y coordinate.
-   * @param canvasWidth - Canvas width in pixels (e.g. `app.canvas.width`).
-   * @param canvasHeight - Canvas height in pixels (e.g. `app.canvas.height`).
+   * @param worldX - World X coordinate.
+   * @param worldY - World Y coordinate.
    */
-  public worldToScreen(worldX: number, worldY: number, canvasWidth: number, canvasHeight: number): PointLike {
+  public worldToScreen(worldX: number, worldY: number): PointLike;
+  /**
+   * Convert a world-space position to raw canvas backing-store pixel
+   * coordinates. Accounts for the view's viewport rectangle.
+   *
+   * @param worldX       - World X coordinate.
+   * @param worldY       - World Y coordinate.
+   * @param canvasWidth  - Canvas backing-store width in pixels (`app.canvas.width`).
+   * @param canvasHeight - Canvas backing-store height in pixels (`app.canvas.height`).
+   */
+  public worldToScreen(worldX: number, worldY: number, canvasWidth: number, canvasHeight: number): PointLike;
+  public worldToScreen(worldX: number, worldY: number, canvasWidth?: number, canvasHeight?: number): PointLike {
     const m = this.getTransform();
     const clipX = m.a * worldX + m.b * worldY + m.x;
     const clipY = m.c * worldX + m.d * worldY + m.y;
+
+    if (canvasWidth === undefined || canvasHeight === undefined) {
+      return {
+        x: ((clipX + 1) / 2) * this.width,
+        y: ((1 - clipY) / 2) * this.height,
+      };
+    }
+
     const vx = this._viewport.x * canvasWidth;
     const vy = this._viewport.y * canvasHeight;
 

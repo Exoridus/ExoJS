@@ -62,7 +62,7 @@ import { Pointer } from '@codexo/exojs';
 
 // Slot 1 (second finger)
 this.inputs.onActive(Pointer.Slot1X, value => {
-    this.touchX = value * this.app.canvas.width;
+    this.touchX = value * this.app.width;
 });
 ```
 
@@ -117,27 +117,16 @@ These are high-level events built on top of the raw pointer signals. They track 
 
 ## Pointer-to-world coordinates
 
-Pointer positions are in canvas pixel space. To map them into scene world coordinates — for placing objects, selecting units, or aiming — invert the active view's transform:
+Pointer positions are in **design space** (`0..app.width` × `0..app.height`), independent of device pixel ratio or how the canvas is displayed. To map them into scene world coordinates — for placing objects, selecting units, or aiming — pass them through the active view's `screenToWorld`, which undoes the camera's pan / zoom / rotation:
 
 ```js
-import { Vector } from '@codexo/exojs';
-
-_toWorld(screenX, screenY) {
-    const { width, height } = this.app.canvas;
-    const clipX = (screenX / width) * 2 - 1;
-    const clipY = 1 - (screenY / height) * 2;
-
-    const matrix = this._view.getInverseTransform();
-    return new Vector(
-        matrix.a * clipX + matrix.b * clipY + matrix.x,
-        matrix.c * clipX + matrix.d * clipY + matrix.y,
-    );
-}
+const world = this._view.screenToWorld(pointer.x, pointer.y);
+// world.x, world.y are now in scene world space
 ```
 
-`getInverseTransform()` returns an ExoJS `Matrix`, and that matrix exposes the fields used above: `.a`, `.b`, `.c`, `.d`, `.x`, `.y`.
+The inverse is `worldToScreen(worldX, worldY)`, and the two round-trip. If the default centered camera is active (no pan/zoom), design space already equals world space, so `screenToWorld` is the identity and no mapping is needed.
 
-If the default view is active (no camera transform), the canvas-pixel position is already the world position and no mapping is needed.
+For raw canvas backing-store pixels — e.g. an off-screen render target at a different pixel ratio — the four-argument form `screenToWorld(x, y, canvasWidth, canvasHeight)` additionally accounts for the viewport rectangle and physical pixel size.
 
 ## Interactive sprites
 
@@ -161,7 +150,7 @@ Setting `interactive = true` makes the sprite participate in hit testing. Settin
 The `Pointer` instance passed to every signal callback carries the properties you typically need:
 
 ```js
-pointer.x, pointer.y   // canvas-local pixel position
+pointer.x, pointer.y   // design-space pixel position (0..app.width, 0..app.height)
 pointer.position       // Vector with current x and y
 pointer.buttons        // bitmask: 1=left, 2=right, 4=middle
 pointer.isPrimary      // true for mouse or first finger to touch

@@ -16,8 +16,8 @@ class GradientScene extends Scene {
     orbGradient;
     orb;
     init() {
-        const centerX = this.app.canvas.width / 2;
-        const centerY = this.app.canvas.height / 2;
+        const centerX = this.app.width / 2;
+        const centerY = this.app.height / 2;
         this.backgroundGradient = new LinearGradient([
             { offset: 0, color: new Color(255, 90, 40, 1) },
             { offset: 0.45, color: new Color(255, 210, 70, 1) },
