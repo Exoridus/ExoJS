@@ -57,6 +57,7 @@ enum InputManagerFlag {
  * automatically — you do not instantiate this class yourself.
  */
 export class InputManager {
+  private readonly _app: Application;
   private readonly canvas: HTMLCanvasElement;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
   private readonly pointers: Record<number, Pointer> = {};
@@ -156,6 +157,7 @@ export class InputManager {
     const pointerDistanceThreshold = inputOptions.pointerDistanceThreshold ?? 10;
     const gamepadSlotStrategy = inputOptions.gamepadSlotStrategy ?? 'sticky';
 
+    this._app = app;
     this.canvas = app.canvas;
     this.canvasFocusedValue = document.activeElement === this.canvas;
     this.pointerDistanceThreshold = pointerDistanceThreshold;
@@ -485,7 +487,7 @@ export class InputManager {
       return;
     }
 
-    this.pointers[event.pointerId] = new Pointer(event, this.canvas, this.channels, slot);
+    this.pointers[event.pointerId] = new Pointer(event, this._app, this.canvas, this.channels, slot);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 

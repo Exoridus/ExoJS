@@ -91,7 +91,16 @@ const createApp = (): {
 
   const app = {
     canvas,
+    width: 800,
+    height: 600,
     input: signals as unknown as InputManager,
+    // Default centered camera: design-space pointer coords pass through to
+    // world space unchanged (identity screenToWorld).
+    rendering: {
+      camera: {
+        screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+      },
+    },
     scene: {
       get currentScene(): Scene | null {
         return scene;

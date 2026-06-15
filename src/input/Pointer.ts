@@ -1,3 +1,4 @@
+import type { Application } from '#core/Application';
 import { Flags } from '#math/Flags';
 import { Size } from '#math/Size';
 import { Vector } from '#math/Vector';
@@ -56,13 +57,16 @@ export enum PointerState {
  * be polled by {@link Input} bindings or read directly by interaction-aware
  * scene nodes.
  *
- * Coordinates are stored in canvas-local (backing-store) pixel space — i.e.
- * `app.canvas.width`/`height` units, matching {@link View.screenToWorld} and
- * node positions. The CSS-pixel event coordinates are scaled by
- * `canvas.width / boundingRect.width`, so picking stays correct when the canvas
- * is displayed at a different size (sizingMode `'fit'`/`'shrink'`, or a CSS
- * transform). The channel writes are normalized to 0..1 (position, size, twist,
- * tilt) for backend-agnostic sampling.
+ * Coordinates are stored in logical/design pixel space — i.e. `app.width`/
+ * `app.height` units (`0..app.width` × `0..app.height`), matching node
+ * positions, the 2-argument {@link View.screenToWorld}, and the active camera.
+ * The CSS-pixel event coordinates are mapped through the application's content
+ * viewport, so the value is independent of {@link Application.pixelRatio} and of
+ * however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`,
+ * or a CSS transform): a click at the right edge always reads `app.width`. In
+ * `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel
+ * writes are normalized to 0..1 (position, size, twist, tilt) for
+ * backend-agnostic sampling.
  *
  * Pointers are owned by the {@link InputManager}, which assigns them a slot
  * index in 0..15 (see {@link maxPointers}) and exposes their per-slot
@@ -77,6 +81,7 @@ export class Pointer {
   public readonly tilt: Vector;
   public readonly stateFlags: Flags<PointerStateFlag> = new Flags<PointerStateFlag>();
 
+  private _app: Application | null;
   private _canvas: HTMLCanvasElement | null;
   private _channels: Float32Array | null;
   private _slotIndex: number;
@@ -87,21 +92,21 @@ export class Pointer {
   private _isPrimary: boolean;
   private _currentState: PointerState = PointerState.Unknown;
 
-  public constructor(event: PointerEvent, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number) {
+  public constructor(event: PointerEvent, app: Application, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number) {
     const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
 
+    this._app = app;
     this._canvas = canvas;
     this._channels = channels;
     this._slotIndex = slotIndex;
     this._channelBase = ChannelOffset.Pointers + slotIndex * pointerSlotSize;
 
+    const geometry = this._computeDesignGeometry(clientX, clientY, width, height);
+
     this.id = pointerId;
     this.type = pointerType;
-    this.position = new Vector((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
-    this.size = new Size(width * scaleX, height * scaleY);
+    this.position = new Vector(geometry.x, geometry.y);
+    this.size = new Size(geometry.width, geometry.height);
     this.tilt = new Vector(tiltX, tiltY);
     this._buttons = buttons;
     this._pressure = pressure;
@@ -212,19 +217,17 @@ export class Pointer {
     this.startPos.destroy();
     this.size.destroy();
     this.tilt.destroy();
+    this._app = null;
     this._canvas = null;
     this._channels = null;
   }
 
   private handleEvent(event: PointerEvent): this {
     const { clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
-    const canvas = this._canvas!;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+    const geometry = this._computeDesignGeometry(clientX, clientY, width, height);
 
-    this.position.set((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
-    this.size.set(width * scaleX, height * scaleY);
+    this.position.set(geometry.x, geometry.y);
+    this.size.set(geometry.width, geometry.height);
     this.tilt.set(tiltX, tiltY);
     this._buttons = buttons;
     this._pressure = pressure;
@@ -232,6 +235,39 @@ export class Pointer {
     this._isPrimary = isPrimary;
 
     return this;
+  }
+
+  /**
+   * Map a CSS-pixel pointer event into design space. The event point is first
+   * expressed as a fraction of the canvas display rect, scaled to backing-store
+   * pixels, then routed through {@link Application._backingStoreToDesign} (which
+   * folds in `pixelRatio` and any letterbox content viewport). The contact
+   * size is mapped as a delta through the same transform.
+   */
+  private _computeDesignGeometry(clientX: number, clientY: number, width: number, height: number): { x: number; y: number; width: number; height: number } {
+    const app = this._app;
+    const canvas = this._canvas;
+
+    if (!app || !canvas) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const u = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+    const v = rect.height > 0 ? (clientY - rect.top) / rect.height : 0;
+    const backingStoreX = u * canvas.width;
+    const backingStoreY = v * canvas.height;
+    const backingStoreW = rect.width > 0 ? (width / rect.width) * canvas.width : 0;
+    const backingStoreH = rect.height > 0 ? (height / rect.height) * canvas.height : 0;
+    const origin = app._backingStoreToDesign(backingStoreX, backingStoreY);
+    const corner = app._backingStoreToDesign(backingStoreX + backingStoreW, backingStoreY + backingStoreH);
+
+    return {
+      x: origin.x,
+      y: origin.y,
+      width: Math.abs(corner.x - origin.x),
+      height: Math.abs(corner.y - origin.y),
+    };
   }
 
   /** Write the full 16-channel per-pointer state into the shared channel buffer. */
@@ -244,11 +280,11 @@ export class Pointer {
     }
 
     const base = this._channelBase;
-    // position/size are already in canvas-local (backing-store) pixels, so
-    // normalize by the backing-store size — not the CSS display rect, which
-    // differs when the canvas is scaled to fit.
-    const w = canvas.width || 1;
-    const h = canvas.height || 1;
+    // position/size are in design pixels (0..app.width × 0..app.height), so
+    // normalize by the design size for a scale-invariant 0..1 channel value.
+    const app = this._app;
+    const w = (app ? app.width : canvas.width) || 1;
+    const h = (app ? app.height : canvas.height) || 1;
 
     if (!active) {
       // Zero the entire slot for a clean release.

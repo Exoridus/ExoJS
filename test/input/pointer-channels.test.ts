@@ -33,19 +33,40 @@ const createCanvas = (width = 800, height = 600): HTMLCanvasElement => {
   return canvas;
 };
 
-const createInputManager = (canvas?: HTMLCanvasElement): InputManager => {
-  const c = canvas ?? createCanvas();
-  const app = {
-    canvas: c,
+/**
+ * Minimal Application stand-in exposing the surface the input system reads:
+ * the canvas, input options, the design size, and the backing-store → design
+ * mapping. With `pixelRatio = 1` (the default) the design size equals the
+ * backing store, so coordinates pass through 1:1; a higher ratio shrinks the
+ * design space accordingly (the content viewport covers the full backing store
+ * outside `'letterbox'` mode).
+ */
+const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application => {
+  const designWidth = canvas.width / pixelRatio;
+  const designHeight = canvas.height / pixelRatio;
+
+  return {
+    canvas,
+    width: designWidth,
+    height: designHeight,
+    pixelRatio,
     options: {
       input: {
         gamepadDefinitions: [],
         pointerDistanceThreshold: 10,
       },
     },
+    _backingStoreToDesign: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
+      x: (backingStoreX / canvas.width) * designWidth,
+      y: (backingStoreY / canvas.height) * designHeight,
+    }),
   } as unknown as Application;
+};
 
-  return new InputManager(app);
+const createInputManager = (canvas?: HTMLCanvasElement, pixelRatio = 1): InputManager => {
+  const c = canvas ?? createCanvas();
+
+  return new InputManager(createMockApp(c, pixelRatio));
 };
 
 /** Fire a pointer event on the canvas and return it. */
@@ -396,8 +417,9 @@ describe('Gesture — long press', () => {
 describe('Pointer coordinate mapping — scaled canvas', () => {
   // Backing store 800x600, but displayed (CSS) at 400x300 — e.g. object-fit
   // contain or transform: scale(0.5). getBoundingClientRect reflects the
-  // displayed (CSS) size; raw pointer coordinates must map back to
-  // backing-store pixels so picking matches node positions / screenToWorld.
+  // displayed (CSS) size; raw pointer coordinates must map into design space
+  // (here pixelRatio=1 so design == backing store) so picking matches node
+  // positions / screenToWorld.
   const createScaledCanvas = (): HTMLCanvasElement => {
     const canvas = document.createElement('canvas');
 
@@ -421,12 +443,12 @@ describe('Pointer coordinate mapping — scaled canvas', () => {
 
   const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Record<number, Pointer> }).pointers[id];
 
-  test('constructor maps CSS-display coordinates to backing-store pixels', () => {
+  test('constructor maps CSS-display coordinates to design pixels', () => {
     const canvas = createScaledCanvas();
     const im = createInputManager(canvas);
 
-    // Display center (200,150) → canvas-local center (400,300) — 2x, since the
-    // canvas is shown at half its backing-store size.
+    // Display center (200,150) → design center (400,300) — 2x, since the canvas
+    // is shown at half its size and design == backing store at pixelRatio 1.
     pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 200, clientY: 150, isPrimary: true });
 
     const pointer = getPointer(im, 1);
@@ -452,6 +474,58 @@ describe('Pointer coordinate mapping — scaled canvas', () => {
 
     expect(pointer.x).toBeCloseTo(200, 5); // 100 * 800/400
     expect(pointer.y).toBeCloseTo(150, 5); // 75 * 600/300
+
+    im.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. pixelRatio > 1: pointer reads design pixels, not physical backing-store
+// ---------------------------------------------------------------------------
+
+describe('Pointer coordinate mapping — pixelRatio > 1', () => {
+  // Design 800x600 rendered at pixelRatio 2 → backing store 1600x1200, but the
+  // canvas is displayed (CSS) at its design size 800x600. Pointer coordinates
+  // must come out in design pixels (0..800 × 0..600), independent of DPR.
+  const createDprCanvas = (): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+
+    canvas.width = 1600;
+    canvas.height = 1200;
+
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      right: 800,
+      bottom: 600,
+      width: 800,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    return canvas;
+  };
+
+  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Record<number, Pointer> }).pointers[id];
+
+  test('pointer position is in design pixels regardless of pixelRatio', () => {
+    const canvas = createDprCanvas();
+    const im = createInputManager(canvas, 2);
+
+    // Display center (400,300) → design center (400,300), not the physical
+    // backing-store center (800,600).
+    pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 400, clientY: 300, isPrimary: true });
+
+    const pointer = getPointer(im, 1);
+
+    expect(pointer.x).toBeCloseTo(400, 5);
+    expect(pointer.y).toBeCloseTo(300, 5);
+
+    // Normalized channels stay 0..1 (scale-invariant).
+    expect(ch(im, Pointer.X)).toBeCloseTo(0.5, 5);
+    expect(ch(im, Pointer.Y)).toBeCloseTo(0.5, 5);
 
     im.destroy();
   });
