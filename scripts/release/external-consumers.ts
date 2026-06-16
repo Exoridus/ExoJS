@@ -51,6 +51,8 @@ const CONSUMER_TS = `import { Application, Scene } from '@codexo/exojs';
 import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles';
 import { TileMap, tilemapExtension } from '@codexo/exojs-tilemap';
 import { TiledMap, tiledExtension } from '@codexo/exojs-tiled';
+import { PhysicsWorld } from '@codexo/exojs-physics';
+import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 
 export class DemoScene extends Scene {}
 
@@ -59,6 +61,8 @@ export function bootstrap(): { app: Application; system: typeof ParticleSystem; 
     void particlesExtension;
     void tilemapExtension;
     void tiledExtension;
+    void PhysicsWorld;
+    void PhysicsDebugDraw;
     return { app, system: ParticleSystem, tiles: TileMap, map: TiledMap };
 }
 `;
@@ -85,6 +89,8 @@ const NODE_SMOKE = `import * as exo from '@codexo/exojs';
 import * as particles from '@codexo/exojs-particles';
 import * as tilemap from '@codexo/exojs-tilemap';
 import * as tiled from '@codexo/exojs-tiled';
+import * as physics from '@codexo/exojs-physics';
+import * as physicsDebug from '@codexo/exojs-physics/debug';
 
 const checks = [
   ['@codexo/exojs Application', typeof exo.Application === 'function'],
@@ -96,6 +102,8 @@ const checks = [
   ['@codexo/exojs-tiled TiledMap', typeof tiled.TiledMap === 'function'],
   ['@codexo/exojs-tiled tiledExtension', tiled.tiledExtension != null],
   ['facade TileMap identity (tiled === tilemap)', tiled.TileMap === tilemap.TileMap],
+  ['@codexo/exojs-physics PhysicsWorld', typeof physics.PhysicsWorld === 'function'],
+  ['@codexo/exojs-physics/debug PhysicsDebugDraw', typeof physicsDebug.PhysicsDebugDraw === 'function'],
 ];
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 if (failed.length > 0) {
@@ -125,7 +133,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
     // `--no-save` keeps package.json clean; pass tarballs positionally.
     const installOk = install.code === 0 && existsSync(join(consumerDir, 'node_modules', '@codexo', 'exojs'));
     checks.push({
-      name: 'install (offline, 4 tarballs)',
+      name: 'install (offline, 5 tarballs)',
       ok: installOk,
       detail: installOk ? undefined : install.output.trim().split('\n').slice(-3).join(' '),
     });
@@ -166,6 +174,7 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
     resolve(repoRoot, 'packages/exojs-particles'),
     resolve(repoRoot, 'packages/exojs-tilemap'),
     resolve(repoRoot, 'packages/exojs-tiled'),
+    resolve(repoRoot, 'packages/exojs-physics'),
   ];
   const version = (JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { version: string }).version;
 
@@ -176,7 +185,9 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
       process.exit(1);
     }
   }
-  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tilemap', 'codexo-exojs-tiled'].map(n => join(staging, `${n}-${version}.tgz`));
+  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tilemap', 'codexo-exojs-tiled', 'codexo-exojs-physics'].map(n =>
+    join(staging, `${n}-${version}.tgz`),
+  );
 
   process.stdout.write('\n=== verify:external-consumers ===\n');
   const result = verifyExternalConsumers(tarballs);

@@ -785,6 +785,7 @@ export default defineConfig([
       'packages/exojs-particles/src/typings.d.ts',
       'packages/exojs-tilemap/src/typings.d.ts',
       'packages/exojs-tiled/src/typings.d.ts',
+      'packages/exojs-physics/src/typings.d.ts',
     ],
     rules: {
       '@typescript-eslint/naming-convention': 'off',

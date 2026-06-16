@@ -11,12 +11,13 @@ const targets = [
   { dir: root, name: '@codexo/exojs', isExtension: false },
   { dir: resolve(root, 'packages/exojs-particles'), name: '@codexo/exojs-particles', isExtension: true },
   { dir: resolve(root, 'packages/exojs-tiled'), name: '@codexo/exojs-tiled', isExtension: true },
+  { dir: resolve(root, 'packages/exojs-physics'), name: '@codexo/exojs-physics', isExtension: true, hasRegister: false },
 ];
 
 let failed = 0;
 
 for (const t of targets) {
-  const { ok, checks } = verifyRuntimePackage(t.dir, { name: t.name, isExtension: t.isExtension });
+  const { ok, checks } = verifyRuntimePackage(t.dir, { name: t.name, isExtension: t.isExtension, hasRegister: t.hasRegister ?? true });
   const bad = checks.filter(c => !c.ok);
   console.log(`${ok ? '✓' : '✗'} ${t.name} (${checks.length} checks${bad.length ? `, ${bad.length} failed` : ''})`);
   for (const c of bad) console.log(`    ✗ ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);

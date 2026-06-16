@@ -16,7 +16,10 @@ function read(dir) {
 /**
  * Verify an official runtime package (Core or an extension).
  * @param {string} dir absolute package directory
- * @param {{ name: string, isExtension: boolean }} opts
+ * @param {{ name: string, isExtension: boolean, hasRegister?: boolean }} opts
+ *   `hasRegister` defaults to `true`; set `false` for library-style extensions
+ *   that have no `/register` subpath and ship `sideEffects: false`
+ *   (e.g. @codexo/exojs-physics).
  * @returns {PolicyResult}
  */
 export function verifyRuntimePackage(dir, opts) {
@@ -56,12 +59,17 @@ export function verifyRuntimePackage(dir, opts) {
   }
 
   if (opts.isExtension) {
+    const hasRegister = opts.hasRegister !== false;
     ok('peer @codexo/exojs', Boolean(pkg.peerDependencies?.['@codexo/exojs']));
     ok('core dev dep', pkg.devDependencies?.['@codexo/exojs'] === 'workspace:*');
     ok('no production deps', !pkg.dependencies || Object.keys(pkg.dependencies).length === 0);
-    const reg = pkg.exports?.['./register'];
-    ok('exposes /register', Boolean(reg?.import));
-    ok('register side-effect declared', Array.isArray(pkg.sideEffects) && pkg.sideEffects.some((s) => s.includes('register')));
+    if (hasRegister) {
+      const reg = pkg.exports?.['./register'];
+      ok('exposes /register', Boolean(reg?.import));
+      ok('register side-effect declared', Array.isArray(pkg.sideEffects) && pkg.sideEffects.some((s) => s.includes('register')));
+    } else {
+      ok('library sideEffects: false', pkg.sideEffects === false);
+    }
   } else {
     ok('Core sideEffects: false', pkg.sideEffects === false);
     ok('Core has no extension deps', !Object.keys({ ...pkg.dependencies }).some((d) => /^@codexo\/exojs-(particles|tiled)/.test(d)));

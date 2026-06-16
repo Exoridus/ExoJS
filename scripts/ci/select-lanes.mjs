@@ -54,7 +54,7 @@ import { pathToFileURL } from 'node:url';
  *
  * Adding a new runtime extension package == add its directory name here.
  */
-const RUNTIME_PACKAGES = ['exojs-config', 'exojs-particles', 'exojs-tilemap', 'exojs-tiled'];
+const RUNTIME_PACKAGES = ['exojs-config', 'exojs-particles', 'exojs-tilemap', 'exojs-tiled', 'exojs-physics'];
 
 /**
  * Documentation-only files inside a package. A change limited to these must NOT

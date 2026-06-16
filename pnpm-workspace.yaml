@@ -4,6 +4,7 @@ packages:
   - packages/exojs-particles
   - packages/exojs-tilemap
   - packages/exojs-tiled
+  - packages/exojs-physics
   - packages/create-exo-app
 
 # Packages permitted to run install/build scripts. pnpm v10+ blocks build

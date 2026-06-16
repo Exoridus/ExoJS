@@ -47,6 +47,17 @@ describe('CI lane selection — engine/site areas', () => {
     expect(lanes.browserFirefox).toBe(true);
   });
 
+  it('physics SOURCE change runs every engine lane and site', () => {
+    const { areas, lanes } = decide('packages/exojs-physics/src/PhysicsWorld.ts');
+    expect(areas).toEqual({ engine: true, site: true });
+    expect(lanes.unit).toBe(true);
+    expect(lanes.coverage).toBe(true);
+    expect(lanes.packageVerify).toBe(true);
+    expect(lanes.browserWebgl2).toBe(true);
+    expect(lanes.browserWebgpu).toBe(true);
+    expect(lanes.browserFirefox).toBe(true);
+  });
+
   it('tiled FIXTURE change runs unit + package validation', () => {
     const { areas, lanes } = decide('packages/exojs-tiled/test/fixtures/orthogonal-rich.tmj');
     expect(areas.engine).toBe(true);

@@ -42,12 +42,13 @@ const readVersion = (packageJsonPath: string): { name: string; version: string }
   return { name: pkg.name, version: pkg.version };
 };
 
-/** Resolves the four official packages in canonical publish order (PUBLISH_ORDER). */
+/** Resolves the five official packages in canonical publish order (PUBLISH_ORDER). */
 export const officialPackages = (rootDir: string): OfficialPackage[] => [
   { name: '@codexo/exojs', dir: rootDir },
   { name: '@codexo/exojs-particles', dir: resolve(rootDir, 'packages/exojs-particles') },
   { name: '@codexo/exojs-tilemap', dir: resolve(rootDir, 'packages/exojs-tilemap') },
   { name: '@codexo/exojs-tiled', dir: resolve(rootDir, 'packages/exojs-tiled') },
+  { name: '@codexo/exojs-physics', dir: resolve(rootDir, 'packages/exojs-physics') },
 ];
 
 /**

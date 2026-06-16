@@ -5,17 +5,17 @@
  * handles every official package, in the right order, with coherent versions,
  * via the two-stage build-once pipeline:
  *
- *  1. The four official packages (@codexo/exojs, -particles, -tilemap, -tiled) share one
- *     lockstep version.
+ *  1. The five official packages (@codexo/exojs, -particles, -tilemap, -tiled, -physics)
+ *     share one lockstep version.
  *  2. Each extension's peerDependencies["@codexo/exojs"] is "<major>.<minor>.x".
  *  3. create-exo-app is versioned independently (a different version line).
- *  4. release.yml builds all four packages in the PREPARE stage.
- *  5. PREPARE runs `release:prepare` (packs four tarballs + Full ZIP) and
+ *  4. release.yml builds all five packages in the PREPARE stage.
+ *  5. PREPARE runs `release:prepare` (packs five tarballs + Full ZIP) and
  *     uploads the artifacts.
  *  6. PUBLISH consumes those artifacts (`download-artifact` + `release:publish`)
  *     and never rebuilds.
- *  7. The publish order Core → Particles → Tilemap → Tiled is the canonical PUBLISH_ORDER,
- *     and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
+ *  7. The publish order Core → Particles → Tilemap → Tiled → Physics is the canonical
+ *     PUBLISH_ORDER, and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
  *
  * Read-only: safe to run in dry-run/CI. Exits non-zero on any inconsistency.
  *
@@ -54,9 +54,10 @@ const core = readPkg('package.json');
 const particles = readPkg('packages/exojs-particles/package.json');
 const tilemap = readPkg('packages/exojs-tilemap/package.json');
 const tiled = readPkg('packages/exojs-tiled/package.json');
+const physics = readPkg('packages/exojs-physics/package.json');
 const createExoApp = readPkg('packages/create-exo-app/package.json');
 
-const official = [core, particles, tilemap, tiled];
+const official = [core, particles, tilemap, tiled, physics];
 
 // 1. Lockstep version.
 const versions = new Set(official.map(p => p.version));
@@ -71,7 +72,7 @@ const [major, minor] = version.split('.');
 const expectedPeer = `${major}.${minor}.x`;
 
 // 2. Extension peer ranges.
-for (const ext of [particles, tilemap, tiled]) {
+for (const ext of [particles, tilemap, tiled, physics]) {
   if (ext.peer !== expectedPeer) {
     problems.push(`${ext.name}: peer "@codexo/exojs" is "${ext.peer ?? '(missing)'}", expected "${expectedPeer}"`);
   } else {
@@ -114,6 +115,7 @@ requireInWorkflow('pnpm build', 'prepare builds core');
 requireInWorkflow('pnpm --filter @codexo/exojs-particles build', 'prepare builds particles');
 requireInWorkflow('pnpm --filter @codexo/exojs-tilemap build', 'prepare builds tilemap');
 requireInWorkflow('pnpm --filter @codexo/exojs-tiled build', 'prepare builds tiled');
+requireInWorkflow('pnpm --filter @codexo/exojs-physics build', 'prepare builds physics');
 
 // 5. PREPARE packs/hashes/zips and uploads the artifacts.
 requireInWorkflow('pnpm release:prepare', 'prepare packs tarballs + Full ZIP (release:prepare)');
@@ -146,11 +148,12 @@ if (
   PUBLISH_ORDER[0] === '@codexo/exojs' &&
   PUBLISH_ORDER[1] === '@codexo/exojs-particles' &&
   PUBLISH_ORDER[2] === '@codexo/exojs-tilemap' &&
-  PUBLISH_ORDER[3] === '@codexo/exojs-tiled'
+  PUBLISH_ORDER[3] === '@codexo/exojs-tiled' &&
+  PUBLISH_ORDER[4] === '@codexo/exojs-physics'
 ) {
-  ok.push('PUBLISH_ORDER is Core → Particles → Tilemap → Tiled');
+  ok.push('PUBLISH_ORDER is Core → Particles → Tilemap → Tiled → Physics');
 } else {
-  problems.push(`PUBLISH_ORDER must be Core → Particles → Tilemap → Tiled, got ${PUBLISH_ORDER.join(' → ')}`);
+  problems.push(`PUBLISH_ORDER must be Core → Particles → Tilemap → Tiled → Physics, got ${PUBLISH_ORDER.join(' → ')}`);
 }
 
 // 7b. What `release:prepare` actually packs (officialPackages) must cover the
