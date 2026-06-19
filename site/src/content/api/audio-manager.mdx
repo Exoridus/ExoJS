@@ -1,6 +1,6 @@
 ---
 title: "AudioManager"
-description: "Module-level singleton that owns the engine-wide audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single shared AudioListener for spatial audio, and a registry of any extra busses the user constructs. Access the singleton via getAudioManager (or `app.audio`). The instance is constructed lazily on first access so client code that does not need audio pays no startup cost. Drives the per-frame `_tick()` on the listener and every spatial sound; propagates visibility-driven mute when AudioManager.muteOnHidden is enabled."
+description: "Per-Application owner of the audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single AudioListener for spatial audio, and a registry of any extra busses the user constructs. The `AudioContext` is shared process-wide, but each Application owns its own bus subtree, so multiple Applications mix independently. Access it via `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial voice, and propagates visibility-driven mute when AudioManager.muteOnHidden is enabled."
 symbol: "AudioManager"
 kind: "class"
 subsystem: "audio"
@@ -9,24 +9,22 @@ memberCount: 17
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/audio/AudioManager.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts#L22"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts#L21"
 ---
 ## Import
 
 `import { AudioManager } from '@codexo/exojs'`
 
-Module-level singleton that owns the engine-wide audio mix: three
-pre-configured AudioBus instances (`master` ← `music` + `sound`),
-a single shared AudioListener for spatial audio, and a registry
-of any extra busses the user constructs.
+Per-Application owner of the audio mix: three pre-configured
+AudioBus instances (`master` ← `music` + `sound`), a single
+AudioListener for spatial audio, and a registry of any extra busses
+the user constructs.
 
-Access the singleton via getAudioManager (or `app.audio`). The
-instance is constructed lazily on first access so client code that does
-not need audio pays no startup cost.
-
-Drives the per-frame `_tick()` on the listener and every spatial sound;
-propagates visibility-driven mute when AudioManager.muteOnHidden
-is enabled.
+The `AudioContext` is shared process-wide, but each Application owns its own
+bus subtree, so multiple Applications mix independently. Access it via
+`app.audio`. Drives the per-frame `_tick()` on the listener and every spatial
+voice, and propagates visibility-driven mute when
+AudioManager.muteOnHidden is enabled.
 
 ## Constructors
 
@@ -35,11 +33,11 @@ is enabled.
 ## Methods
 
 - `_applyVisibility(visible: boolean): void`
-- `_registerSpatialSound(sound: Sound): void`
-- `_unregisterSpatialSound(sound: Sound): void`
+- `_registerSpatial(voice: SpatialVoice): void`
 - `destroy(): void`
 - `getBus(name: string): AudioBus`
 - `hasBus(name: string): boolean`
+- `play(source: Playable, options?: PlayOptions): Voice`
 - `registerBus(bus: AudioBus): this`
 - `unregisterBus(bus: AudioBus): this`
 - `update(): void`
@@ -59,4 +57,4 @@ is enabled.
 
 ## Source
 
-[src/audio/AudioManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts#L22)
+[src/audio/AudioManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts#L21)

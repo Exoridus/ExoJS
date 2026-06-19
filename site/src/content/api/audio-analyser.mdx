@@ -1,6 +1,6 @@
 ---
 title: "AudioAnalyser"
-description: "Lightweight visualisation analyser backed by a Web Audio AnalyserNode. Accepts any of: AudioBus, Sound, Music, MediaStream, AudioNode, or null. The tap is a parallel branch — it does not affect the source's main routing. Migration from 0.7.1: the old constructor was `new AudioAnalyser(media, options)`. The new API is `new AudioAnalyser(options?); analyser.source = media`."
+description: "Lightweight visualisation analyser backed by a Web Audio AnalyserNode. Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch — it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance."
 symbol: "AudioAnalyser"
 kind: "class"
 subsystem: "audio"
@@ -9,7 +9,7 @@ memberCount: 19
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/AudioAnalyser.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.ts#L49"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.ts#L47"
 ---
 ## Import
 
@@ -17,11 +17,10 @@ sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.
 
 Lightweight visualisation analyser backed by a Web Audio AnalyserNode.
 
-Accepts any of: AudioBus, Sound, Music, MediaStream, AudioNode, or null.
-The tap is a parallel branch — it does not affect the source's main routing.
-
-Migration from 0.7.1: the old constructor was `new AudioAnalyser(media, options)`.
-The new API is `new AudioAnalyser(options?); analyser.source = media`.
+Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is
+a parallel branch — it does not affect the source's main routing. Tap a bus
+for a whole submix, or an individual Voice (its `output` node) for a
+single playing instance.
 
 ## Constructors
 
@@ -53,4 +52,4 @@ The new API is `new AudioAnalyser(options?); analyser.source = media`.
 
 ## Source
 
-[src/audio/AudioAnalyser.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.ts#L49)
+[src/audio/AudioAnalyser.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.ts#L47)

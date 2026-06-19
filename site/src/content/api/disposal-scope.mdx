@@ -1,0 +1,55 @@
+---
+title: "DisposalScope"
+description: "Ownership container for Destroyable resources. Items registered with track are destroyed in reverse registration order when the scope itself is destroyed — the spine of ExoJS's ownership-driven cleanup. A Scene owns one (exposed via `Scene.track`); an `Application` owns one for app-scoped services. `track` is idempotent and returns its argument for fluent capture: ```ts const world = scope.track(new PhysicsWorld()); ``` destroy is idempotent and tolerant: every tracked item's `destroy()` is attempted even if an earlier one throws, so a single failure cannot leak the rest. In development the collected errors are rethrown as an `AggregateError` once teardown completes; in production they are swallowed. A `DisposalScope` is itself Destroyable, so scopes can nest."
+symbol: "DisposalScope"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 7
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/core/DisposalScope.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/DisposalScope.ts#L23"
+---
+## Import
+
+`import { DisposalScope } from '@codexo/exojs'`
+
+Ownership container for Destroyable resources. Items registered with
+track are destroyed in reverse registration order when the scope
+itself is destroyed — the spine of ExoJS's ownership-driven cleanup. A
+Scene owns one (exposed via `Scene.track`); an `Application` owns one
+for app-scoped services.
+
+`track` is idempotent and returns its argument for fluent capture:
+
+```ts
+const world = scope.track(new PhysicsWorld());
+```
+
+destroy is idempotent and tolerant: every tracked item's `destroy()`
+is attempted even if an earlier one throws, so a single failure cannot leak
+the rest. In development the collected errors are rethrown as an
+`AggregateError` once teardown completes; in production they are swallowed.
+
+A `DisposalScope` is itself Destroyable, so scopes can nest.
+
+## Constructors
+
+- `new(): DisposalScope`
+
+## Methods
+
+- `destroy(): void`
+- `has(item: Destroyable): boolean`
+- `track(item: T): T`
+- `untrack(item: Destroyable): boolean`
+
+## Properties
+
+- `disposed: boolean`
+- `size: number`
+
+## Source
+
+[src/core/DisposalScope.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/DisposalScope.ts#L23)

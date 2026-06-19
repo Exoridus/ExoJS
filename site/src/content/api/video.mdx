@@ -9,7 +9,7 @@ memberCount: 105
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/video/Video.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/video/Video.ts#L36"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/video/Video.ts#L34"
 ---
 ## Import
 
@@ -89,7 +89,7 @@ node and can be directed to any AudioBus.
 - `analyserTarget: AudioNode | null`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
-- `bus: AudioBus`
+- `bus: AudioBus | null`
 - `cacheAsBitmap: boolean`
 - `cullable: boolean`
 - `currentTime: number`
@@ -129,6 +129,8 @@ node and can be directed to any AudioBus.
 
 ## Events
 
+- `onStart: Signal<[]>`
+- `onStop: Signal<[]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
@@ -138,9 +140,7 @@ node and can be directed to any AudioBus.
 - `onPointerOver: Signal<[InteractionEvent]>`
 - `onPointerTap: Signal<[InteractionEvent]>`
 - `onPointerUp: Signal<[InteractionEvent]>`
-- `onStart: Signal<[]>`
-- `onStop: Signal<[]>`
 
 ## Source
 
-[src/rendering/video/Video.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/video/Video.ts#L36)
+[src/rendering/video/Video.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/video/Video.ts#L34)
