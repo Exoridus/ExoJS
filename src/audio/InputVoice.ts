@@ -75,9 +75,12 @@ export class InputVoice extends BaseVoice {
       recorder.addEventListener('error', () => reject(new Error('Recording failed.')));
 
       recorder.start();
-      setTimeout(() => {
-        if (recorder.state !== 'inactive') recorder.stop();
-      }, Math.max(0, durationMs));
+      setTimeout(
+        () => {
+          if (recorder.state !== 'inactive') recorder.stop();
+        },
+        Math.max(0, durationMs),
+      );
     });
   }
 

@@ -615,15 +615,6 @@ export default defineConfig([
     },
   },
 
-  // TODO: replace this override by tightening BeatDetector worklet payload
-  // types and normalizing input at the message boundary.
-  {
-    files: ['src/audio/BeatDetector.ts'],
-    rules: {
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-    },
-  },
-
   // Audio graph integration frequently passes bound methods and keeps
   // defensive runtime checks against browser API variance.
   {
@@ -885,6 +876,24 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
+    },
+  },
+
+  // Extracted audio-effects/DSP package — same defensive audio regime as the
+  // core audio graph it was split from (bound methods, browser API variance).
+  // TODO: replace the BeatDetector relaxation by tightening its worklet payload
+  // types and normalizing input at the message boundary.
+  {
+    files: ['packages/exojs-audio-fx/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/class-literal-property-style': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      complexity: 'off',
     },
   },
 

@@ -2,9 +2,8 @@
 // A peer-dependency library on top of @codexo/exojs: effects, DSP, beat
 // detection and analysis. Insert effects on a bus or voice via addEffect().
 
-export { AudioAnalyser } from './AudioAnalyser';
 export type { AudioAnalyserOptions, AudioAnalyserSource, SpectrumMappingOptions } from './AudioAnalyser';
-export { BeatDetector } from './BeatDetector';
+export { AudioAnalyser } from './AudioAnalyser';
 export type {
   BandEnergy,
   BarInfo,
@@ -15,6 +14,7 @@ export type {
   TimeSignature,
   UpcomingBeat,
 } from './BeatDetector';
+export { BeatDetector } from './BeatDetector';
 export { ChorusEffect, type ChorusEffectOptions } from './effects/ChorusEffect';
 export { CompressorEffect, type CompressorEffectOptions } from './effects/CompressorEffect';
 export { DelayEffect, type DelayEffectOptions } from './effects/DelayEffect';

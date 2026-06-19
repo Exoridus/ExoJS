@@ -1,7 +1,8 @@
-﻿import { getAudioContext, isAudioContextReady } from '@codexo/exojs';
+﻿import type { Voice } from '@codexo/exojs';
+import { getAudioContext, isAudioContextReady } from '@codexo/exojs';
 import { AudioBus } from '@codexo/exojs';
+
 import { BeatDetector } from '../src/BeatDetector';
-import type { Voice } from '@codexo/exojs';
 
 // ---------------------------------------------------------------------------
 // Types for the mock AudioWorkletNode (extended in setup-env.ts)

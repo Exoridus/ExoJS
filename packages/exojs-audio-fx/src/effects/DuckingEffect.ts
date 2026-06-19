@@ -1,4 +1,4 @@
-import { WorkletEffect, type AudioBus } from '@codexo/exojs';
+import { type AudioBus, WorkletEffect } from '@codexo/exojs';
 
 const duckingWorkletSource = `
 class DuckingProcessor extends AudioWorkletProcessor {

@@ -1,4 +1,5 @@
 ﻿import { getAudioContext } from '@codexo/exojs';
+
 import { CompressorEffect } from '../../src/effects/CompressorEffect';
 
 const makeAudioParam = (initial: number) => ({

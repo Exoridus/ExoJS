@@ -186,9 +186,14 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
       process.exit(1);
     }
   }
-  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tilemap', 'codexo-exojs-tiled', 'codexo-exojs-physics', 'codexo-exojs-audio-fx'].map(n =>
-    join(staging, `${n}-${version}.tgz`),
-  );
+  const tarballs = [
+    'codexo-exojs',
+    'codexo-exojs-particles',
+    'codexo-exojs-tilemap',
+    'codexo-exojs-tiled',
+    'codexo-exojs-physics',
+    'codexo-exojs-audio-fx',
+  ].map(n => join(staging, `${n}-${version}.tgz`));
 
   process.stdout.write('\n=== verify:external-consumers ===\n');
   const result = verifyExternalConsumers(tarballs);

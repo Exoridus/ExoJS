@@ -14,7 +14,13 @@ const makeStubEffect = (): AudioEffect => {
 interface CapturedGain {
   connect: MockInstance;
   disconnect: MockInstance;
-  gain: { setTargetAtTime: MockInstance; setValueAtTime: MockInstance; cancelScheduledValues: MockInstance; linearRampToValueAtTime: MockInstance; value: number };
+  gain: {
+    setTargetAtTime: MockInstance;
+    setValueAtTime: MockInstance;
+    cancelScheduledValues: MockInstance;
+    linearRampToValueAtTime: MockInstance;
+    value: number;
+  };
 }
 
 /** Capture the first createGain after this call — the voice's output gain. */

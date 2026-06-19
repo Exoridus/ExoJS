@@ -1,4 +1,4 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady, registerAudioWorkletProcessor, Signal, type AudioBus, type Voice } from '@codexo/exojs';
+import { type AudioBus, getAudioContext, isAudioContextReady, onAudioContextReady, registerAudioWorkletProcessor, Signal, type Voice } from '@codexo/exojs';
 
 import { beatDetectorWorkletSource } from './worklets/beat-detector.worklet';
 

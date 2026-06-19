@@ -1,5 +1,6 @@
 ﻿import { getAudioContext } from '@codexo/exojs';
 import { AudioBus } from '@codexo/exojs';
+
 import { DuckingEffect } from '../../src/effects/DuckingEffect';
 
 // ---------------------------------------------------------------------------

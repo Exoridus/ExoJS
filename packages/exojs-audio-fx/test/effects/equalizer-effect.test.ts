@@ -1,4 +1,5 @@
 ﻿import { getAudioContext } from '@codexo/exojs';
+
 import { EqualizerEffect } from '../../src/effects/EqualizerEffect';
 
 const makeAudioParam = (initial: number) => ({

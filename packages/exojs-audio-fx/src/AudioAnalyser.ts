@@ -1,4 +1,4 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady, type AudioBus, type Voice } from '@codexo/exojs';
+import { type AudioBus, getAudioContext, isAudioContextReady, onAudioContextReady, type Voice } from '@codexo/exojs';
 
 import { buildMelFilterbank, type MelBand } from './dsp/mel';
 
