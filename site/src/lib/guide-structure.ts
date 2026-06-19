@@ -470,12 +470,12 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 slug: 'audio-effects',
                 level: 'intermediate',
                 learningGoals: [
-                    'shape sound with bus filters',
+                    'shape sound with bus and per-voice effects',
                     'apply reverb, delay, and ducking',
                 ],
                 prerequisites: ['audio/audio-basics'],
                 examples: ['audio-fx/compressor', 'audio-fx/ducking', 'audio-fx/reverb-and-delay', 'audio-fx/vocoder'],
-                apiLinks: ['audio-bus', 'audio-filter'],
+                apiLinks: ['audio-bus', 'audio-effect'],
             },
             {
                 slug: 'beat-detection',
