@@ -24,5 +24,5 @@ export * from './Segment';
 export * from './ShapeLike';
 export * from './Size';
 export * from './swept-collision';
-export * from './utils';
+export { MathUtils } from './utils';
 export * from './Vector';

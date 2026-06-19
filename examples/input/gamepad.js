@@ -1,5 +1,5 @@
 // Auto-generated from gamepad.ts — edit the .ts source, not this file.
-import { Application, Color, Container, GamepadAxis, GamepadButton, Json, lerp, Scene, Spritesheet, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Container, GamepadAxis, GamepadButton, Json, MathUtils, Scene, Spritesheet, Texture, Vector } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -73,7 +73,7 @@ class GamepadScene extends Scene {
         this.status.setTint(Color.white);
         for (const [channel, sprite] of this.mappingButtons.entries()) {
             this.padBindings.push(pad.onActive(channel, v => {
-                sprite.tint.a = lerp(0.25, 1, v);
+                sprite.tint.a = MathUtils.lerp(0.25, 1, v);
             }), pad.onStop(channel, () => {
                 sprite.tint.a = this.buttonColor.a;
             }));

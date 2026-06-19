@@ -131,3 +131,24 @@ export const getVoronoiRegion = (line: Vector, point: Vector): VoronoiRegion => 
     return VoronoiRegion.middle;
   }
 };
+
+/**
+ * Scalar + angle math helpers, grouped as a namespace so the public API carries
+ * no loose math functions. The underlying functions stay module exports for
+ * hot-path internal use (`import { clamp } from '#math/utils'`); only this
+ * facade is re-exported from the public barrel.
+ */
+export const MathUtils = {
+  tau,
+  clamp,
+  sign,
+  lerp,
+  inRange,
+  isPowerOfTwo,
+  distance: getDistance,
+  trimRotation,
+  degreesToRadians,
+  radiansToDegrees,
+  bezierCurveTo,
+  quadraticCurveTo,
+} as const;
