@@ -424,8 +424,40 @@ export class SceneNode implements Collidable {
     }
   }
 
+  /**
+   * Hit-test the world-space point `(x, y)` against this node.
+   *
+   * For axis-aligned nodes ({@link isAlignedBox} — rotation a multiple of 90°
+   * and no skew) the AABB equals the oriented box, so the cheap
+   * {@link getBounds} test is exact. For rotated or skewed nodes the point is
+   * mapped back into local space with the inverse of the global transform and
+   * tested against the untransformed {@link getLocalBounds} — i.e. a true
+   * oriented-box test. This is the exact inverse of the forward map that
+   * {@link getBounds} and the renderer use to place the node's corners, so
+   * picking matches the rendered quad instead of over-reporting hits in the
+   * empty AABB corners of a rotated node.
+   */
   public contains(x: number, y: number): boolean {
-    return this.getBounds().contains(x, y);
+    if (this.isAlignedBox) {
+      return this.getBounds().contains(x, y);
+    }
+
+    const matrix = this.getGlobalTransform();
+    const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
+
+    if (determinant === 0) {
+      return false;
+    }
+
+    // Inverse of the forward map `world = [[a, b], [c, d]] · local + (x, y)`
+    // (AbstractVector.transform — the same map getBounds()/Sprite vertices use).
+    // Recovers the local-space coordinate, then tests the untransformed bounds.
+    const deltaX = x - matrix.x;
+    const deltaY = y - matrix.y;
+    const localX = (matrix.d * deltaX - matrix.b * deltaY) / determinant;
+    const localY = (matrix.a * deltaY - matrix.c * deltaX) / determinant;
+
+    return this.getLocalBounds().contains(localX, localY);
   }
 
   public inView(view: View): boolean {
