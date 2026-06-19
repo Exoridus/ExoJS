@@ -1,5 +1,5 @@
 // Auto-generated from ducking.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, AudioBus, Color, DuckingFilter, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, AudioAnalyser, AudioBus, AudioStream, Color, DuckingFilter, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -31,7 +31,7 @@ class DuckingScene extends Scene {
     voiceBarY = 0;
     hud;
     async load(loader) {
-        await loader.load(Music, { music: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { music: assets.demo.audio.musicLoop });
         await loader.load(Sound, { voice: assets.demo.voice.congratulations });
     }
     init(loader) {
@@ -41,7 +41,7 @@ class DuckingScene extends Scene {
         this.barW = width * 0.8;
         this.musicBarY = height * 0.42;
         this.voiceBarY = height * 0.55;
-        this.music = loader.get(Music, 'music');
+        this.music = loader.get(AudioStream, 'music');
         this.voice = loader.get(Sound, 'voice');
         // Route the voice-over onto its own bus so it can drive the sidechain.
         this.voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
@@ -80,8 +80,8 @@ class DuckingScene extends Scene {
             this.hud.setStatus('Voice playing — music ducked');
         });
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.7).play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.7 });
         this.hud.setStatus('Music playing — click to duck it');
     }
     bar(label, name, y, level, color) {

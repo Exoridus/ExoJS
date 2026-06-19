@@ -1,5 +1,5 @@
 // Auto-generated from audio-reactive-particles.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, BeatDetector, Color, Music, Scene, Text, Texture, Vector, } from '@codexo/exojs';
+import { Application, AudioAnalyser, AudioStream, BeatDetector, Color, Scene, Text, Texture, Vector, } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -15,6 +15,7 @@ const app = new Application({
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
 class AudioReactiveParticlesScene extends Scene {
     music;
+    musicVoice;
     analyser;
     detector;
     ps;
@@ -24,17 +25,17 @@ class AudioReactiveParticlesScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
         await loader.load(Texture, { particle: assets.demo.textures.particleLight });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.music = loader.get(Music, 'track');
+        this.music = loader.get(AudioStream, 'track');
         // Two parallel taps of the same track: the analyser gives per-band
         // energy (drives emission), the detector gives beats (recolours).
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.music });
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.detector = new BeatDetector();
-        this.detector.source = this.music;
+        this.detector.source = this.app.audio.music;
         this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 6000 });
         this.ps.setPosition(width / 2, height / 2);
         // The rate (density) and the cone speed range (spread) are mutated every
@@ -69,8 +70,8 @@ class AudioReactiveParticlesScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 64);
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically — play() returns the Voice now.
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         // Low band (bass) drives how MANY particles spawn this second.
@@ -82,7 +83,7 @@ class AudioReactiveParticlesScene extends Scene {
         // treble → spread: a tight slow core grows into a fast wide burst.
         this.cone.minSpeed = 40 + high * 120;
         this.cone.maxSpeed = 90 + high * 360;
-        if (!this.music.paused) {
+        if (this.musicVoice) {
             this.hud.setStatus(`bass ${(low * 100) | 0}%  treble ${(high * 100) | 0}%`);
         }
         this.ps.update(delta);

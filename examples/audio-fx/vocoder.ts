@@ -1,4 +1,4 @@
-import { Application, AudioBus, Color, OscillatorSound, Scene, Sound, Text, VocoderFilter } from '@codexo/exojs';
+import { Application, AudioBus, AudioGenerator, Color, Scene, Sound, Text, VocoderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -21,9 +21,8 @@ const PHRASES: Array<{ key: string; label: string; asset: string }> = [
 
 class VocoderScene extends Scene {
     private modulatorBus!: AudioBus;
-    private carrier!: OscillatorSound;
     private vocoder!: VocoderFilter;
-    private voices = new Map<string, Sound>();
+    private phrases = new Map<string, Sound>();
     private phraseIndex = 0;
     private phraseLabel!: Text;
     private tapPrompt!: Text;
@@ -45,13 +44,9 @@ class VocoderScene extends Scene {
         app.audio.registerBus(this.modulatorBus);
 
         for (const phrase of PHRASES) {
-            const voice = loader.get(Sound, phrase.key);
-
-            this.voices.set(phrase.key, voice);
+            this.phrases.set(phrase.key, loader.get(Sound, phrase.key));
         }
 
-        // The carrier is a sustained synth tone shaped by the voice envelope.
-        this.carrier = new OscillatorSound({ frequency: 110, type: 'sawtooth', volume: 0.45 });
         this.vocoder = new VocoderFilter({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
         app.audio.sound.addFilter(this.vocoder);
 
@@ -82,9 +77,10 @@ class VocoderScene extends Scene {
 
         this.app.input.onPointerTap.add(() => this.speak());
 
+        // The carrier is a sustained saw tone shaped by the voice envelope.
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts the sustained carrier automatically.
-        this.carrier.play();
+        // gesture, then starts the carrier automatically.
+        this.app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), { volume: 0.45 });
         this.hud.setStatus('Ready — pick a phrase and speak.');
     }
 
@@ -97,8 +93,8 @@ class VocoderScene extends Scene {
 
         const phrase = PHRASES[this.phraseIndex];
 
-        const voice = this.voices.get(phrase.key);
-        if (voice) this.app.audio.play(voice, { bus: this.modulatorBus });
+        const sound = this.phrases.get(phrase.key);
+        if (sound) this.app.audio.play(sound, { bus: this.modulatorBus });
         this.hud.setStatus(`Speaking: "${phrase.label}"`);
         this.phraseLabel.text = `"${phrase.label}"`;
     }

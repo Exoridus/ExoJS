@@ -1,5 +1,5 @@
 // Auto-generated from compressor.ts — edit the .ts source, not this file.
-import { Application, Color, CompressorFilter, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, CompressorFilter, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -35,7 +35,7 @@ class CompressorScene extends Scene {
     meterY = 0;
     hud;
     async load(loader) {
-        await loader.load(Music, { music: 'audio/demo-loop-main.ogg' });
+        await loader.load(AudioStream, { music: 'audio/demo-loop-main.ogg' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
@@ -45,7 +45,7 @@ class CompressorScene extends Scene {
         this.labelX = width * 0.1;
         this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
-        this.music = loader.get(Music, 'music');
+        this.music = loader.get(AudioStream, 'music');
         this.filter = new CompressorFilter();
         app.audio.music.addFilter(this.filter);
         this.gfx = new Graphics();
@@ -74,8 +74,8 @@ class CompressorScene extends Scene {
             this.drag = -1;
         });
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
         this.hud.setStatus('Compressing music bus…');
     }
     sliderAt(y) {

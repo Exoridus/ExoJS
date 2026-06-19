@@ -1,5 +1,5 @@
 // Auto-generated from frequency-bands.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioAnalyser, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -41,12 +41,12 @@ class FrequencyBandsScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
+        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
     }
     init(loader) {
-        this.music = loader.get(Music, 'track');
+        this.music = loader.get(AudioStream, 'track');
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
-        this.analyser.source = this.music;
+        this.analyser.source = this.app.audio.music;
         // Log-spaced bin boundaries across the spectrum. Index 0 (DC) is skipped
         // so the lowest band starts at the first meaningful bin.
         const binCount = this.analyser.frequencyBinCount;
@@ -78,8 +78,8 @@ class FrequencyBandsScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 48);
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update() {
         const spectrum = this.analyser.getSpectrum();

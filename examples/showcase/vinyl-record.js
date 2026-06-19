@@ -1,5 +1,5 @@
 // Auto-generated from vinyl-record.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioAnalyser, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -12,6 +12,7 @@ const app = new Application({
 });
 class VinylRecordScene extends Scene {
     music;
+    musicVoice;
     analyser;
     disc;
     bars;
@@ -20,12 +21,12 @@ class VinylRecordScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.music = loader.get(Music, 'track');
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.music });
+        this.music = loader.get(AudioStream, 'track');
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();
         this.hud = mountControls({
@@ -40,8 +41,8 @@ class VinylRecordScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 64);
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically — play() returns the Voice now.
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         // Spin speed is driven by live audio energy, not a constant fallback BPM.
@@ -51,7 +52,7 @@ class VinylRecordScene extends Scene {
         // Ease toward the target so the disc spins up and slows down smoothly.
         this.rpm += (targetRpm - this.rpm) * Math.min(1, delta.seconds * 4);
         this.angle += delta.seconds * (this.rpm / 60) * 360;
-        if (!this.music.paused) {
+        if (this.musicVoice) {
             this.hud.setStatus(`${this.rpm | 0} rpm`);
         }
     }

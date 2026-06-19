@@ -1,5 +1,5 @@
 // Auto-generated from low-band-camera-shake.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { Application, AudioAnalyser, AudioStream, Color, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -12,19 +12,20 @@ const app = new Application({
 });
 class LowBandCameraShakeScene extends Scene {
     music;
+    musicVoice;
     analyser;
     view;
     sprite;
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
         await loader.load(Texture, { ship: assets.demo.textures.shipA });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.music = loader.get(Music, 'track');
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.music });
+        this.music = loader.get(AudioStream, 'track');
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.view = new View(width / 2, height / 2, width, height);
         this.sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
         this.hud = mountControls({
@@ -39,8 +40,8 @@ class LowBandCameraShakeScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 64);
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically — play() returns the Voice now.
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         const low = this.analyser.getBandEnergy(20, 180);
@@ -50,7 +51,7 @@ class LowBandCameraShakeScene extends Scene {
         this.view.shake(amplitude, 90, { decay: true, frequency: 22 });
         // Advance the shake oscillation (the View only animates when updated).
         this.view.update(delta.milliseconds);
-        if (!this.music.paused) {
+        if (this.musicVoice) {
             this.hud.setStatus(`bass ${(low * 100) | 0}%`);
         }
     }

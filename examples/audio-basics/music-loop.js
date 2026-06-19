@@ -1,5 +1,5 @@
 // Auto-generated from music-loop.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -12,6 +12,7 @@ const app = new Application({
 });
 class MusicLoopScene extends Scene {
     music;
+    musicVoice;
     graphics;
     status;
     tapPrompt;
@@ -20,7 +21,7 @@ class MusicLoopScene extends Scene {
     hud;
     panel;
     async load(loader) {
-        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
@@ -28,7 +29,11 @@ class MusicLoopScene extends Scene {
         this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
         // A single streaming track — the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
-        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.7).setPlaybackRate(1);
+        this.music = loader.get(AudioStream, 'track');
+        // Core defers playback until the AudioContext unlocks on the first
+        // gesture, then starts automatically — play() returns the Voice now,
+        // and all live control (volume, rate, loop, seek) lives on it.
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 });
         this.graphics = new Graphics();
         this.status = new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.bar.x, this.bar.y - 36);
         // Shown while the browser still blocks audio (`app.audio.locked`); the
@@ -42,62 +47,65 @@ class MusicLoopScene extends Scene {
             status: 'Click or press any key to start the track…',
             hint: 'The bar shows playback position. With Loop off, the track plays once and stops; turn Loop on to repeat seamlessly.',
         });
-        // Real, engine-backed controls over the single Music instance.
+        // Real, engine-backed controls over the live music Voice.
         this.panel = mountControlPanel({ title: 'Music', corner: 'bottom-left' });
         this.panel.addSlider({
             label: 'Volume',
             min: 0,
             max: 1,
             step: 0.01,
-            value: this.music.volume,
-            onChange: value => this.music.setVolume(value),
+            value: this.musicVoice.volume,
+            onChange: value => (this.musicVoice.volume = value),
         });
         this.panel.addSlider({
             label: 'Playback rate',
             min: 0.5,
             max: 2,
             step: 0.05,
-            value: this.music.playbackRate,
-            onChange: value => this.music.setPlaybackRate(value),
+            value: this.musicVoice.playbackRate,
+            onChange: value => (this.musicVoice.playbackRate = value),
         });
         this.panel.addToggle({
             label: 'Loop',
-            value: this.music.loop,
+            value: this.musicVoice.loop,
             onChange: on => {
-                this.music.setLoop(on);
+                this.musicVoice.loop = on;
                 // Re-running off the end: if the track already finished while
                 // loop was off, re-enabling and playing restarts it.
-                if (on && this.music.paused)
-                    this.music.setTime(0).play();
+                if (on && this.musicVoice.paused) {
+                    this.musicVoice.seek(0);
+                    this.musicVoice.resume();
+                }
             },
         });
         this.panel.addButton({
             label: 'Restart',
-            onClick: () => this.music.setTime(0).play(),
+            onClick: () => {
+                this.musicVoice.seek(0);
+                this.musicVoice.resume();
+            },
         });
-        // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.play();
         this.hud.setStatus('Playing — use the panel to mix.');
     }
     draw(context) {
         context.backend.clear();
         this.graphics.clear();
-        const duration = this.music.duration;
-        const time = this.music.currentTime;
-        // Music captures its duration from the media element at construction,
-        // before metadata has loaded, so it can be NaN. Fall back to a moving
-        // marker driven purely by the playback clock when it is unavailable.
+        const duration = this.musicVoice.duration;
+        const time = this.musicVoice.time;
+        // The stream captures its duration from the media element, which is NaN
+        // until metadata has loaded. Fall back to a moving marker driven purely
+        // by the playback clock when it is unavailable.
         const hasDuration = Number.isFinite(duration) && duration > 0;
         const progress = hasDuration ? Math.max(0, Math.min(1, time / duration)) : (time % 4) / 4;
+        const playing = !this.musicVoice.paused && !this.musicVoice.ended;
         // Progress trough + fill.
         this.graphics.fillColor = new Color(45, 50, 60);
         this.graphics.drawRectangle(this.bar.x, this.bar.y, this.bar.w, this.bar.h);
-        this.graphics.fillColor = this.music.playing ? new Color(120, 200, 255) : new Color(120, 120, 120);
+        this.graphics.fillColor = playing ? new Color(120, 200, 255) : new Color(120, 120, 120);
         this.graphics.drawRectangle(this.bar.x, this.bar.y, this.bar.w * progress, this.bar.h);
-        const state = this.music.playing ? 'Playing' : 'Stopped';
+        const state = playing ? 'Playing' : 'Stopped';
         const position = hasDuration ? `${time.toFixed(1)} / ${duration.toFixed(1)}s` : `${time.toFixed(1)}s`;
-        this.status.text = `${state}   ${position}   ${Math.round(this.music.playbackRate * 100)}% speed   Loop ${this.music.loop ? 'on' : 'off'}`;
+        this.status.text = `${state}   ${position}   ${Math.round(this.musicVoice.playbackRate * 100)}% speed   Loop ${this.musicVoice.loop ? 'on' : 'off'}`;
         context.render(this.graphics);
         context.render(this.status);
         if (this.app.audio.locked) {

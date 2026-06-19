@@ -1,5 +1,5 @@
 // Auto-generated from audio-buses.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -33,7 +33,7 @@ class AudioBusesScene extends Scene {
     sfxButton = { x: 0, y: 0, w: 0, h: 0 };
     hud;
     async load(loader) {
-        await loader.load(Music, { music: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { music: assets.demo.audio.musicLoop });
         await loader.load(Sound, { sfx: assets.demo.audio.uiClick });
     }
     init(loader) {
@@ -44,7 +44,7 @@ class AudioBusesScene extends Scene {
         this.trackX = (width - this.trackW) / 2;
         this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
         this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
-        this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.6);
+        this.music = loader.get(AudioStream, 'music');
         this.sfx = loader.get(Sound, 'sfx');
         this.graphics = new Graphics();
         this.labels = rows.map((_, i) => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.trackX - 50, this.rowY[i] - 34));
@@ -80,8 +80,8 @@ class AudioBusesScene extends Scene {
             }
         });
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.6 });
         this.hud.setStatus('Music playing on the Music bus. Drag a bar to mix.');
     }
     rowFromY(y) {

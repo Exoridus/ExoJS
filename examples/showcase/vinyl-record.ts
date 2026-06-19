@@ -1,4 +1,4 @@
-import { Application, AudioAnalyser, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioAnalyser, AudioStream, Color, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -12,7 +12,8 @@ const app = new Application({
 });
 
 class VinylRecordScene extends Scene {
-    private music!: Music;
+    private music!: AudioStream;
+    private musicVoice!: Voice;
     private analyser!: AudioAnalyser;
     private disc!: Graphics;
     private bars!: Graphics;
@@ -22,14 +23,14 @@ class VinylRecordScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(Music, 'track');
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.music });
+        this.music = loader.get(AudioStream, 'track');
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();
 
@@ -47,8 +48,8 @@ class VinylRecordScene extends Scene {
             .setPosition(width / 2, height - 64);
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically — play() returns the Voice now.
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
     override update(delta): void {
@@ -61,7 +62,7 @@ class VinylRecordScene extends Scene {
         this.rpm += (targetRpm - this.rpm) * Math.min(1, delta.seconds * 4);
         this.angle += delta.seconds * (this.rpm / 60) * 360;
 
-        if (!this.music.paused) {
+        if (this.musicVoice) {
             this.hud.setStatus(`${this.rpm | 0} rpm`);
         }
     }

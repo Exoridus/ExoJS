@@ -1,4 +1,4 @@
-import { Application, Color, crossFade, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, crossFade, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -19,9 +19,14 @@ const METER_W = 120;
 const METER_H = 320;
 
 class CrossfadeTracksScene extends Scene {
-    private trackA!: Music;
-    private trackB!: Music;
+    private trackA!: AudioStream;
+    private trackB!: AudioStream;
+    private trackAVoice!: Voice;
+    private trackBVoice!: Voice;
     private toB = true;
+    // Displayed meter levels, eased toward each voice's target volume.
+    private dispA = PEAK;
+    private dispB = 0;
     private graphics!: Graphics;
     private labelA!: Text;
     private labelB!: Text;
@@ -34,7 +39,7 @@ class CrossfadeTracksScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { a: assets.demo.audio.musicA, b: assets.demo.audio.musicB });
+        await loader.load(AudioStream, { a: assets.demo.audio.musicA, b: assets.demo.audio.musicB });
     }
 
     override init(loader): void {
@@ -46,10 +51,9 @@ class CrossfadeTracksScene extends Scene {
         this.meterBX = width * 0.67 - METER_W / 2;
         this.meterBaseY = height * 0.82;
 
-        // Track A starts at full volume, Track B silent — both loop so the
-        // crossfade only swaps which one is audible, never restarting either.
-        this.trackA = loader.get(Music, 'a').setLoop(true).setVolume(PEAK);
-        this.trackB = loader.get(Music, 'b').setLoop(true).setVolume(0);
+        // Both tracks loop; the crossfade only swaps which one is audible.
+        this.trackA = loader.get(AudioStream, 'a');
+        this.trackB = loader.get(AudioStream, 'b');
 
         this.graphics = new Graphics();
         this.labelA = new Text('Track A', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -76,21 +80,22 @@ class CrossfadeTracksScene extends Scene {
         });
 
         this.app.input.onPointerTap.add(() => {
+            // stopAfter: false keeps both loops alive so we can crossfade back.
             if (this.toB) {
-                void crossFade(this.trackA, this.trackB, 2000, { stopAfterFade: false });
+                void crossFade(this.trackAVoice, this.trackBVoice, 2000, { toVolume: PEAK, stopAfter: false });
                 this.hud.setStatus('Crossfading to Track B…');
             } else {
-                void crossFade(this.trackB, this.trackA, 2000, { stopAfterFade: false });
+                void crossFade(this.trackBVoice, this.trackAVoice, 2000, { toVolume: PEAK, stopAfter: false });
                 this.hud.setStatus('Crossfading to Track A…');
             }
             this.toB = !this.toB;
         });
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — start both loops (B muted) so
+        // gesture, then starts automatically — start both loops (B silent) so
         // crossFade only has to ramp gains rather than start playback mid-fade.
-        this.trackA.play();
-        this.trackB.play();
+        this.trackAVoice = this.app.audio.play(this.trackA, { loop: true, volume: PEAK });
+        this.trackBVoice = this.app.audio.play(this.trackB, { loop: true, volume: 0 });
         this.hud.setStatus('Track A active — click to crossfade.');
     }
 
@@ -121,8 +126,13 @@ class CrossfadeTracksScene extends Scene {
         context.backend.clear();
         this.graphics.clear();
 
-        const aLevel = this.trackA.volume;
-        const bLevel = this.trackB.volume;
+        // voice.volume returns the fade TARGET immediately, so ease the
+        // displayed level toward it for a smooth meter during the 2s ramp.
+        this.dispA += (this.trackAVoice.volume - this.dispA) * 0.06;
+        this.dispB += (this.trackBVoice.volume - this.dispB) * 0.06;
+
+        const aLevel = this.dispA;
+        const bLevel = this.dispB;
         const aActive = aLevel >= bLevel;
 
         this.drawMeter(this.meterAX, aLevel, aActive, COLOR_A);

@@ -1,4 +1,4 @@
-import { Application, Color, GamepadAxis, GamepadButton, Graphics, OscillatorSound, Scene, Sprite, Text, Texture, Vector } from '@codexo/exojs';
+import { Application, AudioGenerator, Color, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Texture, Vector, type Voice } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -41,7 +41,7 @@ class GamepadSpaceshipScene extends Scene {
     private velocity = new Vector(0, 0);
     private thrust = new Vector(0, 0);
     private facing = -Math.PI / 2;
-    private engine!: OscillatorSound;
+    private engine!: Voice;
     private bullets: Array<Bullet> = [];
     private asteroids: Array<Asteroid> = [];
     private fx!: Graphics;
@@ -61,7 +61,7 @@ class GamepadSpaceshipScene extends Scene {
         const { width, height } = this.app.canvas;
 
         this.ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
-        this.engine = new OscillatorSound({ type: 'sawtooth', frequency: 90, volume: 0 }).play();
+        this.engine = this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
 
         this.fx = new Graphics();
 
