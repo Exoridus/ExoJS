@@ -3,8 +3,9 @@ import { Vector } from '#math/Vector';
 
 import { getAudioContext, isAudioContextReady } from './audio-context';
 import type { AudioManager } from './AudioManager';
+import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
-import { SoundVoice } from './SoundVoice';
+import { SoundVoice, type SoundVoiceWindow } from './SoundVoice';
 
 /**
  * Eviction strategy used when the pool is full and a new play is requested.
@@ -114,7 +115,7 @@ interface PooledVoice {
  * When the pool is full the configured {@link SoundPoolStrategy} decides which
  * active voice to evict.
  *
- * Use {@link Music} for long-form streaming audio (single source, decoded
+ * Use {@link AudioStream} for long-form streaming audio (single source, decoded
  * lazily) — `Sound` is best for short, frequently-triggered clips.
  */
 export class Sound implements Playable {
@@ -279,7 +280,7 @@ export class Sound implements Playable {
       rolloffFactor,
     } = options;
 
-    this.volume = clamp(volume ?? 1, 0, 2);
+    this.volume = clamp(volume ?? 1, 0, 1);
     this.loop = loop ?? false;
     this.playbackRate = clamp(playbackRate ?? 1, 0.1, 20);
     this.muted = muted ?? false;
@@ -372,108 +373,23 @@ export class Sound implements Playable {
    * Implements {@link Playable}. Called by {@link AudioManager.play}; do not
    * call directly — use `manager.play(sound, options)` instead.
    *
-   * Creates one `SoundVoice` backed by a single `AudioBufferSourceNode`. Pool
-   * limits are enforced: if the pool is full the configured eviction strategy
-   * picks a victim to stop before the new voice starts.
+   * Creates one {@link SoundVoice} backed by a single `AudioBufferSourceNode`.
+   * Pool limits are enforced: if the pool is full the configured eviction
+   * strategy picks a victim to stop before the new voice starts.
    */
   public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
-    const loop = options.loop ?? this.loop;
-    const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
-    const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 2);
     const offset = Math.max(0, options.time ?? 0);
-    const bus = options.bus ?? manager.sound;
 
     if (offset >= this.duration) {
-      return _noopVoice;
+      return new NoopVoice(options.bus ?? manager.sound);
     }
 
-    // Pool eviction: stop the victim voice if we're at capacity.
-    this._pruneEndedVoices();
-
-    if (this._activeVoices.length >= this._poolSize) {
-      const victimIndex = this._pickEvictionVictim();
-      const victim = this._activeVoices[victimIndex];
-      if (victim) {
-        this._activeVoices.splice(victimIndex, 1);
-        victim.voice.stop();
-      }
-    }
-
-    const audioContext = getAudioContext();
-
-    // Build the Web Audio graph for this voice:
-    // sourceNode → gainNode [→ pannerNode] → bus.inputNode
-    const gainNode = audioContext.createGain();
-    gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.01);
-
-    // Spatial routing
-    let pannerNode: PannerNode | null = null;
-    if (this._position !== null) {
-      pannerNode = audioContext.createPanner();
-      pannerNode.panningModel = 'equalpower';
-      pannerNode.distanceModel = this._distanceModel;
-      pannerNode.refDistance = this._refDistance;
-      pannerNode.maxDistance = this._maxDistance;
-      pannerNode.rolloffFactor = this._rolloffFactor;
-
-      gainNode.connect(pannerNode);
-      const inputNode = bus._getInputNode();
-      if (inputNode) {
-        pannerNode.connect(inputNode);
-      } else {
-        pannerNode.connect(audioContext.destination);
-      }
-    } else {
-      const inputNode = bus._getInputNode();
-      if (inputNode) {
-        gainNode.connect(inputNode);
-      } else {
-        gainNode.connect(audioContext.destination);
-      }
-    }
-
-    const sourceNode = audioContext.createBufferSource();
-    sourceNode.buffer = this._audioBuffer;
-    sourceNode.loop = loop;
-    sourceNode.playbackRate.value = playbackRate;
-
-    if (loop) {
-      sourceNode.loopStart = 0;
-      sourceNode.loopEnd = this.duration;
-    }
-
-    sourceNode.connect(gainNode);
-
-    const duration = loop ? undefined : this.duration - offset;
-
-    if (!loop && duration !== undefined && duration > 0) {
-      sourceNode.start(0, offset, duration);
-    } else {
-      sourceNode.start(0, offset);
-    }
-
-    const startedAt = audioContext.currentTime;
-    const effectiveDuration = loop ? Infinity : (duration ?? Infinity);
-
-    const voice = new SoundVoice(audioContext, gainNode, sourceNode, pannerNode);
-
-    // Register spatial voice with the manager so update() can tick its position.
-    if (pannerNode !== null) {
-      manager._registerSpatialVoice(voice, () => this._position);
-    }
-
-    const pooledVoice: PooledVoice = { voice, startedAt, effectiveDuration };
-
-    sourceNode.onended = (): void => {
-      const index = this._activeVoices.indexOf(pooledVoice);
-      if (index !== -1) {
-        this._activeVoices.splice(index, 1);
-      }
-    };
-
-    this._activeVoices.push(pooledVoice);
-
-    return voice;
+    return this._buildVoice(manager, options, offset, {
+      base: 0,
+      end: this.duration,
+      loopStart: 0,
+      loopEnd: this.duration,
+    });
   }
 
   /**
@@ -496,28 +412,27 @@ export class Sound implements Playable {
 
     const loop = options.loop ?? clip.loop;
 
-    const spriteOptions: PlayOptions = {
-      ...options,
-      time: offset,
-      loop,
-    };
-
-    return this._createSpriteVoiceRaw(manager, spriteOptions, clip.start, clip.end);
+    return this._buildVoice(manager, { ...options, loop }, offset, {
+      base: clip.start,
+      end: clip.end,
+      loopStart: clip.start,
+      loopEnd: clip.end,
+    });
   }
 
-  /** Internal: creates a voice using sprite loop window overrides. */
-  private _createSpriteVoiceRaw(
-    manager: AudioManager,
-    options: PlayOptions,
-    loopStart: number,
-    loopEnd: number,
-  ): Voice {
-    const loop = options.loop ?? false;
+  /**
+   * Shared voice construction for full-buffer and sprite playback. Enforces the
+   * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
+   * descriptor's position, and tracks the voice for eviction.
+   */
+  private _buildVoice(manager: AudioManager, options: PlayOptions, offset: number, window: SoundVoiceWindow): Voice {
+    const loop = options.loop ?? this.loop;
     const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
-    const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 2);
-    const offset = Math.max(0, options.time ?? 0);
+    const detune = options.detune ?? 0;
+    const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 1);
     const bus = options.bus ?? manager.sound;
 
+    // Pool eviction: stop the victim voice if we're at capacity.
     this._pruneEndedVoices();
 
     if (this._activeVoices.length >= this._poolSize) {
@@ -530,49 +445,44 @@ export class Sound implements Playable {
     }
 
     const audioContext = getAudioContext();
-    const gainNode = audioContext.createGain();
-    gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.01);
+    const output = audioContext.createGain();
 
-    const inputNode = bus._getInputNode();
-    if (inputNode) {
-      gainNode.connect(inputNode);
-    } else {
-      gainNode.connect(audioContext.destination);
-    }
+    const voice = new SoundVoice({
+      audioContext,
+      output,
+      bus,
+      manager,
+      volume,
+      spatial: {
+        distanceModel: this._distanceModel,
+        refDistance: this._refDistance,
+        maxDistance: this._maxDistance,
+        rolloffFactor: this._rolloffFactor,
+      },
+      buffer: this._audioBuffer,
+      loop,
+      playbackRate,
+      detune,
+      offset,
+      window,
+    });
 
-    const sourceNode = audioContext.createBufferSource();
-    sourceNode.buffer = this._audioBuffer;
-    sourceNode.loop = loop;
-    sourceNode.playbackRate.value = playbackRate;
-
-    if (loop) {
-      sourceNode.loopStart = loopStart;
-      sourceNode.loopEnd = loopEnd;
-    }
-
-    sourceNode.connect(gainNode);
-
-    const clipDuration = loop ? undefined : loopEnd - offset;
-
-    if (!loop && clipDuration !== undefined && clipDuration > 0) {
-      sourceNode.start(0, offset, clipDuration);
-    } else {
-      sourceNode.start(0, offset);
+    // Seed spatialization from the descriptor's position (initial value only;
+    // move a live voice via `voice.position` or `voice.follow(node)`).
+    if (this._position !== null) {
+      voice.position = this._position;
     }
 
     const startedAt = audioContext.currentTime;
-    const effectiveDuration = loop ? Infinity : (clipDuration ?? Infinity);
-
-    const voice = new SoundVoice(audioContext, gainNode, sourceNode, null);
-
+    const effectiveDuration = loop ? Infinity : window.end - offset;
     const pooledVoice: PooledVoice = { voice, startedAt, effectiveDuration };
 
-    sourceNode.onended = (): void => {
+    voice.onEnd.add((): void => {
       const index = this._activeVoices.indexOf(pooledVoice);
       if (index !== -1) {
         this._activeVoices.splice(index, 1);
       }
-    };
+    });
 
     this._activeVoices.push(pooledVoice);
 
@@ -657,14 +567,3 @@ export class Sound implements Playable {
     }
   }
 }
-
-/** A no-op Voice returned when a play call is out of range (e.g. offset >= duration). */
-const _noopVoice: Voice = {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
-  stop: (): void => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
-  setVolume: (_volume: number): void => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
-  fadeOut: (_durationMs: number): void => {},
-  ended: true,
-};

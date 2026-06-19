@@ -1,4 +1,4 @@
-import { Music } from '#audio/Music';
+import { AudioStream } from '#audio/AudioStream';
 import { Sound } from '#audio/Sound';
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { BmFont } from '#rendering/text/BmFont';
@@ -101,7 +101,7 @@ const soundBinding = binding(
 );
 
 const musicBinding = binding(
-  Music,
+  AudioStream,
   { typeNames: ['music'] },
   binaryFactoryHandler(() => new MusicFactory()),
 );

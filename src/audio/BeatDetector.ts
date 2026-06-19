@@ -4,14 +4,13 @@ import { Signal } from '#core/Signal';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
-import type { Music } from './Music';
-import type { Sound } from './Sound';
+import type { Voice } from './Playable';
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
-export type BeatDetectorSource = AudioBus | Sound | Music | MediaStream | AudioNode | null;
+export type BeatDetectorSource = AudioBus | Voice | MediaStream | AudioNode | null;
 
 export interface BeatDetectorOptions {
   /** Minimum detectable BPM. Default 50. */
@@ -114,8 +113,8 @@ const workletName = 'exojs-beat-detector';
  * class — receives beats, fires Signals, handles configuration and source
  * routing).
  *
- * Accepts a wide range of {@link BeatDetectorSource}s — bus, individual
- * sound/music, raw MediaStream, or any AudioNode — and exposes a Signal
+ * Accepts a wide range of {@link BeatDetectorSource}s — a bus, an individual
+ * {@link Voice}, a raw MediaStream, or any AudioNode — and exposes a Signal
  * for each notable event:
  * - {@link BeatDetector.onBeat} — every detected beat
  * - {@link BeatDetector.onDownbeat} — first beat of each bar
@@ -518,10 +517,10 @@ export class BeatDetector {
       return asBus._getOutputNode();
     }
 
-    // Sound / Music — has analyserTarget
-    const asMedia = source as Partial<{ analyserTarget: AudioNode | null }>;
-    if ('analyserTarget' in asMedia) {
-      return asMedia.analyserTarget ?? null;
+    // Voice — tap its output node
+    const asVoice = source as Partial<{ output: AudioNode }>;
+    if ('output' in asVoice && asVoice.output) {
+      return asVoice.output;
     }
 
     // Raw AudioNode — duck-type: has connect & disconnect

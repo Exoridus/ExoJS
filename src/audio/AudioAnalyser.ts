@@ -2,10 +2,9 @@ import { buildMelFilterbank, type MelBand } from '#audio/dsp/mel';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
-import type { Music } from './Music';
-import type { Sound } from './Sound';
+import type { Voice } from './Playable';
 
-export type AudioAnalyserSource = AudioBus | Sound | Music | MediaStream | AudioNode | null;
+export type AudioAnalyserSource = AudioBus | Voice | MediaStream | AudioNode | null;
 
 /** Construction options for {@link AudioAnalyser}. */
 export interface AudioAnalyserOptions {
@@ -40,11 +39,10 @@ type RequiredAnalyserOptions = Required<AudioAnalyserOptions>;
 /**
  * Lightweight visualisation analyser backed by a Web Audio AnalyserNode.
  *
- * Accepts any of: AudioBus, Sound, Music, MediaStream, AudioNode, or null.
- * The tap is a parallel branch — it does not affect the source's main routing.
- *
- * Migration from 0.7.1: the old constructor was `new AudioAnalyser(media, options)`.
- * The new API is `new AudioAnalyser(options?); analyser.source = media`.
+ * Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is
+ * a parallel branch — it does not affect the source's main routing. Tap a bus
+ * for a whole submix, or an individual {@link Voice} (its `output` node) for a
+ * single playing instance.
  */
 export class AudioAnalyser {
   private _analyser: AnalyserNode | null = null;
@@ -443,7 +441,7 @@ export class AudioAnalyser {
 
     const tap = this._resolveToAudioNode(source, audioContext);
     if (!tap) {
-      // AudioBus/Sound/Music not ready — defer via their own onceSetup
+      // AudioBus not ready yet — defer via its onceSetup
       this._deferConnectionViaBus(source);
       return;
     }
@@ -473,10 +471,10 @@ export class AudioAnalyser {
       return asBus._getOutputNode();
     }
 
-    // Sound / Music — tap analyserTarget
-    const asMedia = source as Partial<{ analyserTarget: AudioNode | null }>;
-    if ('analyserTarget' in asMedia) {
-      return asMedia.analyserTarget ?? null;
+    // Voice — tap its output node
+    const asVoice = source as Partial<{ output: AudioNode }>;
+    if ('output' in asVoice && asVoice.output) {
+      return asVoice.output;
     }
 
     // Raw AudioNode — duck-type: has connect & disconnect
@@ -500,7 +498,7 @@ export class AudioAnalyser {
       return;
     }
 
-    // Sound/Music — they set up when audioContext is ready (same signal)
+    // Otherwise retry once the audioContext is ready (same signal).
     onAudioContextReady.once(() => {
       if (this._source === source && this._analyser && isAudioContextReady()) {
         this._connectSource(source, getAudioContext());

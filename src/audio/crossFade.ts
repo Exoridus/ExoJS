@@ -1,33 +1,31 @@
-import type { AbstractMedia } from './AbstractMedia';
+import { clamp } from '#math/utils';
+
+import type { Voice } from './Playable';
 
 export interface CrossFadeOptions {
-  /** Stop the `from` media after fade completes. Default true. */
-  stopAfterFade?: boolean;
-  /** Auto-play `to` if currently paused. Default true. */
-  autoPlayTarget?: boolean;
+  /** Volume to fade the `to` voice up to. Range [0, 1]. Default 1. */
+  toVolume?: number;
 }
 
 /**
- * Cross-fade from one media instance to another over `durationMs`.
+ * Cross-fade from one playing {@link Voice} to another over `durationMs`.
  *
- * Calls `from.fadeOut(durationMs)` and `to.fadeIn(durationMs)` in parallel.
- * If `to` is paused at call time and `autoPlayTarget !== false`, it will
- * be played first (so the fade-in is audible).
+ * Fades `from` to silence and stops it (`from.stop(durationMs)`) while ramping
+ * `to` up to `toVolume` (`to.fade(...)`). Both voices must already be playing —
+ * start the incoming voice (typically at volume 0) before calling, e.g.:
  *
- * Returns a Promise that resolves after `durationMs` elapses (i.e., when
- * the fade completes). Use `await crossFade(...)` for sequential music
- * transitions, or fire-and-forget for non-blocking transitions.
+ * ```ts
+ * const next = app.audio.play(track, { volume: 0 });
+ * await crossFade(current, next, 1000);
+ * ```
+ *
+ * Returns a Promise that resolves once `durationMs` elapses.
  */
-export async function crossFade(from: AbstractMedia, to: AbstractMedia, durationMs: number, options: CrossFadeOptions = {}): Promise<void> {
-  const stopAfterFade = options.stopAfterFade ?? true;
-  const autoPlayTarget = options.autoPlayTarget ?? true;
+export async function crossFade(from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions = {}): Promise<void> {
+  const target = clamp(options.toVolume ?? 1, 0, 1);
 
-  if (autoPlayTarget && to.paused) {
-    to.play();
-  }
-
-  from.fadeOut(durationMs, { stopAfter: stopAfterFade });
-  to.fadeIn(durationMs);
+  to.fade(target, durationMs);
+  from.stop(durationMs);
 
   return new Promise<void>(resolve => {
     setTimeout(resolve, Math.max(0, durationMs));
