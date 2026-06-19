@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link EqualizerFilter}. */
 export interface EqualizerFilterOptions {
@@ -24,7 +24,7 @@ interface EqualizerFilterSetup {
  * adjustable at runtime via the corresponding setters; gain changes use a
  * short exponential ramp to avoid clicks.
  */
-export class EqualizerFilter extends AudioFilter {
+export class EqualizerFilter extends AudioEffect {
   private _setup: EqualizerFilterSetup | null = null;
   private _low: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {

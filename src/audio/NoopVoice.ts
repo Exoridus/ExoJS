@@ -2,6 +2,7 @@ import { Signal } from '#core/Signal';
 
 import { getAudioContext } from './audio-context';
 import type { AudioBus } from './AudioBus';
+import type { AudioEffect } from './AudioEffect';
 import type { Voice } from './Playable';
 
 /**
@@ -51,5 +52,13 @@ export class NoopVoice implements Voice {
 
   public stop(_fadeMs?: number): void {
     // inert — the voice already ended
+  }
+
+  public addEffect(_effect: AudioEffect): this {
+    return this;
+  }
+
+  public removeEffect(_effect: AudioEffect): this {
+    return this;
   }
 }

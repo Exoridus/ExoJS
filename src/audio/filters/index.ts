@@ -9,4 +9,3 @@ export * from './LowpassFilter';
 export { PitchShiftFilter, type PitchShiftFilterOptions } from './PitchShiftFilter';
 export * from './ReverbFilter';
 export { VocoderFilter, type VocoderFilterOptions } from './VocoderFilter';
-export { WorkletFilter } from './WorkletFilter';

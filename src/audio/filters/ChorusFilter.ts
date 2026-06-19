@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link ChorusFilter}. */
 export interface ChorusFilterOptions {
@@ -39,7 +39,7 @@ interface ChorusFilterSetup {
  * lfoOscillator ── lfoGain (depth) ── delayNode.delayTime
  * ```
  */
-export class ChorusFilter extends AudioFilter {
+export class ChorusFilter extends AudioEffect {
   private _nodes: ChorusFilterSetup | null = null;
   private _delayMs: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {

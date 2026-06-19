@@ -1,6 +1,5 @@
+import { WorkletEffect } from '#audio/WorkletEffect';
 import { pitchShiftWorkletSource } from '#audio/worklets/pitch-shift.worklet';
-
-import { WorkletFilter } from './WorkletFilter';
 
 export interface PitchShiftFilterOptions {
   /** Pitch ratio. 1.0 = no change, 0.5 = octave down, 2.0 = octave up. Default 1.0. */
@@ -15,7 +14,7 @@ export interface PitchShiftFilterOptions {
 }
 
 /**
- * Real-time pitch shifter via granular synthesis (WorkletFilter).
+ * Real-time pitch shifter via granular synthesis (WorkletEffect).
  *
  * Quality: good for ±1 octave (pitch 0.5x-2.0x). Beyond that, audible
  * artifacts (graininess, phase issues). For high-quality pitch shift,
@@ -30,7 +29,7 @@ export interface PitchShiftFilterOptions {
  *   - Voice effects: chipmunk (1.5x) or demon (0.7x) for game NPCs
  *   - Detune layering: stack 0.99x and 1.01x for thick chorused sound
  */
-export class PitchShiftFilter extends WorkletFilter {
+export class PitchShiftFilter extends WorkletEffect {
   private _pitch: number;
   private _wet: number;
   private readonly _grainSize: number;

@@ -4,6 +4,7 @@ import { clamp } from '#math/utils';
 import { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
+import type { AudioEffect } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
 import type { Spatializable, Voice } from './Playable';
 
@@ -73,6 +74,9 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   private _followNode: SceneNode | null = null;
   private _spatialRegistered = false;
 
+  /** Per-voice effect chain, inserted between the output gain and the bus. */
+  private readonly _effects: AudioEffect[] = [];
+
   protected constructor(init: BaseVoiceInit) {
     this._audioContext = init.audioContext;
     this._output = init.output;
@@ -118,9 +122,25 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
       this._bus = bus;
       return;
     }
-    this._output.disconnect();
+    this._tail().disconnect();
     this._bus = bus;
     this._connectOutput();
+  }
+
+  public addEffect(effect: AudioEffect): this {
+    if (this._ended) return this;
+    this._effects.push(effect);
+    this._rebuildEffectChain();
+    return this;
+  }
+
+  public removeEffect(effect: AudioEffect): this {
+    const index = this._effects.indexOf(effect);
+    if (index !== -1) {
+      this._effects.splice(index, 1);
+      this._rebuildEffectChain();
+    }
+    return this;
   }
 
   public fade(to: number, ms: number): void {
@@ -239,24 +259,52 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   // Internals
   // -------------------------------------------------------------------------
 
+  /** The last node in the voice chain before the bus — the output gain, or the last effect. */
+  private _tail(): AudioNode {
+    return this._effects.length > 0 ? this._effects[this._effects.length - 1].outputNode : this._output;
+  }
+
   protected _connectOutput(): void {
+    this._connectTail(this._tail());
+  }
+
+  /** Connect `tail` to the bus input, or to the destination with a deferred reroute while the bus is still locked. */
+  private _connectTail(tail: AudioNode): void {
     const input = this._bus._getInputNode();
     if (input !== null) {
-      this._output.connect(input);
+      tail.connect(input);
       return;
     }
 
     // Bus not set up yet (AudioContext still locked) — route to the destination
     // for now and reconnect to the bus once it comes online.
-    this._output.connect(this._audioContext.destination);
+    tail.connect(this._audioContext.destination);
     this._bus.onceSetup((): void => {
       if (this._ended) return;
       const node = this._bus._getInputNode();
       if (node !== null) {
-        this._output.disconnect();
-        this._output.connect(node);
+        const current = this._tail();
+        current.disconnect();
+        current.connect(node);
       }
     });
+  }
+
+  /** Rewire `output → [effects...] → bus` after the per-voice effect chain changes. */
+  private _rebuildEffectChain(): void {
+    if (this._ended) return;
+
+    this._output.disconnect();
+    for (const effect of this._effects) {
+      effect.outputNode.disconnect();
+    }
+
+    let prev: AudioNode = this._output;
+    for (const effect of this._effects) {
+      prev.connect(effect.inputNode);
+      prev = effect.outputNode;
+    }
+    this._connectTail(prev);
   }
 
   protected _clearStopTimer(): void {
@@ -297,6 +345,12 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     this._teardownSource();
     this._panner?.disconnect();
     this._output.disconnect();
+
+    // Detach per-voice effects from the chain (the caller still owns them).
+    for (const effect of this._effects) {
+      effect.outputNode.disconnect();
+    }
+    this._effects.length = 0;
 
     if (this._position !== null) {
       this._position.destroy();

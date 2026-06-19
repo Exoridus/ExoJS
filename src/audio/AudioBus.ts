@@ -1,7 +1,7 @@
 import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
-import type { AudioFilter } from './AudioFilter';
+import type { AudioEffect } from './AudioEffect';
 
 /** Construction options for {@link AudioBus}. */
 export interface AudioBusOptions {
@@ -9,7 +9,7 @@ export interface AudioBusOptions {
   volume?: number;
   muted?: boolean;
   pan?: number;
-  filters?: readonly AudioFilter[];
+  effects?: readonly AudioEffect[];
 }
 
 interface AudioBusSetup {
@@ -21,7 +21,7 @@ interface AudioBusSetup {
 
 /**
  * Hierarchical mixer node in the engine's audio routing graph. Each bus
- * owns three Web Audio nodes (input gain, optional filter chain, stereo
+ * owns three Web Audio nodes (input gain, optional effect chain, stereo
  * pan, output gain) and routes its output into its parent's input — the
  * root bus connects to the destination.
  *
@@ -32,8 +32,8 @@ interface AudioBusSetup {
  *
  * Volume is in 0..2 (1 = unity), pan is -1..1, mute is a boolean override.
  * {@link AudioBus.fadeIn} / {@link AudioBus.fadeOut} produce smooth ramps
- * over the output gain. Filter changes via {@link AudioBus.addFilter} /
- * {@link AudioBus.removeFilter} rebuild the chain in place.
+ * over the output gain. Effect changes via {@link AudioBus.addEffect} /
+ * {@link AudioBus.removeEffect} rebuild the chain in place.
  *
  * Setup is deferred until the global `AudioContext` is unlocked
  * (browser autoplay policy); operations that need live nodes are no-ops
@@ -45,7 +45,7 @@ export class AudioBus {
   private _volume: number;
   private _muted: boolean;
   private _pan: number;
-  private readonly _filters: AudioFilter[] = [];
+  private readonly _effects: AudioEffect[] = [];
   private _setup: AudioBusSetup | null = null;
   private _scheduledStopId: ReturnType<typeof setTimeout> | null = null;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
@@ -63,8 +63,8 @@ export class AudioBus {
     this._muted = options.muted ?? false;
     this._pan = clamp(options.pan ?? 0, -1, 1);
 
-    if (options.filters) {
-      this._filters.push(...options.filters);
+    if (options.effects) {
+      this._effects.push(...options.effects);
     }
 
     if (isAudioContextReady()) {
@@ -117,22 +117,22 @@ export class AudioBus {
   }
 
   /**
-   * Append a filter to the end of the chain (before the pan stage). The
+   * Append a effect to the end of the chain (before the pan stage). The
    * chain is rebuilt in place; existing audio routes through the new
-   * filter on the next frame.
+   * effect on the next frame.
    */
-  public addFilter(filter: AudioFilter): this {
-    this._filters.push(filter);
-    this._rebuildFilterChain();
+  public addEffect(effect: AudioEffect): this {
+    this._effects.push(effect);
+    this._rebuildEffectChain();
     return this;
   }
 
-  /** Remove `filter` from the chain. No-op if not present. Caller still owns + must `destroy()` it. */
-  public removeFilter(filter: AudioFilter): this {
-    const index = this._filters.indexOf(filter);
+  /** Remove `effect` from the chain. No-op if not present. Caller still owns + must `destroy()` it. */
+  public removeEffect(effect: AudioEffect): this {
+    const index = this._effects.indexOf(effect);
     if (index !== -1) {
-      this._filters.splice(index, 1);
-      this._rebuildFilterChain();
+      this._effects.splice(index, 1);
+      this._rebuildEffectChain();
     }
     return this;
   }
@@ -185,10 +185,10 @@ export class AudioBus {
   public destroy(): void {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._clearScheduledStop();
-    for (const filter of this._filters) {
-      filter.destroy();
+    for (const effect of this._effects) {
+      effect.destroy();
     }
-    this._filters.length = 0;
+    this._effects.length = 0;
     if (this._setup) {
       this._setup.inputNode.disconnect();
       this._setup.outputNode.disconnect();
@@ -212,12 +212,12 @@ export class AudioBus {
     const panNode = audioContext.createStereoPanner();
     const outputNode = audioContext.createGain();
 
-    // Internal chain: input → [filters...] → pan → output
+    // Internal chain: input → [effects...] → pan → output
     outputNode.gain.setTargetAtTime(this._muted ? 0 : this._volume, audioContext.currentTime, 0.01);
     panNode.pan.setTargetAtTime(this._pan, audioContext.currentTime, 0.01);
 
     this._setup = { audioContext, inputNode, outputNode, panNode };
-    this._rebuildFilterChain();
+    this._rebuildEffectChain();
     this._connectUpstream();
   }
 
@@ -252,23 +252,23 @@ export class AudioBus {
     }
   }
 
-  private _rebuildFilterChain(): void {
+  private _rebuildEffectChain(): void {
     if (!this._setup) return;
     const { inputNode, panNode } = this._setup;
 
     // Disconnect current chain
     inputNode.disconnect();
-    for (const filter of this._filters) {
-      filter.inputNode.disconnect();
-      filter.outputNode.disconnect();
+    for (const effect of this._effects) {
+      effect.inputNode.disconnect();
+      effect.outputNode.disconnect();
     }
     panNode.disconnect();
 
-    // Rebuild: input → filter[0].input → filter[0].output → filter[1].input → ... → pan → output
+    // Rebuild: input → effect[0].input → effect[0].output → effect[1].input → ... → pan → output
     let prev: AudioNode = inputNode;
-    for (const filter of this._filters) {
-      prev.connect(filter.inputNode);
-      prev = filter.outputNode;
+    for (const effect of this._effects) {
+      prev.connect(effect.inputNode);
+      prev = effect.outputNode;
     }
     prev.connect(panNode);
     panNode.connect(this._setup.outputNode);

@@ -1,7 +1,6 @@
 import type { AudioBus } from '#audio/AudioBus';
+import { WorkletEffect } from '#audio/WorkletEffect';
 import { vocoderWorkletSource } from '#audio/worklets/vocoder.worklet';
-
-import { WorkletFilter } from './WorkletFilter';
 
 export interface VocoderFilterOptions {
   /** Modulator AudioBus — its output drives the spectral envelope.
@@ -23,7 +22,7 @@ export interface VocoderFilterOptions {
 }
 
 /**
- * Phase-vocoder-style effect implemented as a {@link WorkletFilter}. Analyzes
+ * Phase-vocoder-style effect implemented as a {@link WorkletEffect}. Analyzes
  * the spectral envelope of a `modulator` {@link AudioBus} across a bank of
  * log-spaced bandpass filters and applies that envelope to the carrier signal
  * (the main input). The result is the classic "robot voice" or talking-synth
@@ -31,7 +30,7 @@ export interface VocoderFilterOptions {
  * at construction; only `wet` and `envelopeSmoothing` are adjustable at
  * runtime.
  */
-export class VocoderFilter extends WorkletFilter {
+export class VocoderFilter extends WorkletEffect {
   // Declared nullable because super() may trigger _onWorkletReady before the
   // subclass constructor body runs (if construction is aborted by a throw).
   private readonly _modulator: AudioBus | null = null;

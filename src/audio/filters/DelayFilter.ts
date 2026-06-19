@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link DelayFilter}. */
 export interface DelayFilterOptions {
@@ -24,7 +24,7 @@ interface DelayFilterSetup {
  * its maximum of 0.95 produces a long, prominent tail; lower values create
  * a single slap-back echo.
  */
-export class DelayFilter extends AudioFilter {
+export class DelayFilter extends AudioEffect {
   private _setup: DelayFilterSetup | null = null;
   private _delaySeconds: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {

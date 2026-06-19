@@ -3,6 +3,7 @@ import type { Signal } from '#core/Signal';
 import type { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
+import type { AudioEffect } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
 
 /**
@@ -44,6 +45,14 @@ export interface Voice {
   readonly output: AudioNode;
   /** The {@link AudioBus} this voice routes into. Reassign to reroute live. */
   bus: AudioBus;
+  /**
+   * Insert a per-voice {@link AudioEffect} into this voice's output chain
+   * (after the volume gain, before the bus). Effects are applied in insertion
+   * order.
+   */
+  addEffect(effect: AudioEffect): this;
+  /** Remove a previously added per-voice effect. The caller still owns it and must `destroy()` it. */
+  removeEffect(effect: AudioEffect): this;
 }
 
 /** A voice whose playhead can be read and moved. */

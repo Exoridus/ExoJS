@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
 
 /**
@@ -17,7 +17,7 @@ import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
  * (e.g., sidechain inputs).
  * @advanced
  */
-export abstract class WorkletFilter extends AudioFilter {
+export abstract class WorkletEffect extends AudioEffect {
   protected _inputGain: GainNode | null = null;
   protected _outputGain: GainNode | null = null;
   protected _workletNode: AudioWorkletNode | null = null;

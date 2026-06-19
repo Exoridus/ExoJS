@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link ReverbFilter}. */
 export interface ReverbFilterOptions {
@@ -24,7 +24,7 @@ interface ReverbFilterSetup {
  * avoid animating these properties at audio rate — use `wet` for real-time
  * mix control instead.
  */
-export class ReverbFilter extends AudioFilter {
+export class ReverbFilter extends AudioEffect {
   private _setup: ReverbFilterSetup | null = null;
   private _duration: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {

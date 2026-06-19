@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link HighpassFilter}. */
 export interface HighpassFilterOptions {
@@ -14,7 +14,7 @@ export interface HighpassFilterOptions {
  * or sculpting mix headroom. The `resonance` (Q) parameter controls the
  * sharpness of the roll-off peak at the cutoff frequency.
  */
-export class HighpassFilter extends AudioFilter {
+export class HighpassFilter extends AudioEffect {
   private _node: BiquadFilterNode | null = null;
   private _frequency: number;
   private _resonance: number;

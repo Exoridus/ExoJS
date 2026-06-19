@@ -1,6 +1,5 @@
 import type { AudioBus } from '#audio/AudioBus';
-
-import { WorkletFilter } from './WorkletFilter';
+import { WorkletEffect } from '#audio/WorkletEffect';
 
 const duckingWorkletSource = `
 class DuckingProcessor extends AudioWorkletProcessor {
@@ -78,14 +77,14 @@ export interface DuckingFilterOptions {
 }
 
 /**
- * Sidechain compressor (ducker) implemented as an {@link WorkletFilter}.
+ * Sidechain compressor (ducker) implemented as an {@link WorkletEffect}.
  * Attenuates the main audio signal whenever the `sidechain` {@link AudioBus}
  * exceeds the threshold, then releases when it drops back down. Commonly used
  * to duck background music under dialogue or sound effects. Attack and release
  * times are expressed in milliseconds and converted internally to one-pole
  * filter coefficients.
  */
-export class DuckingFilter extends WorkletFilter {
+export class DuckingFilter extends WorkletEffect {
   // Declared nullable because super() may trigger _onWorkletReady before the
   // subclass constructor body runs (if construction is aborted by a throw).
   private readonly _sidechain: AudioBus | null = null;

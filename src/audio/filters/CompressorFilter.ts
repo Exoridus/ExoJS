@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link CompressorFilter}. All values are clamped to their valid ranges on assignment. */
 export interface CompressorFilterOptions {
@@ -16,7 +16,7 @@ export interface CompressorFilterOptions {
  * perceived loudness of a mix. All parameter changes are applied with a short
  * smoothing ramp so they are artifact-free during playback.
  */
-export class CompressorFilter extends AudioFilter {
+export class CompressorFilter extends AudioEffect {
   private _node: DynamicsCompressorNode | null = null;
   private _threshold: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
