@@ -215,7 +215,8 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
       app.update();
 
       // Should receive 16ms (≈0.016s), not a huge accumulated spike
-      expect(tweensUpdateSpy).toHaveBeenCalledWith(expect.closeTo(0.016, 4));
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
+      expect(receivedDelta.seconds).toBeCloseTo(0.016, 4);
     });
   });
 
@@ -232,10 +233,10 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
       app.update();
 
       expect(tweensUpdateSpy).toHaveBeenCalledTimes(1);
-      const receivedSeconds = tweensUpdateSpy.mock.calls[0][0] as number;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
 
       // MAX_DELTA_MS = 100 → 0.1 seconds
-      expect(receivedSeconds).toBeLessThanOrEqual(0.1);
+      expect(receivedDelta.seconds).toBeLessThanOrEqual(0.1);
     });
 
     test('a very large raw delta is clamped before sceneManager.update receives it', () => {
@@ -259,9 +260,9 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
       app.update();
 
       expect(tweensUpdateSpy).toHaveBeenCalledTimes(1);
-      const receivedSeconds = tweensUpdateSpy.mock.calls[0][0] as number;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
 
-      expect(receivedSeconds).toBeCloseTo(0.016, 4);
+      expect(receivedDelta.seconds).toBeCloseTo(0.016, 4);
     });
 
     test('a delta exactly at the cap boundary (100ms) passes through unchanged', () => {
@@ -271,9 +272,9 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
 
       app.update();
 
-      const receivedSeconds = tweensUpdateSpy.mock.calls[0][0] as number;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
 
-      expect(receivedSeconds).toBeCloseTo(0.1, 4);
+      expect(receivedDelta.seconds).toBeCloseTo(0.1, 4);
     });
 
     test('a delta one millisecond above the cap is clamped to exactly the cap', () => {
@@ -283,10 +284,10 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
 
       app.update();
 
-      const receivedSeconds = tweensUpdateSpy.mock.calls[0][0] as number;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
 
       // Must be <= 0.1, not 0.101
-      expect(receivedSeconds).toBeLessThanOrEqual(0.1);
+      expect(receivedDelta.seconds).toBeLessThanOrEqual(0.1);
     });
 
     test('raw delta beyond cap is still recorded in backend.stats.rawFrameDeltaMs', () => {
@@ -304,10 +305,10 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
 
       app.update();
 
-      const receivedSeconds = tweensUpdateSpy.mock.calls[0][0] as number;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
 
       // Simulation delta is clamped to 100ms = 0.1s
-      expect(receivedSeconds).toBeLessThanOrEqual(0.1);
+      expect(receivedDelta.seconds).toBeLessThanOrEqual(0.1);
       // Raw stat records the actual 200ms
       expect(app.backend.stats.rawFrameDeltaMs).toBe(200);
     });

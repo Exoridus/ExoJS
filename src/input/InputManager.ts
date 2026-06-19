@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
+import type { System } from '#core/System';
 import { stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
 import { getDistance } from '#math/utils';
@@ -56,7 +57,9 @@ enum InputManagerFlag {
  * Driven each frame by {@link Application.update}; constructed
  * automatically — you do not instantiate this class yourself.
  */
-export class InputManager {
+export class InputManager implements System {
+  /** App-systems tick band — input flushes first; see Application.systems. @internal */
+  public readonly order = 100;
   private readonly _app: Application;
   private readonly canvas: HTMLCanvasElement;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);

@@ -28,6 +28,7 @@ import { computeLetterboxLayout } from './letterbox';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
 import { Signal } from './Signal';
+import { SystemRegistry } from './SystemRegistry';
 import { Time } from './Time';
 import { canvasSourceToDataUrl } from './utils';
 
@@ -190,8 +191,8 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
 
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
- * controller, input + interaction managers, asset loader, tween manager,
- * shared audio singleton, and the per-frame loop.
+ * controller, the app system registry (input, interaction, audio, tweens,
+ * rendering), asset loader, and the per-frame loop.
  *
  * Lifecycle: construct with options → `await app.start(scene)` → engine
  * runs the request-animation-frame loop until `app.stop()` or
@@ -221,6 +222,13 @@ export class Application {
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
   public readonly random: Random;
   public readonly tweens: TweenManager = new TweenManager();
+  /**
+   * App-level system registry, ticked once per frame in ascending `order`. The
+   * core managers occupy reserved bands (input 100, interaction 200, audio 300,
+   * tweens 400, rendering 500); register your own app-wide systems at order
+   * 600+ via `app.systems.add(...)`. Scene-scoped systems live on `scene.systems`.
+   */
+  public readonly systems = new SystemRegistry();
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
@@ -333,6 +341,14 @@ export class Application {
     this.scene = new SceneManager(this);
     this.random = new Random(this.options.seed);
     this._updateHandler = this.update.bind(this);
+
+    // Register the core managers as ordered app systems (reserved order bands);
+    // they tick from one loop, ahead of any user systems (order 600+).
+    this.systems.add(this.input);
+    this.systems.add(this.interaction);
+    this.systems.add(this._audio);
+    this.systems.add(this.tweens);
+    this.systems.add(this._rendering);
 
     this._startupClock.start();
 
@@ -519,9 +535,9 @@ export class Application {
    *
    * Each normal frame runs two distinct phases:
    *
-   * **Update phase** — input and interaction flush, audio update, tween
-   * advancement, optional view runtime update, then `scene.update(delta)` for
-   * each participating scene in stack order.
+   * **Update phase** — the app systems tick in ascending `order` (input,
+   * interaction, audio, tweens, rendering, plus any user systems at 600+), then
+   * `scene.update(delta)` for each participating scene in stack order.
    *
    * **Render phase** — `scene.draw(context)` for each participating scene in
    * stack order, followed by the transition overlay when active.
@@ -552,12 +568,7 @@ export class Application {
       this.backend.resetStats();
       this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
-      this.input.update();
-      this.interaction.update();
-      this._audio.update();
-      this.tweens.update(frameDelta.seconds);
-
-      this._rendering.update(frameDelta.milliseconds);
+      this.systems._tick(frameDelta);
 
       this.scene.update(frameDelta);
       this.onFrame.dispatch(frameDelta);
@@ -747,9 +758,10 @@ export class Application {
   }
 
   /**
-   * Tear down every owned subsystem (loader, interaction, input, tweens,
-   * backend, scene manager, all clocks, all signals) and release event
-   * listeners. The application instance is unusable after this call.
+   * Tear down every owned subsystem (loader, the app systems — input,
+   * interaction, audio, tweens, rendering — backend, scene manager, all clocks,
+   * all signals) and release event listeners. The application instance is
+   * unusable after this call.
    */
   public destroy(): void {
     if (typeof document !== 'undefined') {
@@ -761,10 +773,7 @@ export class Application {
 
     this.stop();
     this.loader.destroy();
-    this.interaction.destroy();
-    this.input.destroy();
-    this.tweens.destroy();
-    this._audio.destroy();
+    this.systems.destroy();
     this._backend.destroy();
     this.scene.destroy();
     this._startupClock.destroy();
@@ -864,7 +873,15 @@ export class Application {
       this._backend.destroy();
       this._backendType = 'webgl2';
       this._backend = this.createBackend(this._backendType, this._snapshot);
+
+      // Swap the rendering system for one bound to the rebuilt backend so
+      // app.systems keeps ticking the live RenderingContext.
+      const previousRendering = this._rendering;
+      this.systems.remove(previousRendering);
+      previousRendering.destroy();
       this._rendering = new RenderingContext(this._backend);
+      this.systems.add(this._rendering);
+
       await this._backend.initialize();
     }
   }

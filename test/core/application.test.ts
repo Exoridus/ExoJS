@@ -179,10 +179,8 @@ describe('Application', () => {
     const { Application, ApplicationStatus } = await loadApplicationHarness();
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
-    const inputManager = { update: vi.fn() };
-    const tweens = { update: vi.fn() };
+    const systemsTick = vi.fn();
     const sceneManager = { update: vi.fn() };
-    const renderingUpdate = vi.fn();
     const backend = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),
@@ -193,15 +191,11 @@ describe('Application', () => {
       restart: vi.fn(),
     };
 
-    const interaction = { update: vi.fn() };
-
     rawApp['_status'] = ApplicationStatus.Running;
-    rawApp['_audio'] = { update: vi.fn(), destroy: vi.fn() };
-    rawApp['input'] = inputManager;
-    rawApp['interaction'] = interaction;
-    rawApp['tweens'] = tweens;
+    rawApp['pauseOnHidden'] = false;
+    rawApp['_documentVisible'] = true;
+    rawApp['systems'] = { _tick: systemsTick };
     rawApp['scene'] = sceneManager;
-    rawApp['_rendering'] = { update: renderingUpdate };
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
     rawApp['_updateHandler'] = vi.fn();
@@ -212,9 +206,8 @@ describe('Application', () => {
 
     app.update();
 
-    expect(inputManager.update).toHaveBeenCalledTimes(1);
+    expect(systemsTick).toHaveBeenCalledTimes(1);
     expect(sceneManager.update).toHaveBeenCalledTimes(1);
-    expect(renderingUpdate).toHaveBeenCalledWith(16);
     expect(backend.resetStats).toHaveBeenCalledTimes(1);
     expect(backend.flush).toHaveBeenCalledTimes(1);
     expect(backend.stats.frameTimeMs).toBeGreaterThanOrEqual(0);

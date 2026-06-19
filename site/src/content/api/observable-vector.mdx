@@ -1,6 +1,6 @@
 ---
 title: "ObservableVector"
-description: "A AbstractVector subclass that fires a callback whenever its components change. Used internally by Rectangle and other types to invalidate cached state (e.g. normals) on position mutations. Setting individual components (`x`, `y`) fires the callback only when the value actually changes. Batch mutations via `set()` fire at most one callback per call."
+description: "An AbstractVector subclass that notifies an owner whenever its components change. Used internally by Rectangle, `SceneNode`, View and other types to invalidate cached state (normals, transforms) on mutation. Instead of a per-instance callback closure, the vector holds a reference to its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)` on change. This keeps hot per-node vectors closure-free — a `SceneNode` carries four of these, so dropping the bound closures saves four allocations per node. Pass `owner = null` for a plain, non-reactive vector. Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call."
 symbol: "ObservableVector"
 kind: "class"
 subsystem: "math"
@@ -9,23 +9,29 @@ memberCount: 27
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/math/ObservableVector.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableVector.ts#L12"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableVector.ts#L30"
 ---
 ## Import
 
 `import { ObservableVector } from '@codexo/exojs'`
 
-A AbstractVector subclass that fires a callback whenever its
-components change. Used internally by Rectangle and other types to
-invalidate cached state (e.g. normals) on position mutations.
+An AbstractVector subclass that notifies an owner whenever its
+components change. Used internally by Rectangle, `SceneNode`,
+View and other types to invalidate cached state (normals, transforms)
+on mutation.
 
-Setting individual components (`x`, `y`) fires the callback only when the
-value actually changes. Batch mutations via `set()` fire at most one
-callback per call.
+Instead of a per-instance callback closure, the vector holds a reference to
+its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)`
+on change. This keeps hot per-node vectors closure-free — a `SceneNode`
+carries four of these, so dropping the bound closures saves four allocations
+per node. Pass `owner = null` for a plain, non-reactive vector.
+
+Setting individual components (`x`, `y`) notifies only when the value
+actually changes. Batch mutations via `set()` notify at most once per call.
 
 ## Constructors
 
-- `new(callback: object | null, x: number, y: number): ObservableVector`
+- `new(owner: ObservableVectorOwner | null, channel: number, x: number, y: number): ObservableVector`
 
 ## Methods
 
@@ -61,4 +67,4 @@ callback per call.
 
 ## Source
 
-[src/math/ObservableVector.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableVector.ts#L12)
+[src/math/ObservableVector.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableVector.ts#L30)

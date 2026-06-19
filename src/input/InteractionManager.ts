@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
+import type { System } from '#core/System';
 import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
@@ -65,7 +66,9 @@ interface IndexedNode {
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
  */
-export class InteractionManager implements InteractionHooks {
+export class InteractionManager implements InteractionHooks, System {
+  /** App-systems tick band — interaction after input. @internal */
+  public readonly order = 200;
   private readonly _app: Application;
 
   // Persistent quadtree — null when no interactive nodes are present.

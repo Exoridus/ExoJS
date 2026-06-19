@@ -1,4 +1,6 @@
 import type { Color } from '#core/Color';
+import type { System } from '#core/System';
+import type { Time } from '#core/Time';
 import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
 import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
@@ -32,7 +34,9 @@ export interface RenderOptions {
  *   context.renderTo(node, opts)    // into an off-screen RenderTexture
  * @stable
  */
-export class RenderingContext {
+export class RenderingContext implements System {
+  /** App-systems tick band — rendering last (camera + render-plan prep). @internal */
+  public readonly order = 500;
   private readonly _backend: RenderBackend;
   private _camera: Camera;
   private readonly _screenView: View;
@@ -89,11 +93,22 @@ export class RenderingContext {
   }
 
   /**
-   * Advance follow, shake, and bounds-constraint animations on the
-   * active camera. Call once per frame before rendering.
+   * Advance follow, shake, and bounds-constraint animations on the active
+   * camera. Ticked once per frame via {@link Application.systems}.
    */
-  public update(deltaMs: number): void {
-    this._camera.update(deltaMs);
+  public update(delta: Time): void {
+    this._camera.update(delta.milliseconds);
+  }
+
+  /**
+   * Destroy the resources this context owns — the active {@link Camera} and the
+   * screen-space {@link View}. The {@link RenderBackend} is owned by the
+   * Application and destroyed separately.
+   * @internal — invoked via Application.systems on teardown.
+   */
+  public destroy(): void {
+    this._camera.destroy();
+    this._screenView.destroy();
   }
 
   /**
