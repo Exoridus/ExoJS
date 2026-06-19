@@ -1,6 +1,6 @@
 ---
 title: "DuckingFilter"
-description: "Sidechain compressor (ducker) implemented as an WorkletFilter. Attenuates the main audio signal whenever the `sidechain` AudioBus exceeds the threshold, then releases when it drops back down. Commonly used to duck background music under dialogue or sound effects. Attack and release times are expressed in milliseconds and converted internally to one-pole filter coefficients."
+description: "Sidechain compressor (ducker) implemented as an WorkletEffect. Attenuates the main audio signal whenever the `sidechain` AudioBus exceeds the threshold, then releases when it drops back down. Commonly used to duck background music under dialogue or sound effects. Attack and release times are expressed in milliseconds and converted internally to one-pole filter coefficients."
 symbol: "DuckingFilter"
 kind: "class"
 subsystem: "audio"
@@ -9,13 +9,13 @@ memberCount: 10
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/DuckingFilter.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DuckingFilter.ts#L88"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DuckingFilter.ts#L87"
 ---
 ## Import
 
 `import { DuckingFilter } from '@codexo/exojs'`
 
-Sidechain compressor (ducker) implemented as an WorkletFilter.
+Sidechain compressor (ducker) implemented as an WorkletEffect.
 Attenuates the main audio signal whenever the `sidechain` AudioBus
 exceeds the threshold, then releases when it drops back down. Commonly used
 to duck background music under dialogue or sound effects. Attack and release
@@ -43,4 +43,4 @@ filter coefficients.
 
 ## Source
 
-[src/audio/filters/DuckingFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DuckingFilter.ts#L88)
+[src/audio/filters/DuckingFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DuckingFilter.ts#L87)

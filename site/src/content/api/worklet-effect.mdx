@@ -1,19 +1,19 @@
 ---
-title: "WorkletFilter"
+title: "WorkletEffect"
 description: "Base class for filters implemented as AudioWorkletProcessors. Subclasses declare the worklet's name, source code, and node options; this class handles the async lifecycle. Stable input/output nodes (GainNodes) are created immediately on setup. While the worklet loads asynchronously, audio passes through directly (effectively bypassing the filter for ~10-50ms during initial load). Once the worklet loads, it's inserted into the chain and audio routes through it. Subclasses can override `_onWorkletReady` to perform additional wiring (e.g., sidechain inputs)."
-symbol: "WorkletFilter"
+symbol: "WorkletEffect"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
 memberCount: 6
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
-sourcePath: "src/audio/filters/WorkletFilter.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/WorkletFilter.ts#L20"
+sourcePath: "src/audio/WorkletEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/WorkletEffect.ts#L20"
 ---
 ## Import
 
-`import { WorkletFilter } from '@codexo/exojs'`
+`import { WorkletEffect } from '@codexo/exojs'`
 
 Base class for filters implemented as AudioWorkletProcessors. Subclasses
 declare the worklet's name, source code, and node options; this class
@@ -30,7 +30,7 @@ Subclasses can override `_onWorkletReady` to perform additional wiring
 
 ## Constructors
 
-- `new(): WorkletFilter`
+- `new(): WorkletEffect`
 
 ## Methods
 
@@ -45,4 +45,4 @@ Subclasses can override `_onWorkletReady` to perform additional wiring
 
 ## Source
 
-[src/audio/filters/WorkletFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/WorkletFilter.ts#L20)
+[src/audio/WorkletEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/WorkletEffect.ts#L20)

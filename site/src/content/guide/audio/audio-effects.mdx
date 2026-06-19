@@ -7,7 +7,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Audio effects
 
-Every bus in ExoJS carries a filter chain — an ordered list of [`AudioFilter`](/ExoJS/en/api/audio-filter/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every voice routing through the music bus. You can also create custom buses for isolated effect chains.
+Every bus in ExoJS carries a filter chain — an ordered list of [`AudioEffect`](/ExoJS/en/api/audio-effect/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every voice routing through the music bus. You can also create custom buses for isolated effect chains.
 
 ## The filter chain
 
@@ -20,15 +20,15 @@ const compressor = new CompressorFilter({ threshold: -20, ratio: 8 });
 const reverb = new ReverbFilter({ wet: 0.3 });
 const delay = new DelayFilter({ delaySeconds: 0.25, wet: 0.2, feedback: 0.4 });
 
-app.audio.master.addFilter(compressor);
-app.audio.master.addFilter(reverb);
-app.audio.sound.addFilter(delay);
+app.audio.master.addEffect(compressor);
+app.audio.master.addEffect(reverb);
+app.audio.sound.addEffect(delay);
 ```
 
 Remove a filter to take it out of the chain without destroying it:
 
 ```js
-app.audio.master.removeFilter(reverb);
+app.audio.master.removeEffect(reverb);
 ```
 
 Filters are reusable — move one from bus to bus by removing it from the old bus and adding it to the new one. Destroy a filter with `filter.destroy()` when it's no longer needed anywhere.
@@ -46,7 +46,7 @@ const compressor = new CompressorFilter({
     knee: 30,         // dB — softens the threshold transition
 });
 
-app.audio.master.addFilter(compressor);
+app.audio.master.addEffect(compressor);
 ```
 
 All properties are live get/set. The `compressor.reduction` getter returns the current gain reduction in dB (always ≤ 0) — useful for live level metering:
@@ -100,7 +100,7 @@ const ducker = new DuckingFilter({
     releaseMs: 260,   // how fast audio recovers after sidechain drops
 });
 
-app.audio.music.addFilter(ducker);
+app.audio.music.addEffect(ducker);
 ```
 
 `threshold`, `ratio`, `attackMs`, and `releaseMs` are live get/set. The `filter.ready` promise resolves when the worklet processor is loaded and the chain is fully wired.
@@ -127,7 +127,7 @@ All parameters on these filters are live get/set. The [`EqualizerFilter` API ref
 
 ## Worklet-based effects
 
-Three filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletFilter`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
+Three filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletEffect`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
 
 ```js no-check
 import { GranularFilter, PitchShiftFilter, VocoderFilter } from '@codexo/exojs';
@@ -152,8 +152,8 @@ Bus-level filters affect everything on that bus. Create isolated chains for spec
 const ambientBus = new AudioBus('ambient', { parent: app.audio.master });
 app.audio.registerBus(ambientBus);
 
-ambientBus.addFilter(new ReverbFilter({ wet: 0.6, durationSeconds: 3 }));
-ambientBus.addFilter(new LowpassFilter({ frequency: 800 }));
+ambientBus.addEffect(new ReverbFilter({ wet: 0.6, durationSeconds: 3 }));
+ambientBus.addEffect(new LowpassFilter({ frequency: 800 }));
 
 const wind = loader.get(Sound, 'wind');
 // Route this play onto the ambient bus — reverb + lowpass applied.

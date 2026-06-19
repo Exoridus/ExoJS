@@ -1,0 +1,47 @@
+---
+title: "BiquadEffect"
+description: "Native biquad filter effect backed by a single `BiquadFilterNode` — the most common audio-shaping need, covering `lowpass` / `highpass` / `bandpass` / `notch` / `peaking` / `lowshelf` / `highshelf` / `allpass` via one `type` parameter. Insert it on an AudioBus (`bus.addEffect`) or a Voice (`voice.addEffect`). The single node serves as both inputNode and outputNode."
+symbol: "BiquadEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+memberCount: 10
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/audio/BiquadEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/BiquadEffect.ts#L27"
+---
+## Import
+
+`import { BiquadEffect } from '@codexo/exojs'`
+
+Native biquad filter effect backed by a single `BiquadFilterNode` — the most
+common audio-shaping need, covering `lowpass` / `highpass` / `bandpass` /
+`notch` / `peaking` / `lowshelf` / `highshelf` / `allpass` via one `type`
+parameter. Insert it on an AudioBus (`bus.addEffect`) or a
+Voice (`voice.addEffect`).
+
+The single node serves as both inputNode and outputNode.
+
+## Constructors
+
+- `new(options: BiquadEffectOptions): BiquadEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `detune: number`
+- `frequency: number`
+- `gain: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+- `resonance: number`
+- `type: BiquadFilterType`
+
+## Source
+
+[src/audio/BiquadEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/BiquadEffect.ts#L27)
