@@ -24,6 +24,7 @@ import type { PointLike } from './PointLike';
 import type { Polygon } from './Polygon';
 import type { Rectangle } from './Rectangle';
 import { clamp, getDistance, VoronoiRegion } from './utils';
+import { Vector } from './Vector';
 
 /**
  * INTERSECTION
@@ -343,8 +344,8 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
     normalY = centerBy < centerAy ? -1 : 1;
   }
 
-  const projectionN = rectA.position.clone().set(normalX, normalY);
-  const projectionV = rectA.position.clone().set(normalX * overlap, normalY * overlap);
+  const projectionN = new Vector(normalX, normalY);
+  const projectionV = new Vector(normalX * overlap, normalY * overlap);
 
   return {
     shapeA: rectA,

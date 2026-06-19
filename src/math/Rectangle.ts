@@ -1,5 +1,6 @@
 import type { SceneNode } from '#core/SceneNode';
 
+import type { AbstractVector } from './AbstractVector';
 import type { Circle } from './Circle';
 import type { Collidable, CollisionResponse } from './Collision';
 import { CollisionType } from './Collision';
@@ -22,7 +23,7 @@ import type { Polygon } from './Polygon';
 import type { ShapeLike } from './ShapeLike';
 import { Size } from './Size';
 import { inRange } from './utils';
-import type { Vector } from './Vector';
+import { Vector } from './Vector';
 
 let temp: Rectangle | null = null;
 const tempPoint = new ObservableVector(null);
@@ -41,7 +42,7 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner {
 
   private readonly _position: ObservableVector;
   private readonly _size: Size;
-  private _normals: ObservableVector[] | null = null;
+  private _normals: Vector[] | null = null;
   private _normalsDirty = false;
 
   public constructor(x = 0, y = x, width = 0, height = width) {
@@ -57,11 +58,11 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner {
     this._normalsDirty = true;
   }
 
-  public get position(): Vector {
-    return this._position as unknown as Vector;
+  public get position(): AbstractVector {
+    return this._position;
   }
 
-  public set position(position: Vector) {
+  public set position(position: AbstractVector) {
     this._position.copy(position);
   }
 
@@ -173,14 +174,12 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner {
 
   public getNormals(): Vector[] {
     if (this._normalsDirty || this._normals === null) {
-      this._updateNormals(
-        this._normals || (this._normals = [new ObservableVector(null), new ObservableVector(null), new ObservableVector(null), new ObservableVector(null)]),
-      );
+      this._updateNormals(this._normals || (this._normals = [new Vector(), new Vector(), new Vector(), new Vector()]));
 
       this._normalsDirty = false;
     }
 
-    return this._normals as unknown as Vector[];
+    return this._normals;
   }
 
   public project(axis: Vector, result: Interval = new Interval()): Interval {
@@ -290,7 +289,7 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner {
     }
   }
 
-  private _updateNormals(normals: ObservableVector[]): void {
+  private _updateNormals(normals: Vector[]): void {
     normals[0]
       .set(this.right - this.left, 0)
       .rperp()
