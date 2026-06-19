@@ -404,7 +404,7 @@ export class InteractionManager implements InteractionHooks {
             // Best-effort — jsdom and some browsers may not support this.
           }
 
-          this._dispatchDirect(new InteractionEvent('dragstart', hit, pointer, x, y), hit.onDragStart);
+          this._dispatchDirect(new InteractionEvent('dragstart', hit, pointer, x, y), hit._peekInteractionSignal('dragstart'));
         }
       }
     }
@@ -422,7 +422,7 @@ export class InteractionManager implements InteractionHooks {
       }
 
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node.onDrag);
+        this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
       }
     }
 
@@ -433,7 +433,7 @@ export class InteractionManager implements InteractionHooks {
       }
 
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node.onDragEnd);
+        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
         this._endDrag(id);
       }
     }
@@ -448,7 +448,7 @@ export class InteractionManager implements InteractionHooks {
     // --- Cancel / Leave ---
     if (isExitEvent) {
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node.onDragEnd);
+        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
         this._endDrag(id);
       } else if (last !== null) {
         this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
@@ -691,7 +691,7 @@ export class InteractionManager implements InteractionHooks {
       event.currentTarget = current;
       const signal = this._signalFor(event.type, current);
 
-      signal.dispatch(event);
+      signal?.dispatch(event);
 
       if (event.propagationStopped) {
         break;
@@ -705,32 +705,15 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /** Dispatch an event directly on a single node without bubbling. */
-  private _dispatchDirect(event: InteractionEvent, signal: Signal<[InteractionEvent]>): void {
+  private _dispatchDirect(event: InteractionEvent, signal: Signal<[InteractionEvent]> | null): void {
     event.currentTarget = event.target;
-    signal.dispatch(event);
+    signal?.dispatch(event);
   }
 
-  private _signalFor(type: InteractionEventType, node: RenderNode): Signal<[InteractionEvent]> {
-    switch (type) {
-      case 'pointerdown':
-        return node.onPointerDown;
-      case 'pointerup':
-        return node.onPointerUp;
-      case 'pointermove':
-        return node.onPointerMove;
-      case 'pointerover':
-        return node.onPointerOver;
-      case 'pointerout':
-        return node.onPointerOut;
-      case 'pointertap':
-        return node.onPointerTap;
-      case 'dragstart':
-        return node.onDragStart;
-      case 'drag':
-        return node.onDrag;
-      case 'dragend':
-        return node.onDragEnd;
-    }
+  private _signalFor(type: InteractionEventType, node: RenderNode): Signal<[InteractionEvent]> | null {
+    // Peek (never materialize): a node with no listener for `type` has no
+    // signal, so dispatch simply skips it.
+    return node._peekInteractionSignal(type);
   }
 
   // ---------------------------------------------------------------------------

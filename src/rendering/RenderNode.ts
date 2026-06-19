@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
 import { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
-import type { InteractionEvent } from '#input/InteractionEvent';
+import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
 import { Rectangle } from '#math/Rectangle';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -148,19 +148,66 @@ export abstract class RenderNode extends SceneNode {
    */
   public clipShape: Rectangle | Geometry | null = null;
 
-  public readonly onPointerDown = new Signal<[InteractionEvent]>();
-  public readonly onPointerUp = new Signal<[InteractionEvent]>();
-  public readonly onPointerMove = new Signal<[InteractionEvent]>();
-  public readonly onPointerOver = new Signal<[InteractionEvent]>();
-  public readonly onPointerOut = new Signal<[InteractionEvent]>();
-  public readonly onPointerTap = new Signal<[InteractionEvent]>();
+  // Interaction signals are lazily materialized: a non-interactive node (the
+  // common case) allocates none. The dispatch path uses _peekInteractionSignal,
+  // so firing never materializes a signal that has no listener.
+  private _signals: Map<InteractionEventType, Signal<[InteractionEvent]>> | null = null;
+
+  public get onPointerDown(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('pointerdown');
+  }
+
+  public get onPointerUp(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('pointerup');
+  }
+
+  public get onPointerMove(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('pointermove');
+  }
+
+  public get onPointerOver(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('pointerover');
+  }
+
+  public get onPointerOut(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('pointerout');
+  }
+
+  public get onPointerTap(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('pointertap');
+  }
 
   /** Fired once when a drag gesture begins on this node. Does not bubble. */
-  public readonly onDragStart = new Signal<[InteractionEvent]>();
+  public get onDragStart(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('dragstart');
+  }
+
   /** Fired on every pointer-move while this node is being dragged. Does not bubble. */
-  public readonly onDrag = new Signal<[InteractionEvent]>();
+  public get onDrag(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('drag');
+  }
+
   /** Fired when the drag gesture ends (pointer-up or cancel). Does not bubble. */
-  public readonly onDragEnd = new Signal<[InteractionEvent]>();
+  public get onDragEnd(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('dragend');
+  }
+
+  private _interactionSignal(type: InteractionEventType): Signal<[InteractionEvent]> {
+    const signals = (this._signals ??= new Map<InteractionEventType, Signal<[InteractionEvent]>>());
+    let signal = signals.get(type);
+
+    if (signal === undefined) {
+      signal = new Signal<[InteractionEvent]>();
+      signals.set(type, signal);
+    }
+
+    return signal;
+  }
+
+  /** @internal — the signal for `type`, or `null` if never materialized (used by the dispatch peek). */
+  public _peekInteractionSignal(type: InteractionEventType): Signal<[InteractionEvent]> | null {
+    return this._signals?.get(type) ?? null;
+  }
 
   private readonly _filters: Filter[] = [];
   private readonly _cacheBounds: Rectangle = new Rectangle();
@@ -386,15 +433,14 @@ export abstract class RenderNode extends SceneNode {
     this._filters.length = 0;
     this._mask = null;
 
-    this.onPointerDown.destroy();
-    this.onPointerUp.destroy();
-    this.onPointerMove.destroy();
-    this.onPointerOver.destroy();
-    this.onPointerOut.destroy();
-    this.onPointerTap.destroy();
-    this.onDragStart.destroy();
-    this.onDrag.destroy();
-    this.onDragEnd.destroy();
+    if (this._signals !== null) {
+      for (const signal of this._signals.values()) {
+        signal.destroy();
+      }
+
+      this._signals.clear();
+      this._signals = null;
+    }
   }
 
   private _renderContentToTexture(
