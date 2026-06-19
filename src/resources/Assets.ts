@@ -73,5 +73,5 @@ export type Assets<M extends Record<string, AssetInput>> = AssetsImpl<M> & Infer
 
 type AssetsConstructorFn = new <M extends Record<string, AssetInput>>(definition: M) => Assets<M>;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
+ 
 export const Assets = AssetsImpl as unknown as AssetsConstructorFn;

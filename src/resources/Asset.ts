@@ -39,5 +39,5 @@ export interface Asset<T> {
 
 type AssetConstructorFn = new <K extends keyof AssetDefinitions>(config: { type: K } & AssetDefinitions[K]['config']) => Asset<AssetDefinitions[K]['resource']>;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
+ 
 export const Asset = AssetImpl as unknown as AssetConstructorFn;

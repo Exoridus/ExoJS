@@ -5,7 +5,7 @@ symbol: "Time"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 30
+memberCount: 35
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/core/Time.ts"
@@ -47,6 +47,11 @@ reference across calls.
 - `setSeconds(seconds: number): this`
 - `subtract(value: number, factor: TimeInterval): this`
 - `subtractTime(time: Time): this`
+- `fromHours(value: number): Time`
+- `fromMilliseconds(value: number): Time`
+- `fromMinutes(value: number): Time`
+- `fromSeconds(value: number): Time`
+- `now(): Time`
 
 ## Properties
 

@@ -223,6 +223,15 @@ export default defineConfig([
       '@typescript-eslint/naming-convention': [
         'error',
         {
+          // const namespace objects (MathUtils, Perf, Collision, …) are PascalCase
+          // by convention; const constants may be UPPER_CASE — both alongside camelCase.
+          selector: 'variable',
+          modifiers: ['const'],
+          format: ['strictCamelCase', 'StrictPascalCase', 'UPPER_CASE'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        {
           selector: 'variableLike',
           format: ['strictCamelCase'],
           leadingUnderscore: 'allow',
