@@ -1,7 +1,7 @@
 ﻿import { getAudioContext, isAudioContextReady } from '#audio/audio-context';
 import { AudioAnalyser } from '#audio/AudioAnalyser';
 import { AudioBus } from '#audio/AudioBus';
-import { disposeAudioManager } from '#audio/AudioManager';
+import type { Voice } from '#audio/Playable';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -29,7 +29,6 @@ describe('AudioAnalyser', () => {
   });
 
   afterEach(() => {
-    disposeAudioManager();
     vi.restoreAllMocks();
   });
 
@@ -125,27 +124,14 @@ describe('AudioAnalyser', () => {
     });
   });
 
-  describe('source setter — Sound', () => {
-    it('accepts a Sound-like object (analyserTarget)', () => {
+  describe('source setter — Voice', () => {
+    it('taps a Voice via its output node', () => {
       const ctx = getAudioContext();
       const gainNode = ctx.createGain();
-      const soundLike = { analyserTarget: gainNode };
+      const voiceLike = { output: gainNode } as unknown as Voice;
       const connectSpy = vi.spyOn(gainNode, 'connect');
       const a = new AudioAnalyser();
-      a.source = soundLike as unknown as import('#audio/Sound').Sound;
-      expect(connectSpy).toHaveBeenCalled();
-      a.destroy();
-    });
-  });
-
-  describe('source setter — Music', () => {
-    it('accepts a Music-like object (analyserTarget)', () => {
-      const ctx = getAudioContext();
-      const gainNode = ctx.createGain();
-      const musicLike = { analyserTarget: gainNode };
-      const connectSpy = vi.spyOn(gainNode, 'connect');
-      const a = new AudioAnalyser();
-      a.source = musicLike as unknown as import('#audio/Music').Music;
+      a.source = voiceLike;
       expect(connectSpy).toHaveBeenCalled();
       a.destroy();
     });

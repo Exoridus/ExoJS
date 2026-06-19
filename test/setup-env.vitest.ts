@@ -206,9 +206,13 @@ class MockAudioContext {
       disconnect: () => undefined,
       start: () => undefined,
       stop: () => undefined,
-      playbackRate: { value: 1 },
+      playbackRate: makeMockAudioParam(),
+      detune: makeMockAudioParam(),
       loop: false,
+      loopStart: 0,
+      loopEnd: 0,
       buffer: null,
+      onended: null,
     } as unknown as AudioBufferSourceNode;
   }
 
@@ -219,8 +223,8 @@ class MockAudioContext {
       start: () => undefined,
       stop: () => undefined,
       type: 'sine' as OscillatorType,
-      frequency: { value: 440 },
-      detune: { value: 0 },
+      frequency: makeMockAudioParam(),
+      detune: makeMockAudioParam(),
       onended: null,
     } as unknown as OscillatorNode;
   }
@@ -372,6 +376,28 @@ Object.defineProperty(globalThis, 'AudioWorkletNode', {
     }
   },
 });
+
+// jsdom does not implement HTMLMediaElement playback — stub play/pause/load so
+// AudioStream / Video voices can drive an <audio>/<video> element in tests.
+if (typeof HTMLMediaElement !== 'undefined') {
+  Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+    configurable: true,
+    writable: true,
+    value: function play(): Promise<void> {
+      return Promise.resolve();
+    },
+  });
+  Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+    configurable: true,
+    writable: true,
+    value: function pause(): void {},
+  });
+  Object.defineProperty(HTMLMediaElement.prototype, 'load', {
+    configurable: true,
+    writable: true,
+    value: function load(): void {},
+  });
+}
 
 // MediaStream mock — jsdom does not implement MediaStream.
 if (typeof globalThis.MediaStream === 'undefined') {

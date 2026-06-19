@@ -1,7 +1,7 @@
 ﻿import { getAudioContext, isAudioContextReady } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
-import { disposeAudioManager } from '#audio/AudioManager';
 import { BeatDetector } from '#audio/BeatDetector';
+import type { Voice } from '#audio/Playable';
 
 // ---------------------------------------------------------------------------
 // Types for the mock AudioWorkletNode (extended in setup-env.ts)
@@ -38,14 +38,9 @@ function makeMediaStream(): MediaStream {
   return { getTracks: () => [] } as unknown as MediaStream;
 }
 
-function makeSoundLike(): import('#audio/Sound').Sound {
+function makeVoiceLike(): Voice {
   const ctx = getAudioContext();
-  return { analyserTarget: ctx.createGain() } as unknown as import('#audio/Sound').Sound;
-}
-
-function makeMusicLike(): import('#audio/Music').Music {
-  const ctx = getAudioContext();
-  return { analyserTarget: ctx.createGain() } as unknown as import('#audio/Music').Music;
+  return { output: ctx.createGain() } as unknown as Voice;
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +60,6 @@ describe('BeatDetector', () => {
   });
 
   afterEach(() => {
-    disposeAudioManager();
     vi.restoreAllMocks();
   });
 
@@ -143,25 +137,13 @@ describe('BeatDetector', () => {
     });
   });
 
-  describe('source setter — Sound', () => {
-    it('accepts a Sound-like object', async () => {
-      const sound = makeSoundLike();
+  describe('source setter — Voice', () => {
+    it('accepts a Voice-like object', async () => {
+      const voice = makeVoiceLike();
       const d = new BeatDetector();
       await d.ready;
       expect(() => {
-        d.source = sound;
-      }).not.toThrow();
-      d.destroy();
-    });
-  });
-
-  describe('source setter — Music', () => {
-    it('accepts a Music-like object', async () => {
-      const music = makeMusicLike();
-      const d = new BeatDetector();
-      await d.ready;
-      expect(() => {
-        d.source = music;
+        d.source = voice;
       }).not.toThrow();
       d.destroy();
     });

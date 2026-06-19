@@ -1,5 +1,5 @@
 import { getAudioContext } from '#audio/audio-context';
-import { getAudioManager } from '#audio/AudioManager';
+import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 
 interface MockBufferSourceNode {
@@ -8,6 +8,7 @@ interface MockBufferSourceNode {
   connect: MockInstance;
   disconnect: MockInstance;
   playbackRate: AudioParam & { value: number };
+  detune: AudioParam & { value: number };
   loop: boolean;
   loopStart: number;
   loopEnd: number;
@@ -27,6 +28,7 @@ const createBufferSourceNodeMock = (): MockBufferSourceNode =>
     start: vi.fn(),
     stop: vi.fn(),
     playbackRate: { value: 1 } as AudioParam & { value: number },
+    detune: { value: 0 } as AudioParam & { value: number },
     loop: false,
     loopStart: 0,
     loopEnd: 0,
@@ -63,7 +65,7 @@ describe('Sound', () => {
   // manager.play({ replace: true }) stops prior instance before starting a new one.
   test('manager.play(sound) with replace: true stops prior instance before starting a new one', () => {
     const factory = setupSourceFactorySpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
 
     manager.play(sound);
@@ -82,7 +84,7 @@ describe('Sound', () => {
   // manager.play() creates independent pooled instances (multi-instance default).
   test('manager.play() creates independent pooled instances', () => {
     const factory = setupSourceFactorySpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 3 });
 
     manager.play(sound);
@@ -101,7 +103,7 @@ describe('Sound', () => {
   // Pool eviction: when pool is full a new play() evicts oldest (FIFO).
   test('manager.play() past pool limit evicts oldest via FIFO', () => {
     const factory = setupSourceFactorySpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 2 });
 
     manager.play(sound);
@@ -119,7 +121,7 @@ describe('Sound', () => {
 
   test('manager.play() with sprite plays the requested clip range from one source', () => {
     const factory = setupSourceFactorySpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), {
       sprites: {
         click: { start: 0.2, end: 0.5 },
@@ -141,7 +143,7 @@ describe('Sound', () => {
 
   test('looping audio sprites configure source loop window', () => {
     const factory = setupSourceFactorySpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
 
     sound.defineSprite('hum', { start: 0.1, end: 0.6, loop: true });
@@ -158,7 +160,7 @@ describe('Sound', () => {
   });
 
   test('unknown sprite names fail clearly', () => {
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
 
     expect(() => sound._createSpriteVoice(manager, 'missing')).toThrow('Sound sprite "missing" is not defined.');

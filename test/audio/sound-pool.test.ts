@@ -10,7 +10,7 @@
  */
 
 import { getAudioContext } from '#audio/audio-context';
-import { getAudioManager } from '#audio/AudioManager';
+import { AudioManager } from '#audio/AudioManager';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
 // ---------------------------------------------------------------------------
@@ -25,6 +25,7 @@ interface MockBufferSourceNode {
   connect: MockInstance;
   disconnect: MockInstance;
   playbackRate: { value: number };
+  detune: { value: number };
   loop: boolean;
   loopStart: number;
   loopEnd: number;
@@ -38,6 +39,7 @@ const createSourceMock = (): MockBufferSourceNode => ({
   start: vi.fn(),
   stop: vi.fn(),
   playbackRate: { value: 1 },
+  detune: { value: 0 },
   loop: false,
   loopStart: 0,
   loopEnd: 0,
@@ -154,7 +156,7 @@ describe('Sound — multi-instance play() (pooled default)', () => {
   // 4. play() below pool limit creates new source, no eviction
   test('play() below pool limit creates a new source without stopping others', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 8 });
 
     manager.play(sound);
@@ -173,7 +175,7 @@ describe('Sound — multi-instance play() (pooled default)', () => {
   // 5. FIFO eviction when pool is full
   test('play() past pool limit evicts oldest source first (FIFO)', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.FirstInFirstOut,
@@ -200,7 +202,7 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
   test('LRU strategy evicts the source with least remaining time', () => {
     const timeMock = mockCurrentTime(0);
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
 
     // Buffer duration = 4 s
     const sound = new Sound(createAudioBufferStub(4), {
@@ -237,7 +239,7 @@ describe('Sound — LowestPriority eviction', () => {
   // 7. LowestPriority degenerates to FIFO within a single Sound (all instances share priority)
   test('LowestPriority strategy degenerates to FIFO within a single Sound', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.LowestPriority,
@@ -263,7 +265,7 @@ describe('Sound — _stopAllVoices() (replace mode)', () => {
   // 8. _stopAllVoices() stops all active voices
   test('_stopAllVoices() stops all active voices', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
     manager.play(sound); // src[0]
@@ -284,7 +286,7 @@ describe('Sound — _stopAllVoices() (replace mode)', () => {
   // 9. play() after _stopAllVoices() starts fresh
   test('play() after _stopAllVoices() accumulates normally', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
     manager.play(sound); // src[0]
@@ -304,7 +306,7 @@ describe('Sound — _stopAllVoices() (replace mode)', () => {
   // _stopAllVoices() with poolSize=1 exactly replicates old singleton behavior
   test('_stopAllVoices() + play() with poolSize=1 replicates old singleton-replace behavior', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 1 });
 
     sound._stopAllVoices();
@@ -330,7 +332,7 @@ describe('Sound — natural pool cleanup', () => {
   // 10. Voices are removed from pool when they end naturally
   test('voices are removed from the pool when they end naturally (no eviction)', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
     manager.play(sound); // src[0]
@@ -357,7 +359,7 @@ describe('Sound — natural pool cleanup', () => {
   // voice.stop() ends the voice immediately
   test('voice.stop() marks the voice as ended', () => {
     const factory = setupSourceFactory();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
     const voice = manager.play(sound);

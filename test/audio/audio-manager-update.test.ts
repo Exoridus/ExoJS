@@ -1,5 +1,5 @@
 import { getAudioContext } from '#audio/audio-context';
-import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
+import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
@@ -38,18 +38,13 @@ const setupPannerSpy = () => {
 // ---------------------------------------------------------------------------
 
 describe('AudioManager.update()', () => {
-  beforeEach(() => {
-    disposeAudioManager();
-  });
-
   afterEach(() => {
-    disposeAudioManager();
     vi.restoreAllMocks();
   });
 
   // 1. mixer.update() ticks listener
   test('update() calls listener._tick()', () => {
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const tickSpy = vi.spyOn(mixer.listener, '_tick');
     mixer.update();
     expect(tickSpy).toHaveBeenCalledTimes(1);
@@ -58,7 +53,7 @@ describe('AudioManager.update()', () => {
   // 2. mixer.update() ticks all registered spatial voices
   test('update() calls _tickSpatial() on all registered spatial voices', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound1 = new Sound(createAudioBufferStub());
     const sound2 = new Sound(createAudioBufferStub());
     sound1.position = { x: 0, y: 0 };
@@ -82,7 +77,7 @@ describe('AudioManager.update()', () => {
 
   // 3. Non-spatial voices NOT ticked
   test('update() does NOT call _tickSpatial() on non-spatial voices', () => {
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     // sound.position remains null — not spatial
     const voice = mixer.play(sound) as SoundVoice;
@@ -202,7 +197,7 @@ describe('AudioManager.update()', () => {
 
   test('update() still works after all spatial voices end', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     const voice = mixer.play(sound);
@@ -215,7 +210,7 @@ describe('AudioManager.update()', () => {
 
   test('destroy() clears the spatial voices set', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     const voice = mixer.play(sound) as SoundVoice;

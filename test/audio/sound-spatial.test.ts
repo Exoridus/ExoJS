@@ -1,5 +1,5 @@
 import { getAudioContext } from '#audio/audio-context';
-import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
+import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
@@ -57,12 +57,7 @@ const setupPannerSpy = (): {
 // ---------------------------------------------------------------------------
 
 describe('Sound — spatial (PannerNode)', () => {
-  beforeEach(() => {
-    disposeAudioManager();
-  });
-
   afterEach(() => {
-    disposeAudioManager();
     vi.restoreAllMocks();
   });
 
@@ -74,7 +69,7 @@ describe('Sound — spatial (PannerNode)', () => {
 
   test('no PannerNode is created when playing a non-spatial sound', () => {
     const spy = setupPannerSpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     manager.play(sound);
     expect(spy.panners.length).toBe(0);
@@ -92,7 +87,7 @@ describe('Sound — spatial (PannerNode)', () => {
 
   test('playing a sound with position creates a PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 10, y: 20 };
     manager.play(sound);
@@ -103,7 +98,7 @@ describe('Sound — spatial (PannerNode)', () => {
 
   test('PannerNode is configured with correct default spatial parameters', () => {
     const spy = setupPannerSpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     manager.play(sound);
@@ -120,7 +115,7 @@ describe('Sound — spatial (PannerNode)', () => {
   // 3. Voice is registered as spatial in mixer; update() ticks it
   test('voice is registered as spatial in the mixer when sound has position at play time', () => {
     const spy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     const voice = mixer.play(sound) as SoundVoice;
@@ -135,7 +130,7 @@ describe('Sound — spatial (PannerNode)', () => {
   // 4. update() calls _tickSpatial with position coordinates
   test('update() writes sound.position x/y to PannerNode', () => {
     const spy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 55, y: 66 };
     mixer.play(sound);
@@ -163,7 +158,7 @@ describe('Sound — spatial (PannerNode)', () => {
 
   test('after setting position to null, new play creates no panner', () => {
     const spy = setupPannerSpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 1, y: 2 };
     sound.position = null;
@@ -214,7 +209,7 @@ describe('Sound — spatial (PannerNode)', () => {
 
   test('playing sound twice each gets its own PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     manager.play(sound);
@@ -228,7 +223,7 @@ describe('Sound — spatial (PannerNode)', () => {
   // 8. voice.stop() disconnects panner
   test('voice.stop() disconnects the PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = getAudioManager();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     const voice = manager.play(sound);
@@ -243,7 +238,7 @@ describe('Sound — spatial (PannerNode)', () => {
   // 9. Ended voice is pruned from spatial tracking after update()
   test('ended voice is removed from spatial tracking after update()', () => {
     const spy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     const voice = mixer.play(sound) as SoundVoice;
@@ -277,7 +272,7 @@ describe('Sound — spatial (PannerNode)', () => {
 
   test('destroy() stops all active voices', () => {
     const spy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
     const voice = mixer.play(sound);
