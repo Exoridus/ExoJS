@@ -24,6 +24,7 @@ import type { PointLike } from './PointLike';
 import type { Polygon } from './Polygon';
 import type { Rectangle } from './Rectangle';
 import { clamp, getDistance, VoronoiRegion } from './utils';
+import { Vector } from './Vector';
 
 /**
  * INTERSECTION
@@ -343,8 +344,8 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
     normalY = centerBy < centerAy ? -1 : 1;
   }
 
-  const projectionN = rectA.position.clone().set(normalX, normalY);
-  const projectionV = rectA.position.clone().set(normalX * overlap, normalY * overlap);
+  const projectionN = new Vector(normalX, normalY);
+  const projectionV = new Vector(normalX * overlap, normalY * overlap);
 
   return {
     shapeA: rectA,
@@ -881,3 +882,46 @@ export {
   intersectionRectRect,
   intersectionSat,
 };
+
+/**
+ * Shape-vs-shape collision queries, grouped as a namespace so the public API
+ * carries no loose `intersection*`/`getCollision*` functions: `intersects.*`
+ * are boolean overlap tests, `resolve.*` return a minimum-translation-vector
+ * response. The underlying functions stay module exports for internal use; only
+ * this facade is in the public barrel (the low-level `*Sat` primitives stay
+ * internal-only).
+ */
+export const Collision = {
+  intersects: {
+    circleCircle: intersectionCircleCircle,
+    circleEllipse: intersectionCircleEllipse,
+    circlePoly: intersectionCirclePoly,
+    ellipseEllipse: intersectionEllipseEllipse,
+    ellipsePoly: intersectionEllipsePoly,
+    lineCircle: intersectionLineCircle,
+    lineEllipse: intersectionLineEllipse,
+    lineLine: intersectionLineLine,
+    linePoly: intersectionLinePoly,
+    lineRect: intersectionLineRect,
+    pointCircle: intersectionPointCircle,
+    pointEllipse: intersectionPointEllipse,
+    pointLine: intersectionPointLine,
+    pointPoint: intersectionPointPoint,
+    pointPoly: intersectionPointPoly,
+    pointRect: intersectionPointRect,
+    polyPoly: intersectionPolyPoly,
+    rectCircle: intersectionRectCircle,
+    rectEllipse: intersectionRectEllipse,
+    rectPoly: intersectionRectPoly,
+    rectRect: intersectionRectRect,
+  },
+  resolve: {
+    circleCircle: getCollisionCircleCircle,
+    circleRectangle: getCollisionCircleRectangle,
+    ellipseCircle: getCollisionEllipseCircle,
+    ellipseEllipse: getCollisionEllipseEllipse,
+    ellipseRectangle: getCollisionEllipseRectangle,
+    polygonCircle: getCollisionPolygonCircle,
+    rectangleRectangle: getCollisionRectangleRectangle,
+  },
+} as const;

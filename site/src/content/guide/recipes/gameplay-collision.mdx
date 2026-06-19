@@ -201,33 +201,26 @@ interface SweptHit {
 ### Available sweep functions
 
 ```js
-import {
-    sweepRectangle,
-    sweepCircleVsRectangle,
-    sweepCircleVsCircle,
-    sweepRectangleAgainst,
-    sweepCircleAgainst,
-    substepSweep,
-} from '@codexo/exojs';
+import { Sweep } from '@codexo/exojs';
 ```
 
 | Function | Moving shape | Target | Notes |
 |----------|-------------|--------|-------|
-| `sweepRectangle` | Rectangle | Rectangle | Slab method, exact |
-| `sweepCircleVsCircle` | Circle | Circle | Quadratic, exact |
-| `sweepCircleVsRectangle` | Circle | Rectangle | Minkowski expansion (V1 — slightly over-collides at corners) |
-| `sweepRectangleAgainst` | Rectangle | Rectangle[] | Batch — returns earliest hit across all targets |
-| `sweepCircleAgainst` | Circle | Circle[] | Batch — returns earliest hit across all targets |
-| `substepSweep` | any | any | Generator of evenly-spaced snapshots for arbitrary pair discrete-step fallback |
+| `Sweep.rectangle` | Rectangle | Rectangle | Slab method, exact |
+| `Sweep.circleVsCircle` | Circle | Circle | Quadratic, exact |
+| `Sweep.circleVsRectangle` | Circle | Rectangle | Minkowski expansion (V1 — slightly over-collides at corners) |
+| `Sweep.rectangleAgainst` | Rectangle | Rectangle[] | Batch — returns earliest hit across all targets |
+| `Sweep.circleAgainst` | Circle | Circle[] | Batch — returns earliest hit across all targets |
+| `Sweep.substep` | any | any | Generator of evenly-spaced snapshots for arbitrary pair discrete-step fallback |
 
 ### Tunneling-safe movement
 
 ```js
-import { sweepRectangle } from '@codexo/exojs';
+import { Sweep } from '@codexo/exojs';
 
 // In your update loop:
 const playerBounds = player.getBounds();
-const hit = sweepRectangle(playerBounds, velocityX * delta, velocityY * delta, wall.getBounds());
+const hit = Sweep.rectangle(playerBounds, velocityX * delta, velocityY * delta, wall.getBounds());
 
 if (hit !== null) {
     // Move only as far as the impact point
@@ -245,16 +238,16 @@ if (hit !== null) {
 }
 ```
 
-`sweepRectangle` handles the already-overlapping case: it returns `t = 0` with the deepest-penetration-axis normal so you can resolve immediately without a separate discrete check.
+`Sweep.rectangle` handles the already-overlapping case: it returns `t = 0` with the deepest-penetration-axis normal so you can resolve immediately without a separate discrete check.
 
-The batch helpers (`sweepRectangleAgainst`, `sweepCircleAgainst`) include a swept-AABB broadphase skip — they skip targets whose bounds do not overlap the swept path at all before running the precise test. Use them when you have a list of static tiles or obstacles.
+The batch helpers (`Sweep.rectangleAgainst`, `Sweep.circleAgainst`) include a swept-AABB broadphase skip — they skip targets whose bounds do not overlap the swept path at all before running the precise test. Use them when you have a list of static tiles or obstacles.
 
-`substepSweep` is a fallback generator for shape pairs that lack a closed-form swept test. It yields evenly-spaced snapshots along the move path so you can run your own `intersectsWith` check at each step:
+`Sweep.substep` is a fallback generator for shape pairs that lack a closed-form swept test. It yields evenly-spaced snapshots along the move path so you can run your own `intersectsWith` check at each step:
 
 ```js
-import { substepSweep } from '@codexo/exojs';
+import { Sweep } from '@codexo/exojs';
 
-for (const snapshot of substepSweep(fromX, fromY, dx, dy, maxStepSize)) {
+for (const snapshot of Sweep.substep(fromX, fromY, dx, dy, maxStepSize)) {
     polygon.setPosition(snapshot.x, snapshot.y);
     if (polygon.intersectsWith(target)) {
         // Hit at snapshot.t — resolve here

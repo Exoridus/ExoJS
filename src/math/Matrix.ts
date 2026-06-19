@@ -128,18 +128,23 @@ export class Matrix implements Cloneable {
       return result.copy(Matrix.identity);
     }
 
+    // Inverse of the row-major affine `[[a,b,x],[c,d,y],[e,f,z]]` — the same
+    // convention `transform()`/`combine()` use — so it is the EXACT inverse of
+    // the forward map (translation stays in x/y, not e/f). The previous form
+    // inverted the transpose, which dropped the translation into e/f and forced
+    // hand-rolled inverses in SceneNode.contains / View.screenToWorld.
     return result.set(
-      (this.z * this.d - this.y * this.f) / determinant,
-      (this.z * this.c - this.y * this.e) / -determinant,
-      (this.f * this.c - this.d * this.e) / determinant,
+      (this.d * this.z - this.y * this.f) / determinant,
+      (this.x * this.f - this.b * this.z) / determinant,
+      (this.b * this.y - this.x * this.d) / determinant,
 
-      (this.z * this.b - this.x * this.f) / -determinant,
-      (this.z * this.a - this.x * this.e) / determinant,
-      (this.f * this.a - this.b * this.e) / -determinant,
+      (this.y * this.e - this.c * this.z) / determinant,
+      (this.a * this.z - this.x * this.e) / determinant,
+      (this.x * this.c - this.a * this.y) / determinant,
 
-      (this.y * this.b - this.x * this.d) / determinant,
-      (this.y * this.a - this.x * this.c) / -determinant,
-      (this.d * this.a - this.b * this.c) / determinant,
+      (this.c * this.f - this.d * this.e) / determinant,
+      (this.b * this.e - this.a * this.f) / determinant,
+      (this.a * this.d - this.b * this.c) / determinant,
     );
   }
 

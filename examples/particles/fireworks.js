@@ -1,5 +1,5 @@
 // Auto-generated from fireworks.ts — edit the .ts source, not this file.
-import { Application, BlendModes, Color, rand, Scene, seconds, Size, Sprite, Texture, Timer, Vector, } from '@codexo/exojs';
+import { Application, BlendModes, Color, Random, Scene, Size, Sprite, Texture, Time, Timer, Vector, } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, BurstSpawn, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -12,7 +12,8 @@ const app = new Application({
     clearColor: Color.black,
     extensions: [particlesExtension],
 });
-const autoLaunchInterval = seconds(2.2);
+const random = new Random();
+const autoLaunchInterval = Time.fromSeconds(2.2);
 const tailDuration = 2.5;
 const particlesPerExplosion = 375;
 // Upward launch speed range (px/s, negative = up). Higher = higher apex.
@@ -80,7 +81,7 @@ class FireworksScene extends Scene {
         });
     }
     launchRocket(x) {
-        const color = fireworkColors[(rand(0, fireworkColors.length - 1) + 0.5) | 0];
+        const color = fireworkColors[(random.next(0, fireworkColors.length - 1) + 0.5) | 0];
         const sprite = new Sprite(this.rocketTexture);
         sprite.setAnchor(0.5).setBlendMode(BlendModes.Additive).setTint(color).setScale(0.7);
         const position = new Vector(x, this.canvasSize.height);
@@ -88,7 +89,7 @@ class FireworksScene extends Scene {
         this.rockets.push({
             sprite,
             position,
-            velocityY: -rand(launchSpeedMin, launchSpeedMax),
+            velocityY: -random.next(launchSpeedMin, launchSpeedMax),
             color,
         });
         this.launchCount++;
@@ -105,7 +106,7 @@ class FireworksScene extends Scene {
     update(delta) {
         const dt = delta.seconds;
         if (this.autoLaunchTimer.expired) {
-            this.launchRocket(rand(80, this.canvasSize.width - 80));
+            this.launchRocket(random.next(80, this.canvasSize.width - 80));
             this.autoLaunchTimer.restart();
         }
         // Integrate rockets; detonate the instant a rocket's upward velocity

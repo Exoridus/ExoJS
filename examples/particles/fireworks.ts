@@ -2,12 +2,12 @@ import {
     Application,
     BlendModes,
     Color,
-    rand,
+    Random,
     Scene,
-    seconds,
     Size,
     Sprite,
     Texture,
+    Time,
     Timer,
     Vector,
 } from '@codexo/exojs';
@@ -35,7 +35,8 @@ const app = new Application({
     extensions: [particlesExtension],
 });
 
-const autoLaunchInterval = seconds(2.2);
+const random = new Random();
+const autoLaunchInterval = Time.fromSeconds(2.2);
 const tailDuration = 2.5;
 const particlesPerExplosion = 375;
 // Upward launch speed range (px/s, negative = up). Higher = higher apex.
@@ -126,7 +127,7 @@ class FireworksScene extends Scene {
     }
 
     private launchRocket(x: number): void {
-        const color = fireworkColors[(rand(0, fireworkColors.length - 1) + 0.5) | 0];
+        const color = fireworkColors[(random.next(0, fireworkColors.length - 1) + 0.5) | 0];
         const sprite = new Sprite(this.rocketTexture);
 
         sprite.setAnchor(0.5).setBlendMode(BlendModes.Additive).setTint(color).setScale(0.7);
@@ -138,7 +139,7 @@ class FireworksScene extends Scene {
         this.rockets.push({
             sprite,
             position,
-            velocityY: -rand(launchSpeedMin, launchSpeedMax),
+            velocityY: -random.next(launchSpeedMin, launchSpeedMax),
             color,
         });
 
@@ -160,7 +161,7 @@ class FireworksScene extends Scene {
         const dt = delta.seconds;
 
         if (this.autoLaunchTimer.expired) {
-            this.launchRocket(rand(80, this.canvasSize.width - 80));
+            this.launchRocket(random.next(80, this.canvasSize.width - 80));
             this.autoLaunchTimer.restart();
         }
 

@@ -1,5 +1,5 @@
 // Auto-generated from scene-lifecycle.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, seconds, Text, Timer } from '@codexo/exojs';
+import { Application, Color, Scene, Text, Time, Timer } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -24,7 +24,7 @@ class LifecycleScene extends Scene {
     init() {
         const { width, height } = this.app.canvas;
         this.events.push('init');
-        this.timer = new Timer(seconds(1), true);
+        this.timer = new Timer(Time.fromSeconds(1), true);
         this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
         this.text.setAnchor(0.5);
         this.text.setPosition(width / 2, height / 2);

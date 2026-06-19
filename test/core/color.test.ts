@@ -70,3 +70,23 @@ describe('Color — channel saturation', () => {
     expect(color.toRgba()).toBe(0xff0000ff);
   });
 });
+
+// toRgba() must preserve RGB at every alpha. The old `this._a && …` guard
+// collapsed any fully-transparent color to 0, so transparent red == transparent
+// black — which loses hue when alpha is animated 0 -> 1 or the packed value is
+// unpacked downstream.
+describe('Color — toRgba packs RGB at every alpha', () => {
+  test('a fully transparent color keeps its RGB channels', () => {
+    const transparentRed = new Color(255, 0, 0, 0);
+    const transparentBlack = new Color(0, 0, 0, 0);
+
+    expect(transparentRed.toRgba()).toBe(0x000000ff); // a=0, b=0, g=0, r=255
+    expect(transparentBlack.toRgba()).toBe(0x00000000);
+    expect(transparentRed.toRgba()).not.toBe(transparentBlack.toRgba());
+  });
+
+  test('alpha occupies the high byte', () => {
+    expect(new Color(0, 0, 0, 1).toRgba()).toBe(0xff000000);
+    expect(new Color(0, 0, 0, 0.5).toRgba()).toBe(0x7f000000); // (0.5*255 | 0) = 127 = 0x7f
+  });
+});

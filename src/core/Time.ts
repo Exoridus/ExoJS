@@ -152,6 +152,31 @@ export class Time implements Cloneable {
   public static readonly minutes: TimeInterval = 60000;
   public static readonly hours: TimeInterval = 3600000;
 
+  /** Current high-resolution monotonic time (`performance.now()`) as a {@link Time}. */
+  public static now(): Time {
+    return new Time(performance.now());
+  }
+
+  /** Construct a {@link Time} from a millisecond count. */
+  public static fromMilliseconds(value: number): Time {
+    return new Time(value, Time.milliseconds);
+  }
+
+  /** Construct a {@link Time} from a second count. */
+  public static fromSeconds(value: number): Time {
+    return new Time(value, Time.seconds);
+  }
+
+  /** Construct a {@link Time} from a minute count. */
+  public static fromMinutes(value: number): Time {
+    return new Time(value, Time.minutes);
+  }
+
+  /** Construct a {@link Time} from an hour count. */
+  public static fromHours(value: number): Time {
+    return new Time(value, Time.hours);
+  }
+
   public static readonly zero = new Time(0);
   public static readonly oneMillisecond = new Time(1);
   public static readonly oneSecond = new Time(1, Time.seconds);

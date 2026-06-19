@@ -1,7 +1,5 @@
-import { Random } from '#math/Random';
 import { Size } from '#math/Size';
 
-import { Time } from './Time';
 import type { TextureSource } from './types';
 
 interface CanvasSourceWithDisplaySize {
@@ -16,7 +14,6 @@ const codecNotSupportedPattern = /^no$/;
 let internalAudioElement: HTMLAudioElement | null = null;
 let internalCanvasElement: HTMLCanvasElement | null = null;
 let internalCanvasContext: CanvasRenderingContext2D | null = null;
-let internalRandom: Random | null = null;
 let supportsEventOptionsValue: boolean | null = null;
 
 const canUseDocument = (): boolean => typeof document !== 'undefined';
@@ -59,21 +56,6 @@ const getCanvasContext = (): CanvasRenderingContext2D => {
 
   return internalCanvasContext;
 };
-
-const getRandom = (): Random => {
-  if (internalRandom === null) {
-    internalRandom = new Random();
-  }
-
-  return internalRandom;
-};
-
-/**
- * Random number in the range `[min, max]` from the module-level shared
- * {@link Random} instance. Pass no arguments for `[0, 1)`. For deterministic
- * sequences create your own seeded `Random` instance instead.
- */
-export const rand = (min?: number, max?: number): number => getRandom().next(min, max);
 
 /** Empty function literal — useful as a default callback that does nothing. */
 export const noop = (): void => {
@@ -131,17 +113,8 @@ export const supportsEventOptions = (): boolean => {
   return supportsEventOptionsValue;
 };
 
-/** High-resolution monotonic clock reading in milliseconds. Wraps `performance.now()`. */
+/** High-resolution monotonic clock reading in milliseconds. Wraps `performance.now()`. @internal */
 export const getPreciseTime = (): number => performance.now();
-
-/** Construct a {@link Time} value from a millisecond count. */
-export const milliseconds = (value: number): Time => new Time(value, Time.milliseconds);
-/** Construct a {@link Time} value from a second count. */
-export const seconds = (value: number): Time => new Time(value, Time.seconds);
-/** Construct a {@link Time} value from a minute count. */
-export const minutes = (value: number): Time => new Time(value, Time.minutes);
-/** Construct a {@link Time} value from an hour count. */
-export const hours = (value: number): Time => new Time(value, Time.hours);
 
 /**
  * Trigger a device vibration pattern via the

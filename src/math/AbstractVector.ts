@@ -153,12 +153,14 @@ export abstract class AbstractVector {
    * in place and returns `this` for chaining.
    */
   public transformInverse(matrix: Matrix): this {
-    const id = 1 / (matrix.a * matrix.d + matrix.c * -matrix.b);
+    // Exact inverse of `transform()`: recover the local point from the
+    // row-major forward map `world = [[a,b],[c,d]]·local + (x,y)`. Same formula
+    // SceneNode.contains uses for oriented-box picking.
+    const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
+    const deltaX = this.x - matrix.x;
+    const deltaY = this.y - matrix.y;
 
-    return this.set(
-      this.x * matrix.d * id + this.y * -matrix.c * id + (matrix.y * matrix.c - matrix.x * matrix.d) * id,
-      this.y * matrix.a * id + this.x * -matrix.b * id + (-matrix.y * matrix.a + matrix.x * matrix.b) * id,
-    );
+    return this.set((matrix.d * deltaX - matrix.b * deltaY) / determinant, (matrix.a * deltaY - matrix.c * deltaX) / determinant);
   }
 
   /**
