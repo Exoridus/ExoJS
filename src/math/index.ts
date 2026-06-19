@@ -11,7 +11,7 @@ export * from './Line';
 export * from './LineLike';
 export * from './Matrix';
 export * from './ObservableSize';
-export * from './ObservableVector';
+export { ObservableVector } from './ObservableVector';
 export * from './PointLike';
 export * from './PolarVector';
 export * from './Polygon';

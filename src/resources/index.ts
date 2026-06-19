@@ -1,14 +1,15 @@
 export * from './AbstractAssetFactory';
-export * from './Asset';
+export { Asset } from './Asset';
 export * from './AssetDefinitions';
 export * from './AssetFactory';
 export * from './AssetManifest';
-export * from './Assets';
+export { Assets } from './Assets';
+export type { InferAssetsEntries } from './Assets';
 export * from './CacheFirstStrategy';
 export * from './CacheStore';
 export * from './CacheStrategy';
 export * from './Database';
-export * from './FactoryRegistry';
+export type { AssetConstructor } from './FactoryRegistry';
 export * from './IndexedDbDatabase';
 export * from './IndexedDbStore';
 export * from './JsonStore';
