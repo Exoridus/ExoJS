@@ -127,7 +127,7 @@ export interface PrepareResult {
 }
 
 /**
- * End-to-end prepare: packs the four tarballs into a clean staging dir, hashes
+ * End-to-end prepare: packs the six tarballs into a clean staging dir, hashes
  * them, and writes `release-manifest.json` + `checksums.sha256`. The caller is
  * responsible for having built the packages first (build-once).
  *
