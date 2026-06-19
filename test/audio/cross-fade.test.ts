@@ -55,6 +55,22 @@ describe('crossFade', () => {
     await promise;
   });
 
+  test('stopAfter: false fades `from` out without stopping it', async () => {
+    vi.useFakeTimers();
+
+    const from = makeMockVoice();
+    const to = makeMockVoice();
+
+    const promise = crossFade(from as Voice, to as Voice, 400, { stopAfter: false });
+
+    expect(from.fade).toHaveBeenCalledWith(0, 400);
+    expect(from.stop).not.toHaveBeenCalled();
+    expect(to.fade).toHaveBeenCalledWith(1, 400);
+
+    vi.advanceTimersByTime(400);
+    await promise;
+  });
+
   test('returns a Promise that resolves after durationMs', async () => {
     vi.useFakeTimers();
 
