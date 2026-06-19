@@ -73,5 +73,4 @@ export type Assets<M extends Record<string, AssetInput>> = AssetsImpl<M> & Infer
 
 type AssetsConstructorFn = new <M extends Record<string, AssetInput>>(definition: M) => Assets<M>;
 
- 
 export const Assets = AssetsImpl as unknown as AssetsConstructorFn;
