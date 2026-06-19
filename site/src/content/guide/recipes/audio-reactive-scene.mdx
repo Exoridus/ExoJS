@@ -23,7 +23,7 @@ One analyser for frequency data, one beat detector for rhythm, one particle syst
 
 ```js
 import {
-    Application, AudioAnalyser, BeatDetector, Music,
+    Application, AudioAnalyser, AudioStream, BeatDetector,
     Scene, View, Texture, Vector, Color, Ease,
 } from '@codexo/exojs';
 import {
@@ -35,16 +35,16 @@ const app = new Application({ extensions: [particlesExtension] });
 
 class AudioReactiveScene extends Scene {
     async load(loader) {
-        await loader.load(Music, { track: 'audio/track.ogg' });
+        await loader.load(AudioStream, { track: 'audio/track.ogg' });
         await loader.load(Texture, { particle: 'image/particle.png' });
     }
 
     init(loader) {
-        const music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
+        this.app.audio.play(loader.get(AudioStream, 'track'), { loop: true, volume: 0.8 });
 
-        // Analysis
-        this.analyser = new AudioAnalyser({ source: music, fftSize: 512 });
-        this.detector = new BeatDetector({ source: music });
+        // Analysis — both taps read the music bus the track plays through.
+        this.analyser = new AudioAnalyser({ source: this.app.audio.music, fftSize: 512 });
+        this.detector = new BeatDetector({ source: this.app.audio.music });
         this._bg = new Color(20, 24, 40, 1);
 
         // Particles — burst on beat

@@ -7,7 +7,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Audio effects
 
-Every bus in ExoJS carries a filter chain — an ordered list of [`AudioFilter`](/ExoJS/en/api/audio-filter/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every `Music` instance routing through the music bus. You can also create custom buses for isolated effect chains.
+Every bus in ExoJS carries a filter chain — an ordered list of [`AudioFilter`](/ExoJS/en/api/audio-filter/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every voice routing through the music bus. You can also create custom buses for isolated effect chains.
 
 ## The filter chain
 
@@ -156,8 +156,8 @@ ambientBus.addFilter(new ReverbFilter({ wet: 0.6, durationSeconds: 3 }));
 ambientBus.addFilter(new LowpassFilter({ frequency: 800 }));
 
 const wind = loader.get(Sound, 'wind');
-wind.bus = ambientBus; // now routes through reverb + lowpass
-wind.setLoop(true).play();
+// Route this play onto the ambient bus — reverb + lowpass applied.
+this.app.audio.play(wind, { bus: ambientBus, loop: true });
 ```
 
 `registerBus` stores the bus by name, retrievable later via `app.audio.getBus('ambient')`. `unregisterBus` removes and destroys a custom bus. The three built-in buses (`master`, `music`, `sound`) cannot be unregistered.

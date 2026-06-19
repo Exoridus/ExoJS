@@ -9,51 +9,56 @@ import Callout from '../../../components/Callout.astro';
 
 # Audio basics
 
-ExoJS audio is built on two media types: [`Sound`](/ExoJS/en/api/sound/) for short, pooled, decoded-buffer playback and [`Music`](/ExoJS/en/api/music/) for long, streamed, seekable tracks. Both extend `AbstractMedia` and share the same volume, loop, playback rate, mute, bus, and fade controls. The difference is how the browser handles the underlying data.
+ExoJS audio splits cleanly into two halves: **assets** are pure data descriptors — [`Sound`](/ExoJS/en/api/sound/) for short, pooled, decoded-buffer clips and [`AudioStream`](/ExoJS/en/api/audio-stream/) for long, streamed, seekable tracks — and a **`Voice`** is the live, controllable playback instance you get back when you play one. You never call playback methods on the asset itself. Instead you call `app.audio.play(asset, options)`, which returns a `Voice`, and all live control (volume, fade, seek, loop, rate, pause) lives on that `Voice`.
 
-## Sound vs. Music
+## Sound vs. AudioStream
 
-| | Sound | Music |
+| | Sound | AudioStream |
 |---|---|---|
 | Backing | Decoded `AudioBuffer` | `HTMLAudioElement` (streamed) |
-| Best for | Short SFX, UI sounds, footstep pools | Background tracks, ambient loops, long audio |
-| Seekable | No — `getTime()` always returns 0 | Yes — `setTime()` seeks to a position |
-| Pooled | Yes — `poolSize` controls concurrent sources | No — one source, one stream |
+| Best for | Short SFX, UI sounds, footstep pools | Background tracks, ambient loops, radio, long audio |
+| Seekable voice | No | Yes — `voice.seek(t)` / `voice.time` |
+| Concurrent voices | Yes — `poolSize` controls the pool | No — one playhead, one active voice |
 | Default bus | `app.audio.sound` | `app.audio.music` |
 
-Use `Sound` when you need many overlapping instances of the same short clip. Use `Music` for long, seekable content that you want the browser to stream from disk rather than decode entirely into memory.
+Use `Sound` when you need many overlapping instances of the same short clip. Use `AudioStream` for long, seekable content that you want the browser to stream rather than decode entirely into memory. (A third descriptor, [`AudioGenerator`](/ExoJS/en/api/audio-generator/), synthesises tones from an oscillator — covered in the [Audio effects](/ExoJS/en/guide/audio/audio-effects/) chapter.)
 
 ## Loading and playing
 
-Both types are loaded through the `Loader`, like textures:
+Both types are loaded through the `Loader`, like textures, then played through `app.audio`:
 
 ```js
-import { Music, Scene, Sound } from '@codexo/exojs';
+import { AudioStream, Scene, Sound } from '@codexo/exojs';
 
 class AudioScene extends Scene {
     async load(loader) {
         await loader.load(Sound, { laser: 'audio/laser.ogg' });
-        await loader.load(Music, { theme: 'audio/theme.ogg' });
+        await loader.load(AudioStream, { theme: 'audio/theme.ogg' });
     }
 
     init(loader) {
         this.laser = loader.get(Sound, 'laser');
-        this.theme = loader.get(Music, 'theme');
+        this.theme = loader.get(AudioStream, 'theme');
 
-        this.theme.setLoop(true).setVolume(0.6).play();
+        // Playing returns a live Voice — keep it to control this instance.
+        this.themeVoice = this.app.audio.play(this.theme, { loop: true, volume: 0.6 });
     }
 }
 ```
 
-A `Sound` instance is a single object that pools multiple underlying `AudioBufferSourceNode` instances internally. Call `play()` as many times as you need — the pool handles concurrent voices. A `Music` instance has one `HTMLAudioElement`; `play()` and `pause()` toggle that single stream.
+A `Sound` is a data descriptor that holds a decoded buffer; each `app.audio.play(sound)` creates an independent pooled `Voice`, so overlapping concurrent playback is just multiple voices. An `AudioStream` has one `HTMLAudioElement` and therefore one playhead — playing it again stops the previous voice and returns a fresh one.
 
 ## AudioContext auto-unlock
 
 Browsers require a user gesture before Web Audio starts. ExoJS handles this automatically: the `AudioContext` is created on first use and resumed (un-suspended) on the first `mousedown`, `touchstart`, or `touchend` event observed on `document`.
 
-For `Sound`, `play()` requests queue until the context is ready. `Music` uses `HTMLAudioElement` playback and is still subject to browser autoplay policy, so starting music from a user gesture remains the safest pattern.
+`app.audio.play(asset, ...)` always returns a `Voice` immediately, even while audio is still locked. Stream and sound playback is deferred and starts automatically on that first gesture, so you can call `play()` in `init` and keep the returned voice — there is no separate "start on click" step beyond the gesture the browser already requires. Check `app.audio.locked` to know whether the gesture has happened yet; `app.audio.onUnlock` fires once when it does.
 
-If you need to know when the context is ready, import `isAudioContextReady` from `@codexo/exojs` and poll it.
+```js
+if (this.app.audio.locked) {
+    // still waiting for the first user gesture; the queued voice will auto-start
+}
+```
 
 <Callout type="browser" title="Audio needs a user gesture">
 Browsers won't start audio until the user interacts with the page. Trigger the first sound or music from a click, tap, or key press — the embedded examples below ask for a click for exactly this reason.
@@ -61,50 +66,67 @@ Browsers won't start audio until the user interacts with the page. Trigger the f
 
 ## Playback controls
 
-All media share the same control surface:
+Per-play overrides are passed to `play()`; everything afterwards is controlled on the returned `Voice`:
 
 ```js
-sound.setVolume(0.8);        // 0..2, default 1
-sound.setLoop(true);         // loop the clip
-sound.setPlaybackRate(1.5);  // 0.1..20, 2 = double speed / one octave up
-sound.setMuted(true);        // mute without forgetting volume
+// Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted)
+const voice = this.app.audio.play(sound, { volume: 0.5, loop: true, playbackRate: 1.2 });
 
-sound.play();
-sound.pause();
-sound.stop();                // stop + reset time
-sound.toggle();              // play if paused, pause if playing
+voice.volume = 0.8;     // live volume, range [0, 1]
+voice.fade(0.2, 500);   // ramp volume to 0.2 over 500ms (no stop)
+voice.stop();           // stop now and release the voice
+voice.stop(800);        // fade out over 800ms, then stop
 ```
 
-All setters return `this` for chaining. `play()` accepts optional per-call overrides:
+Every `Voice` carries `volume` (get/set), `fade(to, ms)`, `stop(fadeMs?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports — narrow with a cast or an `'x' in voice` check:
 
 ```js
-sound.play({ volume: 0.5, loop: true, playbackRate: 1.2 });
+import { Pausable, Seekable } from '@codexo/exojs';
+
+// A SoundVoice is Seekable + Loopable + RatePitched + Spatializable.
+// An AudioStreamVoice adds Pausable on top of those.
+const streamVoice = this.app.audio.play(stream, { loop: true });
+
+streamVoice.seek(10);        // Seekable: jump to 10s
+streamVoice.time;            // current position in seconds
+streamVoice.duration;        // total length in seconds
+streamVoice.loop = false;    // Loopable
+streamVoice.playbackRate = 1.5; // RatePitched: 0.1..20
+streamVoice.detune = 1200;   // RatePitched: cents (one octave up)
+streamVoice.pause();         // Pausable (streams only)
+streamVoice.resume();
+streamVoice.paused;          // boolean
 ```
 
-`Sound.play()` also accepts a `replace` flag (`{ replace: true }`) that stops all other pooled sources before playing this one — useful for "one voice at a time" scenarios like voice-over lines.
+For "one voice at a time" scenarios like voice-over lines, `Sound`'s play options also accept a `replace` flag (`app.audio.play(sound, { replace: true })`) that stops all other pooled voices of that sound before starting this one.
 
 ## Volume and fading
 
-The engine exposes linear gain (0..2, where 1 is "as authored"). dB conversion is up to you — the raw gain value is what the `GainNode` receives.
+Voice volume is linear gain in the range `[0, 1]`, where 1 is "as authored". The bus the voice routes through can amplify beyond that (bus volume is 0..2), so a quiet voice on a hot bus can still be loud. dB conversion is up to you.
 
-`fadeIn(ms)` and `fadeOut(ms)` ramp the output gain over a duration in milliseconds:
+`fade(to, ms)` ramps a voice's volume without stopping it; `stop(fadeMs)` ramps to zero and then releases the voice:
 
 ```js
-// Fade out over 800ms, then pause
-music.fadeOut(800, { stopAfter: true });
+// Fade out over 800ms, then stop
+voice.stop(800);
 
-// Fade in over 500ms
-music.fadeIn(500);
+// Fade up to 0.7 over 500ms, keep playing
+voice.fade(0.7, 500);
 ```
 
-The `crossFade` utility fades from one media instance to another in parallel:
+The `crossFade` utility fades one playing voice down while fading another up, in parallel:
 
 ```js no-check
 import { crossFade } from '@codexo/exojs';
 
-await crossFade(this.trackA, this.trackB, 2000);
-// trackA is now silent (and paused by default), trackB is at full volume
+const current = this.app.audio.play(this.trackA, { volume: 0.7 });
+const next = this.app.audio.play(this.trackB, { volume: 0 });
+
+await crossFade(current, next, 2000);
+// next is at full volume; current has faded out and stopped (stopAfter defaults to true)
 ```
+
+Pass `{ toVolume }` to fade the incoming voice to something other than full, and `{ stopAfter: false }` to keep the outgoing voice alive at volume 0 — the right choice when you crossfade back and forth between two looping tracks.
 
 ## The sound pool
 
@@ -121,45 +143,46 @@ const gunshot = loader.get(Sound, 'gunshot');
 gunshot.poolSize = 24;
 
 // ... hold spacebar to fire rapidly ...
-gunshot.play(); // next oldest gets evicted when pool is full
+this.app.audio.play(gunshot); // oldest voice gets evicted when the pool is full
 ```
 
-Pitch variation for a richer sound is one line — randomise `playbackRate`:
+Pitch variation for a richer sound is one line — randomise `playbackRate` per play:
 
 ```js
 const cents = Math.random() * 300 - 150; // -150 to +150 cents
-sound.play({ playbackRate: Math.pow(2, cents / 1200) });
+this.app.audio.play(sound, { playbackRate: Math.pow(2, cents / 1200) });
 ```
 
 ## Buses
 
-The audio manager exposes three built-in buses: `app.audio.master`, `app.audio.music`, and `app.audio.sound`. Each media instance routes to its default bus (`music` for Music, `sound` for Sound). Buses form a tree — `music` and `sound` are children of `master`, and `master` connects to the audio destination.
+The audio manager exposes three built-in buses: `app.audio.master`, `app.audio.music`, and `app.audio.sound`. Each play routes to a default bus (`music` for `AudioStream`, `sound` for `Sound` and `AudioGenerator`). Buses form a tree — `music` and `sound` are children of `master`, and `master` connects to the audio destination.
 
-Set a media instance's bus explicitly:
+Route a play through a specific bus with the `bus` option, or reassign a live voice's `bus`:
 
 ```js
 import { AudioBus } from '@codexo/exojs';
 
 const voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
 app.audio.registerBus(voiceBus);
-sound.bus = voiceBus;
+
+// Per-play:
+const line = this.app.audio.play(sound, { bus: voiceBus });
+// Or reroute the live voice:
+line.bus = app.audio.master;
 ```
 
-Buses have independent `volume`, `muted`, and `pan` controls, plus a filter chain. The [Audio effects](/ExoJS/en/guide/audio/audio-effects/) chapter covers bus filters in detail.
+Buses have independent `volume` (0..2), `muted`, and `pan` controls, plus a filter chain. The [Audio effects](/ExoJS/en/guide/audio/audio-effects/) chapter covers bus filters in detail.
 
 ## Audio sprites
 
-A `Sound` can define named sub-regions ("sprites") for one-shot playback from specific offsets:
+A `Sound` can define named sub-regions ("sprites") on the descriptor — useful when you bake several effects into a single file and want to address them by name rather than by offset:
 
 ```js
 sound.defineSprite('impact', { start: 0.5, end: 0.8 });
 sound.defineSprite('whoosh', { start: 1.2, end: 1.6 });
-
-sound.playSprite('impact');
-sound.playSprite('whoosh', { volume: 0.7 });
 ```
 
-This is useful when you bake multiple sound effects into a single file and address them by name rather than by offset.
+Sprites can also be declared up front via the `sprites` constructor option. They are part of the `Sound` descriptor's data; clip ranges are validated against the buffer duration when defined.
 
 ## Examples
 
@@ -171,11 +194,11 @@ Click the canvas to play a loaded `Sound` — the minimal audio example.
 <a id="crossfade-tracks"></a>
 <ExamplePreview chapter="audio-basics" slug="crossfade-tracks" />
 
-Two looping music tracks crossfading back and forth with `crossFade()`.
+Two looping `AudioStream` tracks crossfading back and forth with `crossFade()`.
 
 <TryIt
   examples={['audio-basics/play-sound', 'audio-basics/crossfade-tracks']}
-  api={['sound', 'music', 'audio-manager']}
+  api={['sound', 'audio-stream', 'audio-manager']}
 />
 
 ## Where to go next
