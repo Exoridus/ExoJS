@@ -2,10 +2,14 @@ import { clamp } from '#math/utils';
 
 import type { Cloneable } from './types';
 
+/** Clamp a value into the 0..255 integer channel range (saturating, not wrapping). */
+const toChannel = (value: number): number => clamp(value, 0, 255) | 0;
+
 /**
  * 32-bit RGBA color value with channel-wise accessors. Red, green, and blue
  * are integers in 0..255; alpha is a float in 0..1. Out-of-range values are
- * clipped on assignment (RGB via bitwise mask, alpha via `clamp`).
+ * saturated on assignment (RGB clamped to 0..255 and truncated to an integer,
+ * alpha clamped to 0..1) — values outside the range no longer wrap around.
  *
  * The class predefines every CSS named color as a static readonly instance
  * (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are
@@ -25,9 +29,9 @@ export class Color implements Cloneable {
   private _array: Float32Array | null = null;
 
   public constructor(r = 0, g = 0, b = 0, a = 1) {
-    this._r = r & 255;
-    this._g = g & 255;
-    this._b = b & 255;
+    this._r = toChannel(r);
+    this._g = toChannel(g);
+    this._b = toChannel(b);
     this._a = clamp(a, 0, 1);
   }
 
@@ -36,7 +40,7 @@ export class Color implements Cloneable {
   }
 
   public set r(red: number) {
-    this._r = red & 255;
+    this._r = toChannel(red);
     this._rgba = null;
   }
 
@@ -45,7 +49,7 @@ export class Color implements Cloneable {
   }
 
   public set g(green: number) {
-    this._g = green & 255;
+    this._g = toChannel(green);
     this._rgba = null;
   }
 
@@ -54,7 +58,7 @@ export class Color implements Cloneable {
   }
 
   public set b(blue: number) {
-    this._b = blue & 255;
+    this._b = toChannel(blue);
     this._rgba = null;
   }
 
@@ -73,9 +77,9 @@ export class Color implements Cloneable {
    * to 0..255; alpha is clamped to 0..1.
    */
   public set(r: number = this._r, g: number = this._g, b: number = this._b, a: number = this._a): this {
-    this._r = r & 255;
-    this._g = g & 255;
-    this._b = b & 255;
+    this._r = toChannel(r);
+    this._g = toChannel(g);
+    this._b = toChannel(b);
     this._a = clamp(a, 0, 1);
 
     this._rgba = null;
