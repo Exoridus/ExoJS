@@ -1,6 +1,6 @@
 import { Signal } from '#core/Signal';
+import { Time } from '#core/Time';
 import { Timer } from '#core/Timer';
-import { milliseconds } from '#core/utils';
 
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButtonChannel } from './GamepadButton';
@@ -67,7 +67,7 @@ export class InputBinding {
 
   public constructor(channels: readonly number[], options: InputBindingOptions = {}, detacher: InternalChannelDetacher | null = null) {
     this.channels = channels;
-    this._triggerTimer = new Timer(milliseconds(options.threshold ?? InputBinding.defaultTriggerThreshold));
+    this._triggerTimer = new Timer(Time.fromMilliseconds(options.threshold ?? InputBinding.defaultTriggerThreshold));
     this._detacher = detacher;
   }
 

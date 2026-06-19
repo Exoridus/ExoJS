@@ -15,4 +15,3 @@ export * from './SystemRegistry';
 export * from './Time';
 export * from './Timer';
 export * from './types';
-export * from './utils';

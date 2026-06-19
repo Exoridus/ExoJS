@@ -1,4 +1,4 @@
-import { Application, Color, Scene, seconds, Signal, Text, Timer } from '@codexo/exojs';
+import { Application, Color, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -28,7 +28,7 @@ class SignalBusInspectorScene extends Scene {
         };
         this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 28 });
         this.text.setPosition(40, 70);
-        this.tick = new Timer(seconds(1), true);
+        this.tick = new Timer(Time.fromSeconds(1), true);
         this.listenerA = () => undefined;
         this.listenerB = () => undefined;
         this.signals.spawn.add(this.listenerA);
