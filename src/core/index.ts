@@ -10,6 +10,7 @@ export * from './Scene';
 export * from './SceneManager';
 export * from './SceneNode';
 export * from './Signal';
+export * from './System';
 export * from './Time';
 export * from './Timer';
 export * from './types';

@@ -242,6 +242,11 @@ export class SceneManager {
           `[ExoJS] Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.`,
         );
       }
+
+      // Tick the scene's systems (e.g. a physics world) after its update() and
+      // before the draw phase. Covered (modal/opaque) scenes are absent from
+      // _updateScratch, so their systems pause automatically.
+      scene._tickSystems(delta);
     }
 
     for (const scene of this._drawScratch) {

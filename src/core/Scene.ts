@@ -7,6 +7,7 @@ import type { Loader } from '#resources/Loader';
 
 import type { Application } from './Application';
 import { DisposalScope } from './DisposalScope';
+import type { System } from './System';
 import type { Time } from './Time';
 import type { Destroyable } from './types';
 
@@ -83,6 +84,127 @@ class SceneTweens implements Destroyable {
 }
 
 /**
+ * Scene-bound system registry. Systems added via {@link Scene.systems} are
+ * ticked once per frame after {@link Scene.update} (ascending `order`) and
+ * destroyed with the scene. See {@link System}.
+ *
+ * Structural mutations made from inside a system's `update()` (a system adding
+ * or removing another, or itself) are deferred until the tick completes.
+ */
+class SceneSystems implements Destroyable {
+  private readonly _systems: System[] = [];
+  private readonly _set = new Set<System>();
+  private readonly _pending: Array<{ add: boolean; system: System }> = [];
+  private _ticking = false;
+  private _sorted = true;
+
+  /** Add `system`; returns it for fluent capture. Ticks from the next frame. */
+  public add<T extends System>(system: T): T {
+    if (this._ticking) {
+      this._pending.push({ add: true, system });
+    } else {
+      this._insert(system);
+    }
+
+    return system;
+  }
+
+  /** Remove `system` without destroying it. Returns `true` if it was registered. */
+  public remove(system: System): boolean {
+    if (this._ticking) {
+      if (!this._set.has(system)) {
+        return false;
+      }
+
+      this._pending.push({ add: false, system });
+
+      return true;
+    }
+
+    return this._delete(system);
+  }
+
+  /** Whether `system` is registered. */
+  public has(system: System): boolean {
+    return this._set.has(system);
+  }
+
+  /** Number of registered systems. */
+  public get size(): number {
+    return this._set.size;
+  }
+
+  /** @internal — ticked by {@link SceneManager} after `Scene.update`. */
+  public _tick(delta: Time): void {
+    if (this._systems.length === 0) {
+      return;
+    }
+
+    if (!this._sorted) {
+      this._systems.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      this._sorted = true;
+    }
+
+    this._ticking = true;
+
+    for (let index = 0; index < this._systems.length; index++) {
+      this._systems[index].update(delta);
+    }
+
+    this._ticking = false;
+    this._drainPending();
+  }
+
+  public destroy(): void {
+    for (let index = this._systems.length - 1; index >= 0; index--) {
+      this._systems[index].destroy();
+    }
+
+    this._systems.length = 0;
+    this._set.clear();
+    this._pending.length = 0;
+  }
+
+  private _insert(system: System): void {
+    if (!this._set.has(system)) {
+      this._set.add(system);
+      this._systems.push(system);
+      this._sorted = false;
+    }
+  }
+
+  private _delete(system: System): boolean {
+    if (!this._set.delete(system)) {
+      return false;
+    }
+
+    const index = this._systems.indexOf(system);
+
+    if (index !== -1) {
+      this._systems.splice(index, 1);
+    }
+
+    return true;
+  }
+
+  private _drainPending(): void {
+    if (this._pending.length === 0) {
+      return;
+    }
+
+    for (const { add, system } of this._pending) {
+      if (add) {
+        this._insert(system);
+      } else {
+        this._delete(system);
+      }
+    }
+
+    this._pending.length = 0;
+  }
+}
+
+/**
  * How a {@link Scene} composes with scenes already on the stack.
  * - `'overlay'`: render on top, scenes below also render and update.
  * - `'modal'`: render on top, scenes below render but do not update.
@@ -120,6 +242,7 @@ export class Scene {
   protected _stackMode: SceneStackMode = 'overlay';
   private _inputs: SceneInputs | null = null;
   private _tweens: SceneTweens | null = null;
+  private _systems: SceneSystems | null = null;
   private readonly _disposal = new DisposalScope();
 
   public get app(): Application | null {
@@ -193,6 +316,26 @@ export class Scene {
    */
   public track<T extends Destroyable>(item: T): T {
     return this._disposal.track(item);
+  }
+
+  /**
+   * Scene-bound system registry. Add tickable {@link System}s (e.g. a physics
+   * world) via `this.systems.add(world)`; each is updated once per frame after
+   * {@link Scene.update} (ascending `order`) and destroyed with the scene — no
+   * manual `step()` / `destroy()` wiring. Available before the scene is
+   * attached to an Application (systems tick only while the scene is active).
+   */
+  public get systems(): SceneSystems {
+    if (this._systems === null) {
+      this._systems = this._disposal.track(new SceneSystems());
+    }
+
+    return this._systems;
+  }
+
+  /** @internal — called by {@link SceneManager} each frame after `update`. */
+  public _tickSystems(delta: Time): void {
+    this._systems?._tick(delta);
   }
 
   public get stackMode(): SceneStackMode {
@@ -285,6 +428,7 @@ export class Scene {
     this._disposal.destroy();
     this._inputs = null;
     this._tweens = null;
+    this._systems = null;
     this._root.destroy();
     this._app = null;
   }
