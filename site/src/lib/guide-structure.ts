@@ -440,7 +440,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 slug: 'audio-basics',
                 level: 'intro',
                 learningGoals: [
-                    'load and play Sound and Music',
+                    'load and play Sound and AudioStream',
                     'control volume, looping, and fades',
                     'handle the browser autoplay gesture',
                 ],
@@ -453,7 +453,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'audio-basics/random-pitch-pool',
                     'audio-basics/audio-buses',
                 ],
-                apiLinks: ['sound', 'music', 'audio-manager'],
+                apiLinks: ['sound', 'audio-stream', 'audio-manager'],
             },
             {
                 slug: 'spatial-audio',

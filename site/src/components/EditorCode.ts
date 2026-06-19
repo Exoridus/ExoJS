@@ -129,7 +129,7 @@ function resolveAssetPaths(tokenName: string, manifest: AssetManifest): string[]
         case 'FontFace':
             category = 'font';
             break;
-        case 'Music':
+        case 'AudioStream':
         case 'Sound':
             category = 'audio';
             break;
