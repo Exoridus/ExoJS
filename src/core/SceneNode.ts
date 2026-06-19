@@ -14,7 +14,7 @@ import { Flags } from '#math/Flags';
 import { Interval } from '#math/Interval';
 import type { Line } from '#math/Line';
 import { Matrix } from '#math/Matrix';
-import { ObservableVector } from '#math/ObservableVector';
+import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
 import { Rectangle } from '#math/Rectangle';
 import { degreesToRadians, trimRotation } from '#math/utils';
 import type { Vector } from '#math/Vector';
@@ -46,6 +46,16 @@ enum SceneNodeTransformFlags {
   BoundsRect = 1 << 9, // own _bounds is stale
 }
 
+// Internal: which reactive vector fired a change, so the single
+// `_onObservableChange` handler can route to the right dirty path without each
+// vector carrying a bound closure (4 fewer allocations per node).
+enum SceneNodeVectorChannel {
+  Position,
+  Scale,
+  Origin,
+  Anchor,
+}
+
 /**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
  * rotation, scale, skew, origin, and a 2-component {@link Vector} `anchor`
@@ -71,7 +81,7 @@ enum SceneNodeTransformFlags {
  * Subclasses: {@link Container} (carries children), {@link RenderNode}
  * (carries draw payloads).
  */
-export class SceneNode implements Collidable {
+export class SceneNode implements Collidable, ObservableVectorOwner {
   public readonly collisionType: CollisionType = CollisionType.SceneNode;
 
   public readonly flags: Flags<SceneNodeTransformFlags> = new Flags<SceneNodeTransformFlags>(
@@ -80,9 +90,9 @@ export class SceneNode implements Collidable {
 
   protected _bounds = new Bounds();
   protected _transform: Matrix = new Matrix();
-  protected _position: ObservableVector = new ObservableVector(this._setPositionDirty.bind(this), 0, 0);
-  protected _scale: ObservableVector = new ObservableVector(this._setScalingDirty.bind(this), 1, 1);
-  protected _origin: ObservableVector = new ObservableVector(this._setOriginDirty.bind(this), 0, 0);
+  protected _position: ObservableVector = new ObservableVector(this, SceneNodeVectorChannel.Position, 0, 0);
+  protected _scale: ObservableVector = new ObservableVector(this, SceneNodeVectorChannel.Scale, 1, 1);
+  protected _origin: ObservableVector = new ObservableVector(this, SceneNodeVectorChannel.Origin, 0, 0);
   protected _rotation = 0;
   protected _skewX = 0;
   protected _skewY = 0;
@@ -95,7 +105,7 @@ export class SceneNode implements Collidable {
   private _visible = true;
   private _globalTransform = new Matrix();
   private _localBounds = new Rectangle();
-  private _anchor = new ObservableVector(this._updateOrigin.bind(this), 0, 0);
+  private _anchor = new ObservableVector(this, SceneNodeVectorChannel.Anchor, 0, 0);
   private _parentNode: Container | null = null;
   private _zIndex = 0;
   private _cullable = true;
@@ -492,6 +502,30 @@ export class SceneNode implements Collidable {
    */
   public _setStage(stage: Stage | null): void {
     this._stage = stage;
+  }
+
+  /**
+   * Routes a change from one of this node's reactive {@link ObservableVector}
+   * components (position/scale/origin/anchor) to the matching dirty path. The
+   * vectors carry only a numeric channel, so this single handler replaces the
+   * four bound closures they used to allocate per node.
+   * @internal
+   */
+  public _onObservableChange(channel: number): void {
+    switch (channel) {
+      case SceneNodeVectorChannel.Position:
+        this._setPositionDirty();
+        break;
+      case SceneNodeVectorChannel.Scale:
+        this._setScalingDirty();
+        break;
+      case SceneNodeVectorChannel.Origin:
+        this._setOriginDirty();
+        break;
+      case SceneNodeVectorChannel.Anchor:
+        this._updateOrigin();
+        break;
+    }
   }
 
   /** Mark own + all descendants' GlobalTransform + Bounds dirty. */

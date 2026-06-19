@@ -1,23 +1,23 @@
 ---
 title: "Application"
-description: "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, input + interaction managers, asset loader, tween manager, shared audio singleton, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations."
+description: "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the app system registry (input, interaction, audio, tweens, rendering), asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations."
 symbol: "Application"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 39
+memberCount: 40
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/core/Application.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L214"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L215"
 ---
 ## Import
 
 `import { Application } from '@codexo/exojs'`
 
 Top-level engine instance. Owns the canvas, render backend, scene-stack
-controller, input + interaction managers, asset loader, tween manager,
-shared audio singleton, and the per-frame loop.
+controller, the app system registry (input, interaction, audio, tweens,
+rendering), asset loader, and the per-frame loop.
 
 Lifecycle: construct with options → `await app.start(scene)` → engine
 runs the request-animation-frame loop until `app.stop()` or
@@ -62,6 +62,7 @@ background-active simulations.
 - `pauseOnHidden: boolean`
 - `random: Random`
 - `scene: SceneManager`
+- `systems: SystemRegistry`
 - `tweens: TweenManager`
 - `activeTime: Time`
 - `audio: AudioManager`
@@ -90,4 +91,4 @@ background-active simulations.
 
 ## Source
 
-[src/core/Application.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L214)
+[src/core/Application.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L215)

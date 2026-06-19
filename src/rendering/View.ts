@@ -3,7 +3,7 @@ import { SceneNode } from '#core/SceneNode';
 import { Flags } from '#math/Flags';
 import { Matrix } from '#math/Matrix';
 import { ObservableSize } from '#math/ObservableSize';
-import { ObservableVector } from '#math/ObservableVector';
+import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
 import type { PointLike } from '#math/PointLike';
 import { Rectangle } from '#math/Rectangle';
 import { clamp, degreesToRadians, trimRotation } from '#math/utils';
@@ -56,7 +56,7 @@ export interface ViewShakeOptions {
  * shake animations.
  * @stable
  */
-export class View {
+export class View implements ObservableVectorOwner {
   private readonly _center: ObservableVector;
   private readonly _size: ObservableSize;
   private readonly _viewport: Rectangle = new Rectangle(0, 0, 1, 1);
@@ -86,11 +86,21 @@ export class View {
   private _updateId = 0;
 
   public constructor(centerX: number, centerY: number, width: number, height: number) {
-    this._center = new ObservableVector(this._setPositionDirty.bind(this), centerX, centerY);
+    this._center = new ObservableVector(this, 0, centerX, centerY);
     this._size = new ObservableSize(this._setScalingDirty.bind(this), width, height);
     this._zoomBaseWidth = width;
     this._zoomBaseHeight = height;
     this._flags.push(ViewFlags.Transform, ViewFlags.TransformInverse, ViewFlags.BoundingBox);
+  }
+
+  /**
+   * Receives change notifications from the reactive `_center` vector and marks
+   * the view transform stale. (`_size` is an {@link ObservableSize}, which still
+   * carries its own callback.)
+   * @internal
+   */
+  public _onObservableChange(): void {
+    this._setPositionDirty();
   }
 
   public get center(): ObservableVector {

@@ -1,4 +1,5 @@
 import { Signal } from '#core/Signal';
+import type { System } from '#core/System';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
@@ -20,7 +21,9 @@ import type { Playable, PlayOptions, Voice } from './Playable';
  * voice, and propagates visibility-driven mute when
  * {@link AudioManager.muteOnHidden} is enabled.
  */
-export class AudioManager {
+export class AudioManager implements System {
+  /** App-systems tick band — audio after interaction. @internal */
+  public readonly order = 300;
   public readonly master: AudioBus;
   public readonly music: AudioBus;
   public readonly sound: AudioBus;

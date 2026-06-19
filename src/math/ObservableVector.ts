@@ -1,25 +1,45 @@
 import { AbstractVector } from './AbstractVector';
 
 /**
- * A {@link AbstractVector} subclass that fires a callback whenever its
- * components change. Used internally by {@link Rectangle} and other types to
- * invalidate cached state (e.g. normals) on position mutations.
+ * Receiver of {@link ObservableVector} change notifications. The vector calls
+ * `_onObservableChange(channel)` whenever a component actually changes, passing
+ * the numeric `channel` it was constructed with so a single owner can tell
+ * several vectors apart (e.g. a node's position vs. scale vs. origin) without
+ * allocating a bound closure per vector.
+ * @internal
+ */
+export interface ObservableVectorOwner {
+  _onObservableChange(channel: number): void;
+}
+
+/**
+ * An {@link AbstractVector} subclass that notifies an owner whenever its
+ * components change. Used internally by {@link Rectangle}, `SceneNode`,
+ * {@link View} and other types to invalidate cached state (normals, transforms)
+ * on mutation.
  *
- * Setting individual components (`x`, `y`) fires the callback only when the
- * value actually changes. Batch mutations via `set()` fire at most one
- * callback per call.
+ * Instead of a per-instance callback closure, the vector holds a reference to
+ * its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)`
+ * on change. This keeps hot per-node vectors closure-free — a `SceneNode`
+ * carries four of these, so dropping the bound closures saves four allocations
+ * per node. Pass `owner = null` for a plain, non-reactive vector.
+ *
+ * Setting individual components (`x`, `y`) notifies only when the value
+ * actually changes. Batch mutations via `set()` notify at most once per call.
  */
 export class ObservableVector extends AbstractVector {
   private _x: number;
   private _y: number;
-  private _callback: (() => void) | null;
+  private _owner: ObservableVectorOwner | null;
+  private readonly _channel: number;
 
-  public constructor(callback: (() => void) | null, x = 0, y = 0) {
+  public constructor(owner: ObservableVectorOwner | null, channel = 0, x = 0, y = 0) {
     super();
 
     this._x = x;
     this._y = y;
-    this._callback = callback;
+    this._owner = owner;
+    this._channel = channel;
   }
 
   public get x(): number {
@@ -29,7 +49,7 @@ export class ObservableVector extends AbstractVector {
   public set x(x: number) {
     if (this._x !== x) {
       this._x = x;
-      this._callback?.();
+      this._owner?._onObservableChange(this._channel);
     }
   }
 
@@ -40,7 +60,7 @@ export class ObservableVector extends AbstractVector {
   public set y(y: number) {
     if (this._y !== y) {
       this._y = y;
-      this._callback?.();
+      this._owner?._onObservableChange(this._channel);
     }
   }
 
@@ -60,7 +80,7 @@ export class ObservableVector extends AbstractVector {
     if (this._x !== x || this._y !== y) {
       this._x = x;
       this._y = y;
-      this._callback?.();
+      this._owner?._onObservableChange(this._channel);
     }
 
     return this;
@@ -87,7 +107,7 @@ export class ObservableVector extends AbstractVector {
   }
 
   public clone(): this {
-    return new ObservableVector(this._callback ?? ((): void => {}), this._x, this._y) as this;
+    return new ObservableVector(this._owner, this._channel, this._x, this._y) as this;
   }
 
   public copy(vector: AbstractVector): this {
@@ -95,8 +115,8 @@ export class ObservableVector extends AbstractVector {
   }
 
   public destroy(): void {
-    // Clear the callback to prevent leaks if this vector is retained by an
-    // external scope after the owning object is destroyed.
-    this._callback = null;
+    // Drop the owner reference to prevent leaks if this vector is retained by
+    // an external scope after the owning object is destroyed.
+    this._owner = null;
   }
 }

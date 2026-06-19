@@ -17,7 +17,7 @@ import type { Ellipse } from './Ellipse';
 import { Interval } from './Interval';
 import type { Line } from './Line';
 import type { Matrix } from './Matrix';
-import { ObservableVector } from './ObservableVector';
+import { ObservableVector, type ObservableVectorOwner } from './ObservableVector';
 import type { Polygon } from './Polygon';
 import type { ShapeLike } from './ShapeLike';
 import { Size } from './Size';
@@ -25,8 +25,7 @@ import { inRange } from './utils';
 import type { Vector } from './Vector';
 
 let temp: Rectangle | null = null;
-const noop = (): void => {};
-const tempPoint = new ObservableVector(noop);
+const tempPoint = new ObservableVector(null);
 
 /**
  * Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and
@@ -37,7 +36,7 @@ const tempPoint = new ObservableVector(noop);
  * `Rectangle.temp` is a shared scratch instance. Edge normals are lazily
  * computed and cached; they are invalidated when position or size mutates.
  */
-export class Rectangle implements ShapeLike {
+export class Rectangle implements ShapeLike, ObservableVectorOwner {
   public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
   private readonly _position: ObservableVector;
@@ -46,14 +45,16 @@ export class Rectangle implements ShapeLike {
   private _normalsDirty = false;
 
   public constructor(x = 0, y = x, width = 0, height = width) {
-    this._position = new ObservableVector(
-      () => {
-        this._normalsDirty = true;
-      },
-      x,
-      y,
-    );
+    this._position = new ObservableVector(this, 0, x, y);
     this._size = new Size(width, height);
+  }
+
+  /**
+   * Receives change notifications from `_position`; marks the cached edge
+   * normals stale so the next {@link getNormals} recomputes them. @internal
+   */
+  public _onObservableChange(): void {
+    this._normalsDirty = true;
   }
 
   public get position(): Vector {
@@ -173,7 +174,7 @@ export class Rectangle implements ShapeLike {
   public getNormals(): Vector[] {
     if (this._normalsDirty || this._normals === null) {
       this._updateNormals(
-        this._normals || (this._normals = [new ObservableVector(noop), new ObservableVector(noop), new ObservableVector(noop), new ObservableVector(noop)]),
+        this._normals || (this._normals = [new ObservableVector(null), new ObservableVector(null), new ObservableVector(null), new ObservableVector(null)]),
       );
 
       this._normalsDirty = false;

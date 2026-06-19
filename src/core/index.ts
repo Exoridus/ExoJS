@@ -12,6 +12,7 @@ export * from './SceneNode';
 export * from './Signal';
 export * from './Stage';
 export * from './System';
+export * from './SystemRegistry';
 export * from './Time';
 export * from './Timer';
 export * from './types';

@@ -87,86 +87,39 @@ describe('AudioManager.update()', () => {
     sound.destroy();
   });
 
-  // 4. Application.update() invokes mixer.update() between interaction and tweens
-  test('Application.update() calls audio.update() between interaction.update() and tweens.update()', async () => {
+  // 4. Application.update() ticks the app systems in ascending order. The core
+  // managers register on app.systems with reserved bands, so the loop runs
+  // interaction (200) → audio (300) → tweens (400). Stand in with ordered probes.
+  test('Application.update() ticks app systems in ascending order', async () => {
     vi.resetModules();
 
     const callOrder: string[] = [];
 
-    const mixerMock = {
-      update: vi.fn(() => {
-        callOrder.push('mixer');
-      }),
-      _applyVisibility: vi.fn(),
-      destroy: vi.fn(),
-    };
-    vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({
-      WebGl2Backend: vi.fn(function () {
-        return {
-          initialize: vi.fn(),
-          flush: vi.fn(),
-          resize: vi.fn(),
-          destroy: vi.fn(),
-          resetStats: vi.fn().mockReturnThis(),
-          stats: { frameTimeMs: 0 },
-        };
-      }),
-    }));
-    vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
-      WebGpuBackend: vi.fn(),
-    }));
+    vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({ WebGl2Backend: vi.fn() }));
+    vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({ WebGpuBackend: vi.fn() }));
     vi.doMock('#resources/Loader', () => ({
       Loader: vi.fn(function () {
         return { destroy: vi.fn() };
       }),
     }));
-    vi.doMock('#input/InputManager', () => ({
-      InputManager: vi.fn(function () {
-        return {
-          update: vi.fn(),
-          destroy: vi.fn(),
-          onCanvasFocusChange: { add: vi.fn() },
-        };
-      }),
-    }));
-    vi.doMock('#input/InteractionManager', () => ({
-      InteractionManager: vi.fn(function () {
-        return {
-          update: vi.fn(() => {
-            callOrder.push('interaction');
-          }),
-          destroy: vi.fn(),
-        };
-      }),
-    }));
-    vi.doMock('#core/SceneManager', () => ({
-      SceneManager: vi.fn(function () {
-        return { update: vi.fn(), setScene: vi.fn(), destroy: vi.fn() };
-      }),
-    }));
 
     const { Application, ApplicationStatus } = await import('#core/Application');
+    const { SystemRegistry } = await import('#core/SystemRegistry');
 
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
-    const tweens = {
-      update: vi.fn(() => {
-        callOrder.push('tweens');
-      }),
-    };
+    // Register out of order to prove the registry sorts by `order`, not insertion.
+    const systems = new SystemRegistry();
+    systems.add({ order: 400, update: () => callOrder.push('tweens'), destroy: vi.fn() });
+    systems.add({ order: 200, update: () => callOrder.push('interaction'), destroy: vi.fn() });
+    systems.add({ order: 300, update: () => callOrder.push('audio'), destroy: vi.fn() });
 
     rawApp['_status'] = ApplicationStatus.Running;
-    rawApp['_audio'] = mixerMock;
-    rawApp['input'] = { update: vi.fn() };
-    rawApp['interaction'] = {
-      update: () => {
-        callOrder.push('interaction');
-      },
-    };
-    rawApp['tweens'] = tweens;
+    rawApp['pauseOnHidden'] = false;
+    rawApp['_documentVisible'] = true;
+    rawApp['systems'] = systems;
     rawApp['scene'] = { update: vi.fn() };
-    rawApp['_rendering'] = { update: vi.fn() };
     rawApp['_backend'] = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),
@@ -184,13 +137,7 @@ describe('AudioManager.update()', () => {
 
     app.update();
 
-    const mixerIdx = callOrder.indexOf('mixer');
-    const interactionIdx = callOrder.indexOf('interaction');
-    const tweensIdx = callOrder.indexOf('tweens');
-
-    expect(mixerMock.update).toHaveBeenCalledTimes(1);
-    expect(mixerIdx).toBeGreaterThan(interactionIdx);
-    expect(tweensIdx).toBeGreaterThan(mixerIdx);
+    expect(callOrder).toEqual(['interaction', 'audio', 'tweens']);
 
     vi.resetModules();
   });

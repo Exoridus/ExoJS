@@ -1,3 +1,6 @@
+import type { System } from '#core/System';
+import type { Time } from '#core/Time';
+
 import { Tween } from './Tween';
 
 /**
@@ -11,7 +14,9 @@ import { Tween } from './Tween';
  * stopped tweens are evicted automatically.
  * @stable
  */
-export class TweenManager {
+export class TweenManager implements System {
+  /** App-systems tick band — tweens after audio. @internal */
+  public readonly order = 400;
   private _tweens: Tween[] = [];
   private _destroyed = false;
 
@@ -82,17 +87,17 @@ export class TweenManager {
   }
 
   /**
-   * Advance all active tweens by deltaSeconds. Called once per frame by
-   * Application.update(). Uses a snapshot of the list so that callbacks that
-   * add or remove tweens do not corrupt mid-iteration.
+   * Advance all active tweens by the frame `delta` (read as seconds). Ticked
+   * once per frame via {@link Application.systems}. Uses a snapshot of the list
+   * so that callbacks that add or remove tweens do not corrupt mid-iteration.
    */
-  public update(deltaSeconds: number): void {
+  public update(delta: Time): void {
     if (this._destroyed) return;
 
     const snapshot = [...this._tweens];
 
     for (const tween of snapshot) {
-      tween.update(deltaSeconds);
+      tween.update(delta.seconds);
     }
   }
 
