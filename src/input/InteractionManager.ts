@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import type { Signal } from '#core/Signal';
-import { setActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
+import type { InteractionHooks, Stage } from '#core/Stage';
 import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
@@ -65,7 +65,7 @@ interface IndexedNode {
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
  */
-export class InteractionManager {
+export class InteractionManager implements InteractionHooks {
   private readonly _app: Application;
 
   // Persistent quadtree — null when no interactive nodes are present.
@@ -84,6 +84,9 @@ export class InteractionManager {
   private _quadtreeOrderCounter = 0;
 
   private readonly _quadtreeQueryBuffer: Array<QuadtreeItem<IndexedNode>> = [];
+
+  /** This manager's service bundle, installed on a scene root via {@link attachRoot}. */
+  private readonly _stage: Stage = { interaction: this };
 
   /** Maps pointerId → the deepest interactive RenderNode that pointer is currently over. */
   private readonly _lastHit = new Map<number, RenderNode>();
@@ -109,10 +112,6 @@ export class InteractionManager {
 
   public constructor(app: Application) {
     this._app = app;
-
-    // Register as the active singleton so RenderNode / Container / SceneNode hooks
-    // can reach the manager without holding an explicit reference.
-    setActiveInteractionManager(this);
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -195,8 +194,6 @@ export class InteractionManager {
       this._quadtree.destroy();
       this._quadtree = null;
     }
-
-    setActiveInteractionManager(null);
   }
 
   /**
@@ -222,6 +219,28 @@ export class InteractionManager {
 
     this._pending.clear();
     this._updateCursor();
+  }
+
+  /**
+   * Bind a scene's root container to this manager: install the manager's
+   * {@link Stage} on the subtree (so its nodes route their hooks here) and
+   * register the subtree's interactive nodes. Called by {@link SceneManager}
+   * when a scene becomes active.
+   * @internal
+   */
+  public attachRoot(root: Container): void {
+    root._setStage(this._stage);
+    this._notifyNodeAdded(root);
+  }
+
+  /**
+   * Unbind a scene's root: unregister its interactive nodes and clear the stage
+   * from the subtree. Called by {@link SceneManager} when a scene is removed.
+   * @internal
+   */
+  public detachRoot(root: Container): void {
+    this._notifyNodeRemoved(root);
+    root._setStage(null);
   }
 
   // ---------------------------------------------------------------------------

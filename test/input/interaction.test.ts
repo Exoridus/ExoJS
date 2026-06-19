@@ -129,6 +129,7 @@ describe('InteractionManager — hit-test basics', () => {
   test('fires onPointerDown on interactive sprite when pointer is over it', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -150,6 +151,7 @@ describe('InteractionManager — hit-test basics', () => {
   test('does NOT fire onPointerDown when interactive=false', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = false;
@@ -170,6 +172,7 @@ describe('InteractionManager — hit-test basics', () => {
   test('does NOT fire when pointer misses the sprite bounds', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -196,6 +199,7 @@ describe('InteractionManager — z-order', () => {
   test('top child (added last) receives hit over bottom child at same position', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const bottom = new TestSprite().setBounds(0, 0, 100, 100);
     const top = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -229,6 +233,7 @@ describe('InteractionManager — bubbling', () => {
   test('child and interactive parent both receive event; target=child for both', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -274,6 +279,7 @@ describe('InteractionManager — stopPropagation', () => {
   test('stopPropagation in child handler prevents parent from receiving event', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -306,6 +312,7 @@ describe('InteractionManager — bubble stops at non-interactive parent', () => 
   test('event does not reach grandparent through non-interactive parent', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const grandparent = new Container();
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
@@ -342,6 +349,7 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
   test('moving from sprite A to sprite B fires pointerout on A then pointerover on B', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
     const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
 
@@ -384,6 +392,7 @@ describe('InteractionManager — multi-pointer', () => {
   test('two pointers track separate lastHit independently', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
     const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
 
@@ -426,6 +435,7 @@ describe('InteractionManager — cursor', () => {
   test('canvas cursor becomes pointer when sprite.cursor="pointer" is hovered', () => {
     const { app, scene, signals, canvas } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -444,6 +454,7 @@ describe('InteractionManager — cursor', () => {
   test('canvas cursor reverts to empty string when pointer leaves', () => {
     const { app, scene, signals, canvas } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -471,6 +482,7 @@ describe('InteractionManager — tap', () => {
   test('onPointerTap signal fires on hit node when input.onPointerTap dispatches', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -501,6 +513,7 @@ describe('InteractionManager — destroy cleanup', () => {
   test('no events fire after interaction.destroy()', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -563,6 +576,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -605,6 +619,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
 
     // Sprite positioned at (50, 50) in scene space.
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
@@ -634,6 +649,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const dragged = new TestSprite().setBounds(0, 0, 100, 100);
     const other = new TestSprite().setBounds(200, 0, 100, 100);
 
@@ -666,6 +682,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -689,6 +706,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = false;
@@ -715,6 +733,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -748,6 +767,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     sprite.interactive = true;
@@ -781,6 +801,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -819,6 +840,7 @@ describe('InteractionManager — drag and drop', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
     const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
 
@@ -854,5 +876,39 @@ describe('InteractionManager — drag and drop', () => {
     im.destroy();
     spriteA.destroy();
     spriteB.destroy();
+  });
+});
+
+describe('InteractionManager — multi-Application isolation', () => {
+  test('two Applications route picking independently (no global active-manager)', () => {
+    const a = createApp();
+    const b = createApp();
+    const imA = new InteractionManager(a.app);
+    const imB = new InteractionManager(b.app);
+    imA.attachRoot(a.scene.root);
+    imB.attachRoot(b.scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+    sprite.interactive = true;
+    a.scene.addChild(sprite);
+
+    const down = vi.fn();
+    sprite.onPointerDown.add(down);
+
+    // App B's pointer must NOT reach app A's node. Under the old global
+    // singleton the node registered with whichever manager was constructed
+    // last, breaking exactly this case.
+    b.signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    imB.update();
+    expect(down).not.toHaveBeenCalled();
+
+    // Only app A's own pointer reaches it.
+    a.signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    imA.update();
+    expect(down).toHaveBeenCalledTimes(1);
+
+    imA.destroy();
+    imB.destroy();
+    sprite.destroy();
   });
 });

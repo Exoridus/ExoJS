@@ -1,5 +1,5 @@
+import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
-import { getActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 
 import { RenderNode } from './RenderNode';
@@ -98,7 +98,8 @@ export class Container extends RenderNode {
     child._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
 
-    getActiveInteractionManager()?._notifyNodeAdded(child);
+    child._setStage(this._stage);
+    this._stage?.interaction._notifyNodeAdded(child);
 
     return this;
   }
@@ -168,7 +169,8 @@ export class Container extends RenderNode {
       this._invalidateBoundsCascade();
       child.parent = null;
       child._invalidateSubtreeTransform();
-      getActiveInteractionManager()?._notifyNodeRemoved(child);
+      this._stage?.interaction._notifyNodeRemoved(child);
+      child._setStage(null);
     }
 
     this.invalidateCache();
@@ -198,7 +200,8 @@ export class Container extends RenderNode {
       if (child?.parent === this) {
         child.parent = null;
         child._invalidateSubtreeTransform();
-        getActiveInteractionManager()?._notifyNodeRemoved(child);
+        this._stage?.interaction._notifyNodeRemoved(child);
+        child._setStage(null);
       }
     }
 
@@ -206,6 +209,19 @@ export class Container extends RenderNode {
     this.invalidateCache();
 
     return this;
+  }
+
+  /** @internal — propagate the owning stage down the whole subtree. */
+  public override _setStage(stage: Stage | null): void {
+    if (this._stage === stage) {
+      return;
+    }
+
+    this._stage = stage;
+
+    for (const child of this._children) {
+      child._setStage(stage);
+    }
   }
 
   /** @internal */

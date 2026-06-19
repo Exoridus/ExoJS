@@ -1,4 +1,3 @@
-import { getActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
 import type { Circle } from '#math/Circle';
 import type { Collidable, CollisionResponse } from '#math/Collision';
 import { CollisionType } from '#math/Collision';
@@ -24,6 +23,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
 import { Bounds } from './Bounds';
+import type { Stage } from './Stage';
 
 // Internal: dirty-flag bits used by SceneNode's transform cache.
 // Was previously exposed publicly as `TransformableFlags`. Inlined here
@@ -88,6 +88,9 @@ export class SceneNode implements Collidable {
   protected _skewY = 0;
   protected _sin = 0;
   protected _cos = 1;
+
+  /** Per-Application service bundle, propagated on attach. @internal */
+  protected _stage: Stage | null = null;
 
   private _visible = true;
   private _globalTransform = new Matrix();
@@ -481,6 +484,16 @@ export class SceneNode implements Collidable {
     this._anchor.destroy();
   }
 
+  /**
+   * Set this node's owning {@link Stage} (the per-Application service bundle).
+   * Set when the node is attached to an active scene tree and cleared on
+   * detach. {@link Container} overrides this to propagate to its children.
+   * @internal
+   */
+  public _setStage(stage: Stage | null): void {
+    this._stage = stage;
+  }
+
   /** Mark own + all descendants' GlobalTransform + Bounds dirty. */
   public _invalidateSubtreeTransform(): void {
     this.flags.push(SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect);
@@ -499,7 +512,7 @@ export class SceneNode implements Collidable {
     // Notify the InteractionManager so it can mark the quadtree entry stale.
     // The manager filters to only tracked interactive nodes so this call is
     // O(1) for the common case (non-interactive node — fast Set.has miss).
-    getActiveInteractionManager()?._notifyBoundsInvalidated(this as unknown as RenderNode);
+    this._stage?.interaction._notifyBoundsInvalidated(this as unknown as RenderNode);
 
     if (this._parentNode) {
       this._parentNode._invalidateBoundsCascade();

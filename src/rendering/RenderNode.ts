@@ -2,7 +2,6 @@ import { Color } from '#core/Color';
 import { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { InteractionEvent } from '#input/InteractionEvent';
-import { getActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
 import { Rectangle } from '#math/Rectangle';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -94,7 +93,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     this._interactive = value;
-    getActiveInteractionManager()?._notifyInteractiveChanged(this, value);
+    this._stage?.interaction._notifyInteractiveChanged(this, value);
   }
 
   /**
