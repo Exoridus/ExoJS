@@ -4,7 +4,10 @@ import { clamp } from '#math/utils';
 import { AbstractMedia } from './AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
+import type { AudioManager } from './AudioManager';
 import { getAudioManager } from './AudioManager';
+import { MusicVoice } from './MusicVoice';
+import type { Playable, PlayOptions, Voice } from './Playable';
 
 interface MusicAudioSetup {
   readonly audioContext: AudioContext;
@@ -17,14 +20,22 @@ interface MusicAudioSetup {
  * lazily via the browser's media pipeline, so memory cost scales with
  * decode-buffer size rather than total duration. Routes through the
  * engine's `music` bus by default (overridable via the inherited
- * `bus` setter).
+ * `bus` setter or via {@link PlayOptions.bus} in `AudioManager.play`).
+ *
+ * Implements {@link Playable} so it can be played via
+ * `audioManager.play(music)` — this returns a {@link Voice} handle for
+ * fine-grained per-play control.
+ *
+ * Also retains the legacy {@link AbstractMedia} `play()`/`pause()` API for
+ * cross-fade utilities and existing code that interacts with a single
+ * streaming source directly.
  *
  * Use {@link Sound} for short, frequently-triggered clips that benefit
  * from pre-decoded `AudioBuffer` storage and pooled overlapping
  * playback. `Music` is the right choice for background tracks, voice
  * lines, or anything else where a single source per track is enough.
  */
-export class Music extends AbstractMedia {
+export class Music extends AbstractMedia implements Playable {
   private readonly _audioElement: HTMLMediaElement;
   private _audioSetup: MusicAudioSetup | null = null;
   private _pendingPlay = false;
@@ -177,6 +188,49 @@ export class Music extends AbstractMedia {
     return this;
   }
 
+  /**
+   * Implements {@link Playable}. Called by {@link AudioManager.play}.
+   *
+   * Music uses a single `HTMLAudioElement` per instance, so concurrent
+   * voices are not supported — calling play creates a new voice that
+   * controls the same underlying element.
+   */
+  public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+    const bus = options.bus ?? manager.music;
+
+    if (options.volume !== undefined) {
+      this.setVolume(clamp(options.volume, 0, 2));
+    }
+
+    if (options.muted !== undefined) {
+      this.setMuted(options.muted);
+    }
+
+    if (options.loop !== undefined) {
+      this.setLoop(options.loop);
+    }
+
+    if (options.playbackRate !== undefined) {
+      this.setPlaybackRate(options.playbackRate);
+    }
+
+    if (options.time !== undefined) {
+      this.setTime(options.time);
+    }
+
+    // Ensure audio is set up with the right bus
+    this._ensureSetupWithBus(bus);
+
+    // Start playback
+    this.play();
+
+    if (!this._audioSetup) {
+      return _noopVoice;
+    }
+
+    return new MusicVoice(this._audioSetup.audioContext, this._audioSetup.gainNode, this._audioElement);
+  }
+
   protected override _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null {
     return this._audioSetup;
   }
@@ -216,6 +270,15 @@ export class Music extends AbstractMedia {
     }
   }
 
+  private _ensureSetupWithBus(bus: AudioBus): void {
+    if (!this._audioSetup && isAudioContextReady()) {
+      this._bus = bus;
+      this.setupWithAudioContext(getAudioContext());
+    } else if (this._audioSetup && this._bus !== bus) {
+      this.bus = bus;
+    }
+  }
+
   private setupWithAudioContext(audioContext: AudioContext): void {
     const gainNode = audioContext.createGain();
     gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
@@ -233,3 +296,14 @@ export class Music extends AbstractMedia {
     this._audioSetup = { audioContext, gainNode, sourceNode };
   }
 }
+
+/** A no-op Voice returned when audio is not ready. */
+const _noopVoice: Voice = {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  stop: (): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  setVolume: (_volume: number): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  fadeOut: (_durationMs: number): void => {},
+  ended: true,
+};

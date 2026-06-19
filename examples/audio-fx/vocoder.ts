@@ -47,7 +47,6 @@ class VocoderScene extends Scene {
         for (const phrase of PHRASES) {
             const voice = loader.get(Sound, phrase.key);
 
-            voice.bus = this.modulatorBus;
             this.voices.set(phrase.key, voice);
         }
 
@@ -98,7 +97,8 @@ class VocoderScene extends Scene {
 
         const phrase = PHRASES[this.phraseIndex];
 
-        this.voices.get(phrase.key)?.play({ replace: true });
+        const voice = this.voices.get(phrase.key);
+        if (voice) this.app.audio.play(voice, { bus: this.modulatorBus });
         this.hud.setStatus(`Speaking: "${phrase.label}"`);
         this.phraseLabel.text = `"${phrase.label}"`;
     }

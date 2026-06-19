@@ -112,7 +112,7 @@ class ReverbAndDelayScene extends Scene {
             // still locked would be silent, so wait until audio is ready.
             if (this.app.audio.locked)
                 return;
-            this.sound.play({ replace: true });
+            this.app.audio.play(this.sound);
             this.flash = 1;
             this.triggers += 1;
             this.hud.setStatus(`Impacts triggered: ${this.triggers}`);

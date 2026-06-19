@@ -75,7 +75,7 @@ class AudioBusesScene extends Scene {
         });
         this.app.input.onPointerTap.add(p => {
             if (this.insideSfxButton(p.x, p.y)) {
-                this.sfx.play();
+                this.app.audio.play(this.sfx);
                 this.hud.setStatus('SFX fired on the SFX bus — try lowering Master or SFX, then fire again.');
             }
         });

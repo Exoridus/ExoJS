@@ -4,8 +4,11 @@ import { clamp } from '#math/utils';
 import { AbstractMedia } from './AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
+import type { AudioManager } from './AudioManager';
 import { getAudioManager } from './AudioManager';
 import type { Envelope } from './Envelope';
+import { OscillatorVoice } from './OscillatorVoice';
+import type { Playable, PlayOptions, Voice } from './Playable';
 import { SoundPoolStrategy } from './Sound';
 
 export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
@@ -47,14 +50,15 @@ interface OscillatorAudioSetup {
  * Useful for prototyping, game-jam SFX, retro-style sound effects, music
  * apps that need synthesizer-style tones.
  *
- * Each `play()` creates a new OscillatorNode (oscillators are one-shot in
- * Web Audio). Pool semantics match `Sound`: multiple concurrent voices
- * up to `poolSize`, FIFO eviction by default.
+ * Implements {@link Playable} so it can be played via
+ * `audioManager.play(oscSound, { bus })` — returns a {@link Voice} handle.
+ *
+ * Also retains the legacy `play()`/`pause()` API from {@link AbstractMedia}.
  *
  *   const tone = new OscillatorSound({ frequency: 440, type: 'sine' });
- *   tone.play();        // plays A4 sine wave
- *   tone.frequency = 880;
- *   tone.play();        // plays A5 (in addition to A4 if pool > 1)
+ *   tone.play();        // plays A4 sine wave (legacy)
+ *   // Or via manager:
+ *   const voice = manager.play(tone);  // returns a Voice handle
  *
  * For musical applications, use `setNote(midi)`:
  *
@@ -71,7 +75,7 @@ interface OscillatorAudioSetup {
  *   // ... later
  *   synth.pause();      // triggers release phase, stops after releaseMs
  */
-export class OscillatorSound extends AbstractMedia {
+export class OscillatorSound extends AbstractMedia implements Playable {
   public frequency: number;
   public detune: number;
   public type: OscillatorType;
@@ -177,6 +181,56 @@ export class OscillatorSound extends AbstractMedia {
     }
 
     return this;
+  }
+
+  /**
+   * Implements {@link Playable}. Called by {@link AudioManager.play}.
+   *
+   * Creates one OscillatorNode + voice gain for this play call and returns
+   * an {@link OscillatorVoice} handle.
+   */
+  public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+    const bus = options.bus ?? manager.sound;
+
+    if (options.volume !== undefined) {
+      this.setVolume(clamp(options.volume, 0, 2));
+    }
+
+    if (options.muted !== undefined) {
+      this.setMuted(options.muted);
+    }
+
+    if (!this._audioSetup) {
+      // AudioContext not yet ready; oscillator voices can't be deferred
+      return _noopVoice;
+    }
+
+    const { audioContext } = this._audioSetup;
+    const now = audioContext.currentTime;
+
+    const voiceGain = audioContext.createGain();
+    const busInput = bus._getInputNode();
+    if (busInput) {
+      voiceGain.connect(busInput);
+    } else {
+      voiceGain.connect(audioContext.destination);
+    }
+
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = this.type;
+    oscillator.frequency.value = this.frequency;
+    oscillator.detune.value = this.detune;
+    oscillator.connect(voiceGain);
+
+    if (this.envelope) {
+      this.envelope.trigger(voiceGain.gain, now);
+    } else {
+      voiceGain.gain.value = this.muted ? 0 : this._volume;
+    }
+
+    oscillator.start(now);
+
+    return new OscillatorVoice(audioContext, oscillator, voiceGain, this.envelope);
   }
 
   public setVolume(value: number): this {
@@ -440,3 +494,14 @@ export class OscillatorSound extends AbstractMedia {
     }
   }
 }
+
+/** A no-op Voice returned when audio context is not ready. */
+const _noopVoice: Voice = {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  stop: (): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  setVolume: (_volume: number): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  fadeOut: (_durationMs: number): void => {},
+  ended: true,
+};

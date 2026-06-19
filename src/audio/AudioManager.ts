@@ -3,7 +3,13 @@ import { Signal } from '#core/Signal';
 import { isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
 import { AudioListener } from './AudioListener';
-import type { Sound } from './Sound';
+import type { Playable, PlayOptions, Voice } from './Playable';
+import type { SoundVoice } from './SoundVoice';
+
+interface SpatialEntry {
+  readonly voice: SoundVoice;
+  readonly getPosition: () => { x: number; y: number } | null;
+}
 
 /**
  * Module-level singleton that owns the engine-wide audio mix: three
@@ -15,7 +21,7 @@ import type { Sound } from './Sound';
  * instance is constructed lazily on first access so client code that does
  * not need audio pays no startup cost.
  *
- * Drives the per-frame `_tick()` on the listener and every spatial sound;
+ * Drives the per-frame `_tick()` on the listener and every spatial voice;
  * propagates visibility-driven mute when {@link AudioManager.muteOnHidden}
  * is enabled.
  */
@@ -33,7 +39,7 @@ export class AudioManager {
   public readonly onUnlock = new Signal();
 
   private readonly _registered = new Map<string, AudioBus>();
-  private readonly _spatialSounds = new Set<Sound>();
+  private readonly _spatialVoices = new Set<SpatialEntry>();
   private _muteOnHidden = false;
 
   public constructor() {
@@ -72,30 +78,56 @@ export class AudioManager {
   /**
    * `true` while audio is blocked by the browser's autoplay policy — no user
    * gesture has resumed the AudioContext yet. {@link Sound} and {@link Music}
-   * played while locked are deferred and start automatically on the first
-   * gesture, so you can simply call `play()` and (optionally) render a
-   * "tap to start" prompt while this is `true`. Pairs with {@link onUnlock}.
+   * played while locked are deferred and start automatically on that gesture.
    */
   public get locked(): boolean {
     return !isAudioContextReady();
   }
 
+  /**
+   * Play a {@link Playable} asset and return a {@link Voice} handle.
+   *
+   * Each call creates an independent playback instance. Call `play()` again
+   * to start another concurrent voice. The returned Voice lets you control
+   * this specific instance (`stop()`, `setVolume()`, `fadeOut()`).
+   *
+   * @example
+   * ```ts
+   * const voice = app.audio.play(shootSfx);
+   * // Later:
+   * voice.stop();
+   * ```
+   *
+   * @param source - Any {@link Playable} asset (Sound, Music, OscillatorSound).
+   * @param options - Per-play overrides (bus, volume, loop, playbackRate, time, muted).
+   * @returns A {@link Voice} handle for the new instance.
+   */
+  public play(source: Playable, options?: PlayOptions): Voice {
+    return source._createVoice(this, options ?? {});
+  }
+
   /** Called once per frame from Application.update(). */
   public update(): void {
     this.listener._tick();
-    for (const sound of this._spatialSounds) {
-      sound._tickSpatial();
+    // Tick spatial voices and prune ended ones
+    for (const entry of this._spatialVoices) {
+      if (entry.voice.ended) {
+        this._spatialVoices.delete(entry);
+        continue;
+      }
+      const pos = entry.getPosition();
+      if (pos !== null) {
+        entry.voice._tickSpatial(pos.x, pos.y);
+      }
     }
   }
 
-  /** Internal: called by Sound when it becomes spatial. */
-  public _registerSpatialSound(sound: Sound): void {
-    this._spatialSounds.add(sound);
-  }
-
-  /** Internal: called by Sound when it stops being spatial. */
-  public _unregisterSpatialSound(sound: Sound): void {
-    this._spatialSounds.delete(sound);
+  /**
+   * Internal: register a spatial SoundVoice for per-frame position updates.
+   * Called by Sound._createVoice when a PannerNode-backed voice is started.
+   */
+  public _registerSpatialVoice(voice: SoundVoice, getPosition: () => { x: number; y: number } | null): void {
+    this._spatialVoices.add({ voice, getPosition });
   }
 
   /** Internal: called by Application when visibility changes. */
@@ -153,7 +185,7 @@ export class AudioManager {
 
   public destroy(): void {
     this.listener.destroy();
-    this._spatialSounds.clear();
+    this._spatialVoices.clear();
     for (const bus of this._registered.values()) {
       // Note: destroying built-ins too — AudioManager is destroyed only when app shuts down.
       bus.destroy();
@@ -174,6 +206,18 @@ export function getAudioManager(): AudioManager {
   if (_manager === null) {
     _manager = new AudioManager();
   }
+  return _manager;
+}
+
+/**
+ * Returns the singleton {@link AudioManager} if it has already been
+ * constructed, or `null` if it has not been accessed yet.
+ *
+ * Use this where you want to route to the audio manager **only when it
+ * already exists** — for example, Video's default bus routing — so that
+ * constructing an asset does not force-create the audio manager.
+ */
+export function peekAudioManager(): AudioManager | null {
   return _manager;
 }
 

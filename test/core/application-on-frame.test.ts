@@ -154,6 +154,7 @@ describe('Application.onFrame', () => {
     };
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_audio'] = { update: vi.fn(), destroy: vi.fn() };
     rawApp['input'] = { update: vi.fn() };
     rawApp['interaction'] = { update: vi.fn() };
     rawApp['tweens'] = { update: vi.fn() };

@@ -1,15 +1,16 @@
-﻿/**
- * Tests for Sound pool behaviour introduced in 0.7.0:
+/**
+ * Tests for Sound pool behaviour:
  *  - Default poolSize = 8, poolStrategy = FirstInFirstOut, priority = 0
- *  - play() is multi-instance (pooled) by default
- *  - play({ replace: true }) is singleton-replace mode
+ *  - manager.play() is multi-instance (pooled) by default
+ *  - _stopAllVoices() stops all active voices (replace mode)
  *  - FIFO eviction (FirstInFirstOut strategy)
  *  - LRU eviction (LeastRecentlyUsed strategy — closest to natural end)
  *  - LowestPriority degenerates to FIFO within a single Sound (V1)
- *  - Sources are cleaned up from the pool when they end naturally
+ *  - Voices are removed from pool when they end naturally
  */
 
 import { getAudioContext } from '#audio/audio-context';
+import { getAudioManager } from '#audio/AudioManager';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
 // ---------------------------------------------------------------------------
@@ -153,11 +154,12 @@ describe('Sound — multi-instance play() (pooled default)', () => {
   // 4. play() below pool limit creates new source, no eviction
   test('play() below pool limit creates a new source without stopping others', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 8 });
 
-    sound.play();
-    sound.play();
-    sound.play();
+    manager.play(sound);
+    manager.play(sound);
+    manager.play(sound);
 
     expect(factory.sources.length).toBe(3);
     for (const src of factory.sources) {
@@ -165,19 +167,21 @@ describe('Sound — multi-instance play() (pooled default)', () => {
     }
 
     factory.restore();
+    sound.destroy();
   });
 
   // 5. FIFO eviction when pool is full
   test('play() past pool limit evicts oldest source first (FIFO)', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.FirstInFirstOut,
     });
 
-    sound.play(); // src[0] — oldest
-    sound.play(); // src[1]
-    sound.play(); // src[2] — pool at 2, so src[0] evicted
+    manager.play(sound); // src[0] — oldest
+    manager.play(sound); // src[1]
+    manager.play(sound); // src[2] — pool at 2, so src[0] evicted
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1); // evicted (FIFO)
@@ -185,6 +189,7 @@ describe('Sound — multi-instance play() (pooled default)', () => {
     expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
     factory.restore();
+    sound.destroy();
   });
 });
 
@@ -195,6 +200,7 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
   test('LRU strategy evicts the source with least remaining time', () => {
     const timeMock = mockCurrentTime(0);
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
 
     // Buffer duration = 4 s
     const sound = new Sound(createAudioBufferStub(4), {
@@ -204,15 +210,15 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
 
     // src[0] — started at t=0, duration=4s → remaining at t=3: 4-3=1s
     timeMock.setTime(0);
-    sound.play();
+    manager.play(sound);
 
     // src[1] — started at t=2, duration=4s → remaining at t=3: 4-(3-2)=3s
     timeMock.setTime(2);
-    sound.play();
+    manager.play(sound);
 
     // At t=3, pool is full (2). Next play should evict src[0] (least remaining).
     timeMock.setTime(3);
-    sound.play(); // src[2] — triggers eviction
+    manager.play(sound); // src[2] — triggers eviction
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1); // evicted (closest to end)
@@ -221,6 +227,7 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
 
     timeMock.restore();
     factory.restore();
+    sound.destroy();
   });
 });
 
@@ -230,14 +237,15 @@ describe('Sound — LowestPriority eviction', () => {
   // 7. LowestPriority degenerates to FIFO within a single Sound (all instances share priority)
   test('LowestPriority strategy degenerates to FIFO within a single Sound', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.LowestPriority,
     });
 
-    sound.play(); // src[0] — oldest
-    sound.play(); // src[1]
-    sound.play(); // src[2] — evicts src[0] (FIFO fallback since same priority)
+    manager.play(sound); // src[0] — oldest
+    manager.play(sound); // src[1]
+    manager.play(sound); // src[2] — evicts src[0] (FIFO fallback since same priority)
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1); // FIFO victim
@@ -245,61 +253,66 @@ describe('Sound — LowestPriority eviction', () => {
     expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
     factory.restore();
+    sound.destroy();
   });
 });
 
-describe('Sound — play({ replace: true })', () => {
+describe('Sound — _stopAllVoices() (replace mode)', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  // 8. replace: true stops all prior pooled sources before new play
-  test('play({ replace: true }) stops all prior pooled sources before starting', () => {
+  // 8. _stopAllVoices() stops all active voices
+  test('_stopAllVoices() stops all active voices', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    sound.play(); // src[0]
-    sound.play(); // src[1]
-    sound.play(); // src[2]
+    manager.play(sound); // src[0]
+    manager.play(sound); // src[1]
+    manager.play(sound); // src[2]
 
-    sound.play({ replace: true }); // src[3] — should stop src[0..2]
+    sound._stopAllVoices(); // should stop src[0..2]
 
-    expect(factory.sources.length).toBe(4);
+    expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
     expect(factory.sources[1].stop).toHaveBeenCalledTimes(1);
     expect(factory.sources[2].stop).toHaveBeenCalledTimes(1);
-    expect(factory.sources[3].stop).not.toHaveBeenCalled();
 
     factory.restore();
+    sound.destroy();
   });
 
-  // 9. Subsequent play() after replace starts fresh pooled instance
-  test('play() after play({ replace: true }) accumulates normally', () => {
+  // 9. play() after _stopAllVoices() starts fresh
+  test('play() after _stopAllVoices() accumulates normally', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    sound.play({ replace: true }); // src[0] — replaces nothing (pool was empty)
-    sound.play(); // src[1] — regular pooled
-    sound.play(); // src[2] — regular pooled
+    manager.play(sound); // src[0]
+    sound._stopAllVoices();
+    manager.play(sound); // src[1] — regular pooled
+    manager.play(sound); // src[2] — regular pooled
 
-    // Now replace again — stops src[0..2], starts src[3]
-    sound.play({ replace: true }); // src[3]
-
-    expect(factory.sources.length).toBe(4);
+    expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
-    expect(factory.sources[1].stop).toHaveBeenCalledTimes(1);
-    expect(factory.sources[2].stop).toHaveBeenCalledTimes(1);
-    expect(factory.sources[3].stop).not.toHaveBeenCalled();
+    expect(factory.sources[1].stop).not.toHaveBeenCalled();
+    expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
     factory.restore();
+    sound.destroy();
   });
 
-  // play({ replace: true }) with poolSize=1 exactly replicates old singleton behavior
-  test('play({ replace: true }) with poolSize=1 replicates old singleton-replace behavior', () => {
+  // _stopAllVoices() with poolSize=1 exactly replicates old singleton behavior
+  test('_stopAllVoices() + play() with poolSize=1 replicates old singleton-replace behavior', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 1 });
 
-    sound.play({ replace: true });
-    sound.play({ replace: true });
-    sound.play({ replace: true });
+    sound._stopAllVoices();
+    manager.play(sound); // src[0]
+    sound._stopAllVoices();
+    manager.play(sound); // src[1]
+    sound._stopAllVoices();
+    manager.play(sound); // src[2]
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
@@ -307,53 +320,60 @@ describe('Sound — play({ replace: true })', () => {
     expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
     factory.restore();
+    sound.destroy();
   });
 });
 
 describe('Sound — natural pool cleanup', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  // 10. Sources are removed from pool when they end naturally
-  test('sources are removed from the pool when they end naturally', () => {
+  // 10. Voices are removed from pool when they end naturally
+  test('voices are removed from the pool when they end naturally (no eviction)', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    sound.play(); // src[0]
-    sound.play(); // src[1]
+    manager.play(sound); // src[0]
+    manager.play(sound); // src[1]
 
     expect(factory.sources.length).toBe(2);
 
     // Simulate natural end of src[0]
     factory.sources[0].onended?.();
-    // src[0] is removed from pool; src[1] still playing
+    // src[0] is removed from pool via the sourceNode.onended hook;
+    // now we can fit one more without eviction
 
     // After src[1] also ends
     factory.sources[1].onended?.();
 
-    // Pool should be empty → sound is paused
-    expect(sound.paused).toBe(true);
+    // Pool should now be empty — a 3rd play creates a fresh voice without evicting
+    manager.play(sound); // src[2]
+    expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
     factory.restore();
+    sound.destroy();
   });
 
-  // pause() stops all pooled sources
-  test('pause() stops all pooled sources', () => {
+  // voice.stop() ends the voice immediately
+  test('voice.stop() marks the voice as ended', () => {
     const factory = setupSourceFactory();
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    sound.play();
-    sound.play();
-    sound.play();
+    const voice = manager.play(sound);
+    const voice2 = manager.play(sound);
+    const voice3 = manager.play(sound);
 
-    sound.pause();
+    voice.stop();
+    voice2.stop();
+    voice3.stop();
 
-    for (const src of factory.sources) {
-      expect(src.stop).toHaveBeenCalledTimes(1);
-    }
-
-    expect(sound.paused).toBe(true);
+    expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
+    expect(factory.sources[1].stop).toHaveBeenCalledTimes(1);
+    expect(factory.sources[2].stop).toHaveBeenCalledTimes(1);
 
     factory.restore();
+    sound.destroy();
   });
 });
 

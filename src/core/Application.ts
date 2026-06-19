@@ -1,5 +1,5 @@
 import { TweenManager } from '#animation/TweenManager';
-import { type AudioManager, getAudioManager } from '#audio/AudioManager';
+import { AudioManager } from '#audio/AudioManager';
 import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
 import { materializeAssetBindings, materializeRendererBindings } from '#extensions/materialize';
@@ -249,6 +249,7 @@ export class Application {
   private _cursor = 'default';
   private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
   private _resizeObserver: ResizeObserver | null = null;
+  private readonly _audio: AudioManager = new AudioManager();
 
   public constructor(appSettings: ApplicationOptions = {}) {
     const canvasOptions = appSettings.canvas ?? {};
@@ -345,7 +346,7 @@ export class Application {
     });
 
     this.onVisibilityChange.add(visible => {
-      getAudioManager()._applyVisibility(visible);
+      this._audio._applyVisibility(visible);
     });
   }
 
@@ -420,7 +421,7 @@ export class Application {
   }
 
   public get audio(): AudioManager {
-    return getAudioManager();
+    return this._audio;
   }
 
   /**
@@ -553,7 +554,7 @@ export class Application {
 
       this.input.update();
       this.interaction.update();
-      getAudioManager().update();
+      this._audio.update();
       this.tweens.update(frameDelta.seconds);
 
       this._rendering.update(frameDelta.milliseconds);
@@ -763,6 +764,7 @@ export class Application {
     this.interaction.destroy();
     this.input.destroy();
     this.tweens.destroy();
+    this._audio.destroy();
     this._backend.destroy();
     this.scene.destroy();
     this._startupClock.destroy();

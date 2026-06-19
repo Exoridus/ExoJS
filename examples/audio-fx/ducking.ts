@@ -52,7 +52,6 @@ class DuckingScene extends Scene {
         // Route the voice-over onto its own bus so it can drive the sidechain.
         this.voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
         app.audio.registerBus(this.voiceBus);
-        this.voice.bus = this.voiceBus;
 
         // The ducker listens to the voice bus and pulls the music bus down
         // whenever the voice exceeds the threshold.
@@ -88,7 +87,7 @@ class DuckingScene extends Scene {
             // The pointer gesture also unlocks the AudioContext; firing while
             // still locked would be silent, so wait until audio is ready.
             if (this.app.audio.locked) return;
-            this.voice.play({ replace: true });
+            this.app.audio.play(this.voice, { bus: this.voiceBus });
             this.hud.setStatus('Voice playing — music ducked');
         });
 

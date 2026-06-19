@@ -37,7 +37,6 @@ class VocoderScene extends Scene {
         app.audio.registerBus(this.modulatorBus);
         for (const phrase of PHRASES) {
             const voice = loader.get(Sound, phrase.key);
-            voice.bus = this.modulatorBus;
             this.voices.set(phrase.key, voice);
         }
         // The carrier is a sustained synth tone shaped by the voice envelope.
@@ -78,7 +77,9 @@ class VocoderScene extends Scene {
             return;
         }
         const phrase = PHRASES[this.phraseIndex];
-        this.voices.get(phrase.key)?.play({ replace: true });
+        const voice = this.voices.get(phrase.key);
+        if (voice)
+            this.app.audio.play(voice, { bus: this.modulatorBus });
         this.hud.setStatus(`Speaking: "${phrase.label}"`);
         this.phraseLabel.text = `"${phrase.label}"`;
     }

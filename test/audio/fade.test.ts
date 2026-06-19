@@ -1,4 +1,5 @@
-﻿import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext } from '#audio/audio-context';
+import { getAudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 5 }) as AudioBuffer;
@@ -43,114 +44,104 @@ describe('Audio fade helpers', () => {
     vi.useRealTimers();
   });
 
-  test('fadeIn(0) plays immediately if paused', () => {
+  test('Voice.fadeOut(0) stops immediately (ended becomes true)', () => {
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
+    const manager = getAudioManager();
 
-    expect(sound.paused).toBe(true);
-    sound.fadeIn(0);
-    expect(sound.paused).toBe(false);
+    const voice = manager.play(sound);
+    expect(voice.ended).toBe(false);
 
-    restore();
-    sound.destroy();
-  });
-
-  test('fadeIn(500) schedules linearRamp with correct target time', () => {
-    const { gainNode, restore } = setupGainSpy();
-    const ctx = getAudioContext();
-    const sound = new Sound(createAudioBufferStub());
-
-    sound.fadeIn(500);
-
-    expect(gainNode.gain.cancelScheduledValues).toHaveBeenCalledWith(ctx.currentTime);
-    expect(gainNode.gain.setValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime);
-    expect(gainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(
-      1, // volume target (not muted, volume=1)
-      ctx.currentTime + 0.5,
-    );
+    voice.fadeOut(0);
+    expect(voice.ended).toBe(true);
 
     restore();
     sound.destroy();
   });
 
-  test('fadeOut(0) pauses immediately', () => {
-    const { restore } = setupGainSpy();
-    const sound = new Sound(createAudioBufferStub());
-
-    sound.play();
-    expect(sound.paused).toBe(false);
-
-    sound.fadeOut(0);
-    expect(sound.paused).toBe(true);
-
-    restore();
-    sound.destroy();
-  });
-
-  test('fadeOut(500) schedules ramp and pauses after durationMs', () => {
+  test('Voice.fadeOut(500) schedules linearRamp to 0', () => {
     vi.useFakeTimers();
     const { gainNode, restore } = setupGainSpy();
     const ctx = getAudioContext();
     const sound = new Sound(createAudioBufferStub());
+    const manager = getAudioManager();
 
-    sound.play();
-    sound.fadeOut(500);
+    const voice = manager.play(sound);
+    voice.fadeOut(500);
 
     expect(gainNode.gain.cancelScheduledValues).toHaveBeenCalled();
     expect(gainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime + 0.5);
 
-    expect(sound.paused).toBe(false);
+    // Voice not ended yet — timer hasn't fired
+    expect(voice.ended).toBe(false);
     vi.advanceTimersByTime(500);
-    expect(sound.paused).toBe(true);
+    expect(voice.ended).toBe(true);
 
     restore();
     sound.destroy();
   });
 
-  test('fadeOut(500, { stopAfter: false }) does not pause', () => {
+  test('Voice.setVolume() updates gain node', () => {
+    const { gainNode, restore } = setupGainSpy();
+    const ctx = getAudioContext();
+    const sound = new Sound(createAudioBufferStub());
+    const manager = getAudioManager();
+
+    const voice = manager.play(sound);
+    voice.setVolume(0.5);
+
+    expect(gainNode.gain.setTargetAtTime).toHaveBeenCalledWith(0.5, ctx.currentTime, 0.01);
+
+    restore();
+    sound.destroy();
+  });
+
+  test('Voice.stop() marks voice as ended immediately', () => {
+    const { restore } = setupGainSpy();
+    const sound = new Sound(createAudioBufferStub());
+    const manager = getAudioManager();
+
+    const voice = manager.play(sound);
+    expect(voice.ended).toBe(false);
+
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    restore();
+    sound.destroy();
+  });
+
+  test('Voice.fadeOut with pending timer: stop() before timer fires marks ended', () => {
     vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
+    const manager = getAudioManager();
 
-    sound.play();
-    sound.fadeOut(500, { stopAfter: false });
+    const voice = manager.play(sound);
+    voice.fadeOut(500);
 
+    // Stop before timer fires
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    // Advance past the original fadeOut — should not throw or double-stop
     vi.advanceTimersByTime(600);
-    expect(sound.paused).toBe(false);
+    expect(voice.ended).toBe(true);
 
     restore();
     sound.destroy();
   });
 
-  test('fadeIn(500) cancels a previous fadeOut scheduled pause', () => {
+  test('sound.destroy() stops all active voices', () => {
     vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
+    const manager = getAudioManager();
 
-    sound.play();
-    sound.fadeOut(500);
+    const voice = manager.play(sound);
+    voice.fadeOut(500); // schedules a timer
 
-    // Before the fade out timer fires, call fadeIn — should cancel the stop
-    vi.advanceTimersByTime(100);
-    sound.fadeIn(500);
-
-    // Now advance past the original fadeOut duration
-    vi.advanceTimersByTime(500);
-    expect(sound.paused).toBe(false);
-
-    restore();
-    sound.destroy();
-  });
-
-  test('destroy() clears scheduled stops without leaking timers', () => {
-    vi.useFakeTimers();
-    const { restore } = setupGainSpy();
-    const sound = new Sound(createAudioBufferStub());
-
-    sound.play();
-    sound.fadeOut(500);
-
-    // Destroying before the timer fires should not throw
+    // Destroying Sound stops all voices without throwing
     expect(() => sound.destroy()).not.toThrow();
 
     restore();

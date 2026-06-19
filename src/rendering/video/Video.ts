@@ -1,6 +1,6 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
 import type { AudioBus } from '#audio/AudioBus';
-import { getAudioManager } from '#audio/AudioManager';
+import { peekAudioManager } from '#audio/AudioManager';
 import type { Media } from '#audio/Media';
 import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
@@ -183,8 +183,8 @@ export class Video extends Sprite implements Media {
     return this._audioSetup?.gainNode ?? null;
   }
 
-  public get bus(): AudioBus {
-    return this._bus ?? getAudioManager().master;
+  public get bus(): AudioBus | null {
+    return this._bus ?? peekAudioManager()?.master ?? null;
   }
 
   public set bus(bus: AudioBus) {
@@ -438,7 +438,7 @@ export class Video extends Sprite implements Media {
     const gainNode = audioContext.createGain();
     gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
 
-    const inputNode = this.bus._getInputNode();
+    const inputNode = this.bus?._getInputNode() ?? null;
     if (inputNode) {
       gainNode.connect(inputNode);
     } else {

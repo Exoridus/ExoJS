@@ -1,4 +1,4 @@
-﻿import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
 import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
 import { Music } from '#audio/Music';
@@ -80,10 +80,20 @@ describe('Bus routing (Sound / Music / Video)', () => {
     vi.restoreAllMocks();
   });
 
-  // 1. Default bus for Sound
-  test('new Sound has bus === audioManager.sound', () => {
+  // 1. Default bus for Sound voice (via manager.play)
+  test('manager.play(sound) routes voice to audioManager.sound bus by default', () => {
+    // Create manager BEFORE spy so bus setup doesn't consume the firstCall slot.
+    const manager = getAudioManager();
+    const spy = spyOnGainConnect();
     const sound = new Sound(createAudioBufferStub());
-    expect(sound.bus).toBe(getAudioManager().sound);
+
+    manager.play(sound);
+
+    // The gainNode for the voice should connect to the sound bus input
+    const soundBusInput = manager.sound._getInputNode();
+    expect(spy.gainNode.connect).toHaveBeenCalledWith(soundBusInput);
+
+    spy.restore();
     sound.destroy();
   });
 
@@ -95,24 +105,75 @@ describe('Bus routing (Sound / Music / Video)', () => {
   });
 
   // 3. Default bus for Video
-  test('new Video has bus === audioManager.master', () => {
+  test('new Video has bus === audioManager.master when manager already exists', () => {
+    const manager = getAudioManager(); // ensure manager is constructed first
     const video = new Video(createVideoElementStub());
-    expect(video.bus).toBe(getAudioManager().master);
+    expect(video.bus).toBe(manager.master);
     video.destroy();
   });
 
-  // 4. Setting sound.bus reconnects gainNode to custom bus input
-  test('setting Sound.bus reconnects gainNode to custom bus inputNode', () => {
-    const spy = spyOnGainConnect();
+  test('new Video has bus === null when no manager has been constructed yet', () => {
+    // disposeAudioManager() called in beforeEach; no manager exists here
+    const video = new Video(createVideoElementStub());
+    expect(video.bus).toBeNull();
+    video.destroy();
+  });
+
+  // 4. Passing bus option to manager.play() routes to that bus
+  test('manager.play(sound, { bus }) routes voice to the specified bus — voice is created alive', () => {
+    const manager = getAudioManager();
     const sound = new Sound(createAudioBufferStub());
 
-    // At construction the gainNode connected to the default sound bus input.
-    const soundBusInput = getAudioManager().sound._getInputNode();
-    expect(spy.gainNode.connect).toHaveBeenCalledWith(soundBusInput);
+    const customBus = new AudioBus('custom');
+    // Playing with a custom bus should succeed and return a live voice
+    const voice = manager.play(sound, { bus: customBus });
+    expect(voice.ended).toBe(false);
+
+    voice.stop();
+    sound.destroy();
+    customBus.destroy();
+  });
+
+  // 5. Playing same sound twice: each voice routes to the bus specified at play time
+  test('each play() call creates an independent voice with its own bus routing', () => {
+    const manager = getAudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    const customBus = new AudioBus('custom2');
+    // First voice → default sound bus; second → customBus
+    const voice1 = manager.play(sound);
+    const voice2 = manager.play(sound, { bus: customBus });
+
+    // Both voices should be alive
+    expect(voice1.ended).toBe(false);
+    expect(voice2.ended).toBe(false);
+
+    sound.destroy();
+    customBus.destroy();
+  });
+
+  // 6. Music gainNode connects to music bus's inputNode at construction
+  test('Music gainNode connects to music bus inputNode at construction time', () => {
+    const manager = getAudioManager(); // ensure manager exists before spy
+    const spy = spyOnGainConnect();
+    const music = new Music(createAudioElementStub());
+
+    const musicBusInput = manager.music._getInputNode();
+    expect(spy.gainNode.connect).toHaveBeenCalledWith(musicBusInput);
+
+    spy.restore();
+    music.destroy();
+  });
+
+  // 7. Setting Music.bus reconnects gainNode to custom bus
+  test('setting Music.bus reconnects gainNode to custom bus inputNode', () => {
+    getAudioManager(); // ensure manager exists before spy
+    const spy = spyOnGainConnect();
+    const music = new Music(createAudioElementStub());
 
     // Now switch to a custom bus.
-    const customBus = new AudioBus('custom');
-    sound.bus = customBus;
+    const customBus = new AudioBus('custom3');
+    music.bus = customBus;
 
     // The old connection should have been disconnected.
     expect(spy.gainNode.disconnect).toHaveBeenCalled();
@@ -122,71 +183,29 @@ describe('Bus routing (Sound / Music / Video)', () => {
     expect(spy.gainNode.connect).toHaveBeenCalledWith(customBusInput);
 
     spy.restore();
-    sound.destroy();
+    music.destroy();
     customBus.destroy();
   });
 
-  // 5. Setting back to original bus works
-  test('setting Sound.bus back to the default bus re-routes correctly', () => {
+  // 8. Setting same bus is a no-op
+  test('setting Music.bus to the same explicitly-set bus is a no-op', () => {
+    getAudioManager(); // ensure manager exists before spy
     const spy = spyOnGainConnect();
-    const sound = new Sound(createAudioBufferStub());
-    const mixer = getAudioManager();
-
-    const customBus = new AudioBus('custom2');
-    sound.bus = customBus;
-    spy.gainNode.connect.mockClear();
-
-    // Set back to the sound bus
-    sound.bus = mixer.sound;
-    expect(spy.gainNode.connect).toHaveBeenCalledWith(mixer.sound._getInputNode());
-
-    spy.restore();
-    sound.destroy();
-    customBus.destroy();
-  });
-
-  // 6. Setting same bus (after it has been explicitly set) is a no-op
-  test('setting Sound.bus to the same explicitly-set bus is a no-op', () => {
-    const spy = spyOnGainConnect();
-    const sound = new Sound(createAudioBufferStub());
+    const music = new Music(createAudioElementStub());
     const customBus = new AudioBus('custom-noop');
 
     // First set to a custom bus so _bus is assigned.
-    sound.bus = customBus;
+    music.bus = customBus;
     spy.gainNode.disconnect.mockClear();
     spy.gainNode.connect.mockClear();
 
     // Setting to the same custom bus should not trigger disconnect/reconnect.
-    sound.bus = customBus;
+    music.bus = customBus;
     expect(spy.gainNode.disconnect).not.toHaveBeenCalled();
     expect(spy.gainNode.connect).not.toHaveBeenCalled();
 
     spy.restore();
-    sound.destroy();
-    customBus.destroy();
-  });
-
-  // 7. Sound gainNode connects to bus's inputNode at construction
-  test('Sound gainNode connects to sound bus inputNode at construction time', () => {
-    const spy = spyOnGainConnect();
-    const sound = new Sound(createAudioBufferStub());
-
-    const soundBusInput = getAudioManager().sound._getInputNode();
-    expect(spy.gainNode.connect).toHaveBeenCalledWith(soundBusInput);
-
-    spy.restore();
-    sound.destroy();
-  });
-
-  // 8. Music gainNode connects to music bus's inputNode at construction
-  test('Music gainNode connects to music bus inputNode at construction time', () => {
-    const spy = spyOnGainConnect();
-    const music = new Music(createAudioElementStub());
-
-    const musicBusInput = getAudioManager().music._getInputNode();
-    expect(spy.gainNode.connect).toHaveBeenCalledWith(musicBusInput);
-
-    spy.restore();
     music.destroy();
+    customBus.destroy();
   });
 });

@@ -196,6 +196,7 @@ describe('Application', () => {
     const interaction = { update: vi.fn() };
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_audio'] = { update: vi.fn(), destroy: vi.fn() };
     rawApp['input'] = inputManager;
     rawApp['interaction'] = interaction;
     rawApp['tweens'] = tweens;

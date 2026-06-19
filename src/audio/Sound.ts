@@ -1,11 +1,10 @@
-import type { PlaybackOptions } from '#core/types';
 import { clamp } from '#math/utils';
 import { Vector } from '#math/Vector';
 
-import { AbstractMedia } from './AbstractMedia';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
-import type { AudioBus } from './AudioBus';
-import { getAudioManager } from './AudioManager';
+import { getAudioContext, isAudioContextReady } from './audio-context';
+import type { AudioManager } from './AudioManager';
+import type { Playable, PlayOptions, Voice } from './Playable';
+import { SoundVoice } from './SoundVoice';
 
 /**
  * Eviction strategy used when the pool is full and a new play is requested.
@@ -26,29 +25,6 @@ export enum SoundPoolStrategy {
    * degenerates to FirstInFirstOut in V1.
    */
   LowestPriority = 'priority',
-}
-
-interface SoundAudioSetup {
-  readonly audioContext: AudioContext;
-  readonly gainNode: GainNode;
-}
-
-interface QueuedPooledPlay {
-  readonly offset: number;
-  readonly duration?: number;
-  readonly loop: boolean;
-  readonly loopStart?: number;
-  readonly loopEnd?: number;
-  readonly playbackRate: number;
-}
-
-/** A pooled source with timing metadata for LRU eviction. */
-interface PooledSource {
-  readonly node: AudioBufferSourceNode;
-  /** audioContext.currentTime when the source was started. */
-  readonly startedAt: number;
-  /** Finite playback duration in seconds, or Infinity for looping sources. */
-  readonly effectiveDuration: number;
 }
 
 interface NormalizedAudioSpriteClip {
@@ -82,11 +58,19 @@ export interface AudioSpriteClip {
 export type DistanceModel = 'linear' | 'inverse' | 'exponential';
 
 /** Construction options for {@link Sound}. */
-export interface SoundOptions extends Partial<PlaybackOptions> {
+export interface SoundOptions {
   poolSize?: number;
   poolStrategy?: SoundPoolStrategy;
   priority?: number;
   sprites?: Readonly<Record<string, AudioSpriteClip>>;
+  /** Default volume for voices created from this sound. Range [0, 2]. Default: 1. */
+  volume?: number;
+  /** Default loop setting. Default: false. */
+  loop?: boolean;
+  /** Default playback rate. Default: 1. */
+  playbackRate?: number;
+  /** Default muted state. Default: false. */
+  muted?: boolean;
   /** Distance-attenuation model. Default: `'linear'`. */
   distanceModel?: DistanceModel;
   /** Distance below which volume is at full strength. Default: `50`. */
@@ -98,8 +82,7 @@ export interface SoundOptions extends Partial<PlaybackOptions> {
 }
 
 /** Per-call overrides for {@link Sound.play} and {@link Sound.playSprite}. */
-export interface PlayOptions extends Partial<PlaybackOptions> {
-  bus?: AudioBus;
+export interface SoundPlayOptions extends PlayOptions {
   /**
    * When `true`, all currently-playing instances of this sound are stopped
    * before the new one starts (singleton-replace mode). Useful for
@@ -110,66 +93,65 @@ export interface PlayOptions extends Partial<PlaybackOptions> {
   replace?: boolean;
 }
 
+/** Internal record tracking an active voice for pool management. */
+interface PooledVoice {
+  readonly voice: SoundVoice;
+  /** audioContext.currentTime when the voice was started. */
+  readonly startedAt: number;
+  /** Finite playback duration in seconds, or Infinity for looping. */
+  readonly effectiveDuration: number;
+}
+
 /**
- * Pre-decoded short audio clip backed by an `AudioBuffer`. Each
- * {@link Sound.play} call grabs a free `AudioBufferSourceNode` from the
- * pool (default size 8) so the same sound can overlap itself; when the
- * pool is full the configured {@link SoundPoolStrategy} decides which
- * source to evict.
+ * Pre-decoded short audio clip backed by an `AudioBuffer`.
  *
- * Supports audio-sprite playback via {@link Sound.playSprite} — name a
- * sub-region in the {@link AudioSpriteClip} options and trigger by name.
+ * Sound is a **data descriptor** — it holds the decoded audio buffer, sprite
+ * definitions, default playback parameters, and spatial configuration but does
+ * NOT start playback itself. Playback is driven by
+ * `AudioManager.play(sound, options)` which returns a {@link Voice} handle.
  *
- * Routes through any {@link AudioBus}; defaults to the engine's `sound`
- * bus. Calling {@link Sound.makeSpatial} attaches a panner so the sound
- * follows a {@link SceneNode} or world-space target with distance
- * attenuation handled by Web Audio.
+ * Multiple concurrent plays of the same Sound are supported up to `poolSize`.
+ * When the pool is full the configured {@link SoundPoolStrategy} decides which
+ * active voice to evict.
  *
  * Use {@link Music} for long-form streaming audio (single source, decoded
  * lazily) — `Sound` is best for short, frequently-triggered clips.
  */
-export class Sound extends AbstractMedia {
+export class Sound implements Playable {
   private readonly _audioBuffer: AudioBuffer;
-  private readonly _pooledSources: PooledSource[] = [];
-  private readonly _queuedPooledPlays: QueuedPooledPlay[] = [];
   private readonly _sprites = new Map<string, NormalizedAudioSpriteClip>();
 
-  private _audioSetup: SoundAudioSetup | null = null;
-  private _paused = true;
-  private _poolSize = 8;
-  private _poolStrategy: SoundPoolStrategy = SoundPoolStrategy.FirstInFirstOut;
-  private _priority = 0;
+  /** Default volume applied to new voices. */
+  public volume: number;
+  /** Default loop flag applied to new voices. */
+  public loop: boolean;
+  /** Default playback rate applied to new voices. */
+  public playbackRate: number;
+  /** Default muted flag applied to new voices. */
+  public muted: boolean;
+
+  private _poolSize: number;
+  private _poolStrategy: SoundPoolStrategy;
+  private _priority: number;
+
+  // Spatial descriptor params — read by _createVoice to configure the PannerNode.
   private _position: Vector | null = null;
   private _velocity: Vector | null = null;
-  private _pannerNode: PannerNode | null = null;
   private _distanceModel: DistanceModel = 'linear';
   private _refDistance = 50;
   private _maxDistance = 1000;
   private _rolloffFactor = 1;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this.setupWithAudioContext(ctx);
-  };
 
-  public get paused(): boolean {
-    return this._paused;
-  }
-
-  public set paused(paused: boolean) {
-    if (paused) {
-      this.pause();
-    } else {
-      this.play();
-    }
-  }
-
-  public get analyserTarget(): GainNode | null {
-    return this._audioSetup?.gainNode ?? null;
-  }
+  // Active voice pool — tracks concurrent voices for eviction logic.
+  private readonly _activeVoices: PooledVoice[] = [];
 
   /** The underlying decoded audio data. Useful for sharing a single decoded buffer across multiple `Sound` instances. */
   public get audioBuffer(): AudioBuffer {
     return this._audioBuffer;
+  }
+
+  public get duration(): number {
+    return this._audioBuffer.duration;
   }
 
   public get poolSize(): number {
@@ -214,16 +196,11 @@ export class Sound extends AbstractMedia {
       if (this._position !== null) {
         this._position.destroy();
         this._position = null;
-        this._teardownSpatial();
-        getAudioManager()._unregisterSpatialSound(this);
       }
       return;
     }
     if (this._position === null) {
-      // Becoming spatial
       this._position = new Vector(value.x, value.y);
-      this._setupSpatial();
-      getAudioManager()._registerSpatialSound(this);
     } else {
       this._position.set(value.x, value.y);
     }
@@ -248,16 +225,13 @@ export class Sound extends AbstractMedia {
     }
   }
 
-  /** Distance-attenuation model. Applied immediately if a panner is already attached. */
+  /** Distance-attenuation model. */
   public get distanceModel(): DistanceModel {
     return this._distanceModel;
   }
 
   public set distanceModel(value: DistanceModel) {
     this._distanceModel = value;
-    if (this._pannerNode !== null) {
-      this._pannerNode.distanceModel = value;
-    }
   }
 
   /** Reference distance — volume is at full strength at and below this distance. */
@@ -267,9 +241,6 @@ export class Sound extends AbstractMedia {
 
   public set refDistance(value: number) {
     this._refDistance = Math.max(0, value);
-    if (this._pannerNode !== null) {
-      this._pannerNode.refDistance = this._refDistance;
-    }
   }
 
   /** Maximum distance for the `'linear'` model — volume reaches zero here. */
@@ -279,9 +250,6 @@ export class Sound extends AbstractMedia {
 
   public set maxDistance(value: number) {
     this._maxDistance = Math.max(0, value);
-    if (this._pannerNode !== null) {
-      this._pannerNode.maxDistance = this._maxDistance;
-    }
   }
 
   /** Falloff steepness. Higher values attenuate faster with distance. */
@@ -291,33 +259,34 @@ export class Sound extends AbstractMedia {
 
   public set rolloffFactor(value: number) {
     this._rolloffFactor = Math.max(0, value);
-    if (this._pannerNode !== null) {
-      this._pannerNode.rolloffFactor = this._rolloffFactor;
-    }
   }
 
   public constructor(audioBuffer: AudioBuffer, options: SoundOptions = {}) {
-    super({
-      duration: audioBuffer.duration,
-      volume: 1,
-      playbackRate: 1,
-      loop: false,
-      muted: false,
-    });
-
     this._audioBuffer = audioBuffer;
 
-    const { poolSize, poolStrategy, priority, sprites, distanceModel, refDistance, maxDistance, rolloffFactor, ...playbackOptions } = options;
+    const {
+      poolSize,
+      poolStrategy,
+      priority,
+      sprites,
+      volume,
+      loop,
+      playbackRate,
+      muted,
+      distanceModel,
+      refDistance,
+      maxDistance,
+      rolloffFactor,
+    } = options;
+
+    this.volume = clamp(volume ?? 1, 0, 2);
+    this.loop = loop ?? false;
+    this.playbackRate = clamp(playbackRate ?? 1, 0.1, 20);
+    this.muted = muted ?? false;
 
     this._poolSize = Math.max(1, Math.floor(poolSize ?? 8));
-
-    if (poolStrategy !== undefined) {
-      this._poolStrategy = poolStrategy;
-    }
-
-    if (priority !== undefined) {
-      this._priority = priority;
-    }
+    this._poolStrategy = poolStrategy ?? SoundPoolStrategy.FirstInFirstOut;
+    this._priority = priority ?? 0;
 
     if (distanceModel !== undefined) {
       this._distanceModel = distanceModel;
@@ -332,68 +301,9 @@ export class Sound extends AbstractMedia {
       this._rolloffFactor = Math.max(0, rolloffFactor);
     }
 
-    if (Object.keys(playbackOptions).length > 0) {
-      this.applyOptions(playbackOptions);
-    }
-
     if (sprites) {
       this.setSprites(sprites);
     }
-
-    if (isAudioContextReady()) {
-      this.setupWithAudioContext(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
-  }
-
-  public setVolume(value: number): this {
-    const volume = clamp(value, 0, 2);
-
-    if (this._volume === volume) {
-      return this;
-    }
-
-    this._volume = volume;
-
-    if (this._audioSetup) {
-      const { gainNode, audioContext } = this._audioSetup;
-      gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 0.01);
-    }
-
-    return this;
-  }
-
-  public setLoop(loop: boolean): this {
-    this._loop = loop;
-
-    return this;
-  }
-
-  public setPlaybackRate(value: number): this {
-    this._playbackRate = clamp(value, 0.1, 20);
-
-    return this;
-  }
-
-  public getTime(): number {
-    return 0;
-  }
-
-  public setTime(currentTime: number): this {
-    void currentTime;
-    return this;
-  }
-
-  public setMuted(muted: boolean): this {
-    this._muted = muted;
-
-    if (this._audioSetup) {
-      const { gainNode, audioContext } = this._audioSetup;
-      gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 0.01);
-    }
-
-    return this;
   }
 
   public setPoolSize(poolSize: number): this {
@@ -404,7 +314,7 @@ export class Sound extends AbstractMedia {
     }
 
     this._poolSize = normalizedPoolSize;
-    this._trimPooledSources();
+    this._trimActiveVoices();
 
     return this;
   }
@@ -459,55 +369,118 @@ export class Sound extends AbstractMedia {
   }
 
   /**
-   * Play this sound. By default, creates a new pooled instance allowing
-   * multiple concurrent plays up to `poolSize`. Pass `{ replace: true }` to
-   * stop all prior instances of this sound before starting a new one
-   * (singleton-replace mode — useful for non-overlapping playback like UI
-   * confirmation chimes).
+   * Implements {@link Playable}. Called by {@link AudioManager.play}; do not
+   * call directly — use `manager.play(sound, options)` instead.
+   *
+   * Creates one `SoundVoice` backed by a single `AudioBufferSourceNode`. Pool
+   * limits are enforced: if the pool is full the configured eviction strategy
+   * picks a victim to stop before the new voice starts.
    */
-  public play(options?: PlayOptions): this {
-    if (options?.bus !== undefined) {
-      this.bus = options.bus;
-    }
-
-    const playbackRate = clamp(options?.playbackRate ?? this._playbackRate, 0.1, 20);
-    const offset = Math.max(0, options?.time ?? 0);
-    const loop = options?.loop ?? this._loop;
-
-    if (options?.volume !== undefined) {
-      this.setVolume(options.volume);
-    }
-
-    if (options?.muted !== undefined) {
-      this.setMuted(options.muted);
-    }
-
-    if (options?.replace) {
-      this._stopAllPooled();
-    }
+  public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+    const loop = options.loop ?? this.loop;
+    const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
+    const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 2);
+    const offset = Math.max(0, options.time ?? 0);
+    const bus = options.bus ?? manager.sound;
 
     if (offset >= this.duration) {
-      return this;
+      return _noopVoice;
     }
+
+    // Pool eviction: stop the victim voice if we're at capacity.
+    this._pruneEndedVoices();
+
+    if (this._activeVoices.length >= this._poolSize) {
+      const victimIndex = this._pickEvictionVictim();
+      const victim = this._activeVoices[victimIndex];
+      if (victim) {
+        this._activeVoices.splice(victimIndex, 1);
+        victim.voice.stop();
+      }
+    }
+
+    const audioContext = getAudioContext();
+
+    // Build the Web Audio graph for this voice:
+    // sourceNode → gainNode [→ pannerNode] → bus.inputNode
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.01);
+
+    // Spatial routing
+    let pannerNode: PannerNode | null = null;
+    if (this._position !== null) {
+      pannerNode = audioContext.createPanner();
+      pannerNode.panningModel = 'equalpower';
+      pannerNode.distanceModel = this._distanceModel;
+      pannerNode.refDistance = this._refDistance;
+      pannerNode.maxDistance = this._maxDistance;
+      pannerNode.rolloffFactor = this._rolloffFactor;
+
+      gainNode.connect(pannerNode);
+      const inputNode = bus._getInputNode();
+      if (inputNode) {
+        pannerNode.connect(inputNode);
+      } else {
+        pannerNode.connect(audioContext.destination);
+      }
+    } else {
+      const inputNode = bus._getInputNode();
+      if (inputNode) {
+        gainNode.connect(inputNode);
+      } else {
+        gainNode.connect(audioContext.destination);
+      }
+    }
+
+    const sourceNode = audioContext.createBufferSource();
+    sourceNode.buffer = this._audioBuffer;
+    sourceNode.loop = loop;
+    sourceNode.playbackRate.value = playbackRate;
+
+    if (loop) {
+      sourceNode.loopStart = 0;
+      sourceNode.loopEnd = this.duration;
+    }
+
+    sourceNode.connect(gainNode);
 
     const duration = loop ? undefined : this.duration - offset;
 
-    this._enqueuePooledPlay({
-      offset,
-      duration,
-      loop,
-      loopStart: 0,
-      loopEnd: this.duration,
-      playbackRate,
-    });
+    if (!loop && duration !== undefined && duration > 0) {
+      sourceNode.start(0, offset, duration);
+    } else {
+      sourceNode.start(0, offset);
+    }
 
-    this._paused = false;
-    this.onStart.dispatch();
+    const startedAt = audioContext.currentTime;
+    const effectiveDuration = loop ? Infinity : (duration ?? Infinity);
 
-    return this;
+    const voice = new SoundVoice(audioContext, gainNode, sourceNode, pannerNode);
+
+    // Register spatial voice with the manager so update() can tick its position.
+    if (pannerNode !== null) {
+      manager._registerSpatialVoice(voice, () => this._position);
+    }
+
+    const pooledVoice: PooledVoice = { voice, startedAt, effectiveDuration };
+
+    sourceNode.onended = (): void => {
+      const index = this._activeVoices.indexOf(pooledVoice);
+      if (index !== -1) {
+        this._activeVoices.splice(index, 1);
+      }
+    };
+
+    this._activeVoices.push(pooledVoice);
+
+    return voice;
   }
 
-  public playSprite(name: string, options: Partial<PlaybackOptions> = {}): this {
+  /**
+   * Create a voice for a named sprite clip.
+   * @internal Used by managers that want sprite-level playback.
+   */
+  public _createSpriteVoice(manager: AudioManager, name: string, options: PlayOptions = {}): Voice {
     const clip = this._sprites.get(name);
 
     if (!clip) {
@@ -522,239 +495,122 @@ export class Sound extends AbstractMedia {
     }
 
     const loop = options.loop ?? clip.loop;
-    const playbackRate = clamp(options.playbackRate ?? this._playbackRate, 0.1, 20);
 
-    if (options.volume !== undefined) {
-      this.setVolume(options.volume);
-    }
-
-    if (options.muted !== undefined) {
-      this.setMuted(options.muted);
-    }
-
-    this._enqueuePooledPlay({
-      offset,
-      duration: loop ? undefined : clip.end - offset,
+    const spriteOptions: PlayOptions = {
+      ...options,
+      time: offset,
       loop,
-      loopStart: clip.start,
-      loopEnd: clip.end,
-      playbackRate,
-    });
-    this.onStart.dispatch();
+    };
 
-    return this;
+    return this._createSpriteVoiceRaw(manager, spriteOptions, clip.start, clip.end);
   }
 
-  public pause(options?: Partial<PlaybackOptions>): this {
-    if (options) {
-      this.applyOptions(options);
-    }
+  /** Internal: creates a voice using sprite loop window overrides. */
+  private _createSpriteVoiceRaw(
+    manager: AudioManager,
+    options: PlayOptions,
+    loopStart: number,
+    loopEnd: number,
+  ): Voice {
+    const loop = options.loop ?? false;
+    const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
+    const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 2);
+    const offset = Math.max(0, options.time ?? 0);
+    const bus = options.bus ?? manager.sound;
 
-    if (this._paused && this._pooledSources.length === 0) {
-      return this;
-    }
+    this._pruneEndedVoices();
 
-    const hadPooledSources = this._pooledSources.length > 0;
-    const wasPlaying = !this._paused || hadPooledSources;
-
-    this._stopAllPooled();
-    this._queuedPooledPlays.length = 0;
-
-    this._paused = true;
-
-    if (wasPlaying) {
-      this.onStop.dispatch();
-    }
-
-    return this;
-  }
-
-  protected override _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null {
-    return this._audioSetup;
-  }
-
-  protected override _defaultBus(): AudioBus {
-    return getAudioManager().sound;
-  }
-
-  protected override _disconnectFromBus(): void {
-    if (this._audioSetup) {
-      // Disconnect the upstream node (panner if spatial, else gainNode)
-      const upstream = this._pannerNode ?? this._audioSetup.gainNode;
-      upstream.disconnect();
-    }
-  }
-
-  protected override _connectToBus(): void {
-    if (this._audioSetup) {
-      const upstream = this._pannerNode ?? this._audioSetup.gainNode;
-      const inputNode = this.bus._getInputNode();
-      if (inputNode) {
-        upstream.connect(inputNode);
-      } else {
-        upstream.connect(this._audioSetup.audioContext.destination);
+    if (this._activeVoices.length >= this._poolSize) {
+      const victimIndex = this._pickEvictionVictim();
+      const victim = this._activeVoices[victimIndex];
+      if (victim) {
+        this._activeVoices.splice(victimIndex, 1);
+        victim.voice.stop();
       }
     }
-  }
 
-  public override destroy(): void {
-    if (this._pannerNode !== null) {
-      this._pannerNode.disconnect();
-      this._pannerNode = null;
-    }
-    if (this._position !== null) {
-      this._position.destroy();
-      this._position = null;
-      getAudioManager()._unregisterSpatialSound(this);
-    }
-    if (this._velocity !== null) {
-      this._velocity.destroy();
-      this._velocity = null;
-    }
-
-    super.destroy();
-
-    onAudioContextReady.remove(this._onAudioContextReady);
-
-    this._audioSetup?.gainNode.disconnect();
-    this._stopAllPooled();
-
-    this._queuedPooledPlays.length = 0;
-    this._sprites.clear();
-  }
-
-  /** Internal: called by AudioManager.update() once per frame for spatial sounds. */
-  public _tickSpatial(): void {
-    if (this._pannerNode === null || this._position === null) return;
-    const ctx = this._pannerNode.context;
-    const t = ctx.currentTime;
-    const panner = this._pannerNode as unknown as Partial<{
-      positionX: AudioParam;
-      positionY: AudioParam;
-      positionZ: AudioParam;
-      setPosition: (x: number, y: number, z: number) => void;
-    }>;
-    if (panner.positionX) {
-      panner.positionX.setValueAtTime(this._position.x, t);
-      panner.positionY!.setValueAtTime(this._position.y, t);
-      panner.positionZ!.setValueAtTime(0, t);
-    } else if (panner.setPosition) {
-      panner.setPosition(this._position.x, this._position.y, 0);
-    }
-  }
-
-  private _setupSpatial(): void {
-    if (!this._audioSetup || this._pannerNode !== null) return;
-    const ctx = this._audioSetup.audioContext;
-    const panner = ctx.createPanner();
-    panner.panningModel = 'equalpower';
-    panner.distanceModel = this._distanceModel;
-    panner.refDistance = this._refDistance;
-    panner.maxDistance = this._maxDistance;
-    panner.rolloffFactor = this._rolloffFactor;
-    this._pannerNode = panner;
-
-    // Re-route: gainNode → pannerNode → bus.inputNode
-    this._audioSetup.gainNode.disconnect();
-    this._audioSetup.gainNode.connect(panner);
-
-    const busInput = this.bus._getInputNode();
-    if (busInput) {
-      panner.connect(busInput);
-    } else {
-      panner.connect(ctx.destination);
-    }
-  }
-
-  private _teardownSpatial(): void {
-    if (!this._audioSetup || this._pannerNode === null) return;
-    this._audioSetup.gainNode.disconnect();
-    this._pannerNode.disconnect();
-    this._pannerNode = null;
-
-    // Restore: gainNode → bus.inputNode
-    const busInput = this.bus._getInputNode();
-    if (busInput) {
-      this._audioSetup.gainNode.connect(busInput);
-    } else {
-      this._audioSetup.gainNode.connect(this._audioSetup.audioContext.destination);
-    }
-  }
-
-  private setupWithAudioContext(audioContext: AudioContext): void {
+    const audioContext = getAudioContext();
     const gainNode = audioContext.createGain();
-    gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
+    gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.01);
 
-    const inputNode = this.bus._getInputNode();
+    const inputNode = bus._getInputNode();
     if (inputNode) {
       gainNode.connect(inputNode);
     } else {
       gainNode.connect(audioContext.destination);
     }
 
-    this._audioSetup = { audioContext, gainNode };
+    const sourceNode = audioContext.createBufferSource();
+    sourceNode.buffer = this._audioBuffer;
+    sourceNode.loop = loop;
+    sourceNode.playbackRate.value = playbackRate;
 
-    this._flushQueuedPooledPlays();
-  }
-
-  private _enqueuePooledPlay(play: QueuedPooledPlay): void {
-    if (!this._audioSetup) {
-      this._queuedPooledPlays.push(play);
-
-      return;
+    if (loop) {
+      sourceNode.loopStart = loopStart;
+      sourceNode.loopEnd = loopEnd;
     }
 
-    this._playPooledNow(play);
-  }
+    sourceNode.connect(gainNode);
 
-  private _flushQueuedPooledPlays(): void {
-    if (!this._audioSetup || this._queuedPooledPlays.length === 0) {
-      return;
+    const clipDuration = loop ? undefined : loopEnd - offset;
+
+    if (!loop && clipDuration !== undefined && clipDuration > 0) {
+      sourceNode.start(0, offset, clipDuration);
+    } else {
+      sourceNode.start(0, offset);
     }
 
-    const queued = [...this._queuedPooledPlays];
-
-    this._queuedPooledPlays.length = 0;
-
-    for (const play of queued) {
-      this._playPooledNow(play);
-    }
-  }
-
-  private _playPooledNow(play: QueuedPooledPlay): void {
-    if (!this._audioSetup) {
-      return;
-    }
-
-    const { audioContext } = this._audioSetup;
-    const sourceNode = this._createBufferSourceNode(this._audioSetup, play);
     const startedAt = audioContext.currentTime;
-    const effectiveDuration = play.loop ? Infinity : (play.duration ?? Infinity);
+    const effectiveDuration = loop ? Infinity : (clipDuration ?? Infinity);
 
-    const pooledSource: PooledSource = { node: sourceNode, startedAt, effectiveDuration };
+    const voice = new SoundVoice(audioContext, gainNode, sourceNode, null);
+
+    const pooledVoice: PooledVoice = { voice, startedAt, effectiveDuration };
 
     sourceNode.onended = (): void => {
-      const index = this._pooledSources.indexOf(pooledSource);
-
+      const index = this._activeVoices.indexOf(pooledVoice);
       if (index !== -1) {
-        this._pooledSources.splice(index, 1);
-      }
-
-      sourceNode.disconnect();
-
-      if (this._pooledSources.length === 0 && this._queuedPooledPlays.length === 0) {
-        this._paused = true;
+        this._activeVoices.splice(index, 1);
       }
     };
 
-    this._pooledSources.push(pooledSource);
-    this._trimPooledSources();
+    this._activeVoices.push(pooledVoice);
+
+    return voice;
   }
 
-  /**
-   * Pick the index within `_pooledSources` of the source to evict.
-   * The returned index is always valid (0 .. length-1).
-   */
+  /** Stop all currently active voices (e.g. for replace mode). */
+  public _stopAllVoices(): void {
+    const voices = [...this._activeVoices];
+    this._activeVoices.length = 0;
+    for (const pv of voices) {
+      pv.voice.stop();
+    }
+  }
+
+  public destroy(): void {
+    this._stopAllVoices();
+    this._sprites.clear();
+
+    if (this._position !== null) {
+      this._position.destroy();
+      this._position = null;
+    }
+
+    if (this._velocity !== null) {
+      this._velocity.destroy();
+      this._velocity = null;
+    }
+  }
+
+  private _pruneEndedVoices(): void {
+    for (let i = this._activeVoices.length - 1; i >= 0; i--) {
+      if (this._activeVoices[i].voice.ended) {
+        this._activeVoices.splice(i, 1);
+      }
+    }
+  }
+
   private _pickEvictionVictim(): number {
     switch (this._poolStrategy) {
       case SoundPoolStrategy.LeastRecentlyUsed: {
@@ -770,19 +626,13 @@ export class Sound extends AbstractMedia {
     }
   }
 
-  /**
-   * Returns the index of the source with the smallest remaining playback
-   * time (i.e. closest to its natural end). Used for `LeastRecentlyUsed`.
-   */
   private _pickClosestToEnd(): number {
-    if (!this._audioSetup) return 0;
-
-    const now = this._audioSetup.audioContext.currentTime;
+    const now = isAudioContextReady() ? getAudioContext().currentTime : 0;
     let minRemaining = Infinity;
     let minIndex = 0;
 
-    for (let i = 0; i < this._pooledSources.length; i++) {
-      const src = this._pooledSources[i];
+    for (let i = 0; i < this._activeVoices.length; i++) {
+      const src = this._activeVoices[i];
       const elapsed = now - src.startedAt;
       const remaining = src.effectiveDuration - elapsed;
 
@@ -795,64 +645,26 @@ export class Sound extends AbstractMedia {
     return minIndex;
   }
 
-  private _trimPooledSources(): void {
-    while (this._pooledSources.length > this._poolSize) {
+  private _trimActiveVoices(): void {
+    while (this._activeVoices.length > this._poolSize) {
       const victimIndex = this._pickEvictionVictim();
-      const victim = this._pooledSources[victimIndex];
+      const victim = this._activeVoices[victimIndex];
 
-      if (!victim) {
-        break;
-      }
+      if (!victim) break;
 
-      this._pooledSources.splice(victimIndex, 1);
-      victim.node.onended = null;
-      this._stopSourceNode(victim.node);
+      this._activeVoices.splice(victimIndex, 1);
+      victim.voice.stop();
     }
-  }
-
-  /** Stop all pooled sources immediately (used by `replace: true` and `pause()`). */
-  private _stopAllPooled(): void {
-    for (const pooledSource of this._pooledSources) {
-      pooledSource.node.onended = null;
-      this._stopSourceNode(pooledSource.node);
-    }
-
-    this._pooledSources.length = 0;
-  }
-
-  private _stopSourceNode(sourceNode: AudioBufferSourceNode): void {
-    try {
-      sourceNode.stop(0);
-    } catch {
-      // source nodes can only be stopped once; ignore invalid state errors
-    }
-
-    sourceNode.disconnect();
-  }
-
-  private _createBufferSourceNode(setup: SoundAudioSetup, play: QueuedPooledPlay): AudioBufferSourceNode {
-    const { gainNode } = setup;
-    const sourceNode = setup.audioContext.createBufferSource();
-
-    sourceNode.buffer = this._audioBuffer;
-    sourceNode.loop = play.loop;
-    sourceNode.playbackRate.value = play.playbackRate;
-
-    if (play.loop) {
-      sourceNode.loopStart = play.loopStart ?? 0;
-      sourceNode.loopEnd = play.loopEnd ?? this.duration;
-    }
-
-    sourceNode.connect(gainNode);
-
-    const duration = play.duration;
-
-    if (!play.loop && duration !== undefined && duration > 0) {
-      sourceNode.start(0, play.offset, duration);
-    } else {
-      sourceNode.start(0, play.offset);
-    }
-
-    return sourceNode;
   }
 }
+
+/** A no-op Voice returned when a play call is out of range (e.g. offset >= duration). */
+const _noopVoice: Voice = {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  stop: (): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  setVolume: (_volume: number): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op for degenerate case
+  fadeOut: (_durationMs: number): void => {},
+  ended: true,
+};
