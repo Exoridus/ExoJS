@@ -64,7 +64,7 @@ export interface SoundOptions {
   poolStrategy?: SoundPoolStrategy;
   priority?: number;
   sprites?: Readonly<Record<string, AudioSpriteClip>>;
-  /** Default volume for voices created from this sound. Range [0, 2]. Default: 1. */
+  /** Default volume for voices created from this sound. Range [0, 1]. Default: 1. */
   volume?: number;
   /** Default loop setting. Default: false. */
   loop?: boolean;
@@ -265,20 +265,7 @@ export class Sound implements Playable {
   public constructor(audioBuffer: AudioBuffer, options: SoundOptions = {}) {
     this._audioBuffer = audioBuffer;
 
-    const {
-      poolSize,
-      poolStrategy,
-      priority,
-      sprites,
-      volume,
-      loop,
-      playbackRate,
-      muted,
-      distanceModel,
-      refDistance,
-      maxDistance,
-      rolloffFactor,
-    } = options;
+    const { poolSize, poolStrategy, priority, sprites, volume, loop, playbackRate, muted, distanceModel, refDistance, maxDistance, rolloffFactor } = options;
 
     this.volume = clamp(volume ?? 1, 0, 1);
     this.loop = loop ?? false;
