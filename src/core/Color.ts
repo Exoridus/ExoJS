@@ -73,7 +73,7 @@ export class Color implements Cloneable {
 
   /**
    * Set any subset of channels. Omitted parameters default to the current
-   * channel value (use this for "set red, leave the rest"). RGB are masked
+   * channel value (use this for "set red, leave the rest"). RGB are clamped
    * to 0..255; alpha is clamped to 0..1.
    */
   public set(r: number = this._r, g: number = this._g, b: number = this._b, a: number = this._a): this {
@@ -131,17 +131,18 @@ export class Color implements Cloneable {
    * for the full RGBA32 packed form.
    */
   public toString(prefixed = true): string {
-    return `${prefixed ? '#' : ''}${((1 << 24) + (this._r << 16) + (this._g << 8) + this._b).toString(16).substr(1)}`;
+    return `${prefixed ? '#' : ''}${((1 << 24) | (this._r << 16) | (this._g << 8) | this._b).toString(16).substr(1)}`;
   }
 
   /**
    * Return the color packed into a single 32-bit RGBA value (R in low byte,
-   * A in high byte). Cached after first call until any channel is written.
-   * Returns `0` when alpha is zero.
+   * A in high byte). Cached after first call until any channel is written. RGB
+   * is preserved at every alpha — a fully transparent red and a fully
+   * transparent black pack to different values.
    */
   public toRgba(): number {
     if (this._rgba === null) {
-      this._rgba = this._a && ((((this._a * 255) | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
+      this._rgba = ((((this._a * 255) | 0) << 24) | (this._b << 16) | (this._g << 8) | this._r) >>> 0;
     }
 
     return this._rgba;
