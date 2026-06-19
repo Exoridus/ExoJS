@@ -9,6 +9,7 @@ import type { GamepadSlotStrategy } from '#input/InputManager';
 import { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { PointLike } from '#math/PointLike';
+import { Random } from '#math/Random';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderingContext, type RenderToOptions } from '#rendering/RenderingContext';
@@ -105,6 +106,8 @@ export interface ApplicationOptions {
   loader?: LoaderOptions;
   rendering?: RenderingApplicationOptions;
   input?: InputApplicationOptions;
+  /** Seed for the per-Application {@link Application.random} RNG. Omit for a non-deterministic seed. */
+  seed?: number;
   /**
    * Extension selection.
    * `undefined` → Core + globally registered extensions.
@@ -215,6 +218,8 @@ export class Application {
   public readonly input: InputManager;
   public readonly interaction: InteractionManager;
   public readonly scene: SceneManager;
+  /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
+  public readonly random: Random;
   public readonly tweens: TweenManager = new TweenManager();
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
@@ -325,6 +330,7 @@ export class Application {
     this.input = new InputManager(this);
     this.interaction = new InteractionManager(this);
     this.scene = new SceneManager(this);
+    this.random = new Random(this.options.seed);
     this._updateHandler = this.update.bind(this);
 
     this._startupClock.start();
