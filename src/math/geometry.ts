@@ -376,3 +376,19 @@ export const buildStar = (
 
   return buildPolygon(path);
 };
+
+/**
+ * CPU mesh-geometry builders, grouped as a namespace so the public API carries
+ * no loose `build*` functions. Named `MeshBuilder` (not `Geometry`) to avoid
+ * clashing with the rendering `Geometry` class. The underlying functions stay
+ * module exports for internal use; only this facade is in the public barrel.
+ */
+export const MeshBuilder = {
+  line: buildLine,
+  path: buildPath,
+  circle: buildCircle,
+  ellipse: buildEllipse,
+  polygon: buildPolygon,
+  rectangle: buildRectangle,
+  star: buildStar,
+} as const;

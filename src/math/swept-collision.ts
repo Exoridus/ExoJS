@@ -417,3 +417,17 @@ export function* substepSweep(
     yield { x: fromX + deltaX * t, y: fromY + deltaY * t, t };
   }
 }
+
+/**
+ * Swept (continuous) collision queries, grouped as a namespace so the public
+ * API carries no loose `sweep*` functions. The underlying functions stay module
+ * exports for internal use; only this facade is in the public barrel.
+ */
+export const Sweep = {
+  rectangle: sweepRectangle,
+  circleVsRectangle: sweepCircleVsRectangle,
+  circleVsCircle: sweepCircleVsCircle,
+  rectangleAgainst: sweepRectangleAgainst,
+  circleAgainst: sweepCircleAgainst,
+  substep: substepSweep,
+} as const;
