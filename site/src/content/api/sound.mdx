@@ -5,7 +5,7 @@ symbol: "Sound"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 24
+memberCount: 25
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/Sound.ts"
@@ -37,6 +37,7 @@ lazily) — `Sound` is best for short, frequently-triggered clips.
 
 - `_createVoice(manager: AudioManager, options: PlayOptions): Voice`
 - `_stopAllVoices(): void`
+- `clip(offset: number, duration: number): Sound`
 - `defineSprite(name: string, clip: AudioSpriteClip): this`
 - `destroy(): void`
 - `hasSprite(name: string): boolean`

@@ -1,0 +1,42 @@
+---
+title: "AudioInput"
+description: "A live audio capture source — a microphone or WebRTC `MediaStream` obtained via `getUserMedia`. **Not a Playable**: you don't \"play\" a mic, you *open* it. Pass it to AudioManager.open to get an InputVoice for monitoring, analysis, or recording. ```ts const mic = await AudioInput.open({ echoCancellation: true }); const input = app.audio.open(mic); input.analyse(analyser); // visualise / beat-detect (no feedback) const clip = await input.record(2000); // capture 2s -> Sound mic.close(); // release the device ```"
+symbol: "AudioInput"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+memberCount: 3
+tier: "stable"
+sections: ["Import", "Methods", "Properties", "Source"]
+sourcePath: "src/audio/AudioInput.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioInput.ts#L27"
+---
+## Import
+
+`import { AudioInput } from '@codexo/exojs'`
+
+A live audio capture source — a microphone or WebRTC `MediaStream` obtained
+via `getUserMedia`. **Not a Playable**: you don't "play" a mic, you
+*open* it. Pass it to AudioManager.open to get an
+InputVoice for monitoring, analysis, or recording.
+
+```ts
+const mic = await AudioInput.open(\{ echoCancellation: true \});
+const input = app.audio.open(mic);
+input.analyse(analyser);          // visualise / beat-detect (no feedback)
+const clip = await input.record(2000); // capture 2s -> Sound
+mic.close();                      // release the device
+```
+
+## Methods
+
+- `close(): void`
+- `open(options: AudioInputOptions): Promise<AudioInput>`
+
+## Properties
+
+- `stream: MediaStream`
+
+## Source
+
+[src/audio/AudioInput.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioInput.ts#L27)
