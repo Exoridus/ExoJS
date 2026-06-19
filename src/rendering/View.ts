@@ -452,8 +452,8 @@ export class View implements ObservableVectorOwner {
     // Solve the forward transform `clip = M · world` directly for `world`,
     // including the translation, so this is an exact inverse of worldToScreen
     // (returns absolute world coordinates, identity at the default centered
-    // camera). The shared Matrix.getInverse drops the translation for this
-    // projection matrix, so it is deliberately not used here.
+    // camera). Inlined 2×2 solve — a det guard + no Matrix allocation on this
+    // pointer-mapping path; equivalent to `transformInverse(getTransform())`.
     const m = this.getTransform();
     const det = m.a * m.d - m.b * m.c;
 
