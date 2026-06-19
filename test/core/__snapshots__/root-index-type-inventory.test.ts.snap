@@ -113,6 +113,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "DelayFilter: class",
   "DelayFilterOptions: interface",
   "Destroyable: interface",
+  "DisposalScope: class",
   "Drawable: class",
   "DrawableConstructor: type alias",
   "DuckingFilter: class",

@@ -6,13 +6,15 @@ import type { RenderNode } from '#rendering/RenderNode';
 import type { Loader } from '#resources/Loader';
 
 import type { Application } from './Application';
+import { DisposalScope } from './DisposalScope';
 import type { Time } from './Time';
+import type { Destroyable } from './types';
 
 /**
  * Scene-bound input proxy. Bindings created here are automatically unbound
  * when the owning scene is destroyed. Access via {@link Scene.inputs}.
  */
-class SceneInputs {
+class SceneInputs implements Destroyable {
   private readonly _bindings = new Set<InputBinding>();
 
   public constructor(private readonly _scene: Scene) {}
@@ -33,8 +35,7 @@ class SceneInputs {
     return this._track(this._scene.app!.input.onTrigger(channel, callback, options));
   }
 
-  /** @internal */
-  public _disposeAll(): void {
+  public destroy(): void {
     for (const binding of this._bindings) {
       binding.unbind();
     }
@@ -53,7 +54,7 @@ class SceneInputs {
  * Scene-bound tween proxy. Tweens created or added here are automatically
  * stopped when the owning scene is destroyed. Access via {@link Scene.tweens}.
  */
-class SceneTweens {
+class SceneTweens implements Destroyable {
   private readonly _tweens = new Set<Tween>();
 
   public constructor(private readonly _scene: Scene) {}
@@ -72,8 +73,7 @@ class SceneTweens {
     return this;
   }
 
-  /** @internal */
-  public _disposeAll(): void {
+  public destroy(): void {
     for (const tween of this._tweens) {
       tween.stop();
     }
@@ -120,6 +120,7 @@ export class Scene {
   protected _stackMode: SceneStackMode = 'overlay';
   private _inputs: SceneInputs | null = null;
   private _tweens: SceneTweens | null = null;
+  private readonly _disposal = new DisposalScope();
 
   public get app(): Application | null {
     return this._app;
@@ -159,7 +160,7 @@ export class Scene {
         throw new Error('Scene.inputs is unavailable before the scene is attached to an Application.');
       }
 
-      this._inputs = new SceneInputs(this);
+      this._inputs = this._disposal.track(new SceneInputs(this));
     }
 
     return this._inputs;
@@ -178,10 +179,20 @@ export class Scene {
         throw new Error('Scene.tweens is unavailable before the scene is attached to an Application.');
       }
 
-      this._tweens = new SceneTweens(this);
+      this._tweens = this._disposal.track(new SceneTweens(this));
     }
 
     return this._tweens;
+  }
+
+  /**
+   * Register a {@link Destroyable} to be destroyed automatically when this
+   * scene is destroyed (reverse registration order). Returns its argument for
+   * fluent capture: `const world = this.track(new PhysicsWorld())`. The
+   * scene-bound `tweens` and `inputs` registries are tracked the same way.
+   */
+  public track<T extends Destroyable>(item: T): T {
+    return this._disposal.track(item);
   }
 
   public get stackMode(): SceneStackMode {
@@ -269,9 +280,10 @@ export class Scene {
   }
 
   public destroy(): void {
-    this._inputs?._disposeAll();
+    // Destroys everything tracked (scene-bound tweens/inputs + user-tracked
+    // resources) in reverse registration order, then the scene-graph root.
+    this._disposal.destroy();
     this._inputs = null;
-    this._tweens?._disposeAll();
     this._tweens = null;
     this._root.destroy();
     this._app = null;
