@@ -61,7 +61,7 @@ class CompressorScene extends Scene {
 
         this.music = loader.get(AudioStream, 'music');
         this.filter = new CompressorFilter();
-        app.audio.music.addFilter(this.filter);
+        app.audio.music.addEffect(this.filter);
 
         this.gfx = new Graphics();
         this.labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));

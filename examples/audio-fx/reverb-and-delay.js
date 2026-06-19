@@ -37,8 +37,8 @@ class ReverbAndDelayScene extends Scene {
         // Reverb (room tail) → Delay (echoes) chained on the sound bus.
         this.reverb = new ReverbFilter({ wet: 0.4, decay: 2 });
         this.delay = new DelayFilter({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });
-        app.audio.sound.addFilter(this.reverb);
-        app.audio.sound.addFilter(this.delay);
+        app.audio.sound.addEffect(this.reverb);
+        app.audio.sound.addEffect(this.delay);
         this.gfx = new Graphics();
         this.prompt = new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)

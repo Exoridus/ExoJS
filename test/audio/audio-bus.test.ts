@@ -1,6 +1,6 @@
 ﻿import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
-import type { AudioFilter } from '#audio/AudioFilter';
+import type { AudioEffect } from '#audio/AudioEffect';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -83,8 +83,8 @@ const spyOnBusCreation = (): BusSpy => {
   };
 };
 
-// A minimal concrete AudioFilter for testing.
-class StubFilter implements AudioFilter {
+// A minimal concrete AudioEffect for testing.
+class StubFilter implements AudioEffect {
   public readonly inputNode: AudioNode;
   public readonly outputNode: AudioNode;
   public readonly ready: Promise<void> = Promise.resolve();
@@ -173,7 +173,7 @@ describe('AudioBus', () => {
   });
 
   // 6. Filter add / remove reconnects chain
-  test('addFilter connects filter into chain and removeFilter removes it', () => {
+  test('addEffect connects filter into chain and removeEffect removes it', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('filter-test');
 
@@ -183,18 +183,18 @@ describe('AudioBus', () => {
     const connectsBefore = spy.inputNode.connect.mock.calls.length;
 
     const filter = new StubFilter();
-    bus.addFilter(filter);
+    bus.addEffect(filter);
 
-    // After addFilter: inputNode → filter.input → filter.output → pan → output
+    // After addEffect: inputNode → filter.input → filter.output → pan → output
     // _rebuildFilterChain disconnects then reconnects
     expect(spy.inputNode.connect).toHaveBeenCalledWith(filter.inputNode);
 
     const connectsAfterAdd = spy.inputNode.connect.mock.calls.length;
     expect(connectsAfterAdd).toBeGreaterThan(connectsBefore);
 
-    bus.removeFilter(filter);
+    bus.removeEffect(filter);
 
-    // After removeFilter: inputNode → panNode again
+    // After removeEffect: inputNode → panNode again
     const connectsAfterRemove = spy.inputNode.connect.mock.calls.length;
     expect(connectsAfterRemove).toBeGreaterThan(connectsAfterAdd);
 
@@ -271,7 +271,7 @@ describe('AudioBus', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('destroy-test');
     const filter = new StubFilter();
-    bus.addFilter(filter);
+    bus.addEffect(filter);
 
     bus.destroy();
 

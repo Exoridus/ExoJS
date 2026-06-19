@@ -49,7 +49,7 @@ class DuckingScene extends Scene {
         // The ducker listens to the voice bus and pulls the music bus down
         // whenever the voice exceeds the threshold.
         this.ducking = new DuckingFilter({ sidechain: this.voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
-        app.audio.music.addFilter(this.ducking);
+        app.audio.music.addEffect(this.ducking);
         // Tap each bus with a parallel analyser so we can show the live levels.
         // The music meter visibly dips while the voice meter spikes — that gap
         // is the duck.

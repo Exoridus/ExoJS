@@ -1,11 +1,11 @@
 ﻿import { getAudioContext } from '#audio/audio-context';
-import { WorkletFilter } from '#audio/filters/WorkletFilter';
+import { WorkletEffect } from '#audio/WorkletEffect';
 
 // ---------------------------------------------------------------------------
 // Test subclass
 // ---------------------------------------------------------------------------
 
-class TestWorkletFilter extends WorkletFilter {
+class TestWorkletEffect extends WorkletEffect {
   protected get _workletName(): string {
     return 'test-worklet';
   }
@@ -18,7 +18,7 @@ class TestWorkletFilter extends WorkletFilter {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WorkletFilter', () => {
+describe('WorkletEffect', () => {
   let addModuleMock: MockInstance;
 
   beforeEach(() => {
@@ -37,7 +37,7 @@ describe('WorkletFilter', () => {
   it('construction creates input/output gains immediately (sync)', () => {
     const ctx = getAudioContext();
     const gainSpy = vi.spyOn(ctx, 'createGain');
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     // At least 2 gains: input and output
     expect(gainSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(filter['_inputGain']).not.toBeNull();
@@ -46,14 +46,14 @@ describe('WorkletFilter', () => {
   });
 
   it('inputNode and outputNode are accessible immediately after construction', () => {
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     expect(() => filter.inputNode).not.toThrow();
     expect(() => filter.outputNode).not.toThrow();
     filter.destroy();
   });
 
   it('inputNode and outputNode return stable references that do not change after worklet loads', async () => {
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     const inputBefore = filter.inputNode;
     const outputBefore = filter.outputNode;
     await filter.ready;
@@ -76,7 +76,7 @@ describe('WorkletFilter', () => {
       return node as unknown as GainNode;
     });
 
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     // Input gain should have connected to something (the output gain) synchronously
     expect(capturedInputGain).not.toBeNull();
     expect(capturedInputGain!.connect).toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe('WorkletFilter', () => {
   });
 
   it('after await filter.ready: workletNode exists and is wired correctly', async () => {
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     await filter.ready;
     expect(filter['_workletNode']).not.toBeNull();
     filter.destroy();
@@ -102,7 +102,7 @@ describe('WorkletFilter', () => {
       return node as unknown as GainNode;
     });
 
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     filter.destroy();
     for (const node of nodes) {
       expect(node.disconnect).toHaveBeenCalled();
@@ -110,13 +110,13 @@ describe('WorkletFilter', () => {
   });
 
   it('second destroy after first is safe (no throw)', () => {
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     filter.destroy();
     expect(() => filter.destroy()).not.toThrow();
   });
 
   it('inputNode/outputNode throw after destroy', () => {
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     filter.destroy();
     expect(() => filter.inputNode).toThrow('input node accessed before audio context is ready');
     expect(() => filter.outputNode).toThrow('output node accessed before audio context is ready');
@@ -130,7 +130,7 @@ describe('WorkletFilter', () => {
       }),
     );
 
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     filter.destroy(); // destroy before worklet loads
 
     // Now resolve the module load — should not throw
@@ -144,14 +144,14 @@ describe('WorkletFilter', () => {
   });
 
   it('_setAudioParam is a no-op if worklet node not ready yet', () => {
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     // Before worklet loads, _workletNode is null — should not throw
     expect(() => filter['_setAudioParam']('threshold', -10)).not.toThrow();
     filter.destroy();
   });
 
   it('ready getter returns Promise.resolve() after destroy', () => {
-    const filter = new TestWorkletFilter();
+    const filter = new TestWorkletEffect();
     filter.destroy();
     // After destroy _ready is null, so getter returns Promise.resolve()
     expect(filter.ready).toBeInstanceOf(Promise);
@@ -160,7 +160,7 @@ describe('WorkletFilter', () => {
   it('registration is cached: addModule not called again for same context+name after first load', async () => {
     // Use a fresh unique worklet name to avoid cross-test cache contamination.
     const uniqueName = `test-worklet-cache-${Date.now()}`;
-    class CacheTestFilter extends TestWorkletFilter {
+    class CacheTestFilter extends TestWorkletEffect {
       protected override get _workletName(): string {
         return uniqueName;
       }

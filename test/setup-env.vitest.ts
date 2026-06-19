@@ -250,6 +250,11 @@ class MockAudioContext {
         setTargetAtTime: () => undefined,
         value: 0,
       },
+      detune: {
+        setValueAtTime: () => undefined,
+        setTargetAtTime: () => undefined,
+        value: 0,
+      },
     } as unknown as BiquadFilterNode;
   }
 

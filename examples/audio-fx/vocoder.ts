@@ -48,7 +48,7 @@ class VocoderScene extends Scene {
         }
 
         this.vocoder = new VocoderFilter({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
-        app.audio.sound.addFilter(this.vocoder);
+        app.audio.sound.addEffect(this.vocoder);
 
         this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' })
             .setAnchor(0.5, 0.5)
