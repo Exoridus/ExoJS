@@ -1,33 +1,45 @@
-import type { AbstractMedia } from './AbstractMedia';
+import { clamp } from '#math/utils';
+
+import type { Voice } from './Playable';
 
 export interface CrossFadeOptions {
-  /** Stop the `from` media after fade completes. Default true. */
-  stopAfterFade?: boolean;
-  /** Auto-play `to` if currently paused. Default true. */
-  autoPlayTarget?: boolean;
+  /** Volume to fade the `to` voice up to. Range [0, 1]. Default 1. */
+  toVolume?: number;
+  /**
+   * Stop the `from` voice once the fade completes (default `true`) — the right
+   * choice for a one-shot transition, since it frees the outgoing voice. Pass
+   * `false` to leave `from` playing at volume 0, e.g. when you crossfade back
+   * and forth between two looping tracks.
+   */
+  stopAfter?: boolean;
 }
 
 /**
- * Cross-fade from one media instance to another over `durationMs`.
+ * Cross-fade from one playing {@link Voice} to another over `durationMs`.
  *
- * Calls `from.fadeOut(durationMs)` and `to.fadeIn(durationMs)` in parallel.
- * If `to` is paused at call time and `autoPlayTarget !== false`, it will
- * be played first (so the fade-in is audible).
+ * Ramps `to` up to `toVolume` and `from` down to silence. By default `from` is
+ * stopped when the fade finishes; pass `stopAfter: false` to keep it alive.
+ * Both voices must already be playing — start the incoming voice (typically at
+ * volume 0) before calling:
  *
- * Returns a Promise that resolves after `durationMs` elapses (i.e., when
- * the fade completes). Use `await crossFade(...)` for sequential music
- * transitions, or fire-and-forget for non-blocking transitions.
+ * ```ts
+ * const next = app.audio.play(track, { volume: 0 });
+ * await crossFade(current, next, 1000);
+ * ```
+ *
+ * Returns a Promise that resolves once `durationMs` elapses.
  */
-export async function crossFade(from: AbstractMedia, to: AbstractMedia, durationMs: number, options: CrossFadeOptions = {}): Promise<void> {
-  const stopAfterFade = options.stopAfterFade ?? true;
-  const autoPlayTarget = options.autoPlayTarget ?? true;
+export async function crossFade(from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions = {}): Promise<void> {
+  const target = clamp(options.toVolume ?? 1, 0, 1);
+  const stopAfter = options.stopAfter ?? true;
 
-  if (autoPlayTarget && to.paused) {
-    to.play();
+  to.fade(target, durationMs);
+
+  if (stopAfter) {
+    from.stop(durationMs);
+  } else {
+    from.fade(0, durationMs);
   }
-
-  from.fadeOut(durationMs, { stopAfter: stopAfterFade });
-  to.fadeIn(durationMs);
 
   return new Promise<void>(resolve => {
     setTimeout(resolve, Math.max(0, durationMs));

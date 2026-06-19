@@ -1,4 +1,5 @@
-import { Application, AudioAnalyser, BeatDetector, Color, Music, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, AudioStream, Color, type Pausable, Scene, type Seekable, Sprite, Text, Texture, type Voice } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -12,7 +13,8 @@ const app = new Application({
 });
 
 class AudioVisualisationScene extends Scene {
-    private music!: Music;
+    private music!: AudioStream;
+    private musicVoice!: Voice & Pausable & Seekable;
     private analyser!: AudioAnalyser;
     private detector!: BeatDetector;
     private canvas!: HTMLCanvasElement;
@@ -25,19 +27,20 @@ class AudioVisualisationScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { example: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { example: assets.demo.audio.musicLoop });
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(Music, 'example');
+        this.music = loader.get(AudioStream, 'example');
 
         // One analyser tap for spectrum/waveform, one beat detector for the
-        // beat-pulse ring. Both read the same track without altering playback.
-        this.analyser = new AudioAnalyser({ source: this.music });
+        // beat-pulse ring. Both read the music bus the stream plays through,
+        // without altering playback.
+        this.analyser = new AudioAnalyser({ source: this.app.audio.music });
         this.detector = new BeatDetector();
-        this.detector.source = this.music;
+        this.detector.source = this.app.audio.music;
 
         this.canvas = document.createElement('canvas');
         this.canvas.style.position = 'absolute';
@@ -80,13 +83,17 @@ class AudioVisualisationScene extends Scene {
                 return;
             }
 
-            this.music.toggle();
-            this.hud.setStatus(this.music.paused ? 'Paused' : 'Playing…');
+            if (this.musicVoice.paused) {
+                this.musicVoice.resume();
+            } else {
+                this.musicVoice.pause();
+            }
+            this.hud.setStatus(this.musicVoice.paused ? 'Paused' : 'Playing…');
         });
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically — play() returns the Voice now.
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 }) as Voice & Pausable & Seekable;
     }
 
     override draw(context): void {
@@ -101,8 +108,9 @@ class AudioVisualisationScene extends Scene {
         this.context.clearRect(0, 0, width, height);
 
         // Progress bar of the looping track.
+        const progress = this.musicVoice.duration > 0 ? this.musicVoice.time / this.musicVoice.duration : 0;
         this.context.fillStyle = this.progressStyle;
-        this.context.fillRect(0, 0, width * this.music.progress, height);
+        this.context.fillRect(0, 0, width * progress, height);
 
         // Frequency bars + waveform polyline.
         this.context.fillStyle = this.gradientStyle;

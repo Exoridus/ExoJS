@@ -7,38 +7,38 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Audio effects
 
-Every bus in ExoJS carries a filter chain — an ordered list of [`AudioFilter`](/ExoJS/en/api/audio-filter/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every `Music` instance routing through the music bus. You can also create custom buses for isolated effect chains.
+Every bus in ExoJS carries a filter chain — an ordered list of [`AudioEffect`](/ExoJS/en/api/audio-effect/) instances that process audio in series. Filters are applied at the bus level, which means adding a filter to `app.audio.music` affects every voice routing through the music bus. You can also create custom buses for isolated effect chains.
 
 ## The filter chain
 
 A bus's filter chain is `inputNode → [filter₁ → filter₂ → ...] → panNode → outputNode`. Adding a filter appends it to the end of the chain. Order matters — a compressor before reverb sounds different from a compressor after reverb.
 
 ```js
-import { CompressorFilter, DelayFilter, ReverbFilter } from '@codexo/exojs';
+import { CompressorEffect, DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 
-const compressor = new CompressorFilter({ threshold: -20, ratio: 8 });
-const reverb = new ReverbFilter({ wet: 0.3 });
-const delay = new DelayFilter({ delaySeconds: 0.25, wet: 0.2, feedback: 0.4 });
+const compressor = new CompressorEffect({ threshold: -20, ratio: 8 });
+const reverb = new ReverbEffect({ wet: 0.3 });
+const delay = new DelayEffect({ delaySeconds: 0.25, wet: 0.2, feedback: 0.4 });
 
-app.audio.master.addFilter(compressor);
-app.audio.master.addFilter(reverb);
-app.audio.sound.addFilter(delay);
+app.audio.master.addEffect(compressor);
+app.audio.master.addEffect(reverb);
+app.audio.sound.addEffect(delay);
 ```
 
 Remove a filter to take it out of the chain without destroying it:
 
 ```js
-app.audio.master.removeFilter(reverb);
+app.audio.master.removeEffect(reverb);
 ```
 
 Filters are reusable — move one from bus to bus by removing it from the old bus and adding it to the new one. Destroy a filter with `filter.destroy()` when it's no longer needed anywhere.
 
-## CompressorFilter
+## CompressorEffect
 
 A dynamics compressor that clamps the dynamic range of audio passing through it. Useful for evening out volume, adding punch to SFX, and preventing clipping when many sounds play simultaneously:
 
 ```js
-const compressor = new CompressorFilter({
+const compressor = new CompressorEffect({
     threshold: -24,   // dBFS — signals above this get compressed
     ratio: 12,        // 1:1 = no compression, 20:1 = near-limiting
     attack: 0.003,    // seconds — how fast compression kicks in
@@ -46,7 +46,7 @@ const compressor = new CompressorFilter({
     knee: 30,         // dB — softens the threshold transition
 });
 
-app.audio.master.addFilter(compressor);
+app.audio.master.addEffect(compressor);
 ```
 
 All properties are live get/set. The `compressor.reduction` getter returns the current gain reduction in dB (always ≤ 0) — useful for live level metering:
@@ -58,22 +58,22 @@ update(delta) {
 }
 ```
 
-## ReverbFilter and DelayFilter
+## ReverbEffect and DelayEffect
 
-`ReverbFilter` simulates acoustic space by convolving audio through a procedurally-generated impulse response:
+`ReverbEffect` simulates acoustic space by convolving audio through a procedurally-generated impulse response:
 
 ```js
-const reverb = new ReverbFilter({
+const reverb = new ReverbEffect({
     durationSeconds: 2,   // IR length — longer = bigger space
     decay: 2,             // exponential decay factor
     wet: 0.4,             // 0 = dry only, 1 = wet only
 });
 ```
 
-`DelayFilter` creates an echo with configurable feedback:
+`DelayEffect` creates an echo with configurable feedback:
 
 ```js
-const delay = new DelayFilter({
+const delay = new DelayEffect({
     delaySeconds: 0.3,    // echo interval
     feedback: 0.45,       // 0 = one echo, 0.95 = long tail
     wet: 0.5,             // dry/wet mix
@@ -82,17 +82,18 @@ const delay = new DelayFilter({
 
 Both expose live `wet`, `delaySeconds`, `feedback`, `decay`, and `durationSeconds` properties. Changing `durationSeconds` or `decay` on a reverb rebuilds the impulse response — prefer to keep these stable during playback.
 
-## DuckingFilter
+## DuckingEffect
 
 A sidechain compressor — when the sidechain bus exceeds a threshold, the main signal is attenuated. Common use case: automatically lower music volume when voice-over plays:
 
 ```js
-import { AudioBus, DuckingFilter } from '@codexo/exojs';
+import { AudioBus } from '@codexo/exojs';
+import { DuckingEffect } from '@codexo/exojs-audio-fx';
 
 const voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
 app.audio.registerBus(voiceBus);
 
-const ducker = new DuckingFilter({
+const ducker = new DuckingEffect({
     sidechain: voiceBus,
     threshold: -30,   // dBFS — sidechain level that triggers ducking
     ratio: 6,         // gain reduction ratio
@@ -100,7 +101,7 @@ const ducker = new DuckingFilter({
     releaseMs: 260,   // how fast audio recovers after sidechain drops
 });
 
-app.audio.music.addFilter(ducker);
+app.audio.music.addEffect(ducker);
 ```
 
 `threshold`, `ratio`, `attackMs`, and `releaseMs` are live get/set. The `filter.ready` promise resolves when the worklet processor is loaded and the chain is fully wired.
@@ -110,39 +111,40 @@ app.audio.music.addFilter(ducker);
 Several filters cover tone shaping and modulation effects:
 
 ```js
-import { ChorusFilter, EqualizerFilter, HighpassFilter, LowpassFilter } from '@codexo/exojs';
+import { HighpassFilter, LowpassFilter } from '@codexo/exojs';
+import { ChorusEffect, EqualizerEffect } from '@codexo/exojs-audio-fx';
 
 // Three-band equalizer — low shelf, peaking mid, high shelf
-const eq = new EqualizerFilter({ low: 3, mid: -2, high: 4 });
+const eq = new EqualizerEffect({ low: 3, mid: -2, high: 4 });
 
 // Frequency cuts — animate the frequency property for sweeps
 const lp = new LowpassFilter({ frequency: 2000, resonance: 1 });
 const hp = new HighpassFilter({ frequency: 200, resonance: 1 });
 
 // Modulated delay for thickness and doubling (native nodes, instant startup)
-const chorus = new ChorusFilter({ rateHz: 1.5, depthMs: 5, wet: 0.5 });
+const chorus = new ChorusEffect({ rateHz: 1.5, depthMs: 5, wet: 0.5 });
 ```
 
-All parameters on these filters are live get/set. The [`EqualizerFilter` API reference](/ExoJS/en/api/equalizer-filter/) documents individual band frequencies; the [`ChorusFilter`](/ExoJS/en/api/chorus-filter/) and [`LowpassFilter`](/ExoJS/en/api/lowpass-filter/) references cover constructor options in detail.
+All parameters on these effects are live get/set. The [`EqualizerEffect` API reference](/ExoJS/en/api/equalizer-effect/) documents individual band frequencies; the [`ChorusEffect`](/ExoJS/en/api/chorus-effect/) and [`LowpassFilter`](/ExoJS/en/api/lowpass-filter/) references cover constructor options in detail.
 
 ## Worklet-based effects
 
-Three filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletFilter`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
+Three filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletEffect`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
 
 ```js no-check
-import { GranularFilter, PitchShiftFilter, VocoderFilter } from '@codexo/exojs';
+import { GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs-audio-fx';
 
 // Granular pitch shifting (0.25x to 4x)
-const shifter = new PitchShiftFilter({ pitch: 1.2, wet: 1.0 });
+const shifter = new PitchShiftEffect({ pitch: 1.2, wet: 1.0 });
 
 // Cross-synthesis between a carrier signal and a modulator bus
-const vocoder = new VocoderFilter({ modulator: modulatorBus, numBands: 14 });
+const vocoder = new VocoderEffect({ modulator: modulatorBus, numBands: 14 });
 
 // Slices input into short grains with random pitch and time offset
-const granular = new GranularFilter({ grainSize: 0.05, density: 50, wet: 1.0 });
+const granular = new GranularEffect({ grainSize: 0.05, density: 50, wet: 1.0 });
 ```
 
-All three have live `wet` controls. `PitchShiftFilter` exposes `pitch`; `GranularFilter` exposes `grainSize`, `density`, `spread`, `pitchMin`, and `pitchMax` for real-time grain cloud manipulation. The API reference documents the full constructor options for each.
+All three have live `wet` controls. `PitchShiftEffect` exposes `pitch`; `GranularEffect` exposes `grainSize`, `density`, `spread`, `pitchMin`, and `pitchMax` for real-time grain cloud manipulation. The API reference documents the full constructor options for each.
 
 ## Custom buses
 
@@ -152,12 +154,12 @@ Bus-level filters affect everything on that bus. Create isolated chains for spec
 const ambientBus = new AudioBus('ambient', { parent: app.audio.master });
 app.audio.registerBus(ambientBus);
 
-ambientBus.addFilter(new ReverbFilter({ wet: 0.6, durationSeconds: 3 }));
-ambientBus.addFilter(new LowpassFilter({ frequency: 800 }));
+ambientBus.addEffect(new ReverbEffect({ wet: 0.6, durationSeconds: 3 }));
+ambientBus.addEffect(new LowpassFilter({ frequency: 800 }));
 
 const wind = loader.get(Sound, 'wind');
-wind.bus = ambientBus; // now routes through reverb + lowpass
-wind.setLoop(true).play();
+// Route this play onto the ambient bus — reverb + lowpass applied.
+this.app.audio.play(wind, { bus: ambientBus, loop: true });
 ```
 
 `registerBus` stores the bus by name, retrievable later via `app.audio.getBus('ambient')`. `unregisterBus` removes and destroys a custom bus. The three built-in buses (`master`, `music`, `sound`) cannot be unregistered.

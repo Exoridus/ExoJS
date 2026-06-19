@@ -1,5 +1,6 @@
 // Auto-generated from reverb-and-delay.ts — edit the .ts source, not this file.
-import { Application, Color, DelayFilter, Graphics, ReverbFilter, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -35,10 +36,10 @@ class ReverbAndDelayScene extends Scene {
         this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
         this.sound = loader.get(Sound, 'sfx');
         // Reverb (room tail) → Delay (echoes) chained on the sound bus.
-        this.reverb = new ReverbFilter({ wet: 0.4, decay: 2 });
-        this.delay = new DelayFilter({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });
-        app.audio.sound.addFilter(this.reverb);
-        app.audio.sound.addFilter(this.delay);
+        this.reverb = new ReverbEffect({ wet: 0.4, decay: 2 });
+        this.delay = new DelayEffect({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });
+        app.audio.sound.addEffect(this.reverb);
+        app.audio.sound.addEffect(this.delay);
         this.gfx = new Graphics();
         this.prompt = new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)
@@ -112,7 +113,7 @@ class ReverbAndDelayScene extends Scene {
             // still locked would be silent, so wait until audio is ready.
             if (this.app.audio.locked)
                 return;
-            this.sound.play({ replace: true });
+            this.app.audio.play(this.sound);
             this.flash = 1;
             this.triggers += 1;
             this.hud.setStatus(`Impacts triggered: ${this.triggers}`);

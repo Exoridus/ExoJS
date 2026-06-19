@@ -35,19 +35,32 @@ Valid target types are:
 
 ## Sound sources
 
-A `Sound` becomes spatial the moment you assign a `position`:
+A `Sound` descriptor carries a `position`. When set, it seeds the spatial position of every voice played from that sound:
 
 ```js
 import { Sound } from '@codexo/exojs';
 
 const pickup = loader.get(Sound, 'pickup-sfx');
-pickup.position = { x: 320, y: 180 };
-pickup.play();
+pickup.position = { x: 320, y: 180 };  // seeds the voice's initial position
+this.app.audio.play(pickup);
 ```
 
 The audio pans left when the source is left of the listener, right when to the right. Volume attenuates with distance according to the configured distance model.
 
-Setting `position` to `null` makes the sound non-spatial again — it plays at full volume in both channels regardless of listener position.
+To move a source *while it plays*, drive the live `Voice` — spatial voices are `Spatializable`, exposing `position` and `follow()`:
+
+```js
+const voice = this.app.audio.play(pickup);
+
+// Move the live source each frame...
+voice.position = { x: item.x, y: item.y };
+
+// ...or have it track a scene node automatically.
+voice.follow(this.enemy);   // reads the node's global position every frame
+voice.follow(null);         // stop tracking, fall back to voice.position
+```
+
+Setting a voice's `position` to `null` makes it non-spatial again — it plays at full volume in both channels regardless of listener position.
 
 ## Distance models
 
@@ -71,12 +84,12 @@ const ambient = new Sound(audioBuffer, {
     rolloffFactor: 1.5,    // steepness multiplier (all models)
 });
 ambient.position = { x: 0, y: 0 };
-ambient.setLoop(true).play();
+this.app.audio.play(ambient, { loop: true });
 ```
 
 `refDistance` (default 50) is the radius around the listener where the sound plays at full volume. `maxDistance` (default 1000) only applies to the linear model. `rolloffFactor` (default 1) scales the steepness — higher values make the sound drop off faster.
 
-All four properties are live setters on `Sound`:
+All four attenuation properties are live setters on the `Sound` descriptor; they apply to voices played afterwards:
 
 ```js
 sound.distanceModel = 'inverse';
@@ -86,12 +99,12 @@ sound.rolloffFactor = 2;
 
 ## Practical use
 
-The most common pattern is to set the listener's target to the camera or player once in `init`, then assign positions to spatial sounds when they play:
+The most common pattern is to set the listener's target to the camera or player once in `init`, then assign a position to a spatial sound right before each one-shot play:
 
 ```js
 init(loader) {
     this.pickupSfx = loader.get(Sound, 'pickup-sfx');
-    this.pickupSfx.setVolume(0.6);
+    this.pickupSfx.volume = 0.6;
 
     app.audio.listener.target = this.player;
 }
@@ -101,7 +114,7 @@ update(delta) {
 
     if (pickupCollected) {
         this.pickupSfx.position = { x: item.x, y: item.y };
-        this.pickupSfx.play();
+        this.app.audio.play(this.pickupSfx);
     }
 }
 ```
@@ -113,12 +126,12 @@ const waterfall = loader.get(Sound, 'waterfall');
 waterfall.distanceModel = 'inverse';
 waterfall.refDistance = 300;
 waterfall.position = { x: 600, y: 200 };
-waterfall.setLoop(true).play();
+this.app.audio.play(waterfall, { loop: true });
 ```
 
 ## Sounds per frame
 
-Spatial updates happen automatically — the `AudioManager` runs `listener._tick()` each frame, which reads the target position and writes to the Web Audio `PannerNode` for every spatial `Sound`. You do not need to call any per-frame update on spatial sources. Assign a position, call `play()`, and the engine handles the rest.
+Spatial updates happen automatically — each frame the `AudioManager` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: assign a position (on the descriptor before play, or on the live voice after), or call `voice.follow(node)`, and the engine handles the rest.
 
 ## Browser constraints
 

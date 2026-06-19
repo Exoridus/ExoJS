@@ -1,4 +1,5 @@
-import { Application, AudioAnalyser, AudioBus, Color, DuckingFilter, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, AudioBus, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -12,10 +13,10 @@ const app = new Application({
 });
 
 class DuckingScene extends Scene {
-    private music!: Music;
+    private music!: AudioStream;
     private voice!: Sound;
     private voiceBus!: AudioBus;
-    private ducking!: DuckingFilter;
+    private ducking!: DuckingEffect;
     private musicLevel!: AudioAnalyser;
     private voiceLevel!: AudioAnalyser;
     private gfx!: Graphics;
@@ -33,7 +34,7 @@ class DuckingScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { music: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { music: assets.demo.audio.musicLoop });
         await loader.load(Sound, { voice: assets.demo.voice.congratulations });
     }
 
@@ -46,18 +47,17 @@ class DuckingScene extends Scene {
         this.musicBarY = height * 0.42;
         this.voiceBarY = height * 0.55;
 
-        this.music = loader.get(Music, 'music');
+        this.music = loader.get(AudioStream, 'music');
         this.voice = loader.get(Sound, 'voice');
 
         // Route the voice-over onto its own bus so it can drive the sidechain.
         this.voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
         app.audio.registerBus(this.voiceBus);
-        this.voice.bus = this.voiceBus;
 
         // The ducker listens to the voice bus and pulls the music bus down
         // whenever the voice exceeds the threshold.
-        this.ducking = new DuckingFilter({ sidechain: this.voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
-        app.audio.music.addFilter(this.ducking);
+        this.ducking = new DuckingEffect({ sidechain: this.voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
+        app.audio.music.addEffect(this.ducking);
 
         // Tap each bus with a parallel analyser so we can show the live levels.
         // The music meter visibly dips while the voice meter spikes — that gap
@@ -88,13 +88,13 @@ class DuckingScene extends Scene {
             // The pointer gesture also unlocks the AudioContext; firing while
             // still locked would be silent, so wait until audio is ready.
             if (this.app.audio.locked) return;
-            this.voice.play({ replace: true });
+            this.app.audio.play(this.voice, { bus: this.voiceBus });
             this.hud.setStatus('Voice playing — music ducked');
         });
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.7).play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.7 });
         this.hud.setStatus('Music playing — click to duck it');
     }
 

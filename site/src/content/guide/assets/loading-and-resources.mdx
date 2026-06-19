@@ -80,20 +80,20 @@ await loader.load(Texture, {
 When a scene needs different asset types, load them in parallel with `Promise.all`:
 
 ```js
-import { Texture, Music, Sound, Json } from '@codexo/exojs';
+import { Texture, AudioStream, Sound, Json } from '@codexo/exojs';
 
 async load(loader) {
     await Promise.all([
-        loader.load(Texture, { sky: 'image/sky.png' }),
-        loader.load(Music,   { ambient: 'audio/ambient.ogg' }),
-        loader.load(Sound,   { coin: 'audio/coin.wav', jump: 'audio/jump.wav' }),
-        loader.load(Json,    { levels: 'data/levels.json' }),
+        loader.load(Texture,     { sky: 'image/sky.png' }),
+        loader.load(AudioStream, { ambient: 'audio/ambient.ogg' }),
+        loader.load(Sound,       { coin: 'audio/coin.wav', jump: 'audio/jump.wav' }),
+        loader.load(Json,        { levels: 'data/levels.json' }),
     ]);
 }
 
 init(loader) {
     this.sky    = new Sprite(loader.get(Texture, 'sky'));
-    this.music  = loader.get(Music, 'ambient');
+    this.ambient = loader.get(AudioStream, 'ambient');
     this.levels = loader.get(Json, 'levels');
 }
 ```
@@ -137,7 +137,7 @@ export const HeroAsset = new Asset({
 // A typed group of related assets
 export const TitleAssets = new Assets({
     logo:  { type: 'texture', source: '/logo.png' },
-    music: { type: 'music',   source: '/title.ogg' },
+    music: { type: 'music',   source: '/title.ogg' }, // 'music' loads an AudioStream
 });
 ```
 
@@ -147,7 +147,7 @@ Load them directly:
 // Resolves to Texture
 const hero = await loader.load(HeroAsset);
 
-// Resolves to { logo: Texture, music: Music }
+// Resolves to { logo: Texture, music: AudioStream }
 const title = await loader.load(TitleAssets);
 ```
 
@@ -155,7 +155,7 @@ Typed properties on `Assets` give autocomplete on the container itself:
 
 ```ts
 TitleAssets.logo;   // Asset<Texture>
-TitleAssets.music;  // Asset<Music>
+TitleAssets.music;  // Asset<AudioStream>
 ```
 
 `Assets` also exposes a `.entries` property for spread composition — useful when you want to merge several asset groups into a single load call without nesting them:
@@ -284,8 +284,8 @@ import { defineAssetManifest } from '@codexo/exojs';
 const manifest = defineAssetManifest({
     bundles: {
         menu: [
-            { type: Texture, alias: 'logo',  path: 'image/logo.png' },
-            { type: Music,   alias: 'theme', path: 'audio/theme.ogg' },
+            { type: Texture,     alias: 'logo',  path: 'image/logo.png' },
+            { type: AudioStream, alias: 'theme', path: 'audio/theme.ogg' },
         ],
         'level-1': [
             { type: Texture, alias: 'tiles', path: 'image/level-1/tiles.png' },
@@ -307,7 +307,7 @@ await loader.loadBundle('level-1');
 await loader.loadBundle('menu');
 
 this.logo  = new Sprite(loader.get(Texture, 'logo'));
-this.theme = loader.get(Music, 'theme');
+this.theme = loader.get(AudioStream, 'theme');
 ```
 
 Bundles are useful when scene loads should be granular — load the menu bundle once and keep it resident, then load level bundles as the player progresses. Treat bundle names and aliases as part of your project's asset contract.

@@ -8,7 +8,7 @@
  *   tsx scripts/release/run.ts publish   [--execute] [--no-check-existing]
  *
  * `prepare` builds (optionally), freezes the exact source revision (failing on
- * a dirty tree or unknown revision), packs exactly four tarballs WITHOUT
+ * a dirty tree or unknown revision), packs exactly six tarballs WITHOUT
  * rebuilding them, hashes them into `release-manifest.json` + `checksums.sha256`,
  * runs attw and the external-consumer smoke against those exact tarballs, and
  * assembles the Full GitHub Release ZIP. `publish` consumes only the prepared
@@ -51,6 +51,7 @@ const ensureBuilt = (): void => {
     resolve(repoRoot, 'packages/exojs-tilemap/dist/esm'),
     resolve(repoRoot, 'packages/exojs-tiled/dist/esm'),
     resolve(repoRoot, 'packages/exojs-physics/dist/esm'),
+    resolve(repoRoot, 'packages/exojs-audio-fx/dist/esm'),
   ];
   const missing = dists.filter(d => !existsSync(d));
   if (missing.length > 0) {
@@ -66,6 +67,7 @@ const build = (): void => {
     ['tilemap', ['--filter', '@codexo/exojs-tilemap', 'build'], repoRoot],
     ['tiled', ['--filter', '@codexo/exojs-tiled', 'build'], repoRoot],
     ['physics', ['--filter', '@codexo/exojs-physics', 'build'], repoRoot],
+    ['audio-fx', ['--filter', '@codexo/exojs-audio-fx', 'build'], repoRoot],
   ] as const) {
     const r = runner.run({ command: 'pnpm', args: [...args], cwd });
     if (r.code !== 0) die(`build failed for ${label}:\n${r.stderr || r.stdout}`);
@@ -109,7 +111,7 @@ const doPrepare = (): void => {
 
   const revision = freezeRevision();
 
-  log('\n→ Packing five tarballs (no rebuild) + manifest + checksums…');
+  log('\n→ Packing six tarballs (no rebuild) + manifest + checksums…');
   const prepared = prepareRelease(runner, { rootDir: repoRoot, stagingDir, revision });
   let manifest = prepared.manifest;
   log(`  packed: ${manifest.packages.map(p => `${p.name}@${p.version} (${p.bytes}B)`).join(', ')}`);

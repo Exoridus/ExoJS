@@ -66,6 +66,7 @@
                 var exoRenderingEntry;
                 var particlesEntry;
                 var particlesRegisterEntry;
+                var audioFxEntry;
                 var tiledEntry;
                 var tiledRegisterEntry;
                 if (!safeVersion || safeVersion === 'current') {
@@ -75,6 +76,7 @@
                     exoRenderingEntry = './vendor/exojs/esm/rendering.js?no-cache=' + noCache;
                     particlesEntry = './vendor/exojs-particles/esm/index.js?no-cache=' + noCache;
                     particlesRegisterEntry = './vendor/exojs-particles/esm/register.js?no-cache=' + noCache;
+                    audioFxEntry = './vendor/exojs-audio-fx/esm/index.js?no-cache=' + noCache;
                     tiledEntry = './vendor/exojs-tiled/esm/index.js?no-cache=' + noCache;
                     tiledRegisterEntry = './vendor/exojs-tiled/esm/register.js?no-cache=' + noCache;
                 } else {
@@ -87,6 +89,7 @@
                     exoRenderingEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/rendering.js';
                     particlesEntry = cdnBase + 'exojs-particles@' + safeVersion + '/dist/esm/index.js';
                     particlesRegisterEntry = cdnBase + 'exojs-particles@' + safeVersion + '/dist/esm/register.js';
+                    audioFxEntry = cdnBase + 'exojs-audio-fx@' + safeVersion + '/dist/esm/index.js';
                     tiledEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/index.js';
                     tiledRegisterEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/register.js';
                 }
@@ -99,6 +102,7 @@
                         '@codexo/exojs/rendering': exoRenderingEntry,
                         '@codexo/exojs-particles': particlesEntry,
                         '@codexo/exojs-particles/register': particlesRegisterEntry,
+                        '@codexo/exojs-audio-fx': audioFxEntry,
                         '@codexo/exojs-tiled': tiledEntry,
                         '@codexo/exojs-tiled/register': tiledRegisterEntry,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,

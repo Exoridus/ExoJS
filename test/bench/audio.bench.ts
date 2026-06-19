@@ -184,9 +184,9 @@ describe('audio', () => {
         new LowpassFilter({ frequency: 500 }),
         new LowpassFilter({ frequency: 200 }),
       ];
-      for (const f of filters) bus.addFilter(f);
+      for (const f of filters) bus.addEffect(f);
       for (const f of filters) {
-        bus.removeFilter(f);
+        bus.removeEffect(f);
         f.destroy();
       }
     }

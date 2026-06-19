@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Music, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -21,7 +21,7 @@ const rows = [
 ];
 
 class AudioBusesScene extends Scene {
-    private music!: Music;
+    private music!: AudioStream;
     private sfx!: Sound;
     private graphics!: Graphics;
     private labels!: Text[];
@@ -36,7 +36,7 @@ class AudioBusesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { music: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { music: assets.demo.audio.musicLoop });
         await loader.load(Sound, { sfx: assets.demo.audio.uiClick });
     }
 
@@ -50,7 +50,7 @@ class AudioBusesScene extends Scene {
         this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
         this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
 
-        this.music = loader.get(Music, 'music').setLoop(true).setVolume(0.6);
+        this.music = loader.get(AudioStream, 'music');
         this.sfx = loader.get(Sound, 'sfx');
 
         this.graphics = new Graphics();
@@ -85,14 +85,14 @@ class AudioBusesScene extends Scene {
         });
         this.app.input.onPointerTap.add(p => {
             if (this.insideSfxButton(p.x, p.y)) {
-                this.sfx.play();
+                this.app.audio.play(this.sfx);
                 this.hud.setStatus('SFX fired on the SFX bus — try lowering Master or SFX, then fire again.');
             }
         });
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.6 });
         this.hud.setStatus('Music playing on the Music bus. Drag a bar to mix.');
     }
 

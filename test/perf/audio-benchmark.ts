@@ -289,10 +289,10 @@ const results: BenchmarkResult[] = [];
             new LowpassFilter({ frequency: 200 }),
           ];
           for (const f of filters) {
-            bus!.addFilter(f);
+            bus!.addEffect(f);
           }
           for (const f of filters) {
-            bus!.removeFilter(f);
+            bus!.removeEffect(f);
             f.destroy();
           }
         },

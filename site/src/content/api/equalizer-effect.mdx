@@ -1,0 +1,46 @@
+---
+title: "EqualizerEffect"
+description: "Three-band equalizer (low shelf / peaking mid / high shelf) built from a series chain of `BiquadFilterNode` instances. Gain values are in dB and clamped to ±40 dB. All six parameters (gains + frequencies) are adjustable at runtime via the corresponding setters; gain changes use a short exponential ramp to avoid clicks."
+symbol: "EqualizerEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 11
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/EqualizerEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/EqualizerEffect.ts#L26"
+---
+## Import
+
+`import { EqualizerEffect } from '@codexo/exojs-audio-fx'`
+
+Three-band equalizer (low shelf / peaking mid / high shelf) built from a
+series chain of `BiquadFilterNode` instances. Gain values are in dB and
+clamped to ±40 dB. All six parameters (gains + frequencies) are
+adjustable at runtime via the corresponding setters; gain changes use a
+short exponential ramp to avoid clicks.
+
+## Constructors
+
+- `new(options: EqualizerEffectOptions): EqualizerEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `high: number`
+- `highFrequency: number`
+- `inputNode: AudioNode`
+- `low: number`
+- `lowFrequency: number`
+- `mid: number`
+- `midFrequency: number`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/EqualizerEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/EqualizerEffect.ts#L26)

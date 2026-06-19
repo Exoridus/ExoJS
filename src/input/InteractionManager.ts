@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import type { Signal } from '#core/Signal';
-import { setActiveInteractionManager } from '#input/internal/interactionManagerRegistry';
+import type { InteractionHooks, Stage } from '#core/Stage';
 import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
@@ -65,7 +65,7 @@ interface IndexedNode {
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
  */
-export class InteractionManager {
+export class InteractionManager implements InteractionHooks {
   private readonly _app: Application;
 
   // Persistent quadtree — null when no interactive nodes are present.
@@ -84,6 +84,9 @@ export class InteractionManager {
   private _quadtreeOrderCounter = 0;
 
   private readonly _quadtreeQueryBuffer: Array<QuadtreeItem<IndexedNode>> = [];
+
+  /** This manager's service bundle, installed on a scene root via {@link attachRoot}. */
+  private readonly _stage: Stage = { interaction: this };
 
   /** Maps pointerId → the deepest interactive RenderNode that pointer is currently over. */
   private readonly _lastHit = new Map<number, RenderNode>();
@@ -109,10 +112,6 @@ export class InteractionManager {
 
   public constructor(app: Application) {
     this._app = app;
-
-    // Register as the active singleton so RenderNode / Container / SceneNode hooks
-    // can reach the manager without holding an explicit reference.
-    setActiveInteractionManager(this);
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -195,8 +194,6 @@ export class InteractionManager {
       this._quadtree.destroy();
       this._quadtree = null;
     }
-
-    setActiveInteractionManager(null);
   }
 
   /**
@@ -222,6 +219,28 @@ export class InteractionManager {
 
     this._pending.clear();
     this._updateCursor();
+  }
+
+  /**
+   * Bind a scene's root container to this manager: install the manager's
+   * {@link Stage} on the subtree (so its nodes route their hooks here) and
+   * register the subtree's interactive nodes. Called by {@link SceneManager}
+   * when a scene becomes active.
+   * @internal
+   */
+  public attachRoot(root: Container): void {
+    root._setStage(this._stage);
+    this._notifyNodeAdded(root);
+  }
+
+  /**
+   * Unbind a scene's root: unregister its interactive nodes and clear the stage
+   * from the subtree. Called by {@link SceneManager} when a scene is removed.
+   * @internal
+   */
+  public detachRoot(root: Container): void {
+    this._notifyNodeRemoved(root);
+    root._setStage(null);
   }
 
   // ---------------------------------------------------------------------------
@@ -385,7 +404,7 @@ export class InteractionManager {
             // Best-effort — jsdom and some browsers may not support this.
           }
 
-          this._dispatchDirect(new InteractionEvent('dragstart', hit, pointer, x, y), hit.onDragStart);
+          this._dispatchDirect(new InteractionEvent('dragstart', hit, pointer, x, y), hit._peekInteractionSignal('dragstart'));
         }
       }
     }
@@ -403,7 +422,7 @@ export class InteractionManager {
       }
 
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node.onDrag);
+        this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
       }
     }
 
@@ -414,7 +433,7 @@ export class InteractionManager {
       }
 
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node.onDragEnd);
+        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
         this._endDrag(id);
       }
     }
@@ -429,7 +448,7 @@ export class InteractionManager {
     // --- Cancel / Leave ---
     if (isExitEvent) {
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node.onDragEnd);
+        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
         this._endDrag(id);
       } else if (last !== null) {
         this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
@@ -672,7 +691,7 @@ export class InteractionManager {
       event.currentTarget = current;
       const signal = this._signalFor(event.type, current);
 
-      signal.dispatch(event);
+      signal?.dispatch(event);
 
       if (event.propagationStopped) {
         break;
@@ -686,32 +705,15 @@ export class InteractionManager {
   }
 
   /** Dispatch an event directly on a single node without bubbling. */
-  private _dispatchDirect(event: InteractionEvent, signal: Signal<[InteractionEvent]>): void {
+  private _dispatchDirect(event: InteractionEvent, signal: Signal<[InteractionEvent]> | null): void {
     event.currentTarget = event.target;
-    signal.dispatch(event);
+    signal?.dispatch(event);
   }
 
-  private _signalFor(type: InteractionEventType, node: RenderNode): Signal<[InteractionEvent]> {
-    switch (type) {
-      case 'pointerdown':
-        return node.onPointerDown;
-      case 'pointerup':
-        return node.onPointerUp;
-      case 'pointermove':
-        return node.onPointerMove;
-      case 'pointerover':
-        return node.onPointerOver;
-      case 'pointerout':
-        return node.onPointerOut;
-      case 'pointertap':
-        return node.onPointerTap;
-      case 'dragstart':
-        return node.onDragStart;
-      case 'drag':
-        return node.onDrag;
-      case 'dragend':
-        return node.onDragEnd;
-    }
+  private _signalFor(type: InteractionEventType, node: RenderNode): Signal<[InteractionEvent]> | null {
+    // Peek (never materialize): a node with no listener for `type` has no
+    // signal, so dispatch simply skips it.
+    return node._peekInteractionSignal(type);
   }
 
   // ---------------------------------------------------------------------------

@@ -13,28 +13,32 @@ An audio-reactive scene is one where visuals move, change color, or trigger effe
 
 The flow is the same for any audio-reactive setup:
 
-1. Tap an audio source (`Sound`, `Music`, `AudioBus`) with an `AudioAnalyser` and/or a `BeatDetector`.
+1. Tap a live audio source (an `AudioBus` such as `app.audio.music`, or a `Voice`) with an `AudioAnalyser` and/or a `BeatDetector`.
 2. In `update`, read spectrum values, beat envelopes, or subdivision phase.
 3. Apply those readings to drawable properties — scale, position, tint, shader uniforms, particle spawns.
 
-Both the analyser and the beat detector connect as parallel taps. They never affect the source's main audio routing, so you can attach them to anything that's already playing.
+Both the analyser and the beat detector connect as parallel taps. They never affect the source's main audio routing, so you can attach them to anything that's already playing. They take a live source (bus, voice, `AudioNode`, or `MediaStream`) — not a `Sound`/`AudioStream` descriptor.
 
 ## Building an analyser
 
 An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and time-domain data. You point it at a source, then call its getters each frame:
 
 ```js
-import { AudioAnalyser, Music, Scene } from '@codexo/exojs';
+import { AudioStream, Scene } from '@codexo/exojs';
+import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 class VisualizerScene extends Scene {
     async load(loader) {
-        await loader.load(Music, { track: 'audio/track.ogg' });
+        await loader.load(AudioStream, { track: 'audio/track.ogg' });
     }
 
     init(loader) {
-        this.music = loader.get(Music, 'track').setLoop(true).play();
+        this.music = loader.get(AudioStream, 'track');
+        this.app.audio.play(this.music, { loop: true });
+
+        // Tap the bus the track plays through.
         this.analyser = new AudioAnalyser({ fftSize: 1024 });
-        this.analyser.source = this.music;
+        this.analyser.source = this.app.audio.music;
     }
 
     update(delta) {
@@ -43,7 +47,7 @@ class VisualizerScene extends Scene {
 }
 ```
 
-You can also pass `source` as a constructor option: `new AudioAnalyser({ source: this.music, fftSize: 1024 })`. Either form works; the setter is useful when you need to switch sources at runtime.
+You can also pass `source` as a constructor option: `new AudioAnalyser({ source: app.audio.music, fftSize: 1024 })`. Either form works; the setter is useful when you need to switch sources at runtime. To analyse a single track in isolation, keep the `Voice` from `play()` and pass that instead of the bus.
 
 ## Spectrum sampling strategies
 
@@ -83,7 +87,7 @@ The event signals — `onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange` — 
 
 ```js
 this.detector = new BeatDetector();
-this.detector.source = this.music;
+this.detector.source = this.app.audio.music;
 
 this.detector.onBeat.add(() => {
     this.particleBurst.reset();
@@ -143,7 +147,7 @@ import { DataTexture, Sprite } from '@codexo/exojs';
 
 init(loader) {
     this.analyser = new AudioAnalyser({ fftSize: 512 });
-    this.analyser.source = this.music;
+    this.analyser.source = this.app.audio.music;
 
     this.specTex = new DataTexture({
         width: 256,    // scroll history in columns
@@ -180,25 +184,28 @@ Here is a complete scene that combines an analyser-driven bar graph with beat-tr
 
 ```js
 import {
-    Application, AudioAnalyser, BeatDetector,
-    Color, Graphics, Music, Scene,
+    Application, AudioStream,
+    Color, Graphics, Scene,
 } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 
 const app = new Application({ canvas: { width: 800, height: 600 } });
 document.body.append(app.canvas);
 
 class AudioReactiveScene extends Scene {
     async load(loader) {
-        await loader.load(Music, { track: 'audio/track.ogg' });
+        await loader.load(AudioStream, { track: 'audio/track.ogg' });
     }
 
     init(loader) {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(Music, 'track').setLoop(true).play();
+        this.music = loader.get(AudioStream, 'track');
+        this.app.audio.play(this.music, { loop: true });
 
-        this.analyser = new AudioAnalyser({ source: this.music, fftSize: 512 });
-        this.detector = new BeatDetector({ source: this.music });
+        // Both taps read the music bus the track plays through.
+        this.analyser = new AudioAnalyser({ source: this.app.audio.music, fftSize: 512 });
+        this.detector = new BeatDetector({ source: this.app.audio.music });
 
         this.bars = new Graphics();
         this.addChild(this.bars);

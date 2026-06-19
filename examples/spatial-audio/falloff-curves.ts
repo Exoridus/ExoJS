@@ -113,7 +113,7 @@ class FalloffCurvesScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        for (const sound of this.sounds) sound.setLoop(true).setVolume(0.5).play();
+        for (const sound of this.sounds) this.app.audio.play(sound, { loop: true, volume: 0.5 });
         this.hud.setStatus('Move the pointer to relocate the listener');
     }
 

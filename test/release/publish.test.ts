@@ -59,14 +59,15 @@ describe('publishRelease — dry-run', () => {
     expect(report.dryRun).toBe(true);
 
     const published = publishCalls(runner.invocations);
-    expect(published).toHaveLength(5);
-    // order by tarball file name reflects Core→Particles→Tilemap→Tiled→Physics
+    expect(published).toHaveLength(6);
+    // order by tarball file name reflects Core→Particles→Tilemap→Tiled→Physics→AudioFx
     expect(published.map(i => i.args[1])).toEqual([
       resolveArtifact(tarballName('@codexo/exojs')),
       resolveArtifact(tarballName('@codexo/exojs-particles')),
       resolveArtifact(tarballName('@codexo/exojs-tilemap')),
       resolveArtifact(tarballName('@codexo/exojs-tiled')),
       resolveArtifact(tarballName('@codexo/exojs-physics')),
+      resolveArtifact(tarballName('@codexo/exojs-audio-fx')),
     ]);
     for (const call of published) {
       expect(call.args).toContain('--dry-run');
@@ -84,13 +85,13 @@ describe('publishRelease — live happy path', () => {
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
     expect(report.ok).toBe(true);
-    expect(report.packages.map(p => p.publish)).toEqual(['published', 'published', 'published', 'published', 'published']);
-    expect(report.packages.map(p => p.promote)).toEqual(['promoted', 'promoted', 'promoted', 'promoted', 'promoted']);
+    expect(report.packages.map(p => p.publish)).toEqual(['published', 'published', 'published', 'published', 'published', 'published']);
+    expect(report.packages.map(p => p.promote)).toEqual(['promoted', 'promoted', 'promoted', 'promoted', 'promoted', 'promoted']);
 
     // dist-tag promotion runs once per package, AFTER all publishes, to `latest`.
     const tags = distTagCalls(runner.invocations);
-    expect(tags).toHaveLength(5);
-    expect(tags.map(t => t.args[3])).toEqual(['latest', 'latest', 'latest', 'latest', 'latest']);
+    expect(tags).toHaveLength(6);
+    expect(tags.map(t => t.args[3])).toEqual(['latest', 'latest', 'latest', 'latest', 'latest', 'latest']);
     const firstTagIndex = runner.invocations.findIndex(i => i.args[0] === 'dist-tag');
     const lastPublishIndex = runner.invocations.map(i => i.args[0]).lastIndexOf('publish');
     expect(firstTagIndex).toBeGreaterThan(lastPublishIndex);
@@ -114,15 +115,17 @@ describe('publishRelease — idempotent resume', () => {
     expect(report.packages[2].publish).toBe('published');
     expect(report.packages[3].publish).toBe('published');
     expect(report.packages[4].publish).toBe('published');
+    expect(report.packages[5].publish).toBe('published');
     // Core was NOT re-published…
     expect(publishedPackages(runner.invocations)).toEqual([
       resolveArtifact(tarballName('@codexo/exojs-particles')),
       resolveArtifact(tarballName('@codexo/exojs-tilemap')),
       resolveArtifact(tarballName('@codexo/exojs-tiled')),
       resolveArtifact(tarballName('@codexo/exojs-physics')),
+      resolveArtifact(tarballName('@codexo/exojs-audio-fx')),
     ]);
     // …but it still gets promoted to latest along with the others.
-    expect(report.packages.map(p => p.promote)).toEqual(['promoted', 'promoted', 'promoted', 'promoted', 'promoted']);
+    expect(report.packages.map(p => p.promote)).toEqual(['promoted', 'promoted', 'promoted', 'promoted', 'promoted', 'promoted']);
   });
 
   it('a fully-published release re-run promotes everything and publishes nothing', () => {
@@ -179,7 +182,7 @@ describe('publishRelease — partial failure never promotes latest', () => {
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
     expect(report.ok).toBe(false);
-    expect(report.packages.map(p => p.publish)).toEqual(['published', 'published', 'published', 'failed', 'not-attempted']);
+    expect(report.packages.map(p => p.publish)).toEqual(['published', 'published', 'published', 'failed', 'not-attempted', 'not-attempted']);
     expect(distTagCalls(runner.invocations)).toHaveLength(0);
   });
 });

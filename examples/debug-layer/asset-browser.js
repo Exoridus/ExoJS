@@ -1,5 +1,5 @@
 // Auto-generated from asset-browser.ts — edit the .ts source, not this file.
-import { Application, Color, FontAsset, Graphics, Json, Music, Scene, Sprite, Spritesheet, SvgAsset, Text, Texture, } from '@codexo/exojs';
+import { Application, AudioStream, Color, FontAsset, Graphics, Json, Scene, Sprite, Spritesheet, SvgAsset, Text, Texture, } from '@codexo/exojs';
 // Dynamic category accessor: maps a category key to the correct sub-object
 // in the hierarchical assets catalog. Technical assets live under
 // assets.technical; everything else is under assets.demo.
@@ -87,6 +87,9 @@ class AssetBrowserScene extends Scene {
     soundMusics = new Map();
     musicMusics = new Map();
     soundSpriteAudio = new Map();
+    // Single-asset preview playback: one Voice at a time, tied to `previewKey`.
+    previewVoice = null;
+    previewKey = null;
     frameIdx = 0;
     frameTimer = 0;
     animPlaying = true;
@@ -178,19 +181,19 @@ class AssetBrowserScene extends Scene {
             audBatch[`aud_${k}`] = url;
         }
         if (Object.keys(audBatch).length)
-            await loader.load(Music, audBatch);
+            await loader.load(AudioStream, audBatch);
         const sndBatch = {};
         for (const [k, url] of Object.entries(assets.demo.sound ?? {})) {
             sndBatch[`snd_${k}`] = url;
         }
         if (Object.keys(sndBatch).length)
-            await loader.load(Music, sndBatch);
+            await loader.load(AudioStream, sndBatch);
         const musBatch = {};
         for (const [k, url] of Object.entries(assets.demo.music ?? {})) {
             musBatch[`mus_${k}`] = url;
         }
         if (Object.keys(musBatch).length)
-            await loader.load(Music, musBatch);
+            await loader.load(AudioStream, musBatch);
         const sdsBatch = {};
         const sdsJsonBatch = {};
         for (const [k, entry] of Object.entries(assets.demo.soundSprites ?? {})) {
@@ -198,7 +201,7 @@ class AssetBrowserScene extends Scene {
             sdsJsonBatch[`sds_${k}`] = entry.data;
         }
         if (Object.keys(sdsBatch).length) {
-            await loader.load(Music, sdsBatch);
+            await loader.load(AudioStream, sdsBatch);
             await loader.load(Json, sdsJsonBatch);
         }
         for (const [k, url] of Object.entries(assets.demo.fonts ?? {})) {
@@ -279,16 +282,16 @@ class AssetBrowserScene extends Scene {
                 s.setAnchor(0.5);
         }
         for (const [k] of Object.entries(assets.demo.audio ?? {})) {
-            this.audioMusics.set(k, loader.get(Music, `aud_${k}`));
+            this.audioMusics.set(k, loader.get(AudioStream, `aud_${k}`));
         }
         for (const [k] of Object.entries(assets.demo.sound ?? {})) {
-            this.soundMusics.set(k, loader.get(Music, `snd_${k}`));
+            this.soundMusics.set(k, loader.get(AudioStream, `snd_${k}`));
         }
         for (const [k] of Object.entries(assets.demo.music ?? {})) {
-            this.musicMusics.set(k, loader.get(Music, `mus_${k}`));
+            this.musicMusics.set(k, loader.get(AudioStream, `mus_${k}`));
         }
         for (const [k] of Object.entries(assets.demo.soundSprites ?? {})) {
-            this.soundSpriteAudio.set(k, loader.get(Music, `sds_${k}`));
+            this.soundSpriteAudio.set(k, loader.get(AudioStream, `sds_${k}`));
             this.soundSpriteData.set(k, loader.get(Json, `sds_${k}`));
         }
         for (const [k, url] of Object.entries(assets.demo.fonts ?? {})) {
@@ -384,17 +387,15 @@ class AssetBrowserScene extends Scene {
         this.animPlaying = true;
     }
     stopAllAudio() {
-        for (const music of [
-            ...this.audioMusics.values(),
-            ...this.soundMusics.values(),
-            ...this.musicMusics.values(),
-            ...this.soundSpriteAudio.values(),
-        ]) {
-            if (music.playing) {
-                music.pause();
-                music.setTime(0);
-            }
+        if (this.previewVoice) {
+            this.previewVoice.stop();
+            this.previewVoice = null;
+            this.previewKey = null;
         }
+    }
+    /** True when the selected key's preview voice is live and not paused. */
+    previewIsPlaying() {
+        return this.previewVoice !== null && !this.previewVoice.ended && !this.previewVoice.paused && this.previewKey === this.key;
     }
     currentPlayingMap() {
         if (this.cat === 'audio')
@@ -413,14 +414,21 @@ class AssetBrowserScene extends Scene {
         const map = this.currentPlayingMap();
         if (!map)
             return;
-        const music = map.get(this.key);
-        if (!music)
+        const stream = map.get(this.key);
+        if (!stream)
             return;
-        if (music.playing) {
-            music.pause();
+        if (this.previewKey === this.key && this.previewVoice && !this.previewVoice.ended) {
+            // Same asset selected: pause / resume the live voice.
+            if (this.previewVoice.paused)
+                this.previewVoice.resume();
+            else
+                this.previewVoice.pause();
         }
         else {
-            music.play();
+            // New asset: stop the previous preview and start this one.
+            this.previewVoice?.stop();
+            this.previewVoice = this.app.audio.play(stream);
+            this.previewKey = this.key;
         }
     }
     currentFrameKeys() {
@@ -842,7 +850,7 @@ class AssetBrowserScene extends Scene {
         if (!this.audioG)
             this.audioG = new Graphics();
         const music = musicMap.get(this.key ?? '');
-        const isPlaying = music ? music.playing : false;
+        const isPlaying = music ? this.previewIsPlaying() : false;
         const g = this.audioG;
         const { cx, cy } = this.previewCenter();
         const bx = cx - 50;
@@ -865,7 +873,7 @@ class AssetBrowserScene extends Scene {
             this.audioG = new Graphics();
         const music = this.soundSpriteAudio.get(this.key ?? '');
         const data = this.soundSpriteData.get(this.key ?? '');
-        const isPlaying = music ? music.playing : false;
+        const isPlaying = music ? this.previewIsPlaying() : false;
         const sprites = data?.sprites ?? {};
         const g = this.audioG;
         const { cx } = this.previewCenter();

@@ -1,5 +1,6 @@
 // Auto-generated from tempo-tracking.ts — edit the .ts source, not this file.
-import { Application, BeatDetector, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -27,14 +28,14 @@ class TempoTrackingScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
+        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         const marginX = width * 0.08;
-        this.music = loader.get(Music, 'track');
+        this.music = loader.get(AudioStream, 'track');
         this.detector = new BeatDetector();
-        this.detector.source = this.music;
+        this.detector.source = this.app.audio.music;
         this.readout = new Text('BPM —', { fillColor: Color.white, fontSize: 40 });
         this.readout.setPosition(marginX, height * 0.18);
         this.confidenceLabel = new Text('Confidence', { fillColor: new Color(150, 220, 175), fontSize: 20 });
@@ -53,8 +54,8 @@ class TempoTrackingScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 48);
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         // Raw onset strength straight from the detector (positive spectral flux).

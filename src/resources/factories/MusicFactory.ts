@@ -1,4 +1,4 @@
-import { Music } from '#audio/Music';
+import { AudioStream } from '#audio/AudioStream';
 import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
 import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
 import { determineMimeType } from '#resources/utils';
@@ -17,7 +17,7 @@ export interface MusicFactoryOptions {
    * (but potentially less buffered) readiness.
    */
   loadEvent?: StreamingLoadEvent;
-  /** Initial playback settings forwarded to the {@link Music} instance. */
+  /** Initial playback settings forwarded to the {@link AudioStream} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
   /**
    * Milliseconds to wait after a `stalled` event before rejecting the load
@@ -29,16 +29,16 @@ export interface MusicFactoryOptions {
 
 /**
  * {@link AssetFactory} implementation that loads streaming audio assets
- * (MP3, OGG, WAV, AAC, and other browser-supported formats) and produces a
- * {@link Music} instance backed by an `<audio>` element.
+ * (MP3, OGG, WAV, AAC, and other browser-supported formats) and produces an
+ * {@link AudioStream} instance backed by an `<audio>` element.
  *
- * Unlike {@link SoundFactory}, music assets are decoded lazily via the browser's
+ * Unlike {@link SoundFactory}, stream assets are decoded lazily via the browser's
  * streaming audio pipeline rather than being fully decoded into an
  * {@link AudioBuffer} up-front, making them appropriate for long-form
  * background tracks. The underlying `<audio>` elements are paused and detached
  * when {@link MusicFactory.destroy} is called.
  */
-export class MusicFactory extends AbstractAssetFactory<Music> {
+export class MusicFactory extends AbstractAssetFactory<AudioStream> {
   public readonly storageName = 'music';
 
   private readonly _audioElements: HTMLAudioElement[] = [];
@@ -52,13 +52,13 @@ export class MusicFactory extends AbstractAssetFactory<Music> {
   }
 
   /**
-   * Wraps audio bytes in an `<audio>` element and resolves with a
-   * {@link Music} instance once the configured `loadEvent` fires.
+   * Wraps audio bytes in an `<audio>` element and resolves with an
+   * {@link AudioStream} instance once the configured `loadEvent` fires.
    *
    * Rejects if the element emits an `error` or `abort` event before the
    * load event is received.
    */
-  public async create(source: ArrayBuffer, options: MusicFactoryOptions = {}): Promise<Music> {
+  public async create(source: ArrayBuffer, options: MusicFactoryOptions = {}): Promise<AudioStream> {
     const { mimeType, loadEvent, playbackOptions, stallTimeout } = options;
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
     const objectUrl = this.createObjectUrl(blob);
@@ -84,7 +84,7 @@ export class MusicFactory extends AbstractAssetFactory<Music> {
       audio.addEventListener('error', () => settle(() => reject(new Error('Error loading audio source.'))), onceListenerOption);
       audio.addEventListener('abort', () => settle(() => reject(new Error('Audio loading was canceled.'))), onceListenerOption);
       audio.addEventListener('emptied', () => settle(() => reject(new Error('Audio loading was emptied.'))), onceListenerOption);
-      audio.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Music(audio, playbackOptions))), onceListenerOption);
+      audio.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new AudioStream(audio, playbackOptions))), onceListenerOption);
 
       if (stallTimeout !== undefined) {
         audio.addEventListener('stalled', () => {

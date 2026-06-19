@@ -120,6 +120,15 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/exojs-audio-fx:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+      '@codexo/exojs-config':
+        specifier: workspace:*
+        version: link:../exojs-config
+
   packages/exojs-config:
     dependencies:
       '@rollup/plugin-node-resolve':

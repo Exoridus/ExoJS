@@ -1,35 +1,32 @@
 ---
 title: "Sound"
-description: "Pre-decoded short audio clip backed by an `AudioBuffer`. Each Sound.play call grabs a free `AudioBufferSourceNode` from the pool (default size 8) so the same sound can overlap itself; when the pool is full the configured SoundPoolStrategy decides which source to evict. Supports audio-sprite playback via Sound.playSprite — name a sub-region in the AudioSpriteClip options and trigger by name. Routes through any AudioBus; defaults to the engine's `sound` bus. Calling Sound.makeSpatial attaches a panner so the sound follows a SceneNode or world-space target with distance attenuation handled by Web Audio. Use Music for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips."
+description: "Pre-decoded short audio clip backed by an `AudioBuffer`. Sound is a **data descriptor** — it holds the decoded audio buffer, sprite definitions, default playback parameters, and spatial configuration but does NOT start playback itself. Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle. Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict. Use AudioStream for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips."
 symbol: "Sound"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 49
+memberCount: 25
 tier: "stable"
-sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/Sound.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L131"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L121"
 ---
 ## Import
 
 `import { Sound } from '@codexo/exojs'`
 
-Pre-decoded short audio clip backed by an `AudioBuffer`. Each
-Sound.play call grabs a free `AudioBufferSourceNode` from the
-pool (default size 8) so the same sound can overlap itself; when the
-pool is full the configured SoundPoolStrategy decides which
-source to evict.
+Pre-decoded short audio clip backed by an `AudioBuffer`.
 
-Supports audio-sprite playback via Sound.playSprite — name a
-sub-region in the AudioSpriteClip options and trigger by name.
+Sound is a **data descriptor** — it holds the decoded audio buffer, sprite
+definitions, default playback parameters, and spatial configuration but does
+NOT start playback itself. Playback is driven by
+`AudioManager.play(sound, options)` which returns a Voice handle.
 
-Routes through any AudioBus; defaults to the engine's `sound`
-bus. Calling Sound.makeSpatial attaches a panner so the sound
-follows a SceneNode or world-space target with distance
-attenuation handled by Web Audio.
+Multiple concurrent plays of the same Sound are supported up to `poolSize`.
+When the pool is full the configured SoundPoolStrategy decides which
+active voice to evict.
 
-Use Music for long-form streaming audio (single source, decoded
+Use AudioStream for long-form streaming audio (single source, decoded
 lazily) — `Sound` is best for short, frequently-triggered clips.
 
 ## Constructors
@@ -38,61 +35,34 @@ lazily) — `Sound` is best for short, frequently-triggered clips.
 
 ## Methods
 
-- `_connectToBus(): void`
-- `_defaultBus(): AudioBus`
-- `_disconnectFromBus(): void`
-- `_getAudioSetup(): object | null`
-- `_tickSpatial(): void`
-- `applyOptions(options: Partial<PlaybackOptions>): this`
+- `_createVoice(manager: AudioManager, options: PlayOptions): Voice`
+- `_stopAllVoices(): void`
+- `clip(offset: number, duration: number): Sound`
 - `defineSprite(name: string, clip: AudioSpriteClip): this`
 - `destroy(): void`
-- `fadeIn(durationMs: number): this`
-- `fadeOut(durationMs: number, options: object): this`
-- `getTime(): number`
 - `hasSprite(name: string): boolean`
-- `pause(options?: Partial<PlaybackOptions>): this`
-- `play(options?: PlayOptions): this`
-- `playSprite(name: string, options: Partial<PlaybackOptions>): this`
 - `removeSprite(name: string): this`
-- `setLoop(loop: boolean): this`
-- `setMuted(muted: boolean): this`
-- `setPlaybackRate(value: number): this`
 - `setPoolSize(poolSize: number): this`
 - `setSprites(sprites: Readonly<Record<string, AudioSpriteClip>>): this`
-- `setTime(currentTime: number): this`
-- `setVolume(value: number): this`
-- `stop(options?: Partial<PlaybackOptions>): this`
-- `toggle(options?: Partial<PlaybackOptions>): this`
 
 ## Properties
 
-- `analyserTarget: GainNode | null`
+- `loop: boolean`
+- `muted: boolean`
+- `playbackRate: number`
+- `volume: number`
 - `audioBuffer: AudioBuffer`
-- `bus: AudioBus`
-- `currentTime: number`
 - `distanceModel: DistanceModel`
 - `duration: number`
-- `loop: boolean`
 - `maxDistance: number`
-- `muted: boolean`
-- `paused: boolean`
-- `playbackRate: number`
-- `playing: boolean`
 - `poolSize: number`
 - `poolStrategy: SoundPoolStrategy`
 - `position: Vector | null`
 - `priority: number`
-- `progress: number`
 - `refDistance: number`
 - `rolloffFactor: number`
 - `velocity: Vector | null`
-- `volume: number`
-
-## Events
-
-- `onStart: Signal<[]>`
-- `onStop: Signal<[]>`
 
 ## Source
 
-[src/audio/Sound.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L131)
+[src/audio/Sound.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L121)

@@ -1,4 +1,5 @@
-import { Application, AudioAnalyser, Color, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { Application, AudioStream, Color, Scene, Sprite, Text, Texture, View, type Voice } from '@codexo/exojs';
+import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -12,7 +13,8 @@ const app = new Application({
 });
 
 class LowBandCameraShakeScene extends Scene {
-    private music!: Music;
+    private music!: AudioStream;
+    private musicVoice!: Voice;
     private analyser!: AudioAnalyser;
     private view!: View;
     private sprite!: Sprite;
@@ -20,15 +22,15 @@ class LowBandCameraShakeScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { track: assets.demo.audio.musicLoop });
+        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
         await loader.load(Texture, { ship: assets.demo.textures.shipA });
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(Music, 'track');
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.music });
+        this.music = loader.get(AudioStream, 'track');
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.view = new View(width / 2, height / 2, width, height);
         this.sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
 
@@ -46,8 +48,8 @@ class LowBandCameraShakeScene extends Scene {
             .setPosition(width / 2, height - 64);
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically — play() returns the Voice now.
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
     override update(delta): void {
@@ -61,7 +63,7 @@ class LowBandCameraShakeScene extends Scene {
         // Advance the shake oscillation (the View only animates when updated).
         this.view.update(delta.milliseconds);
 
-        if (!this.music.paused) {
+        if (this.musicVoice) {
             this.hud.setStatus(`bass ${(low * 100) | 0}%`);
         }
     }

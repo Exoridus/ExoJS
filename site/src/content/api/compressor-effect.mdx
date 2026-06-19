@@ -1,0 +1,45 @@
+---
+title: "CompressorEffect"
+description: "Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`. Reduces the volume of loud signals above a threshold, evening out the perceived loudness of a mix. All parameter changes are applied with a short smoothing ramp so they are artifact-free during playback."
+symbol: "CompressorEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 11
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/CompressorEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/CompressorEffect.ts#L18"
+---
+## Import
+
+`import { CompressorEffect } from '@codexo/exojs-audio-fx'`
+
+Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`.
+Reduces the volume of loud signals above a threshold, evening out the
+perceived loudness of a mix. All parameter changes are applied with a short
+smoothing ramp so they are artifact-free during playback.
+
+## Constructors
+
+- `new(options: CompressorEffectOptions): CompressorEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `attack: number`
+- `inputNode: AudioNode`
+- `knee: number`
+- `outputNode: AudioNode`
+- `ratio: number`
+- `ready: Promise<void>`
+- `reduction: number`
+- `release: number`
+- `threshold: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/CompressorEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/CompressorEffect.ts#L18)

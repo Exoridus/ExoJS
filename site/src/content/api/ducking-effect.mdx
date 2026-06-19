@@ -1,0 +1,46 @@
+---
+title: "DuckingEffect"
+description: "Sidechain compressor (ducker) implemented as an WorkletEffect. Attenuates the main audio signal whenever the `sidechain` AudioBus exceeds the threshold, then releases when it drops back down. Commonly used to duck background music under dialogue or sound effects. Attack and release times are expressed in milliseconds and converted internally to one-pole filter coefficients."
+symbol: "DuckingEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 10
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/DuckingEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DuckingEffect.ts#L86"
+---
+## Import
+
+`import { DuckingEffect } from '@codexo/exojs-audio-fx'`
+
+Sidechain compressor (ducker) implemented as an WorkletEffect.
+Attenuates the main audio signal whenever the `sidechain` AudioBus
+exceeds the threshold, then releases when it drops back down. Commonly used
+to duck background music under dialogue or sound effects. Attack and release
+times are expressed in milliseconds and converted internally to one-pole
+filter coefficients.
+
+## Constructors
+
+- `new(options: DuckingEffectOptions): DuckingEffect`
+
+## Methods
+
+- `_onWorkletReady(audioContext: AudioContext): void`
+- `destroy(): void`
+
+## Properties
+
+- `attackMs: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ratio: number`
+- `ready: Promise<void>`
+- `releaseMs: number`
+- `threshold: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/DuckingEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DuckingEffect.ts#L86)

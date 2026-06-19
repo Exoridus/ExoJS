@@ -1,6 +1,5 @@
 ﻿import { getAudioContext } from '#audio/audio-context';
 import { AudioListener } from '#audio/AudioListener';
-import { disposeAudioManager } from '#audio/AudioManager';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,7 +34,6 @@ const makeViewStub = (x: number, y: number) => ({
 
 describe('AudioListener', () => {
   beforeEach(() => {
-    disposeAudioManager();
     // Reset mock call history on listener AudioParams
     const l = getListenerMock();
     (l.positionX.setValueAtTime as MockInstance).mockClear();
@@ -50,7 +48,6 @@ describe('AudioListener', () => {
   });
 
   afterEach(() => {
-    disposeAudioManager();
     vi.restoreAllMocks();
   });
 

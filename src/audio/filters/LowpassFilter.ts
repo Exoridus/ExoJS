@@ -1,5 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioFilter } from '#audio/AudioFilter';
+import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link LowpassFilter}. */
 export interface LowpassFilterOptions {
@@ -14,7 +14,7 @@ export interface LowpassFilterOptions {
  * harsh high-frequency content, or creating underwater/telephone effects.
  * The `resonance` (Q) parameter controls the sharpness of the roll-off peak.
  */
-export class LowpassFilter extends AudioFilter {
+export class LowpassFilter extends AudioEffect {
   private _node: BiquadFilterNode | null = null;
   private _frequency: number;
   private _resonance: number;

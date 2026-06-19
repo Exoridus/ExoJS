@@ -32,7 +32,7 @@ export type Mutable<T> = {
  */
 export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | ImageBitmap | null;
 
-/** Common playback configuration for both {@link Sound} and {@link Music}. */
+/** Common playback configuration for {@link Sound} and {@link AudioStream}. */
 export interface PlaybackOptions {
   volume: number;
   playbackRate: number;

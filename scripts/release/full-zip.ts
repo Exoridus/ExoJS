@@ -36,6 +36,7 @@ const VENDOR_PACKAGES = [
   { name: 'exojs-tilemap', vendorDir: 'exojs-tilemap' },
   { name: 'exojs-tiled', vendorDir: 'exojs-tiled' },
   { name: 'exojs-physics', vendorDir: 'exojs-physics' },
+  { name: 'exojs-audio-fx', vendorDir: 'exojs-audio-fx' },
 ] as const;
 
 const FORBIDDEN_PATTERNS: Array<{ label: string; test: (text: string) => boolean }> = [

@@ -1,6 +1,7 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
+import { getAudioContext } from '#audio/audio-context';
+import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
+import type { SoundVoice } from '#audio/SoundVoice';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,54 +38,57 @@ const setupPannerSpy = () => {
 // ---------------------------------------------------------------------------
 
 describe('AudioManager.update()', () => {
-  beforeEach(() => {
-    disposeAudioManager();
-  });
-
   afterEach(() => {
-    disposeAudioManager();
     vi.restoreAllMocks();
   });
 
   // 1. mixer.update() ticks listener
   test('update() calls listener._tick()', () => {
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const tickSpy = vi.spyOn(mixer.listener, '_tick');
     mixer.update();
     expect(tickSpy).toHaveBeenCalledTimes(1);
   });
 
-  // 2. mixer.update() ticks all registered spatial sounds
-  test('update() calls _tickSpatial() on all registered spatial sounds', () => {
+  // 2. mixer.update() ticks all registered spatial voices
+  test('update() calls _tickSpatial() on all registered spatial voices', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound1 = new Sound(createAudioBufferStub());
     const sound2 = new Sound(createAudioBufferStub());
     sound1.position = { x: 0, y: 0 };
     sound2.position = { x: 10, y: 10 };
 
-    const tick1 = vi.spyOn(sound1, '_tickSpatial');
-    const tick2 = vi.spyOn(sound2, '_tickSpatial');
+    const voice1 = mixer.play(sound1) as SoundVoice;
+    const voice2 = mixer.play(sound2) as SoundVoice;
+
+    const tick1 = vi.spyOn(voice1, '_tickSpatial');
+    const tick2 = vi.spyOn(voice2, '_tickSpatial');
 
     mixer.update();
 
     expect(tick1).toHaveBeenCalledTimes(1);
     expect(tick2).toHaveBeenCalledTimes(1);
+
     pannerSpy.restore();
+    sound1.destroy();
+    sound2.destroy();
   });
 
-  // 3. Non-spatial sounds NOT ticked
-  test('update() does NOT call _tickSpatial() on non-spatial sounds', () => {
-    const mixer = getAudioManager();
+  // 3. Non-spatial voices NOT ticked
+  test('update() does NOT call _tickSpatial() on non-spatial voices', () => {
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     // sound.position remains null — not spatial
-    const tickSpy = vi.spyOn(sound, '_tickSpatial');
+    const voice = mixer.play(sound) as SoundVoice;
+    const tickSpy = vi.spyOn(voice, '_tickSpatial');
     mixer.update();
     expect(tickSpy).not.toHaveBeenCalled();
+    sound.destroy();
   });
 
   // 4. Application.update() invokes mixer.update() between interaction and tweens
-  test('Application.update() calls getAudioManager().update() between interaction.update() and tweens.update()', async () => {
+  test('Application.update() calls audio.update() between interaction.update() and tweens.update()', async () => {
     vi.resetModules();
 
     const callOrder: string[] = [];
@@ -94,10 +98,8 @@ describe('AudioManager.update()', () => {
         callOrder.push('mixer');
       }),
       _applyVisibility: vi.fn(),
+      destroy: vi.fn(),
     };
-    vi.doMock('#audio/AudioManager', () => ({
-      getAudioManager: () => mixerMock,
-    }));
     vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({
       WebGl2Backend: vi.fn(function () {
         return {
@@ -155,6 +157,7 @@ describe('AudioManager.update()', () => {
     };
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_audio'] = mixerMock;
     rawApp['input'] = { update: vi.fn() };
     rawApp['interaction'] = {
       update: () => {
@@ -192,29 +195,33 @@ describe('AudioManager.update()', () => {
     vi.resetModules();
   });
 
-  test('update() still works after all spatial sounds are unregistered', () => {
+  test('update() still works after all spatial voices end', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
-    sound.position = null;
+    const voice = mixer.play(sound);
+    voice.stop(); // mark ended
 
     expect(() => mixer.update()).not.toThrow();
     pannerSpy.restore();
+    sound.destroy();
   });
 
-  test('destroy() clears the spatial sounds set', () => {
+  test('destroy() clears the spatial voices set', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
+    const voice = mixer.play(sound) as SoundVoice;
 
     mixer.destroy();
 
-    // After destroy, update() shouldn't call anything on the old sound
-    const tickSpy = vi.spyOn(sound, '_tickSpatial');
-    // mixer is now destroyed — but we can still call update (though mixer is invalid, so don't call it)
+    // After destroy, update() is not safe to call on destroyed mixer.
+    // But the voice's _tickSpatial should not have been called.
+    const tickSpy = vi.spyOn(voice, '_tickSpatial');
     expect(tickSpy).not.toHaveBeenCalled();
     pannerSpy.restore();
+    sound.destroy();
   });
 });

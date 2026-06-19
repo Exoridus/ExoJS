@@ -55,9 +55,10 @@ const particles = readPkg('packages/exojs-particles/package.json');
 const tilemap = readPkg('packages/exojs-tilemap/package.json');
 const tiled = readPkg('packages/exojs-tiled/package.json');
 const physics = readPkg('packages/exojs-physics/package.json');
+const audioFx = readPkg('packages/exojs-audio-fx/package.json');
 const createExoApp = readPkg('packages/create-exo-app/package.json');
 
-const official = [core, particles, tilemap, tiled, physics];
+const official = [core, particles, tilemap, tiled, physics, audioFx];
 
 // 1. Lockstep version.
 const versions = new Set(official.map(p => p.version));
@@ -72,7 +73,7 @@ const [major, minor] = version.split('.');
 const expectedPeer = `${major}.${minor}.x`;
 
 // 2. Extension peer ranges.
-for (const ext of [particles, tilemap, tiled, physics]) {
+for (const ext of [particles, tilemap, tiled, physics, audioFx]) {
   if (ext.peer !== expectedPeer) {
     problems.push(`${ext.name}: peer "@codexo/exojs" is "${ext.peer ?? '(missing)'}", expected "${expectedPeer}"`);
   } else {
@@ -116,6 +117,7 @@ requireInWorkflow('pnpm --filter @codexo/exojs-particles build', 'prepare builds
 requireInWorkflow('pnpm --filter @codexo/exojs-tilemap build', 'prepare builds tilemap');
 requireInWorkflow('pnpm --filter @codexo/exojs-tiled build', 'prepare builds tiled');
 requireInWorkflow('pnpm --filter @codexo/exojs-physics build', 'prepare builds physics');
+requireInWorkflow('pnpm --filter @codexo/exojs-audio-fx build', 'prepare builds audio-fx');
 
 // 5. PREPARE packs/hashes/zips and uploads the artifacts.
 requireInWorkflow('pnpm release:prepare', 'prepare packs tarballs + Full ZIP (release:prepare)');

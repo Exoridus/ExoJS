@@ -108,7 +108,7 @@ update(delta) {
 }
 ```
 
-A `RateSpawn` with a `Constant` rate lets you dynamically change `rate.value` each frame — the spawn module reads the current value, not a snapshot. The engine hum uses an `OscillatorSound` with volume tied to thrust magnitude. The combined effect: moving produces particles and sound; stopping kills both. The player *feels* the connection between input and response.
+A `RateSpawn` with a `Constant` rate lets you dynamically change `rate.value` each frame — the spawn module reads the current value, not a snapshot. The engine hum is a `Voice` from `this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 })`, with `this.engine.volume` tied to thrust magnitude each frame. The combined effect: moving produces particles and sound; stopping kills both. The player *feels* the connection between input and response.
 
 ## Layering timing
 

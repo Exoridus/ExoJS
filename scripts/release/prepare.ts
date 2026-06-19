@@ -42,13 +42,14 @@ const readVersion = (packageJsonPath: string): { name: string; version: string }
   return { name: pkg.name, version: pkg.version };
 };
 
-/** Resolves the five official packages in canonical publish order (PUBLISH_ORDER). */
+/** Resolves the six official packages in canonical publish order (PUBLISH_ORDER). */
 export const officialPackages = (rootDir: string): OfficialPackage[] => [
   { name: '@codexo/exojs', dir: rootDir },
   { name: '@codexo/exojs-particles', dir: resolve(rootDir, 'packages/exojs-particles') },
   { name: '@codexo/exojs-tilemap', dir: resolve(rootDir, 'packages/exojs-tilemap') },
   { name: '@codexo/exojs-tiled', dir: resolve(rootDir, 'packages/exojs-tiled') },
   { name: '@codexo/exojs-physics', dir: resolve(rootDir, 'packages/exojs-physics') },
+  { name: '@codexo/exojs-audio-fx', dir: resolve(rootDir, 'packages/exojs-audio-fx') },
 ];
 
 /**
@@ -126,7 +127,7 @@ export interface PrepareResult {
 }
 
 /**
- * End-to-end prepare: packs the four tarballs into a clean staging dir, hashes
+ * End-to-end prepare: packs the six tarballs into a clean staging dir, hashes
  * them, and writes `release-manifest.json` + `checksums.sha256`. The caller is
  * responsible for having built the packages first (build-once).
  *

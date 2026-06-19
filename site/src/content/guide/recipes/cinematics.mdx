@@ -7,7 +7,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Cinematics
 
-A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `Music` (for audio), and scene-stack management (for input gating).
+A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `AudioStream` (for music), and scene-stack management (for input gating).
 
 ## Approach
 
@@ -19,7 +19,7 @@ The key technique: **tween chains and delays**. Each tween starts at a specific 
 class CinematicScene extends Scene {
     async load(loader) {
         await loader.load(Texture, { boss: 'image/boss.png' });
-        await loader.load(Music, { track: 'audio/track.ogg' });
+        await loader.load(AudioStream, { track: 'audio/track.ogg' });
     }
 
     init(loader) {
@@ -33,8 +33,8 @@ class CinematicScene extends Scene {
             .setPosition(560, 320)
             .setTint(new Color(255, 130, 130));
 
-        // Music — fades in over the sequence
-        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.2).play();
+        // Music — start quiet, fade in over the sequence. Keep the Voice to tween.
+        this.musicVoice = this.app.audio.play(loader.get(AudioStream, 'track'), { loop: true, volume: 0.2 });
 
         // Shutter bars — open at the very start
         this.barSize = { v: 0 };
@@ -65,8 +65,8 @@ class CinematicScene extends Scene {
             })
             .start();
 
-        // Music fade — reaches full volume over 2 seconds
-        this.app.tweens.create(this.music)
+        // Music fade — the Voice's volume is a plain get/set, so tween it directly.
+        this.app.tweens.create(this.musicVoice)
             .to({ volume: 0.85 }, 2.0)
             .start();
     }
@@ -152,7 +152,7 @@ For a smoother skip, fast-forward remaining tweens to completion rather than cut
 this.inputs.onTrigger(Keyboard.Space, () => {
     // Jump all tweens to their end state
     this.app.tweens.clear(); // stops all active tweens
-    this.music.setVolume(0.85);
+    this.musicVoice.volume = 0.85;
     this.boss.setScale(2.1, 2.1);
     // ... snap other properties ...
     this.app.scene.popScene();

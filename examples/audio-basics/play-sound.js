@@ -22,7 +22,7 @@ class PlaySoundScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);
         this.app.input.onPointerTap.add(() => {
-            this.sound.play();
+            this.app.audio.play(this.sound);
         });
     }
     draw(context) {

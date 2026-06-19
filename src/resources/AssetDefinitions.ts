@@ -1,4 +1,4 @@
-import type { Music } from '#audio/Music';
+import type { AudioStream } from '#audio/AudioStream';
 import type { AudioSpriteClip } from '#audio/Sound';
 import type { Sound } from '#audio/Sound';
 import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
@@ -17,7 +17,7 @@ export interface AssetDefinitions {
     config: { source: string; playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; sprites?: Readonly<Record<string, AudioSpriteClip>> };
   };
   music: {
-    resource: Music;
+    resource: AudioStream;
     config: { source: string; mimeType?: string; loadEvent?: StreamingLoadEvent; playbackOptions?: Partial<PlaybackOptions>; stallTimeout?: number };
   };
   json: { resource: unknown; config: { source: string } };

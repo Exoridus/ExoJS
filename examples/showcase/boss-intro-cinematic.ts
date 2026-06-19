@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Keyboard, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Keyboard, type Pausable, Scene, type Seekable, Sprite, Text, Texture, View, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -21,7 +21,8 @@ class BossIntroCinematicScene extends Scene {
     private title!: Text;
     private titleState!: { count: number };
     private boss!: Sprite;
-    private music!: Music;
+    private music!: AudioStream;
+    private musicVoice!: Voice & Seekable & Pausable;
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
     private width = 0;
@@ -29,7 +30,7 @@ class BossIntroCinematicScene extends Scene {
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { boss: assets.demo.textures.shipA });
-        await loader.load(Music, { track: assets.demo.music.loopMain });
+        await loader.load(AudioStream, { track: assets.demo.music.loopMain });
     }
 
     override init(loader): void {
@@ -50,7 +51,7 @@ class BossIntroCinematicScene extends Scene {
             .setScale(0.4)
             .setPosition(width * 0.62, height / 2)
             .setTint(new Color(255, 130, 130));
-        this.music = loader.get(Music, 'track');
+        this.music = loader.get(AudioStream, 'track');
 
         this.hud = mountControls({
             title: 'Boss Intro Cinematic',
@@ -69,7 +70,7 @@ class BossIntroCinematicScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture; start the cinematic in lockstep with the sting on unlock.
-        this.music.setLoop(true).setVolume(0.2).play();
+        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.2 }) as Voice & Seekable & Pausable;
         this.app.audio.onUnlock.add(() => this.playSequence());
 
         this.inputs.onTrigger(Keyboard.R, () => this.replay());
@@ -82,10 +83,10 @@ class BossIntroCinematicScene extends Scene {
         }
 
         // Restart the sting from the top so the reveal beat lines up again.
-        this.music.currentTime = 0;
-        this.music.setVolume(0.2);
-        if (this.music.paused) {
-            this.music.play();
+        this.musicVoice.seek(0);
+        this.musicVoice.volume = 0.2;
+        if (this.musicVoice.paused) {
+            this.musicVoice.resume();
         }
         this.playSequence();
         this.hud.setStatus('Replaying…');
@@ -122,7 +123,7 @@ class BossIntroCinematicScene extends Scene {
             })
             .start();
         // Music swells up under the reveal.
-        this.app.tweens.create(this.music).to({ volume: 0.85 }, 2.0).start();
+        this.app.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start();
     }
 
     override update(delta): void {

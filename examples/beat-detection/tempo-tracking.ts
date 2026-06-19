@@ -1,4 +1,5 @@
-import { Application, BeatDetector, Color, Graphics, Music, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -15,7 +16,7 @@ const app = new Application({
 });
 
 class TempoTrackingScene extends Scene {
-    private music!: Music;
+    private music!: AudioStream;
     private detector!: BeatDetector;
     private readout!: Text;
     private confidenceLabel!: Text;
@@ -29,17 +30,17 @@ class TempoTrackingScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
+        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
         const marginX = width * 0.08;
 
-        this.music = loader.get(Music, 'track');
+        this.music = loader.get(AudioStream, 'track');
 
         this.detector = new BeatDetector();
-        this.detector.source = this.music;
+        this.detector.source = this.app.audio.music;
 
         this.readout = new Text('BPM —', { fillColor: Color.white, fontSize: 40 });
         this.readout.setPosition(marginX, height * 0.18);
@@ -65,8 +66,8 @@ class TempoTrackingScene extends Scene {
             .setPosition(width / 2, height - 48);
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
     override update(delta): void {

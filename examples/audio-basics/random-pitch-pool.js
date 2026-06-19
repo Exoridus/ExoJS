@@ -77,7 +77,7 @@ class RandomPitchPoolScene extends Scene {
             this.timer -= FIRE_INTERVAL;
             this.lastCents = Math.random() * (DETUNE_RANGE * 2) - DETUNE_RANGE;
             this.flash = 1;
-            this.sound.play({ playbackRate: Math.pow(2, this.lastCents / 1200) });
+            this.app.audio.play(this.sound, { playbackRate: Math.pow(2, this.lastCents / 1200) });
         }
     }
     draw(context) {

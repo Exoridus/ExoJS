@@ -1,7 +1,7 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { AudioBus } from '#audio/AudioBus';
-import { disposeAudioManager, getAudioManager } from '#audio/AudioManager';
+import { getAudioContext } from '#audio/audio-context';
+import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
+import type { SoundVoice } from '#audio/SoundVoice';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -57,43 +57,51 @@ const setupPannerSpy = (): {
 // ---------------------------------------------------------------------------
 
 describe('Sound — spatial (PannerNode)', () => {
-  beforeEach(() => {
-    disposeAudioManager();
-  });
-
   afterEach(() => {
-    disposeAudioManager();
     vi.restoreAllMocks();
   });
 
-  // 1. Default position === null, no PannerNode
+  // 1. Default position === null, no PannerNode on descriptor
   test('position is null by default', () => {
     const sound = new Sound(createAudioBufferStub());
     expect(sound.position).toBeNull();
   });
 
-  test('no PannerNode is created by default (non-spatial)', () => {
+  test('no PannerNode is created when playing a non-spatial sound', () => {
     const spy = setupPannerSpy();
-    new Sound(createAudioBufferStub());
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    manager.play(sound);
     expect(spy.panners.length).toBe(0);
     spy.restore();
+    sound.destroy();
   });
 
-  // 2. Setting position = { x, y } creates PannerNode
-  test('setting position creates a PannerNode', () => {
-    const spy = setupPannerSpy();
+  // 2. Setting position = { x, y } on the descriptor; PannerNode created at play time
+  test('setting position stores the value on the descriptor', () => {
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 10, y: 20 };
-    expect(spy.panners.length).toBe(1);
     expect(sound.position!.x).toBe(10);
     expect(sound.position!.y).toBe(20);
+  });
+
+  test('playing a sound with position creates a PannerNode', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    sound.position = { x: 10, y: 20 };
+    manager.play(sound);
+    expect(spy.panners.length).toBe(1);
     spy.restore();
+    sound.destroy();
   });
 
   test('PannerNode is configured with correct default spatial parameters', () => {
     const spy = setupPannerSpy();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
+    manager.play(sound);
     const panner = spy.panners[0];
     expect(panner.panningModel).toBe('equalpower');
     expect(panner.distanceModel).toBe('linear');
@@ -101,54 +109,63 @@ describe('Sound — spatial (PannerNode)', () => {
     expect(panner.refDistance).toBe(50);
     expect(panner.rolloffFactor).toBe(1);
     spy.restore();
+    sound.destroy();
   });
 
-  // 3. Sound is registered in mixer's _spatialSounds
-  test('sound is registered as spatial in the mixer when position is set', () => {
+  // 3. Voice is registered as spatial in mixer; update() ticks it
+  test('voice is registered as spatial in the mixer when sound has position at play time', () => {
     const spy = setupPannerSpy();
-    const mixer = getAudioManager();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
-    // Confirm by calling update — should call _tickSpatial on the sound.
-    const tickSpy = vi.spyOn(sound, '_tickSpatial');
+    const voice = mixer.play(sound) as SoundVoice;
+    // Confirm by calling update — should call _tickSpatial on the voice.
+    const tickSpy = vi.spyOn(voice, '_tickSpatial');
     mixer.update();
     expect(tickSpy).toHaveBeenCalledTimes(1);
     spy.restore();
+    sound.destroy();
   });
 
-  // 4. _tickSpatial() writes position to panner
-  test('_tickSpatial() writes x/y/z to PannerNode positionX/Y/Z', () => {
+  // 4. update() calls _tickSpatial with position coordinates
+  test('update() writes sound.position x/y to PannerNode', () => {
     const spy = setupPannerSpy();
+    const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 55, y: 66 };
+    mixer.play(sound);
     const panner = spy.panners[0];
     panner.positionX.setValueAtTime.mockClear();
     panner.positionY.setValueAtTime.mockClear();
     panner.positionZ.setValueAtTime.mockClear();
-    sound._tickSpatial();
+    mixer.update();
     expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(55, expect.any(Number));
     expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(66, expect.any(Number));
     expect(panner.positionZ.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
     spy.restore();
+    sound.destroy();
   });
 
-  // 5. Setting position = null removes PannerNode and unregisters
-  test('setting position to null tears down PannerNode and unregisters from mixer', () => {
+  // 5. Setting position = null removes it from the descriptor
+  test('setting position to null clears the descriptor position', () => {
     const spy = setupPannerSpy();
-    const mixer = getAudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 1, y: 2 };
-    expect(spy.panners.length).toBe(1);
-
     sound.position = null;
     expect(sound.position).toBeNull();
-    expect(spy.panners[0].disconnect).toHaveBeenCalled();
-
-    // Mixer should no longer tick this sound
-    const tickSpy = vi.spyOn(sound, '_tickSpatial');
-    mixer.update();
-    expect(tickSpy).not.toHaveBeenCalled();
     spy.restore();
+  });
+
+  test('after setting position to null, new play creates no panner', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    sound.position = { x: 1, y: 2 };
+    sound.position = null;
+    manager.play(sound);
+    expect(spy.panners.length).toBe(0);
+    spy.restore();
+    sound.destroy();
   });
 
   // 6. velocity round-trips
@@ -180,71 +197,61 @@ describe('Sound — spatial (PannerNode)', () => {
     expect(sound.velocity).toBeNull();
   });
 
-  // 7. Setting position multiple times reuses panner (no second panner created)
-  test('updating position multiple times reuses the same PannerNode', () => {
-    const spy = setupPannerSpy();
+  // 7. Setting position multiple times reuses value (no additional panner per update)
+  test('updating position multiple times changes the descriptor value', () => {
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 1, y: 2 };
     sound.position = { x: 3, y: 4 };
     sound.position = { x: 5, y: 6 };
-    expect(spy.panners.length).toBe(1);
     expect(sound.position!.x).toBe(5);
     expect(sound.position!.y).toBe(6);
-    spy.restore();
   });
 
-  // 8. Changing bus while spatial keeps panner intact, reroutes to new bus
-  test('changing bus while spatial disconnects from old bus and connects panner to new bus', () => {
+  test('playing sound twice each gets its own PannerNode', () => {
     const spy = setupPannerSpy();
+    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 0, y: 0 };
-    const panner = spy.panners[0];
-
-    const newBus = new AudioBus('sfx');
-    const connectSpy = panner.connect;
-    const disconnectSpy = panner.disconnect;
-
-    sound.bus = newBus;
-
-    expect(disconnectSpy).toHaveBeenCalled();
-    expect(connectSpy).toHaveBeenCalled();
-    // panner should still be non-null (not torn down)
-    expect(sound.position).not.toBeNull();
-
-    newBus.destroy();
+    manager.play(sound);
+    manager.play(sound);
+    // Each play creates one PannerNode
+    expect(spy.panners.length).toBe(2);
     spy.restore();
-  });
-
-  // 9. destroy() cleans up panner + unregisters
-  test('destroy() disconnects PannerNode and unregisters from mixer', () => {
-    const spy = setupPannerSpy();
-    const mixer = getAudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    sound.position = { x: 0, y: 0 };
-    const panner = spy.panners[0];
-
     sound.destroy();
+  });
 
+  // 8. voice.stop() disconnects panner
+  test('voice.stop() disconnects the PannerNode', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    sound.position = { x: 0, y: 0 };
+    const voice = manager.play(sound);
+    const panner = spy.panners[0];
+
+    voice.stop();
     expect(panner.disconnect).toHaveBeenCalled();
+    spy.restore();
+    sound.destroy();
+  });
 
-    // Mixer should no longer tick after destroy
-    const tickSpy = vi.fn();
-    (sound as unknown as { _tickSpatial: MockInstance })._tickSpatial = tickSpy;
+  // 9. Ended voice is pruned from spatial tracking after update()
+  test('ended voice is removed from spatial tracking after update()', () => {
+    const spy = setupPannerSpy();
+    const mixer = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    sound.position = { x: 0, y: 0 };
+    const voice = mixer.play(sound) as SoundVoice;
+
+    voice.stop(); // mark as ended
+
+    const tickSpy = vi.spyOn(voice, '_tickSpatial');
     mixer.update();
+    // Ended voice should not be ticked
     expect(tickSpy).not.toHaveBeenCalled();
 
     spy.restore();
-  });
-
-  test('destroy() cleans up velocity Vector', () => {
-    const sound = new Sound(createAudioBufferStub());
-    sound.velocity = { x: 1, y: 2 };
-    expect(() => sound.destroy()).not.toThrow();
-  });
-
-  test('_tickSpatial() is a no-op when position is null', () => {
-    const sound = new Sound(createAudioBufferStub());
-    expect(() => sound._tickSpatial()).not.toThrow();
+    sound.destroy();
   });
 
   test('setting position to null when already null is a no-op', () => {
@@ -253,6 +260,32 @@ describe('Sound — spatial (PannerNode)', () => {
     expect(sound.position).toBeNull();
     sound.position = null; // should not throw
     expect(spy.panners.length).toBe(0);
+    spy.restore();
+  });
+
+  test('sound.destroy() cleans up position and velocity vectors', () => {
+    const sound = new Sound(createAudioBufferStub());
+    sound.position = { x: 1, y: 2 };
+    sound.velocity = { x: 3, y: 4 };
+    expect(() => sound.destroy()).not.toThrow();
+  });
+
+  test('destroy() stops all active voices', () => {
+    const spy = setupPannerSpy();
+    const mixer = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    sound.position = { x: 0, y: 0 };
+    const voice = mixer.play(sound);
+
+    sound.destroy();
+
+    expect(voice.ended).toBe(true);
+
+    // Mixer should no longer tick after destroy (voice ended)
+    const tickSpy = vi.spyOn(voice as SoundVoice, '_tickSpatial');
+    mixer.update();
+    expect(tickSpy).not.toHaveBeenCalled();
+
     spy.restore();
   });
 });

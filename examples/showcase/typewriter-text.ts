@@ -44,7 +44,7 @@ class TypewriterTextScene extends Scene {
             .to({ count: message.length }, 2.4)
             .onUpdate(() => {
                 const n = this.state.count | 0;
-                if (n > this.last) this.sound.play({ playbackRate: 1.6 });
+                if (n > this.last) this.app.audio.play(this.sound, { playbackRate: 1.6 });
                 this.last = n;
                 this.text.text = message.slice(0, n);
             })

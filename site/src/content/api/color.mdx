@@ -1,6 +1,6 @@
 ---
 title: "Color"
-description: "32-bit RGBA color value with channel-wise accessors. Red, green, and blue are integers in 0..255; alpha is a float in 0..1. Out-of-range values are clipped on assignment (RGB via bitwise mask, alpha via `clamp`). The class predefines every CSS named color as a static readonly instance (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are intentionally shared — do not mutate them; clone first if you need to customize a starting color. Internally caches the packed RGBA32 representation and a normalized `Float32Array` for upload to GPU buffers; both are invalidated on channel writes and rebuilt lazily."
+description: "32-bit RGBA color value with channel-wise accessors. Red, green, and blue are integers in 0..255; alpha is a float in 0..1. Out-of-range values are saturated on assignment (RGB clamped to 0..255 and truncated to an integer, alpha clamped to 0..1) — values outside the range no longer wrap around. The class predefines every CSS named color as a static readonly instance (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are intentionally shared — do not mutate them; clone first if you need to customize a starting color. Internally caches the packed RGBA32 representation and a normalized `Float32Array` for upload to GPU buffers; both are invalidated on channel writes and rebuilt lazily."
 symbol: "Color"
 kind: "class"
 subsystem: "core"
@@ -9,7 +9,7 @@ memberCount: 155
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/core/Color.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Color.ts#L19"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Color.ts#L23"
 ---
 ## Import
 
@@ -17,7 +17,8 @@ sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Color.ts#L19"
 
 32-bit RGBA color value with channel-wise accessors. Red, green, and blue
 are integers in 0..255; alpha is a float in 0..1. Out-of-range values are
-clipped on assignment (RGB via bitwise mask, alpha via `clamp`).
+saturated on assignment (RGB clamped to 0..255 and truncated to an integer,
+alpha clamped to 0..1) — values outside the range no longer wrap around.
 
 The class predefines every CSS named color as a static readonly instance
 (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are
@@ -194,4 +195,4 @@ channel writes and rebuilt lazily.
 
 ## Source
 
-[src/core/Color.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Color.ts#L19)
+[src/core/Color.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Color.ts#L23)

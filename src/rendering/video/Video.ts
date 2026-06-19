@@ -1,7 +1,5 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
 import type { AudioBus } from '#audio/AudioBus';
-import { getAudioManager } from '#audio/AudioManager';
-import type { Media } from '#audio/Media';
 import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
 import { Rectangle } from '#math/Rectangle';
@@ -33,7 +31,7 @@ type FrameCallbackVideoElement = HTMLVideoElement &
  * browsers that lack it). Audio is routed through the Web Audio API gain
  * node and can be directed to any {@link AudioBus}.
  */
-export class Video extends Sprite implements Media {
+export class Video extends Sprite {
   public readonly onStart = new Signal();
   public readonly onStop = new Signal();
 
@@ -183,8 +181,13 @@ export class Video extends Sprite implements Media {
     return this._audioSetup?.gainNode ?? null;
   }
 
-  public get bus(): AudioBus {
-    return this._bus ?? getAudioManager().master;
+  /**
+   * The {@link AudioBus} this video's audio routes into, or `null` when none
+   * has been assigned (audio then routes straight to the context destination).
+   * Set `video.bus = app.audio.master` to route through a manager's mix.
+   */
+  public get bus(): AudioBus | null {
+    return this._bus;
   }
 
   public set bus(bus: AudioBus) {
@@ -438,7 +441,7 @@ export class Video extends Sprite implements Media {
     const gainNode = audioContext.createGain();
     gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
 
-    const inputNode = this.bus._getInputNode();
+    const inputNode = this.bus?._getInputNode() ?? null;
     if (inputNode) {
       gainNode.connect(inputNode);
     } else {

@@ -64,6 +64,7 @@ const createApplicationStub = (): Application & {
   return {
     loader: {},
     input: createInputManagerStub(),
+    interaction: { attachRoot: vi.fn(), detachRoot: vi.fn() },
     rendering: {
       backend: backendMock,
       render: vi.fn(),

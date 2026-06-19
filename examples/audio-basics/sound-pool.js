@@ -72,7 +72,7 @@ class SoundPoolScene extends Scene {
             this.evictions += 1;
         }
         this.voices.push(this.clock + this.sound.duration);
-        this.sound.play();
+        this.app.audio.play(this.sound);
     }
     update(delta) {
         this.clock += delta.seconds;

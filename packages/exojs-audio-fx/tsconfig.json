@@ -1,0 +1,14 @@
+{
+  "extends": "@codexo/exojs-config/typescript/extension.json",
+  "compilerOptions": {
+    "customConditions": ["@codexo/source"],
+    "paths": {
+      "@codexo/exojs": ["../../src/index.ts"],
+      "@codexo/exojs/extensions": ["../../src/extensions/index.ts"],
+      "@codexo/exojs/rendering": ["../../src/rendering.ts"],
+      "@codexo/exojs/debug": ["../../src/debug/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "src/typings.d.ts", "../../src/typings.d.ts"],
+  "exclude": ["dist", "node_modules", "test"]
+}

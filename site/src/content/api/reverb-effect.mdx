@@ -1,0 +1,44 @@
+---
+title: "ReverbEffect"
+description: "Convolution reverb using a procedurally-generated impulse response loaded into a `ConvolverNode`. The impulse response is a stereo noise burst whose amplitude decays exponentially, simulating room reflections. Adjusting `durationSeconds` or `decay` rebuilds the impulse response immediately, so avoid animating these properties at audio rate — use `wet` for real-time mix control instead."
+symbol: "ReverbEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 8
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/ReverbEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ReverbEffect.ts#L26"
+---
+## Import
+
+`import { ReverbEffect } from '@codexo/exojs-audio-fx'`
+
+Convolution reverb using a procedurally-generated impulse response loaded
+into a `ConvolverNode`. The impulse response is a stereo noise burst whose
+amplitude decays exponentially, simulating room reflections. Adjusting
+`durationSeconds` or `decay` rebuilds the impulse response immediately, so
+avoid animating these properties at audio rate — use `wet` for real-time
+mix control instead.
+
+## Constructors
+
+- `new(options: ReverbEffectOptions): ReverbEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `decay: number`
+- `durationSeconds: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+- `wet: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/ReverbEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ReverbEffect.ts#L26)

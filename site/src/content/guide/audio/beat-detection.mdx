@@ -13,20 +13,24 @@ This chapter covers what the detector does and the events it fires. The next cha
 
 ## Connecting a source
 
-The detector taps any audio source — `Sound`, `Music`, `AudioBus`, `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain:
+The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain. It does not accept a `Sound`/`AudioStream` descriptor; tap the bus the audio plays through (e.g. `app.audio.music`) or the individual `Voice` you got back from `play()`:
 
 ```js
-import { BeatDetector, Music } from '@codexo/exojs';
+import { AudioStream } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
 
-const music = loader.get(Music, 'track').setLoop(true).play();
+const track = loader.get(AudioStream, 'track');
+this.app.audio.play(track, { loop: true });
+
 const detector = new BeatDetector();
-detector.source = music;
+detector.source = this.app.audio.music; // the bus the track plays through
 ```
 
-You can also pass the source as a constructor option:
+You can also pass the source as a constructor option, or point it at a single voice:
 
 ```js
-const detector = new BeatDetector({ source: music });
+const voice = this.app.audio.play(track, { loop: true });
+const detector = new BeatDetector({ source: voice });
 ```
 
 The detector runs its own FFT inside the worklet processor. No `AudioAnalyser` is required — `BeatDetector` handles frequency analysis internally. The `fftSize` option (default 2048) and `hopSize` (default 512) control the worklet's internal analysis window.
@@ -144,7 +148,7 @@ const detector = new BeatDetector({
     settlingMs: 1500,                      // initial suppression period
     melBands: 24,                          // mel filterbank bands
     enableTimeSignatureDetection: true,    // auto-detect 3/4 vs 4/4
-    source: music,                         // initial source (optional)
+    source: app.audio.music,               // initial source: bus or Voice (optional)
 });
 ```
 

@@ -243,7 +243,7 @@ interface HandlerEntry {
  *
  * The `Loader` orchestrates fetching, processing, caching, and retrieval of
  * all engine asset types. It ships with built-in factories for every first-party
- * type (Texture, Sound, Music, Video, FontFace, HTMLImageElement, Json, text,
+ * type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text,
  * SVG, VTT, binary, and WASM) and allows registering custom factories via
  * {@link register}.
  *

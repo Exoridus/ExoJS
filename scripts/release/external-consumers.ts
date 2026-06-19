@@ -1,7 +1,7 @@
 /**
  * External consumer smoke for the coordinated release.
  *
- * Installs the four packed tarballs into a throwaway project OUTSIDE the
+ * Installs the packed tarballs into a throwaway project OUTSIDE the
  * repository (so no workspace/source resolution can leak in) and proves they
  * work for the three audiences a published release must serve:
  *
@@ -13,8 +13,8 @@
  *
  * Fully offline: the only runtime dependency in the set (@codexo/exojs-tiled →
  * @codexo/exojs-tilemap) is satisfied by the tilemap tarball installed
- * alongside, so `npm install --offline` of all four resolves with no registry
- * access.
+ * alongside, so `npm install --offline` of all of them resolves with no
+ * registry access.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -53,6 +53,7 @@ import { TileMap, tilemapExtension } from '@codexo/exojs-tilemap';
 import { TiledMap, tiledExtension } from '@codexo/exojs-tiled';
 import { PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
+import { AudioAnalyser, BeatDetector, ReverbEffect } from '@codexo/exojs-audio-fx';
 
 export class DemoScene extends Scene {}
 
@@ -63,6 +64,9 @@ export function bootstrap(): { app: Application; system: typeof ParticleSystem; 
     void tiledExtension;
     void PhysicsWorld;
     void PhysicsDebugDraw;
+    void AudioAnalyser;
+    void BeatDetector;
+    void ReverbEffect;
     return { app, system: ParticleSystem, tiles: TileMap, map: TiledMap };
 }
 `;
@@ -91,6 +95,7 @@ import * as tilemap from '@codexo/exojs-tilemap';
 import * as tiled from '@codexo/exojs-tiled';
 import * as physics from '@codexo/exojs-physics';
 import * as physicsDebug from '@codexo/exojs-physics/debug';
+import * as audioFx from '@codexo/exojs-audio-fx';
 
 const checks = [
   ['@codexo/exojs Application', typeof exo.Application === 'function'],
@@ -104,6 +109,9 @@ const checks = [
   ['facade TileMap identity (tiled === tilemap)', tiled.TileMap === tilemap.TileMap],
   ['@codexo/exojs-physics PhysicsWorld', typeof physics.PhysicsWorld === 'function'],
   ['@codexo/exojs-physics/debug PhysicsDebugDraw', typeof physicsDebug.PhysicsDebugDraw === 'function'],
+  ['@codexo/exojs-audio-fx AudioAnalyser', typeof audioFx.AudioAnalyser === 'function'],
+  ['@codexo/exojs-audio-fx BeatDetector', typeof audioFx.BeatDetector === 'function'],
+  ['@codexo/exojs-audio-fx ReverbEffect', typeof audioFx.ReverbEffect === 'function'],
 ];
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 if (failed.length > 0) {
@@ -114,8 +122,8 @@ console.log('NODE_OK ' + checks.length);
 `;
 
 /**
- * Runs the external-consumer checks against four tarball paths. Returns one
- * {@link ConsumerCheck} per audience; `ok` overall is the conjunction.
+ * Runs the external-consumer checks against the packed tarball paths. Returns
+ * one {@link ConsumerCheck} per audience; `ok` overall is the conjunction.
  */
 export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; consumerDir: string; checks: ConsumerCheck[] } => {
   const consumerDir = mkdtempSync(join(tmpdir(), 'exo-consumer-'));
@@ -127,13 +135,13 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
       JSON.stringify({ name: 'exo-external-consumer', private: true, type: 'module', version: '1.0.0' }, null, 2),
     );
 
-    // 1. Install all four tarballs offline (tiled's tilemap dep resolves
+    // 1. Install all tarballs offline (tiled's tilemap dep resolves
     // against the tilemap tarball installed alongside → no registry).
     const install = run('npm', ['install', '--no-audit', '--no-fund', '--offline', '--no-save', ...tarballs], consumerDir);
     // `--no-save` keeps package.json clean; pass tarballs positionally.
     const installOk = install.code === 0 && existsSync(join(consumerDir, 'node_modules', '@codexo', 'exojs'));
     checks.push({
-      name: 'install (offline, 5 tarballs)',
+      name: `install (offline, ${tarballs.length} tarballs)`,
       ok: installOk,
       detail: installOk ? undefined : install.output.trim().split('\n').slice(-3).join(' '),
     });
@@ -166,7 +174,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
   }
 };
 
-// CLI: pack the four official packages into a temp dir and run the checks.
+// CLI: pack the official packages into a temp dir and run the checks.
 if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === resolve(process.argv[1] ?? '')) {
   const staging = mkdtempSync(join(tmpdir(), 'exo-cons-pack-'));
   const dirs = [
@@ -175,6 +183,7 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
     resolve(repoRoot, 'packages/exojs-tilemap'),
     resolve(repoRoot, 'packages/exojs-tiled'),
     resolve(repoRoot, 'packages/exojs-physics'),
+    resolve(repoRoot, 'packages/exojs-audio-fx'),
   ];
   const version = (JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { version: string }).version;
 
@@ -185,9 +194,14 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
       process.exit(1);
     }
   }
-  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tilemap', 'codexo-exojs-tiled', 'codexo-exojs-physics'].map(n =>
-    join(staging, `${n}-${version}.tgz`),
-  );
+  const tarballs = [
+    'codexo-exojs',
+    'codexo-exojs-particles',
+    'codexo-exojs-tilemap',
+    'codexo-exojs-tiled',
+    'codexo-exojs-physics',
+    'codexo-exojs-audio-fx',
+  ].map(n => join(staging, `${n}-${version}.tgz`));
 
   process.stdout.write('\n=== verify:external-consumers ===\n');
   const result = verifyExternalConsumers(tarballs);

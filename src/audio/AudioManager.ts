@@ -1,23 +1,24 @@
 import { Signal } from '#core/Signal';
 
-import { isAudioContextReady, onAudioContextReady } from './audio-context';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
+import type { AudioInput } from './AudioInput';
 import { AudioListener } from './AudioListener';
-import type { Sound } from './Sound';
+import type { SpatialVoice } from './BaseVoice';
+import { InputVoice } from './InputVoice';
+import type { Playable, PlayOptions, Voice } from './Playable';
 
 /**
- * Module-level singleton that owns the engine-wide audio mix: three
- * pre-configured {@link AudioBus} instances (`master` ← `music` + `sound`),
- * a single shared {@link AudioListener} for spatial audio, and a registry
- * of any extra busses the user constructs.
+ * Per-{@link Application} owner of the audio mix: three pre-configured
+ * {@link AudioBus} instances (`master` ← `music` + `sound`), a single
+ * {@link AudioListener} for spatial audio, and a registry of any extra busses
+ * the user constructs.
  *
- * Access the singleton via {@link getAudioManager} (or `app.audio`). The
- * instance is constructed lazily on first access so client code that does
- * not need audio pays no startup cost.
- *
- * Drives the per-frame `_tick()` on the listener and every spatial sound;
- * propagates visibility-driven mute when {@link AudioManager.muteOnHidden}
- * is enabled.
+ * The `AudioContext` is shared process-wide, but each Application owns its own
+ * bus subtree, so multiple Applications mix independently. Access it via
+ * `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial
+ * voice, and propagates visibility-driven mute when
+ * {@link AudioManager.muteOnHidden} is enabled.
  */
 export class AudioManager {
   public readonly master: AudioBus;
@@ -33,7 +34,7 @@ export class AudioManager {
   public readonly onUnlock = new Signal();
 
   private readonly _registered = new Map<string, AudioBus>();
-  private readonly _spatialSounds = new Set<Sound>();
+  private readonly _spatial = new Set<SpatialVoice>();
   private _muteOnHidden = false;
 
   public constructor() {
@@ -71,31 +72,82 @@ export class AudioManager {
 
   /**
    * `true` while audio is blocked by the browser's autoplay policy — no user
-   * gesture has resumed the AudioContext yet. {@link Sound} and {@link Music}
-   * played while locked are deferred and start automatically on the first
-   * gesture, so you can simply call `play()` and (optionally) render a
-   * "tap to start" prompt while this is `true`. Pairs with {@link onUnlock}.
+   * gesture has resumed the AudioContext yet. Voices played while locked are
+   * deferred (streams) or skipped (generators) until that gesture.
    */
   public get locked(): boolean {
     return !isAudioContextReady();
   }
 
+  /**
+   * Play a {@link Playable} asset and return a {@link Voice} handle.
+   *
+   * Each call creates an independent playback instance. Call `play()` again
+   * to start another concurrent voice. The returned Voice lets you control
+   * this specific instance (`stop()`, `volume`, `fade()`, capabilities).
+   *
+   * @example
+   * ```ts
+   * const voice = app.audio.play(shootSfx);
+   * // Later:
+   * voice.stop();
+   * ```
+   *
+   * @param source - Any {@link Playable} asset (Sound, AudioStream, AudioGenerator).
+   * @param options - Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted).
+   * @returns A {@link Voice} handle for the new instance.
+   */
+  public play(source: Playable, options?: PlayOptions): Voice {
+    return source._createVoice(this, options ?? {});
+  }
+
+  /**
+   * Open a live {@link AudioInput} (microphone / WebRTC stream) and return an
+   * {@link InputVoice}. The input is analysis-only by default (not audible) —
+   * tap it with an analyser, route it to a bus to monitor, or record it.
+   *
+   * @example
+   * ```ts
+   * const mic = await AudioInput.open();
+   * const input = app.audio.open(mic);
+   * input.analyse(analyser);
+   * ```
+   */
+  public open(input: AudioInput): InputVoice {
+    const audioContext = getAudioContext();
+    const sourceNode = audioContext.createMediaStreamSource(input.stream);
+    const output = audioContext.createGain();
+
+    return new InputVoice({
+      audioContext,
+      output,
+      bus: this.sound,
+      manager: this,
+      volume: 1,
+      sourceNode,
+      stream: input.stream,
+    });
+  }
+
   /** Called once per frame from Application.update(). */
   public update(): void {
     this.listener._tick();
-    for (const sound of this._spatialSounds) {
-      sound._tickSpatial();
+    // Tick spatial voices and prune ended ones.
+    for (const voice of this._spatial) {
+      if (voice.ended) {
+        this._spatial.delete(voice);
+        continue;
+      }
+      voice._tickSpatial();
     }
   }
 
-  /** Internal: called by Sound when it becomes spatial. */
-  public _registerSpatialSound(sound: Sound): void {
-    this._spatialSounds.add(sound);
-  }
-
-  /** Internal: called by Sound when it stops being spatial. */
-  public _unregisterSpatialSound(sound: Sound): void {
-    this._spatialSounds.delete(sound);
+  /**
+   * Internal: register a spatial voice for per-frame position updates. Called by
+   * a {@link Voice} the first time it is spatialized (position set or follow).
+   */
+  public _registerSpatial(voice: SpatialVoice): void {
+    this._spatial.add(voice);
   }
 
   /** Internal: called by Application when visibility changes. */
@@ -153,40 +205,11 @@ export class AudioManager {
 
   public destroy(): void {
     this.listener.destroy();
-    this._spatialSounds.clear();
+    this._spatial.clear();
     for (const bus of this._registered.values()) {
       // Note: destroying built-ins too — AudioManager is destroyed only when app shuts down.
       bus.destroy();
     }
     this._registered.clear();
-  }
-}
-
-// Module-level singleton (lazy)
-let _manager: AudioManager | null = null;
-
-/**
- * Lazy accessor for the singleton {@link AudioManager}. Constructs the
- * instance on first call, returns the same instance for every subsequent
- * call. Equivalent to `app.audio`.
- */
-export function getAudioManager(): AudioManager {
-  if (_manager === null) {
-    _manager = new AudioManager();
-  }
-  return _manager;
-}
-
-/**
- * Dispose and clear the module-level audio singleton.
- *
- * Useful for deterministic teardown between independent engine lifecycles
- * (for example hot-reload flows, embedded runtimes, or test harnesses that
- * spin up multiple isolated apps in one process).
- */
-export function disposeAudioManager(): void {
-  if (_manager) {
-    _manager.destroy();
-    _manager = null;
   }
 }

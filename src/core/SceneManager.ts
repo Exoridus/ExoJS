@@ -242,6 +242,11 @@ export class SceneManager {
           `[ExoJS] Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.`,
         );
       }
+
+      // Tick the scene's systems (e.g. a physics world) after its update() and
+      // before the draw phase. Covered (modal/opaque) scenes are absent from
+      // _updateScratch, so their systems pause automatically.
+      scene._tickSystems(delta);
     }
 
     for (const scene of this._drawScratch) {
@@ -299,6 +304,10 @@ export class SceneManager {
           `[ExoJS] Scene.root has ${scene.root.children.length} child(ren) after init() but draw() is not overridden. Scene.root is not auto-rendered — call context.render(this.root) inside draw().`,
         );
       }
+
+      // Bind the scene's root to the app's interaction manager so its nodes
+      // route picking/bounds notifications to this Application (no global).
+      this._app.interaction.attachRoot(scene.root);
     } catch (error) {
       let cleanupError: unknown = null;
 
@@ -332,6 +341,7 @@ export class SceneManager {
   private async _disposeScene(scene: Scene): Promise<void> {
     this.onStopScene.dispatch(scene);
     await scene.unload(this._app.loader);
+    this._app.interaction.detachRoot(scene.root);
     scene.destroy();
     scene.app = null;
   }

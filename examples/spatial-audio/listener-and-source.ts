@@ -90,7 +90,7 @@ class ListenerAndSourceScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        this.sound.setLoop(true).setVolume(1).play();
+        this.app.audio.play(this.sound, { loop: true, volume: 1 });
         this.hud.setStatus('Drag the red source to move it');
     }
 

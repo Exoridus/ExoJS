@@ -1,4 +1,5 @@
-import { Application, BeatDetector, Color, Music, Scene, Sprite, Text, Texture, Vector } from '@codexo/exojs';
+import { Application, AudioStream, Color, Scene, Sprite, Text, Texture, Vector } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -24,7 +25,7 @@ const app = new Application({
 });
 
 class BeatSyncPulseScene extends Scene {
-    private music!: Music;
+    private music!: AudioStream;
     private detector!: BeatDetector;
     private sprite!: Sprite;
     private pulse = 0;
@@ -37,13 +38,13 @@ class BeatSyncPulseScene extends Scene {
 
     override async load(loader): Promise<void> {
         await loader.load(Texture, { bunny: 'image/ship-a.png', particle: 'image/particle-light.png' });
-        await loader.load(Music, { track: 'audio/demo-loop-main.ogg' });
+        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(Music, 'track');
+        this.music = loader.get(AudioStream, 'track');
         this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
 
         this.hud = mountControls({
@@ -81,7 +82,7 @@ class BeatSyncPulseScene extends Scene {
         });
 
         this.detector = new BeatDetector();
-        this.detector.source = this.music;
+        this.detector.source = this.app.audio.music;
         this.detector.onBeat.add(() => {
             this.pulse = this.intensity;
             this.burst.reset();
@@ -90,8 +91,8 @@ class BeatSyncPulseScene extends Scene {
         });
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        this.music.setLoop(true).setVolume(0.8).play();
+        // gesture, then starts automatically.
+        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
     override update(delta): void {

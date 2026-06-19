@@ -1,12 +1,9 @@
-﻿import type { AbstractMedia } from '#audio/AbstractMedia';
 import { crossFade } from '#audio/crossFade';
+import type { Voice } from '#audio/Playable';
 
-const makeMockMedia = (paused = false): Mocked<Pick<AbstractMedia, 'paused' | 'play' | 'pause' | 'fadeIn' | 'fadeOut'>> => ({
-  paused,
-  play: vi.fn().mockReturnThis(),
-  pause: vi.fn().mockReturnThis(),
-  fadeIn: vi.fn().mockReturnThis(),
-  fadeOut: vi.fn().mockReturnThis(),
+const makeMockVoice = (): Pick<Voice, 'fade' | 'stop'> => ({
+  fade: vi.fn(),
+  stop: vi.fn(),
 });
 
 describe('crossFade', () => {
@@ -14,64 +11,61 @@ describe('crossFade', () => {
     vi.useRealTimers();
   });
 
-  test('calls fadeOut on `from` and fadeIn on `to` with durationMs', async () => {
+  test('fades `to` up to 1 and stops `from`, both over durationMs', async () => {
     vi.useFakeTimers();
 
-    const from = makeMockMedia();
-    const to = makeMockMedia();
+    const from = makeMockVoice();
+    const to = makeMockVoice();
 
-    const promise = crossFade(from as unknown as AbstractMedia, to as unknown as AbstractMedia, 500);
+    const promise = crossFade(from as Voice, to as Voice, 500);
 
-    expect(from.fadeOut).toHaveBeenCalledWith(500, { stopAfter: true });
-    expect(to.fadeIn).toHaveBeenCalledWith(500);
+    expect(to.fade).toHaveBeenCalledWith(1, 500);
+    expect(from.stop).toHaveBeenCalledWith(500);
 
     vi.advanceTimersByTime(500);
     await promise;
   });
 
-  test('calls play() on `to` if it is paused and autoPlayTarget is not false', async () => {
+  test('honors a custom toVolume', async () => {
     vi.useFakeTimers();
 
-    const from = makeMockMedia();
-    const to = makeMockMedia(true); // paused = true
+    const from = makeMockVoice();
+    const to = makeMockVoice();
 
-    const promise = crossFade(from as unknown as AbstractMedia, to as unknown as AbstractMedia, 300);
+    const promise = crossFade(from as Voice, to as Voice, 300, { toVolume: 0.6 });
 
-    expect(to.play).toHaveBeenCalledTimes(1);
-    expect(to.fadeIn).toHaveBeenCalledWith(300);
+    expect(to.fade).toHaveBeenCalledWith(0.6, 300);
+    expect(from.stop).toHaveBeenCalledWith(300);
 
     vi.advanceTimersByTime(300);
     await promise;
   });
 
-  test('does NOT call play() on `to` when autoPlayTarget: false', async () => {
+  test('clamps toVolume into [0, 1]', async () => {
     vi.useFakeTimers();
 
-    const from = makeMockMedia();
-    const to = makeMockMedia(true); // paused = true
+    const from = makeMockVoice();
+    const to = makeMockVoice();
 
-    const promise = crossFade(from as unknown as AbstractMedia, to as unknown as AbstractMedia, 300, {
-      autoPlayTarget: false,
-    });
+    const promise = crossFade(from as Voice, to as Voice, 200, { toVolume: 5 });
 
-    expect(to.play).not.toHaveBeenCalled();
-    expect(to.fadeIn).toHaveBeenCalledWith(300);
+    expect(to.fade).toHaveBeenCalledWith(1, 200);
 
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(200);
     await promise;
   });
 
-  test('passes stopAfterFade: false to from.fadeOut', async () => {
+  test('stopAfter: false fades `from` out without stopping it', async () => {
     vi.useFakeTimers();
 
-    const from = makeMockMedia();
-    const to = makeMockMedia();
+    const from = makeMockVoice();
+    const to = makeMockVoice();
 
-    const promise = crossFade(from as unknown as AbstractMedia, to as unknown as AbstractMedia, 400, {
-      stopAfterFade: false,
-    });
+    const promise = crossFade(from as Voice, to as Voice, 400, { stopAfter: false });
 
-    expect(from.fadeOut).toHaveBeenCalledWith(400, { stopAfter: false });
+    expect(from.fade).toHaveBeenCalledWith(0, 400);
+    expect(from.stop).not.toHaveBeenCalled();
+    expect(to.fade).toHaveBeenCalledWith(1, 400);
 
     vi.advanceTimersByTime(400);
     await promise;
@@ -80,11 +74,11 @@ describe('crossFade', () => {
   test('returns a Promise that resolves after durationMs', async () => {
     vi.useFakeTimers();
 
-    const from = makeMockMedia();
-    const to = makeMockMedia();
+    const from = makeMockVoice();
+    const to = makeMockVoice();
 
     let resolved = false;
-    const promise = crossFade(from as unknown as AbstractMedia, to as unknown as AbstractMedia, 1000);
+    const promise = crossFade(from as Voice, to as Voice, 1000);
     void promise.then(() => {
       resolved = true;
     });
@@ -100,32 +94,18 @@ describe('crossFade', () => {
     expect(resolved).toBe(true);
   });
 
-  test('durationMs: 0 resolves immediately (no timer needed)', async () => {
+  test('durationMs: 0 resolves immediately', async () => {
     vi.useFakeTimers();
 
-    const from = makeMockMedia();
-    const to = makeMockMedia();
+    const from = makeMockVoice();
+    const to = makeMockVoice();
 
-    const promise = crossFade(from as unknown as AbstractMedia, to as unknown as AbstractMedia, 0);
+    const promise = crossFade(from as Voice, to as Voice, 0);
 
     vi.advanceTimersByTime(0);
     await promise;
 
-    expect(from.fadeOut).toHaveBeenCalledWith(0, { stopAfter: true });
-    expect(to.fadeIn).toHaveBeenCalledWith(0);
-  });
-
-  test('does NOT call play() on `to` when `to` is already playing', async () => {
-    vi.useFakeTimers();
-
-    const from = makeMockMedia();
-    const to = makeMockMedia(false); // paused = false (already playing)
-
-    const promise = crossFade(from as unknown as AbstractMedia, to as unknown as AbstractMedia, 500);
-
-    expect(to.play).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(500);
-    await promise;
+    expect(to.fade).toHaveBeenCalledWith(1, 0);
+    expect(from.stop).toHaveBeenCalledWith(0);
   });
 });

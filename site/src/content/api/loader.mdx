@@ -1,6 +1,6 @@
 ---
 title: "Loader"
-description: "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in factories for every first-party type (Texture, Sound, Music, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom factories via register. Assets can be loaded in three ways: - **Direct** — `loader.load(Texture, 'hero.png')` fetches immediately and resolves to the finished asset. - **Bundle** — declare assets in a manifest with registerManifest, then call loadBundle to load groups on demand. - **Background** — call backgroundLoad or loadAll to pre-warm everything registered in the manifest at low priority. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching."
+description: "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in factories for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom factories via register. Assets can be loaded in three ways: - **Direct** — `loader.load(Texture, 'hero.png')` fetches immediately and resolves to the finished asset. - **Bundle** — declare assets in a manifest with registerManifest, then call loadBundle to load groups on demand. - **Background** — call backgroundLoad or loadAll to pre-warm everything registered in the manifest at low priority. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching."
 symbol: "Loader"
 kind: "class"
 subsystem: "resources"
@@ -19,7 +19,7 @@ Central asset management hub for ExoJS applications.
 
 The `Loader` orchestrates fetching, processing, caching, and retrieval of
 all engine asset types. It ships with built-in factories for every first-party
-type (Texture, Sound, Music, Video, FontFace, HTMLImageElement, Json, text,
+type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text,
 SVG, VTT, binary, and WASM) and allows registering custom factories via
 register.
 

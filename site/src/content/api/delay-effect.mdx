@@ -1,0 +1,43 @@
+---
+title: "DelayEffect"
+description: "Echo/delay effect using a Web Audio `DelayNode` with a feedback loop and dry/wet mix. The feedback path feeds the delayed signal back into itself, producing repeating echoes that decay naturally. Setting `feedback` near its maximum of 0.95 produces a long, prominent tail; lower values create a single slap-back echo."
+symbol: "DelayEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 8
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/DelayEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DelayEffect.ts#L26"
+---
+## Import
+
+`import { DelayEffect } from '@codexo/exojs-audio-fx'`
+
+Echo/delay effect using a Web Audio `DelayNode` with a feedback loop and
+dry/wet mix. The feedback path feeds the delayed signal back into itself,
+producing repeating echoes that decay naturally. Setting `feedback` near
+its maximum of 0.95 produces a long, prominent tail; lower values create
+a single slap-back echo.
+
+## Constructors
+
+- `new(options: DelayEffectOptions): DelayEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `delaySeconds: number`
+- `feedback: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+- `wet: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/DelayEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DelayEffect.ts#L26)

@@ -88,7 +88,7 @@ class DialogSystemScene extends Scene {
         this.namePlate.text = lines[this.lineIndex].speaker;
     }
     choose(choice) {
-        this.beep.play({ playbackRate: 1.2, volume: 0.3 });
+        this.app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
         this.choicePrompt.text = `You chose: ${choice}`;
         this.hud.setStatus(`Reply: ${choice}`);
         this.awaitingChoice = false;
@@ -107,7 +107,7 @@ class DialogSystemScene extends Scene {
             while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {
                 this.timer -= 0.035;
                 this.chars++;
-                this.beep.play({ playbackRate: 1.9, volume: 0.14 });
+                this.app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
             }
             this.done = this.chars >= lines[this.lineIndex].text.length;
         }
