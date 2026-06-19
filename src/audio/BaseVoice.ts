@@ -34,6 +34,12 @@ export interface BaseVoiceInit {
   volume: number;
   /** Spatial parameters; defaults are used for any omitted field. */
   spatial?: Partial<VoiceSpatialConfig>;
+  /**
+   * Connect the output to the bus on construction. Default `true`. Pass `false`
+   * for analysis-only voices (e.g. a live {@link InputVoice}) that should not be
+   * audible until explicitly routed.
+   */
+  autoConnect?: boolean;
 }
 
 /** A voice the {@link AudioManager} ticks each frame for spatial updates. */
@@ -86,7 +92,9 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     this._spatialConfig = { ...defaultSpatialConfig, ...init.spatial };
 
     this._output.gain.setTargetAtTime(this._volume, this._audioContext.currentTime, 0.01);
-    this._connectOutput();
+    if (init.autoConnect !== false) {
+      this._connectOutput();
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -138,6 +146,10 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     const index = this._effects.indexOf(effect);
     if (index !== -1) {
       this._effects.splice(index, 1);
+      // Detach the removed effect's output from the graph (its internal input
+      // wiring is left intact so the caller can reuse it). The rebuild below
+      // only touches the effects still in the chain.
+      effect.outputNode.disconnect();
       this._rebuildEffectChain();
     }
     return this;
@@ -260,7 +272,7 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   // -------------------------------------------------------------------------
 
   /** The last node in the voice chain before the bus — the output gain, or the last effect. */
-  private _tail(): AudioNode {
+  protected _tail(): AudioNode {
     return this._effects.length > 0 ? this._effects[this._effects.length - 1].outputNode : this._output;
   }
 

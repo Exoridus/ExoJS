@@ -38,6 +38,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "AudioEffect: class",
   "AudioGenerator: class",
   "AudioGeneratorOptions: interface",
+  "AudioInput: class",
+  "AudioInputOptions: interface",
   "AudioListener: class",
   "AudioListenerTarget: type alias",
   "AudioManager: class",

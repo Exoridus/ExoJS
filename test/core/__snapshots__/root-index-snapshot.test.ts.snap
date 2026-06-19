@@ -20,6 +20,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "AudioBus",
   "AudioEffect",
   "AudioGenerator",
+  "AudioInput",
   "AudioListener",
   "AudioManager",
   "AudioStream",

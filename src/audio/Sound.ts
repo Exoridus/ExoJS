@@ -122,6 +122,10 @@ export class Sound implements Playable {
   private readonly _audioBuffer: AudioBuffer;
   private readonly _sprites = new Map<string, NormalizedAudioSpriteClip>();
 
+  // Playable buffer window (seconds). Full buffer by default; narrowed by clip().
+  private _clipStart = 0;
+  private _clipEnd = 0;
+
   /** Default volume applied to new voices. */
   public volume: number;
   /** Default loop flag applied to new voices. */
@@ -151,8 +155,9 @@ export class Sound implements Playable {
     return this._audioBuffer;
   }
 
+  /** Playable duration in seconds — the full buffer, or the clip span for a {@link Sound.clip}. */
   public get duration(): number {
-    return this._audioBuffer.duration;
+    return this._clipEnd - this._clipStart;
   }
 
   public get poolSize(): number {
@@ -264,6 +269,7 @@ export class Sound implements Playable {
 
   public constructor(audioBuffer: AudioBuffer, options: SoundOptions = {}) {
     this._audioBuffer = audioBuffer;
+    this._clipEnd = audioBuffer.duration;
 
     const { poolSize, poolStrategy, priority, sprites, volume, loop, playbackRate, muted, distanceModel, refDistance, maxDistance, rolloffFactor } = options;
 
@@ -357,6 +363,36 @@ export class Sound implements Playable {
   }
 
   /**
+   * Return a new {@link Sound} that plays only the `[offset, offset + duration]`
+   * sub-range (seconds) of this sound's buffer — an audio atlas / sprite-sheet
+   * clip. The clip shares the same decoded {@link AudioBuffer} (no extra memory)
+   * and inherits this sound's default playback + spatial settings, including its
+   * own independent voice pool.
+   */
+  public clip(offset: number, duration: number): Sound {
+    const start = clamp(offset, 0, this._audioBuffer.duration);
+    const end = clamp(start + duration, start, this._audioBuffer.duration);
+
+    const clip = new Sound(this._audioBuffer, {
+      volume: this.volume,
+      loop: this.loop,
+      playbackRate: this.playbackRate,
+      muted: this.muted,
+      poolSize: this._poolSize,
+      poolStrategy: this._poolStrategy,
+      priority: this._priority,
+      distanceModel: this._distanceModel,
+      refDistance: this._refDistance,
+      maxDistance: this._maxDistance,
+      rolloffFactor: this._rolloffFactor,
+    });
+    clip._clipStart = start;
+    clip._clipEnd = end;
+
+    return clip;
+  }
+
+  /**
    * Implements {@link Playable}. Called by {@link AudioManager.play}; do not
    * call directly — use `manager.play(sound, options)` instead.
    *
@@ -365,17 +401,17 @@ export class Sound implements Playable {
    * strategy picks a victim to stop before the new voice starts.
    */
   public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
-    const offset = Math.max(0, options.time ?? 0);
+    const offset = this._clipStart + Math.max(0, options.time ?? 0);
 
-    if (offset >= this.duration) {
+    if (offset >= this._clipEnd) {
       return new NoopVoice(options.bus ?? manager.sound);
     }
 
     return this._buildVoice(manager, options, offset, {
-      base: 0,
-      end: this.duration,
-      loopStart: 0,
-      loopEnd: this.duration,
+      base: this._clipStart,
+      end: this._clipEnd,
+      loopStart: this._clipStart,
+      loopEnd: this._clipEnd,
     });
   }
 

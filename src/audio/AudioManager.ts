@@ -1,9 +1,11 @@
 import { Signal } from '#core/Signal';
 
-import { isAudioContextReady, onAudioContextReady } from './audio-context';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
+import type { AudioInput } from './AudioInput';
 import { AudioListener } from './AudioListener';
 import type { SpatialVoice } from './BaseVoice';
+import { InputVoice } from './InputVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 
 /**
@@ -97,6 +99,34 @@ export class AudioManager {
    */
   public play(source: Playable, options?: PlayOptions): Voice {
     return source._createVoice(this, options ?? {});
+  }
+
+  /**
+   * Open a live {@link AudioInput} (microphone / WebRTC stream) and return an
+   * {@link InputVoice}. The input is analysis-only by default (not audible) —
+   * tap it with an analyser, route it to a bus to monitor, or record it.
+   *
+   * @example
+   * ```ts
+   * const mic = await AudioInput.open();
+   * const input = app.audio.open(mic);
+   * input.analyse(analyser);
+   * ```
+   */
+  public open(input: AudioInput): InputVoice {
+    const audioContext = getAudioContext();
+    const sourceNode = audioContext.createMediaStreamSource(input.stream);
+    const output = audioContext.createGain();
+
+    return new InputVoice({
+      audioContext,
+      output,
+      bus: this.sound,
+      manager: this,
+      volume: 1,
+      sourceNode,
+      stream: input.stream,
+    });
   }
 
   /** Called once per frame from Application.update(). */

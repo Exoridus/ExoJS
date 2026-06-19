@@ -6,6 +6,8 @@ export { AudioBus } from './AudioBus';
 export { AudioEffect } from './AudioEffect';
 export type { AudioGeneratorOptions, OscillatorType } from './AudioGenerator';
 export { AudioGenerator } from './AudioGenerator';
+export type { AudioInputOptions } from './AudioInput';
+export { AudioInput } from './AudioInput';
 export { AudioListener, type AudioListenerTarget } from './AudioListener';
 export { AudioManager } from './AudioManager';
 export { AudioStream } from './AudioStream';
