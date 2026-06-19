@@ -1,4 +1,5 @@
-import { Application, AudioBus, AudioGenerator, Color, Scene, Sound, Text, VocoderFilter } from '@codexo/exojs';
+import { Application, AudioBus, AudioGenerator, Color, Scene, Sound, Text } from '@codexo/exojs';
+import { VocoderEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -21,7 +22,7 @@ const PHRASES: Array<{ key: string; label: string; asset: string }> = [
 
 class VocoderScene extends Scene {
     private modulatorBus!: AudioBus;
-    private vocoder!: VocoderFilter;
+    private vocoder!: VocoderEffect;
     private phrases = new Map<string, Sound>();
     private phraseIndex = 0;
     private phraseLabel!: Text;
@@ -47,7 +48,7 @@ class VocoderScene extends Scene {
             this.phrases.set(phrase.key, loader.get(Sound, phrase.key));
         }
 
-        this.vocoder = new VocoderFilter({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
+        this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
         app.audio.sound.addEffect(this.vocoder);
 
         this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' })

@@ -1,5 +1,6 @@
 // Auto-generated from audio-visualisation.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, AudioStream, BeatDetector, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, AudioStream, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {

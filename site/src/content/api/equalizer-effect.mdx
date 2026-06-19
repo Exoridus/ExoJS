@@ -1,19 +1,19 @@
 ---
-title: "EqualizerFilter"
+title: "EqualizerEffect"
 description: "Three-band equalizer (low shelf / peaking mid / high shelf) built from a series chain of `BiquadFilterNode` instances. Gain values are in dB and clamped to ±40 dB. All six parameters (gains + frequencies) are adjustable at runtime via the corresponding setters; gain changes use a short exponential ramp to avoid clicks."
-symbol: "EqualizerFilter"
+symbol: "EqualizerEffect"
 kind: "class"
 subsystem: "audio"
-importPath: "@codexo/exojs"
+importPath: "@codexo/exojs-audio-fx"
 memberCount: 11
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
-sourcePath: "src/audio/filters/EqualizerFilter.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/EqualizerFilter.ts#L27"
+sourcePath: "packages/exojs-audio-fx/src/effects/EqualizerEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/EqualizerEffect.ts#L26"
 ---
 ## Import
 
-`import { EqualizerFilter } from '@codexo/exojs'`
+`import { EqualizerEffect } from '@codexo/exojs-audio-fx'`
 
 Three-band equalizer (low shelf / peaking mid / high shelf) built from a
 series chain of `BiquadFilterNode` instances. Gain values are in dB and
@@ -23,7 +23,7 @@ short exponential ramp to avoid clicks.
 
 ## Constructors
 
-- `new(options: EqualizerFilterOptions): EqualizerFilter`
+- `new(options: EqualizerEffectOptions): EqualizerEffect`
 
 ## Methods
 
@@ -43,4 +43,4 @@ short exponential ramp to avoid clicks.
 
 ## Source
 
-[src/audio/filters/EqualizerFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/EqualizerFilter.ts#L27)
+[packages/exojs-audio-fx/src/effects/EqualizerEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/EqualizerEffect.ts#L26)

@@ -1,19 +1,19 @@
 ---
-title: "ChorusFilter"
+title: "ChorusEffect"
 description: "Chorus effect using native WebAudio nodes (no worklet required). The signal splits into a dry path and a wet path. The wet path passes through a DelayNode whose delay time is modulated by a sine-wave LFO, producing the characteristic pitch-wobble / thickening of chorus. Node graph: ``` inputGain ┬── dryGain ────────────────┐ │ ├── outputGain └── delayNode ── wetGain ────┘ lfoOscillator ── lfoGain (depth) ── delayNode.delayTime ```"
-symbol: "ChorusFilter"
+symbol: "ChorusEffect"
 kind: "class"
 subsystem: "audio"
-importPath: "@codexo/exojs"
+importPath: "@codexo/exojs-audio-fx"
 memberCount: 9
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
-sourcePath: "src/audio/filters/ChorusFilter.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/ChorusFilter.ts#L42"
+sourcePath: "packages/exojs-audio-fx/src/effects/ChorusEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ChorusEffect.ts#L41"
 ---
 ## Import
 
-`import { ChorusFilter } from '@codexo/exojs'`
+`import { ChorusEffect } from '@codexo/exojs-audio-fx'`
 
 Chorus effect using native WebAudio nodes (no worklet required).
 
@@ -32,7 +32,7 @@ lfoOscillator ── lfoGain (depth) ── delayNode.delayTime
 
 ## Constructors
 
-- `new(options: ChorusFilterOptions): ChorusFilter`
+- `new(options: ChorusEffectOptions): ChorusEffect`
 
 ## Methods
 
@@ -50,4 +50,4 @@ lfoOscillator ── lfoGain (depth) ── delayNode.delayTime
 
 ## Source
 
-[src/audio/filters/ChorusFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/ChorusFilter.ts#L42)
+[packages/exojs-audio-fx/src/effects/ChorusEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ChorusEffect.ts#L41)

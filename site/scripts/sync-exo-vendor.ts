@@ -340,7 +340,7 @@ const syncVendor = (): void => {
     console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
 
     // Sync extension packages (ESM trees only — no declaration patching needed).
-    const extensionPackages = ['exojs-particles', 'exojs-tilemap', 'exojs-tiled'] as const;
+    const extensionPackages = ['exojs-particles', 'exojs-audio-fx', 'exojs-tilemap', 'exojs-tiled'] as const;
     for (const pkgName of extensionPackages) {
         let pkgRoot: string | null = null;
         try {

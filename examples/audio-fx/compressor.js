@@ -1,5 +1,6 @@
 // Auto-generated from compressor.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, CompressorFilter, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -46,7 +47,7 @@ class CompressorScene extends Scene {
         this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
         this.music = loader.get(AudioStream, 'music');
-        this.filter = new CompressorFilter();
+        this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);
         this.gfx = new Graphics();
         this.labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));

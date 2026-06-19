@@ -1,19 +1,19 @@
 ---
-title: "CompressorFilter"
+title: "CompressorEffect"
 description: "Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`. Reduces the volume of loud signals above a threshold, evening out the perceived loudness of a mix. All parameter changes are applied with a short smoothing ramp so they are artifact-free during playback."
-symbol: "CompressorFilter"
+symbol: "CompressorEffect"
 kind: "class"
 subsystem: "audio"
-importPath: "@codexo/exojs"
+importPath: "@codexo/exojs-audio-fx"
 memberCount: 11
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
-sourcePath: "src/audio/filters/CompressorFilter.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/CompressorFilter.ts#L19"
+sourcePath: "packages/exojs-audio-fx/src/effects/CompressorEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/CompressorEffect.ts#L18"
 ---
 ## Import
 
-`import { CompressorFilter } from '@codexo/exojs'`
+`import { CompressorEffect } from '@codexo/exojs-audio-fx'`
 
 Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`.
 Reduces the volume of loud signals above a threshold, evening out the
@@ -22,7 +22,7 @@ smoothing ramp so they are artifact-free during playback.
 
 ## Constructors
 
-- `new(options: CompressorFilterOptions): CompressorFilter`
+- `new(options: CompressorEffectOptions): CompressorEffect`
 
 ## Methods
 
@@ -42,4 +42,4 @@ smoothing ramp so they are artifact-free during playback.
 
 ## Source
 
-[src/audio/filters/CompressorFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/CompressorFilter.ts#L19)
+[packages/exojs-audio-fx/src/effects/CompressorEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/CompressorEffect.ts#L18)

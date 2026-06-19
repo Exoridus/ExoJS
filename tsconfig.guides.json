@@ -39,6 +39,7 @@
       "@codexo/exojs/debug": ["./src/debug/index.ts"],
       "@codexo/exojs-particles": ["./packages/exojs-particles/src/index.ts"],
       "@codexo/exojs-particles/register": ["./packages/exojs-particles/src/register.ts"],
+      "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
       "@codexo/exojs-tiled": ["./packages/exojs-tiled/src/index.ts"],
       "@codexo/exojs-tiled/register": ["./packages/exojs-tiled/src/register.ts"],
       "@codexo/exojs-tilemap": ["./packages/exojs-tilemap/src/index.ts"],

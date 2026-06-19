@@ -1,19 +1,19 @@
 ---
-title: "DuckingFilter"
+title: "DuckingEffect"
 description: "Sidechain compressor (ducker) implemented as an WorkletEffect. Attenuates the main audio signal whenever the `sidechain` AudioBus exceeds the threshold, then releases when it drops back down. Commonly used to duck background music under dialogue or sound effects. Attack and release times are expressed in milliseconds and converted internally to one-pole filter coefficients."
-symbol: "DuckingFilter"
+symbol: "DuckingEffect"
 kind: "class"
 subsystem: "audio"
-importPath: "@codexo/exojs"
+importPath: "@codexo/exojs-audio-fx"
 memberCount: 10
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
-sourcePath: "src/audio/filters/DuckingFilter.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DuckingFilter.ts#L87"
+sourcePath: "packages/exojs-audio-fx/src/effects/DuckingEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DuckingEffect.ts#L86"
 ---
 ## Import
 
-`import { DuckingFilter } from '@codexo/exojs'`
+`import { DuckingEffect } from '@codexo/exojs-audio-fx'`
 
 Sidechain compressor (ducker) implemented as an WorkletEffect.
 Attenuates the main audio signal whenever the `sidechain` AudioBus
@@ -24,7 +24,7 @@ filter coefficients.
 
 ## Constructors
 
-- `new(options: DuckingFilterOptions): DuckingFilter`
+- `new(options: DuckingEffectOptions): DuckingEffect`
 
 ## Methods
 
@@ -43,4 +43,4 @@ filter coefficients.
 
 ## Source
 
-[src/audio/filters/DuckingFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DuckingFilter.ts#L87)
+[packages/exojs-audio-fx/src/effects/DuckingEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DuckingEffect.ts#L86)

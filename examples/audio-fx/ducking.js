@@ -1,5 +1,6 @@
 // Auto-generated from ducking.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, AudioBus, AudioStream, Color, DuckingFilter, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, AudioBus, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -48,7 +49,7 @@ class DuckingScene extends Scene {
         app.audio.registerBus(this.voiceBus);
         // The ducker listens to the voice bus and pulls the music bus down
         // whenever the voice exceeds the threshold.
-        this.ducking = new DuckingFilter({ sidechain: this.voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
+        this.ducking = new DuckingEffect({ sidechain: this.voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
         app.audio.music.addEffect(this.ducking);
         // Tap each bus with a parallel analyser so we can show the live levels.
         // The music meter visibly dips while the voice meter spikes — that gap

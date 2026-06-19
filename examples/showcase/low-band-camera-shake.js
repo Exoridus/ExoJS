@@ -1,5 +1,6 @@
 // Auto-generated from low-band-camera-shake.ts — edit the .ts source, not this file.
-import { Application, AudioAnalyser, AudioStream, Color, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { Application, AudioStream, Color, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {

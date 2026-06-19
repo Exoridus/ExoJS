@@ -1,19 +1,19 @@
 ---
-title: "ReverbFilter"
+title: "ReverbEffect"
 description: "Convolution reverb using a procedurally-generated impulse response loaded into a `ConvolverNode`. The impulse response is a stereo noise burst whose amplitude decays exponentially, simulating room reflections. Adjusting `durationSeconds` or `decay` rebuilds the impulse response immediately, so avoid animating these properties at audio rate — use `wet` for real-time mix control instead."
-symbol: "ReverbFilter"
+symbol: "ReverbEffect"
 kind: "class"
 subsystem: "audio"
-importPath: "@codexo/exojs"
+importPath: "@codexo/exojs-audio-fx"
 memberCount: 8
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
-sourcePath: "src/audio/filters/ReverbFilter.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/ReverbFilter.ts#L27"
+sourcePath: "packages/exojs-audio-fx/src/effects/ReverbEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ReverbEffect.ts#L26"
 ---
 ## Import
 
-`import { ReverbFilter } from '@codexo/exojs'`
+`import { ReverbEffect } from '@codexo/exojs-audio-fx'`
 
 Convolution reverb using a procedurally-generated impulse response loaded
 into a `ConvolverNode`. The impulse response is a stereo noise burst whose
@@ -24,7 +24,7 @@ mix control instead.
 
 ## Constructors
 
-- `new(options: ReverbFilterOptions): ReverbFilter`
+- `new(options: ReverbEffectOptions): ReverbEffect`
 
 ## Methods
 
@@ -41,4 +41,4 @@ mix control instead.
 
 ## Source
 
-[src/audio/filters/ReverbFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/ReverbFilter.ts#L27)
+[packages/exojs-audio-fx/src/effects/ReverbEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ReverbEffect.ts#L26)

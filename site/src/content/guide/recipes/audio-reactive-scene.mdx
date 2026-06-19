@@ -23,9 +23,10 @@ One analyser for frequency data, one beat detector for rhythm, one particle syst
 
 ```js
 import {
-    Application, AudioAnalyser, AudioStream, BeatDetector,
+    Application, AudioStream,
     Scene, View, Texture, Vector, Color, Ease,
 } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant,
     particlesExtension, ParticleSystem,

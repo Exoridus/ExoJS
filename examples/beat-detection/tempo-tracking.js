@@ -1,5 +1,6 @@
 // Auto-generated from tempo-tracking.ts — edit the .ts source, not this file.
-import { Application, AudioStream, BeatDetector, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {

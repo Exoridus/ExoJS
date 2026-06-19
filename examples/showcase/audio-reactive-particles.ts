@@ -1,15 +1,5 @@
-import {
-    Application,
-    AudioAnalyser,
-    AudioStream,
-    BeatDetector,
-    Color,
-    Scene,
-    Text,
-    Texture,
-    Vector,
-    type Voice,
-} from '@codexo/exojs';
+import { Application, AudioStream, Color, Scene, Text, Texture, Vector, type Voice } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
     ConeDirection,

@@ -40,6 +40,13 @@ const EXTENSION_PACKAGES: ReadonlyArray<ExtensionPackage> = [
         sourceMarker: 'packages/exojs-particles/src/',
     },
     {
+        importPath: '@codexo/exojs-audio-fx',
+        subsystem: 'audio',
+        entryPoint: 'packages/exojs-audio-fx/src/index.ts',
+        tsconfig: 'packages/exojs-audio-fx/tsconfig.json',
+        sourceMarker: 'packages/exojs-audio-fx/src/',
+    },
+    {
         importPath: '@codexo/exojs-tilemap',
         subsystem: 'tilemap',
         entryPoint: 'packages/exojs-tilemap/src/index.ts',

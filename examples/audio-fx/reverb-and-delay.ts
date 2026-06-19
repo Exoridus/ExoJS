@@ -1,4 +1,5 @@
-import { Application, Color, DelayFilter, Graphics, ReverbFilter, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -16,8 +17,8 @@ const app = new Application({
 
 class ReverbAndDelayScene extends Scene {
     private sound!: Sound;
-    private reverb!: ReverbFilter;
-    private delay!: DelayFilter;
+    private reverb!: ReverbEffect;
+    private delay!: DelayEffect;
     private gfx!: Graphics;
     private prompt!: Text;
     private tapPrompt!: Text;
@@ -41,8 +42,8 @@ class ReverbAndDelayScene extends Scene {
         this.sound = loader.get(Sound, 'sfx');
 
         // Reverb (room tail) → Delay (echoes) chained on the sound bus.
-        this.reverb = new ReverbFilter({ wet: 0.4, decay: 2 });
-        this.delay = new DelayFilter({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });
+        this.reverb = new ReverbEffect({ wet: 0.4, decay: 2 });
+        this.delay = new DelayEffect({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });
         app.audio.sound.addEffect(this.reverb);
         app.audio.sound.addEffect(this.delay);
 

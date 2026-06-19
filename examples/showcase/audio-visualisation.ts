@@ -1,4 +1,5 @@
-import { Application, AudioAnalyser, AudioStream, BeatDetector, Color, type Pausable, Scene, type Seekable, Sprite, Text, Texture, type Voice } from '@codexo/exojs';
+import { Application, AudioStream, Color, type Pausable, Scene, type Seekable, Sprite, Text, Texture, type Voice } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({

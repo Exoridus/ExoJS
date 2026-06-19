@@ -1,4 +1,5 @@
-import { Application, AudioStream, BeatDetector, Color, Scene, Sprite, Text, Texture, Vector } from '@codexo/exojs';
+import { Application, AudioStream, Color, Scene, Sprite, Text, Texture, Vector } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,

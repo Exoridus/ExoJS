@@ -1,4 +1,5 @@
-import { Application, AudioStream, Color, CompressorFilter, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -31,7 +32,7 @@ const sliders: SliderDef[] = [
 
 class CompressorScene extends Scene {
     private music!: AudioStream;
-    private filter!: CompressorFilter;
+    private filter!: CompressorEffect;
     private gfx!: Graphics;
     private labels!: Text[];
     private meterLabel!: Text;
@@ -60,7 +61,7 @@ class CompressorScene extends Scene {
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
 
         this.music = loader.get(AudioStream, 'music');
-        this.filter = new CompressorFilter();
+        this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);
 
         this.gfx = new Graphics();
