@@ -1,4 +1,4 @@
-import { applyTempoHysteresis, computeAcf, findTempoPeaks } from '#audio/dsp/tempogram';
+import { applyTempoHysteresis, computeAcf, findTempoPeaks } from '../../src/dsp/tempogram';
 
 const SAMPLE_RATE = 48000;
 const HOP_SIZE = 512;

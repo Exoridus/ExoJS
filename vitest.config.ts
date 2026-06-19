@@ -102,6 +102,11 @@ export default defineConfig({
         alias: aliasConfig,
         include: ['packages/exojs-physics/test/**/*.test.ts'],
       }),
+      createJsdomTestProject({
+        name: 'exojs-audio-fx',
+        alias: aliasConfig,
+        include: ['packages/exojs-audio-fx/test/**/*.test.ts'],
+      }),
 
       // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for

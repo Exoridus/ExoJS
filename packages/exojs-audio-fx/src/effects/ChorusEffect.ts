@@ -1,8 +1,7 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioEffect } from '#audio/AudioEffect';
+import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
 
-/** Construction options for {@link ChorusFilter}. */
-export interface ChorusFilterOptions {
+/** Construction options for {@link ChorusEffect}. */
+export interface ChorusEffectOptions {
   /** Base delay in ms. Typical 15-30ms. Default 25. */
   delayMs?: number;
   /** Modulation depth in ms (peak deviation from base). Default 5. */
@@ -13,7 +12,7 @@ export interface ChorusFilterOptions {
   wet?: number;
 }
 
-interface ChorusFilterSetup {
+interface ChorusEffectSetup {
   readonly inputGain: GainNode;
   readonly outputGain: GainNode;
   readonly dryGain: GainNode;
@@ -39,8 +38,8 @@ interface ChorusFilterSetup {
  * lfoOscillator ── lfoGain (depth) ── delayNode.delayTime
  * ```
  */
-export class ChorusFilter extends AudioEffect {
-  private _nodes: ChorusFilterSetup | null = null;
+export class ChorusEffect extends AudioEffect {
+  private _nodes: ChorusEffectSetup | null = null;
   private _delayMs: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -50,7 +49,7 @@ export class ChorusFilter extends AudioEffect {
   private _rateHz: number;
   private _wet: number;
 
-  public constructor(options: ChorusFilterOptions = {}) {
+  public constructor(options: ChorusEffectOptions = {}) {
     super();
     this._delayMs = Math.max(0, options.delayMs ?? 25);
     this._depthMs = Math.max(0, options.depthMs ?? 5);
@@ -64,12 +63,12 @@ export class ChorusFilter extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._nodes) throw new Error('ChorusFilter not yet initialized.');
+    if (!this._nodes) throw new Error('ChorusEffect not yet initialized.');
     return this._nodes.inputGain;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._nodes) throw new Error('ChorusFilter not yet initialized.');
+    if (!this._nodes) throw new Error('ChorusEffect not yet initialized.');
     return this._nodes.outputGain;
   }
 

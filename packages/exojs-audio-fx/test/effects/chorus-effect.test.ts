@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { ChorusFilter } from '#audio/filters/ChorusFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { ChorusEffect } from '../../src/effects/ChorusEffect';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,7 +39,7 @@ const makeOscillatorNode = (ctx: AudioContext) => ({
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('ChorusFilter', () => {
+describe('ChorusEffect', () => {
   // Ensure all spies are cleaned up after every test, even after failures.
   afterEach(() => {
     vi.restoreAllMocks();
@@ -47,31 +47,31 @@ describe('ChorusFilter', () => {
 
   describe('construction with defaults', () => {
     it('uses default delayMs of 25', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(filter.delayMs).toBe(25);
       filter.destroy();
     });
 
     it('uses default depthMs of 5', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(filter.depthMs).toBe(5);
       filter.destroy();
     });
 
     it('uses default rateHz of 1.5', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(filter.rateHz).toBe(1.5);
       filter.destroy();
     });
 
     it('uses default wet of 0.5', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(filter.wet).toBe(0.5);
       filter.destroy();
     });
 
     it('accepts custom options', () => {
-      const filter = new ChorusFilter({ delayMs: 20, depthMs: 3, rateHz: 2, wet: 0.8 });
+      const filter = new ChorusEffect({ delayMs: 20, depthMs: 3, rateHz: 2, wet: 0.8 });
       expect(filter.delayMs).toBe(20);
       expect(filter.depthMs).toBe(3);
       expect(filter.rateHz).toBe(2);
@@ -82,14 +82,14 @@ describe('ChorusFilter', () => {
 
   describe('inputNode and outputNode', () => {
     it('inputNode and outputNode are defined after construction', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(filter.inputNode).toBeDefined();
       expect(filter.outputNode).toBeDefined();
       filter.destroy();
     });
 
     it('inputNode and outputNode are different instances', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(filter.inputNode).not.toBe(filter.outputNode);
       filter.destroy();
     });
@@ -115,7 +115,7 @@ describe('ChorusFilter', () => {
       delayNode = makeDelayNode(ctx);
       lfoOscillator = makeOscillatorNode(ctx);
 
-      // ChorusFilter._setupNodes order: inputGain, outputGain, dryGain, wetGain, lfoGain
+      // ChorusEffect._setupNodes order: inputGain, outputGain, dryGain, wetGain, lfoGain
       let gainCallCount = 0;
       const gains = [inputGain, outputGain, dryGain, wetGain, lfoGain];
       vi.spyOn(ctx, 'createGain').mockImplementation(() => {
@@ -126,14 +126,14 @@ describe('ChorusFilter', () => {
     });
 
     it('connects dry path: inputGain → dryGain → outputGain', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(inputGain.connect).toHaveBeenCalledWith(dryGain);
       expect(dryGain.connect).toHaveBeenCalledWith(outputGain);
       filter.destroy();
     });
 
     it('connects wet path: inputGain → delayNode → wetGain → outputGain', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(inputGain.connect).toHaveBeenCalledWith(delayNode);
       expect(delayNode.connect).toHaveBeenCalledWith(wetGain);
       expect(wetGain.connect).toHaveBeenCalledWith(outputGain);
@@ -141,26 +141,26 @@ describe('ChorusFilter', () => {
     });
 
     it('connects LFO: lfoOscillator → lfoGain → delayNode.delayTime', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(lfoOscillator.connect).toHaveBeenCalledWith(lfoGain);
       expect(lfoGain.connect).toHaveBeenCalled();
       filter.destroy();
     });
 
     it('LFO oscillator type is sine', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(lfoOscillator.type).toBe('sine');
       filter.destroy();
     });
 
     it('LFO oscillator is started on setup', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(lfoOscillator.start).toHaveBeenCalled();
       filter.destroy();
     });
 
     it('inputNode is inputGain, outputNode is outputGain', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       expect(filter.inputNode).toBe(inputGain);
       expect(filter.outputNode).toBe(outputGain);
       filter.destroy();
@@ -173,7 +173,7 @@ describe('ChorusFilter', () => {
       const delayNode = makeDelayNode(ctx);
       vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
 
-      const filter = new ChorusFilter({ delayMs: 25 });
+      const filter = new ChorusEffect({ delayMs: 25 });
       filter.delayMs = 20;
       expect(filter.delayMs).toBe(20);
       expect(delayNode.delayTime.setTargetAtTime).toHaveBeenCalledWith(0.02, expect.anything(), expect.anything());
@@ -181,7 +181,7 @@ describe('ChorusFilter', () => {
     });
 
     it('clamps delayMs to minimum of 0', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       filter.delayMs = -10;
       expect(filter.delayMs).toBe(0);
       filter.destroy();
@@ -194,7 +194,7 @@ describe('ChorusFilter', () => {
       const lfoOscillator = makeOscillatorNode(ctx);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
-      const filter = new ChorusFilter({ rateHz: 1.5 });
+      const filter = new ChorusEffect({ rateHz: 1.5 });
       filter.rateHz = 3;
       expect(filter.rateHz).toBe(3);
       expect(lfoOscillator.frequency.setTargetAtTime).toHaveBeenCalledWith(3, expect.anything(), expect.anything());
@@ -206,7 +206,7 @@ describe('ChorusFilter', () => {
       // Must mock oscillator so frequency has setTargetAtTime.
       const lfoOscillator = makeOscillatorNode(ctx);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       filter.rateHz = -1;
       expect(filter.rateHz).toBe(0);
       filter.destroy();
@@ -222,8 +222,8 @@ describe('ChorusFilter', () => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
 
-      const filter = new ChorusFilter({ wet: 0.5 });
-      // ChorusFilter._setupNodes order: inputGain[0], outputGain[1], dryGain[2], wetGain[3], lfoGain[4]
+      const filter = new ChorusEffect({ wet: 0.5 });
+      // ChorusEffect._setupNodes order: inputGain[0], outputGain[1], dryGain[2], wetGain[3], lfoGain[4]
       const dryGain = gainNodes[2]!;
       const wetGain = gainNodes[3]!;
 
@@ -236,7 +236,7 @@ describe('ChorusFilter', () => {
     });
 
     it('clamps wet to 0..1', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       filter.wet = -1;
       expect(filter.wet).toBe(0);
       filter.wet = 2;
@@ -251,7 +251,7 @@ describe('ChorusFilter', () => {
       const lfoOscillator = makeOscillatorNode(ctx);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       filter.destroy();
       expect(lfoOscillator.stop).toHaveBeenCalled();
     });
@@ -269,7 +269,7 @@ describe('ChorusFilter', () => {
       vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       filter.destroy();
 
       for (const node of gainNodes) {
@@ -280,13 +280,13 @@ describe('ChorusFilter', () => {
     });
 
     it('throws after destroy when accessing inputNode', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       filter.destroy();
-      expect(() => filter.inputNode).toThrow('ChorusFilter not yet initialized.');
+      expect(() => filter.inputNode).toThrow('ChorusEffect not yet initialized.');
     });
 
     it('double destroy is safe', () => {
-      const filter = new ChorusFilter();
+      const filter = new ChorusEffect();
       filter.destroy();
       expect(() => filter.destroy()).not.toThrow();
     });

@@ -1,7 +1,7 @@
-﻿import { getAudioContext, isAudioContextReady } from '#audio/audio-context';
-import { AudioBus } from '#audio/AudioBus';
-import { BeatDetector } from '#audio/BeatDetector';
-import type { Voice } from '#audio/Playable';
+﻿import { getAudioContext, isAudioContextReady } from '@codexo/exojs';
+import { AudioBus } from '@codexo/exojs';
+import { BeatDetector } from '../src/BeatDetector';
+import type { Voice } from '@codexo/exojs';
 
 // ---------------------------------------------------------------------------
 // Types for the mock AudioWorkletNode (extended in setup-env.ts)
@@ -631,4 +631,4 @@ describe('BeatDetector', () => {
 });
 
 // Import for the type in the test above
-import type { UpcomingBeat } from '#audio/BeatDetector';
+import type { UpcomingBeat } from '../src/BeatDetector';

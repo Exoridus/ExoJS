@@ -19,9 +19,9 @@ export interface AudioInputOptions {
  * ```ts
  * const mic = await AudioInput.open({ echoCancellation: true });
  * const input = app.audio.open(mic);
- * input.analyse(analyser);          // visualise / beat-detect (no feedback)
+ * new AudioAnalyser({ source: input });  // visualise / beat-detect (no feedback)
  * const clip = await input.record(2000); // capture 2s -> Sound
- * mic.close();                      // release the device
+ * mic.close();                           // release the device
  * ```
  */
 export class AudioInput {

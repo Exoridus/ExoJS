@@ -1,5 +1,4 @@
-import type { AudioBus } from '#audio/AudioBus';
-import { WorkletEffect } from '#audio/WorkletEffect';
+import { WorkletEffect, type AudioBus } from '@codexo/exojs';
 
 const duckingWorkletSource = `
 class DuckingProcessor extends AudioWorkletProcessor {
@@ -67,8 +66,8 @@ class DuckingProcessor extends AudioWorkletProcessor {
 registerProcessor('exojs-ducking', DuckingProcessor);
 `;
 
-/** Construction options for {@link DuckingFilter}. `sidechain` is required. */
-export interface DuckingFilterOptions {
+/** Construction options for {@link DuckingEffect}. `sidechain` is required. */
+export interface DuckingEffectOptions {
   sidechain: AudioBus;
   threshold?: number;
   ratio?: number;
@@ -84,7 +83,7 @@ export interface DuckingFilterOptions {
  * times are expressed in milliseconds and converted internally to one-pole
  * filter coefficients.
  */
-export class DuckingFilter extends WorkletEffect {
+export class DuckingEffect extends WorkletEffect {
   // Declared nullable because super() may trigger _onWorkletReady before the
   // subclass constructor body runs (if construction is aborted by a throw).
   private readonly _sidechain: AudioBus | null = null;
@@ -93,10 +92,10 @@ export class DuckingFilter extends WorkletEffect {
   private _attackMs: number;
   private _releaseMs: number;
 
-  public constructor(options: DuckingFilterOptions) {
+  public constructor(options: DuckingEffectOptions) {
     super();
     if (!options.sidechain) {
-      throw new Error('DuckingFilter requires a sidechain AudioBus.');
+      throw new Error('DuckingEffect requires a sidechain AudioBus.');
     }
     this._sidechain = options.sidechain;
     this._threshold = options.threshold ?? -20;

@@ -1,14 +1,13 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioEffect } from '#audio/AudioEffect';
+import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
 
-/** Construction options for {@link DelayFilter}. */
-export interface DelayFilterOptions {
+/** Construction options for {@link DelayEffect}. */
+export interface DelayEffectOptions {
   delaySeconds?: number;
   feedback?: number;
   wet?: number;
 }
 
-interface DelayFilterSetup {
+interface DelayEffectSetup {
   readonly inputGain: GainNode;
   readonly outputGain: GainNode;
   readonly delayNode: DelayNode;
@@ -24,8 +23,8 @@ interface DelayFilterSetup {
  * its maximum of 0.95 produces a long, prominent tail; lower values create
  * a single slap-back echo.
  */
-export class DelayFilter extends AudioEffect {
-  private _setup: DelayFilterSetup | null = null;
+export class DelayEffect extends AudioEffect {
+  private _setup: DelayEffectSetup | null = null;
   private _delaySeconds: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -34,7 +33,7 @@ export class DelayFilter extends AudioEffect {
   private _feedback: number;
   private _wet: number;
 
-  public constructor(options: DelayFilterOptions = {}) {
+  public constructor(options: DelayEffectOptions = {}) {
     super();
     this._delaySeconds = Math.max(0, Math.min(5, options.delaySeconds ?? 0.3));
     this._feedback = Math.max(0, Math.min(0.95, options.feedback ?? 0.4));
@@ -47,12 +46,12 @@ export class DelayFilter extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('DelayFilter not yet initialized.');
+    if (!this._setup) throw new Error('DelayEffect not yet initialized.');
     return this._setup.inputGain;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('DelayFilter not yet initialized.');
+    if (!this._setup) throw new Error('DelayEffect not yet initialized.');
     return this._setup.outputGain;
   }
 

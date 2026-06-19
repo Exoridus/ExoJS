@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { DelayFilter } from '#audio/filters/DelayFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { DelayEffect } from '../../src/effects/DelayEffect';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),
@@ -21,28 +21,28 @@ const makeDelayNode = (ctx: AudioContext) => ({
   delayTime: makeAudioParam(0),
 });
 
-describe('DelayFilter', () => {
+describe('DelayEffect', () => {
   describe('construction', () => {
     it('uses default delaySeconds of 0.3', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       expect(filter.delaySeconds).toBe(0.3);
       filter.destroy();
     });
 
     it('uses default feedback of 0.4', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       expect(filter.feedback).toBe(0.4);
       filter.destroy();
     });
 
     it('uses default wet of 0.5', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       expect(filter.wet).toBe(0.5);
       filter.destroy();
     });
 
     it('accepts custom options', () => {
-      const filter = new DelayFilter({ delaySeconds: 0.5, feedback: 0.3, wet: 0.7 });
+      const filter = new DelayEffect({ delaySeconds: 0.5, feedback: 0.3, wet: 0.7 });
       expect(filter.delaySeconds).toBe(0.5);
       expect(filter.feedback).toBe(0.3);
       expect(filter.wet).toBe(0.7);
@@ -71,7 +71,7 @@ describe('DelayFilter', () => {
       delayNode = makeDelayNode(ctx);
 
       let gainCallCount = 0;
-      // DelayFilter._setupNodes order: inputGain, outputGain, feedbackGain, dryGain, wetGain
+      // DelayEffect._setupNodes order: inputGain, outputGain, feedbackGain, dryGain, wetGain
       const gains = [inputGain, outputGain, feedbackGain, dryGain, wetGain];
       gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
@@ -85,14 +85,14 @@ describe('DelayFilter', () => {
     });
 
     it('connects dry path: input → dryGain → output', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       expect(inputGain.connect).toHaveBeenCalledWith(dryGain);
       expect(dryGain.connect).toHaveBeenCalledWith(outputGain);
       filter.destroy();
     });
 
     it('connects wet path: input → delay → wetGain → output', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       expect(inputGain.connect).toHaveBeenCalledWith(delayNode);
       expect(delayNode.connect).toHaveBeenCalledWith(wetGain);
       expect(wetGain.connect).toHaveBeenCalledWith(outputGain);
@@ -100,14 +100,14 @@ describe('DelayFilter', () => {
     });
 
     it('connects feedback loop: delay → feedbackGain → delay', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       expect(delayNode.connect).toHaveBeenCalledWith(feedbackGain);
       expect(feedbackGain.connect).toHaveBeenCalledWith(delayNode);
       filter.destroy();
     });
 
     it('inputNode is the input gain, outputNode is the output gain', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       expect(filter.inputNode).toBe(inputGain);
       expect(filter.outputNode).toBe(outputGain);
       filter.destroy();
@@ -116,21 +116,21 @@ describe('DelayFilter', () => {
 
   describe('feedback setter', () => {
     it('clamps feedback to 0.95 maximum', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.feedback = 1.0;
       expect(filter.feedback).toBe(0.95);
       filter.destroy();
     });
 
     it('clamps feedback to 0 minimum', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.feedback = -0.5;
       expect(filter.feedback).toBe(0);
       filter.destroy();
     });
 
     it('accepts valid feedback values', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.feedback = 0.6;
       expect(filter.feedback).toBe(0.6);
       filter.destroy();
@@ -139,14 +139,14 @@ describe('DelayFilter', () => {
 
   describe('delaySeconds setter', () => {
     it('clamps to 0 minimum', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.delaySeconds = -1;
       expect(filter.delaySeconds).toBe(0);
       filter.destroy();
     });
 
     it('clamps to 5 maximum', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.delaySeconds = 10;
       expect(filter.delaySeconds).toBe(5);
       filter.destroy();
@@ -155,7 +155,7 @@ describe('DelayFilter', () => {
 
   describe('wet setter', () => {
     it('clamps to 0..1', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.wet = -1;
       expect(filter.wet).toBe(0);
       filter.wet = 2;
@@ -175,7 +175,7 @@ describe('DelayFilter', () => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
       const delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(delay as unknown as DelayNode);
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.destroy();
       for (const node of gainNodes) {
         expect(node.disconnect).toHaveBeenCalled();
@@ -186,9 +186,9 @@ describe('DelayFilter', () => {
     });
 
     it('throws after destroy', () => {
-      const filter = new DelayFilter();
+      const filter = new DelayEffect();
       filter.destroy();
-      expect(() => filter.inputNode).toThrow('DelayFilter not yet initialized.');
+      expect(() => filter.inputNode).toThrow('DelayEffect not yet initialized.');
     });
   });
 });

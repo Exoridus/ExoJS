@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 
 /** Lockstep publish order — Core first (peer of the extensions), then the extensions. */
-export const PUBLISH_ORDER = ['@codexo/exojs', '@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled', '@codexo/exojs-physics'] as const;
+export const PUBLISH_ORDER = ['@codexo/exojs', '@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled', '@codexo/exojs-physics', '@codexo/exojs-audio-fx'] as const;
 
 export type OfficialPackageName = (typeof PUBLISH_ORDER)[number];
 

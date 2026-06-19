@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { CompressorFilter } from '#audio/filters/CompressorFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { CompressorEffect } from '../../src/effects/CompressorEffect';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),
@@ -19,49 +19,49 @@ const createMockCompressor = (ctx: AudioContext) => ({
   reduction: 0,
 });
 
-describe('CompressorFilter', () => {
+describe('CompressorEffect', () => {
   describe('construction', () => {
     it('creates a DynamicsCompressorNode on construction', () => {
       const ctx = getAudioContext();
       const spy = vi.spyOn(ctx, 'createDynamicsCompressor');
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       expect(spy).toHaveBeenCalledTimes(1);
       filter.destroy();
       spy.mockRestore();
     });
 
     it('uses default threshold of -24 dB', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       expect(filter.threshold).toBe(-24);
       filter.destroy();
     });
 
     it('uses default knee of 30', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       expect(filter.knee).toBe(30);
       filter.destroy();
     });
 
     it('uses default ratio of 12', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       expect(filter.ratio).toBe(12);
       filter.destroy();
     });
 
     it('uses default attack of 0.003', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       expect(filter.attack).toBe(0.003);
       filter.destroy();
     });
 
     it('uses default release of 0.25', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       expect(filter.release).toBe(0.25);
       filter.destroy();
     });
 
     it('accepts all options via constructor', () => {
-      const filter = new CompressorFilter({
+      const filter = new CompressorEffect({
         threshold: -12,
         knee: 10,
         ratio: 4,
@@ -79,21 +79,21 @@ describe('CompressorFilter', () => {
 
   describe('inputNode / outputNode', () => {
     it('inputNode and outputNode are the same compressor node', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       expect(filter.inputNode).toBe(filter.outputNode);
       filter.destroy();
     });
 
     it('throws after destroy', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.destroy();
-      expect(() => filter.inputNode).toThrow('CompressorFilter not yet initialized.');
+      expect(() => filter.inputNode).toThrow('CompressorEffect not yet initialized.');
     });
   });
 
   describe('setters', () => {
     it('threshold setter clamps to -100..0', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.threshold = 10;
       expect(filter.threshold).toBe(0);
       filter.threshold = -200;
@@ -102,7 +102,7 @@ describe('CompressorFilter', () => {
     });
 
     it('knee setter clamps to 0..40', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.knee = -5;
       expect(filter.knee).toBe(0);
       filter.knee = 50;
@@ -111,7 +111,7 @@ describe('CompressorFilter', () => {
     });
 
     it('ratio setter clamps to 1..20', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.ratio = 0;
       expect(filter.ratio).toBe(1);
       filter.ratio = 30;
@@ -120,7 +120,7 @@ describe('CompressorFilter', () => {
     });
 
     it('attack setter clamps to 0..1', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.attack = -1;
       expect(filter.attack).toBe(0);
       filter.attack = 2;
@@ -129,7 +129,7 @@ describe('CompressorFilter', () => {
     });
 
     it('release setter clamps to 0..1', () => {
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.release = -1;
       expect(filter.release).toBe(0);
       filter.release = 5;
@@ -141,7 +141,7 @@ describe('CompressorFilter', () => {
       const ctx = getAudioContext();
       const mockNode = createMockCompressor(ctx);
       const spy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(mockNode as unknown as DynamicsCompressorNode);
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.threshold = -18;
       expect(mockNode.threshold.setTargetAtTime).toHaveBeenCalledWith(-18, 0, 0.01);
       filter.knee = 5;
@@ -162,7 +162,7 @@ describe('CompressorFilter', () => {
       const ctx = getAudioContext();
       const mockNode = createMockCompressor(ctx);
       const spy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(mockNode as unknown as DynamicsCompressorNode);
-      const filter = new CompressorFilter();
+      const filter = new CompressorEffect();
       filter.destroy();
       expect(mockNode.disconnect).toHaveBeenCalledTimes(1);
       spy.mockRestore();

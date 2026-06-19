@@ -1,4 +1,4 @@
-import { buildMelFilterbank, computeMelBands, hzToMel, melToHz } from '#audio/dsp/mel';
+import { buildMelFilterbank, computeMelBands, hzToMel, melToHz } from '../../src/dsp/mel';
 
 describe('mel scale helpers', () => {
   it('hzToMel(0) === 0', () => {

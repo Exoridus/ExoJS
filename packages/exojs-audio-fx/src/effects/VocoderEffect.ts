@@ -1,8 +1,8 @@
-import type { AudioBus } from '#audio/AudioBus';
-import { WorkletEffect } from '#audio/WorkletEffect';
-import { vocoderWorkletSource } from '#audio/worklets/vocoder.worklet';
+import { WorkletEffect, type AudioBus } from '@codexo/exojs';
 
-export interface VocoderFilterOptions {
+import { vocoderWorkletSource } from '../worklets/vocoder.worklet';
+
+export interface VocoderEffectOptions {
   /** Modulator AudioBus — its output drives the spectral envelope.
    *  Typically routed from a microphone or voice sample. */
   modulator: AudioBus;
@@ -30,7 +30,7 @@ export interface VocoderFilterOptions {
  * at construction; only `wet` and `envelopeSmoothing` are adjustable at
  * runtime.
  */
-export class VocoderFilter extends WorkletEffect {
+export class VocoderEffect extends WorkletEffect {
   // Declared nullable because super() may trigger _onWorkletReady before the
   // subclass constructor body runs (if construction is aborted by a throw).
   private readonly _modulator: AudioBus | null = null;
@@ -41,10 +41,10 @@ export class VocoderFilter extends WorkletEffect {
   private _wet: number;
   private _envelopeSmoothing: number;
 
-  public constructor(options: VocoderFilterOptions) {
+  public constructor(options: VocoderEffectOptions) {
     super();
     if (!options.modulator) {
-      throw new Error('VocoderFilter requires a modulator AudioBus.');
+      throw new Error('VocoderEffect requires a modulator AudioBus.');
     }
     this._modulator = options.modulator;
     this._numBands = options.numBands ?? 16;

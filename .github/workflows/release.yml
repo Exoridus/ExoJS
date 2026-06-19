@@ -101,6 +101,7 @@ jobs:
           pnpm --filter @codexo/exojs-tilemap build
           pnpm --filter @codexo/exojs-tiled build
           pnpm --filter @codexo/exojs-physics build
+          pnpm --filter @codexo/exojs-audio-fx build
           pnpm site:build
 
       # The site build can regenerate tracked content with platform-dependent

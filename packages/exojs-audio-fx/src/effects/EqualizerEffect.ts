@@ -1,8 +1,7 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioEffect } from '#audio/AudioEffect';
+import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
 
-/** Construction options for {@link EqualizerFilter}. */
-export interface EqualizerFilterOptions {
+/** Construction options for {@link EqualizerEffect}. */
+export interface EqualizerEffectOptions {
   low?: number;
   mid?: number;
   high?: number;
@@ -11,7 +10,7 @@ export interface EqualizerFilterOptions {
   highFrequency?: number;
 }
 
-interface EqualizerFilterSetup {
+interface EqualizerEffectSetup {
   readonly lowShelf: BiquadFilterNode;
   readonly peaking: BiquadFilterNode;
   readonly highShelf: BiquadFilterNode;
@@ -24,8 +23,8 @@ interface EqualizerFilterSetup {
  * adjustable at runtime via the corresponding setters; gain changes use a
  * short exponential ramp to avoid clicks.
  */
-export class EqualizerFilter extends AudioEffect {
-  private _setup: EqualizerFilterSetup | null = null;
+export class EqualizerEffect extends AudioEffect {
+  private _setup: EqualizerEffectSetup | null = null;
   private _low: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -37,7 +36,7 @@ export class EqualizerFilter extends AudioEffect {
   private _midFrequency: number;
   private _highFrequency: number;
 
-  public constructor(options: EqualizerFilterOptions = {}) {
+  public constructor(options: EqualizerEffectOptions = {}) {
     super();
     this._low = Math.max(-40, Math.min(40, options.low ?? 0));
     this._mid = Math.max(-40, Math.min(40, options.mid ?? 0));
@@ -53,12 +52,12 @@ export class EqualizerFilter extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('EqualizerFilter not yet initialized.');
+    if (!this._setup) throw new Error('EqualizerEffect not yet initialized.');
     return this._setup.lowShelf;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('EqualizerFilter not yet initialized.');
+    if (!this._setup) throw new Error('EqualizerEffect not yet initialized.');
     return this._setup.highShelf;
   }
 

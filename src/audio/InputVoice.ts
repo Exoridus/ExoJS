@@ -1,5 +1,4 @@
 import { decodeAudioData } from './audio-context';
-import type { AudioAnalyser } from './AudioAnalyser';
 import type { AudioBus } from './AudioBus';
 import { BaseVoice, type BaseVoiceInit } from './BaseVoice';
 import { Sound } from './Sound';
@@ -14,9 +13,9 @@ export interface InputVoiceInit extends BaseVoiceInit {
  * Live control handle for an {@link AudioInput} (microphone / WebRTC stream),
  * created via {@link AudioManager.open}. Unlike a {@link Playable} voice it is
  * **analysis-only by default** — its output is not routed to a bus, so it never
- * causes feedback. Tap it for visualisation/beat-detection ({@link InputVoice.analyse}
- * or `new AudioAnalyser({ source: inputVoice })`), opt into monitoring with
- * {@link InputVoice.routeTo}, or capture it with {@link InputVoice.record}.
+ * causes feedback. Tap it for visualisation/beat-detection (`new AudioAnalyser({
+ * source: inputVoice })`), opt into monitoring with {@link InputVoice.routeTo},
+ * or capture it with {@link InputVoice.record}.
  *
  * A live stream cannot be seeked, paused, looped, or rate-shifted, so it only
  * mixes in {@link Spatializable} (via {@link BaseVoice}) on top of the base
@@ -45,12 +44,6 @@ export class InputVoice extends BaseVoice {
     this._tail().disconnect();
     this._bus = bus;
     this._connectOutput();
-    return this;
-  }
-
-  /** Tap this input into an {@link AudioAnalyser} — the common visualise / beat-detect case. */
-  public analyse(analyser: AudioAnalyser): this {
-    analyser.source = this;
     return this;
   }
 

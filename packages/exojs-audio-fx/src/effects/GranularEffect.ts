@@ -1,7 +1,8 @@
-import { WorkletEffect } from '#audio/WorkletEffect';
-import { granularWorkletSource } from '#audio/worklets/granular.worklet';
+import { WorkletEffect } from '@codexo/exojs';
 
-export interface GranularFilterOptions {
+import { granularWorkletSource } from '../worklets/granular.worklet';
+
+export interface GranularEffectOptions {
   /** Grain size in seconds. 0.005-0.5. Default 0.05 (50ms). */
   grainSize?: number;
   /** Grains per second (overlap density). 1-500. Default 50. */
@@ -31,7 +32,7 @@ export interface GranularFilterOptions {
  *   - Pitch cloud: medium grain, medium density, pitchMin 0.5, pitchMax 2.0
  *     gives a "shimmer" effect of overlapping pitches.
  */
-export class GranularFilter extends WorkletEffect {
+export class GranularEffect extends WorkletEffect {
   private _grainSize: number;
   private _density: number;
   private _spread: number;
@@ -40,7 +41,7 @@ export class GranularFilter extends WorkletEffect {
   private _wet: number;
   private readonly _bufferSeconds: number;
 
-  public constructor(options: GranularFilterOptions = {}) {
+  public constructor(options: GranularEffectOptions = {}) {
     super();
     this._grainSize = Math.max(0.005, Math.min(0.5, options.grainSize ?? 0.05));
     this._density = Math.max(1, Math.min(500, options.density ?? 50));

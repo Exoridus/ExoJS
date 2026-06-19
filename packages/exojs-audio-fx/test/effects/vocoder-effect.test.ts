@@ -1,6 +1,6 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { AudioBus } from '#audio/AudioBus';
-import { VocoderFilter } from '#audio/filters/VocoderFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { AudioBus } from '@codexo/exojs';
+import { VocoderEffect } from '../../src/effects/VocoderEffect';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -14,7 +14,7 @@ function makeModulatorBus(): AudioBus {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('VocoderFilter', () => {
+describe('VocoderEffect', () => {
   let addModuleMock: MockInstance;
 
   beforeEach(() => {
@@ -35,14 +35,14 @@ describe('VocoderFilter', () => {
   describe('constructor validation', () => {
     it('throws if no modulator is provided', () => {
       expect(() => {
-        new VocoderFilter({} as never);
-      }).toThrow('VocoderFilter requires a modulator AudioBus.');
+        new VocoderEffect({} as never);
+      }).toThrow('VocoderEffect requires a modulator AudioBus.');
     });
 
     it('throws if modulator is null', () => {
       expect(() => {
-        new VocoderFilter({ modulator: null as never });
-      }).toThrow('VocoderFilter requires a modulator AudioBus.');
+        new VocoderEffect({ modulator: null as never });
+      }).toThrow('VocoderEffect requires a modulator AudioBus.');
     });
   });
 
@@ -52,14 +52,14 @@ describe('VocoderFilter', () => {
   describe('default values', () => {
     it('defaults wet to 1.0', () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       expect(filter.wet).toBe(1.0);
       filter.destroy();
     });
 
     it('defaults envelopeSmoothing to 0.005', () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       expect(filter.envelopeSmoothing).toBe(0.005);
       filter.destroy();
     });
@@ -71,28 +71,28 @@ describe('VocoderFilter', () => {
   describe('constructor clamping', () => {
     it('clamps wet to 0 if below range', () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, wet: -1 });
+      const filter = new VocoderEffect({ modulator, wet: -1 });
       expect(filter.wet).toBe(0);
       filter.destroy();
     });
 
     it('clamps wet to 1 if above range', () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, wet: 5 });
+      const filter = new VocoderEffect({ modulator, wet: 5 });
       expect(filter.wet).toBe(1);
       filter.destroy();
     });
 
     it('clamps envelopeSmoothing to 0.0001 if below range', () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, envelopeSmoothing: 0 });
+      const filter = new VocoderEffect({ modulator, envelopeSmoothing: 0 });
       expect(filter.envelopeSmoothing).toBe(0.0001);
       filter.destroy();
     });
 
     it('clamps envelopeSmoothing to 0.1 if above range', () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, envelopeSmoothing: 1 });
+      const filter = new VocoderEffect({ modulator, envelopeSmoothing: 1 });
       expect(filter.envelopeSmoothing).toBe(0.1);
       filter.destroy();
     });
@@ -104,7 +104,7 @@ describe('VocoderFilter', () => {
   describe('worklet lifecycle', () => {
     it('after await filter.ready: workletNode is not null', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       expect(filter['_workletNode']).not.toBeNull();
       filter.destroy();
@@ -119,7 +119,7 @@ describe('VocoderFilter', () => {
       });
 
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       expect(capturedOptions?.numberOfInputs).toBe(2);
       filter.destroy();
@@ -127,7 +127,7 @@ describe('VocoderFilter', () => {
 
     it('after await filter.ready: wet and envelopeSmoothing params are set', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, wet: 0.7, envelopeSmoothing: 0.01 });
+      const filter = new VocoderEffect({ modulator, wet: 0.7, envelopeSmoothing: 0.01 });
       await filter.ready;
       const node = filter['_workletNode']!;
       const wetParam = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
@@ -146,7 +146,7 @@ describe('VocoderFilter', () => {
       });
 
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, numBands: 8 });
+      const filter = new VocoderEffect({ modulator, numBands: 8 });
       await filter.ready;
       expect(capturedOptions?.processorOptions?.numBands).toBe(8);
       filter.destroy();
@@ -161,7 +161,7 @@ describe('VocoderFilter', () => {
       });
 
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, minHz: 100, maxHz: 6000 });
+      const filter = new VocoderEffect({ modulator, minHz: 100, maxHz: 6000 });
       await filter.ready;
       expect(capturedOptions?.processorOptions?.minHz).toBe(100);
       expect(capturedOptions?.processorOptions?.maxHz).toBe(6000);
@@ -177,7 +177,7 @@ describe('VocoderFilter', () => {
       });
 
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator, bandQ: 8 });
+      const filter = new VocoderEffect({ modulator, bandQ: 8 });
       await filter.ready;
       expect(capturedOptions?.processorOptions?.bandQ).toBe(8);
       filter.destroy();
@@ -193,7 +193,7 @@ describe('VocoderFilter', () => {
         disconnect: vi.fn(),
       } as unknown as GainNode);
 
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
 
       // The modulator's output node should have been connected to the worklet at input 1
@@ -208,7 +208,7 @@ describe('VocoderFilter', () => {
   describe('setters after ready', () => {
     it('setting wet updates worklet param', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
@@ -221,7 +221,7 @@ describe('VocoderFilter', () => {
 
     it('setting envelopeSmoothing updates worklet param', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('envelopeSmoothing') as unknown as { setTargetAtTime: MockInstance };
@@ -234,7 +234,7 @@ describe('VocoderFilter', () => {
 
     it('wet setter clamps to 0 min', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       filter.wet = -10;
       expect(filter.wet).toBe(0);
@@ -243,7 +243,7 @@ describe('VocoderFilter', () => {
 
     it('wet setter clamps to 1 max', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       filter.wet = 99;
       expect(filter.wet).toBe(1);
@@ -252,7 +252,7 @@ describe('VocoderFilter', () => {
 
     it('envelopeSmoothing setter clamps to 0.0001 min', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       filter.envelopeSmoothing = -1;
       expect(filter.envelopeSmoothing).toBe(0.0001);
@@ -261,7 +261,7 @@ describe('VocoderFilter', () => {
 
     it('envelopeSmoothing setter clamps to 0.1 max', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       filter.envelopeSmoothing = 999;
       expect(filter.envelopeSmoothing).toBe(0.1);
@@ -275,14 +275,14 @@ describe('VocoderFilter', () => {
   describe('destroy', () => {
     it('destroy cleans up without throwing', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       expect(() => filter.destroy()).not.toThrow();
     });
 
     it('after destroy, inputNode throws', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       filter.destroy();
       expect(() => filter.inputNode).toThrow();
@@ -290,7 +290,7 @@ describe('VocoderFilter', () => {
 
     it('double destroy is safe', async () => {
       const modulator = makeModulatorBus();
-      const filter = new VocoderFilter({ modulator });
+      const filter = new VocoderEffect({ modulator });
       await filter.ready;
       filter.destroy();
       expect(() => filter.destroy()).not.toThrow();

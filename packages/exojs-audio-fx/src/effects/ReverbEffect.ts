@@ -1,14 +1,13 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioEffect } from '#audio/AudioEffect';
+import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
 
-/** Construction options for {@link ReverbFilter}. */
-export interface ReverbFilterOptions {
+/** Construction options for {@link ReverbEffect}. */
+export interface ReverbEffectOptions {
   durationSeconds?: number;
   decay?: number;
   wet?: number;
 }
 
-interface ReverbFilterSetup {
+interface ReverbEffectSetup {
   readonly inputGain: GainNode;
   readonly outputGain: GainNode;
   readonly convolver: ConvolverNode;
@@ -24,8 +23,8 @@ interface ReverbFilterSetup {
  * avoid animating these properties at audio rate — use `wet` for real-time
  * mix control instead.
  */
-export class ReverbFilter extends AudioEffect {
-  private _setup: ReverbFilterSetup | null = null;
+export class ReverbEffect extends AudioEffect {
+  private _setup: ReverbEffectSetup | null = null;
   private _duration: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -34,7 +33,7 @@ export class ReverbFilter extends AudioEffect {
   private _decay: number;
   private _wet: number;
 
-  public constructor(options: ReverbFilterOptions = {}) {
+  public constructor(options: ReverbEffectOptions = {}) {
     super();
     this._duration = Math.max(0.1, Math.min(5, options.durationSeconds ?? 2));
     this._decay = Math.max(0.5, Math.min(10, options.decay ?? 2));
@@ -47,12 +46,12 @@ export class ReverbFilter extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('ReverbFilter not yet initialized.');
+    if (!this._setup) throw new Error('ReverbEffect not yet initialized.');
     return this._setup.inputGain;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('ReverbFilter not yet initialized.');
+    if (!this._setup) throw new Error('ReverbEffect not yet initialized.');
     return this._setup.outputGain;
   }
 

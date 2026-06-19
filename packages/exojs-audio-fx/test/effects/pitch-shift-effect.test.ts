@@ -1,11 +1,11 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { PitchShiftFilter } from '#audio/filters/PitchShiftFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { PitchShiftEffect } from '../../src/effects/PitchShiftEffect';
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('PitchShiftFilter', () => {
+describe('PitchShiftEffect', () => {
   let addModuleMock: MockInstance;
 
   beforeEach(() => {
@@ -22,19 +22,19 @@ describe('PitchShiftFilter', () => {
 
   describe('construction with defaults', () => {
     it('uses default pitch of 1.0', () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       expect(filter.pitch).toBe(1.0);
       filter.destroy();
     });
 
     it('uses default wet of 1.0', () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       expect(filter.wet).toBe(1.0);
       filter.destroy();
     });
 
     it('creates input and output nodes on construction', () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       expect(filter.inputNode).toBeDefined();
       expect(filter.outputNode).toBeDefined();
       filter.destroy();
@@ -43,33 +43,33 @@ describe('PitchShiftFilter', () => {
 
   describe('pitch clamping', () => {
     it('clamps pitch to minimum 0.25 on construction', () => {
-      const filter = new PitchShiftFilter({ pitch: 0.1 });
+      const filter = new PitchShiftEffect({ pitch: 0.1 });
       expect(filter.pitch).toBe(0.25);
       filter.destroy();
     });
 
     it('clamps pitch to maximum 4.0 on construction', () => {
-      const filter = new PitchShiftFilter({ pitch: 10 });
+      const filter = new PitchShiftEffect({ pitch: 10 });
       expect(filter.pitch).toBe(4.0);
       filter.destroy();
     });
 
     it('clamps pitch to minimum 0.25 via setter', () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       filter.pitch = 0;
       expect(filter.pitch).toBe(0.25);
       filter.destroy();
     });
 
     it('clamps pitch to maximum 4.0 via setter', () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       filter.pitch = 100;
       expect(filter.pitch).toBe(4.0);
       filter.destroy();
     });
 
     it('accepts valid pitch value', () => {
-      const filter = new PitchShiftFilter({ pitch: 1.5 });
+      const filter = new PitchShiftEffect({ pitch: 1.5 });
       expect(filter.pitch).toBe(1.5);
       filter.destroy();
     });
@@ -77,26 +77,26 @@ describe('PitchShiftFilter', () => {
 
   describe('wet clamping', () => {
     it('clamps wet to minimum 0 on construction', () => {
-      const filter = new PitchShiftFilter({ wet: -1 });
+      const filter = new PitchShiftEffect({ wet: -1 });
       expect(filter.wet).toBe(0);
       filter.destroy();
     });
 
     it('clamps wet to maximum 1.0 on construction', () => {
-      const filter = new PitchShiftFilter({ wet: 2 });
+      const filter = new PitchShiftEffect({ wet: 2 });
       expect(filter.wet).toBe(1.0);
       filter.destroy();
     });
 
     it('clamps wet to minimum 0 via setter', () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       filter.wet = -0.5;
       expect(filter.wet).toBe(0);
       filter.destroy();
     });
 
     it('clamps wet to maximum 1.0 via setter', () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       filter.wet = 1.5;
       expect(filter.wet).toBe(1.0);
       filter.destroy();
@@ -105,14 +105,14 @@ describe('PitchShiftFilter', () => {
 
   describe('worklet lifecycle', () => {
     it('after await filter.ready: workletNode is not null', async () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       expect(filter['_workletNode']).not.toBeNull();
       filter.destroy();
     });
 
     it('after await filter.ready: workletNode is an AudioWorkletNode', async () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       // AudioWorkletNode mock in setup-env has connect/disconnect/parameters
       const node = filter['_workletNode'];
@@ -122,7 +122,7 @@ describe('PitchShiftFilter', () => {
     });
 
     it('worklet parameters pitch and wet are set on ready', async () => {
-      const filter = new PitchShiftFilter({ pitch: 1.5, wet: 0.8 });
+      const filter = new PitchShiftEffect({ pitch: 1.5, wet: 0.8 });
       await filter.ready;
       const node = filter['_workletNode']!;
       const pitchParam = node.parameters.get('pitch') as unknown as { setTargetAtTime: MockInstance };
@@ -140,7 +140,7 @@ describe('PitchShiftFilter', () => {
         return new OrigAWN(c, name, options);
       });
 
-      const filter = new PitchShiftFilter({ grainSize: 2048 });
+      const filter = new PitchShiftEffect({ grainSize: 2048 });
       await filter.ready;
       expect(capturedOptions?.processorOptions?.grainSize).toBe(2048);
       filter.destroy();
@@ -154,7 +154,7 @@ describe('PitchShiftFilter', () => {
         return new OrigAWN(c, name, options);
       });
 
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       expect(capturedOptions?.processorOptions?.grainSize).toBe(1024);
       filter.destroy();
@@ -163,7 +163,7 @@ describe('PitchShiftFilter', () => {
 
   describe('setters after ready', () => {
     it('setting pitch updates worklet param', async () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('pitch') as unknown as { setTargetAtTime: MockInstance };
@@ -175,7 +175,7 @@ describe('PitchShiftFilter', () => {
     });
 
     it('setting wet updates worklet param', async () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
@@ -189,20 +189,20 @@ describe('PitchShiftFilter', () => {
 
   describe('destroy', () => {
     it('destroy cleans up without throwing', async () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       expect(() => filter.destroy()).not.toThrow();
     });
 
     it('after destroy, inputNode throws', async () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       filter.destroy();
       expect(() => filter.inputNode).toThrow();
     });
 
     it('double destroy is safe', async () => {
-      const filter = new PitchShiftFilter();
+      const filter = new PitchShiftEffect();
       await filter.ready;
       filter.destroy();
       expect(() => filter.destroy()).not.toThrow();

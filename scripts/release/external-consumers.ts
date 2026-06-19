@@ -175,6 +175,7 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
     resolve(repoRoot, 'packages/exojs-tilemap'),
     resolve(repoRoot, 'packages/exojs-tiled'),
     resolve(repoRoot, 'packages/exojs-physics'),
+    resolve(repoRoot, 'packages/exojs-audio-fx'),
   ];
   const version = (JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { version: string }).version;
 
@@ -185,7 +186,7 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
       process.exit(1);
     }
   }
-  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tilemap', 'codexo-exojs-tiled', 'codexo-exojs-physics'].map(n =>
+  const tarballs = ['codexo-exojs', 'codexo-exojs-particles', 'codexo-exojs-tilemap', 'codexo-exojs-tiled', 'codexo-exojs-physics', 'codexo-exojs-audio-fx'].map(n =>
     join(staging, `${n}-${version}.tgz`),
   );
 

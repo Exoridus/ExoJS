@@ -1,8 +1,7 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
-import { AudioEffect } from '#audio/AudioEffect';
+import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
 
-/** Construction options for {@link CompressorFilter}. All values are clamped to their valid ranges on assignment. */
-export interface CompressorFilterOptions {
+/** Construction options for {@link CompressorEffect}. All values are clamped to their valid ranges on assignment. */
+export interface CompressorEffectOptions {
   threshold?: number;
   knee?: number;
   ratio?: number;
@@ -16,7 +15,7 @@ export interface CompressorFilterOptions {
  * perceived loudness of a mix. All parameter changes are applied with a short
  * smoothing ramp so they are artifact-free during playback.
  */
-export class CompressorFilter extends AudioEffect {
+export class CompressorEffect extends AudioEffect {
   private _node: DynamicsCompressorNode | null = null;
   private _threshold: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
@@ -28,7 +27,7 @@ export class CompressorFilter extends AudioEffect {
   private _attack: number;
   private _release: number;
 
-  public constructor(options: CompressorFilterOptions = {}) {
+  public constructor(options: CompressorEffectOptions = {}) {
     super();
     this._threshold = Math.max(-100, Math.min(0, options.threshold ?? -24));
     this._knee = Math.max(0, Math.min(40, options.knee ?? 30));
@@ -43,12 +42,12 @@ export class CompressorFilter extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._node) throw new Error('CompressorFilter not yet initialized.');
+    if (!this._node) throw new Error('CompressorEffect not yet initialized.');
     return this._node;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._node) throw new Error('CompressorFilter not yet initialized.');
+    if (!this._node) throw new Error('CompressorEffect not yet initialized.');
     return this._node;
   }
 

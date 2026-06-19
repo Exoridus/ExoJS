@@ -1,8 +1,6 @@
-import { buildMelFilterbank, type MelBand } from '#audio/dsp/mel';
+import { getAudioContext, isAudioContextReady, onAudioContextReady, type AudioBus, type Voice } from '@codexo/exojs';
 
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
-import type { AudioBus } from './AudioBus';
-import type { Voice } from './Playable';
+import { buildMelFilterbank, type MelBand } from './dsp/mel';
 
 export type AudioAnalyserSource = AudioBus | Voice | MediaStream | AudioNode | null;
 

@@ -12,6 +12,7 @@ const targets = [
   { dir: resolve(root, 'packages/exojs-particles'), name: '@codexo/exojs-particles', isExtension: true },
   { dir: resolve(root, 'packages/exojs-tiled'), name: '@codexo/exojs-tiled', isExtension: true },
   { dir: resolve(root, 'packages/exojs-physics'), name: '@codexo/exojs-physics', isExtension: true, hasRegister: false },
+  { dir: resolve(root, 'packages/exojs-audio-fx'), name: '@codexo/exojs-audio-fx', isExtension: true, hasRegister: false },
 ];
 
 let failed = 0;

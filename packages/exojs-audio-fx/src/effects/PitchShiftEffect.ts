@@ -1,7 +1,8 @@
-import { WorkletEffect } from '#audio/WorkletEffect';
-import { pitchShiftWorkletSource } from '#audio/worklets/pitch-shift.worklet';
+import { WorkletEffect } from '@codexo/exojs';
 
-export interface PitchShiftFilterOptions {
+import { pitchShiftWorkletSource } from '../worklets/pitch-shift.worklet';
+
+export interface PitchShiftEffectOptions {
   /** Pitch ratio. 1.0 = no change, 0.5 = octave down, 2.0 = octave up. Default 1.0. */
   pitch?: number;
   /** Dry/wet mix, 0..1. Default 1.0 (full wet). */
@@ -29,12 +30,12 @@ export interface PitchShiftFilterOptions {
  *   - Voice effects: chipmunk (1.5x) or demon (0.7x) for game NPCs
  *   - Detune layering: stack 0.99x and 1.01x for thick chorused sound
  */
-export class PitchShiftFilter extends WorkletEffect {
+export class PitchShiftEffect extends WorkletEffect {
   private _pitch: number;
   private _wet: number;
   private readonly _grainSize: number;
 
-  public constructor(options: PitchShiftFilterOptions = {}) {
+  public constructor(options: PitchShiftEffectOptions = {}) {
     super();
     this._pitch = Math.max(0.25, Math.min(4, options.pitch ?? 1));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));

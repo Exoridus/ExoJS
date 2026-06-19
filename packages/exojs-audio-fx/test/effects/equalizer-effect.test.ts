@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { EqualizerFilter } from '#audio/filters/EqualizerFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { EqualizerEffect } from '../../src/effects/EqualizerEffect';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),
@@ -17,19 +17,19 @@ const makeBiquadFilterNode = (ctx: AudioContext, filterType: BiquadFilterType) =
   gain: makeAudioParam(0),
 });
 
-describe('EqualizerFilter', () => {
+describe('EqualizerEffect', () => {
   describe('construction', () => {
     it('creates three BiquadFilterNodes', () => {
       const ctx = getAudioContext();
       const spy = vi.spyOn(ctx, 'createBiquadFilter');
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       expect(spy).toHaveBeenCalledTimes(3);
       filter.destroy();
       spy.mockRestore();
     });
 
     it('uses default low/mid/high gain of 0', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       expect(filter.low).toBe(0);
       expect(filter.mid).toBe(0);
       expect(filter.high).toBe(0);
@@ -37,7 +37,7 @@ describe('EqualizerFilter', () => {
     });
 
     it('accepts custom gain options', () => {
-      const filter = new EqualizerFilter({ low: 3, mid: -2, high: 5 });
+      const filter = new EqualizerEffect({ low: 3, mid: -2, high: 5 });
       expect(filter.low).toBe(3);
       expect(filter.mid).toBe(-2);
       expect(filter.high).toBe(5);
@@ -55,7 +55,7 @@ describe('EqualizerFilter', () => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       expect(lowShelf.type).toBe('lowshelf');
       expect(peaking.type).toBe('peaking');
       expect(highShelf.type).toBe('highshelf');
@@ -76,7 +76,7 @@ describe('EqualizerFilter', () => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       expect(lowShelf.connect).toHaveBeenCalledWith(peaking);
       expect(peaking.connect).toHaveBeenCalledWith(highShelf);
       filter.destroy();
@@ -94,7 +94,7 @@ describe('EqualizerFilter', () => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       expect(filter.inputNode).toBe(lowShelf);
       filter.destroy();
       spy.mockRestore();
@@ -111,7 +111,7 @@ describe('EqualizerFilter', () => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       expect(filter.outputNode).toBe(highShelf);
       filter.destroy();
       spy.mockRestore();
@@ -142,28 +142,28 @@ describe('EqualizerFilter', () => {
     });
 
     it('low setter updates lowShelf gain', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.low = 6;
       expect(lowShelf.gain.setTargetAtTime).toHaveBeenCalledWith(6, 0, 0.01);
       filter.destroy();
     });
 
     it('mid setter updates peaking gain', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.mid = -3;
       expect(peaking.gain.setTargetAtTime).toHaveBeenCalledWith(-3, 0, 0.01);
       filter.destroy();
     });
 
     it('high setter updates highShelf gain', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.high = 4;
       expect(highShelf.gain.setTargetAtTime).toHaveBeenCalledWith(4, 0, 0.01);
       filter.destroy();
     });
 
     it('low setter clamps to -40..40 dB', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.low = 50;
       expect(filter.low).toBe(40);
       filter.low = -50;
@@ -172,14 +172,14 @@ describe('EqualizerFilter', () => {
     });
 
     it('mid setter clamps to -40..40 dB', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.mid = 100;
       expect(filter.mid).toBe(40);
       filter.destroy();
     });
 
     it('high setter clamps to -40..40 dB', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.high = -100;
       expect(filter.high).toBe(-40);
       filter.destroy();
@@ -198,7 +198,7 @@ describe('EqualizerFilter', () => {
         return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
       });
 
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.destroy();
       expect(lowShelf.disconnect).toHaveBeenCalled();
       expect(peaking.disconnect).toHaveBeenCalled();
@@ -207,9 +207,9 @@ describe('EqualizerFilter', () => {
     });
 
     it('throws after destroy', () => {
-      const filter = new EqualizerFilter();
+      const filter = new EqualizerEffect();
       filter.destroy();
-      expect(() => filter.inputNode).toThrow('EqualizerFilter not yet initialized.');
+      expect(() => filter.inputNode).toThrow('EqualizerEffect not yet initialized.');
     });
   });
 });

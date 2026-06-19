@@ -1,6 +1,6 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { AudioBus } from '#audio/AudioBus';
-import { DuckingFilter } from '#audio/filters/DuckingFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { AudioBus } from '@codexo/exojs';
+import { DuckingEffect } from '../../src/effects/DuckingEffect';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -12,7 +12,7 @@ const makeSidechain = (): AudioBus => new AudioBus('sidechain-test');
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('DuckingFilter', () => {
+describe('DuckingEffect', () => {
   let sidechain: AudioBus;
   let addModuleMock: MockInstance;
 
@@ -33,35 +33,35 @@ describe('DuckingFilter', () => {
   describe('construction', () => {
     it('throws if no sidechain provided', () => {
       // @ts-expect-error intentional: testing runtime guard
-      expect(() => new DuckingFilter({})).toThrow('DuckingFilter requires a sidechain AudioBus.');
+      expect(() => new DuckingEffect({})).toThrow('DuckingEffect requires a sidechain AudioBus.');
     });
 
     it('uses default threshold of -20', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       expect(filter.threshold).toBe(-20);
       filter.destroy();
     });
 
     it('uses default ratio of 4', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       expect(filter.ratio).toBe(4);
       filter.destroy();
     });
 
     it('uses default attackMs of 30', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       expect(filter.attackMs).toBe(30);
       filter.destroy();
     });
 
     it('uses default releaseMs of 300', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       expect(filter.releaseMs).toBe(300);
       filter.destroy();
     });
 
     it('accepts custom options', () => {
-      const filter = new DuckingFilter({
+      const filter = new DuckingEffect({
         sidechain,
         threshold: -10,
         ratio: 8,
@@ -76,7 +76,7 @@ describe('DuckingFilter', () => {
     });
 
     it('creates input and output gain nodes on construction', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       expect(filter.inputNode).toBeDefined();
       expect(filter.outputNode).toBeDefined();
       filter.destroy();
@@ -85,7 +85,7 @@ describe('DuckingFilter', () => {
 
   describe('worklet lifecycle', () => {
     it('after await filter.ready: workletNode is an AudioWorkletNode', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       expect(filter['_workletNode']).not.toBeNull();
       filter.destroy();
@@ -99,14 +99,14 @@ describe('DuckingFilter', () => {
         return new OrigAWN(c, name, options);
       });
 
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       expect(capturedOptions?.numberOfInputs).toBe(2);
       filter.destroy();
     });
 
     it('worklet parameters are set on ready: threshold and ratio', async () => {
-      const filter = new DuckingFilter({ sidechain, threshold: -15, ratio: 6 });
+      const filter = new DuckingEffect({ sidechain, threshold: -15, ratio: 6 });
       await filter.ready;
       const node = filter['_workletNode']!;
       const thresholdParam = node.parameters.get('threshold') as unknown as { setTargetAtTime: MockInstance };
@@ -117,7 +117,7 @@ describe('DuckingFilter', () => {
     });
 
     it('worklet parameters are set on ready: attack and release coefficients', async () => {
-      const filter = new DuckingFilter({ sidechain, attackMs: 30, releaseMs: 300 });
+      const filter = new DuckingEffect({ sidechain, attackMs: 30, releaseMs: 300 });
       await filter.ready;
       const node = filter['_workletNode']!;
       const attackParam = node.parameters.get('attack') as unknown as { setTargetAtTime: MockInstance };
@@ -139,7 +139,7 @@ describe('DuckingFilter', () => {
       const sidechainOutputNode = sidechain._getOutputNode();
       if (sidechainOutputNode) {
         const connectSpy = vi.spyOn(sidechainOutputNode, 'connect');
-        const filter = new DuckingFilter({ sidechain });
+        const filter = new DuckingEffect({ sidechain });
         await filter.ready;
         // Should have been called with (workletNode, 0, 1)
         const callWithInput1 = (connectSpy.mock.calls as unknown as unknown[][]).find(args => args[2] === 1);
@@ -151,7 +151,7 @@ describe('DuckingFilter', () => {
 
   describe('setters after ready', () => {
     it('setting threshold after ready updates worklet param', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('threshold') as unknown as { setTargetAtTime: MockInstance };
@@ -163,7 +163,7 @@ describe('DuckingFilter', () => {
     });
 
     it('setting ratio after ready updates worklet param', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('ratio') as unknown as { setTargetAtTime: MockInstance };
@@ -175,7 +175,7 @@ describe('DuckingFilter', () => {
     });
 
     it('setting attackMs after ready updates worklet attack param', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('attack') as unknown as { setTargetAtTime: MockInstance };
@@ -187,7 +187,7 @@ describe('DuckingFilter', () => {
     });
 
     it('setting releaseMs after ready updates worklet release param', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('release') as unknown as { setTargetAtTime: MockInstance };
@@ -206,7 +206,7 @@ describe('DuckingFilter', () => {
         }),
       );
 
-      const filter = new DuckingFilter({ sidechain, threshold: -20 });
+      const filter = new DuckingEffect({ sidechain, threshold: -20 });
       filter.threshold = -50; // set before ready
 
       resolveModule();
@@ -219,7 +219,7 @@ describe('DuckingFilter', () => {
 
   describe('setters clamping', () => {
     it('threshold is clamped to [-100, 0]', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       filter.threshold = 10;
       expect(filter.threshold).toBe(0);
       filter.threshold = -200;
@@ -228,7 +228,7 @@ describe('DuckingFilter', () => {
     });
 
     it('ratio is clamped to [1, 20]', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       filter.ratio = 0;
       expect(filter.ratio).toBe(1);
       filter.ratio = 100;
@@ -237,14 +237,14 @@ describe('DuckingFilter', () => {
     });
 
     it('attackMs clamps to minimum of 0.001', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       filter.attackMs = 0;
       expect(filter.attackMs).toBe(0.001);
       filter.destroy();
     });
 
     it('releaseMs clamps to minimum of 0.001', () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       filter.releaseMs = -100;
       expect(filter.releaseMs).toBe(0.001);
       filter.destroy();
@@ -253,20 +253,20 @@ describe('DuckingFilter', () => {
 
   describe('destroy', () => {
     it('destroy cleans up nodes without throwing', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       expect(() => filter.destroy()).not.toThrow();
     });
 
     it('after destroy, inputNode throws', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       filter.destroy();
       expect(() => filter.inputNode).toThrow();
     });
 
     it('double destroy is safe', async () => {
-      const filter = new DuckingFilter({ sidechain });
+      const filter = new DuckingEffect({ sidechain });
       await filter.ready;
       filter.destroy();
       expect(() => filter.destroy()).not.toThrow();

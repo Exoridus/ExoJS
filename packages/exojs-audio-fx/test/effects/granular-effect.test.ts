@@ -1,11 +1,11 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { GranularFilter } from '#audio/filters/GranularFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { GranularEffect } from '../../src/effects/GranularEffect';
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('GranularFilter', () => {
+describe('GranularEffect', () => {
   let addModuleMock: MockInstance;
 
   beforeEach(() => {
@@ -25,49 +25,49 @@ describe('GranularFilter', () => {
   // -------------------------------------------------------------------------
   describe('construction with defaults', () => {
     it('uses default grainSize of 0.05', () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       expect(filter.grainSize).toBe(0.05);
       filter.destroy();
     });
 
     it('uses default density of 50', () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       expect(filter.density).toBe(50);
       filter.destroy();
     });
 
     it('uses default spread of 0.5', () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       expect(filter.spread).toBe(0.5);
       filter.destroy();
     });
 
     it('uses default pitchMin of 1.0', () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       expect(filter.pitchMin).toBe(1.0);
       filter.destroy();
     });
 
     it('uses default pitchMax of 1.0', () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       expect(filter.pitchMax).toBe(1.0);
       filter.destroy();
     });
 
     it('uses default wet of 1.0', () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       expect(filter.wet).toBe(1.0);
       filter.destroy();
     });
 
     it('constructs without arguments', () => {
-      expect(() => new GranularFilter()).not.toThrow();
-      const filter = new GranularFilter();
+      expect(() => new GranularEffect()).not.toThrow();
+      const filter = new GranularEffect();
       filter.destroy();
     });
 
     it('creates input and output nodes on construction', () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       expect(filter.inputNode).toBeDefined();
       expect(filter.outputNode).toBeDefined();
       filter.destroy();
@@ -79,7 +79,7 @@ describe('GranularFilter', () => {
   // -------------------------------------------------------------------------
   describe('worklet lifecycle', () => {
     it('after await filter.ready: workletNode is not null', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       expect(filter['_workletNode']).not.toBeNull();
       filter.destroy();
@@ -93,14 +93,14 @@ describe('GranularFilter', () => {
         return new OrigAWN(c, name, options);
       });
 
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       expect(capturedOptions?.numberOfInputs).toBe(1);
       filter.destroy();
     });
 
     it('after await filter.ready: all 6 worklet params are set', async () => {
-      const filter = new GranularFilter({
+      const filter = new GranularEffect({
         grainSize: 0.1,
         density: 30,
         spread: 0.8,
@@ -133,7 +133,7 @@ describe('GranularFilter', () => {
         return new OrigAWN(c, name, options);
       });
 
-      const filter = new GranularFilter({ bufferSeconds: 4 });
+      const filter = new GranularEffect({ bufferSeconds: 4 });
       await filter.ready;
       expect(capturedOptions?.processorOptions?.bufferSeconds).toBe(4);
       filter.destroy();
@@ -147,7 +147,7 @@ describe('GranularFilter', () => {
         return new OrigAWN(c, name, options);
       });
 
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       expect(capturedOptions?.processorOptions?.bufferSeconds).toBe(2);
       filter.destroy();
@@ -159,61 +159,61 @@ describe('GranularFilter', () => {
   // -------------------------------------------------------------------------
   describe('constructor clamping', () => {
     it('clamps grainSize to 0.005 min', () => {
-      const filter = new GranularFilter({ grainSize: 0 });
+      const filter = new GranularEffect({ grainSize: 0 });
       expect(filter.grainSize).toBe(0.005);
       filter.destroy();
     });
 
     it('clamps grainSize to 0.5 max', () => {
-      const filter = new GranularFilter({ grainSize: 99 });
+      const filter = new GranularEffect({ grainSize: 99 });
       expect(filter.grainSize).toBe(0.5);
       filter.destroy();
     });
 
     it('clamps density to 1 min', () => {
-      const filter = new GranularFilter({ density: 0 });
+      const filter = new GranularEffect({ density: 0 });
       expect(filter.density).toBe(1);
       filter.destroy();
     });
 
     it('clamps density to 500 max', () => {
-      const filter = new GranularFilter({ density: 9999 });
+      const filter = new GranularEffect({ density: 9999 });
       expect(filter.density).toBe(500);
       filter.destroy();
     });
 
     it('clamps spread to 0 min', () => {
-      const filter = new GranularFilter({ spread: -1 });
+      const filter = new GranularEffect({ spread: -1 });
       expect(filter.spread).toBe(0);
       filter.destroy();
     });
 
     it('clamps spread to 1 max', () => {
-      const filter = new GranularFilter({ spread: 5 });
+      const filter = new GranularEffect({ spread: 5 });
       expect(filter.spread).toBe(1);
       filter.destroy();
     });
 
     it('clamps pitchMin to 0.25 min', () => {
-      const filter = new GranularFilter({ pitchMin: 0 });
+      const filter = new GranularEffect({ pitchMin: 0 });
       expect(filter.pitchMin).toBe(0.25);
       filter.destroy();
     });
 
     it('clamps pitchMax to 4 max', () => {
-      const filter = new GranularFilter({ pitchMax: 100 });
+      const filter = new GranularEffect({ pitchMax: 100 });
       expect(filter.pitchMax).toBe(4);
       filter.destroy();
     });
 
     it('clamps wet to 0 min', () => {
-      const filter = new GranularFilter({ wet: -1 });
+      const filter = new GranularEffect({ wet: -1 });
       expect(filter.wet).toBe(0);
       filter.destroy();
     });
 
     it('clamps wet to 1 max', () => {
-      const filter = new GranularFilter({ wet: 2 });
+      const filter = new GranularEffect({ wet: 2 });
       expect(filter.wet).toBe(1);
       filter.destroy();
     });
@@ -224,7 +224,7 @@ describe('GranularFilter', () => {
   // -------------------------------------------------------------------------
   describe('setters after ready', () => {
     it('setting grainSize updates worklet param', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('grainSize') as unknown as { setTargetAtTime: MockInstance };
@@ -236,7 +236,7 @@ describe('GranularFilter', () => {
     });
 
     it('setting density updates worklet param', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('density') as unknown as { setTargetAtTime: MockInstance };
@@ -248,7 +248,7 @@ describe('GranularFilter', () => {
     });
 
     it('setting spread updates worklet param', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('spread') as unknown as { setTargetAtTime: MockInstance };
@@ -260,7 +260,7 @@ describe('GranularFilter', () => {
     });
 
     it('setting pitchMin updates worklet param', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('pitchMin') as unknown as { setTargetAtTime: MockInstance };
@@ -272,7 +272,7 @@ describe('GranularFilter', () => {
     });
 
     it('setting pitchMax updates worklet param', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('pitchMax') as unknown as { setTargetAtTime: MockInstance };
@@ -284,7 +284,7 @@ describe('GranularFilter', () => {
     });
 
     it('setting wet updates worklet param', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       const node = filter['_workletNode']!;
       const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
@@ -296,7 +296,7 @@ describe('GranularFilter', () => {
     });
 
     it('grainSize setter clamps to 0.005 min', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       filter.grainSize = -1;
       expect(filter.grainSize).toBe(0.005);
@@ -304,7 +304,7 @@ describe('GranularFilter', () => {
     });
 
     it('density setter clamps to 500 max', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       filter.density = 99999;
       expect(filter.density).toBe(500);
@@ -312,7 +312,7 @@ describe('GranularFilter', () => {
     });
 
     it('spread setter clamps to 0 min', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       filter.spread = -5;
       expect(filter.spread).toBe(0);
@@ -320,7 +320,7 @@ describe('GranularFilter', () => {
     });
 
     it('spread setter clamps to 1 max', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       filter.spread = 10;
       expect(filter.spread).toBe(1);
@@ -333,20 +333,20 @@ describe('GranularFilter', () => {
   // -------------------------------------------------------------------------
   describe('destroy', () => {
     it('destroy cleans up without throwing', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       expect(() => filter.destroy()).not.toThrow();
     });
 
     it('after destroy, inputNode throws', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       filter.destroy();
       expect(() => filter.inputNode).toThrow();
     });
 
     it('double destroy is safe', async () => {
-      const filter = new GranularFilter();
+      const filter = new GranularEffect();
       await filter.ready;
       filter.destroy();
       expect(() => filter.destroy()).not.toThrow();

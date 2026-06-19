@@ -1,5 +1,4 @@
 import { getAudioContext } from '#audio/audio-context';
-import { AudioAnalyser } from '#audio/AudioAnalyser';
 import { AudioInput } from '#audio/AudioInput';
 import { AudioManager } from '#audio/AudioManager';
 import type { InputVoice } from '#audio/InputVoice';
@@ -89,18 +88,17 @@ describe('AudioInput / InputVoice', () => {
     voice.stop();
   });
 
-  test('analyse() taps the voice into an AudioAnalyser', async () => {
+  test('exposes an output node to tap for analysis', async () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
     const manager = new AudioManager();
     const voice = manager.open(input);
 
-    const analyser = new AudioAnalyser();
-    voice.analyse(analyser);
-    expect(analyser.source).toBe(voice);
+    // The output node is the analysis tap (e.g. new AudioAnalyser({ source: voice })).
+    expect(voice.output).toBeDefined();
+    expect(typeof (voice.output as unknown as { connect: unknown }).connect).toBe('function');
 
-    analyser.destroy();
     voice.stop();
   });
 

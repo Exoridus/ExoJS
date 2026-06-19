@@ -1,7 +1,7 @@
-﻿import { getAudioContext, isAudioContextReady } from '#audio/audio-context';
-import { AudioAnalyser } from '#audio/AudioAnalyser';
-import { AudioBus } from '#audio/AudioBus';
-import type { Voice } from '#audio/Playable';
+﻿import { getAudioContext, isAudioContextReady } from '@codexo/exojs';
+import { AudioAnalyser } from '../src/AudioAnalyser';
+import { AudioBus } from '@codexo/exojs';
+import type { Voice } from '@codexo/exojs';
 
 // ---------------------------------------------------------------------------
 // Helpers

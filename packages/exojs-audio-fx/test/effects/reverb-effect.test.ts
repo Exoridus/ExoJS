@@ -1,5 +1,5 @@
-﻿import { getAudioContext } from '#audio/audio-context';
-import { ReverbFilter } from '#audio/filters/ReverbFilter';
+﻿import { getAudioContext } from '@codexo/exojs';
+import { ReverbEffect } from '../../src/effects/ReverbEffect';
 
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),
@@ -22,28 +22,28 @@ const makeConvolverNode = () => ({
   context: null as AudioContext | null,
 });
 
-describe('ReverbFilter', () => {
+describe('ReverbEffect', () => {
   describe('construction', () => {
     it('uses default durationSeconds of 2', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       expect(filter.durationSeconds).toBe(2);
       filter.destroy();
     });
 
     it('uses default decay of 2', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       expect(filter.decay).toBe(2);
       filter.destroy();
     });
 
     it('uses default wet of 0.4', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       expect(filter.wet).toBe(0.4);
       filter.destroy();
     });
 
     it('accepts custom options', () => {
-      const filter = new ReverbFilter({ durationSeconds: 3, decay: 5, wet: 0.6 });
+      const filter = new ReverbEffect({ durationSeconds: 3, decay: 5, wet: 0.6 });
       expect(filter.durationSeconds).toBe(3);
       expect(filter.decay).toBe(5);
       expect(filter.wet).toBe(0.6);
@@ -55,7 +55,7 @@ describe('ReverbFilter', () => {
     it('generates an impulse response buffer on construction', () => {
       const ctx = getAudioContext();
       const bufferSpy = vi.spyOn(ctx, 'createBuffer');
-      const filter = new ReverbFilter({ durationSeconds: 1 });
+      const filter = new ReverbEffect({ durationSeconds: 1 });
       // Should have been called with 2 channels, correct length, correct sample rate
       expect(bufferSpy).toHaveBeenCalledWith(2, ctx.sampleRate * 1, ctx.sampleRate);
       filter.destroy();
@@ -75,7 +75,7 @@ describe('ReverbFilter', () => {
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
-      const filter = new ReverbFilter({ durationSeconds: 2 });
+      const filter = new ReverbEffect({ durationSeconds: 2 });
       expect(bufferSpy).toHaveBeenCalledWith(2, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
 
       filter.destroy();
@@ -97,7 +97,7 @@ describe('ReverbFilter', () => {
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
-      const filter = new ReverbFilter({ durationSeconds: 1 });
+      const filter = new ReverbEffect({ durationSeconds: 1 });
       const callsAfterConstruction = bufferSpy.mock.calls.length;
 
       filter.durationSeconds = 3;
@@ -125,7 +125,7 @@ describe('ReverbFilter', () => {
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       const callsAfterConstruction = bufferSpy.mock.calls.length;
 
       filter.decay = 5;
@@ -140,14 +140,14 @@ describe('ReverbFilter', () => {
 
   describe('durationSeconds setter', () => {
     it('clamps to 0.1 minimum', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       filter.durationSeconds = 0;
       expect(filter.durationSeconds).toBe(0.1);
       filter.destroy();
     });
 
     it('clamps to 5 maximum', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       filter.durationSeconds = 10;
       expect(filter.durationSeconds).toBe(5);
       filter.destroy();
@@ -156,14 +156,14 @@ describe('ReverbFilter', () => {
 
   describe('decay setter', () => {
     it('clamps to 0.5 minimum', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       filter.decay = 0;
       expect(filter.decay).toBe(0.5);
       filter.destroy();
     });
 
     it('clamps to 10 maximum', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       filter.decay = 20;
       expect(filter.decay).toBe(10);
       filter.destroy();
@@ -172,15 +172,15 @@ describe('ReverbFilter', () => {
 
   describe('inputNode / outputNode', () => {
     it('inputNode and outputNode are different nodes (dry+wet merge)', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       expect(filter.inputNode).not.toBe(filter.outputNode);
       filter.destroy();
     });
 
     it('throws after destroy', () => {
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       filter.destroy();
-      expect(() => filter.inputNode).toThrow('ReverbFilter not yet initialized.');
+      expect(() => filter.inputNode).toThrow('ReverbEffect not yet initialized.');
     });
   });
 
@@ -195,7 +195,7 @@ describe('ReverbFilter', () => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
-      const filter = new ReverbFilter();
+      const filter = new ReverbEffect();
       filter.destroy();
       expect(convolver.disconnect).toHaveBeenCalled();
       for (const gain of gains) {

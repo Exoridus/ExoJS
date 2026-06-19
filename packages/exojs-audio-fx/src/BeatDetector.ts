@@ -1,10 +1,6 @@
-import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
-import { beatDetectorWorkletSource } from '#audio/worklets/beat-detector.worklet';
-import { Signal } from '#core/Signal';
+import { getAudioContext, isAudioContextReady, onAudioContextReady, registerAudioWorkletProcessor, Signal, type AudioBus, type Voice } from '@codexo/exojs';
 
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
-import type { AudioBus } from './AudioBus';
-import type { Voice } from './Playable';
+import { beatDetectorWorkletSource } from './worklets/beat-detector.worklet';
 
 // ---------------------------------------------------------------------------
 // Public types
