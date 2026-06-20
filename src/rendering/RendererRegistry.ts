@@ -1,6 +1,15 @@
+import { Registry } from '#core/Registry';
+
 import type { Drawable } from './Drawable';
 import type { RenderBackend } from './RenderBackend';
 import type { DrawableConstructor, Renderer } from './Renderer';
+
+/** Climbs one step up the prototype chain, returning the parent constructor. */
+const parentConstructor = (type: DrawableConstructor): DrawableConstructor | null => {
+  const prototype = Object.getPrototypeOf(type.prototype) as { constructor?: DrawableConstructor } | null;
+
+  return prototype?.constructor ?? null;
+};
 
 /**
  * Instance-based renderer registry.
@@ -17,7 +26,16 @@ import type { DrawableConstructor, Renderer } from './Renderer';
  * @advanced
  */
 export class RendererRegistry<Runtime extends RenderBackend> {
-  private readonly _renderers = new Map<DrawableConstructor, Renderer<Runtime>>();
+  private readonly _renderers = new Registry<DrawableConstructor, Renderer<Runtime>>({
+    walk: parentConstructor,
+    dispose: renderer => {
+      renderer.disconnect();
+
+      if ('destroy' in renderer && typeof renderer.destroy === 'function') {
+        (renderer as Renderer<Runtime> & { destroy(): void }).destroy();
+      }
+    },
+  });
   private readonly _resolved = new Map<DrawableConstructor, Renderer<Runtime>>();
   private _backend: Runtime | null = null;
 
@@ -31,7 +49,7 @@ export class RendererRegistry<Runtime extends RenderBackend> {
    * @throws Error if a renderer is already registered for this drawable type.
    */
   public registerRenderer<Target extends Drawable>(drawableType: DrawableConstructor<Target>, renderer: Renderer<Runtime, Target>): void {
-    if (this._renderers.has(drawableType)) {
+    if (this._renderers.hasOwn(drawableType)) {
       throw new Error(`A renderer is already registered for ${drawableType.name}.`);
     }
 
@@ -69,7 +87,7 @@ export class RendererRegistry<Runtime extends RenderBackend> {
 
     // Validate: no target already registered — throw before any mutation
     for (const target of targets) {
-      if (this._renderers.has(target)) {
+      if (this._renderers.hasOwn(target)) {
         throw new Error(`A renderer is already registered for ${target.name}.`);
       }
     }
@@ -112,18 +130,7 @@ export class RendererRegistry<Runtime extends RenderBackend> {
       return cached;
     }
 
-    let constructor: DrawableConstructor | null = ctor;
-    let renderer: Renderer<Runtime> | undefined;
-
-    while (constructor !== null && !renderer) {
-      renderer = this._renderers.get(constructor);
-
-      if (!renderer) {
-        const prototype = Object.getPrototypeOf(constructor.prototype) as { constructor?: DrawableConstructor } | null;
-
-        constructor = prototype?.constructor ?? null;
-      }
-    }
+    const renderer = this._renderers.resolve(ctor);
 
     if (!renderer) {
       throw new Error(
@@ -166,20 +173,7 @@ export class RendererRegistry<Runtime extends RenderBackend> {
    * instance is disconnected and destroyed exactly once.
    */
   public destroy(): void {
-    const seen = new Set<Renderer<Runtime>>();
-
-    for (const renderer of this._renderers.values()) {
-      if (!seen.has(renderer)) {
-        seen.add(renderer);
-        renderer.disconnect();
-
-        if ('destroy' in renderer && typeof renderer.destroy === 'function') {
-          (renderer as Renderer<Runtime> & { destroy(): void }).destroy();
-        }
-      }
-    }
-
-    this._renderers.clear();
+    this._renderers.destroy();
     this._resolved.clear();
     this._backend = null;
   }
