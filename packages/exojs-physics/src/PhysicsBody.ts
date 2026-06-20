@@ -13,11 +13,11 @@ export interface BodyOptions {
   position?: VectorLike;
   /** Initial rotation in radians. Default `0`. */
   angle?: number;
-  /** Linear damping applied by the dynamics spike each sub-step. Default `0`. */
+  /** Linear damping applied to the velocity each sub-step. Default `0`. */
   linearDamping?: number;
-  /** Angular damping applied by the dynamics spike each sub-step. Default `0`. */
+  /** Angular damping applied to the angular velocity each sub-step. Default `0`. */
   angularDamping?: number;
-  /** Per-body multiplier on world gravity, applied by the dynamics spike each sub-step. Default `1`. */
+  /** Per-body multiplier on world gravity (e.g. `0` to ignore gravity). Default `1`. */
   gravityScale?: number;
   /** When `true`, the body never rotates under contacts (infinite rotational inertia). Default `false`. */
   fixedRotation?: boolean;
@@ -34,21 +34,22 @@ export interface BodyOwner {
 
 /**
  * A rigid body: a world transform plus mass properties aggregated from its
- * colliders. A **provisional** dynamics spike (Phase 2A) now integrates dynamic
- * bodies under gravity, accumulated forces/torque and contact impulses; static
- * bodies stay fixed and kinematic bodies move by their velocity only. The
- * velocity/force surface is `@internal` until the solver clears the SGATE and is
- * promoted to stable public API in Phase 2B.
+ * colliders. Dynamic bodies integrate under gravity, accumulated forces/torque
+ * and contact impulses each fixed sub-step; static bodies never move; kinematic
+ * bodies move by their velocity only and stay immovable under contacts. Drive a
+ * body with {@link applyForce}, {@link applyTorque} and {@link applyImpulse}, or
+ * set {@link linearVelocityX}/{@link linearVelocityY}/{@link angularVelocity}
+ * directly; reposition it (teleport, no velocity) with {@link setTransform}.
  */
 export class PhysicsBody {
   public readonly id: number;
   public readonly type: BodyType;
 
-  /** Linear damping applied each sub-step by the dynamics spike. */
+  /** Linear damping applied to the velocity each sub-step. */
   public linearDamping: number;
-  /** Angular damping applied each sub-step by the dynamics spike. */
+  /** Angular damping applied to the angular velocity each sub-step. */
   public angularDamping: number;
-  /** Per-body multiplier on world gravity, applied each sub-step by the dynamics spike. */
+  /** Per-body multiplier on world gravity (e.g. `0` to ignore gravity). */
   public gravityScale: number;
   /** When `true`, rotational inertia is treated as infinite. */
   public fixedRotation: boolean;
@@ -62,11 +63,11 @@ export class PhysicsBody {
   /** Inverse rotational inertia (`0` = no angular response). */
   public invInertia = 0;
 
-  /** @internal — Linear velocity X in px/s. Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE). */
+  /** Linear velocity X in px/s. */
   public linearVelocityX = 0;
-  /** @internal — Linear velocity Y in px/s. Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE). */
+  /** Linear velocity Y in px/s. */
   public linearVelocityY = 0;
-  /** @internal — Angular velocity in rad/s. Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE). */
+  /** Angular velocity in rad/s. */
   public angularVelocity = 0;
 
   /** @internal — Transient position correction X accumulated by the NGS position solver and applied to the transform each sub-step. */
@@ -203,17 +204,20 @@ export class PhysicsBody {
     }
   }
 
-  /** @internal — World-space centre of mass X (body origin + rotated local CoM). Provisional spike surface; promoted at Phase 2B. */
+  /** World-space centre of mass X (body origin + rotated local centre of mass). */
   public get worldCenterOfMassX(): number {
     return this._transform.x + this._transform.cos * this._comX - this._transform.sin * this._comY;
   }
 
-  /** @internal — World-space centre of mass Y. Provisional spike surface; promoted at Phase 2B. */
+  /** World-space centre of mass Y. */
   public get worldCenterOfMassY(): number {
     return this._transform.y + this._transform.sin * this._comX + this._transform.cos * this._comY;
   }
 
-  /** @internal — Accumulate a world-space force at the centre of mass (applied on the next sub-step). Provisional spike surface; promoted at Phase 2B. Returns `this`. */
+  /**
+   * Accumulate a world-space force at the centre of mass; integrated on the next
+   * sub-step and then cleared. No-op on static/kinematic bodies. Returns `this`.
+   */
   public applyForce(forceX: number, forceY: number): this {
     this._forceX += forceX;
     this._forceY += forceY;
@@ -221,7 +225,10 @@ export class PhysicsBody {
     return this;
   }
 
-  /** @internal — Accumulate a torque (applied on the next sub-step). Provisional spike surface; promoted at Phase 2B. Returns `this`. */
+  /**
+   * Accumulate a torque; integrated on the next sub-step and then cleared. No-op
+   * on static/kinematic bodies (and fixed-rotation bodies). Returns `this`.
+   */
   public applyTorque(torque: number): this {
     this._torque += torque;
 
@@ -232,8 +239,6 @@ export class PhysicsBody {
    * Apply an instantaneous world-space impulse at `(pointX, pointY)` (world space;
    * defaults to the centre of mass), changing velocity immediately. No-op on
    * static/kinematic bodies (infinite mass). Returns `this`.
-   *
-   * @internal — Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE).
    */
   public applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this {
     if (this.invMass === 0) {
