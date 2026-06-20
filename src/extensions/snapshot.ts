@@ -1,10 +1,11 @@
-import type { AssetBinding, Extension, RendererBinding } from './Extension';
+import type { AssetBinding, Extension, RendererBinding, SerializerBinding } from './Extension';
 
 // @internal
 export interface ExtensionSnapshot {
   readonly extensions: ReadonlyArray<Readonly<Extension>>;
   readonly renderers: readonly RendererBinding[];
   readonly assets: readonly AssetBinding[];
+  readonly serializers: readonly SerializerBinding[];
 }
 
 // Shared empty singleton — zero allocation for extensions: [] selection.
@@ -12,6 +13,7 @@ const emptySnapshot: ExtensionSnapshot = Object.freeze({
   extensions: Object.freeze([]),
   renderers: Object.freeze([]),
   assets: Object.freeze([]),
+  serializers: Object.freeze([]),
 });
 
 export { emptySnapshot as EMPTY_SNAPSHOT };
@@ -57,6 +59,14 @@ export function freezeExtension(ext: Extension): void {
       if (binding.typeNames) {
         Object.freeze(binding.typeNames);
       }
+    }
+  }
+
+  if (ext.serializers) {
+    Object.freeze(ext.serializers);
+
+    for (const binding of ext.serializers) {
+      Object.freeze(binding);
     }
   }
 }
@@ -127,6 +137,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
   // Flatten in topological (post-order) order — deps before dependents.
   const renderers: RendererBinding[] = [];
   const assets: AssetBinding[] = [];
+  const serializers: SerializerBinding[] = [];
 
   for (const ext of ordered) {
     if (ext.renderers) {
@@ -140,11 +151,18 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
         assets.push(binding);
       }
     }
+
+    if (ext.serializers) {
+      for (const binding of ext.serializers) {
+        serializers.push(binding);
+      }
+    }
   }
 
   return Object.freeze({
     extensions: Object.freeze(ordered),
     renderers: Object.freeze(renderers),
     assets: Object.freeze(assets),
+    serializers: Object.freeze(serializers),
   });
 }

@@ -5,7 +5,7 @@ symbol: "Mesh"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 89
+memberCount: 90
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/mesh/Mesh.ts"
@@ -98,6 +98,7 @@ after in-place mutation is the caller's responsibility (call
 - `geometry: Geometry | null`
 - `indices: Uint16Array<ArrayBufferLike> | null`
 - `material: MeshMaterial | null`
+- `name: string | null`
 - `preserveDrawOrder: boolean`
 - `tabIndex: number`
 - `uvs: Float32Array<ArrayBufferLike> | null`
@@ -119,7 +120,7 @@ after in-place mutation is the caller's responsibility (call
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
-- `texture: RenderTexture | Texture | null`
+- `texture: Texture | RenderTexture | null`
 - `tint: Color`
 - `vertexCount: number`
 - `visible: boolean`

@@ -1,0 +1,38 @@
+---
+title: "SerializationRegistry"
+description: "Bidirectional name ↔ constructor ↔ NodeSerializer registry backing the scene serializer. Serialize resolves a node to its serializer by walking the constructor's prototype chain (so a subclass without its own registration inherits the nearest registered base serializer); deserialize resolves by type name. Core registers the built-in node types; extensions contribute their own via the Extension.serializers binding."
+symbol: "SerializationRegistry"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 3
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Source"]
+sourcePath: "src/core/serialization/SerializationRegistry.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/SerializationRegistry.ts#L44"
+---
+## Import
+
+`import { SerializationRegistry } from '@codexo/exojs'`
+
+Bidirectional name ↔ constructor ↔ NodeSerializer registry backing
+the scene serializer.
+
+Serialize resolves a node to its serializer by walking the constructor's
+prototype chain (so a subclass without its own registration inherits the
+nearest registered base serializer); deserialize resolves by type name.
+Core registers the built-in node types; extensions contribute their own via
+the Extension.serializers binding.
+
+## Constructors
+
+- `new(): SerializationRegistry`
+
+## Methods
+
+- `hasType(typeName: string): boolean`
+- `register(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>): void`
+
+## Source
+
+[src/core/serialization/SerializationRegistry.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/SerializationRegistry.ts#L44)

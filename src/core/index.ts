@@ -9,6 +9,7 @@ export * from './Perf';
 export * from './Scene';
 export * from './SceneManager';
 export * from './SceneNode';
+export * from './serialization';
 export * from './Signal';
 export * from './System';
 export * from './SystemRegistry';

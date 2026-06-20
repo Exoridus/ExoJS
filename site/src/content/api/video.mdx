@@ -5,7 +5,7 @@ symbol: "Video"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 113
+memberCount: 114
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/video/Video.ts"
@@ -66,7 +66,7 @@ node and can be directed to any AudioBus.
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `setTexture(texture: RenderTexture | Texture | null): this`
+- `setTexture(texture: Texture | RenderTexture | null): this`
 - `setTextureFrame(frame: Rectangle, resetSize: boolean): this`
 - `setTime(time: number): this`
 - `setTint(color: Color): this`
@@ -88,6 +88,7 @@ node and can be directed to any AudioBus.
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
 - `focusable: boolean`
+- `name: string | null`
 - `preserveDrawOrder: boolean`
 - `tabIndex: number`
 - `analyserTarget: AudioNode | null`
@@ -119,7 +120,7 @@ node and can be directed to any AudioBus.
 - `skewX: number`
 - `skewY: number`
 - `texCoords: Uint32Array`
-- `texture: RenderTexture | Texture | null`
+- `texture: Texture | RenderTexture | null`
 - `textureFrame: Rectangle`
 - `tint: Color`
 - `vertices: Float32Array`

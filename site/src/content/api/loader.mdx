@@ -5,7 +5,7 @@ symbol: "Loader"
 kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
-memberCount: 27
+memberCount: 28
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/resources/Loader.ts"
@@ -52,6 +52,7 @@ subsequent `load` or get calls without re-fetching.
 - `hasBundle(name: string): boolean`
 - `hasExtension(ext: string): boolean`
 - `hasLoadable(type: AssetConstructor): boolean`
+- `keyFor(resource: object): object | null`
 - `load(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>`
 - `load(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>`
 - `load(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>`

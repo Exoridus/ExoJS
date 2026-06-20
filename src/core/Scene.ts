@@ -8,6 +8,8 @@ import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
 import { DisposalScope } from './DisposalScope';
+import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
+import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
 import { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 import type { Destroyable } from './types';
@@ -252,6 +254,36 @@ export class Scene {
 
   public removeChild(child: RenderNode): this {
     this._root.removeChild(child);
+
+    return this;
+  }
+
+  /**
+   * Serialize this scene's structural root subtree to a plain, JSON-able
+   * {@link SerializedScene} descriptor.
+   *
+   * Captures **data, not behaviour**: structure, transforms, visuals and asset
+   * references — never update logic, signal handlers, tweens or systems. When
+   * the scene is attached to an {@link Application}, texture/asset references
+   * resolve to their {@link Loader} source keys. Reattach behaviour in code
+   * after {@link Scene.deserialize}.
+   */
+  public serialize(): SerializedScene {
+    return { version: SERIALIZATION_VERSION, root: serializeTree(this._root, this._app?.loader ?? null) };
+  }
+
+  /**
+   * Rebuild this scene's root subtree from a {@link SerializedScene} produced
+   * by {@link Scene.serialize}. Existing root children are removed first, then
+   * the descriptor's children are reconstructed under {@link Scene.root}.
+   *
+   * Assets referenced by the data must already be loaded into the
+   * application's {@link Loader} (pre-load contract). Older documents are
+   * migrated to the current format; documents newer than the running engine
+   * throw. Returns `this`.
+   */
+  public deserialize(data: SerializedScene): this {
+    deserializeInto(this._root, migrate(data).root, this._app?.loader ?? null);
 
     return this;
   }

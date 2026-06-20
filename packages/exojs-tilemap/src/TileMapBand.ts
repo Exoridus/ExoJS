@@ -35,7 +35,13 @@ import type { TileLayerNode } from './TileLayerNode';
  * @advanced
  */
 export class TileMapBand extends Container {
-  private readonly _name: string;
+  /**
+   * The band name (unique within its owning {@link TileMapView}). Narrows the
+   * inherited {@link SceneNode.name} from `string | null` to a required string;
+   * assigned once at construction.
+   */
+  public override name = '';
+
   private readonly _layerNodes: TileLayerNode[];
   private _destroyed = false;
 
@@ -48,17 +54,12 @@ export class TileMapBand extends Container {
   public constructor(name: string, layerNodes: readonly TileLayerNode[]) {
     super();
 
-    this._name = name;
+    this.name = name;
     this._layerNodes = [...layerNodes];
 
     for (const node of this._layerNodes) {
       this.addChild(node);
     }
-  }
-
-  /** The band name (unique within its owning {@link TileMapView}). */
-  public get name(): string {
-    return this._name;
   }
 
   /**

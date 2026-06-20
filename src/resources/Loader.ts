@@ -268,6 +268,11 @@ export class Loader {
   private readonly _registry = new FactoryRegistry();
   private readonly _assetTypeMap = new Map<string, AssetConstructor>();
   private readonly _resources = new Map<AssetConstructor, Map<string, unknown>>();
+  // Reverse lookup: loaded resource object → the (type, source) it was first
+  // stored under. Backs {@link Loader.keyFor} for scene serialization. A
+  // WeakMap so it never retains resources; only object resources participate
+  // (primitive results like parsed JSON/text are not keyable → null).
+  private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
   private readonly _manifest = new Map<AssetConstructor, Map<string, ManifestEntry>>();
   private readonly _bundles = new Map<string, readonly QueueEntry[]>();
   private readonly _inFlight = new Map<string, Promise<unknown>>();
@@ -937,6 +942,24 @@ export class Loader {
     const ctor = type;
 
     return this._resources.get(ctor)?.has(alias) ?? false;
+  }
+
+  /**
+   * Reverse lookup: given a loaded resource object, return the asset type and
+   * source key it was first loaded under, or `null` for runtime-created,
+   * unloaded, or non-object resources.
+   *
+   * When a resource is shared across several aliases, the **first** alias it
+   * was stored under is returned (the canonical key). Primitive results
+   * (parsed JSON, text, CSV rows) are not keyable. Used by scene serialization
+   * to turn a live asset reference back into a portable source key; the
+   * contract is that the same asset is pre-loaded under that key before a
+   * matching deserialize.
+   */
+  public keyFor(resource: object): { readonly type: AssetConstructor; readonly source: string } | null {
+    // WeakMap.get returns undefined for any non-registered or non-weakly-holdable
+    // key, so primitive/unkeyed inputs safely resolve to null without a guard.
+    return this._resourceKeys.get(resource) ?? null;
   }
 
   // -----------------------------------------------------------------------
@@ -1798,6 +1821,12 @@ export class Loader {
     }
 
     typeResources.set(alias, resource);
+
+    // Record the canonical reverse key (first alias wins) for object resources.
+    if (typeof resource === 'object' && resource !== null && !this._resourceKeys.has(resource)) {
+      this._resourceKeys.set(resource, { type, source: alias });
+    }
+
     this.onLoaded.dispatch(type, alias, resource);
   }
 

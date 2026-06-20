@@ -1,9 +1,10 @@
+import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
 import type { Loader } from '#resources/Loader';
 
-import type { AssetBinding, AssetHandler, RendererBinding } from './Extension';
+import type { AssetBinding, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
 
 /**
  * Materialise all renderer bindings into the backend's renderer registry.
@@ -76,5 +77,17 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
     const handler: AssetHandler = binding.create(loader);
 
     loader.bindAsset({ type: binding.type, typeNames: binding.typeNames, extensions: binding.extensions }, handler);
+  }
+}
+
+/**
+ * Materialise all serializer bindings into the scene serialization registry.
+ * Called once per Application construction. A conflict (same type name bound to
+ * a different constructor) throws via {@link SerializationRegistry.register}.
+ * @internal
+ */
+export function materializeSerializerBindings(registry: SerializationRegistry, bindings: readonly SerializerBinding[]): void {
+  for (const binding of bindings) {
+    registry.register(binding.typeName, binding.target, binding.serializer);
   }
 }

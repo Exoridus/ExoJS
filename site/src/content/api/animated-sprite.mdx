@@ -5,7 +5,7 @@ symbol: "AnimatedSprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 103
+memberCount: 104
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/AnimatedSprite.ts"
@@ -29,7 +29,7 @@ from a Spritesheet's named animations.
 
 ## Constructors
 
-- `new(texture: RenderTexture | Texture | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>): AnimatedSprite`
+- `new(texture: Texture | RenderTexture | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>): AnimatedSprite`
 
 ## Methods
 
@@ -68,7 +68,7 @@ from a Spritesheet's named animations.
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `setTexture(texture: RenderTexture | Texture | null): this`
+- `setTexture(texture: Texture | RenderTexture | null): this`
 - `setTextureFrame(frame: Rectangle, resetSize: boolean): this`
 - `setTint(color: Color): this`
 - `stop(): this`
@@ -89,6 +89,7 @@ from a Spritesheet's named animations.
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
 - `focusable: boolean`
+- `name: string | null`
 - `preserveDrawOrder: boolean`
 - `tabIndex: number`
 - `anchor: ObservableVector`
@@ -114,7 +115,7 @@ from a Spritesheet's named animations.
 - `skewX: number`
 - `skewY: number`
 - `texCoords: Uint32Array`
-- `texture: RenderTexture | Texture | null`
+- `texture: Texture | RenderTexture | null`
 - `textureFrame: Rectangle`
 - `tint: Color`
 - `vertices: Float32Array`

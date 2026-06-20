@@ -1,3 +1,6 @@
+import type { SceneNode } from '#core/SceneNode';
+import type { NodeSerializer } from '#core/serialization/NodeSerializer';
+import type { SceneNodeConstructor } from '#core/serialization/SerializationRegistry';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
@@ -92,10 +95,29 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
 }
 
 /**
- * An ExoJS extension: an immutable descriptor that contributes renderer bindings
- * and/or asset bindings. Holds no Application, backend, GPU, or loader instances.
- * Register via {@link ExtensionRegistry.register} (official packages do this as
- * an import side effect), or pass explicitly via {@link ApplicationOptions.extensions}.
+ * Binds a {@link SceneNode} type to a {@link NodeSerializer} under a stable
+ * type name, so an extension's own node types participate in
+ * {@link Scene.serialize}/{@link Scene.deserialize}. Pure descriptor — the
+ * serializer is a stateless write/read pair, materialised into the scene
+ * serialization registry once at Application construction.
+ *
+ * `target` is the constructor serialize resolves via prototype walk; `typeName`
+ * is the tag written to JSON and the key deserialize resolves by. Mirrors the
+ * shape of {@link RendererBinding}/{@link AssetBinding}.
+ * @advanced
+ */
+export interface SerializerBinding<T extends SceneNode = SceneNode> {
+  readonly typeName: string;
+  readonly target: SceneNodeConstructor<T>;
+  readonly serializer: NodeSerializer<T>;
+}
+
+/**
+ * An ExoJS extension: an immutable descriptor that contributes renderer bindings,
+ * asset bindings and/or serializer bindings. Holds no Application, backend, GPU,
+ * or loader instances. Register via {@link ExtensionRegistry.register} (official
+ * packages do this as an import side effect), or pass explicitly via
+ * {@link ApplicationOptions.extensions}.
  * @advanced
  */
 export interface Extension {
@@ -103,4 +125,5 @@ export interface Extension {
   readonly dependencies?: readonly Extension[];
   readonly renderers?: readonly RendererBinding[];
   readonly assets?: readonly AssetBinding[];
+  readonly serializers?: readonly SerializerBinding[];
 }

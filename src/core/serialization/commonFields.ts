@@ -1,0 +1,86 @@
+import { Color } from '#core/Color';
+import type { SceneNode } from '#core/SceneNode';
+import { Drawable } from '#rendering/Drawable';
+import { isPixelSnapMode } from '#rendering/pixelSnap';
+import { BlendModes } from '#rendering/types';
+
+import type { SerializedNode } from './types';
+
+/**
+ * Write the common `SceneNode` (+ `Drawable`) fields of `node` into `out`.
+ *
+ * Only non-default values are written, so a freshly-constructed node
+ * contributes nothing here. Transforms are emitted in logical units
+ * (px / degrees); the `Drawable` tint is `[r, g, b, a]` with `r/g/b` in 0..255
+ * and `a` in 0..1. Runtime caches, matrices and dirty flags are never written.
+ */
+export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
+  if (node.x !== 0) out.x = node.x;
+  if (node.y !== 0) out.y = node.y;
+  if (node.rotation !== 0) out.rotation = node.rotation;
+  if (node.scale.x !== 1) out.scaleX = node.scale.x;
+  if (node.scale.y !== 1) out.scaleY = node.scale.y;
+  if (node.skewX !== 0) out.skewX = node.skewX;
+  if (node.skewY !== 0) out.skewY = node.skewY;
+  if (node.origin.x !== 0) out.originX = node.origin.x;
+  if (node.origin.y !== 0) out.originY = node.origin.y;
+  if (!node.visible) out.visible = false;
+  if (node.zIndex !== 0) out.zIndex = node.zIndex;
+  if (!node.cullable) out.cullable = false;
+  if (node.name !== null) out.name = node.name;
+
+  if (node instanceof Drawable) {
+    const tint = node.tint;
+
+    if (tint.r !== 255 || tint.g !== 255 || tint.b !== 255 || tint.a !== 1) {
+      out.tint = [tint.r, tint.g, tint.b, tint.a];
+    }
+
+    if (node.blendMode !== BlendModes.Normal) {
+      out.blendMode = node.blendMode;
+    }
+
+    if (node.pixelSnapMode !== 'none') {
+      out.pixelSnapMode = node.pixelSnapMode;
+    }
+  }
+}
+
+/**
+ * Apply the common fields from `data` onto an already-constructed `node`.
+ *
+ * Called by the framework after a {@link NodeSerializer.read} returns, so it
+ * overrides any transform side-effects of construction (e.g. a `Sprite` frame
+ * resetting scale). Absent fields keep the node's constructed defaults.
+ */
+export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
+  if (typeof data.x === 'number') node.x = data.x;
+  if (typeof data.y === 'number') node.y = data.y;
+  if (typeof data.rotation === 'number') node.rotation = data.rotation;
+  if (typeof data.scaleX === 'number') node.scale.x = data.scaleX;
+  if (typeof data.scaleY === 'number') node.scale.y = data.scaleY;
+  if (typeof data.skewX === 'number') node.skewX = data.skewX;
+  if (typeof data.skewY === 'number') node.skewY = data.skewY;
+  if (typeof data.originX === 'number') node.origin.x = data.originX;
+  if (typeof data.originY === 'number') node.origin.y = data.originY;
+  if (data.visible === false) node.visible = false;
+  if (typeof data.zIndex === 'number') node.zIndex = data.zIndex;
+  if (data.cullable === false) node.cullable = false;
+  if (typeof data.name === 'string') node.name = data.name;
+
+  if (node instanceof Drawable) {
+    const tint = data.tint;
+
+    if (Array.isArray(tint) && tint.length === 4) {
+      node.tint = new Color(Number(tint[0]), Number(tint[1]), Number(tint[2]), Number(tint[3]));
+    }
+
+    if (typeof data.blendMode === 'number') {
+      node.blendMode = data.blendMode;
+    }
+
+    if (typeof data.pixelSnapMode === 'string' && isPixelSnapMode(data.pixelSnapMode)) {
+      node.pixelSnapMode = data.pixelSnapMode;
+    }
+  }
+}
