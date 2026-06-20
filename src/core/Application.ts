@@ -2,7 +2,7 @@ import { TweenManager } from '#animation/TweenManager';
 import { AudioManager } from '#audio/AudioManager';
 import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
-import { materializeAssetBindings, materializeRendererBindings } from '#extensions/materialize';
+import { materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import { FocusManager } from '#input/FocusManager';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
@@ -28,6 +28,7 @@ import { Color } from './Color';
 import { computeLetterboxLayout } from './letterbox';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
+import { defaultSerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
 import { Time } from './Time';
@@ -326,6 +327,7 @@ export class Application {
 
     try {
       materializeAssetBindings(this.loader, [...coreAssetBindings, ...this._snapshot.assets]);
+      materializeSerializerBindings(defaultSerializationRegistry, this._snapshot.serializers);
     } catch (error) {
       try {
         this.loader.destroy();

@@ -5,7 +5,7 @@ symbol: "Sprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 88
+memberCount: 89
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/Sprite.ts"
@@ -31,7 +31,7 @@ operate on the exact rotated quad rather than the AABB.
 
 ## Constructors
 
-- `new(texture: RenderTexture | Texture | null): Sprite`
+- `new(texture: Texture | RenderTexture | null): Sprite`
 
 ## Methods
 
@@ -64,7 +64,7 @@ operate on the exact rotated quad rather than the AABB.
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `setTexture(texture: RenderTexture | Texture | null): this`
+- `setTexture(texture: Texture | RenderTexture | null): this`
 - `setTextureFrame(frame: Rectangle, resetSize: boolean): this`
 - `setTint(color: Color): this`
 - `updateBounds(): this`
@@ -82,6 +82,7 @@ operate on the exact rotated quad rather than the AABB.
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
 - `focusable: boolean`
+- `name: string | null`
 - `preserveDrawOrder: boolean`
 - `tabIndex: number`
 - `anchor: ObservableVector`
@@ -103,7 +104,7 @@ operate on the exact rotated quad rather than the AABB.
 - `skewX: number`
 - `skewY: number`
 - `texCoords: Uint32Array`
-- `texture: RenderTexture | Texture | null`
+- `texture: Texture | RenderTexture | null`
 - `textureFrame: Rectangle`
 - `tint: Color`
 - `vertices: Float32Array`

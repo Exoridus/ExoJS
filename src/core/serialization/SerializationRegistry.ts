@@ -1,0 +1,112 @@
+import { Registry } from '#core/Registry';
+import type { SceneNode } from '#core/SceneNode';
+
+import type { NodeSerializer } from './NodeSerializer';
+
+/**
+ * Any abstract or concrete {@link SceneNode} constructor usable as a
+ * serialization key.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SceneNodeConstructor<T extends SceneNode = SceneNode> = abstract new (...args: any[]) => T;
+
+/**
+ * Resolved registry record pairing a type name with its constructor and
+ * serializer.
+ * @internal
+ */
+export interface SerializerEntry {
+  readonly typeName: string;
+  readonly ctor: SceneNodeConstructor;
+  readonly serializer: NodeSerializer;
+}
+
+/** Walk one step up the constructor's prototype chain, or stop at the base. */
+const walkPrototype = (ctor: SceneNodeConstructor): SceneNodeConstructor | null => {
+  const parent = Object.getPrototypeOf(ctor) as unknown;
+
+  return typeof parent === 'function' && parent !== Function.prototype ? (parent as SceneNodeConstructor) : null;
+};
+
+/**
+ * Bidirectional name ↔ constructor ↔ {@link NodeSerializer} registry backing
+ * the scene serializer.
+ *
+ * Serialize resolves a node to its serializer by walking the constructor's
+ * prototype chain (so a subclass without its own registration inherits the
+ * nearest registered base serializer); deserialize resolves by type name.
+ * Core registers the built-in node types; extensions contribute their own via
+ * the {@link Extension.serializers} binding.
+ *
+ * @see registerSerializer for the convenience entry point onto the
+ * {@link defaultSerializationRegistry}.
+ */
+export class SerializationRegistry {
+  private readonly _byCtor = new Registry<SceneNodeConstructor, SerializerEntry>({ walk: walkPrototype });
+  private readonly _byName = new Map<string, SerializerEntry>();
+
+  /**
+   * Register `serializer` for `ctor` under `typeName`. Re-registering the same
+   * `(typeName, ctor)` pair overwrites silently; registering an existing
+   * `typeName` against a **different** constructor throws.
+   */
+  public register<T extends SceneNode>(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>): void {
+    const existing = this._byName.get(typeName);
+
+    if (existing !== undefined && existing.ctor !== ctor) {
+      throw new Error(`A serializer for type name "${typeName}" is already registered for a different constructor.`);
+    }
+
+    const entry: SerializerEntry = { typeName, ctor, serializer };
+
+    this._byCtor.set(ctor, entry);
+    this._byName.set(typeName, entry);
+  }
+
+  /**
+   * Resolve the serializer for `node` by walking its constructor's prototype
+   * chain. Returns `undefined` if no registration matches.
+   * @internal
+   */
+  public resolveByNode(node: SceneNode): SerializerEntry | undefined {
+    return this._byCtor.resolve(node.constructor as SceneNodeConstructor);
+  }
+
+  /**
+   * Resolve the serializer registered under `typeName`, or `undefined`.
+   * @internal
+   */
+  public resolveByName(typeName: string): SerializerEntry | undefined {
+    return this._byName.get(typeName);
+  }
+
+  /** Returns `true` if a serializer is registered under `typeName`. */
+  public hasType(typeName: string): boolean {
+    return this._byName.has(typeName);
+  }
+}
+
+/**
+ * Process-wide default registry. Core node serializers register here lazily on
+ * first use; extension serializers are materialised here at Application
+ * construction.
+ */
+export const defaultSerializationRegistry = new SerializationRegistry();
+
+/**
+ * Register a custom {@link NodeSerializer} on the {@link defaultSerializationRegistry}.
+ *
+ * Use this to make your own {@link SceneNode} subclasses serializable. Delegate
+ * to a base type's behaviour by composing with the framework helpers, or
+ * register a fully custom serializer.
+ *
+ * ```ts
+ * registerSerializer('PowerUp', PowerUp, {
+ *   write: (node) => ({ kind: node.kind }),
+ *   read: (data) => new PowerUp(data.kind as string),
+ * });
+ * ```
+ */
+export function registerSerializer<T extends SceneNode>(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>): void {
+  defaultSerializationRegistry.register(typeName, ctor, serializer);
+}

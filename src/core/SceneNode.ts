@@ -110,6 +110,15 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _zIndex = 0;
   private _cullable = true;
 
+  /**
+   * Optional human-readable identity for this node. Defaults to `null`.
+   *
+   * Purely a label the engine never interprets: useful for debugging,
+   * find-by-name lookups, prefab references, and as a stable key when merging
+   * serialized state back onto an existing tree. Not required to be unique.
+   */
+  public name: string | null = null;
+
   public get position(): ObservableVector {
     return this._position;
   }
