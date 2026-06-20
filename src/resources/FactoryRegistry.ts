@@ -1,3 +1,5 @@
+import { Registry } from '#core/Registry';
+
 import type { AssetFactory } from './AssetFactory';
 
 /**
@@ -6,6 +8,13 @@ import type { AssetFactory } from './AssetFactory';
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AssetConstructor<T = unknown> = abstract new (...args: any[]) => T;
+
+/** Climbs one step up the prototype chain, returning the parent constructor. */
+const parentConstructor = (type: AssetConstructor): AssetConstructor | null => {
+  const prototype = Object.getPrototypeOf(type.prototype) as { constructor?: AssetConstructor } | null;
+
+  return prototype?.constructor ?? null;
+};
 
 /**
  * Maps {@link AssetConstructor} tokens to their corresponding
@@ -19,7 +28,10 @@ export type AssetConstructor<T = unknown> = abstract new (...args: any[]) => T;
  * @internal Used by {@link Loader}; consumers interact through `loader.register()`.
  */
 export class FactoryRegistry {
-  private readonly _factories = new Map<AssetConstructor, AssetFactory>();
+  private readonly _factories = new Registry<AssetConstructor, AssetFactory>({
+    walk: parentConstructor,
+    dispose: factory => factory.destroy(),
+  });
 
   /** Registers `factory` as the handler for `type` and its subclasses. */
   public register<T>(type: AssetConstructor<T>, factory: AssetFactory<T>): void {
@@ -31,18 +43,7 @@ export class FactoryRegistry {
    * chain if necessary. Throws if no matching factory is found.
    */
   public resolve<T>(type: AssetConstructor<T>): AssetFactory<T> {
-    let constructor: AssetConstructor | null = type;
-    let factory: AssetFactory | undefined;
-
-    while (constructor !== null && !factory) {
-      factory = this._factories.get(constructor);
-
-      if (!factory) {
-        const prototype = Object.getPrototypeOf(constructor.prototype) as { constructor?: AssetConstructor } | null;
-
-        constructor = prototype?.constructor ?? null;
-      }
-    }
+    const factory = this._factories.resolve(type);
 
     if (!factory) {
       throw new Error(`No factory registered for ${type.name}. ` + 'Register one with loader.register() before loading.');
@@ -56,19 +57,7 @@ export class FactoryRegistry {
    * prototype-chain ancestors.
    */
   public has(type: AssetConstructor): boolean {
-    let constructor: AssetConstructor | null = type;
-
-    while (constructor !== null) {
-      if (this._factories.has(constructor)) {
-        return true;
-      }
-
-      const prototype = Object.getPrototypeOf(constructor.prototype) as { constructor?: AssetConstructor } | null;
-
-      constructor = prototype?.constructor ?? null;
-    }
-
-    return false;
+    return this._factories.has(type);
   }
 
   /**
@@ -76,10 +65,6 @@ export class FactoryRegistry {
    * clears the registry.
    */
   public destroy(): void {
-    for (const factory of this._factories.values()) {
-      factory.destroy();
-    }
-
-    this._factories.clear();
+    this._factories.destroy();
   }
 }
