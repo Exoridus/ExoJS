@@ -93,6 +93,7 @@ const createApp = (): {
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,
+    focus: { focused: null, focus() {}, blur() {}, _notifyNodeRemoved() {} },
     // Default centered camera: design-space pointer coords pass through to
     // world space unchanged (identity screenToWorld).
     rendering: {

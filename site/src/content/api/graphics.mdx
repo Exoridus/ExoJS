@@ -5,7 +5,7 @@ symbol: "Graphics"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 102
+memberCount: 111
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/primitives/Graphics.ts"
@@ -50,6 +50,7 @@ tint, and mask support from Container.
 - `addFilter(filter: Filter): this`
 - `arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this`
 - `bezierCurveTo(cpX1: number, cpY1: number, cpX2: number, cpY2: number, toX: number, toY: number): this`
+- `blur(): this`
 - `clear(): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
@@ -62,7 +63,9 @@ tint, and mask support from Container.
 - `drawPath(path: number[]): this`
 - `drawPolygon(path: number[]): this`
 - `drawRectangle(x: number, y: number, width: number, height: number): this`
+- `drawRoundedRectangle(x: number, y: number, width: number, height: number, radius: number): this`
 - `drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number, rotation: number): this`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getChildAt(index: number): Mesh`
 - `getChildIndex(child: RenderNode): number`
@@ -105,7 +108,9 @@ tint, and mask support from Container.
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `preserveDrawOrder: boolean`
+- `tabIndex: number`
 - `anchor: ObservableVector`
 - `bottom: number`
 - `cacheAsBitmap: boolean`
@@ -140,9 +145,13 @@ tint, and mask support from Container.
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

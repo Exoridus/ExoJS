@@ -1,4 +1,5 @@
 export * from './ArcadeStickGamepadMapping';
+export * from './FocusManager';
 export * from './GameCubeGamepadMapping';
 export * from './Gamepad';
 export type { GamepadAxisOptions } from './GamepadAxis';
@@ -15,6 +16,7 @@ export * from './InteractionEvent';
 export * from './InteractionManager';
 export * from './JoyConLeftGamepadMapping';
 export * from './JoyConRightGamepadMapping';
+export * from './KeyEvent';
 export * from './PlayStationGamepadMapping';
 export { Pointer, PointerState, PointerStateFlag } from './Pointer';
 export * from './SteamControllerGamepadMapping';

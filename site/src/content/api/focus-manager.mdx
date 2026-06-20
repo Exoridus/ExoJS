@@ -1,0 +1,51 @@
+---
+title: "FocusManager"
+description: "Per-Application keyboard-focus service. Tracks the single focused RenderNode, routes keyboard input from the InputManager to it, and provides Tab-order traversal across the focusable nodes of the active focus scope. A node reaches this service through its Stage (`stage.focus`); app code reaches it through `app.focus`. Constructed automatically by Application; you do not instantiate this class yourself. Built-in key handling: `Tab` / `Shift+Tab` move focus to the next / previous focusable node. A focused node can call KeyEvent.preventDefault on its `onKeyDown` event to opt out of this and consume the key itself."
+symbol: "FocusManager"
+kind: "class"
+subsystem: "input"
+importPath: "@codexo/exojs"
+memberCount: 9
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/input/FocusManager.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusManager.ts#L23"
+---
+## Import
+
+`import { FocusManager } from '@codexo/exojs'`
+
+Per-Application keyboard-focus service. Tracks the single focused
+RenderNode, routes keyboard input from the InputManager to
+it, and provides Tab-order traversal across the focusable nodes of the active
+focus scope.
+
+A node reaches this service through its Stage (`stage.focus`); app
+code reaches it through `app.focus`. Constructed automatically by
+Application; you do not instantiate this class yourself.
+
+Built-in key handling: `Tab` / `Shift+Tab` move focus to the next / previous
+focusable node. A focused node can call KeyEvent.preventDefault on its
+`onKeyDown` event to opt out of this and consume the key itself.
+
+## Constructors
+
+- `new(app: Application): FocusManager`
+
+## Methods
+
+- `blur(node?: RenderNode): void`
+- `destroy(): void`
+- `focus(node: RenderNode): void`
+- `focusNext(): void`
+- `focusPrevious(): void`
+- `popScope(): void`
+- `pushScope(root: RenderNode): void`
+
+## Properties
+
+- `focused: RenderNode | null`
+
+## Source
+
+[src/input/FocusManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusManager.ts#L23)

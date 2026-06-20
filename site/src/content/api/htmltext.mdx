@@ -5,7 +5,7 @@ symbol: "HTMLText"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 89
+memberCount: 97
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/HTMLText.ts"
@@ -46,10 +46,12 @@ because it is embedded inside an XML document.
 - `addChildAt(child: RenderNode, index: number): this`
 - `addFilter(filter: Filter): this`
 - `addFont(family: string, data: ArrayBuffer, format: FontFormat): this`
+- `blur(): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getChildAt(index: number): RenderNode`
 - `getChildIndex(child: RenderNode): number`
@@ -91,7 +93,9 @@ because it is embedded inside an XML document.
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `preserveDrawOrder: boolean`
+- `tabIndex: number`
 - `anchor: ObservableVector`
 - `bottom: number`
 - `cacheAsBitmap: boolean`
@@ -124,9 +128,13 @@ because it is embedded inside an XML document.
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

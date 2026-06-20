@@ -259,6 +259,9 @@ export class SceneManager {
           `[ExoJS] Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.`,
         );
       }
+
+      // Auto-render the scene's screen-fixed UI layer above its content.
+      scene._peekUI()?._render(this._app.rendering);
     }
 
     const transitionAlpha = this._getTransitionAlpha();
@@ -308,6 +311,13 @@ export class SceneManager {
       // Bind the scene's root to the app's interaction manager so its nodes
       // route picking/bounds notifications to this Application (no global).
       this._app.interaction.attachRoot(scene.root);
+
+      // Bind the UI layer too, if it was materialized before activation.
+      const ui = scene._peekUI();
+
+      if (ui !== null) {
+        this._app.interaction.attachUIRoot(ui);
+      }
     } catch (error) {
       let cleanupError: unknown = null;
 
@@ -341,6 +351,13 @@ export class SceneManager {
   private async _disposeScene(scene: Scene): Promise<void> {
     this.onStopScene.dispatch(scene);
     await scene.unload(this._app.loader);
+
+    const ui = scene._peekUI();
+
+    if (ui !== null) {
+      this._app.interaction.detachUIRoot(ui);
+    }
+
     this._app.interaction.detachRoot(scene.root);
     scene.destroy();
     scene.app = null;

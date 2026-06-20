@@ -5,7 +5,7 @@ symbol: "TileMapNode"
 kind: "class"
 subsystem: "tilemap"
 importPath: "@codexo/exojs-tilemap"
-memberCount: 87
+memberCount: 95
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "packages/exojs-tilemap/src/TileMapNode.ts"
@@ -44,10 +44,12 @@ after TileMapNode.refreshLayers.
 - `addChild(children: RenderNode[]): this`
 - `addChildAt(child: RenderNode, index: number): this`
 - `addFilter(filter: Filter): this`
+- `blur(): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getChildAt(index: number): RenderNode`
 - `getChildIndex(child: RenderNode): number`
@@ -89,7 +91,9 @@ after TileMapNode.refreshLayers.
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `preserveDrawOrder: boolean`
+- `tabIndex: number`
 - `anchor: ObservableVector`
 - `bottom: number`
 - `cacheAsBitmap: boolean`
@@ -121,9 +125,13 @@ after TileMapNode.refreshLayers.
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

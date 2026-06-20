@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { System } from '#core/System';
+import type { PointLike } from '#math/PointLike';
 import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
@@ -89,7 +90,23 @@ export class InteractionManager implements InteractionHooks, System {
   private readonly _quadtreeQueryBuffer: Array<QuadtreeItem<IndexedNode>> = [];
 
   /** This manager's service bundle, installed on a scene root via {@link attachRoot}. */
-  private readonly _stage: Stage = { interaction: this };
+  private readonly _stage: Stage;
+
+  /**
+   * UI-layer interaction hooks: no-ops, so screen-fixed UI nodes are kept OUT
+   * of the world quadtree. The UI layer is hit-tested by a direct subtree walk
+   * in screen space (see {@link _resolveHit}); per-node signal dispatch still
+   * works because it reads the lazy node signals, not the quadtree.
+   */
+  private readonly _uiInteraction: InteractionHooks = {
+    _notifyNodeAdded: () => {},
+    _notifyNodeRemoved: () => {},
+    _notifyInteractiveChanged: () => {},
+    _notifyBoundsInvalidated: () => {},
+  };
+
+  /** Service bundle installed on a scene's UI layer; shares focus with the world stage. */
+  private readonly _uiStage: Stage;
 
   /** Maps pointerId → the deepest interactive RenderNode that pointer is currently over. */
   private readonly _lastHit = new Map<number, RenderNode>();
@@ -103,6 +120,12 @@ export class InteractionManager implements InteractionHooks, System {
   /** Active drag states. Maps pointerId → drag metadata. */
   private readonly _drags = new Map<number, DragState>();
 
+  /**
+   * Modal input-capture stack. While non-empty, hit-testing is confined to the
+   * topmost root's subtree, so a modal dialog shields the nodes beneath it.
+   */
+  private readonly _captureStack: RenderNode[] = [];
+
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
 
@@ -115,6 +138,8 @@ export class InteractionManager implements InteractionHooks, System {
 
   public constructor(app: Application) {
     this._app = app;
+    this._stage = { interaction: this, focus: app.focus };
+    this._uiStage = { interaction: this._uiInteraction, focus: app.focus };
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -166,6 +191,22 @@ export class InteractionManager implements InteractionHooks, System {
   }
 
   /**
+   * Confine pointer hit-testing to `root`'s subtree until a matching
+   * {@link popInputCapture}. Pointer events outside the subtree hit nothing, so
+   * a modal dialog (optionally with a full-screen backdrop to swallow clicks)
+   * shields the interactive nodes beneath it. Captures stack — the most
+   * recently pushed root wins.
+   */
+  public pushInputCapture(root: RenderNode): void {
+    this._captureStack.push(root);
+  }
+
+  /** Release the most recently pushed input capture (see {@link pushInputCapture}). */
+  public popInputCapture(): void {
+    this._captureStack.pop();
+  }
+
+  /**
    * Returns the internal quadtree used for spatial hit-testing, or null when
    * no interactive nodes are present. Used by {@link HitTestLayer} to render
    * the quadtree partitioning during development. Not part of the stable
@@ -188,6 +229,7 @@ export class InteractionManager implements InteractionHooks, System {
     this._pending.clear();
     this._capturedPointers.clear();
     this._drags.clear();
+    this._captureStack.length = 0;
     this._interactiveNodes.clear();
     this._staleNodes.clear();
     this._quadtreeItems.clear();
@@ -242,7 +284,26 @@ export class InteractionManager implements InteractionHooks, System {
    * @internal
    */
   public detachRoot(root: Container): void {
+    this._app.focus.blur();
+    this._captureStack.length = 0;
     this._notifyNodeRemoved(root);
+    root._setStage(null);
+  }
+
+  /**
+   * Bind a scene's UI layer to this manager. Installs the UI stage (no-op world
+   * hooks, shared focus) so its nodes route focus here but stay out of the world
+   * quadtree; the layer is hit-tested by a direct walk in screen space.
+   * @internal
+   */
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
+  public attachUIRoot(root: Container): void {
+    root._setStage(this._uiStage);
+  }
+
+  /** Unbind a scene's UI layer. @internal */
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
+  public detachUIRoot(root: Container): void {
     root._setStage(null);
   }
 
@@ -356,18 +417,30 @@ export class InteractionManager implements InteractionHooks, System {
     const { pointer, events } = queue;
     const { id } = pointer;
 
-    // Pointer coordinates are in design space; convert to world space via the
-    // active camera so hit-testing, dragging and event coordinates all agree
-    // with node positions (correct under pixelRatio > 1, letterboxing, and a
-    // panned / zoomed / rotated camera). At the default centered camera this is
-    // the identity, so legacy screen-space behaviour is preserved.
-    const world = this._app.rendering.camera.screenToWorld(pointer.x, pointer.y);
-    const x = world.x;
-    const y = world.y;
-
-    // Determine the hit node. Captured pointers short-circuit hit-testing.
+    // Resolve the hit node and the coordinate space it lives in. A captured
+    // pointer short-circuits hit-testing; otherwise the screen-fixed UI layer
+    // is tried before the camera-space world (see _resolveHit). Coordinates
+    // follow the hit's layer (UI = screen space, world = camera space) so
+    // dragging and event positions agree with node positions — correct under
+    // pixelRatio > 1, letterboxing, and a panned / zoomed / rotated camera.
     const captured = this._capturedPointers.get(id) ?? null;
-    const hit = captured !== null ? captured : this._hitTest(x, y);
+    let hit: RenderNode | null;
+    let x: number;
+    let y: number;
+
+    if (captured !== null) {
+      const coords = this._pointerCoords(pointer, this._isUINode(captured));
+
+      hit = captured;
+      x = coords.x;
+      y = coords.y;
+    } else {
+      const resolved = this._resolveHit(pointer);
+
+      hit = resolved.node;
+      x = resolved.x;
+      y = resolved.y;
+    }
 
     // --- Over / Out transitions ---
     // Skip while a drag is active for this pointer — the dragged node
@@ -475,6 +548,65 @@ export class InteractionManager implements InteractionHooks, System {
   // ---------------------------------------------------------------------------
   // Hit-testing
   // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve the hit node and its coordinate space for a fresh pointer. An
+   * active modal capture confines hit-testing to its subtree; otherwise the
+   * screen-fixed UI layer is tried first (screen space), then the camera world.
+   */
+  private _resolveHit(pointer: Pointer): { node: RenderNode | null; x: number; y: number } {
+    const capture = this._captureStack.at(-1);
+
+    if (capture !== undefined) {
+      const coords = this._pointerCoords(pointer, this._isUINode(capture));
+
+      return { node: this._hitTestNode(capture, coords.x, coords.y), x: coords.x, y: coords.y };
+    }
+
+    const uiRoot = this._app.scene.currentScene?._peekUI() ?? null;
+
+    if (uiRoot !== null) {
+      const ui = this._app.rendering.screenView.screenToWorld(pointer.x, pointer.y);
+      const uiHit = this._hitTestNode(uiRoot, ui.x, ui.y);
+
+      if (uiHit !== null) {
+        return { node: uiHit, x: ui.x, y: ui.y };
+      }
+    }
+
+    const world = this._app.rendering.camera.screenToWorld(pointer.x, pointer.y);
+
+    return { node: this._hitTest(world.x, world.y), x: world.x, y: world.y };
+  }
+
+  /** Map a design-space pointer into either the screen-fixed UI view or the camera world. */
+  private _pointerCoords(pointer: Pointer, ui: boolean): PointLike {
+    const view = ui ? this._app.rendering.screenView : this._app.rendering.camera;
+
+    return view.screenToWorld(pointer.x, pointer.y);
+  }
+
+  /** Whether `node` lives inside the active scene's UI layer. */
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
+  private _isUINode(node: RenderNode): boolean {
+    const uiRoot = this._app.scene.currentScene?._peekUI() ?? null;
+
+    if (uiRoot === null) {
+      return false;
+    }
+
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      if (current === uiRoot) {
+        return true;
+      }
+
+      current = current.parent;
+    }
+
+    return false;
+  }
 
   private _hitTest(x: number, y: number): RenderNode | null {
     if (this._quadtree !== null) {

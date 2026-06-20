@@ -170,6 +170,7 @@ export class Container extends RenderNode {
       child.parent = null;
       child._invalidateSubtreeTransform();
       this._stage?.interaction._notifyNodeRemoved(child);
+      this._stage?.focus._notifyNodeRemoved(child);
       child._setStage(null);
     }
 
@@ -201,6 +202,7 @@ export class Container extends RenderNode {
         child.parent = null;
         child._invalidateSubtreeTransform();
         this._stage?.interaction._notifyNodeRemoved(child);
+        this._stage?.focus._notifyNodeRemoved(child);
         child._setStage(null);
       }
     }

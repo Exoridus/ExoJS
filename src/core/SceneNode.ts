@@ -504,6 +504,11 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this._stage = stage;
   }
 
+  /** @internal — the owning {@link Stage}, or `null` when this node is detached. */
+  public _getStage(): Stage | null {
+    return this._stage;
+  }
+
   /**
    * Routes a change from one of this node's reactive {@link ObservableVector}
    * components (position/scale/origin/anchor) to the matching dirty path. The

@@ -80,6 +80,21 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
       return { update: vi.fn(), destroy: vi.fn(), onKeyDown, onCanvasFocusChange };
     }),
   }));
+  vi.doMock('#input/FocusManager', () => ({
+    FocusManager: vi.fn(function () {
+      return {
+        focused: null,
+        focus: vi.fn(),
+        blur: vi.fn(),
+        pushScope: vi.fn(),
+        popScope: vi.fn(),
+        focusNext: vi.fn(),
+        focusPrevious: vi.fn(),
+        _notifyNodeRemoved: vi.fn(),
+        destroy: vi.fn(),
+      };
+    }),
+  }));
   vi.doMock('#input/InteractionManager', () => ({
     InteractionManager: vi.fn(function () {
       return {

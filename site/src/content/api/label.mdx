@@ -1,0 +1,135 @@
+---
+title: "Label"
+description: "Text label widget. Wraps a Text node and keeps the widget's layout size in sync with the measured text, so it anchors and stacks correctly."
+symbol: "Label"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 100
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
+sourcePath: "src/ui/Label.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Label.ts#L11"
+---
+## Import
+
+`import { Label } from '@codexo/exojs'`
+
+Text label widget. Wraps a Text node and keeps the widget's layout
+size in sync with the measured text, so it anchors and stacks correctly.
+
+## Constructors
+
+- `new(text: string, style: TextStyleOptions): Label`
+
+## Methods
+
+- `_applyAnchor(containerWidth: number, containerHeight: number): void`
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `_onEnabledChanged(_enabled: boolean): void`
+- `_relayout(): void`
+- `addChild(children: RenderNode[]): this`
+- `addChildAt(child: RenderNode, index: number): this`
+- `addFilter(filter: Filter): this`
+- `anchorIn(root: UIRoot, anchor: WidgetAnchor, offsetX: number, offsetY: number): this`
+- `blur(): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `focus(): this`
+- `getBounds(): Rectangle`
+- `getChildAt(index: number): RenderNode`
+- `getChildIndex(child: RenderNode): number`
+- `getGlobalTransform(): Matrix`
+- `getLocalBounds(): Rectangle`
+- `getNormals(): Vector[]`
+- `getTransform(): Matrix`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View): boolean`
+- `move(x: number, y: number): this`
+- `project(axis: Vector, result: Interval): Interval`
+- `removeChild(child: RenderNode): this`
+- `removeChildAt(index: number): this`
+- `removeChildren(begin: number, end: number): this`
+- `removeFilter(filter: Filter): this`
+- `render(backend: RenderBackend): this`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setChildIndex(child: RenderNode, index: number): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `setSize(width: number, height: number): this`
+- `setSkew(x: number, y: number): this`
+- `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
+- `preserveDrawOrder: boolean`
+- `tabIndex: number`
+- `anchor: ObservableVector`
+- `bottom: number`
+- `cacheAsBitmap: boolean`
+- `children: RenderNode[]`
+- `cullable: boolean`
+- `enabled: boolean`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `left: number`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `right: number`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `text: string`
+- `textNode: Text`
+- `top: number`
+- `uiHeight: number`
+- `uiWidth: number`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
+
+## Events
+
+- `onBlur: Signal<[RenderNode]>`
+- `onDrag: Signal<[InteractionEvent]>`
+- `onDragEnd: Signal<[InteractionEvent]>`
+- `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
+- `onPointerDown: Signal<[InteractionEvent]>`
+- `onPointerMove: Signal<[InteractionEvent]>`
+- `onPointerOut: Signal<[InteractionEvent]>`
+- `onPointerOver: Signal<[InteractionEvent]>`
+- `onPointerTap: Signal<[InteractionEvent]>`
+- `onPointerUp: Signal<[InteractionEvent]>`
+
+## Source
+
+[src/ui/Label.ts](https://github.com/Exoridus/ExoJS/blob/main/src/ui/Label.ts#L11)
