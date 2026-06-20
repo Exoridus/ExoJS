@@ -17,6 +17,8 @@ export interface PhysicsBackend {
   readonly candidatePairs: readonly CandidatePair[];
   /** Run one detection pass over `colliders`, refreshing the contact graph. */
   detect(colliders: readonly Collider[]): void;
+  /** Solve the contact-graph's solid contacts (warm-start + `velocityIterations`) for `dt`. */
+  solve(dt: number, velocityIterations: number): void;
   /** Forget any state referencing `collider` (called on destruction). */
   removeCollider(collider: Collider): void;
   /** Release all backend state. */

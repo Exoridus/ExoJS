@@ -18,17 +18,17 @@ import type { VectorLike } from './types';
 
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
-  /** Gravity in px/s² (+Y down). Stored; applied once the dynamics solver ships. Default `(0, 0)`. */
+  /** Gravity in px/s² (+Y down). Integrated each sub-step by the dynamics spike. Default `(0, 0)`. */
   gravity?: VectorLike;
   /** Fixed timestep in seconds. Default `1 / 60`. */
   fixedDelta?: number;
   /** Maximum sub-steps per `step` (spiral-of-death guard). Default `8`. */
   maxSubSteps?: number;
-  /** Solver velocity iterations (stored for forward-compat). Default `8`. */
+  /** Sequential-impulse velocity iterations per sub-step. Default `8`. */
   velocityIterations?: number;
-  /** Solver position iterations (stored for forward-compat). Default `3`. */
+  /** Solver position iterations (reserved for the Phase-2B position solver). Default `3`. */
   positionIterations?: number;
-  /** Interpolate bound nodes between sub-steps (no effect until dynamics integrate). Default `true`. */
+  /** Interpolate bound nodes between sub-steps (reserved; no effect yet). Default `true`. */
   interpolation?: boolean;
 }
 
@@ -43,14 +43,17 @@ export interface StaticColliderOptions extends ColliderOptions {
 /**
  * The collision/query world: owns bodies, colliders, the detection backend,
  * bindings, the query engine and the fixed-step accumulator. Stepped by the
- * caller (commonly from a `Scene.update`), it runs broad- and narrow-phase
- * detection, fires immutable contact/sensor events, and writes bound node
- * transforms. It holds **no module-level state**, so any number of worlds run
- * in isolation (gate I-1).
+ * caller (commonly from a `Scene.update`), each fixed sub-step it integrates
+ * body velocities, runs broad- and narrow-phase detection, solves contacts and
+ * integrates positions, then fires immutable contact/sensor events and writes
+ * bound node transforms. It holds **no module-level state**, so any number of
+ * worlds run in isolation (gate I-1).
  *
- * This release performs collision detection, sensors, events, queries and
- * binding; bodies move only via {@link PhysicsBody.setTransform}. Gravity,
- * forces and impulse integration arrive with the dynamics solver.
+ * The dynamics are a **provisional Phase-2A spike** (a warm-started
+ * sequential-impulse velocity solver with Baumgarte position bias): it
+ * integrates gravity/forces/impulses and resolves contacts, but the full
+ * stacking-grade position solver and the public dynamics API arrive with
+ * Phase 2B once the solver clears the SGATE.
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */
@@ -62,15 +65,15 @@ export class PhysicsWorld implements BodyOwner {
   /** Fires when a collider leaves a sensor. */
   public readonly onSensorExit = new Signal<[SensorEvent]>();
 
-  /** World gravity (px/s², +Y down). Stored until dynamics ship. */
+  /** World gravity (px/s², +Y down). Integrated each sub-step by the dynamics spike. */
   public readonly gravity: Vector;
   /** The fixed-step accumulator. */
   public readonly timeStepper: TimeStepper;
-  /** Whether bound nodes interpolate between sub-steps (no effect until dynamics). */
+  /** Whether bound nodes interpolate between sub-steps (reserved; no effect yet). */
   public readonly interpolation: boolean;
-  /** Solver velocity iterations (stored for forward-compat). */
+  /** Sequential-impulse velocity iterations per sub-step. */
   public readonly velocityIterations: number;
-  /** Solver position iterations (stored for forward-compat). */
+  /** Solver position iterations (reserved for the Phase-2B position solver). */
   public readonly positionIterations: number;
 
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
@@ -141,8 +144,9 @@ export class PhysicsWorld implements BodyOwner {
   // ── stepping ───────────────────────────────────────────────────────────
 
   /**
-   * Advance the world by `frameDeltaSeconds`. Accumulates into fixed sub-steps,
-   * runs detection, dispatches events, then writes bound node transforms.
+   * Advance the world by `frameDeltaSeconds`. Accumulates into fixed sub-steps;
+   * each sub-step integrates velocities, runs detection, solves contacts and
+   * integrates positions. Then dispatches events and writes bound node transforms.
    */
   public step(frameDeltaSeconds: number): void {
     this._assertAlive();
@@ -150,14 +154,26 @@ export class PhysicsWorld implements BodyOwner {
     const steps = this.timeStepper.advance(frameDeltaSeconds);
 
     if (steps > 0) {
-      // Without dynamics, geometry is unchanged across sub-steps, so a single
-      // detection pass per frame suffices; the dynamics solver will run per
-      // sub-step here.
-      for (const body of this._bodies) {
-        body.synchronizeColliders();
+      const dt = this.timeStepper.fixedDelta;
+      const gravityX = this.gravity.x;
+      const gravityY = this.gravity.y;
+
+      for (let step = 0; step < steps; step++) {
+        // Integrate velocities (gravity + forces), refresh geometry, then detect.
+        for (const body of this._bodies) {
+          body._integrateVelocity(dt, gravityX, gravityY);
+          body.synchronizeColliders();
+        }
+
+        this._backend.detect(this._colliders);
+        this._backend.solve(dt, this.velocityIterations);
+
+        // Integrate positions from the solved velocities.
+        for (const body of this._bodies) {
+          body._integratePosition(dt);
+        }
       }
 
-      this._backend.detect(this._colliders);
       this._dispatchEvents();
     }
 

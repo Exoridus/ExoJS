@@ -2,6 +2,7 @@ import type { BroadPhase, CandidatePair } from '../broadphase/BroadPhase';
 import { SweepAndPrune } from '../broadphase/SweepAndPrune';
 import type { Collider } from '../Collider';
 import { ContactGraph } from '../ContactGraph';
+import { ContactSolver } from '../solver/ContactSolver';
 import type { PhysicsBackend } from './PhysicsBackend';
 
 /**
@@ -14,6 +15,7 @@ export class NativePhysicsBackend implements PhysicsBackend {
   public readonly contactGraph = new ContactGraph();
 
   private readonly _broadPhase: BroadPhase = new SweepAndPrune();
+  private readonly _solver = new ContactSolver();
   private readonly _pairs: CandidatePair[] = [];
 
   public get candidatePairs(): readonly CandidatePair[] {
@@ -23,6 +25,12 @@ export class NativePhysicsBackend implements PhysicsBackend {
   public detect(colliders: readonly Collider[]): void {
     this._broadPhase.computePairs(colliders, this._pairs);
     this.contactGraph.update(this._pairs);
+  }
+
+  public solve(dt: number, velocityIterations: number): void {
+    this._solver.prepare(this.contactGraph.solidContacts, dt);
+    this._solver.warmStart();
+    this._solver.solveVelocities(velocityIterations);
   }
 
   public removeCollider(collider: Collider): void {

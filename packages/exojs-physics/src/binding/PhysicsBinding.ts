@@ -1,4 +1,4 @@
-import type { SceneNode } from '@codexo/exojs';
+import { MathUtils, type SceneNode } from '@codexo/exojs';
 
 import type { PhysicsBody } from '../PhysicsBody';
 
@@ -15,10 +15,10 @@ export interface BindingOptions {
 
 /**
  * A link between a {@link PhysicsBody} and a {@link SceneNode}. After each
- * {@link PhysicsWorld.step}, the body's world position is written onto the node.
- * Rotation is written once dynamics ship (a body cannot rotate under contacts in
- * this collision/query release). The node must be world-space-rooted; runtime
- * scale is ignored and non-zero skew is rejected at bind time.
+ * {@link PhysicsWorld.step}, the body's world position **and rotation** are
+ * written onto the node (the body's angle is radians; the node's rotation is
+ * degrees). The node must be world-space-rooted; runtime scale is ignored and
+ * non-zero skew is rejected at bind time.
  */
 export class PhysicsBinding {
   public constructor(
@@ -27,8 +27,9 @@ export class PhysicsBinding {
     public readonly drive: 'body-to-node' | 'node-to-body' = 'body-to-node',
   ) {}
 
-  /** Write the body's current transform onto the bound node. */
+  /** Write the body's current transform (position + rotation) onto the bound node. */
   public sync(): void {
     this.node.setPosition(this.body.x, this.body.y);
+    this.node.setRotation(MathUtils.radiansToDegrees(this.body.angle));
   }
 }
