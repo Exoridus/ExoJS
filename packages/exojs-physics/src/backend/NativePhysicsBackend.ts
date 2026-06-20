@@ -27,10 +27,11 @@ export class NativePhysicsBackend implements PhysicsBackend {
     this.contactGraph.update(this._pairs);
   }
 
-  public solve(dt: number, velocityIterations: number): void {
-    this._solver.prepare(this.contactGraph.solidContacts, dt);
+  public solve(velocityIterations: number, positionIterations: number): void {
+    this._solver.prepare(this.contactGraph.solidContacts);
     this._solver.warmStart();
     this._solver.solveVelocities(velocityIterations);
+    this._solver.solvePositions(positionIterations);
   }
 
   public removeCollider(collider: Collider): void {

@@ -69,6 +69,20 @@ export class PhysicsBody {
   /** @internal — Angular velocity in rad/s. Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE). */
   public angularVelocity = 0;
 
+  /** @internal — Transient position correction X accumulated by the NGS position solver and applied to the transform each sub-step. */
+  public _posCorrectionX = 0;
+  /** @internal — Transient position correction Y accumulated by the NGS position solver. */
+  public _posCorrectionY = 0;
+  /** @internal — Transient angle correction (radians) accumulated by the NGS position solver. */
+  public _angleCorrection = 0;
+
+  /** @internal — Velocity snapshot taken before this sub-step's gravity, so the restitution bias keys off the true impact speed (not the per-step gravity increment). */
+  public _prevVx = 0;
+  /** @internal — Velocity snapshot (Y) before this sub-step's gravity. */
+  public _prevVy = 0;
+  /** @internal — Angular-velocity snapshot before this sub-step's gravity. */
+  public _prevW = 0;
+
   private _forceX = 0;
   private _forceY = 0;
   private _torque = 0;
@@ -239,6 +253,13 @@ export class PhysicsBody {
     return this;
   }
 
+  /** @internal — snapshot the current velocity (before this sub-step's gravity) for the restitution bias. */
+  public _snapshotVelocity(): void {
+    this._prevVx = this.linearVelocityX;
+    this._prevVy = this.linearVelocityY;
+    this._prevW = this.angularVelocity;
+  }
+
   /**
    * @internal — integrate velocity from gravity, accumulated forces/torque and
    * damping over `dt`. No-op for static/kinematic (infinite mass keeps their
@@ -264,23 +285,33 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal — integrate position from the current velocity over `dt`, rotating
-   * about the centre of mass. Static bodies never move; dynamic + kinematic
-   * bodies advance by their velocity.
+   * @internal — integrate position from the current velocity over `dt` plus any
+   * accumulated NGS position correction, rotating about the centre of mass.
+   * Static bodies never move; dynamic + kinematic bodies advance by their
+   * velocity. The position correction is geometric (it never changes velocity)
+   * and is consumed here.
    */
   public _integratePosition(dt: number): void {
     if (this.type === 'static') {
+      this._posCorrectionX = 0;
+      this._posCorrectionY = 0;
+      this._angleCorrection = 0;
+
       return;
     }
 
-    const newComX = this.worldCenterOfMassX + this.linearVelocityX * dt;
-    const newComY = this.worldCenterOfMassY + this.linearVelocityY * dt;
-    const newAngle = this._transform.angle + this.angularVelocity * dt;
+    const newComX = this.worldCenterOfMassX + this.linearVelocityX * dt + this._posCorrectionX;
+    const newComY = this.worldCenterOfMassY + this.linearVelocityY * dt + this._posCorrectionY;
+    const newAngle = this._transform.angle + this.angularVelocity * dt + this._angleCorrection;
     const cos = Math.cos(newAngle);
     const sin = Math.sin(newAngle);
 
     // origin = newCoM − R(newAngle)·comLocal (so rotation pivots about the CoM).
     setTransform(this._transform, newComX - (cos * this._comX - sin * this._comY), newComY - (sin * this._comX + cos * this._comY), newAngle);
+
+    this._posCorrectionX = 0;
+    this._posCorrectionY = 0;
+    this._angleCorrection = 0;
   }
 
   /** Internal: detach a collider (called by the world during destruction). */

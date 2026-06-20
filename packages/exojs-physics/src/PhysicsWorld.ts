@@ -26,7 +26,7 @@ export interface PhysicsWorldOptions {
   maxSubSteps?: number;
   /** Sequential-impulse velocity iterations per sub-step. Default `8`. */
   velocityIterations?: number;
-  /** Solver position iterations (reserved for the Phase-2B position solver). Default `3`. */
+  /** Split-impulse position-correction iterations per sub-step. Default `3`. */
   positionIterations?: number;
   /** Interpolate bound nodes between sub-steps (reserved; no effect yet). Default `true`. */
   interpolation?: boolean;
@@ -49,11 +49,11 @@ export interface StaticColliderOptions extends ColliderOptions {
  * bound node transforms. It holds **no module-level state**, so any number of
  * worlds run in isolation (gate I-1).
  *
- * The dynamics are a **provisional Phase-2A spike** (a warm-started
- * sequential-impulse velocity solver with Baumgarte position bias): it
- * integrates gravity/forces/impulses and resolves contacts, but the full
- * stacking-grade position solver and the public dynamics API arrive with
- * Phase 2B once the solver clears the SGATE.
+ * The dynamics are a **provisional spike** (Phase 2A/2B): a warm-started
+ * sequential-impulse velocity solver plus a split-impulse position-correction
+ * pass — it integrates gravity/forces/impulses, resolves contacts and keeps
+ * stacks stable. The dynamics API stays `@internal` until the solver clears the
+ * SGATE, after which it is promoted to the stable public surface.
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */
@@ -73,7 +73,7 @@ export class PhysicsWorld implements BodyOwner {
   public readonly interpolation: boolean;
   /** Sequential-impulse velocity iterations per sub-step. */
   public readonly velocityIterations: number;
-  /** Solver position iterations (reserved for the Phase-2B position solver). */
+  /** Split-impulse position-correction iterations per sub-step. */
   public readonly positionIterations: number;
 
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
@@ -161,12 +161,13 @@ export class PhysicsWorld implements BodyOwner {
       for (let step = 0; step < steps; step++) {
         // Integrate velocities (gravity + forces), refresh geometry, then detect.
         for (const body of this._bodies) {
+          body._snapshotVelocity();
           body._integrateVelocity(dt, gravityX, gravityY);
           body.synchronizeColliders();
         }
 
         this._backend.detect(this._colliders);
-        this._backend.solve(dt, this.velocityIterations);
+        this._backend.solve(this.velocityIterations, this.positionIterations);
 
         // Integrate positions from the solved velocities.
         for (const body of this._bodies) {
