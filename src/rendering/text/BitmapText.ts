@@ -224,6 +224,11 @@ export class BitmapText extends AbstractText {
     return this._msdf;
   }
 
+  /** The {@link BmFont} this text renders from. Replace via {@link setFont}. */
+  public get font(): BmFont {
+    return this._font;
+  }
+
   /** Per-page quad data consumed by the text renderer. */
   public get pageQuads(): readonly TextPageQuads[] {
     return this._pageQuads;

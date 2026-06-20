@@ -8,7 +8,14 @@ import { deserializeTree, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
+import { Mesh } from '#rendering/mesh/Mesh';
+import { Graphics } from '#rendering/primitives/Graphics';
+import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
+import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { BitmapText, type BmFontData } from '#rendering/text/BitmapText';
+import { BmFont } from '#rendering/text/BmFont';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -16,6 +23,7 @@ import { Text } from '#rendering/text/Text';
 import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
+import { Video } from '#rendering/video/Video';
 import type { Loadable, Loader } from '#resources/Loader';
 
 /** Build a canvas-backed texture with known dimensions (matches the unit-test convention). */
@@ -328,5 +336,203 @@ describe('serialization — Scene entry point', () => {
 
     expect(() => scene.deserialize({ version: 999, root: { type: 'Container' } })).toThrow(/newer than/);
     scene.destroy();
+  });
+});
+
+describe('serialization — RenderNode interaction flags', () => {
+  it('round-trips interaction flags and a Rectangle clipShape', () => {
+    const node = new Container();
+
+    node.interactive = true;
+    node.draggable = true;
+    node.focusable = true;
+    node.tabIndex = 3;
+    node.cursor = 'pointer';
+    node.clip = true;
+    node.clipShape = new Rectangle(0, 0, 50, 40);
+    node.preserveDrawOrder = true;
+    node.cacheAsBitmap = true;
+
+    const data = serializeTree(node);
+
+    expect(data).toMatchObject({
+      interactive: true,
+      draggable: true,
+      focusable: true,
+      tabIndex: 3,
+      cursor: 'pointer',
+      clip: true,
+      preserveDrawOrder: true,
+      cacheAsBitmap: true,
+      clipShape: [0, 0, 50, 40],
+    });
+
+    const restored = deserializeTree(data) as Container;
+
+    expect(restored.interactive).toBe(true);
+    expect(restored.draggable).toBe(true);
+    expect(restored.focusable).toBe(true);
+    expect(restored.tabIndex).toBe(3);
+    expect(restored.cursor).toBe('pointer');
+    expect(restored.clip).toBe(true);
+    expect(restored.preserveDrawOrder).toBe(true);
+    expect(restored.cacheAsBitmap).toBe(true);
+    expect(restored.clipShape).toBeInstanceOf(Rectangle);
+    expect((restored.clipShape as Rectangle).width).toBe(50);
+  });
+});
+
+describe('serialization — Mesh', () => {
+  it('round-trips vertex/index/uv/colour arrays', () => {
+    const mesh = new Mesh({
+      vertices: new Float32Array([0, 0, 10, 0, 10, 10]),
+      indices: new Uint16Array([0, 1, 2]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1]),
+      colors: new Uint32Array([0xffffffff, 0xff00ff00, 0xffff0000]),
+    });
+
+    const data = serializeTree(mesh);
+
+    expect(data.type).toBe('Mesh');
+    expect(data.vertices).toEqual([0, 0, 10, 0, 10, 10]);
+    expect(data.indices).toEqual([0, 1, 2]);
+
+    const restored = deserializeTree(data) as Mesh;
+
+    expect(Array.from(restored.vertices)).toEqual([0, 0, 10, 0, 10, 10]);
+    expect(Array.from(restored.indices ?? [])).toEqual([0, 1, 2]);
+    expect(Array.from(restored.colors ?? [])).toEqual([0xffffffff, 0xff00ff00, 0xffff0000]);
+  });
+});
+
+describe('serialization — Graphics', () => {
+  it('round-trips as a Graphics with its baked mesh children', () => {
+    const graphics = new Graphics();
+
+    graphics.fillColor = new Color(255, 0, 0, 1);
+    graphics.drawRoundedRectangle(0, 0, 40, 20, 4);
+
+    const data = serializeTree(graphics);
+
+    expect(data.type).toBe('Graphics');
+
+    const restored = deserializeTree(data) as Graphics;
+
+    expect(restored).toBeInstanceOf(Graphics);
+    expect(restored.children.length).toBe(graphics.children.length);
+  });
+});
+
+describe('serialization — NineSliceSprite', () => {
+  it('round-trips slices/border/modes/size + texture ref', () => {
+    const texture = createTexture(48, 48);
+    const loader = fakeLoader([{ type: Texture, source: 'panel.png', resource: texture }]);
+    const ns = new NineSliceSprite(texture, { slices: { top: 16, bottom: 16, left: 16, right: 16 }, width: 100, height: 80 });
+
+    const data = serializeTree(ns, loader);
+
+    expect(data.type).toBe('NineSliceSprite');
+    expect(data.texture).toBe('panel.png');
+    expect(data.slices).toEqual({ top: 16, bottom: 16, left: 16, right: 16 });
+    expect(data.width).toBe(100);
+
+    const restored = deserializeTree(data, loader) as NineSliceSprite;
+
+    expect(restored.width).toBe(100);
+    expect(restored.height).toBe(80);
+    expect(restored.slices.top).toBe(16);
+  });
+});
+
+describe('serialization — RepeatingSprite', () => {
+  it('round-trips modes/fits/offsets/size + texture ref', () => {
+    const texture = createTexture(32, 32);
+    const loader = fakeLoader([{ type: Texture, source: 'tile.png', resource: texture }]);
+    const rs = new RepeatingSprite(texture, { width: 128, height: 64, offsetX: 8, modeX: 'mirror-repeat' });
+
+    const data = serializeTree(rs, loader);
+
+    expect(data.type).toBe('RepeatingSprite');
+    expect(data.modeX).toBe('mirror-repeat');
+    expect(data.offsetX).toBe(8);
+
+    const restored = deserializeTree(data, loader) as RepeatingSprite;
+
+    expect(restored.modeX).toBe('mirror-repeat');
+    expect(restored.width).toBe(128);
+    expect(restored.offsetX).toBe(8);
+  });
+});
+
+describe('serialization — AnimatedSprite', () => {
+  it('round-trips clips + active clip + playing state', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      run: { frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)], fps: 10, loop: true },
+    });
+
+    sprite.play('run');
+
+    const data = serializeTree(sprite, loader);
+
+    expect(data.type).toBe('AnimatedSprite');
+    expect(data.currentClip).toBe('run');
+    expect(data.playing).toBe(true);
+
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+
+    expect(restored.currentClip).toBe('run');
+    expect(restored.playing).toBe(true);
+    expect(() => restored.play('run')).not.toThrow();
+  });
+});
+
+describe('serialization — BitmapText', () => {
+  it('round-trips text, font ref, msdf and scale', () => {
+    const fontData: BmFontData = {
+      pages: ['font_0.png'],
+      chars: new Map([[65, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }]]),
+      kernings: new Map(),
+      lineHeight: 16,
+      base: 12,
+    };
+    const font = new BmFont(fontData, [{ width: 64, height: 64 } as unknown as Texture]);
+    const loader = fakeLoader([{ type: BmFont, source: 'ui.fnt', resource: font }]);
+    const bitmapText = new BitmapText('A', font, { msdf: true, scale: 2 });
+
+    const data = serializeTree(bitmapText, loader);
+
+    expect(data.type).toBe('BitmapText');
+    expect(data.font).toBe('ui.fnt');
+    expect(data.msdf).toBe(true);
+    expect(data.scale).toBe(2);
+
+    const restored = deserializeTree(data, loader) as BitmapText;
+
+    expect(restored.text).toBe('A');
+    expect(restored.msdf).toBe(true);
+    expect(restored.fontScale).toBe(2);
+    expect(restored.font).toBe(font);
+  });
+});
+
+describe('serialization — Video', () => {
+  it('round-trips src and playback options', () => {
+    const element = document.createElement('video');
+
+    element.src = 'clip.mp4';
+
+    const video = new Video(element, { loop: true });
+    const data = serializeTree(video);
+
+    expect(data.type).toBe('Video');
+    expect(typeof data.src).toBe('string');
+    expect(data.loop).toBe(true);
+
+    const restored = deserializeTree(data) as Video;
+
+    expect(restored).toBeInstanceOf(Video);
+    expect(restored.loop).toBe(true);
   });
 });

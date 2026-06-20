@@ -1,7 +1,10 @@
 import { Color } from '#core/Color';
+import { warnOnce } from '#core/dev';
 import type { SceneNode } from '#core/SceneNode';
+import { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 import { isPixelSnapMode } from '#rendering/pixelSnap';
+import { RenderNode } from '#rendering/RenderNode';
 import { BlendModes } from '#rendering/types';
 
 import type { SerializedNode } from './types';
@@ -28,6 +31,25 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
   if (node.zIndex !== 0) out.zIndex = node.zIndex;
   if (!node.cullable) out.cullable = false;
   if (node.name !== null) out.name = node.name;
+
+  if (node instanceof RenderNode) {
+    if (node.interactive) out.interactive = true;
+    if (node.draggable) out.draggable = true;
+    if (node.focusable) out.focusable = true;
+    if (node.tabIndex !== 0) out.tabIndex = node.tabIndex;
+    if (node.cursor !== null) out.cursor = node.cursor;
+    if (node.clip) out.clip = true;
+    if (node.preserveDrawOrder) out.preserveDrawOrder = true;
+    if (node.cacheAsBitmap) out.cacheAsBitmap = true;
+
+    const clipShape = node.clipShape;
+
+    if (clipShape instanceof Rectangle) {
+      out.clipShape = [clipShape.x, clipShape.y, clipShape.width, clipShape.height];
+    } else if (clipShape !== null) {
+      warnOnce('serialize:geometry-clipshape', 'A Geometry clipShape is not serialized (deferred); the deserialized node clips to its bounds instead.');
+    }
+  }
 
   if (node instanceof Drawable) {
     const tint = node.tint;
@@ -67,6 +89,23 @@ export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
   if (typeof data.zIndex === 'number') node.zIndex = data.zIndex;
   if (data.cullable === false) node.cullable = false;
   if (typeof data.name === 'string') node.name = data.name;
+
+  if (node instanceof RenderNode) {
+    if (data.interactive === true) node.interactive = true;
+    if (data.draggable === true) node.draggable = true;
+    if (data.focusable === true) node.focusable = true;
+    if (typeof data.tabIndex === 'number') node.tabIndex = data.tabIndex;
+    if (typeof data.cursor === 'string') node.cursor = data.cursor;
+    if (data.clip === true) node.clip = true;
+    if (data.preserveDrawOrder === true) node.preserveDrawOrder = true;
+    if (data.cacheAsBitmap === true) node.cacheAsBitmap = true;
+
+    const clipShape = data.clipShape;
+
+    if (Array.isArray(clipShape) && clipShape.length === 4) {
+      node.clipShape = new Rectangle(Number(clipShape[0]), Number(clipShape[1]), Number(clipShape[2]), Number(clipShape[3]));
+    }
+  }
 
   if (node instanceof Drawable) {
     const tint = data.tint;

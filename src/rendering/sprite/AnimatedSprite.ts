@@ -128,6 +128,22 @@ export class AnimatedSprite extends Sprite {
     return this;
   }
 
+  /**
+   * Returns the registered clips as serializable definitions (frames as
+   * {@link Rectangle}s, `fps`, `loop`). Used by scene serialization to read
+   * back clip state the normalized internal store no longer exposes directly.
+   * @internal
+   */
+  public _getClipDefinitions(): Record<string, { frames: Rectangle[]; fps: number; loop: boolean }> {
+    const out: Record<string, { frames: Rectangle[]; fps: number; loop: boolean }> = {};
+
+    for (const [name, clip] of this._clips) {
+      out[name] = { frames: clip.frames.map(frame => frame.clone()), fps: 1000 / clip.frameDurationMs, loop: clip.loop };
+    }
+
+    return out;
+  }
+
   /** Remove a registered clip by name. Stops playback first if the clip is currently active. */
   public removeClip(name: string): this {
     if (this._currentClipName === name) {
