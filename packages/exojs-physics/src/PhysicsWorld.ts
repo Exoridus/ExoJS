@@ -18,7 +18,7 @@ import type { VectorLike } from './types';
 
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
-  /** Gravity in px/s² (+Y down). Integrated each sub-step by the dynamics spike. Default `(0, 0)`. */
+  /** Gravity in px/s² (+Y down). Integrated each sub-step. Default `(0, 0)`. */
   gravity?: VectorLike;
   /** Fixed timestep in seconds. Default `1 / 60`. */
   fixedDelta?: number;
@@ -49,11 +49,12 @@ export interface StaticColliderOptions extends ColliderOptions {
  * bound node transforms. It holds **no module-level state**, so any number of
  * worlds run in isolation (gate I-1).
  *
- * The dynamics are a **provisional spike** (Phase 2A/2B): a warm-started
- * sequential-impulse velocity solver plus a split-impulse position-correction
- * pass — it integrates gravity/forces/impulses, resolves contacts and keeps
- * stacks stable. The dynamics API stays `@internal` until the solver clears the
- * SGATE, after which it is promoted to the stable public surface.
+ * The dynamics are a native, warm-started **sequential-impulse** solver: a
+ * 2-point block normal solve plus a non-linear Gauss-Seidel position-correction
+ * pass. It integrates gravity/forces/impulses, resolves contacts and keeps
+ * moderate stacks stable; very tall towers (beyond ~10 high) are a known limit
+ * of the iteration budget. The detection backend sits behind an internal seam,
+ * so the solver is swappable without touching this public surface.
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */
@@ -65,7 +66,7 @@ export class PhysicsWorld implements BodyOwner {
   /** Fires when a collider leaves a sensor. */
   public readonly onSensorExit = new Signal<[SensorEvent]>();
 
-  /** World gravity (px/s², +Y down). Integrated each sub-step by the dynamics spike. */
+  /** World gravity (px/s², +Y down). Integrated each sub-step. */
   public readonly gravity: Vector;
   /** The fixed-step accumulator. */
   public readonly timeStepper: TimeStepper;
