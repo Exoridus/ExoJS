@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 import { SceneNode } from '#core/SceneNode';
+import { Prefab } from '#core/serialization/Prefab';
+import { SaveManager } from '#core/serialization/SaveManager';
 import { registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import { deserializeTree, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
@@ -24,6 +26,7 @@ import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
+import type { JsonStore } from '#resources/JsonStore';
 import type { Loadable, Loader } from '#resources/Loader';
 
 /** Build a canvas-backed texture with known dimensions (matches the unit-test convention). */
@@ -534,5 +537,85 @@ describe('serialization — Video', () => {
 
     expect(restored).toBeInstanceOf(Video);
     expect(restored.loop).toBe(true);
+  });
+});
+
+describe('serialization — Prefab', () => {
+  it('instantiates independent copies of a captured subtree', () => {
+    const prototype = new Container();
+
+    prototype.name = 'coin';
+    prototype.setPosition(0, 0);
+    prototype.addChild(new Container());
+
+    const prefab = Prefab.from(prototype);
+    const first = prefab.instantiate() as Container;
+    const second = prefab.instantiate() as Container;
+
+    expect(first).not.toBe(second);
+    expect(first.name).toBe('coin');
+    expect(second.name).toBe('coin');
+    expect(first.children).toHaveLength(1);
+    // Instances are fully independent (no shared child nodes).
+    expect(first.children[0]).not.toBe(second.children[0]);
+  });
+
+  it('round-trips through toJSON / fromJSON', () => {
+    const prototype = new Container();
+    prototype.name = 'enemy';
+
+    const json = Prefab.from(prototype).toJSON();
+    const rebuilt = Prefab.fromJSON(json);
+
+    expect((rebuilt.instantiate() as Container).name).toBe('enemy');
+  });
+});
+
+describe('serialization — SaveManager', () => {
+  function fakeJsonStore(): JsonStore {
+    const records = new Map<string, unknown>();
+
+    return {
+      set: (key: string, data: unknown) => {
+        records.set(key, JSON.parse(JSON.stringify(data)));
+
+        return Promise.resolve();
+      },
+      get: (key: string) => Promise.resolve(records.has(key) ? records.get(key) : null),
+      has: (key: string) => Promise.resolve(records.has(key)),
+      delete: (key: string) => Promise.resolve(records.delete(key)),
+    } as unknown as JsonStore;
+  }
+
+  it('saves and restores a scene by slot', async () => {
+    const saves = new SaveManager(fakeJsonStore());
+    const scene = new Scene();
+    const child = new Container();
+
+    child.name = 'hud';
+    child.setPosition(5, 6);
+    scene.addChild(child);
+
+    await saves.save('slot-1', scene);
+    expect(await saves.has('slot-1')).toBe(true);
+
+    const target = new Scene();
+    const loaded = await saves.load('slot-1', target);
+
+    expect(loaded).toBe(true);
+    expect(target.root.children).toHaveLength(1);
+    expect(target.root.children[0].name).toBe('hud');
+    expect(target.root.children[0].x).toBe(5);
+
+    scene.destroy();
+    target.destroy();
+  });
+
+  it('returns false when loading a missing slot', async () => {
+    const saves = new SaveManager(fakeJsonStore());
+    const scene = new Scene();
+
+    expect(await saves.load('nope', scene)).toBe(false);
+    scene.destroy();
   });
 });
