@@ -13,11 +13,11 @@ export interface BodyOptions {
   position?: VectorLike;
   /** Initial rotation in radians. Default `0`. */
   angle?: number;
-  /** Linear damping (applied once dynamics ship). Default `0`. */
+  /** Linear damping applied by the dynamics spike each sub-step. Default `0`. */
   linearDamping?: number;
-  /** Angular damping (applied once dynamics ship). Default `0`. */
+  /** Angular damping applied by the dynamics spike each sub-step. Default `0`. */
   angularDamping?: number;
-  /** Per-body multiplier on world gravity (applied once dynamics ship). Default `1`. */
+  /** Per-body multiplier on world gravity, applied by the dynamics spike each sub-step. Default `1`. */
   gravityScale?: number;
   /** When `true`, the body never rotates under contacts (infinite rotational inertia). Default `false`. */
   fixedRotation?: boolean;
@@ -34,20 +34,21 @@ export interface BodyOwner {
 
 /**
  * A rigid body: a world transform plus mass properties aggregated from its
- * colliders. In this collision/query release a body holds and reports its
- * transform and mass but is not integrated — it moves only via
- * {@link setTransform} (game-driven / kinematic). Forces, impulses and gravity
- * integration arrive with the dynamics solver.
+ * colliders. A **provisional** dynamics spike (Phase 2A) now integrates dynamic
+ * bodies under gravity, accumulated forces/torque and contact impulses; static
+ * bodies stay fixed and kinematic bodies move by their velocity only. The
+ * velocity/force surface is `@internal` until the solver clears the SGATE and is
+ * promoted to stable public API in Phase 2B.
  */
 export class PhysicsBody {
   public readonly id: number;
   public readonly type: BodyType;
 
-  /** Linear damping (inert until dynamics ship). */
+  /** Linear damping applied each sub-step by the dynamics spike. */
   public linearDamping: number;
-  /** Angular damping (inert until dynamics ship). */
+  /** Angular damping applied each sub-step by the dynamics spike. */
   public angularDamping: number;
-  /** Per-body gravity multiplier (inert until dynamics ship). */
+  /** Per-body multiplier on world gravity, applied each sub-step by the dynamics spike. */
   public gravityScale: number;
   /** When `true`, rotational inertia is treated as infinite. */
   public fixedRotation: boolean;
@@ -60,6 +61,17 @@ export class PhysicsBody {
   public inertia = 0;
   /** Inverse rotational inertia (`0` = no angular response). */
   public invInertia = 0;
+
+  /** @internal — Linear velocity X in px/s. Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE). */
+  public linearVelocityX = 0;
+  /** @internal — Linear velocity Y in px/s. Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE). */
+  public linearVelocityY = 0;
+  /** @internal — Angular velocity in rad/s. Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE). */
+  public angularVelocity = 0;
+
+  private _forceX = 0;
+  private _forceY = 0;
+  private _torque = 0;
 
   private readonly _owner: BodyOwner;
   private readonly _transform: Transform;
@@ -175,6 +187,100 @@ export class PhysicsBody {
     for (const collider of this._colliders) {
       collider.synchronize(this._transform);
     }
+  }
+
+  /** @internal — World-space centre of mass X (body origin + rotated local CoM). Provisional spike surface; promoted at Phase 2B. */
+  public get worldCenterOfMassX(): number {
+    return this._transform.x + this._transform.cos * this._comX - this._transform.sin * this._comY;
+  }
+
+  /** @internal — World-space centre of mass Y. Provisional spike surface; promoted at Phase 2B. */
+  public get worldCenterOfMassY(): number {
+    return this._transform.y + this._transform.sin * this._comX + this._transform.cos * this._comY;
+  }
+
+  /** @internal — Accumulate a world-space force at the centre of mass (applied on the next sub-step). Provisional spike surface; promoted at Phase 2B. Returns `this`. */
+  public applyForce(forceX: number, forceY: number): this {
+    this._forceX += forceX;
+    this._forceY += forceY;
+
+    return this;
+  }
+
+  /** @internal — Accumulate a torque (applied on the next sub-step). Provisional spike surface; promoted at Phase 2B. Returns `this`. */
+  public applyTorque(torque: number): this {
+    this._torque += torque;
+
+    return this;
+  }
+
+  /**
+   * Apply an instantaneous world-space impulse at `(pointX, pointY)` (world space;
+   * defaults to the centre of mass), changing velocity immediately. No-op on
+   * static/kinematic bodies (infinite mass). Returns `this`.
+   *
+   * @internal — Provisional spike surface; promoted to stable public API at Phase 2B (post-SGATE).
+   */
+  public applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this {
+    if (this.invMass === 0) {
+      return this;
+    }
+
+    this.linearVelocityX += impulseX * this.invMass;
+    this.linearVelocityY += impulseY * this.invMass;
+
+    if (pointX !== undefined && pointY !== undefined && this.invInertia !== 0) {
+      const rx = pointX - this.worldCenterOfMassX;
+      const ry = pointY - this.worldCenterOfMassY;
+
+      this.angularVelocity += (rx * impulseY - ry * impulseX) * this.invInertia;
+    }
+
+    return this;
+  }
+
+  /**
+   * @internal — integrate velocity from gravity, accumulated forces/torque and
+   * damping over `dt`. No-op for static/kinematic (infinite mass keeps their
+   * velocity solver-driven only). Clears the force/torque accumulators.
+   */
+  public _integrateVelocity(dt: number, gravityX: number, gravityY: number): void {
+    if (this.invMass === 0) {
+      return;
+    }
+
+    this.linearVelocityX += (gravityX * this.gravityScale + this._forceX * this.invMass) * dt;
+    this.linearVelocityY += (gravityY * this.gravityScale + this._forceY * this.invMass) * dt;
+    this.angularVelocity += this._torque * this.invInertia * dt;
+
+    // Exponential damping (no-op when damping is 0).
+    this.linearVelocityX /= 1 + dt * this.linearDamping;
+    this.linearVelocityY /= 1 + dt * this.linearDamping;
+    this.angularVelocity /= 1 + dt * this.angularDamping;
+
+    this._forceX = 0;
+    this._forceY = 0;
+    this._torque = 0;
+  }
+
+  /**
+   * @internal — integrate position from the current velocity over `dt`, rotating
+   * about the centre of mass. Static bodies never move; dynamic + kinematic
+   * bodies advance by their velocity.
+   */
+  public _integratePosition(dt: number): void {
+    if (this.type === 'static') {
+      return;
+    }
+
+    const newComX = this.worldCenterOfMassX + this.linearVelocityX * dt;
+    const newComY = this.worldCenterOfMassY + this.linearVelocityY * dt;
+    const newAngle = this._transform.angle + this.angularVelocity * dt;
+    const cos = Math.cos(newAngle);
+    const sin = Math.sin(newAngle);
+
+    // origin = newCoM − R(newAngle)·comLocal (so rotation pivots about the CoM).
+    setTransform(this._transform, newComX - (cos * this._comX - sin * this._comY), newComY - (sin * this._comX + cos * this._comY), newAngle);
   }
 
   /** Internal: detach a collider (called by the world during destruction). */

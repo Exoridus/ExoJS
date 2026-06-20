@@ -8,6 +8,7 @@ interface FakeNode {
   skewY: number;
   x: number;
   y: number;
+  rotation: number;
   setPosition(x: number, y: number): FakeNode;
   setRotation(degrees: number): FakeNode;
 }
@@ -17,13 +18,16 @@ const fakeNode = (skewX = 0, skewY = 0): FakeNode => ({
   skewY,
   x: 0,
   y: 0,
+  rotation: 0,
   setPosition(x: number, y: number) {
     this.x = x;
     this.y = y;
 
     return this;
   },
-  setRotation() {
+  setRotation(degrees: number) {
+    this.rotation = degrees;
+
     return this;
   },
 });
@@ -43,6 +47,22 @@ describe('SceneNode binding (gate B-1)', () => {
     world.step(1 / 60);
     expect(node.x).toBe(33);
     expect(node.y).toBe(44);
+  });
+
+  it('writes the body rotation onto the node (radians → degrees)', () => {
+    const world = new PhysicsWorld();
+    const body = world.createBody({ type: 'kinematic', position: { x: 0, y: 0 }, angle: Math.PI / 2 });
+    body.createCollider({ shape: new BoxShape(10, 10) });
+    const node = fakeNode();
+
+    world.bind(body, node as unknown as SceneNode);
+
+    expect(node.rotation).toBeCloseTo(90, 6);
+
+    body.setTransform({ x: 0, y: 0 }, Math.PI);
+    world.step(1 / 60);
+
+    expect(node.rotation).toBeCloseTo(180, 6);
   });
 
   it('rejects binding a node with non-zero skew', () => {
