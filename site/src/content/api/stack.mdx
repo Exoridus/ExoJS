@@ -1,0 +1,137 @@
+---
+title: "Stack"
+description: "Linear layout container that flows its children in a row or column with even spacing and optional padding, then sizes itself to fit. Call Stack.layout after mutating children added with `addChild`, or use Stack.addItem to add and re-flow in one step."
+symbol: "Stack"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 100
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
+sourcePath: "src/ui/Stack.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Stack.ts#L22"
+---
+## Import
+
+`import { Stack } from '@codexo/exojs'`
+
+Linear layout container that flows its children in a row or column with even
+spacing and optional padding, then sizes itself to fit. Call
+Stack.layout after mutating children added with `addChild`, or use
+Stack.addItem to add and re-flow in one step.
+
+## Constructors
+
+- `new(options: StackOptions): Stack`
+
+## Methods
+
+- `_applyAnchor(containerWidth: number, containerHeight: number): void`
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `_onEnabledChanged(_enabled: boolean): void`
+- `_relayout(): void`
+- `addChild(children: RenderNode[]): this`
+- `addChildAt(child: RenderNode, index: number): this`
+- `addFilter(filter: Filter): this`
+- `addItem(child: RenderNode): this`
+- `anchorIn(root: UIRoot, anchor: WidgetAnchor, offsetX: number, offsetY: number): this`
+- `blur(): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `focus(): this`
+- `getBounds(): Rectangle`
+- `getChildAt(index: number): RenderNode`
+- `getChildIndex(child: RenderNode): number`
+- `getGlobalTransform(): Matrix`
+- `getLocalBounds(): Rectangle`
+- `getNormals(): Vector[]`
+- `getTransform(): Matrix`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View): boolean`
+- `layout(): this`
+- `move(x: number, y: number): this`
+- `project(axis: Vector, result: Interval): Interval`
+- `removeChild(child: RenderNode): this`
+- `removeChildAt(index: number): this`
+- `removeChildren(begin: number, end: number): this`
+- `removeFilter(filter: Filter): this`
+- `render(backend: RenderBackend): this`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setChildIndex(child: RenderNode, index: number): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `setSize(width: number, height: number): this`
+- `setSkew(x: number, y: number): this`
+- `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
+- `preserveDrawOrder: boolean`
+- `tabIndex: number`
+- `anchor: ObservableVector`
+- `bottom: number`
+- `cacheAsBitmap: boolean`
+- `children: RenderNode[]`
+- `cullable: boolean`
+- `enabled: boolean`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `left: number`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `right: number`
+- `rotation: number`
+- `scale: ObservableVector`
+- `skewX: number`
+- `skewY: number`
+- `top: number`
+- `uiHeight: number`
+- `uiWidth: number`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
+
+## Events
+
+- `onBlur: Signal<[RenderNode]>`
+- `onDrag: Signal<[InteractionEvent]>`
+- `onDragEnd: Signal<[InteractionEvent]>`
+- `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
+- `onPointerDown: Signal<[InteractionEvent]>`
+- `onPointerMove: Signal<[InteractionEvent]>`
+- `onPointerOut: Signal<[InteractionEvent]>`
+- `onPointerOver: Signal<[InteractionEvent]>`
+- `onPointerTap: Signal<[InteractionEvent]>`
+- `onPointerUp: Signal<[InteractionEvent]>`
+
+## Source
+
+[src/ui/Stack.ts](https://github.com/Exoridus/ExoJS/blob/main/src/ui/Stack.ts#L22)

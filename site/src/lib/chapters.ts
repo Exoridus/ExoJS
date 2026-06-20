@@ -25,6 +25,7 @@ export const CHAPTERS: ReadonlyArray<ChapterMeta> = [
     { order: 17, slug: 'debug-layer', title: 'Debug Layer', complexity: 'Low' },
     { order: 18, slug: 'custom-renderers', title: 'Custom Renderers', complexity: 'Very high' },
     { order: 19, slug: 'showcase', title: 'Showcase', complexity: 'Mixed' },
+    { order: 20, slug: 'ui', title: 'UI', complexity: 'Medium' },
 ];
 
 export const CHAPTER_BY_SLUG = new Map(CHAPTERS.map(chapter => [chapter.slug, chapter]));

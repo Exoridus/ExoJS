@@ -94,6 +94,7 @@ const createApp = (): {
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,
+    focus: { focused: null, focus() {}, blur() {}, _notifyNodeRemoved() {} },
     // Default centered camera: design-space pointer coords pass through to
     // world space unchanged (identity screenToWorld).
     rendering: {
@@ -910,5 +911,82 @@ describe('InteractionManager — multi-Application isolation', () => {
     imA.destroy();
     imB.destroy();
     sprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Modal input capture
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — input capture', () => {
+  test('confines hit-testing to the captured subtree; outside pointers hit nothing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const modal = new Container();
+    const inside = new TestSprite().setBounds(0, 0, 100, 100);
+    const outside = new TestSprite().setBounds(200, 0, 100, 100);
+
+    inside.interactive = true;
+    outside.interactive = true;
+    modal.addChild(inside);
+    scene.addChild(modal);
+    scene.addChild(outside);
+
+    const insideHandler = vi.fn();
+    const outsideHandler = vi.fn();
+
+    inside.onPointerDown.add(insideHandler);
+    outside.onPointerDown.add(outsideHandler);
+
+    im.pushInputCapture(modal);
+
+    // Pointer over `outside` (not in the captured subtree) hits nothing.
+    signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
+    flushInteractions(im);
+    expect(outsideHandler).not.toHaveBeenCalled();
+
+    // Pointer over `inside` (in the captured subtree) still hits.
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+    expect(insideHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    inside.destroy();
+    outside.destroy();
+    modal.destroy();
+  });
+
+  test('popInputCapture restores hit-testing outside the previous subtree', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const modal = new Container();
+    const inside = new TestSprite().setBounds(0, 0, 100, 100);
+    const outside = new TestSprite().setBounds(200, 0, 100, 100);
+
+    inside.interactive = true;
+    outside.interactive = true;
+    modal.addChild(inside);
+    scene.addChild(modal);
+    scene.addChild(outside);
+
+    const outsideHandler = vi.fn();
+
+    outside.onPointerDown.add(outsideHandler);
+
+    im.pushInputCapture(modal);
+    im.popInputCapture();
+
+    signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
+    flushInteractions(im);
+    expect(outsideHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    inside.destroy();
+    outside.destroy();
+    modal.destroy();
   });
 });

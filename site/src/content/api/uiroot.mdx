@@ -1,0 +1,138 @@
+---
+title: "UIRoot"
+description: "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly. Unlike Scene.root, the UI layer is **auto-rendered** by the SceneManager after `Scene.draw()`, through the RenderingContext.screenView — so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer. Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout."
+symbol: "UIRoot"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 93
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
+sourcePath: "src/ui/UIRoot.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/ui/UIRoot.ts#L20"
+---
+## Import
+
+`import { UIRoot } from '@codexo/exojs'`
+
+Root of a scene's screen-fixed UI layer. Reached through Scene.ui;
+you do not construct it directly.
+
+Unlike Scene.root, the UI layer is **auto-rendered** by the
+SceneManager after `Scene.draw()`, through the
+RenderingContext.screenView — so its children live in screen space
+(origin top-left, `0..width` × `0..height`) and never scroll with the
+camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that
+same screen space, ahead of the world layer.
+
+Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal
+fires whenever the screen size changes, so anchored widgets can re-layout.
+
+## Constructors
+
+- `new(): UIRoot`
+
+## Methods
+
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `addChild(children: RenderNode[]): this`
+- `addChildAt(child: RenderNode, index: number): this`
+- `addFilter(filter: Filter): this`
+- `blur(): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `focus(): this`
+- `getBounds(): Rectangle`
+- `getChildAt(index: number): RenderNode`
+- `getChildIndex(child: RenderNode): number`
+- `getGlobalTransform(): Matrix`
+- `getLocalBounds(): Rectangle`
+- `getNormals(): Vector[]`
+- `getTransform(): Matrix`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View): boolean`
+- `move(x: number, y: number): this`
+- `project(axis: Vector, result: Interval): Interval`
+- `removeChild(child: RenderNode): this`
+- `removeChildAt(index: number): this`
+- `removeChildren(begin: number, end: number): this`
+- `removeFilter(filter: Filter): this`
+- `render(backend: RenderBackend): this`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setChildIndex(child: RenderNode, index: number): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `setSkew(x: number, y: number): this`
+- `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
+- `preserveDrawOrder: boolean`
+- `tabIndex: number`
+- `anchor: ObservableVector`
+- `bottom: number`
+- `cacheAsBitmap: boolean`
+- `children: RenderNode[]`
+- `cullable: boolean`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `left: number`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `right: number`
+- `rotation: number`
+- `scale: ObservableVector`
+- `screenHeight: number`
+- `screenWidth: number`
+- `skewX: number`
+- `skewY: number`
+- `top: number`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
+
+## Events
+
+- `onResize: Signal<[width, height]>`
+- `onBlur: Signal<[RenderNode]>`
+- `onDrag: Signal<[InteractionEvent]>`
+- `onDragEnd: Signal<[InteractionEvent]>`
+- `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
+- `onPointerDown: Signal<[InteractionEvent]>`
+- `onPointerMove: Signal<[InteractionEvent]>`
+- `onPointerOut: Signal<[InteractionEvent]>`
+- `onPointerOver: Signal<[InteractionEvent]>`
+- `onPointerTap: Signal<[InteractionEvent]>`
+- `onPointerUp: Signal<[InteractionEvent]>`
+
+## Source
+
+[src/ui/UIRoot.ts](https://github.com/Exoridus/ExoJS/blob/main/src/ui/UIRoot.ts#L20)

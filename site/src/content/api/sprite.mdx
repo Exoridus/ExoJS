@@ -5,7 +5,7 @@ symbol: "Sprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 80
+memberCount: 88
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/Sprite.ts"
@@ -37,10 +37,12 @@ operate on the exact rotated quad rather than the AABB.
 
 - `_invalidateChildrenTransform(): void`
 - `addFilter(filter: Filter): this`
+- `blur(): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getGlobalTransform(): Matrix`
 - `getLocalBounds(): Rectangle`
@@ -79,7 +81,9 @@ operate on the exact rotated quad rather than the AABB.
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `preserveDrawOrder: boolean`
+- `tabIndex: number`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
@@ -111,9 +115,13 @@ operate on the exact rotated quad rather than the AABB.
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

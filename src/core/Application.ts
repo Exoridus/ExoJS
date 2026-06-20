@@ -4,6 +4,7 @@ import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
 import { materializeAssetBindings, materializeRendererBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
+import { FocusManager } from '#input/FocusManager';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputManager';
 import { InputManager } from '#input/InputManager';
@@ -217,6 +218,7 @@ export class Application {
   public readonly canvas: HTMLCanvasElement;
   public readonly loader: Loader;
   public readonly input: InputManager;
+  public readonly focus: FocusManager;
   public readonly interaction: InteractionManager;
   public readonly scene: SceneManager;
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
@@ -337,6 +339,7 @@ export class Application {
     this._backend = this.createBackend(this._backendType, this._snapshot);
     this._rendering = new RenderingContext(this._backend);
     this.input = new InputManager(this);
+    this.focus = new FocusManager(this);
     this.interaction = new InteractionManager(this);
     this.scene = new SceneManager(this);
     this.random = new Random(this.options.seed);
@@ -773,6 +776,7 @@ export class Application {
 
     this.stop();
     this.loader.destroy();
+    this.focus.destroy();
     this.systems.destroy();
     this._backend.destroy();
     this.scene.destroy();

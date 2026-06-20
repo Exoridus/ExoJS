@@ -1,6 +1,6 @@
 import { Color } from '#core/Color';
 import type { MeshGeometryData } from '#math/geometry';
-import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '#math/geometry';
+import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildRoundedRectangle, buildStar } from '#math/geometry';
 import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '#math/utils';
 import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
@@ -336,6 +336,23 @@ export class Graphics extends Container {
   /** Fill a rectangle and optionally stroke its outline if `lineWidth > 0`. */
   public drawRectangle(x: number, y: number, width: number, height: number): this {
     const data = buildRectangle(x, y, width, height);
+
+    this.addChild(this._createFillMesh(data));
+
+    if (this._lineWidth > 0) {
+      this.drawPath(data.points);
+    }
+
+    return this;
+  }
+
+  /**
+   * Fill a rounded rectangle and optionally stroke its outline if
+   * `lineWidth > 0`. The corner `radius` is clamped to half the smaller side; a
+   * radius of `0` is equivalent to {@link drawRectangle}.
+   */
+  public drawRoundedRectangle(x: number, y: number, width: number, height: number, radius: number): this {
+    const data = buildRoundedRectangle(x, y, width, height, radius);
 
     this.addChild(this._createFillMesh(data));
 

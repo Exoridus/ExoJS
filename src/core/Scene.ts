@@ -4,6 +4,7 @@ import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { Loader } from '#resources/Loader';
+import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
 import { DisposalScope } from './DisposalScope';
@@ -215,6 +216,38 @@ export class Scene {
   /** @internal — called by {@link SceneManager} each frame after `update`. */
   public _tickSystems(delta: Time): void {
     this._systems?._tick(delta);
+  }
+
+  private _ui: UIRoot | null = null;
+
+  /**
+   * Scene-bound UI layer, rendered screen-fixed on top of the scene content
+   * (after {@link Scene.draw}). Lazily created and destroyed with the scene;
+   * add widgets via `this.ui.addChild(...)`.
+   *
+   * Unlike {@link Scene.root}, the UI layer **is** auto-rendered each frame — a
+   * first-class overlay that always sits above the world. Its children live in
+   * screen space (origin top-left, `0..width` × `0..height`); pointer and
+   * keyboard input route to them ahead of the world layer.
+   */
+  public get ui(): UIRoot {
+    if (this._ui === null) {
+      this._ui = this._disposal.track(new UIRoot());
+
+      // If the scene is already active (its root carries a stage), bind the UI
+      // layer now; otherwise SceneManager attaches it when the scene activates.
+      if (this._root._getStage() !== null) {
+        this._app?.interaction.attachUIRoot(this._ui);
+      }
+    }
+
+    return this._ui;
+  }
+
+  /** @internal — the UI layer if materialized, else `null` (no lazy allocation). */
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
+  public _peekUI(): UIRoot | null {
+    return this._ui;
   }
 
   public get stackMode(): SceneStackMode {

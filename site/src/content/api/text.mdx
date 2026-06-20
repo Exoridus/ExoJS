@@ -5,7 +5,7 @@ symbol: "Text"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 82
+memberCount: 90
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/text/Text.ts"
@@ -55,10 +55,12 @@ options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
 - `_invalidateChildrenTransform(): void`
 - `_invalidateSubtreeTransform(): void`
 - `addFilter(filter: Filter): this`
+- `blur(): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getGlobalTransform(): Matrix`
 - `getLocalBounds(): Rectangle`
@@ -95,7 +97,9 @@ options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `preserveDrawOrder: boolean`
+- `tabIndex: number`
 - `anchor: ObservableVector`
 - `atlas: GlyphAtlas | null`
 - `atlasMode: AtlasMode`
@@ -129,9 +133,13 @@ options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

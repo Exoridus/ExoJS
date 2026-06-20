@@ -5,7 +5,7 @@ symbol: "ParticleSystem"
 kind: "class"
 subsystem: "particles"
 importPath: "@codexo/exojs-particles"
-memberCount: 110
+memberCount: 118
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "packages/exojs-particles/src/ParticleSystem.ts"
@@ -76,6 +76,7 @@ to `(0, 0)`.
 - `addFilter(filter: Filter): this`
 - `addSpawnModule(mod: SpawnModule): this`
 - `addUpdateModule(mod: UpdateModule): this`
+- `blur(): this`
 - `clearDeathModules(): this`
 - `clearFilters(): this`
 - `clearParticles(): this`
@@ -84,6 +85,7 @@ to `(0, 0)`.
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getGlobalTransform(): Matrix`
 - `getLocalBounds(): Rectangle`
@@ -127,6 +129,7 @@ to `(0, 0)`.
 - `draggable: boolean`
 - `elapsed: Float32Array`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `lifetime: Float32Array`
 - `liveCount: number`
 - `posX: Float32Array`
@@ -136,6 +139,7 @@ to `(0, 0)`.
 - `rotationSpeeds: Float32Array`
 - `scaleX: Float32Array`
 - `scaleY: Float32Array`
+- `tabIndex: number`
 - `textureIndex: Uint16Array`
 - `velX: Float32Array`
 - `velY: Float32Array`
@@ -175,9 +179,13 @@ to `(0, 0)`.
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

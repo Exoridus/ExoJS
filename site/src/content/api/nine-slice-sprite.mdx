@@ -5,7 +5,7 @@ symbol: "NineSliceSprite"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 82
+memberCount: 90
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/sprite/NineSliceSprite.ts"
@@ -28,10 +28,12 @@ Corners stay pixel-perfect; edges/center fill by stretch, repeat, or mirror-repe
 - `_invalidateChildrenTransform(): void`
 - `_invalidateSubtreeTransform(): void`
 - `addFilter(filter: Filter): this`
+- `blur(): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getGlobalTransform(): Matrix`
 - `getLocalBounds(): Rectangle`
@@ -70,7 +72,9 @@ Corners stay pixel-perfect; edges/center fill by stretch, repeat, or mirror-repe
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `preserveDrawOrder: boolean`
+- `tabIndex: number`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `border: Readonly<NineSliceInsets>`
@@ -102,9 +106,13 @@ Corners stay pixel-perfect; edges/center fill by stretch, repeat, or mirror-repe
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

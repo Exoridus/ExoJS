@@ -350,6 +350,83 @@ export const buildRectangle = (x: number, y: number, width: number, height: numb
 };
 
 /**
+ * Build a filled axis-aligned rounded rectangle as a triangle-list mesh. The
+ * corner `radius` is clamped to half the smaller side; a clamped radius of `0`
+ * falls back to {@link buildRectangle}. Each corner is a quarter-circle arc
+ * whose segment count scales with the radius (like {@link buildCircle}), and
+ * the shape is fan-triangulated from its center. The returned `points` form a
+ * closed outline (the first point is repeated) so stroking yields a seamless
+ * border.
+ */
+export const buildRoundedRectangle = (x: number, y: number, width: number, height: number, radius: number): MeshGeometryData => {
+  const r = Math.min(Math.abs(radius), width / 2, height / 2);
+
+  if (r <= 0) {
+    return buildRectangle(x, y, width, height);
+  }
+
+  // Segments per 90° corner, scaled like buildCircle's full-circle count.
+  const cornerSegments = Math.max(1, Math.floor((15 * Math.sqrt(r + r)) / 4));
+  const step = Math.PI / 2 / cornerSegments;
+
+  // Arc center + start angle per corner, clockwise (y-down): TL, TR, BR, BL.
+  const corners = [
+    [x + r, y + r, Math.PI], // top-left:     180° -> 270°
+    [x + width - r, y + r, Math.PI * 1.5], // top-right:    270° -> 360°
+    [x + width - r, y + height - r, 0], // bottom-right:   0° ->  90°
+    [x + r, y + height - r, Math.PI * 0.5], // bottom-left:  90° -> 180°
+  ];
+
+  const perimeter: number[] = [];
+
+  for (const [centerX, centerY, startAngle] of corners) {
+    for (let i = 0; i <= cornerSegments; i++) {
+      const angle = startAngle + step * i;
+      const px = centerX + Math.cos(angle) * r;
+      const py = centerY + Math.sin(angle) * r;
+      const last = perimeter.length;
+
+      // Skip a point coincident with the previous one (a side of zero straight
+      // length, i.e. radius == half-side, makes adjacent arcs meet).
+      if (last >= 2 && Math.abs(perimeter[last - 2] - px) < 1e-4 && Math.abs(perimeter[last - 1] - py) < 1e-4) {
+        continue;
+      }
+
+      perimeter.push(px, py);
+    }
+  }
+
+  const perimeterCount = perimeter.length / 2;
+  const vertices = new Float32Array((perimeterCount + 1) * 2);
+
+  // 1 center vertex + N perimeter vertices.
+  vertices[0] = x + width / 2;
+  vertices[1] = y + height / 2;
+
+  for (let i = 0; i < perimeterCount; i++) {
+    const offset = (i + 1) * 2;
+
+    vertices[offset] = perimeter[i * 2];
+    vertices[offset + 1] = perimeter[i * 2 + 1];
+  }
+
+  const indices = new Uint16Array(perimeterCount * 3);
+
+  for (let i = 0; i < perimeterCount; i++) {
+    const base = i * 3;
+
+    indices[base] = 0;
+    indices[base + 1] = i + 1;
+    indices[base + 2] = i + 2 > perimeterCount ? 1 : i + 2;
+  }
+
+  // Closed outline (repeat the first point) so the stroke pass seals the border.
+  const points = [...perimeter, perimeter[0], perimeter[1]];
+
+  return { vertices, indices, points };
+};
+
+/**
  * Build a filled star polygon as a triangle-list mesh. `points` is the number
  * of outer tips (e.g. `5` for a five-pointed star). `innerRadius` defaults to
  * half of `radius`. `rotation` offsets the first tip angle in radians.
@@ -390,5 +467,6 @@ export const MeshBuilder = {
   ellipse: buildEllipse,
   polygon: buildPolygon,
   rectangle: buildRectangle,
+  roundedRectangle: buildRoundedRectangle,
   star: buildStar,
 } as const;

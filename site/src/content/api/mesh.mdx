@@ -5,7 +5,7 @@ symbol: "Mesh"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 81
+memberCount: 89
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/mesh/Mesh.ts"
@@ -52,10 +52,12 @@ after in-place mutation is the caller's responsibility (call
 - `_invalidateChildrenTransform(): void`
 - `_invalidateSubtreeTransform(): void`
 - `addFilter(filter: Filter): this`
+- `blur(): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
+- `focus(): this`
 - `getBounds(): Rectangle`
 - `getGlobalTransform(): Matrix`
 - `getLocalBounds(): Rectangle`
@@ -92,10 +94,12 @@ after in-place mutation is the caller's responsibility (call
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
 - `geometry: Geometry | null`
 - `indices: Uint16Array<ArrayBufferLike> | null`
 - `material: MeshMaterial | null`
 - `preserveDrawOrder: boolean`
+- `tabIndex: number`
 - `uvs: Float32Array<ArrayBufferLike> | null`
 - `vertices: Float32Array`
 - `anchor: ObservableVector`
@@ -125,9 +129,13 @@ after in-place mutation is the caller's responsibility (call
 
 ## Events
 
+- `onBlur: Signal<[RenderNode]>`
 - `onDrag: Signal<[InteractionEvent]>`
 - `onDragEnd: Signal<[InteractionEvent]>`
 - `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

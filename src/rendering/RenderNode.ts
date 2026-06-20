@@ -2,6 +2,7 @@ import { Color } from '#core/Color';
 import { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
+import type { KeyEvent } from '#input/KeyEvent';
 import { Rectangle } from '#math/Rectangle';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -207,6 +208,76 @@ export abstract class RenderNode extends SceneNode {
   /** @internal — the signal for `type`, or `null` if never materialized (used by the dispatch peek). */
   public _peekInteractionSignal(type: InteractionEventType): Signal<[InteractionEvent]> | null {
     return this._signals?.get(type) ?? null;
+  }
+
+  // Focus & keyboard. Like the interaction signals these are lazily
+  // materialized — a node that never participates in focus allocates none.
+  // Routed by FocusManager (app.focus / stage.focus) to the focused node.
+
+  /**
+   * When `true`, this node can receive keyboard focus — via {@link focus},
+   * Tab traversal, or `app.focus.focus(node)` — and is delivered key events
+   * through {@link onKeyDown} / {@link onKeyUp} while focused.
+   *
+   * @default false
+   */
+  public focusable = false;
+
+  /**
+   * Tab-traversal order among focusable nodes in the same focus scope. Lower
+   * values are visited first; equal values keep document (tree) order.
+   *
+   * @default 0
+   */
+  public tabIndex = 0;
+
+  private _onFocus: Signal<[RenderNode]> | null = null;
+  private _onBlur: Signal<[RenderNode]> | null = null;
+  private _onKeyDown: Signal<[KeyEvent]> | null = null;
+  private _onKeyUp: Signal<[KeyEvent]> | null = null;
+
+  /** Fired when this node gains keyboard focus. */
+  public get onFocus(): Signal<[RenderNode]> {
+    return (this._onFocus ??= new Signal<[RenderNode]>());
+  }
+
+  /** Fired when this node loses keyboard focus. */
+  public get onBlur(): Signal<[RenderNode]> {
+    return (this._onBlur ??= new Signal<[RenderNode]>());
+  }
+
+  /** Fired for each key pressed while this node holds focus. */
+  public get onKeyDown(): Signal<[KeyEvent]> {
+    return (this._onKeyDown ??= new Signal<[KeyEvent]>());
+  }
+
+  /** Fired for each key released while this node holds focus. */
+  public get onKeyUp(): Signal<[KeyEvent]> {
+    return (this._onKeyUp ??= new Signal<[KeyEvent]>());
+  }
+
+  /** @internal — the focus/blur signal if materialized, else `null` (dispatch peek). */
+  public _peekFocusSignal(type: 'focus' | 'blur'): Signal<[RenderNode]> | null {
+    return type === 'focus' ? this._onFocus : this._onBlur;
+  }
+
+  /** @internal — the keydown/keyup signal if materialized, else `null` (dispatch peek). */
+  public _peekKeySignal(type: 'keydown' | 'keyup'): Signal<[KeyEvent]> | null {
+    return type === 'keydown' ? this._onKeyDown : this._onKeyUp;
+  }
+
+  /** Request keyboard focus for this node through its owning focus service. */
+  public focus(): this {
+    this._stage?.focus.focus(this);
+
+    return this;
+  }
+
+  /** Release keyboard focus from this node if it currently holds it. */
+  public blur(): this {
+    this._stage?.focus.blur(this);
+
+    return this;
   }
 
   private readonly _filters: Filter[] = [];
@@ -441,6 +512,12 @@ export abstract class RenderNode extends SceneNode {
       this._signals.clear();
       this._signals = null;
     }
+
+    this._onFocus?.destroy();
+    this._onBlur?.destroy();
+    this._onKeyDown?.destroy();
+    this._onKeyUp?.destroy();
+    this._onFocus = this._onBlur = this._onKeyDown = this._onKeyUp = null;
   }
 
   private _renderContentToTexture(
