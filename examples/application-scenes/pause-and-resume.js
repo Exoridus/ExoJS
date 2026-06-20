@@ -13,7 +13,6 @@ const app = new Application({
     },
 });
 class PauseResumeScene extends Scene {
-    paused = false;
     sprite;
     label;
     async load(loader) {
@@ -27,14 +26,13 @@ class PauseResumeScene extends Scene {
         this.label.setAnchor(0.5, 0);
         this.label.setPosition(width / 2, 16);
         this.inputs.onTrigger(Keyboard.Space, () => {
+            // scene.paused skips update() + systems each frame; drawing continues.
             this.paused = !this.paused;
             this.label.text = this.paused ? 'Paused (draw running)' : 'Running';
         });
     }
     update(delta) {
-        if (this.paused) {
-            return;
-        }
+        // Not called while paused — the SceneManager skips a paused scene's update().
         this.sprite.rotate(delta.seconds * 180);
     }
     draw(context) {

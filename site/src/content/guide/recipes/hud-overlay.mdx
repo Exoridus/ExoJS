@@ -7,16 +7,25 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # HUD overlay
 
-A HUD (heads-up display) renders UI elements on top of the game world — health bars, score text, mini-maps, debug readouts — without those elements moving or scaling with the game camera. The recipe separates world-space content from screen-space content by using two scenes on the stack.
+A HUD (heads-up display) renders UI elements on top of the game world — health bars, score text, mini-maps, debug readouts — without those elements moving or scaling with the game camera. The recipe separates world-space content from screen-space content using `scene.ui`, a screen-fixed layer that every scene owns and that is automatically rendered above the scene's world content.
 
 ## Approach
 
-Push a second scene on top of the game scene. The game scene renders the world. The HUD scene renders only UI elements — positioned in screen-pixel coordinates, independent of any camera view. The HUD scene uses `'overlay'` mode so both scenes render and update.
+Add HUD elements directly to `scene.ui` instead of creating a separate overlay scene. The world (game nodes, sprites, graphics) lives under `scene.root`; the HUD (labels, progress bars, panels) lives on `scene.ui` and is composited on top automatically — no extra scene or stack needed.
 
 ```js
 class GameScene extends Scene {
     init() {
         this._angle = 0;
+
+        // HUD elements on scene.ui — screen-space, always on top.
+        this._scoreText = new Label('SCORE 1240', { fontSize: 22 });
+        this._scoreText.anchorIn(this.ui, 'top-left', 18, 14);
+        this.ui.addChild(this._scoreText);
+
+        this._health = new ProgressBar({ width: 220, height: 8, value: 1 });
+        this._health.anchorIn(this.ui, 'top-left', 18, 48);
+        this.ui.addChild(this._health);
     }
 
     update(delta) {
@@ -28,47 +37,28 @@ class GameScene extends Scene {
         // ... draw game world ...
     }
 }
-
-class HudScene extends Scene {
-    init() {
-        this._bar = new Graphics();
-        this._text = new Text('SCORE 1240', { fill: 'white', fontSize: 22 });
-        this._text.setPosition(18, 14);
-    }
-
-    draw(context) {
-        this._bar.clear();
-        this._bar.fillColor = new Color(0, 0, 0, 0.45);
-        this._bar.drawRectangle(0, 0, 800, 56);
-        this._bar.drawRectangle(18, 40, 220, 8); // health bar
-        context.render(this._bar);
-        context.render(this._text);
-    }
-}
 ```
 
-Push the HUD scene after the game scene starts:
+Start the scene as normal — `scene.ui` is rendered automatically:
 
 ```js
 const game = new GameScene();
-const hud = new HudScene();
-
 await app.start(game);
-await app.scene.pushScene(hud, { mode: 'overlay' });
 ```
 
-## Why two scenes, not draw-order
+## Why `scene.ui`, not manual draw-order
 
-The alternative — rendering HUD elements after the world in a single scene's `draw` method — works for simple cases. The two-scene approach gives you:
-- Independent `init`/`destroy` lifecycles — the HUD can be pushed, popped, and replaced without touching game code.
-- Camera independence — the HUD scene's root is always in screen space, never affected by the game view.
+The alternative — rendering HUD elements after the world in a single scene's `draw` method — works for simple cases. `scene.ui` gives you:
+- **Screen-space anchoring** via `widget.anchorIn(this.ui, 'top-left' | 'center' | 'bottom-right' | …, offsetX, offsetY)` — widgets stay pinned to corners or the center regardless of canvas size.
+- **Hit-testing in screen space** — UI widgets are clickable and focusable without needing camera-inverse transforms.
+- **Independent lifecycle** — widgets added in `init` are automatically cleaned up when the scene is destroyed.
 
 ## Mini-map with a mask
 
-A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD scene. The capture is a [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) with a `{ target }`, run once per frame from the game scene's pipeline:
+A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD. The capture is a [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) with a `{ target }`, run once per frame from the scene's pipeline:
 
 ```js
-// In GameScene: build the capture pass once, run it each frame from the pipeline.
+// In GameScene.init: build the capture pass once.
 const miniRt = new RenderTexture(260, 260);
 const capturePass = new CallbackRenderPass(
     (context) => {
@@ -78,12 +68,15 @@ const capturePass = new CallbackRenderPass(
     { target: miniRt }, // redirects the callback's output off-screen; clears the target first if you pass `clear`
 );
 
-// In HudScene:
-const miniSprite = new Sprite(miniRt).setPosition(530, 20);
+// Add the mini-map sprite to scene.ui so it stays in screen space.
+const miniSprite = new Sprite(miniRt);
+miniSprite.anchorIn(this.ui, 'top-right', -280, 20);
+this.ui.addChild(miniSprite);
+
 // Clamp to a circle with a mask
 const mask = new Graphics();
 mask.fillColor = Color.white;
-mask.drawCircle(660, 150, 120);
+mask.drawCircle(130, 130, 120);
 miniSprite.mask = mask;
 ```
 
@@ -98,7 +91,7 @@ In-canvas HUD works well when the UI is tightly coupled to game state — health
 <a id="hud-overlay-scene"></a>
 <ExamplePreview chapter="application-scenes" slug="hud-overlay-scene" />
 
-A game scene with a rotating ring, a HUD scene with a top-bar overlay, and transparent input so the HUD is visible but doesn't block interaction.
+A game scene with a rotating ring, a Label and a live ProgressBar on `scene.ui` — the HUD is always on top with no separate overlay scene.
 
 ## Where to go next
 

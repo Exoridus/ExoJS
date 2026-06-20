@@ -205,6 +205,18 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 ],
                 apiLinks: ['view', 'camera'],
             },
+            {
+                slug: 'ui-and-widgets',
+                level: 'intermediate',
+                learningGoals: [
+                    'build a screen-fixed HUD and menus on scene.ui',
+                    'compose Panel, Button, Label, and ProgressBar widgets',
+                    'anchor and stack widgets, and route clicks and keyboard focus',
+                ],
+                prerequisites: ['runtime/scenes-and-lifecycle'],
+                examples: ['ui/hud-and-widgets', 'application-scenes/hud-overlay-scene'],
+                apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'focus-manager'],
+            },
         ],
     },
     {

@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Keyboard, Label, Panel, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -17,9 +17,18 @@ const app = new Application({
 const PAUSE_BLUR_RADIUS = 6;
 const PAUSE_FADE_SECONDS = 0.35;
 
+/**
+ * Pause without a scene stack: a pause overlay lives on `scene.ui` (always
+ * above the world) and is toggled together with `scene.paused`, which skips the
+ * scene's `update` + systems while it keeps drawing. The blur tween runs on the
+ * app-level TweenManager, so it still animates while the scene is frozen.
+ */
 class GameScene extends Scene {
     private sprite!: Sprite;
     private time = 0;
+    private readonly blur = new BlurFilter({ radius: 0, quality: 2 });
+    private pausePanel!: Panel;
+    private pauseLabel!: Label;
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
@@ -32,19 +41,28 @@ class GameScene extends Scene {
         this.sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(2).setPosition(width / 2, height / 2);
         this.addChild(this.sprite);
 
+        // Pause overlay on the UI layer, hidden until paused.
+        this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });
+        this.pausePanel.anchorIn(this.ui, 'center');
+        this.pausePanel.visible = false;
+        this.ui.addChild(this.pausePanel);
+
+        this.pauseLabel = new Label('PAUSED', { fontSize: 56, fontWeight: 'bold' });
+        this.pauseLabel.anchorIn(this.ui, 'center');
+        this.pauseLabel.visible = false;
+        this.ui.addChild(this.pauseLabel);
+
         this.hud = mountControls({
             title: 'Pause Blur',
             controls: [{ keys: 'Esc', action: 'pause / resume' }],
             hint: 'Press Esc to pause — the scene blurs up behind the menu.',
         });
 
-        this.inputs.onTrigger(Keyboard.Escape, async () => {
-            if (pauseScene.app !== null) return;
-            await this.app.scene.pushScene(pauseScene, { mode: 'overlay' });
-        });
+        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
     }
 
     override update(delta): void {
+        // Not called while paused — the SceneManager skips update() + systems.
         this.time += delta.seconds;
         this.sprite.setRotation(this.time * 80);
     }
@@ -53,42 +71,25 @@ class GameScene extends Scene {
         context.backend.clear(new Color(20, 24, 34));
         context.render(this.root);
     }
-}
-
-class PauseScene extends Scene {
-    private blur!: BlurFilter;
-    private text!: Text;
-
-    override init(): void {
-        const { width, height } = this.app.canvas;
-
-        // Start fully sharp and tween the radius up so the blur genuinely fades
-        // in rather than snapping on. The global TweenManager keeps ticking while
-        // this overlay scene is on the stack.
-        this.blur = new BlurFilter({ radius: 0, quality: 2 });
-        gameScene.root.filters = [this.blur];
-        this.tweens.create(this.blur).to({ radius: PAUSE_BLUR_RADIUS }, PAUSE_FADE_SECONDS).start();
-
-        this.text = new Text('PAUSED', { fillColor: Color.white, fontSize: 64, fontWeight: 'bold', align: 'center' });
-        this.text.setAnchor(0.5, 0.5);
-        this.text.setPosition(width / 2, height / 2);
-
-        this.inputs.onTrigger(Keyboard.Escape, async () => {
-            await this.app.scene.popScene();
-        });
-    }
-
-    override draw(context): void {
-        context.render(this.text);
-    }
 
     override destroy(): void {
-        gameScene.root.clearFilters();
+        this.root.clearFilters();
         super.destroy();
+    }
+
+    private togglePause(): void {
+        this.paused = !this.paused;
+        this.pausePanel.visible = this.paused;
+        this.pauseLabel.visible = this.paused;
+
+        if (this.paused) {
+            this.blur.radius = 0;
+            this.root.filters = [this.blur];
+            this.tweens.create(this.blur).to({ radius: PAUSE_BLUR_RADIUS }, PAUSE_FADE_SECONDS).start();
+        } else {
+            this.root.clearFilters();
+        }
     }
 }
 
-const gameScene = new GameScene();
-const pauseScene = new PauseScene();
-
-void app.start(gameScene);
+void app.start(new GameScene());

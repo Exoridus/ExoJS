@@ -1,5 +1,5 @@
 // Auto-generated from hud-overlay-scene.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Label, ProgressBar, Scene } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -8,18 +8,31 @@ const app = new Application({
         sizingMode: 'fit',
     },
     clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
 });
+/**
+ * A screen-fixed HUD on `scene.ui` sits above the world automatically — no
+ * separate overlay scene or stack. The world (a spinning arc) is drawn from
+ * `scene.root`; the HUD (a label + a live health bar) lives on `scene.ui` and
+ * is auto-rendered on top.
+ */
 class GameScene extends Scene {
     angle = 0;
+    time = 0;
     ring;
+    health;
     init() {
         this.ring = new Graphics();
+        const title = new Label('HUD Overlay', { fontSize: 22 });
+        title.anchorIn(this.ui, 'top-left', 18, 14);
+        this.ui.addChild(title);
+        this.health = new ProgressBar({ width: 240, height: 12, value: 1 });
+        this.health.anchorIn(this.ui, 'top-left', 18, 48);
+        this.ui.addChild(this.health);
     }
     update(delta) {
         this.angle += delta.seconds * 90;
+        this.time += delta.seconds;
+        this.health.value = (Math.sin(this.time) + 1) / 2;
     }
     draw(context) {
         const { width, height } = this.app.canvas;
@@ -31,25 +44,4 @@ class GameScene extends Scene {
         context.render(this.ring);
     }
 }
-class HudScene extends Scene {
-    bar;
-    text;
-    init() {
-        this.bar = new Graphics();
-        this.text = new Text('HUD Overlay', { fillColor: Color.white, fontSize: 22 });
-        this.text.setPosition(18, 14);
-    }
-    draw(context) {
-        const { width } = this.app.canvas;
-        this.bar.clear();
-        this.bar.fillColor = new Color(0, 0, 0, 0.45);
-        this.bar.drawRectangle(0, 0, width, 56);
-        this.bar.fillColor = new Color(80, 220, 120);
-        this.bar.drawRectangle(18, 40, 220, 8);
-        context.render(this.bar);
-        context.render(this.text);
-    }
-}
-const gameScene = new GameScene();
-const hudScene = new HudScene();
-void app.start(gameScene).then(() => app.scene.pushScene(hudScene, { mode: 'overlay' }));
+void app.start(new GameScene());
