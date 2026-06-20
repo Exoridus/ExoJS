@@ -1,0 +1,45 @@
+---
+title: "Prefab"
+description: "A reusable, data-driven template captured from a configured scene-graph subtree. Capture once with Prefab.from; stamp out independent copies with instantiate as many times as needed — no re-serialization per instance. A prefab holds the same **data, not behaviour** a scene serializer captures (structure, transforms, visuals, asset references). Re-attach behaviour (signal handlers, systems) in code after instantiate. ```ts const coin = Prefab.from(buildCoin(), loader); for (let i = 0; i < 10; i++) { const node = coin.instantiate(loader); node.setPosition(i * 32, 0); scene.addChild(node); } ```"
+symbol: "Prefab"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 4
+tier: "stable"
+sections: ["Import", "Methods", "Source"]
+sourcePath: "src/core/serialization/Prefab.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/Prefab.ts#L26"
+---
+## Import
+
+`import { Prefab } from '@codexo/exojs'`
+
+A reusable, data-driven template captured from a configured scene-graph
+subtree. Capture once with Prefab.from; stamp out independent copies
+with instantiate as many times as needed — no re-serialization per
+instance.
+
+A prefab holds the same **data, not behaviour** a scene serializer captures
+(structure, transforms, visuals, asset references). Re-attach behaviour
+(signal handlers, systems) in code after instantiate.
+
+```ts
+const coin = Prefab.from(buildCoin(), loader);
+for (let i = 0; i \< 10; i++) \{
+  const node = coin.instantiate(loader);
+  node.setPosition(i * 32, 0);
+  scene.addChild(node);
+\}
+```
+
+## Methods
+
+- `instantiate(loader: Loader | null): SceneNode`
+- `toJSON(): SerializedNode`
+- `from(node: SceneNode, loader: Loader | null): Prefab`
+- `fromJSON(descriptor: SerializedNode): Prefab`
+
+## Source
+
+[src/core/serialization/Prefab.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/Prefab.ts#L26)
