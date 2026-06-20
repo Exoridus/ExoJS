@@ -14,7 +14,6 @@ const app = new Application({
 });
 
 class PauseResumeScene extends Scene {
-    private paused = false;
     private sprite!: Sprite;
     private label!: Text;
 
@@ -33,16 +32,14 @@ class PauseResumeScene extends Scene {
         this.label.setPosition(width / 2, 16);
 
         this.inputs.onTrigger(Keyboard.Space, () => {
+            // scene.paused skips update() + systems each frame; drawing continues.
             this.paused = !this.paused;
             this.label.text = this.paused ? 'Paused (draw running)' : 'Running';
         });
     }
 
     override update(delta): void {
-        if (this.paused) {
-            return;
-        }
-
+        // Not called while paused — the SceneManager skips a paused scene's update().
         this.sprite.rotate(delta.seconds * 180);
     }
 

@@ -188,136 +188,72 @@ describe('SceneManager', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  test('push/pop preserves underlying scene state without reload', async () => {
-    const manager = new SceneManager(createApplicationStub());
-    const baseLoad = vi.fn(async () => undefined);
-    const baseInit = vi.fn(async () => undefined);
-    const baseUpdate = vi.fn();
-    const baseDraw = vi.fn();
-    const baseUnload = vi.fn(async () => undefined);
-    const overlayUpdate = vi.fn();
-    const overlayUnload = vi.fn(async () => undefined);
-    const base = makeScene({
-      load: baseLoad,
-      init: baseInit,
-      update: baseUpdate,
-      draw: baseDraw,
-      unload: baseUnload,
-    });
-    const overlay = makeScene({
-      update: overlayUpdate,
-      unload: overlayUnload,
-    });
-
-    await manager.setScene(base);
-    tick(manager);
-    await manager.pushScene(overlay, { mode: 'modal' });
-    tick(manager);
-
-    expect(baseLoad).toHaveBeenCalledTimes(1);
-    expect(baseInit).toHaveBeenCalledTimes(1);
-    expect(baseUpdate).toHaveBeenCalledTimes(1);
-    expect(overlayUpdate).toHaveBeenCalledTimes(1);
-
-    await manager.popScene();
-    tick(manager);
-
-    expect(baseInit).toHaveBeenCalledTimes(1);
-    expect(baseUpdate).toHaveBeenCalledTimes(2);
-    expect(baseUnload).toHaveBeenCalledTimes(0);
-    expect(overlayUnload).toHaveBeenCalledTimes(1);
-  });
-
-  test('overlay mode keeps lower scene updating and drawing', async () => {
-    const manager = new SceneManager(createApplicationStub());
-    const baseUpdate = vi.fn();
-    const baseDraw = vi.fn();
-    const overlayUpdate = vi.fn();
-    const overlayDraw = vi.fn();
-    const base = makeScene({ update: baseUpdate, draw: baseDraw });
-    const overlay = makeScene({ update: overlayUpdate, draw: overlayDraw });
-
-    await manager.setScene(base);
-    await manager.pushScene(overlay, { mode: 'overlay' });
-    tick(manager);
-
-    expect(baseUpdate).toHaveBeenCalledTimes(1);
-    expect(baseDraw).toHaveBeenCalledTimes(1);
-    expect(overlayUpdate).toHaveBeenCalledTimes(1);
-    expect(overlayDraw).toHaveBeenCalledTimes(1);
-  });
-
-  test('modal mode blocks lower updates but keeps lower drawing', async () => {
-    const manager = new SceneManager(createApplicationStub());
-    const baseUpdate = vi.fn();
-    const baseDraw = vi.fn();
-    const modalUpdate = vi.fn();
-    const modalDraw = vi.fn();
-    const base = makeScene({ update: baseUpdate, draw: baseDraw });
-    const modal = makeScene({ update: modalUpdate, draw: modalDraw });
-
-    await manager.setScene(base);
-    await manager.pushScene(modal, { mode: 'modal' });
-    tick(manager);
-
-    expect(baseUpdate).toHaveBeenCalledTimes(0);
-    expect(baseDraw).toHaveBeenCalledTimes(1);
-    expect(modalUpdate).toHaveBeenCalledTimes(1);
-    expect(modalDraw).toHaveBeenCalledTimes(1);
-  });
-
-  test('opaque mode blocks both lower updates and lower drawing', async () => {
-    const manager = new SceneManager(createApplicationStub());
-    const baseUpdate = vi.fn();
-    const baseDraw = vi.fn();
-    const opaqueUpdate = vi.fn();
-    const opaqueDraw = vi.fn();
-    const base = makeScene({ update: baseUpdate, draw: baseDraw });
-    const opaque = makeScene({ update: opaqueUpdate, draw: opaqueDraw });
-
-    await manager.setScene(base);
-    await manager.pushScene(opaque, { mode: 'opaque' });
-    tick(manager);
-
-    expect(baseUpdate).toHaveBeenCalledTimes(0);
-    expect(baseDraw).toHaveBeenCalledTimes(0);
-    expect(opaqueUpdate).toHaveBeenCalledTimes(1);
-    expect(opaqueDraw).toHaveBeenCalledTimes(1);
-  });
-
-  test('failed push keeps active scene stack intact', async () => {
-    const manager = new SceneManager(createApplicationStub());
-    const baseUnload = vi.fn(async () => undefined);
-    const failedUnload = vi.fn(async () => undefined);
-    const base = makeScene({ unload: baseUnload });
-    const failingOverlay = makeScene({
-      async init() {
-        throw new Error('overlay init failed');
-      },
-      unload: failedUnload,
-    });
-
-    await manager.setScene(base);
-
-    await expect(manager.pushScene(failingOverlay)).rejects.toThrow('overlay init failed');
-    expect(manager.currentScene).toBe(base);
-    expect(manager.scenes).toEqual([base]);
-    expect(baseUnload).toHaveBeenCalledTimes(0);
-    expect(failedUnload).toHaveBeenCalledTimes(1);
-  });
-
-  test('single-scene setScene flow still works with stack-enabled manager', async () => {
+  test('setScene switches the active scene and unloads the previous one', async () => {
     const manager = new SceneManager(createApplicationStub());
     const firstUnload = vi.fn(async () => undefined);
+    const secondInit = vi.fn(async () => undefined);
     const first = makeScene({ unload: firstUnload });
-    const second = makeScene({});
+    const second = makeScene({ init: secondInit });
 
     await manager.setScene(first);
-    await manager.setScene(second);
+    expect(manager.currentScene).toBe(first);
 
-    expect(firstUnload).toHaveBeenCalledTimes(1);
+    await manager.setScene(second);
     expect(manager.currentScene).toBe(second);
-    expect(manager.scenes).toEqual([second]);
+    expect(firstUnload).toHaveBeenCalledTimes(1);
+    expect(secondInit).toHaveBeenCalledTimes(1);
+  });
+
+  test('setScene to the already-active scene is a no-op', async () => {
+    const manager = new SceneManager(createApplicationStub());
+    const init = vi.fn(async () => undefined);
+    const unload = vi.fn(async () => undefined);
+    const scene = makeScene({ init, unload });
+
+    await manager.setScene(scene);
+    await manager.setScene(scene);
+
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(unload).toHaveBeenCalledTimes(0);
+    expect(manager.currentScene).toBe(scene);
+  });
+
+  test('setScene(null) clears the active scene', async () => {
+    const manager = new SceneManager(createApplicationStub());
+    const unload = vi.fn(async () => undefined);
+    const scene = makeScene({ unload });
+
+    await manager.setScene(scene);
+    await manager.setScene(null);
+
+    expect(manager.currentScene).toBeNull();
+    expect(unload).toHaveBeenCalledTimes(1);
+  });
+
+  test('paused scene skips update and systems but keeps drawing', async () => {
+    const manager = new SceneManager(createApplicationStub());
+    const update = vi.fn();
+    const draw = vi.fn();
+    const scene = makeScene({ update, draw });
+    const tickSystems = vi.spyOn(scene, '_tickSystems');
+
+    await manager.setScene(scene);
+    tick(manager);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(tickSystems).toHaveBeenCalledTimes(1);
+    expect(draw).toHaveBeenCalledTimes(1);
+
+    scene.paused = true;
+    tick(manager);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(tickSystems).toHaveBeenCalledTimes(1);
+    expect(draw).toHaveBeenCalledTimes(2);
+
+    scene.paused = false;
+    tick(manager);
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(tickSystems).toHaveBeenCalledTimes(2);
+    expect(draw).toHaveBeenCalledTimes(3);
   });
 
   test('fade transition runs and completes around setScene', async () => {

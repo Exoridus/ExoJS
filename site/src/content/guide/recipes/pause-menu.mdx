@@ -7,113 +7,104 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Pause menu
 
-A pause menu can freeze the game, display a menu overlay, and resume cleanly when dismissed. In ExoJS, this is a scene-stack operation: push a `PauseScene` on top of the game scene with `'overlay'` mode so the game remains visible.
+A pause menu can freeze the game, display a menu overlay, and resume cleanly when dismissed. In ExoJS, this is done entirely within a single scene: set `scene.paused = true` to freeze updates, show a pause overlay on `scene.ui`, and reverse both on resume.
 
 ## Approach
 
-Two scenes, one reference. The game scene holds a reference so the pause scene can apply visual effects (like a blur) to the game scene's root before pushing itself. The pause scene pops itself on Esc to resume.
+One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene.ui` and is hidden until paused. Toggling `scene.paused` stops `update()` and all scene systems while the scene keeps drawing — so the world stays visible behind the overlay. A `BlurFilter` on `scene.root` provides visual separation.
 
 ```js
 class GameScene extends Scene {
     init(loader) {
         this.player = new Sprite(loader.get(Texture, 'hero'));
+        this.addChild(this.player);
         // ... game setup ...
 
-        this.inputs.onTrigger(Keyboard.Escape, async () => {
-            if (pauseScene.app !== null) return; // already paused
-            await this.app.scene.pushScene(pauseScene, {
-                mode: 'overlay',
-            });
-        });
+        this.blur = new BlurFilter({ radius: 0, quality: 2 });
+
+        // Pause overlay on the UI layer, hidden until paused.
+        this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });
+        this.pausePanel.anchorIn(this.ui, 'center');
+        this.pausePanel.visible = false;
+        this.ui.addChild(this.pausePanel);
+
+        this.pauseLabel = new Label('PAUSED', { fontSize: 56, fontWeight: 'bold' });
+        this.pauseLabel.anchorIn(this.ui, 'center');
+        this.pauseLabel.visible = false;
+        this.ui.addChild(this.pauseLabel);
+
+        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
     }
 
     update(delta) {
-        // Game logic — this runs even while the pause scene is up,
-        // but you can gate it on a flag if you prefer to freeze.
+        // Not called while paused — SceneManager skips update() + systems.
+        // ... normal game logic ...
     }
 
     draw(context) {
         context.backend.clear(new Color(20, 24, 34));
         context.render(this.root);
     }
-}
-
-class PauseScene extends Scene {
-    init() {
-        // Apply blur to the game scene for visual separation
-        this._blur = new BlurFilter({ radius: 5, quality: 2 });
-        gameScene.root.filters = [this._blur];
-
-        this._text = new Text('PAUSED', { fill: 'white', fontSize: 64 });
-        this._text.setPosition(280, 250);
-
-        this.inputs.onTrigger(Keyboard.Escape, async () => {
-            await this.app.scene.popScene();
-        });
-    }
 
     destroy() {
-        gameScene.root.clearFilters(); // remove blur on resume
+        this.root.clearFilters();
         super.destroy();
+    }
+
+    togglePause() {
+        this.paused = !this.paused;
+        this.pausePanel.visible = this.paused;
+        this.pauseLabel.visible = this.paused;
+
+        if (this.paused) {
+            this.blur.radius = 0;
+            this.root.filters = [this.blur];
+            this.tweens.create(this.blur).to({ radius: 6 }, 0.35).start();
+        } else {
+            this.root.clearFilters();
+        }
     }
 }
 
-const gameScene = new GameScene();
-const pauseScene = new PauseScene();
-await app.start(gameScene);
+await app.start(new GameScene());
 ```
 
-## Stack semantics
+## How `scene.paused` works
 
-`pushScene(pauseScene, { mode: 'overlay' })`:
+Setting `scene.paused = true`:
 
-- `mode: 'overlay'` — the game scene below continues to render, so the player sees gameplay behind the pause text. If you prefer the game to stop rendering, use `'opaque'` instead (but then the blur effect on the game root becomes invisible — you'd apply the blur to a captured `RenderTexture` of the last frame instead).
+- **Freezes `update()`** — the SceneManager skips `update()` and all scene-level systems. No game logic runs.
+- **Keeps drawing** — the scene still renders every frame, so the world remains visible behind the overlay.
+- **Tweens on `app.tweens` still run** — tween managers at the application level are unaffected, so blur animations and UI transitions animate smoothly while the game is frozen.
 
-Input bindings created via `this.inputs` on both the game scene and the pause scene are always active — use an explicit flag to gate gameplay logic while paused (shown in the example above with `if (pauseScene.app !== null) return`).
-
-If you want the game to truly freeze (no `update` calls), set the game scene's own `stackMode` or use a flag:
-
-```js
-// In GameScene.update:
-update(delta) {
-    if (pauseScene.app !== null) return; // freeze when paused
-    // ... normal update logic ...
-}
-```
-
-This is simpler than changing stack semantics at runtime and gives you explicit control.
+`scene.ui` widgets are always interactive regardless of `scene.paused`, so the pause panel's buttons remain clickable during the pause.
 
 ## Cleanup
 
-The `destroy` hook on `PauseScene` removes the blur filter. Without this, the game scene would remain blurred after resume. `popScene()` calls `destroy` on the popped scene automatically.
+The `destroy` hook clears the blur filter from `scene.root`. Without this, the filter array would linger if the scene is ever replaced via `app.scene.setScene(...)`. As a rule, any filter applied in `init` or `togglePause` should be cleaned up in `destroy`.
 
-If you need to capture the last game frame and blur it without leaving the game scene's filter array polluted, render the game scene root into a `RenderTexture` during `PauseScene.init`, apply the blur, and display the result. A one-pass `RenderNodePass` captures the root subtree off-screen; the blur is a plain `filter.apply` into a second texture:
+## Switching scenes from the pause menu
+
+If the pause menu offers options like "Return to main menu" or "Quit", use `app.scene.setScene(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
 
 ```js
-// Alternative: capture + blur without touching game scene's own filters
-init() {
-    this._capture = new RenderTexture(800, 600);
-    this._blurred = new RenderTexture(800, 600);
-    this._blur = new BlurFilter({ radius: 5, quality: 2 });
+// Inside a resume button's onClick handler:
+resumeButton.onClick.add(() => {
+    this.togglePause(); // unpause first
+});
 
-    // Capture the game's last frame: render the root subtree into _capture off-screen.
-    const context = this.app.rendering; // the Application's RenderingContext
-    new RenderNodePass(gameScene.root, { target: this._capture, clear: Color.black }).execute(context);
-    this._blur.apply(context.backend, this._capture, this._blurred);
-
-    this._bg = new Sprite(this._blurred);
-    this._text = new Text('PAUSED', { fill: 'white', fontSize: 64 });
-}
+// Inside a "main menu" button's onClick handler:
+mainMenuButton.onClick.add(() => {
+    this.app.scene.setScene(new MainMenuScene(), { transition: { type: 'fade' } });
+});
 ```
-
-`RenderNodePass` with `{ target }` redirects the node's render into the texture (and `clear` wipes it first). Here it is executed directly — a single off-screen capture — rather than added to a long-lived pipeline. This approach leaves the game scene's filters untouched and is more robust if multiple systems may add or remove filters from the game root.
 
 ## Examples
 
 <a id="pause-blur"></a>
 <ExamplePreview chapter="showcase" slug="pause-blur" />
 
-A rotating sprite with a pause overlay — press Esc to freeze the game under a blurred snapshot, Esc again to resume.
+A rotating sprite with a pause overlay — press Esc to freeze the game under a blurred background with a PAUSED label, Esc again to resume.
 
 ## Where to go next
 

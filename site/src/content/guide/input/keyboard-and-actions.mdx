@@ -33,7 +33,7 @@ class GameScene extends Scene {
         });
 
         this.inputs.onTrigger(Keyboard.Escape, () => {
-            this.app.scene.pushScene(new PauseScene());
+            this.togglePause();
         }, { threshold: 200 });
     }
 }
@@ -297,7 +297,7 @@ init(loader) {
 
 update(delta) {
     if (this.actions.pause) {
-        this.app.scene.pushScene(new PauseScene());
+        this.togglePause();       // sets this.paused + shows/hides the pause overlay on scene.ui
         this.actions.pause = 0;
     }
 

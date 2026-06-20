@@ -1,30 +1,29 @@
 ---
 title: "SceneManager"
-description: "Stack-based scene controller owned by Application. Maintains an ordered stack of Scene instances, each tagged with its participation policy (SceneStackMode). Scenes higher on the stack overlay scenes lower; the policy of each scene determines whether scenes below continue to update / render. Use SceneManager.setScene to replace the entire stack with one scene, SceneManager.pushScene to overlay a new scene on top, and SceneManager.popScene to remove the topmost. All three accept an optional fade transition."
+description: "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering)."
 symbol: "SceneManager"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 12
+memberCount: 9
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/core/SceneManager.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L96"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L70"
 ---
 ## Import
 
 `import { SceneManager } from '@codexo/exojs'`
 
-Stack-based scene controller owned by Application. Maintains an
-ordered stack of Scene instances, each tagged with its
-participation policy (SceneStackMode).
-Scenes higher on the stack overlay scenes lower; the policy of each
-scene determines whether scenes below continue to update / render.
+Single-active-scene controller owned by Application. Holds at most one
+active Scene (the current "screen"); SceneManager.setScene
+switches to a new scene — unloading the previous one — with an optional fade
+transition.
 
-Use SceneManager.setScene to replace the entire stack with one
-scene, SceneManager.pushScene to overlay a new scene on top, and
-SceneManager.popScene to remove the topmost. All three accept an
-optional fade transition.
+There is no scene stack: overlays, HUDs and pause menus belong on
+Scene.ui (the screen-fixed UI layer), and "freeze the game but keep
+drawing it" is `scene.paused = true` (skips the scene's `update` + systems
+while it keeps rendering).
 
 ## Constructors
 
@@ -33,15 +32,12 @@ optional fade transition.
 ## Methods
 
 - `destroy(): void`
-- `popScene(options: PopSceneOptions): Promise<SceneManager>`
-- `pushScene(scene: Scene, options: PushSceneOptions): Promise<SceneManager>`
 - `setScene(scene: Scene | null, options: SetSceneOptions): Promise<SceneManager>`
 - `update(delta: Time): this`
 
 ## Properties
 
 - `currentScene: Scene | null`
-- `scenes: readonly Scene[]`
 
 ## Events
 
@@ -52,4 +48,4 @@ optional fade transition.
 
 ## Source
 
-[src/core/SceneManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L96)
+[src/core/SceneManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L70)

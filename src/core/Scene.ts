@@ -85,19 +85,6 @@ class SceneTweens implements Destroyable {
 }
 
 /**
- * How a {@link Scene} composes with scenes already on the stack.
- * - `'overlay'`: render on top, scenes below also render and update.
- * - `'modal'`: render on top, scenes below render but do not update.
- * - `'opaque'`: render on top, scenes below neither render nor update.
- */
-export type SceneStackMode = 'overlay' | 'modal' | 'opaque';
-
-/** Bag of overrides for {@link Scene.setParticipationPolicy}. */
-export interface SceneParticipationPolicy {
-  mode?: SceneStackMode;
-}
-
-/**
  * A scene's lifecycle host. Subclass to define scene behavior:
  *
  *   class GameScene extends Scene {
@@ -119,7 +106,14 @@ export interface SceneParticipationPolicy {
 export class Scene {
   protected _app: Application | null = null;
   protected readonly _root = new Container();
-  protected _stackMode: SceneStackMode = 'overlay';
+
+  /**
+   * When `true`, the scene's `update` and systems are skipped each frame while
+   * it keeps drawing — the simple way to freeze gameplay behind a pause menu
+   * (show a panel on `scene.ui`, then set `scene.paused = true`).
+   */
+  public paused = false;
+
   private _inputs: SceneInputs | null = null;
   private _tweens: SceneTweens | null = null;
   private _systems: SystemRegistry | null = null;
@@ -250,14 +244,6 @@ export class Scene {
     return this._ui;
   }
 
-  public get stackMode(): SceneStackMode {
-    return this._stackMode;
-  }
-
-  public set stackMode(mode: SceneStackMode) {
-    this._stackMode = mode;
-  }
-
   public addChild(child: RenderNode): this {
     this._root.addChild(child);
 
@@ -266,14 +252,6 @@ export class Scene {
 
   public removeChild(child: RenderNode): this {
     this._root.removeChild(child);
-
-    return this;
-  }
-
-  public setParticipationPolicy(policy: SceneParticipationPolicy): this {
-    if (policy.mode) {
-      this._stackMode = policy.mode;
-    }
 
     return this;
   }

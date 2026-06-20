@@ -37,7 +37,7 @@
             "path": "application-scenes/hud-overlay-scene.js",
             "language": "typescript",
             "title": "Hud Overlay Scene",
-            "description": "Layer a fixed-position HUD Scene on top of a world Scene using separate cameras and render priorities.",
+            "description": "Build a screen-fixed HUD on scene.ui — a Label and a live ProgressBar auto-rendered above the world, with no separate scene or stack.",
             "backend": "core",
             "tags": [
                 "hud",

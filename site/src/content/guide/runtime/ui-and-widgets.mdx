@@ -1,0 +1,151 @@
+---
+title: 'UI & widgets'
+description: 'Build HUDs and menus on scene.ui with Panel, Button, Label, and ProgressBar widgets — anchoring, layout, clicks, and keyboard focus.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
+
+# UI & widgets
+
+Every scene owns a screen-fixed UI layer, [`scene.ui`](/ExoJS/en/api/uiroot/), that is rendered automatically on top of the world. It lives in screen space (origin top-left, `0..width` × `0..height`), so its contents never scroll or zoom with the camera. Add anything to it with `scene.ui.addChild(...)`.
+
+On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), and a [`Stack`](/ExoJS/en/api/stack/) layout container — for HUDs, menus, and pause screens without hand-built hit-tests.
+
+## Building blocks
+
+Each widget takes an options object and exposes the handful of properties you tend to change at runtime:
+
+```js
+import { Button, Label, Panel, ProgressBar } from '@codexo/exojs';
+
+const score = new Label('Score: 0', { fontSize: 24 });
+score.text = 'Score: 120';
+
+const health = new ProgressBar({ width: 240, height: 14, value: 1 });
+health.value = 0.6; // fill fraction, clamped to [0, 1]
+
+const panel = new Panel({ width: 280, height: 160, cornerRadius: 16 });
+
+const start = new Button({ label: 'Start', width: 160, height: 44 });
+start.onClick.add(() => console.log('clicked'));
+```
+
+A `Label` wraps a runtime [`Text`](/ExoJS/en/api/text/), so it accepts the same style options (`fontSize`, `fillColor`, `align`, …). A `Panel` is a rounded background you can add children to. A `Button` is a clickable panel with a centered label and hover / pressed / disabled states.
+
+## Anchoring to the screen
+
+Widgets extend [`Widget`](/ExoJS/en/api/widget/), which adds an explicit layout size and screen-edge anchoring. `widget.anchorIn(scene.ui, anchor, offsetX, offsetY)` pins a widget to a corner or edge and re-applies the position whenever the canvas resizes:
+
+```js
+import { Label, ProgressBar, Scene } from '@codexo/exojs';
+
+class HudScene extends Scene {
+    init() {
+        const score = new Label('Score: 0', { fontSize: 24 });
+        score.anchorIn(this.ui, 'top-left', 24, 20); // top-left, 24×20 px margin
+        this.ui.addChild(score);
+
+        const health = new ProgressBar({ width: 240, height: 14, value: 1 });
+        health.anchorIn(this.ui, 'bottom-right', -24, -24); // 24 px from the bottom-right
+        this.ui.addChild(health);
+    }
+}
+```
+
+The anchor accepts `'top-left'`, `'top'`, `'top-right'`, `'left'`, `'center'`, `'right'`, `'bottom-left'`, `'bottom'`, and `'bottom-right'`.
+
+## Stacking widgets
+
+A `Stack` flows its children in a row or column with even spacing and sizes itself to fit. Use it for menus and button groups:
+
+```js
+import { Button, Panel, Scene, Stack } from '@codexo/exojs';
+
+class MenuScene extends Scene {
+    init() {
+        const menu = new Stack({ direction: 'column', spacing: 10, padding: 14 });
+        menu.addItem(new Button({ label: 'Resume' }));
+        menu.addItem(new Button({ label: 'Restart' }));
+        menu.addItem(new Button({ label: 'Quit' }));
+
+        const panel = new Panel();
+        panel.setSize(menu.uiWidth, menu.uiHeight);
+        panel.addChild(menu);
+        panel.anchorIn(this.ui, 'center');
+        this.ui.addChild(panel);
+    }
+}
+```
+
+## Clicks and keyboard focus
+
+UI nodes are hit-tested in screen space *before* the world, so a `Button` on `scene.ui` is clickable even under a panned or zoomed camera. Listen to `button.onClick`:
+
+```js
+import { Button, Scene } from '@codexo/exojs';
+
+class GameScene extends Scene {
+    init() {
+        const pause = new Button({ label: 'Pause' });
+        pause.anchorIn(this.ui, 'top-right', -16, 16);
+        pause.onClick.add(() => {
+            this.paused = !this.paused;
+        });
+        this.ui.addChild(pause);
+    }
+}
+```
+
+Widgets are also keyboard-focusable. Mark any node `focusable` and give it a `tabIndex`; it then receives focus and routed key events:
+
+```js
+import { Button, Keyboard } from '@codexo/exojs';
+
+const field = new Button({ label: 'Name' });
+field.focusable = true;
+field.tabIndex = 1; // lower values are visited first
+field.onFocus.add(() => { /* highlight */ });
+field.onKeyDown.add(event => {
+    if (event.channel === Keyboard.Enter) { /* submit */ }
+});
+```
+
+The per-application focus service, [`app.focus`](/ExoJS/en/api/focus-manager/), tracks the focused node, moves focus with `Tab` / `Shift+Tab`, activates a focused button on `Enter` / `Space`, and exposes `app.focus.focus(node)` to focus programmatically.
+
+## Pause overlays
+
+A pause menu is the canonical combination: freeze the world with `scene.paused = true` — which skips `update` and the scene's systems while it keeps drawing — and show an overlay built from widgets on `scene.ui`:
+
+```js
+import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
+
+class GameScene extends Scene {
+    init() {
+        this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18 });
+        this.pausePanel.anchorIn(this.ui, 'center');
+        this.pausePanel.visible = false;
+        this.ui.addChild(this.pausePanel);
+
+        this.pauseLabel = new Label('PAUSED', { fontSize: 56 });
+        this.pauseLabel.anchorIn(this.ui, 'center');
+        this.pauseLabel.visible = false;
+        this.ui.addChild(this.pauseLabel);
+
+        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
+    }
+
+    togglePause() {
+        this.paused = !this.paused;
+        this.pausePanel.visible = this.paused;
+        this.pauseLabel.visible = this.paused;
+    }
+}
+```
+
+<ExamplePreview slug="ui/hud-and-widgets" />
+
+<TryIt
+    examples={['ui/hud-and-widgets', 'application-scenes/hud-overlay-scene']}
+    api={['uiroot', 'button', 'panel', 'label', 'progress-bar']}
+/>

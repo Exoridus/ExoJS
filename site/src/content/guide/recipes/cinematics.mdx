@@ -7,11 +7,11 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Cinematics
 
-A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `AudioStream` (for music), and scene-stack management (for input gating).
+A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `AudioStream` (for music), and `app.scene.setScene(...)` for transitioning between game states.
 
 ## Approach
 
-A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Push the cinematic scene with `mode: 'opaque'` so it fully covers the game, and pop it when the sequence ends.
+A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Navigate to the cinematic scene via `app.scene.setScene(new CinematicScene())` to fully replace the game scene while the cutscene plays, and call `app.scene.setScene(...)` again when the sequence ends to return to gameplay.
 
 The key technique: **tween chains and delays**. Each tween starts at a specific time offset. Together they form a timeline:
 
@@ -103,45 +103,67 @@ Each tween operates independently — they don't need to know about each other. 
 
 ## Gating input
 
-Push the cinematic scene with `mode: 'opaque'` to hide and freeze the game while the cutscene plays:
+Navigate to the cinematic scene from the game to fully replace the active scene while the cutscene plays:
 
 ```js
-// From the game scene:
-this.app.scene.pushScene(new CinematicScene(), {
-    mode: 'opaque', // game scene neither renders nor updates
-});
+// From the game scene — switch to the cinematic:
+this.app.scene.setScene(new CinematicScene());
 ```
 
-`mode: 'opaque'` gives clean separation — the underlying game scene is invisible and frozen for the duration. When the cinematic ends, pop the scene:
+Because the cinematic is now the only active scene, the game scene neither renders nor updates for the duration. When the cinematic ends, switch back:
 
 ```js
-// At the end of the sequence — chain a tween to pop the scene:
+// At the end of the sequence — chain a tween to transition back to the game:
 this.app.tweens.create(this.barSize)
     .to({ v: 70 }, 0.6)
     .delay(3.5) // start closing bars after the sequence plays
     .onComplete(() => {
-        this.app.scene.popScene();
+        this.app.scene.setScene(new GameScene(), { transition: { type: 'fade' } });
     })
     .start();
 ```
 
-The closing shutter bars animate over the scene, then `popScene()` returns to the game.
+The closing shutter bars animate over the scene, then `setScene(...)` transitions back to the game with a fade.
+
+## Letterbox overlays on `scene.ui`
+
+If you want the shutter bars or subtitle text to stay in screen space and be immune to camera transforms, put them on `scene.ui` instead of rendering them in `draw`:
+
+```js
+init(loader) {
+    // ... main cinematic setup ...
+
+    // Letterbox bars as UI nodes — always screen-aligned.
+    this.topBar = new Panel({ width: 1280, height: 0, color: Color.black });
+    this.topBar.anchorIn(this.ui, 'top-left');
+    this.ui.addChild(this.topBar);
+
+    this.bottomBar = new Panel({ width: 1280, height: 0, color: Color.black });
+    this.bottomBar.anchorIn(this.ui, 'bottom-left');
+    this.ui.addChild(this.bottomBar);
+
+    this.app.tweens.create(this.topBar).to({ height: 70 }, 0.6).start();
+    this.app.tweens.create(this.bottomBar).to({ height: 70 }, 0.6).start();
+}
+```
+
+Use `scene.ui` for any overlay that must remain fixed to the screen — subtitles, dialogue boxes, skip prompts.
 
 ## Skip support
 
-Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to jump to the end and pop:
+Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to jump to the end and switch scenes:
 
 ```js
 init(loader) {
     // ... cinematic setup ...
 
     this.inputs.onTrigger(Keyboard.Space, () => {
-        this.app.scene.popScene();
+        this.app.scene.setScene(new GameScene());
     });
 
     const pad = this.app.input.getGamepad(0);
     pad.onTrigger(GamepadButton.Start, () => {
-        this.app.scene.popScene();
+        this.app.scene.setScene(new GameScene());
     });
 }
 ```
@@ -155,7 +177,7 @@ this.inputs.onTrigger(Keyboard.Space, () => {
     this.musicVoice.volume = 0.85;
     this.boss.setScale(2.1, 2.1);
     // ... snap other properties ...
-    this.app.scene.popScene();
+    this.app.scene.setScene(new GameScene());
 });
 ```
 
