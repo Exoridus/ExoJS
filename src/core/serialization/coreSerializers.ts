@@ -12,6 +12,7 @@ import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { deserializeStyleOptions, serializeStyle } from './serializerHelpers';
 import type { SerializedNode } from './types';
+import { registerUiSerializers } from './uiSerializers';
 
 // ── Container ────────────────────────────────────────────────────────────────
 
@@ -104,10 +105,9 @@ const textSerializer: NodeSerializer<Text> = {
 };
 
 /**
- * Register all built-in node serializers (core leaf types + rendering package)
- * on `registry`. Called once, lazily, from the serialization framework. UI
- * widgets are not yet covered (they need read-accessors for their authored
- * options) — see the Phase 4C follow-up.
+ * Register all built-in node serializers (core leaf types + rendering package +
+ * UI widgets) on `registry`. Called once, lazily, from the serialization
+ * framework.
  * @internal
  */
 export function registerCoreSerializers(registry: SerializationRegistry): void {
@@ -116,4 +116,5 @@ export function registerCoreSerializers(registry: SerializationRegistry): void {
   registry.register('Text', Text, textSerializer);
 
   registerRenderingSerializers(registry);
+  registerUiSerializers(registry);
 }

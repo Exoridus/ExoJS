@@ -28,6 +28,11 @@ import { BlendModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 import type { JsonStore } from '#resources/JsonStore';
 import type { Loadable, Loader } from '#resources/Loader';
+import { Button } from '#ui/Button';
+import { Label } from '#ui/Label';
+import { Panel } from '#ui/Panel';
+import { ProgressBar } from '#ui/ProgressBar';
+import { Stack } from '#ui/Stack';
 
 /** Build a canvas-backed texture with known dimensions (matches the unit-test convention). */
 function createTexture(width: number, height: number): Texture {
@@ -616,6 +621,118 @@ describe('serialization — SaveManager', () => {
     const scene = new Scene();
 
     expect(await saves.load('nope', scene)).toBe(false);
+    scene.destroy();
+  });
+});
+
+describe('serialization — UI widgets', () => {
+  it('round-trips a Label (text + style)', () => {
+    const label = new Label('Score', { fontSize: 18, fillColor: new Color(10, 20, 30, 1) });
+
+    const data = serializeTree(label);
+    expect(data.type).toBe('Label');
+    expect(data.text).toBe('Score');
+
+    const restored = deserializeTree(data) as Label;
+    expect(restored.text).toBe('Score');
+    expect(restored.textNode.style.fontSize).toBe(18);
+    expect(restored.textNode.style.fillColor.r).toBe(10);
+  });
+
+  it('round-trips a Panel (options + user children, excluding the internal background)', () => {
+    const panel = new Panel({ width: 120, height: 90, borderWidth: 2, cornerRadius: 12 });
+    const content = new Container();
+    content.name = 'content';
+    panel.addChild(content);
+
+    const data = serializeTree(panel);
+    expect(data.type).toBe('Panel');
+    expect(data.width).toBe(120);
+    expect(data.cornerRadius).toBe(12);
+    // Only the user child is serialized, not the background Graphics.
+    expect(data.children).toHaveLength(1);
+
+    const restored = deserializeTree(data) as Panel;
+    expect(restored.uiWidth).toBe(120);
+    expect(restored.borderWidth).toBe(2);
+    const userChildren = restored.children.filter(child => child !== restored.background);
+    expect(userChildren).toHaveLength(1);
+    expect(userChildren[0].name).toBe('content');
+  });
+
+  it('round-trips a Button (label, colours, size, enabled)', () => {
+    const button = new Button({ label: 'Play', width: 100, height: 36, color: new Color(10, 20, 30, 1) });
+    button.enabled = false;
+
+    const data = serializeTree(button);
+    expect(data.type).toBe('Button');
+    expect(data.label).toBe('Play');
+    expect(data.color).toEqual([10, 20, 30, 1]);
+    expect(data.enabled).toBe(false);
+
+    const restored = deserializeTree(data) as Button;
+    expect(restored.label).toBe('Play');
+    expect(restored.uiWidth).toBe(100);
+    expect(restored.colors.normal.r).toBe(10);
+    expect(restored.enabled).toBe(false);
+  });
+
+  it('round-trips a ProgressBar (value + colours)', () => {
+    const bar = new ProgressBar({ width: 200, height: 16, value: 0.42, fillColor: new Color(1, 2, 3, 1) });
+
+    const data = serializeTree(bar);
+    expect(data.type).toBe('ProgressBar');
+    expect(data.value).toBeCloseTo(0.42);
+
+    const restored = deserializeTree(data) as ProgressBar;
+    expect(restored.value).toBeCloseTo(0.42);
+    expect(restored.fillColor.g).toBe(2);
+  });
+
+  it('round-trips a Stack (options + items)', () => {
+    const stack = new Stack({ direction: 'row', spacing: 12, padding: 4 });
+    stack.addItem(new Label('A'));
+    stack.addItem(new Label('B'));
+
+    const data = serializeTree(stack);
+    expect(data.type).toBe('Stack');
+    expect(data.direction).toBe('row');
+    expect(data.spacing).toBe(12);
+    expect(data.children).toHaveLength(2);
+
+    const restored = deserializeTree(data) as Stack;
+    expect(restored.direction).toBe('row');
+    expect(restored.padding).toBe(4);
+    expect(restored.children).toHaveLength(2);
+  });
+});
+
+describe('serialization — Scene UI layer', () => {
+  it('round-trips scene.ui widgets through serialize/deserialize', () => {
+    const scene = new Scene();
+    const button = new Button({ label: 'Start', width: 100, height: 30 });
+    scene.ui.addChild(button);
+
+    const data = scene.serialize();
+    expect(data.ui).toBeDefined();
+    expect(data.ui?.children).toHaveLength(1);
+
+    const target = new Scene();
+    target.deserialize(data);
+
+    expect(target.ui.children).toHaveLength(1);
+    expect(target.ui.children[0]).toBeInstanceOf(Button);
+    expect((target.ui.children[0] as Button).label).toBe('Start');
+
+    scene.destroy();
+    target.destroy();
+  });
+
+  it('omits ui when the scene has no UI layer', () => {
+    const scene = new Scene();
+    scene.addChild(new Container());
+
+    expect(scene.serialize().ui).toBeUndefined();
     scene.destroy();
   });
 });

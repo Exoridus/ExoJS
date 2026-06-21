@@ -32,6 +32,21 @@ export class Stack extends Widget {
     this._padding = options.padding ?? 0;
   }
 
+  /** Flow direction (`'row'` or `'column'`). */
+  public get direction(): StackDirection {
+    return this._direction;
+  }
+
+  /** Gap between items in pixels. */
+  public get spacing(): number {
+    return this._spacing;
+  }
+
+  /** Inner padding around all items in pixels. */
+  public get padding(): number {
+    return this._padding;
+  }
+
   /** Add a child and re-flow the stack. */
   public addItem(child: RenderNode): this {
     this.addChild(child);

@@ -53,6 +53,21 @@ export class ProgressBar extends Widget {
     }
   }
 
+  /** Track (background) colour. */
+  public get trackColor(): Color {
+    return this._trackColor;
+  }
+
+  /** Fill (foreground) colour. */
+  public get fillColor(): Color {
+    return this._fillColor;
+  }
+
+  /** Corner radius in pixels. */
+  public get cornerRadius(): number {
+    return this._cornerRadius;
+  }
+
   protected override _relayout(): void {
     this._drawTrack();
     this._drawFill();

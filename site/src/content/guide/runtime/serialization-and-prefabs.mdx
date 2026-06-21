@@ -1,0 +1,96 @@
+---
+title: 'Serialization & prefabs'
+description: 'Serialize scenes to JSON and back, capture reusable prefabs, persist save slots with SaveManager, and register serializers for your own node types.'
+---
+
+# Serialization & prefabs
+
+ExoJS can turn a scene-graph subtree into plain JSON and rebuild it later. The serializer captures **data and structure** — transforms, visuals, asset references, and the tree shape — **not behaviour**. Update logic, signal handlers, tweens, and systems live in your `Scene` / `System` code and are re-attached after a load. That boundary keeps the format small and matches the engine's code-first design.
+
+Use it for level/scene layouts, reusable prefabs, the structural half of save games, editor save/load, and snapshot tests.
+
+## Serializing a scene
+
+[`Scene.serialize()`](/ExoJS/en/api/scene/) returns a JSON-able descriptor; [`Scene.deserialize()`](/ExoJS/en/api/scene/) rebuilds the scene's `root` (and `ui` layer, if present) from one. Texture and other asset references resolve to their loader source keys, so the **referenced assets must be loaded into the application's loader before you deserialize**.
+
+```ts
+import { Scene } from '@codexo/exojs';
+
+declare const scene: Scene;
+
+// Capture the current layout as plain JSON.
+const data = scene.serialize();
+const json = JSON.stringify(data);
+
+// ...later, with the same assets pre-loaded, restore it.
+scene.deserialize(JSON.parse(json));
+```
+
+A freshly-constructed node serializes to just its `type` tag — only non-default fields are written, so the JSON stays compact.
+
+## Prefabs
+
+A [`Prefab`](/ExoJS/en/api/prefab/) captures a configured subtree once and stamps out independent copies — the data-driven counterpart to building objects in a code factory. There is no re-serialization per instance.
+
+```ts
+import { Prefab, type SceneNode } from '@codexo/exojs';
+
+declare const coin: SceneNode;
+
+const prefab = Prefab.from(coin);
+
+for (let i = 0; i < 10; i++) {
+  const instance = prefab.instantiate();
+  instance.setPosition(i * 32, 0);
+}
+```
+
+`prefab.toJSON()` and `Prefab.fromJSON(descriptor)` round-trip a prefab through disk or the network.
+
+## Persisting saves
+
+[`SaveManager`](/ExoJS/en/api/save-manager/) is a thin helper over `JsonStore` that saves and restores a scene's structural state by named slot. Pair it with your own game-state persistence (score, inventory, quest flags) for a complete save system — the serializer owns the *world layout*, your code owns the *gameplay variables*.
+
+```ts
+import { SaveManager, type Scene } from '@codexo/exojs';
+
+declare const scene: Scene;
+
+const saves = new SaveManager();
+
+void saves.save('slot-1', scene); // serialize + persist
+void saves.load('slot-1', scene); // fetch + deserialize (resolves false if empty)
+```
+
+## Custom node types
+
+Your own [`SceneNode`](/ExoJS/en/api/scene-node/) subclasses become serializable by registering a serializer with [`registerSerializer`](/ExoJS/en/api/serialization-registry/). The framework writes the common transform/visual fields and the type tag; your serializer only handles its own fields.
+
+```ts
+import { registerSerializer, SceneNode } from '@codexo/exojs';
+
+class Marker extends SceneNode {
+  public kind = 'spawn';
+}
+
+registerSerializer('Marker', Marker, {
+  write: node => ({ kind: node.kind }),
+  read: data => {
+    const marker = new Marker();
+    marker.kind = String(data.kind);
+    return marker;
+  },
+});
+```
+
+Extension packages register their own node types the same way through the `serializers` binding on their `Extension` descriptor.
+
+## What is not captured
+
+The format deliberately stops at structure:
+
+- **Behaviour** — update logic, signal handlers, tweens, input bindings, systems. Re-attach these in code after a load.
+- **Live/heavy references** — a node `mask` that points at another node, post-process `filters`, a `Geometry` clip shape, and custom materials are skipped (with a one-time warning). Transform, tint, blend mode, frame, and asset references all round-trip.
+- **Runtime-only assets** — a `RenderTexture` or other resource not loaded through the `Loader` has no source key, so the reference is omitted.
+
+Every value the serializer writes is JSON-serialisable; caches, matrices, and dirty flags never appear in the output.
