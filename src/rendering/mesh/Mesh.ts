@@ -220,8 +220,12 @@ const findAttribute = (attributes: readonly GeometryAttribute[], names: Set<stri
  * `triangle-list` topology and the canonical attribute layout (`f32` position
  * and texcoord, `u8`/`u32`/`f32` color) are supported — this is the immediate
  * (non-batched) bridge; shared GPU buffers and instancing arrive later.
+ *
+ * Exported (not barrelled) so the pooled immediate-draw mesh can reuse the exact
+ * same flattening the `Mesh` constructor applies.
+ * @internal
  */
-function readGeometry(geometry: Geometry): {
+export function readGeometry(geometry: Geometry): {
   vertices: Float32Array;
   uvs: Float32Array | null;
   colors: Uint32Array | null;
