@@ -1,5 +1,6 @@
-import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
+import { z } from 'astro/zod';
+import { defineCollection } from 'astro:content';
 
 // Guide ordering, grouping, and learning metadata live in
 // src/lib/guide-structure.ts (the single source of truth, reconciled with these

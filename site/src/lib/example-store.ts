@@ -1,7 +1,7 @@
-import type { Example, ExampleDefinition, ExamplesMap, ExamplesResponse } from './types';
 import { CHAPTER_BY_SLUG } from './chapters';
-import { buildExampleUrl, buildGithubRawExampleUrl } from './url-builder';
 import { createUniqueRequest } from './request-manager';
+import type { Example, ExampleDefinition, ExamplesMap, ExamplesResponse } from './types';
+import { buildExampleUrl, buildGithubRawExampleUrl } from './url-builder';
 import { isCurrentVersion } from './versions';
 
 // Per-version cache. The store keeps an internal map keyed by version id so
@@ -36,7 +36,8 @@ function buildSourceUrl(versionId: string, filePath: string): string {
 }
 
 export function hasExamplesFor(versionId: string): boolean {
-    return _entries.get(versionId)?.response != null;
+    const response = _entries.get(versionId)?.response;
+    return response !== undefined && response !== null;
 }
 
 export function getLoadErrorFor(versionId: string): string | null {

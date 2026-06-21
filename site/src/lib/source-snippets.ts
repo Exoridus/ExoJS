@@ -108,14 +108,14 @@ export function extractSnippetRegion(filePath: string, region: string): string {
 
     for (const line of lines) {
         const openMatch = line.match(REGION_OPEN_RE);
-        if (openMatch && openMatch[1].trim() === region) {
+        if (openMatch?.[1].trim() === region) {
             inside = true;
             found = true;
             continue;
         }
 
         const closeMatch = line.match(REGION_CLOSE_RE);
-        if (closeMatch && closeMatch[1].trim() === region) {
+        if (closeMatch?.[1].trim() === region) {
             inside = false;
             continue;
         }

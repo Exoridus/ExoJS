@@ -1,0 +1,50 @@
+.root {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.4rem 0.78rem;
+    background: color-mix(in oklab, var(--bg-canvas), transparent 6%);
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.version-pill {
+    flex: 0 0 auto;
+}
+
+.menu-button {
+    appearance: none;
+    flex: 0 0 auto;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-2);
+    background: transparent;
+    color: var(--fg-muted);
+    cursor: pointer;
+}
+
+.menu-button:hover {
+    background: var(--accent-soft);
+    color: var(--fg);
+}
+
+.menu-button:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+}
+
+.spacer {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+@media (max-width: 1119px) {
+    .menu-button {
+        display: inline-flex;
+    }
+}

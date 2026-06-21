@@ -72,8 +72,21 @@ const isApiVariant = variant === 'api';
         )}
         {hasSidebar && !isGuideVariant && <div class="docs-shell__backdrop" data-docs-backdrop hidden></div>}
         {isGuideVariant && hasSidebar && (
-            <exo-bottom-sheet id="guide-mobile-sheet" title="Guide">
-                <div class="guide-mobile-sheet">
+            <div id="guide-mobile-sheet" class="guide-bottom-sheet" data-guide-bottom-sheet hidden>
+                <button class="guide-bottom-sheet__backdrop" type="button" data-guide-sheet-close aria-label="Close guide navigation"></button>
+                <section
+                    class="guide-bottom-sheet__panel"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="guide-mobile-sheet-title"
+                    tabindex="-1"
+                >
+                    <div class="guide-bottom-sheet__handle" aria-hidden="true"></div>
+                    <header class="guide-bottom-sheet__head">
+                        <h2 id="guide-mobile-sheet-title">Guide</h2>
+                        <button type="button" data-guide-sheet-close aria-label="Close guide navigation">Close</button>
+                    </header>
+                    <div class="guide-mobile-sheet">
                     <div class="guide-mobile-sheet__tabs" role="tablist" aria-label="Guide navigation mode">
                         <button
                             type="button"
@@ -102,8 +115,9 @@ const isApiVariant = variant === 'api';
                     <section id="guide-mobile-panel-onpage" class="guide-mobile-sheet__panel" data-guide-panel="onpage" role="tabpanel" hidden>
                         <div data-guide-mobile-onpage></div>
                     </section>
-                </div>
-            </exo-bottom-sheet>
+                    </div>
+                </section>
+            </div>
         )}
     </section>
 
@@ -118,7 +132,7 @@ const isApiVariant = variant === 'api';
                     const content = root?.querySelector('[data-docs-content]');
                     const rail = root?.querySelector('[data-docs-rail]');
                     const backdrop = root?.querySelector('[data-docs-backdrop]');
-                    const header = document.querySelector('exo-header');
+                    const header = document.querySelector('[data-app-header]');
 
                     if (!(root instanceof HTMLElement)) return;
                     if (!(toggle instanceof HTMLButtonElement)) return;
@@ -257,6 +271,8 @@ const isApiVariant = variant === 'api';
                     const mobileOpen = root.querySelector('[data-guide-mobile-open]');
                     const mobileContext = root.querySelector('[data-guide-mobile-context]');
                     const sheet = root.querySelector('#guide-mobile-sheet');
+                    const sheetPanel = root.querySelector('#guide-mobile-sheet .guide-bottom-sheet__panel');
+                    const sheetCloseButtons = Array.from(root.querySelectorAll('[data-guide-sheet-close]'));
                     const sidebar = root.querySelector('[data-docs-sidebar]');
                     const rail = root.querySelector('[data-docs-rail]');
                     const tabButtons = Array.from(root.querySelectorAll('[data-guide-tab]'));
@@ -268,6 +284,7 @@ const isApiVariant = variant === 'api';
                     if (!(mobileOpen instanceof HTMLButtonElement)) return;
                     if (!(mobileContext instanceof HTMLElement)) return;
                     if (!(sheet instanceof HTMLElement)) return;
+                    if (!(sheetPanel instanceof HTMLElement)) return;
                     if (!(sidebar instanceof HTMLElement)) return;
                     if (!(contentsHost instanceof HTMLElement)) return;
                     if (!(onPageHost instanceof HTMLElement)) return;
@@ -279,6 +296,26 @@ const isApiVariant = variant === 'api';
                     let sourceTocLinks = [];
                     let clonedTocLinks = [];
                     let observer = null;
+                    let sheetOpener = null;
+
+                    const openSheet = opener => {
+                        if (!mediaQuery.matches) return;
+                        sheetOpener = opener instanceof HTMLElement ? opener : document.activeElement;
+                        sheet.hidden = false;
+                        sheet.dataset.open = 'true';
+                        document.body.style.overflow = 'hidden';
+                        requestAnimationFrame(() => sheetPanel.focus());
+                    };
+
+                    const closeSheet = ({ restore = true } = {}) => {
+                        sheet.dataset.open = 'false';
+                        sheet.hidden = true;
+                        document.body.style.overflow = '';
+
+                        if (restore && sheetOpener instanceof HTMLElement) {
+                            sheetOpener.focus();
+                        }
+                    };
 
                     const setContext = () => {
                         const active = sidebar.querySelector('.side-link[data-active="true"]');
@@ -337,7 +374,7 @@ const isApiVariant = variant === 'api';
                                 anchor.appendChild(labelNode);
 
                                 anchor.addEventListener('click', () => {
-                                    sheet.hide?.();
+                                    closeSheet({ restore: false });
                                 });
                                 item.appendChild(anchor);
                                 list.appendChild(item);
@@ -398,7 +435,7 @@ const isApiVariant = variant === 'api';
                                 anchor.setAttribute('data-level', '3');
                             }
                             anchor.addEventListener('click', () => {
-                                sheet.hide?.();
+                                closeSheet({ restore: false });
                             });
                             item.appendChild(anchor);
                             list.appendChild(item);
@@ -435,9 +472,22 @@ const isApiVariant = variant === 'api';
                     });
 
                     mobileOpen.addEventListener('click', () => {
-                        if (!mediaQuery.matches) return;
                         setTab('contents');
-                        sheet.show?.(mobileOpen);
+                        openSheet(mobileOpen);
+                    });
+
+                    sheetCloseButtons.forEach(button => {
+                        button.addEventListener('click', () => closeSheet());
+                    });
+
+                    mediaQuery.addEventListener('change', event => {
+                        if (!event.matches) closeSheet({ restore: false });
+                    });
+
+                    document.addEventListener('keydown', event => {
+                        if (sheet.hidden || event.key !== 'Escape') return;
+                        event.preventDefault();
+                        closeSheet();
                     });
 
                     document.addEventListener('hashchange', () => syncActiveOnPageLink());
@@ -579,6 +629,82 @@ const isApiVariant = variant === 'api';
 
     .guide-mobile-control {
         display: none;
+    }
+
+    .guide-bottom-sheet {
+        position: fixed;
+        inset: 0;
+        z-index: 260;
+        display: grid;
+        align-items: end;
+    }
+
+    .guide-bottom-sheet[hidden] {
+        display: none;
+    }
+
+    .guide-bottom-sheet__backdrop {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        background: rgba(0, 0, 0, 0.52);
+        cursor: pointer;
+    }
+
+    .guide-bottom-sheet__panel {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-height: min(82vh, 720px);
+        overflow: auto;
+        border: 1px solid var(--color-border-soft);
+        border-bottom: 0;
+        border-radius: var(--r-4) var(--r-4) 0 0;
+        background: var(--color-panel);
+        box-shadow: var(--shadow-2);
+        padding: var(--s-3);
+    }
+
+    .guide-bottom-sheet__panel:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: -4px;
+    }
+
+    .guide-bottom-sheet__handle {
+        width: 2.4rem;
+        height: 0.25rem;
+        margin: 0 auto var(--s-3);
+        border-radius: var(--r-pill);
+        background: var(--color-border);
+    }
+
+    .guide-bottom-sheet__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-3);
+        margin-bottom: var(--s-3);
+    }
+
+    .guide-bottom-sheet__head h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 650;
+    }
+
+    .guide-bottom-sheet__head button {
+        min-height: 38px;
+        border: 1px solid var(--color-border-soft);
+        border-radius: var(--radius-control);
+        background: var(--color-surface);
+        color: var(--color-text);
+        padding: 0 0.75rem;
+        cursor: pointer;
+    }
+
+    .guide-bottom-sheet__head button:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
     }
 
     .guide-mobile-sheet {

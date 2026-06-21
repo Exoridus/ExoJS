@@ -1,0 +1,119 @@
+.root {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 34px;
+    padding: 0.38rem 0.62rem;
+    box-sizing: border-box;
+    background: oklch(18% 0.012 245);
+    border-bottom: 1px solid var(--line-soft);
+    color: oklch(70% 0.012 245);
+    user-select: none;
+    font-family: var(--f-mono);
+}
+
+.meta {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.title {
+    color: oklch(94% 0.005 245);
+    font-size: 0.71rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+}
+
+.cap {
+    font-family: var(--f-mono);
+    font-size: 0.62rem;
+    border: 1px solid oklch(35% 0.014 245);
+    border-radius: var(--r-pill);
+    padding: 0.02rem 0.36rem;
+    color: oklch(78% 0.012 245);
+}
+
+.dimensions {
+    color: oklch(60% 0.012 245);
+    font-size: 0.67rem;
+    font-family: var(--f-mono);
+    white-space: nowrap;
+}
+
+.version {
+    color: oklch(60% 0.012 245);
+    font-size: 0.67rem;
+    white-space: nowrap;
+}
+
+.dot-sep {
+    color: oklch(55% 0.012 245);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 0.34rem;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.button {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 25px;
+    padding: 0 0.56rem;
+    border-radius: var(--r-2);
+    border: 1px solid oklch(35% 0.014 245);
+    background: transparent;
+    color: oklch(78% 0.012 245);
+    font-size: 0.65rem;
+    font-family: var(--f-mono);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.button--primary {
+    border-color: oklch(60% 0.18 142 / 0.4);
+    background: oklch(22% 0.014 142 / 0.3);
+    color: oklch(78% 0.18 142);
+}
+
+.button:hover {
+    background: color-mix(in oklab, var(--accent-soft), oklch(18% 0.012 245) 75%);
+}
+
+.button:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+}
+
+.button[disabled] {
+    opacity: 0.45;
+    cursor: default;
+}
+
+@media (max-width: 760px) {
+    .title {
+        max-width: 150px;
+    }
+
+    .dimensions,
+    .version,
+    .dot-sep {
+        display: none;
+    }
+
+    .button {
+        min-height: 32px;
+        padding: 0 0.68rem;
+    }
+}

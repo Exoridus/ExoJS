@@ -1,6 +1,6 @@
 import { defineConfig } from 'astro/config';
-import lit from '@astrojs/lit';
 import mdx from '@astrojs/mdx';
+import react from '@astrojs/react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-    integrations: [lit(), mdx()],
+    integrations: [react(), mdx()],
     output: 'static',
     base: '/ExoJS/',
     i18n: {
@@ -56,14 +56,14 @@ export default defineConfig({
                         // app-code changes and workers/language-packs are kept separate
                         // by Monaco's own internal dynamic imports.
                         if (id.includes('/node_modules/monaco-editor/')) return 'vendor-monaco';
-                        // Lit runtime — shared by all shell components; stable vendor chunk.
+                        // React runtime — shared by all hydrated islands; stable vendor chunk.
                         if (
-                            id.includes('/node_modules/lit/') ||
-                            id.includes('/node_modules/@lit/') ||
-                            id.includes('/node_modules/lit-html/') ||
-                            id.includes('/node_modules/lit-element/')
+                            id.includes('/node_modules/react/') ||
+                            id.includes('/node_modules/react-dom/') ||
+                            id.includes('/node_modules/@astrojs/react/') ||
+                            id.includes('/node_modules/@monaco-editor/react/')
                         )
-                            return 'vendor-lit';
+                            return 'vendor-react';
                     },
                 },
             },

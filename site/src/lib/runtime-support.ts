@@ -1,4 +1,5 @@
 import { Capabilities } from '@codexo/exojs';
+
 import type { Capability } from './examples-catalog';
 import type { AutoRendererStatus, Example, ExampleAvailability, ExampleBackend } from './types';
 

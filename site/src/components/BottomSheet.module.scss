@@ -1,0 +1,126 @@
+.host {
+    position: fixed;
+    inset: 0;
+    z-index: 320;
+    pointer-events: none;
+}
+
+.host[data-open='true'] {
+    pointer-events: auto;
+}
+
+.root {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-items: end;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 180ms ease,
+        visibility 180ms ease;
+}
+
+.host[data-open='true'] .root {
+    opacity: 1;
+    visibility: visible;
+}
+
+.backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    background: color-mix(in oklab, var(--color-bg), black 42%);
+    opacity: 0;
+    transition: opacity 180ms ease;
+    cursor: pointer;
+}
+
+.host[data-open='true'] .backdrop {
+    opacity: 0.64;
+}
+
+.sheet {
+    position: relative;
+    width: min(100%, 760px);
+    margin-inline: auto;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    border: 1px solid var(--color-border-soft);
+    border-bottom: 0;
+    background: var(--color-panel);
+    max-height: min(80dvh, calc(100dvh - 0.65rem));
+    box-shadow: var(--shadow-xl);
+    transform: translateY(102%);
+    transition: transform 210ms ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.host[data-open='true'] .sheet {
+    transform: translateY(0);
+}
+
+.handle {
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-border);
+    opacity: 0.7;
+    margin: 10px auto 6px;
+    flex: 0 0 auto;
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: 0.45rem var(--s-4) 0.65rem;
+    border-bottom: 1px solid var(--color-border-soft);
+}
+
+.title {
+    margin: 0;
+    font-size: 0.92rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.close {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.close:hover {
+    background: var(--color-surface-2);
+}
+
+.close:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+.body {
+    min-height: 0;
+    overflow: auto;
+    padding: var(--s-4);
+    padding-bottom: calc(var(--s-4) + env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .root,
+    .backdrop,
+    .sheet {
+        transition: none;
+    }
+}
