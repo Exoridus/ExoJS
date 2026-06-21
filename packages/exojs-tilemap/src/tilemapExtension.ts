@@ -3,6 +3,8 @@ import type { RenderBackend } from '@codexo/exojs/rendering';
 import { RenderBackendType } from '@codexo/exojs/rendering';
 
 import { TileChunkNode } from './TileChunkNode';
+import { TileMapNode } from './TileMapNode';
+import { tileMapNodeSerializer } from './tilemapSerializers';
 import { WebGl2TileChunkRenderer } from './webgl2/WebGl2TileChunkRenderer';
 import { WebGpuTileChunkRenderer } from './webgpu/WebGpuTileChunkRenderer';
 
@@ -37,9 +39,10 @@ function buildTileChunkRendererBinding(batchSize: number): RendererBinding {
 /**
  * Default immutable tilemap extension descriptor.
  *
- * Registers the WebGL2/WebGPU tile chunk renderers (`renderers`); it carries no
- * asset bindings — there is no generic on-disk tilemap format in this slice, so
- * format adapters (e.g. `@codexo/exojs-tiled`) own loading and depend on this
+ * Registers the WebGL2/WebGPU tile chunk renderers (`renderers`) and the
+ * {@link TileMapNode} scene serializer (`serializers`); it carries no asset
+ * bindings — there is no generic on-disk tilemap format in this slice, so format
+ * adapters (e.g. `@codexo/exojs-tiled`) own loading and depend on this
  * descriptor to pull in rendering.
  *
  * Install + register directly for procedural / hand-built maps
@@ -53,4 +56,5 @@ function buildTileChunkRendererBinding(batchSize: number): RendererBinding {
 export const tilemapExtension: Extension = Object.freeze({
   id: '@codexo/exojs-tilemap',
   renderers: [buildTileChunkRendererBinding(tileRendererBatchSize)],
+  serializers: [{ typeName: 'TileMapNode', target: TileMapNode, serializer: tileMapNodeSerializer }],
 });
