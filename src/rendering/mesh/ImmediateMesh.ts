@@ -20,6 +20,7 @@ interface MutableMeshFields {
   uvs: Float32Array | null;
   colors: Uint32Array | null;
   material: MeshMaterial | null;
+  geometry: Geometry | null;
 }
 
 /**
@@ -62,21 +63,51 @@ export class ImmediateMesh extends Mesh {
   public configure(geometry: Geometry, transform: Matrix, material: MeshMaterial | null, tint: Color | null): void {
     const fields = this as unknown as MutableMeshFields;
 
-    if (geometry !== this._sourceGeometry || geometry.version !== this._sourceVersion) {
-      const data = readGeometry(geometry);
-
-      fields.vertices = data.vertices;
-      fields.uvs = data.uvs;
-      fields.colors = data.colors;
-      fields.indices = data.indices;
-      this._sourceGeometry = geometry;
-      this._sourceVersion = geometry.version;
-    }
-
+    this._flattenGeometry(geometry);
+    // Single immediate draws go through the dynamic (non-static-cached) path, so
+    // the geometry reference is left off the mesh — only the flattened arrays are
+    // consumed. (The batch source path sets it for the shared GPU buffer cache.)
+    fields.geometry = null;
     fields.material = material;
     this._rawTransform = transform;
     // setTint ignores a falsy argument, so a missing tint must reset to white
     // rather than retain the previous draw's tint through the pool.
     this.setTint(tint ?? Color.white);
+  }
+
+  /**
+   * Reconfigure this pooled mesh as the shared geometry/look source for an
+   * instanced {@link RenderBatch} draw. The geometry reference is kept on the
+   * mesh so the renderer can cache its GPU buffer by identity; per-instance
+   * transform and tint are not carried here (they are written to the shared
+   * transform store per instance by `drawBatch`).
+   * @internal
+   */
+  public configureBatchSource(geometry: Geometry, material: MeshMaterial | null): void {
+    const fields = this as unknown as MutableMeshFields;
+
+    this._flattenGeometry(geometry);
+    fields.geometry = geometry;
+    fields.material = material;
+    this._rawTransform = null;
+    this.setTint(Color.white);
+  }
+
+  // Re-flatten the geometry into the mesh data only when its identity or data
+  // version changed; reuses the previously flattened arrays otherwise.
+  private _flattenGeometry(geometry: Geometry): void {
+    if (geometry === this._sourceGeometry && geometry.version === this._sourceVersion) {
+      return;
+    }
+
+    const fields = this as unknown as MutableMeshFields;
+    const data = readGeometry(geometry);
+
+    fields.vertices = data.vertices;
+    fields.uvs = data.uvs;
+    fields.colors = data.colors;
+    fields.indices = data.indices;
+    this._sourceGeometry = geometry;
+    this._sourceVersion = geometry.version;
   }
 }

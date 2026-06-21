@@ -5,11 +5,11 @@ symbol: "WebGpuBackend"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 39
+memberCount: 40
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/webgpu/WebGpuBackend.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L74"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L76"
 ---
 ## Import
 
@@ -46,6 +46,7 @@ acquisition fails on `'auto'`.
 - `createColorAttachment(): GPURenderPassColorAttachment`
 - `destroy(): void`
 - `draw(drawable: Drawable): this`
+- `drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this`
 - `execute(pass: BackendRenderPass): this`
 - `flush(): this`
 - `getScissorRect(): PixelClipBoundsState | null`
@@ -87,4 +88,4 @@ acquisition fails on `'auto'`.
 
 ## Source
 
-[src/rendering/webgpu/WebGpuBackend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L74)
+[src/rendering/webgpu/WebGpuBackend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuBackend.ts#L76)

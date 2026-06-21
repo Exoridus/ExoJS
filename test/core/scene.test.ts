@@ -60,6 +60,9 @@ const createRuntime = (): { backend: RenderBackend; context: RenderingContext } 
     draw() {
       return this;
     },
+    drawInstanced() {
+      return this;
+    },
     resetStats() {
       resetRenderStats(stats);
 

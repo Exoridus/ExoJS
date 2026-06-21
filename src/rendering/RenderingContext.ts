@@ -12,6 +12,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import { Camera } from './Camera';
 import { type RenderBackend } from './RenderBackend';
+import { type RenderBatch } from './RenderBatch';
 import { type RenderNode } from './RenderNode';
 import { type RenderStats } from './RenderStats';
 import { View } from './View';
@@ -43,6 +44,12 @@ export interface DrawGeometryOptions {
   view?: View;
 }
 
+/** Options for {@link RenderingContext.drawBatch}. */
+export interface DrawBatchOptions {
+  /** Override the view used for this draw. Defaults to the context's active camera. */
+  view?: View;
+}
+
 /**
  * Owns rendering orchestration: builds, optimizes and plays the internal
  * RenderPlan for a RenderNode subtree, manages render-target/view state for
@@ -62,6 +69,8 @@ export class RenderingContext implements System {
   private readonly _screenView: View;
   /** Lazily-created pooled drawable reused by every {@link drawGeometry} call. */
   private _immediateMesh: ImmediateMesh | null = null;
+  /** Lazily-created pooled geometry/look source reused by every {@link drawBatch} call. */
+  private _batchMesh: ImmediateMesh | null = null;
 
   public constructor(backend: RenderBackend) {
     this._backend = backend;
@@ -133,6 +142,8 @@ export class RenderingContext implements System {
     this._screenView.destroy();
     this._immediateMesh?.destroy();
     this._immediateMesh = null;
+    this._batchMesh?.destroy();
+    this._batchMesh = null;
   }
 
   /**
@@ -258,6 +269,45 @@ export class RenderingContext implements System {
     this._backend.setView(view);
     mesh.configure(geometry, transform, material, options.tint ?? null);
     this._backend.draw(mesh);
+    this._backend.flush();
+  }
+
+  /**
+   * Immediately draw an instanced {@link RenderBatch} — one geometry + material
+   * drawn once with the batch's N per-instance `(transform, tint)` pairs as a
+   * single instanced draw call. This is the high-throughput immediate path: use
+   * it for many like items (tiles, bullets, procedural instances) where
+   * {@link drawGeometry} would issue one draw call each.
+   *
+   * Like {@link drawGeometry}, the batch is flushed at once and lands in call
+   * order relative to the surrounding {@link render} calls. An empty batch is a
+   * no-op.
+   *
+   * v1 renders with the default mesh material (per-instance tint over the
+   * geometry's vertex colors); a custom {@link RenderBatch.material} is not yet
+   * supported on the instanced path.
+   *
+   * @param batch   The instanced submission (geometry + per-instance transforms/tints).
+   * @param options Optional {@link DrawBatchOptions.view view} override.
+   */
+  public drawBatch(batch: RenderBatch, options: DrawBatchOptions = {}): void {
+    if (batch.material !== null) {
+      throw new Error('drawBatch custom materials are not supported yet — v1 renders batches with the default mesh material.');
+    }
+
+    if (batch.count === 0) {
+      return;
+    }
+
+    const view = options.view ?? this._camera;
+    const mesh = (this._batchMesh ??= new ImmediateMesh());
+
+    // Set the view first (flushing any renderer left pending), configure the
+    // pooled geometry/look source, then submit a single instanced draw over the
+    // batch's per-instance transforms/tints and flush it immediately.
+    this._backend.setView(view);
+    mesh.configureBatchSource(batch.geometry, batch.material);
+    this._backend.drawInstanced(mesh, batch._instanceTransforms, batch._instanceTints, batch.count);
     this._backend.flush();
   }
 

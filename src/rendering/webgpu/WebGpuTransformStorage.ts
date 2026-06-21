@@ -1,3 +1,4 @@
+import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
@@ -49,6 +50,15 @@ export class WebGpuTransformStorage {
    */
   public push(drawable: Drawable, transform?: Matrix): number {
     return this._buffer.push(transform ?? drawable.getGlobalTransform(), drawable.tint);
+  }
+
+  /**
+   * Append a raw `(transform, tint)` pair to the shared buffer and return its
+   * slot. Unlike {@link push} the values are supplied directly rather than read
+   * from a drawable — used by explicit instanced batches.
+   */
+  public pushValues(transform: Matrix, tint: Color): number {
+    return this._buffer.push(transform, tint);
   }
 
   /**

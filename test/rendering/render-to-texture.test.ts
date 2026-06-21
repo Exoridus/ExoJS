@@ -98,6 +98,9 @@ const createMockBackend = () => {
       return this;
     },
     draw,
+    drawInstanced() {
+      return this;
+    },
     resetStats() {
       resetRenderStats(stats);
 
@@ -122,6 +125,9 @@ const createMockBackend = () => {
     backend,
     root,
     draw,
+    drawInstanced() {
+      return this;
+    },
     drawEvents,
     clear,
     clearCalls,

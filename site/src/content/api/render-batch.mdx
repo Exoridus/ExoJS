@@ -1,0 +1,54 @@
+---
+title: "RenderBatch"
+description: "Explicit instanced draw submission: **one** Geometry + MeshMaterial drawn **once** with **N** per-instance `(transform, tint)` pairs — the general form of the engine's mesh-instancing model, surfaced for data-driven rendering (thousands of tiles, bullets, grass blades, procedural items as a single draw). Build it up with add, hand it to RenderingContext.drawBatch, and clear it to reuse the same instance across frames without reallocating — the per-instance transform/tint storage grows on demand and is retained across `clear()`, so a steady-state batch allocates nothing. Each add **copies** the transform and tint into internal storage, so the caller may mutate or reuse the passed `Matrix`/`Color` immediately afterwards without affecting the batch. This is the explicit instanced submission path — distinct from the internal automatic sprite batcher: every instance shares the one geometry and material, and the whole batch is a single instanced draw call."
+symbol: "RenderBatch"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 7
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/RenderBatch.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderBatch.ts#L26"
+---
+## Import
+
+`import { RenderBatch } from '@codexo/exojs'`
+
+Explicit instanced draw submission: **one** Geometry + MeshMaterial
+drawn **once** with **N** per-instance `(transform, tint)` pairs — the general
+form of the engine's mesh-instancing model, surfaced for data-driven rendering
+(thousands of tiles, bullets, grass blades, procedural items as a single draw).
+
+Build it up with add, hand it to RenderingContext.drawBatch,
+and clear it to reuse the same instance across frames without
+reallocating — the per-instance transform/tint storage grows on demand and is
+retained across `clear()`, so a steady-state batch allocates nothing.
+
+Each add **copies** the transform and tint into internal storage, so
+the caller may mutate or reuse the passed `Matrix`/`Color` immediately
+afterwards without affecting the batch.
+
+This is the explicit instanced submission path — distinct from the internal
+automatic sprite batcher: every instance shares the one geometry and material,
+and the whole batch is a single instanced draw call.
+
+## Constructors
+
+- `new(geometry: Geometry, material: MeshMaterial | null): RenderBatch`
+
+## Methods
+
+- `add(transform: Matrix, tint: Color | null): this`
+- `clear(): this`
+- `destroy(): void`
+
+## Properties
+
+- `geometry: Geometry`
+- `material: MeshMaterial | null`
+- `count: number`
+
+## Source
+
+[src/rendering/RenderBatch.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderBatch.ts#L26)

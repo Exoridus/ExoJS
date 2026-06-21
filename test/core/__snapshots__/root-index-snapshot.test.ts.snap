@@ -125,6 +125,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Random",
   "Rectangle",
   "RenderBackendType",
+  "RenderBatch",
   "RenderNode",
   "RenderNodePass",
   "RenderPass",

@@ -106,6 +106,9 @@ const createRuntime = (): MockRuntime => {
 
       return this;
     },
+    drawInstanced() {
+      return this;
+    },
     execute(pass) {
       // Execute the pass synchronously so RenderNode's intermediate
       // RT writes are visible to subsequent assertions.

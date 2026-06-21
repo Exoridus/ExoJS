@@ -109,6 +109,9 @@ const createRuntime = () => {
     draw() {
       return this;
     },
+    drawInstanced() {
+      return this;
+    },
     resetStats() {
       resetRenderStats(stats);
       return this;

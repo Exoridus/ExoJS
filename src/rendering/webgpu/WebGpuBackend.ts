@@ -10,6 +10,7 @@ import { Vector } from '#math/Vector';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
 import type { RenderGroup } from '#rendering/plan/RenderInstruction';
@@ -28,6 +29,7 @@ import { ScaleModes, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
+import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
@@ -308,6 +310,37 @@ export class WebGpuBackend implements RenderBackend {
     renderer.render(drawable);
     this._activeDrawCommand = null;
     this._stats.submittedNodes++;
+
+    return this;
+  }
+
+  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this {
+    if (count <= 0 || mesh.vertexCount === 0 || this._deviceLost || this._device === null) {
+      this._activeDrawCommand = null;
+      return this;
+    }
+
+    const renderer = this.rendererRegistry.resolve(mesh);
+
+    if (!(renderer instanceof WebGpuMeshRenderer)) {
+      throw new Error('drawInstanced requires a mesh handled by the WebGPU mesh renderer.');
+    }
+
+    this._setActiveRenderer(renderer);
+
+    // Write each instance's (transform, tint) into a fresh, contiguous transform
+    // slot before the renderer's draw uploads the storage buffer, then draw the
+    // geometry once over [startNodeIndex, startNodeIndex + count).
+    const storage = this._getTransformStorage();
+    const startNodeIndex = storage.pushValues(transforms[0], tints[0]);
+
+    for (let i = 1; i < count; i++) {
+      storage.pushValues(transforms[i], tints[i]);
+    }
+
+    renderer.drawInstancedBatch(mesh, startNodeIndex, count);
+    this._activeDrawCommand = null;
+    this._stats.submittedNodes += count;
 
     return this;
   }

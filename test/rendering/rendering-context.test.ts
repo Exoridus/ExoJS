@@ -9,6 +9,7 @@ import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
@@ -44,6 +45,13 @@ const createMockBackend = () => {
 
   const draw = vi.fn(function (this: RenderBackend, drawable: Drawable) {
     drawEvents.push(drawable);
+
+    return this;
+  });
+
+  const instancedDraws: Array<{ mesh: Mesh; transforms: readonly Matrix[]; tints: readonly Color[]; count: number }> = [];
+  const drawInstanced = vi.fn(function (this: RenderBackend, mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number) {
+    instancedDraws.push({ mesh, transforms, tints, count });
 
     return this;
   });
@@ -102,6 +110,7 @@ const createMockBackend = () => {
       return this;
     },
     draw,
+    drawInstanced,
     resetStats() {
       resetRenderStats(stats);
 
@@ -126,6 +135,8 @@ const createMockBackend = () => {
     backend,
     root,
     draw,
+    drawInstanced,
+    instancedDraws,
     drawEvents,
     clear,
     clearCalls,
@@ -571,6 +582,114 @@ describe('RenderingContext.drawGeometry', () => {
     expect(() => context.drawGeometry(geometry, new Matrix(), { material: spriteMaterial })).toThrow(/must target 'mesh'/);
     expect(drawEvents).toHaveLength(0);
 
+    geometry.destroy();
+  });
+});
+
+describe('RenderingContext.drawBatch', () => {
+  test('submits a single instanced draw and flushes', () => {
+    const { backend, drawInstanced, instancedDraws, getFlushCallCount } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const batch = new RenderBatch(geometry)
+      .add(new Matrix())
+      .add(new Matrix(1, 0, 5, 0, 1, 5))
+      .add(new Matrix(1, 0, 9, 0, 1, 9));
+
+    context.drawBatch(batch);
+
+    expect(drawInstanced).toHaveBeenCalledTimes(1);
+    expect(instancedDraws).toHaveLength(1);
+    expect(instancedDraws[0].count).toBe(3);
+    expect(getFlushCallCount()).toBe(1);
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('passes the batch geometry source mesh and per-instance transforms/tints', () => {
+    const { backend, instancedDraws } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const batch = new RenderBatch(geometry).add(new Matrix(2, 0, 10, 0, 3, 20), new Color(255, 0, 0)).add(new Matrix());
+
+    context.drawBatch(batch);
+
+    const submission = instancedDraws[0];
+
+    expect((submission.mesh as Mesh).geometry).toBe(geometry);
+    expect(submission.count).toBe(2);
+    expect(submission.transforms[0].a).toBe(2);
+    expect(submission.transforms[0].x).toBe(10);
+    expect(submission.tints[0].equals(new Color(255, 0, 0))).toBe(true);
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('is a no-op for an empty batch', () => {
+    const { backend, drawInstanced, getFlushCallCount, setViewSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const batch = new RenderBatch(geometry);
+
+    context.drawBatch(batch);
+
+    expect(drawInstanced).not.toHaveBeenCalled();
+    expect(getFlushCallCount()).toBe(0);
+    expect(setViewSpy).not.toHaveBeenCalled();
+
+    geometry.destroy();
+  });
+
+  test('defaults to the active camera and honors a custom view', () => {
+    const { backend, setViewSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const batch = new RenderBatch(geometry).add(new Matrix());
+    const customView = new View(100, 100, 200, 200);
+
+    context.drawBatch(batch);
+    expect(setViewSpy).toHaveBeenLastCalledWith(context.camera);
+
+    context.drawBatch(batch, { view: customView });
+    expect(setViewSpy).toHaveBeenLastCalledWith(customView);
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('rejects a batch carrying a custom material', () => {
+    const { backend, drawInstanced } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const batch = new RenderBatch(geometry).add(new Matrix());
+    // Force a custom material onto the batch to exercise the drawBatch guard.
+    (batch as unknown as { material: unknown }).material = minimalMeshMaterial();
+
+    expect(() => context.drawBatch(batch)).toThrow(/custom materials are not supported/);
+    expect(drawInstanced).not.toHaveBeenCalled();
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('draws after a render() in call order', () => {
+    const { backend, draw, drawInstanced } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const sprite = new Sprite(createTexture());
+    const geometry = createStandardGeometry();
+    const batch = new RenderBatch(geometry).add(new Matrix());
+
+    context.render(sprite);
+    context.drawBatch(batch);
+
+    expect(draw).toHaveBeenCalled();
+    expect(drawInstanced).toHaveBeenCalled();
+    // The instanced batch is submitted after the retained render.
+    expect(draw.mock.invocationCallOrder[0]).toBeLessThan(drawInstanced.mock.invocationCallOrder[0]);
+
+    batch.destroy();
     geometry.destroy();
   });
 });

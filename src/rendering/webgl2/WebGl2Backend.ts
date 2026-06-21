@@ -7,6 +7,7 @@ import { Vector } from '#math/Vector';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
 import type { RenderGroup } from '#rendering/plan/RenderInstruction';
@@ -26,6 +27,7 @@ import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
+import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
 import { WebGl2StencilClipper } from './WebGl2StencilClipper';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
@@ -409,6 +411,35 @@ export class WebGl2Backend implements RenderBackend {
     renderer.render(drawable);
     this._activeDrawCommand = null;
     this._stats.submittedNodes++;
+
+    return this;
+  }
+
+  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this {
+    if (count <= 0 || mesh.vertexCount === 0) {
+      return this;
+    }
+
+    const renderer = this.rendererRegistry.resolve(mesh);
+
+    if (!(renderer instanceof WebGl2MeshRenderer)) {
+      throw new Error('drawInstanced requires a mesh handled by the WebGL2 mesh renderer.');
+    }
+
+    this._setActiveRenderer(renderer);
+
+    // Write each instance's (transform, tint) into a fresh, contiguous transform
+    // slot — before the renderer's draw uploads the buffer (write-before-bind) —
+    // then draw the geometry once over [startNodeIndex, startNodeIndex + count).
+    const startNodeIndex = this._transformBuffer.push(transforms[0], tints[0]);
+
+    for (let i = 1; i < count; i++) {
+      this._transformBuffer.push(transforms[i], tints[i]);
+    }
+
+    renderer.drawInstancedBatch(mesh, startNodeIndex, count);
+    this._activeDrawCommand = null;
+    this._stats.submittedNodes += count;
 
     return this;
   }
