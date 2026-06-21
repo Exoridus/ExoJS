@@ -14,6 +14,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Geometry } from '#rendering/geometry/Geometry';
+import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -383,6 +384,37 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
     } finally {
       red.destroy();
       blue.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGL2 RenderingContext.drawBatch', () => {
+  test('draws N instances of one geometry as a single instanced draw call', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    // A 16×16 white quad at the local origin, instanced to three positions/tints.
+    const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
+    const batch = new RenderBatch(geometry)
+      .add(new Matrix(1, 0, 0, 0, 1, 0), new Color(255, 0, 0))
+      .add(new Matrix(1, 0, 32, 0, 1, 0), new Color(0, 255, 0))
+      .add(new Matrix(1, 0, 0, 0, 1, 32), new Color(0, 0, 255));
+
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      context.drawBatch(batch, { view: screenView() });
+
+      // All three instances are emitted as a single instanced draw call.
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]); // instance 0 → red
+      expectPixelNear(readPixel(backend, 40, 8), [0, 255, 0, 255]); // instance 1 → green
+      expectPixelNear(readPixel(backend, 8, 40), [0, 0, 255, 255]); // instance 2 → blue
+      expectPixelNear(readPixel(backend, 60, 60), [0, 0, 0, 255]); // empty → cleared black
+    } finally {
+      batch.destroy();
+      geometry.destroy();
       context.destroy();
       backend.destroy();
     }

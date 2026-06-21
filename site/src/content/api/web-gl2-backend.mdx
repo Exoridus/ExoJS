@@ -5,11 +5,11 @@ symbol: "WebGl2Backend"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 32
+memberCount: 33
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/webgl2/WebGl2Backend.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L128"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L130"
 ---
 ## Import
 
@@ -41,6 +41,7 @@ GPU-side state as needed on the next draw.
 - `composeWithAlphaMask(content: Texture | RenderTexture, mask: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this`
 - `destroy(): void`
 - `draw(drawable: Drawable): this`
+- `drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this`
 - `execute(pass: BackendRenderPass): this`
 - `flush(): this`
 - `initialize(): Promise<WebGl2Backend>`
@@ -73,4 +74,4 @@ GPU-side state as needed on the next draw.
 
 ## Source
 
-[src/rendering/webgl2/WebGl2Backend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L128)
+[src/rendering/webgl2/WebGl2Backend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L130)

@@ -133,6 +133,9 @@ const createRuntime = () => {
       return this;
     },
     draw,
+    drawInstanced() {
+      return this;
+    },
     resetStats() {
       resetRenderStats(stats);
 
@@ -159,6 +162,9 @@ const createRuntime = () => {
     backend,
     root,
     draw,
+    drawInstanced() {
+      return this;
+    },
     drawEvents,
     clipEvents,
     composeCalls,

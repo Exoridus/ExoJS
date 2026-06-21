@@ -116,6 +116,60 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     });
   }
 
+  /**
+   * Draw `mesh`'s geometry once as an explicit instanced batch over the
+   * contiguous transform slots `[startNodeIndex, startNodeIndex + count)`,
+   * already written into the shared transform buffer by the backend. Drawn
+   * immediately (not deferred through the pending-draw queue). Backs
+   * {@link RenderingContext.drawBatch} via {@link WebGl2Backend.drawInstanced}.
+   * @internal
+   */
+  public drawInstancedBatch(mesh: Mesh, startNodeIndex: number, count: number): void {
+    const connection = this._connection;
+
+    if (!connection) {
+      throw new Error('WebGl2MeshRenderer is not connected to a backend.');
+    }
+
+    if (count <= 0 || mesh.vertexCount === 0) {
+      return;
+    }
+
+    const geometry = mesh.geometry;
+
+    if (geometry === null) {
+      throw new Error('drawInstancedBatch requires a mesh constructed from a geometry.');
+    }
+
+    if (mesh.material !== null) {
+      throw new Error('RenderBatch custom materials are not supported yet (v1 renders with the default mesh material).');
+    }
+
+    const backend = this.getBackend();
+    const shader = this._defaultShader;
+    const blendMode = mesh.blendMode;
+    const texture = mesh.texture ?? Texture.white;
+    const cacheEntry = this._getOrCreateStaticGeometryEntry(geometry, mesh, connection);
+    const vao = this._getOrCreateStaticGeometryVao(cacheEntry, shader, connection.gl, connection.dynamicNodeIndexBuffer);
+
+    this._setBlendMode(blendMode, backend);
+    this._ensureNodeIndexCapacity(count);
+
+    const maxNodeIndex = (startNodeIndex + count - 1) >>> 0;
+
+    for (let i = 0; i < count; i++) {
+      this._nodeIndexData[i] = (startNodeIndex + i) >>> 0;
+    }
+
+    this._bindInstancedShaderState(shader, texture, null, backend, maxNodeIndex);
+    backend.bindVertexArrayObject(vao);
+    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, count));
+    vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
+
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+  }
+
   public flush(): void {
     const backend = this.getBackendOrNull();
     const connection = this._connection;

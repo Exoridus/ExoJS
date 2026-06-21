@@ -2,6 +2,7 @@ import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import type { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -86,6 +87,21 @@ export interface RenderBackend {
   composeWithAlphaMask(content: RenderTexture, mask: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this;
 
   draw(drawable: Drawable): this;
+
+  /**
+   * Submit an explicit instanced batch: draw `mesh`'s geometry once with `count`
+   * per-instance `(transform, tint)` pairs, written into fresh shared transform
+   * slots, as a single instanced draw call. `mesh` carries the geometry,
+   * material, texture and blend mode; its own transform and tint are ignored.
+   * Only the first `count` entries of `transforms` / `tints` are read.
+   *
+   * Used internally by {@link RenderingContext.drawBatch}. The geometry must use
+   * the `triangle-list` topology and the standard mesh attribute layout; a
+   * supplied material must be instancing-compatible (default mesh material, or a
+   * custom shader declaring `a_nodeIndex` + `u_transforms`).
+   */
+  drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this;
+
   execute(pass: BackendRenderPass): this;
   flush(): this;
   destroy(): void;

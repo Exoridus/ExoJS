@@ -15,6 +15,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Geometry } from '#rendering/geometry/Geometry';
+import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -238,6 +239,59 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
 
       expectPixelNear(readCanvas(backend)(32, 32), [96, 160, 224, 255]);
     } finally {
+      geometry.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('drawBatch draws N instances of one geometry as a single instanced draw call', async ctx => {
+    const backend = await setupBackend(ctx);
+    const context = new RenderingContext(backend);
+    // A 16×16 white quad at the local origin, instanced to three positions/tints.
+    const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
+    const batch = new RenderBatch(geometry)
+      .add(new Matrix(1, 0, 0, 0, 1, 0), new Color(255, 0, 0))
+      .add(new Matrix(1, 0, 32, 0, 1, 0), new Color(0, 255, 0))
+      .add(new Matrix(1, 0, 0, 0, 1, 32), new Color(0, 0, 255));
+
+    try {
+      const device = getBackendDeviceOrSkip(ctx, backend);
+
+      if (!device) {
+        return;
+      }
+
+      device.pushErrorScope('validation');
+
+      let validationError: GPUError | null;
+
+      try {
+        backend.resetStats();
+        backend.clear(Color.black);
+        context.drawBatch(batch, { view: screenView() });
+        validationError = await device.popErrorScope();
+      } catch (error) {
+        if (isDeviceLoss(error)) {
+          ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+          return;
+        }
+
+        throw error;
+      }
+
+      expect(validationError).toBeNull();
+      // All three instances are emitted as a single instanced draw call.
+      expect(backend.stats.drawCalls).toBe(1);
+
+      const readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]); // instance 0 → red
+      expectPixelNear(readPixel(40, 8), [0, 255, 0, 255]); // instance 1 → green
+      expectPixelNear(readPixel(8, 40), [0, 0, 255, 255]); // instance 2 → blue
+    } finally {
+      batch.destroy();
       geometry.destroy();
       context.destroy();
       backend.destroy();

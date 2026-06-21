@@ -331,6 +331,70 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     this._drawCalls[this._drawCallCount++] = drawCall;
   }
 
+  /**
+   * Draw `mesh`'s geometry once as an explicit instanced batch over the
+   * contiguous transform slots `[startNodeIndex, startNodeIndex + count)`,
+   * already written into the shared transform storage by the backend. Drawn
+   * immediately in its own render pass. Backs {@link RenderingContext.drawBatch}
+   * via {@link WebGpuBackend.drawInstanced}.
+   *
+   * v1 uses the default instanced mesh shader; custom materials are not yet
+   * supported on this path.
+   * @internal
+   */
+  public drawInstancedBatch(mesh: Mesh, startNodeIndex: number, count: number): void {
+    const backend = this._backend;
+    const device = this._device;
+
+    if (backend === null || device === null || count <= 0 || mesh.vertexCount === 0) {
+      return;
+    }
+
+    if (mesh.material !== null) {
+      throw new Error('RenderBatch custom materials are not supported on the WebGPU backend yet (v1 renders with the default mesh material).');
+    }
+
+    const geometry = mesh.geometry;
+
+    if (geometry === null || geometry.usage !== 'static') {
+      throw new Error('drawInstancedBatch requires a mesh with usage="static" geometry.');
+    }
+
+    const texture = mesh.texture ?? TextureClass.white;
+    const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
+
+    this._ensureInstancedUniformCapacity(1);
+
+    const maxNodeIndex = this._uploadInstancedNodeIndexRange(startNodeIndex, count);
+    const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
+
+    this._writeInstancedUniformSlot(0, backend, premultiplySample);
+
+    const staticGeometry = this._getOrCreateStaticGeometryEntry(mesh);
+    const instanceNodeIndexBuffer = this._instancedNodeIndexBuffer;
+
+    if (instanceNodeIndexBuffer === null) {
+      throw new Error('Instanced node-index buffer must be initialized before drawing.');
+    }
+
+    const renderTargetFormat = backend.renderTargetFormat;
+    const stencil = backend._passCoordinator.stencilActive;
+    const pass = backend._passCoordinator.acquirePass().pass;
+
+    pass.setPipeline(this._getInstancedPipeline({ blendMode: mesh.blendMode, format: renderTargetFormat, stencil }));
+    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer), [0]);
+    pass.setBindGroup(1, this._getTextureBindGroup(backend, texture));
+    pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
+    pass.setVertexBuffer(1, instanceNodeIndexBuffer);
+    pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
+    pass.drawIndexed(staticGeometry.indexCount, count);
+
+    backend._passCoordinator.endPass();
+
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+  }
+
   public flush(): void {
     const backend = this._backend;
     const device = this._device;
@@ -1002,6 +1066,26 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     );
 
     return maxNodeIndex;
+  }
+
+  // Like _uploadInstancedNodeIndices but for an explicit batch over a contiguous
+  // slot range [startNodeIndex, startNodeIndex + count); returns the max index.
+  private _uploadInstancedNodeIndexRange(startNodeIndex: number, count: number): number {
+    this._ensureInstancedNodeIndexCapacity(count);
+
+    for (let i = 0; i < count; i++) {
+      this._instancedNodeIndexData[i] = (startNodeIndex + i) >>> 0;
+    }
+
+    this._device!.queue.writeBuffer(
+      this._instancedNodeIndexBuffer!,
+      0,
+      this._instancedNodeIndexData.buffer,
+      this._instancedNodeIndexData.byteOffset,
+      count * Uint32Array.BYTES_PER_ELEMENT,
+    );
+
+    return (startNodeIndex + count - 1) >>> 0;
   }
 
   private _ensureInstancedNodeIndexCapacity(instanceCount: number): void {
