@@ -34,6 +34,8 @@ export interface SerializedScene {
   version: number;
   /** The scene's structural root container subtree. */
   root: SerializedNode;
+  /** The scene's screen-fixed UI layer ({@link Scene.ui}), if it was materialized. */
+  ui?: SerializedNode;
 }
 
 /**

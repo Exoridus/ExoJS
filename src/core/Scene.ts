@@ -269,7 +269,15 @@ export class Scene {
    * after {@link Scene.deserialize}.
    */
   public serialize(): SerializedScene {
-    return { version: SERIALIZATION_VERSION, root: serializeTree(this._root, this._app?.loader ?? null) };
+    const loader = this._app?.loader ?? null;
+    const data: SerializedScene = { version: SERIALIZATION_VERSION, root: serializeTree(this._root, loader) };
+    const ui = this._peekUI();
+
+    if (ui !== null) {
+      data.ui = serializeTree(ui, loader);
+    }
+
+    return data;
   }
 
   /**
@@ -283,7 +291,14 @@ export class Scene {
    * throw. Returns `this`.
    */
   public deserialize(data: SerializedScene): this {
-    deserializeInto(this._root, migrate(data).root, this._app?.loader ?? null);
+    const migrated = migrate(data);
+    const loader = this._app?.loader ?? null;
+
+    deserializeInto(this._root, migrated.root, loader);
+
+    if (migrated.ui !== undefined) {
+      deserializeInto(this.ui, migrated.ui, loader);
+    }
 
     return this;
   }

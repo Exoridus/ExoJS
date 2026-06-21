@@ -5,7 +5,7 @@ symbol: "Button"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 101
+memberCount: 105
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/ui/Button.ts"
@@ -89,9 +89,12 @@ Listen to Button.onClick for activation.
 - `bottom: number`
 - `cacheAsBitmap: boolean`
 - `children: RenderNode[]`
+- `colors: Readonly<Record<"normal" | "hover" | "pressed" | "disabled", Color>>`
+- `cornerRadius: number`
 - `cullable: boolean`
 - `enabled: boolean`
 - `filters: readonly Filter[]`
+- `fontSize: number`
 - `height: number`
 - `interactive: boolean`
 - `isAlignedBox: boolean`
@@ -106,6 +109,7 @@ Listen to Button.onClick for activation.
 - `scale: ObservableVector`
 - `skewX: number`
 - `skewY: number`
+- `textColor: Color`
 - `top: number`
 - `uiHeight: number`
 - `uiWidth: number`

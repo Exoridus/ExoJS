@@ -81,6 +81,26 @@ export class Button extends Widget {
     this._positionLabel();
   }
 
+  /** The per-state fill colours (`normal` / `hover` / `pressed` / `disabled`). */
+  public get colors(): Readonly<Record<'normal' | 'hover' | 'pressed' | 'disabled', Color>> {
+    return this._colors;
+  }
+
+  /** Corner radius in pixels. */
+  public get cornerRadius(): number {
+    return this._cornerRadius;
+  }
+
+  /** Label fill colour. */
+  public get textColor(): Color {
+    return this._label.style.fillColor;
+  }
+
+  /** Label font size in pixels. */
+  public get fontSize(): number {
+    return this._label.style.fontSize;
+  }
+
   private readonly _onPointerOver = (): void => {
     this._pointerInside = true;
     this._refreshState();

@@ -43,6 +43,26 @@ export class Panel extends Widget {
     return this._background;
   }
 
+  /** Fill colour. */
+  public get color(): Color {
+    return this._color;
+  }
+
+  /** Border colour (drawn only when {@link borderWidth} is greater than 0). */
+  public get borderColor(): Color {
+    return this._borderColor;
+  }
+
+  /** Border thickness in pixels. */
+  public get borderWidth(): number {
+    return this._borderWidth;
+  }
+
+  /** Corner radius in pixels. */
+  public get cornerRadius(): number {
+    return this._cornerRadius;
+  }
+
   protected override _relayout(): void {
     const g = this._background;
 

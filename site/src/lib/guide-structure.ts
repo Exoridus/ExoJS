@@ -217,6 +217,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: ['ui/hud-and-widgets', 'application-scenes/hud-overlay-scene'],
                 apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'focus-manager'],
             },
+            {
+                slug: 'serialization-and-prefabs',
+                level: 'advanced',
+                learningGoals: [
+                    'serialize a scene to JSON and restore it',
+                    'capture reusable prefabs and instantiate many independent copies',
+                    'persist save slots with SaveManager and register serializers for custom node types',
+                ],
+                prerequisites: ['runtime/scene-graph'],
+                apiLinks: ['scene', 'prefab', 'save-manager', 'serialization-registry', 'scene-node'],
+            },
         ],
     },
     {
