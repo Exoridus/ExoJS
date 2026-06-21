@@ -1,6 +1,10 @@
 import type { Color } from '#core/Color';
 import type { System } from '#core/System';
 import type { Time } from '#core/Time';
+import type { Matrix } from '#math/Matrix';
+import type { Geometry } from '#rendering/geometry/Geometry';
+import type { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { ImmediateMesh } from '#rendering/mesh/ImmediateMesh';
 import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
 import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
@@ -23,6 +27,22 @@ export interface RenderOptions {
   view?: View;
 }
 
+/** Options for {@link RenderingContext.drawGeometry}. */
+export interface DrawGeometryOptions {
+  /**
+   * Custom look (shader / uniforms / textures / blend mode) for this draw. Must
+   * target `'mesh'`. Defaults to the standard mesh material (vertex colors,
+   * optional texture), so an untextured colored geometry needs no material.
+   */
+  material?: MeshMaterial;
+
+  /** Tint multiplied into the geometry's vertex colors. Defaults to white (no tint). */
+  tint?: Color;
+
+  /** Override the view used for this draw. Defaults to the context's active camera. */
+  view?: View;
+}
+
 /**
  * Owns rendering orchestration: builds, optimizes and plays the internal
  * RenderPlan for a RenderNode subtree, manages render-target/view state for
@@ -40,6 +60,8 @@ export class RenderingContext implements System {
   private readonly _backend: RenderBackend;
   private _camera: Camera;
   private readonly _screenView: View;
+  /** Lazily-created pooled drawable reused by every {@link drawGeometry} call. */
+  private _immediateMesh: ImmediateMesh | null = null;
 
   public constructor(backend: RenderBackend) {
     this._backend = backend;
@@ -109,6 +131,8 @@ export class RenderingContext implements System {
   public destroy(): void {
     this._camera.destroy();
     this._screenView.destroy();
+    this._immediateMesh?.destroy();
+    this._immediateMesh = null;
   }
 
   /**
@@ -185,6 +209,56 @@ export class RenderingContext implements System {
     }
 
     return target;
+  }
+
+  /**
+   * Immediately draw a single {@link Geometry} with `transform` as its world
+   * matrix — no retained {@link RenderNode} required. Useful for procedural or
+   * data-driven shapes that would be wasteful to wrap in a node.
+   *
+   * The draw is submitted through the mesh renderer and flushed at once, so it
+   * lands in call order relative to the surrounding {@link render} calls: a
+   * `drawGeometry` issued after a layer's `render` draws on top of it. All
+   * output is presented at the frame-end backend flush, as usual.
+   *
+   * `transform` is taken as the raw world matrix (`a, b, c, d, tx, ty`),
+   * bypassing the position / rotation / scale / origin composition a node would
+   * apply — build it with {@link Matrix} directly. The geometry must use the
+   * `triangle-list` topology and the standard mesh attribute layout (position,
+   * optional texcoord and color); custom per-vertex attributes are dropped.
+   *
+   * This is the single-draw convenience of the immediate API: each call is its
+   * own flush and draw call, and the geometry is repacked every call, so it is
+   * best for a handful of draws. An instanced batch path for drawing many like
+   * items as one upload + one draw follows in a later release.
+   *
+   * @param geometry  Source geometry (interleaved vertex data + layout).
+   * @param transform World matrix applied to the geometry's local vertices.
+   * @param options   Optional {@link DrawGeometryOptions.material material},
+   *                  {@link DrawGeometryOptions.tint tint}, and
+   *                  {@link DrawGeometryOptions.view view}.
+   */
+  public drawGeometry(geometry: Geometry, transform: Matrix, options: DrawGeometryOptions = {}): void {
+    const material = options.material ?? null;
+
+    // Defensive guard for JS callers; the MeshMaterial type already enforces
+    // this for TypeScript callers (its `target` is the literal 'mesh').
+    if (material !== null && (material.target as string) !== 'mesh') {
+      throw new Error(`drawGeometry material must target 'mesh' (got '${String(material.target)}').`);
+    }
+
+    const view = options.view ?? this._camera;
+    const mesh = (this._immediateMesh ??= new ImmediateMesh());
+
+    // Set the view first: this flushes whatever renderer a prior render() /
+    // drawGeometry left pending, so the shared transform buffer is free for this
+    // draw's synthetic slot and the pooled mesh is safe to reconfigure. The
+    // immediate flush below then keeps a later drawGeometry from observing this
+    // pooled mesh through a still-deferred draw.
+    this._backend.setView(view);
+    mesh.configure(geometry, transform, material, options.tint ?? null);
+    this._backend.draw(mesh);
+    this._backend.flush();
   }
 
   /** Per-frame render counters. Convenience over backend.stats. */

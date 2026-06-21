@@ -1,7 +1,12 @@
 import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Camera } from '#rendering/Camera';
 import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
+import { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderingContext } from '#rendering/RenderingContext';
@@ -343,5 +348,229 @@ describe('RenderingContext', () => {
     expect(setViewSpy).toHaveBeenCalledTimes(2);
     expect(setViewSpy.mock.calls[0][0]).toBe(leftCam);
     expect(setViewSpy.mock.calls[1][0]).toBe(rightCam);
+  });
+});
+
+// Standard interleaved mesh layout: position f32x2 @0, texcoord f32x2 @8,
+// color u8x4 @16, stride 20 — three vertices (red, green, blue).
+const createStandardGeometry = (): Geometry => {
+  const stride = 20;
+  const vertices = [
+    { x: 0, y: 0, u: 0, v: 0, rgba: [255, 0, 0, 255] },
+    { x: 10, y: 0, u: 1, v: 0, rgba: [0, 255, 0, 255] },
+    { x: 5, y: 10, u: 0.5, v: 1, rgba: [0, 0, 255, 255] },
+  ];
+  const buffer = new ArrayBuffer(vertices.length * stride);
+  const view = new DataView(buffer);
+
+  vertices.forEach((vertex, index) => {
+    const base = index * stride;
+    view.setFloat32(base + 0, vertex.x, true);
+    view.setFloat32(base + 4, vertex.y, true);
+    view.setFloat32(base + 8, vertex.u, true);
+    view.setFloat32(base + 12, vertex.v, true);
+    view.setUint8(base + 16, vertex.rgba[0]);
+    view.setUint8(base + 17, vertex.rgba[1]);
+    view.setUint8(base + 18, vertex.rgba[2]);
+    view.setUint8(base + 19, vertex.rgba[3]);
+  });
+
+  return new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
+      { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 16 },
+    ],
+    vertexData: buffer,
+    stride,
+  });
+};
+
+const minimalMeshMaterial = (): MeshMaterial =>
+  new MeshMaterial({
+    shader: new ShaderSource({
+      glsl: {
+        vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+        fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
+      },
+    }),
+  });
+
+describe('RenderingContext.drawGeometry', () => {
+  test('submits a pooled mesh through the backend and flushes immediately', () => {
+    const { backend, drawEvents, getFlushCallCount } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+
+    context.drawGeometry(geometry, new Matrix());
+
+    expect(drawEvents).toHaveLength(1);
+    expect(drawEvents[0]).toBeInstanceOf(Mesh);
+    expect(getFlushCallCount()).toBe(1);
+
+    geometry.destroy();
+  });
+
+  test('uses the raw transform verbatim as the mesh world matrix', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const transform = new Matrix(2, 0, 10, 0, 3, 20);
+
+    context.drawGeometry(geometry, transform);
+
+    const world = drawEvents[0].getGlobalTransform();
+
+    expect(world.a).toBe(2);
+    expect(world.d).toBe(3);
+    expect(world.x).toBe(10);
+    expect(world.y).toBe(20);
+    // No origin/position composition is applied — it is the matrix as given.
+    expect(world.a).toBe(transform.a);
+    expect(world.x).toBe(transform.x);
+
+    geometry.destroy();
+  });
+
+  test('flattens the geometry onto the pooled mesh', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+
+    context.drawGeometry(geometry, new Matrix());
+
+    const mesh = drawEvents[0] as Mesh;
+
+    expect(mesh.vertexCount).toBe(3);
+    expect(Array.from(mesh.vertices)).toEqual([0, 0, 10, 0, 5, 10]);
+    expect(mesh.uvs?.[4]).toBeCloseTo(0.5);
+    // RGBA8 packed little-endian: R | G<<8 | B<<16 | A<<24.
+    expect(mesh.colors?.[0]).toBe(0xff0000ff);
+    expect(mesh.colors?.[2]).toBe(0xffff0000);
+
+    geometry.destroy();
+  });
+
+  test('applies the tint and defaults to white', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+
+    context.drawGeometry(geometry, new Matrix());
+    expect(drawEvents[0].tint.equals(Color.white)).toBe(true);
+
+    context.drawGeometry(geometry, new Matrix(), { tint: new Color(255, 0, 0) });
+    expect(drawEvents[1].tint.equals(new Color(255, 0, 0))).toBe(true);
+
+    geometry.destroy();
+  });
+
+  test('resets the tint to white when a later call omits it (pooled reuse)', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+
+    context.drawGeometry(geometry, new Matrix(), { tint: new Color(0, 128, 255) });
+    expect(drawEvents[0].tint.equals(new Color(0, 128, 255))).toBe(true);
+
+    context.drawGeometry(geometry, new Matrix());
+    expect(drawEvents[1].tint.equals(Color.white)).toBe(true);
+
+    geometry.destroy();
+  });
+
+  test('reuses a single pooled mesh instance across calls', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+
+    context.drawGeometry(geometry, new Matrix());
+    context.drawGeometry(geometry, new Matrix());
+
+    expect(drawEvents).toHaveLength(2);
+    expect(drawEvents[0]).toBe(drawEvents[1]);
+
+    geometry.destroy();
+  });
+
+  test('re-flattens only when the geometry identity or version changes', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+
+    context.drawGeometry(geometry, new Matrix());
+    const firstVertices = (drawEvents[0] as Mesh).vertices;
+
+    // Same geometry, unchanged version → flattened arrays are reused as-is.
+    context.drawGeometry(geometry, new Matrix(2, 0, 0, 0, 2, 0));
+    expect((drawEvents[1] as Mesh).vertices).toBe(firstVertices);
+
+    // Bumping the version forces a re-flatten into fresh arrays.
+    geometry.invalidate();
+    context.drawGeometry(geometry, new Matrix());
+    expect((drawEvents[2] as Mesh).vertices).not.toBe(firstVertices);
+
+    geometry.destroy();
+  });
+
+  test('draws after a render() in call order (immediate draws layer on top)', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const sprite = new Sprite(createTexture());
+    const geometry = createStandardGeometry();
+
+    context.render(sprite);
+    context.drawGeometry(geometry, new Matrix());
+
+    expect(drawEvents).toHaveLength(2);
+    expect(drawEvents[0]).toBe(sprite);
+    expect(drawEvents[1]).toBeInstanceOf(Mesh);
+    expect(drawEvents[1]).not.toBe(sprite);
+
+    geometry.destroy();
+  });
+
+  test('defaults to the active camera and honors a custom view', () => {
+    const { backend, setViewSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const customView = new View(100, 100, 200, 200);
+
+    context.drawGeometry(geometry, new Matrix());
+    expect(setViewSpy).toHaveBeenLastCalledWith(context.camera);
+
+    context.drawGeometry(geometry, new Matrix(), { view: customView });
+    expect(setViewSpy).toHaveBeenLastCalledWith(customView);
+
+    geometry.destroy();
+  });
+
+  test('attaches a mesh material to the pooled mesh', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const material = minimalMeshMaterial();
+
+    context.drawGeometry(geometry, new Matrix(), { material });
+    expect((drawEvents[0] as Mesh).material).toBe(material);
+
+    // A later call without a material clears it through the pool.
+    context.drawGeometry(geometry, new Matrix());
+    expect((drawEvents[1] as Mesh).material).toBeNull();
+
+    material.destroy();
+    geometry.destroy();
+  });
+
+  test('rejects a material that does not target mesh', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const geometry = createStandardGeometry();
+    const spriteMaterial = { target: 'sprite' } as unknown as MeshMaterial;
+
+    expect(() => context.drawGeometry(geometry, new Matrix(), { material: spriteMaterial })).toThrow(/must target 'mesh'/);
+    expect(drawEvents).toHaveLength(0);
+
+    geometry.destroy();
   });
 });

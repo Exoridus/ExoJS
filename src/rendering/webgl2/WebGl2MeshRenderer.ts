@@ -253,8 +253,20 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   }
 
   private _drawDynamicInstancedSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
+    const nodeIndex = draw.command?.nodeIndex ?? 0;
+
+    if (draw.command === null) {
+      // The synthetic, non-plan path does not arrive through a render-group
+      // upload boundary, so write its transform into the shared buffer directly.
+      // This must run BEFORE _bindInstancedShaderState, whose
+      // bindTransformBufferTexture uploads the buffer: a write afterwards would
+      // miss this frame's upload, leaving the slot stale (zeroed on the first
+      // frame) so the draw collapses to the origin.
+      backend._writeTransformCommand(this._createSyntheticCommand(draw.mesh, nodeIndex));
+    }
+
     this._setBlendMode(draw.blendMode, backend);
-    this._bindInstancedShaderState(draw.shader, draw.texture, draw.material, backend, draw.command?.nodeIndex ?? 0);
+    this._bindInstancedShaderState(draw.shader, draw.texture, draw.material, backend, nodeIndex);
 
     this._ensureVertexCapacity(draw.mesh.vertexCount);
     this._ensureIndexCapacity(draw.mesh.indexCount);
@@ -262,14 +274,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     this._packVertices(draw.mesh, 0);
     this._packIndices(draw.mesh, 0);
-
-    const nodeIndex = draw.command?.nodeIndex ?? 0;
-
-    if (draw.command === null) {
-      // The synthetic, non-plan path does not arrive through a render-group
-      // upload boundary, so write its transform into the shared buffer directly.
-      backend._writeTransformCommand(this._createSyntheticCommand(draw.mesh, nodeIndex));
-    }
 
     this._nodeIndexData[0] = nodeIndex >>> 0;
 
