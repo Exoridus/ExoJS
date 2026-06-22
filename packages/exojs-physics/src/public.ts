@@ -12,7 +12,7 @@ export type { CollisionEvent, ContactPoint, SensorEvent } from './events';
 export type { BodyOptions } from './PhysicsBody';
 export { PhysicsBody } from './PhysicsBody';
 export { type PhysicsBuildInfo,physicsBuildInfo } from './physicsBuildInfo';
-export type { PhysicsWorldOptions, StaticColliderOptions } from './PhysicsWorld';
+export type { AttachOptions, PhysicsWorldOptions } from './PhysicsWorld';
 export { PhysicsWorld } from './PhysicsWorld';
 export type { QueryFilter, RayHit } from './query/QueryEngine';
 export { BoxShape } from './shapes/BoxShape';

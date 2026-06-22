@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BoxShape, CircleShape, PhysicsWorld } from '../src/index';
-import type { PhysicsBody } from '../src/PhysicsBody';
+import { PhysicsBody } from '../src/PhysicsBody';
 
 /**
  * The Solver Correctness & Stability matrix (spec `04` §2), exercised over the
@@ -31,7 +31,7 @@ const advance = (world: PhysicsWorld, seconds: number): void => {
 
 /** A wide static floor whose top surface sits at `topY`. */
 const addFloor = (world: PhysicsWorld, topY: number, friction = 0.5, halfWidth = 600): void => {
-  world.createStaticCollider({ shape: new BoxShape(halfWidth * 2, 40), position: { x: 0, y: topY + 20 }, friction });
+  world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: topY + 20 }, colliders: [{ shape: new BoxShape(halfWidth * 2, 40), friction }] }));
 };
 
 /** A dynamic box of `width`×`height` centred at `(x, y)`. */
@@ -43,11 +43,14 @@ const addBox = (
   height = width,
   options: { friction?: number; restitution?: number; density?: number; fixedRotation?: boolean } = {},
 ): PhysicsBody => {
-  const body = world.createBody({ type: 'dynamic', position: { x, y }, fixedRotation: options.fixedRotation });
-
-  body.createCollider({ shape: new BoxShape(width, height), density: options.density ?? 1, friction: options.friction ?? 0.5, restitution: options.restitution ?? 0 });
-
-  return body;
+  return world.add(
+    new PhysicsBody({
+      type: 'dynamic',
+      position: { x, y },
+      fixedRotation: options.fixedRotation,
+      colliders: [{ shape: new BoxShape(width, height), density: options.density ?? 1, friction: options.friction ?? 0.5, restitution: options.restitution ?? 0 }],
+    }),
+  );
 };
 
 const speed = (body: PhysicsBody): number => Math.hypot(body.linearVelocityX, body.linearVelocityY);
@@ -102,8 +105,8 @@ describe('SG-A — angular response', () => {
     const supportY = 300;
 
     // Two static pillars symmetric about x = 0.
-    world.createStaticCollider({ shape: new BoxShape(20, 40), position: { x: -40, y: supportY + 20 } });
-    world.createStaticCollider({ shape: new BoxShape(20, 40), position: { x: 40, y: supportY + 20 } });
+    world.add(new PhysicsBody({ type: 'static', position: { x: -40, y: supportY + 20 }, colliders: [{ shape: new BoxShape(20, 40) }] }));
+    world.add(new PhysicsBody({ type: 'static', position: { x: 40, y: supportY + 20 }, colliders: [{ shape: new BoxShape(20, 40) }] }));
 
     const beam = addBox(world, 0, supportY - 16 - 0.5, 120, 32);
 
@@ -126,8 +129,13 @@ describe('SG-R — restitution', () => {
 
     addFloor(world, floorTop);
 
-    const ball = world.createBody({ type: 'dynamic', position: { x: 0, y: contactCenterY - dropHeight } });
-    ball.createCollider({ shape: new CircleShape(radius), density: 1, friction: 0, restitution: 0.8 });
+    const ball = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 0, y: contactCenterY - dropHeight },
+        colliders: [{ shape: new CircleShape(radius), density: 1, friction: 0, restitution: 0.8 }],
+      }),
+    );
 
     let contacted = false;
     let peakY = Infinity;
@@ -197,8 +205,13 @@ describe('SG-R — restitution', () => {
 
     addFloor(world, floorTop);
 
-    const ball = world.createBody({ type: 'dynamic', position: { x: 0, y: contactCenterY - 200 } });
-    ball.createCollider({ shape: new CircleShape(radius), density: 1, friction: 0, restitution: 0.6 });
+    const ball = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 0, y: contactCenterY - 200 },
+        colliders: [{ shape: new CircleShape(radius), density: 1, friction: 0, restitution: 0.6 }],
+      }),
+    );
 
     const peaks: number[] = [];
     let prevVy = 0;
@@ -410,8 +423,9 @@ describe('SG-K — kinematic interaction', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const platformTop = 300;
 
-    const platform = world.createBody({ type: 'kinematic', position: { x: 0, y: platformTop + 20 } });
-    platform.createCollider({ shape: new BoxShape(200, 40), friction: 0.9 });
+    const platform = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: platformTop + 20 }, colliders: [{ shape: new BoxShape(200, 40), friction: 0.9 }] }),
+    );
     platform.linearVelocityX = 100;
 
     const rider = addBox(world, 0, platformTop - 16 - 0.5, 32, 32, { friction: 0.9 });
@@ -431,8 +445,9 @@ describe('SG-K — kinematic interaction', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const platformTop = 300;
 
-    const platform = world.createBody({ type: 'kinematic', position: { x: 0, y: platformTop + 20 } });
-    platform.createCollider({ shape: new BoxShape(200, 40), friction: 0.5 });
+    const platform = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: platformTop + 20 }, colliders: [{ shape: new BoxShape(200, 40), friction: 0.5 }] }),
+    );
 
     for (let i = 0; i < 4; i++) {
       addBox(world, 0, platformTop - 16 - 1 - i * 33, 32);
@@ -540,8 +555,13 @@ describe('SG-D — deterministic replay', () => {
       bodies.push(addBox(world, -20, floorTop - 16 - 1, 32));
       bodies.push(addBox(world, 18, floorTop - 48 - 1, 28));
 
-      const ball = world.createBody({ type: 'dynamic', position: { x: 0, y: floorTop - 120 } });
-      ball.createCollider({ shape: new CircleShape(12), density: 1.5, friction: 0.4, restitution: 0.4 });
+      const ball = world.add(
+        new PhysicsBody({
+          type: 'dynamic',
+          position: { x: 0, y: floorTop - 120 },
+          colliders: [{ shape: new CircleShape(12), density: 1.5, friction: 0.4, restitution: 0.4 }],
+        }),
+      );
       bodies.push(ball);
 
       for (let frame = 0; frame < 240; frame++) {

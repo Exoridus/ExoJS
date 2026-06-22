@@ -6,15 +6,15 @@ import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
 import type { PhysicsBackend } from './backend/PhysicsBackend';
 import { BindingRegistry } from './binding/BindingRegistry';
 import type { BindingOptions, PhysicsBinding } from './binding/PhysicsBinding';
-import type { Collider, ColliderOptions } from './Collider';
+import { Collider } from './Collider';
 import type { CollisionEvent, SensorEvent } from './events';
-import type { BodyOptions, BodyOwner } from './PhysicsBody';
+import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
 import type { Shape } from './shapes/Shape';
 import { TimeStepper } from './TimeStepper';
-import type { VectorLike } from './types';
+import type { BodyType, CollisionFilter, VectorLike } from './types';
 
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
@@ -32,12 +32,39 @@ export interface PhysicsWorldOptions {
   interpolation?: boolean;
 }
 
-/** {@link PhysicsWorld.createStaticCollider} options: a collider plus its static body placement. */
-export interface StaticColliderOptions extends ColliderOptions {
-  /** World position of the implicit static body. Default `(0, 0)`. */
+/**
+ * {@link PhysicsWorld.attach} convenience options: a body type plus a single
+ * collider, attached to a scene node in one call.
+ */
+export interface AttachOptions {
+  /** Simulation role of the created body. Default `'dynamic'`. */
+  type?: BodyType;
+  /** Initial world position of the body. Default the node's position is left untouched and `(0, 0)` is used. */
   position?: VectorLike;
-  /** Rotation (radians) of the implicit static body. Default `0`. */
+  /** Initial rotation (radians) of the body. Default `0`. */
   angle?: number;
+  /** Per-body multiplier on world gravity. Default `1`. */
+  gravityScale?: number;
+  /** When `true`, the body never rotates under contacts. Default `false`. */
+  fixedRotation?: boolean;
+  /** The collider geometry. */
+  shape: Shape;
+  /** Body-local offset of the collider. Default `(0, 0)`. */
+  offset?: VectorLike;
+  /** Body-local rotation of the collider (radians). Default `0`. */
+  rotation?: number;
+  /** Collider density (mass per px²). Default `1`. */
+  density?: number;
+  /** Coulomb friction coefficient. Default `0.2`. */
+  friction?: number;
+  /** Restitution / bounciness in `[0, 1]`. Default `0`. */
+  restitution?: number;
+  /** When `true`, the collider generates overlap events but no contact response. Default `false`. */
+  isSensor?: boolean;
+  /** Category/mask/group collision filter; partials merge over the defaults. */
+  filter?: Partial<CollisionFilter>;
+  /** Binding options forwarded to {@link PhysicsWorld.bind}. */
+  binding?: BindingOptions;
 }
 
 /**
@@ -110,11 +137,26 @@ export class PhysicsWorld implements BodyOwner {
 
   // ── lifecycle ──────────────────────────────────────────────────────────
 
-  /** Create a body. Safe to call inside an event callback (deferred to end of step). */
-  public createBody(options?: BodyOptions): PhysicsBody {
+  /**
+   * Add a body to the world: allocates the body and its collider ids, registers
+   * the colliders, computes the mass model and tracks the body for stepping.
+   * Construct the body freely first (`new PhysicsBody({ … })`), then add it.
+   * Safe to call inside an event callback — the body push is deferred to the end
+   * of the step, exactly like collider registration. Returns the body.
+   *
+   * @throws if the body has already been added to a world.
+   */
+  public add(body: PhysicsBody): PhysicsBody {
     this._assertAlive();
 
-    const body = new PhysicsBody(this, this._nextBodyId++, options);
+    if (body.attached) {
+      throw new Error('PhysicsWorld.add: this body has already been added to a world.');
+    }
+
+    // Allocate the id + link/register colliders + aggregate mass now (matches the
+    // old createBody, which allocated the id synchronously); only the body-list
+    // push is deferred so it is safe inside an event dispatch.
+    body._attachToWorld(this, this._nextBodyId++);
 
     this._defer(() => {
       if (!body.destroyed) {
@@ -125,11 +167,36 @@ export class PhysicsWorld implements BodyOwner {
     return body;
   }
 
-  /** Sugar: an explicit static body carrying a single collider. The body is addressable via `collider.body`. */
-  public createStaticCollider(options: StaticColliderOptions): Collider {
-    const body = this.createBody({ type: 'static', position: options.position, angle: options.angle });
+  /**
+   * Convenience: create a body carrying a single collider, add it to the world
+   * and bind it to `node` in one call. The node tracks `body.position` after each
+   * step. Returns the body. Equivalent to `new PhysicsBody(...)` + `add` + `bind`.
+   */
+  public attach(node: SceneNode, options: AttachOptions): PhysicsBody {
+    const body = new PhysicsBody({
+      type: options.type,
+      position: options.position,
+      angle: options.angle,
+      gravityScale: options.gravityScale,
+      fixedRotation: options.fixedRotation,
+      colliders: [
+        new Collider({
+          shape: options.shape,
+          offset: options.offset,
+          rotation: options.rotation,
+          density: options.density,
+          friction: options.friction,
+          restitution: options.restitution,
+          isSensor: options.isSensor,
+          filter: options.filter,
+        }),
+      ],
+    });
 
-    return body.createCollider(options);
+    this.add(body);
+    this.bind(body, node, options.binding);
+
+    return body;
   }
 
   /** Destroy a body and its colliders. Deferred when called inside a callback. */

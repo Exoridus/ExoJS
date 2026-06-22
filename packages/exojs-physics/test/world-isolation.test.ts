@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CollisionEvent } from '../src/index';
-import { BoxShape, physicsBuildInfo,PhysicsWorld } from '../src/index';
+import { BoxShape, PhysicsBody, physicsBuildInfo,PhysicsWorld } from '../src/index';
 import { colliderAt } from './support';
 
 const DT = 1 / 60;
 
 const overlappingPair = (world: PhysicsWorld): CollisionEvent[] => {
   colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
-  const body = world.createBody({ type: 'kinematic', position: { x: 8, y: 0 } });
-  body.createCollider({ shape: new BoxShape(10, 10) });
+  world.add(new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
 
   const events: CollisionEvent[] = [];
   world.onCollisionStart.add(e => events.push(e));

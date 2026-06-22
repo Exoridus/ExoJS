@@ -23,23 +23,29 @@ npm install @codexo/exojs @codexo/exojs-physics
 
 ```ts
 import { Scene, Sprite, Vector, type Time } from '@codexo/exojs';
-import { BoxShape, CircleShape, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, CircleShape, Collider, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 class GameScene extends Scene {
   private readonly world = new PhysicsWorld({ gravity: new Vector(0, 980) });
 
   public override onStart(): void {
+    // Construct bodies/colliders freely, then hand them to the world: `add`
+    // assigns ids, registers the colliders and aggregates the mass model.
     // Static ground (an explicit static body + box collider).
-    this.world.createStaticCollider({ shape: new BoxShape(800, 32), position: new Vector(400, 600), friction: 0.9 });
+    this.world.add(
+      new PhysicsBody({ type: 'static', position: new Vector(400, 600), colliders: [new Collider({ shape: new BoxShape(800, 32), friction: 0.9 })] }),
+    );
 
-    // A kinematic platform you move yourself.
-    const platform = this.world.createBody({ type: 'kinematic', position: new Vector(200, 400) });
-    platform.createCollider({ shape: new BoxShape(120, 16) });
+    // A kinematic platform you move yourself. Attach more colliders any time.
+    const platform = new PhysicsBody({ type: 'kinematic', position: new Vector(200, 400) });
+    platform.addCollider(new Collider({ shape: new BoxShape(120, 16) }));
+    this.world.add(platform);
 
     // A sensor trigger.
-    const trigger = this.world.createStaticCollider({ shape: new CircleShape(40), position: new Vector(600, 500), isSensor: true });
-    this.world.onSensorEnter.add(({ sensor, other }) => {
-      if (sensor === trigger) console.log('entered the trigger');
+    const triggerCollider = new Collider({ shape: new CircleShape(40), isSensor: true });
+    this.world.add(new PhysicsBody({ type: 'static', position: new Vector(600, 500), colliders: [triggerCollider] }));
+    this.world.onSensorEnter.add(({ sensor }) => {
+      if (sensor === triggerCollider) console.log('entered the trigger');
     });
   }
 
@@ -54,8 +60,9 @@ class GameScene extends Scene {
 | Area | API |
 |---|---|
 | World | `PhysicsWorld`, `step`, `gravity`, `timeStepper`, `destroy` |
-| Bodies | `createBody` (`dynamic`/`static`/`kinematic`), `setTransform`, mass/inertia from colliders |
-| Colliders | `createCollider`, `createStaticCollider`, density/friction/restitution, `isSensor`, filter, offset |
+| Bodies | `new PhysicsBody` + `world.add` (`dynamic`/`static`/`kinematic`), `setTransform`, mass/inertia from colliders |
+| Colliders | `new Collider` + `body.addCollider` / `colliders: [...]`, density/friction/restitution, `isSensor`, filter, offset |
+| Attach | `world.attach(node, def)` — body + collider + `bind` in one call |
 | Shapes | `CircleShape`, `PolygonShape` (convex-validated), `BoxShape` |
 | Filtering | `CollisionFilter` (category/mask/group), `shouldCollide` |
 | Events | `onCollisionStart` / `onCollisionEnd` / `onSensorEnter` / `onSensorExit` — immutable snapshots |
