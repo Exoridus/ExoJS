@@ -681,6 +681,21 @@
                 "graphics",
                 "rendering"
             ]
+        },
+        {
+            "slug": "immediate-mode-rendering",
+            "path": "geometry-graphics/immediate-mode-rendering.js",
+            "language": "typescript",
+            "title": "Immediate-Mode Rendering",
+            "description": "Draw procedural geometry without a scene graph: gears via drawGeometry and a 2,400-spark field as a single instanced RenderBatch draw call, with a live drawCalls readout.",
+            "backend": "core",
+            "level": "advanced",
+            "tags": [
+                "rendering",
+                "geometry",
+                "instancing",
+                "performance"
+            ]
         }
     ],
     "getting-started": [
