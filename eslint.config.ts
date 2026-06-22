@@ -796,6 +796,18 @@ export default defineConfig([
     },
   },
 
+  // ObjectLayer exposes `ObjectKind`, a PascalCase `as const` enum-like value
+  // object whose members (Rectangle, Polygon, …) are PascalCase by convention
+  // and whose string values are the Tiled wire format. This matches how the
+  // core engine declares enum-like constants; the package naming policy is
+  // relaxed here just for this file.
+  {
+    files: ['packages/exojs-tilemap/src/ObjectLayer.ts'],
+    rules: {
+      '@typescript-eslint/naming-convention': 'off',
+    },
+  },
+
   // Extension bitmask / validation constants follow ALL_CAPS convention.
   {
     files: [

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { TileMapObject } from '../src/index';
-import { ObjectLayer, TileMap } from '../src/index';
+import { ObjectKind, ObjectLayer, TileMap } from '../src/index';
 
 const rectangle = (id: number, name: string, type: string, properties: Record<string, string> = {}): TileMapObject => ({
   kind: 'rectangle',
@@ -15,6 +15,20 @@ const rectangle = (id: number, name: string, type: string, properties: Record<st
   rotation: 0,
   visible: true,
   properties,
+});
+
+const point = (id: number, name: string, type: string): TileMapObject => ({
+  kind: 'point',
+  id,
+  name,
+  type,
+  x: id,
+  y: id,
+  width: 0,
+  height: 0,
+  rotation: 0,
+  visible: true,
+  properties: {},
 });
 
 describe('ObjectLayer', () => {
@@ -69,6 +83,81 @@ describe('ObjectLayer', () => {
     expect(layer.getObjectByName('hero')?.id).toBe(7);
     expect(layer.getObjectById(99)).toBeUndefined();
     expect(layer.getObjectByName('missing')).toBeUndefined();
+  });
+});
+
+interface LevelObjects {
+  spawn: { team: 'red' | 'blue' };
+  trigger: { event: string; once?: boolean };
+  pickup: { item: 'coin' | 'gem'; amount: number };
+}
+
+describe('ObjectLayer typed accessors (byType / byKind / where)', () => {
+  const layer = new ObjectLayer<LevelObjects>({
+    id: 1,
+    objects: [
+      rectangle(1, 'spawn-a', 'spawn', { team: 'red' }),
+      rectangle(2, 'spawn-b', 'spawn', { team: 'blue' }),
+      rectangle(3, 'gate', 'trigger', { event: 'open' }),
+      rectangle(4, 'coin', 'pickup', { item: 'coin', amount: '3' }),
+      rectangle(5, 'gem', 'pickup', { item: 'gem', amount: '10' }),
+      point(6, 'marker', 'waypoint'),
+    ],
+  });
+
+  it('byType returns only objects of the given type, with their properties', () => {
+    const spawns = layer.byType('spawn');
+    expect(spawns.map(o => o.id)).toEqual([1, 2]);
+    expect(spawns.map(o => o.properties.team)).toEqual(['red', 'blue']);
+
+    expect(layer.byType('pickup')).toHaveLength(2);
+    // A type with no matches yields an empty array.
+    expect(layer.byType('trigger')).toHaveLength(1);
+  });
+
+  it('byType returns a fresh array each call', () => {
+    expect(layer.byType('spawn')).not.toBe(layer.byType('spawn'));
+  });
+
+  it('byKind narrows by geometry discriminant', () => {
+    const rects = layer.byKind(ObjectKind.Rectangle);
+    expect(rects).toHaveLength(5);
+    expect(rects.every(o => o.kind === 'rectangle')).toBe(true);
+
+    const points = layer.byKind(ObjectKind.Point);
+    expect(points.map(o => o.id)).toEqual([6]);
+
+    // A kind that no object uses yields an empty array.
+    expect(layer.byKind(ObjectKind.Tile)).toHaveLength(0);
+  });
+
+  it('byKind accepts the raw wire string as well as the ObjectKind member', () => {
+    expect(layer.byKind('point')).toHaveLength(1);
+    expect(layer.byKind(ObjectKind.Point)).toHaveLength(1);
+  });
+
+  it('where combines byType with a predicate over the narrowed properties', () => {
+    const gems = layer.where('pickup', o => o.properties.item === 'gem');
+    expect(gems.map(o => o.id)).toEqual([5]);
+
+    const reds = layer.where('spawn', o => o.properties.team === 'red');
+    expect(reds.map(o => o.id)).toEqual([1]);
+
+    const none = layer.where('pickup', () => false);
+    expect(none).toHaveLength(0);
+  });
+
+  it('untyped layers still expose byType/byKind/where with loose properties', () => {
+    const untyped = new ObjectLayer({
+      id: 2,
+      objects: [rectangle(1, 'a', 'spawn', { team: 'red' }), point(2, 'b', 'marker')],
+    });
+
+    expect(untyped.byType('spawn')).toHaveLength(1);
+    expect(untyped.byKind(ObjectKind.Point)).toHaveLength(1);
+    expect(untyped.where('spawn', o => o.properties.team === 'red')).toHaveLength(1);
+    // query() is unchanged.
+    expect(untyped.query({ type: 'spawn' })).toHaveLength(1);
   });
 });
 

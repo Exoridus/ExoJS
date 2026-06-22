@@ -9,6 +9,7 @@ export type {
   ObjectLayerOptions,
   ObjectPoint,
   ObjectQuery,
+  ObjectSchema,
   PointObject,
   PolygonObject,
   PolylineObject,
@@ -16,8 +17,9 @@ export type {
   TileMapObject,
   TileMapObjectKind,
   TileObject,
+  TypedObject,
 } from './ObjectLayer';
-export { ObjectLayer } from './ObjectLayer';
+export { ObjectKind, ObjectLayer } from './ObjectLayer';
 // The mutable TileChunk implementation is package-internal —
 // only the ReadonlyTileChunk interface is exported publicly.
 export type { ReadonlyTileChunk } from './TileChunk';
