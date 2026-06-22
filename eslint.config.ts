@@ -1047,7 +1047,13 @@ export default defineConfig([
       unicorn,
     },
     rules: {
-      'simple-import-sort/imports': 'error',
+      // Example sources are authored in TypeScript and transpiled to the linted
+      // `.js` by `examples:sync`; that transpile strips the blank lines between
+      // import groups, so a single sorted group (no group separators) is the only
+      // shape an example `.js` can hold. Collapse all imports into one group so
+      // examples that mix a package import with a relative one (e.g. a shared
+      // recipe) still lint clean.
+      'simple-import-sort/imports': ['error', { groups: [['^\\u0000', '^node:', '^@?\\w', '^', '^\\.']] }],
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
       '@typescript-eslint/no-empty-function': 'warn',
