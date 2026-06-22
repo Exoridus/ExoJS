@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
-import type { BlendModes, WebGpuBackend } from '@codexo/exojs/rendering';
-import { AbstractWebGpuRenderer, getWebGpuBlendState, stencilContentDepthStencilState, Texture } from '@codexo/exojs/rendering';
+import type { BlendModes, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import { AbstractWebGpuRenderer, getWebGpuBlendState, stencilContentDepthStencilState, Texture } from '@codexo/exojs/renderer-sdk';
 
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';

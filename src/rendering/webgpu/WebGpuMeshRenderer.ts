@@ -356,7 +356,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     const geometry = mesh.geometry;
 
-    if (geometry === null || geometry.usage !== 'static') {
+    if (geometry?.usage !== 'static') {
       throw new Error('drawInstancedBatch requires a mesh with usage="static" geometry.');
     }
 
@@ -982,7 +982,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const binding = backend.getTextureBinding(texture);
     const cached = this._textureBindGroups.get(texture);
 
-    if (cached !== undefined && cached.view === binding.view) {
+    if (cached?.view === binding.view) {
       return cached.group;
     }
 
@@ -1679,7 +1679,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const binding = backend.getTextureBinding(texture);
     const cached = resources.meshTextureBindGroups.get(texture);
 
-    if (cached !== undefined && cached.view === binding.view) {
+    if (cached?.view === binding.view) {
       return cached.group;
     }
 

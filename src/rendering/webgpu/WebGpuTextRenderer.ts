@@ -779,7 +779,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const { view, sampler } = backend.getTextureBinding(texture);
 
     const cached = this._texBindGroups.get(texture);
-    if (cached !== undefined && cached.view === view) return cached.group;
+    if (cached?.view === view) return cached.group;
 
     const group = device.createBindGroup({
       layout: this._textureBindGroupLayout!,

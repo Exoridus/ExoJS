@@ -47,7 +47,7 @@
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
-      "@codexo/exojs/rendering": ["./src/rendering.ts"],
+      "@codexo/exojs/renderer-sdk": ["./src/renderer-sdk.ts"],
       "@codexo/exojs/debug": ["./src/debug/index.ts"],
       "@codexo/exojs-particles": ["./packages/exojs-particles/src/index.ts"],
       "@codexo/exojs-particles/register": ["./packages/exojs-particles/src/register.ts"],

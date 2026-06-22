@@ -1,4 +1,4 @@
-import type { PixelSnapMode } from '@codexo/exojs/rendering';
+import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
 import { assertPixelSnapMode } from './pixelSnap';
 import type { TileLayer } from './TileLayer';

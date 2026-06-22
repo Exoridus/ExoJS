@@ -1,5 +1,5 @@
 import type { NodeSerializer } from '@codexo/exojs';
-import type { PixelSnapMode } from '@codexo/exojs/rendering';
+import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
 import { TileMap } from './TileMap';
 import { TileMapNode } from './TileMapNode';

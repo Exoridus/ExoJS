@@ -1,6 +1,6 @@
 import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
-import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/rendering';
+import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 
 import { assertPixelSnapMode } from './pixelSnap';
 import { TileChunkNode } from './TileChunkNode';

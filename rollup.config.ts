@@ -72,7 +72,7 @@ const debugBundled: RollupOptions = {
 };
 
 const modules: RollupOptions = {
-  input: ['src/index.ts', 'src/debug/index.ts', 'src/extensions/index.ts', 'src/rendering.ts'],
+  input: ['src/index.ts', 'src/debug/index.ts', 'src/extensions/index.ts', 'src/renderer-sdk.ts'],
   output: {
     dir: 'dist/esm',
     format: 'es',

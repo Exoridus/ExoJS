@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Color, Rectangle, Texture, Time } from '@codexo/exojs';
-import { WebGpuBackend } from '@codexo/exojs/rendering';
+import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 
 import { ColorGradient } from '../src/distributions/ColorGradient';
 import { Curve } from '../src/distributions/Curve';

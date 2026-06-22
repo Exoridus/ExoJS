@@ -970,7 +970,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     const binding = backend.getTextureBinding(texture);
     const existing = resources.baseTextureBindGroups.get(texture);
 
-    if (existing !== undefined && existing.view === binding.view) {
+    if (existing?.view === binding.view) {
       return existing.group;
     }
 

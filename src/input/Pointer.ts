@@ -340,7 +340,6 @@ export class Pointer {
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Pointer {
-  /* eslint-disable @typescript-eslint/naming-convention */
   // --- Primary-pointer convenience aliases (slot 0) ---
   export const Active = pointerCh(0);
   export const X = pointerCh(1);
@@ -408,5 +407,4 @@ export namespace Pointer {
   export const Slot15Active = slot(15, 0);
   export const Slot15X = slot(15, 1);
   export const Slot15Y = slot(15, 2);
-  /* eslint-enable @typescript-eslint/naming-convention */
 }

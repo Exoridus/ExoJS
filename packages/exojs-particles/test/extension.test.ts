@@ -1,6 +1,6 @@
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
-import type { RenderBackend } from '@codexo/exojs/rendering';
-import { RenderBackendType } from '@codexo/exojs/rendering';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
+import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
 import { beforeEach,describe, expect, it } from 'vitest';
 
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';

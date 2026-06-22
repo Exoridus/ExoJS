@@ -5,14 +5,14 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
-// before the root alias so '@codexo/exojs/rendering' resolves before '@codexo/exojs'.
+// before the root alias so '@codexo/exojs/renderer-sdk' resolves before '@codexo/exojs'.
 // These map the PUBLIC cross-package specifiers to source for in-repo tests.
 // Package-internal `#*` imports are NOT aliased — they resolve through each
 // package's own package.json#imports map via the source conditions (see
 // @codexo/exojs-config/vitest `srcConditions`).
 const aliasConfig = [
   { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs/rendering', replacement: fileURLToPath(new URL('./src/rendering.ts', import.meta.url)) },
+  { find: '@codexo/exojs/renderer-sdk', replacement: fileURLToPath(new URL('./src/renderer-sdk.ts', import.meta.url)) },
   { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
   { find: '@codexo/exojs', replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url)) },
   // @codexo/exojs-tiled depends on @codexo/exojs-tilemap; neither package

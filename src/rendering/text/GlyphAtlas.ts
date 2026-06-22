@@ -18,7 +18,7 @@ export type AtlasMode = 'sdf' | 'color';
  * SDF field encodes. Determines the maximum usable outline/shadow reach.
  * Exported so applications can import this constant when computing shader uniforms.
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
+
 export const SDF_RADIUS = 8;
 
 const glyphPadding = 2;
