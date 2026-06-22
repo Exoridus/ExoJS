@@ -9,7 +9,14 @@ import { type AtlasMode, GlyphAtlas, SDF_RADIUS } from './GlyphAtlas';
  * requests them.
  *
  * Use {@link getDefaultGlyphAtlasPool} to obtain the shared process-wide
- * instance. Tests can mock that function to inject a fake pool.
+ * instance; tests reset it via {@link resetDefaultGlyphAtlasPool} for isolation.
+ *
+ * Process-wide is intentional: an atlas is a content cache keyed by font variant
+ * + mode, so sharing it across {@link Application} instances on the same backend
+ * is correct and memory-efficient (identical glyphs rasterize once). Strict
+ * per-backend isolation for mixed-backend multi-app setups is a deferred
+ * enhancement — it would require routing the pool through the render context,
+ * which text layout reaches before a node is attached to a scene.
  * @advanced
  */
 export class GlyphAtlasPool {

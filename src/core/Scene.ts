@@ -270,11 +270,12 @@ export class Scene {
    */
   public serialize(): SerializedScene {
     const loader = this._app?.loader ?? null;
-    const data: SerializedScene = { version: SERIALIZATION_VERSION, root: serializeTree(this._root, loader) };
+    const registry = this._app?.serializers;
+    const data: SerializedScene = { version: SERIALIZATION_VERSION, root: serializeTree(this._root, loader, registry) };
     const ui = this._peekUI();
 
     if (ui !== null) {
-      data.ui = serializeTree(ui, loader);
+      data.ui = serializeTree(ui, loader, registry);
     }
 
     return data;
@@ -293,11 +294,12 @@ export class Scene {
   public deserialize(data: SerializedScene): this {
     const migrated = migrate(data);
     const loader = this._app?.loader ?? null;
+    const registry = this._app?.serializers;
 
-    deserializeInto(this._root, migrated.root, loader);
+    deserializeInto(this._root, migrated.root, loader, registry);
 
     if (migrated.ui !== undefined) {
-      deserializeInto(this.ui, migrated.ui, loader);
+      deserializeInto(this.ui, migrated.ui, loader, registry);
     }
 
     return this;
