@@ -62,7 +62,8 @@ Beneath the high-level, context-aware pass tree sits `BackendRenderPass` — an 
 
 ```ts
 import { CallbackRenderPass, RenderPipeline } from '@codexo/exojs';
-import type { BackendRenderPass, RenderBackend } from '@codexo/exojs';
+import type { BackendRenderPass } from '@codexo/exojs';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 
 class MyBackendPass implements BackendRenderPass {
     public execute(backend: RenderBackend): void {
@@ -126,7 +127,7 @@ Direct backend access is deliberately unabstracted — you are writing raw WebGP
 
 ## Renderer registration
 
-ExoJS resolves a renderer for each drawable type through the [`RendererRegistry`](/ExoJS/en/api/renderer-registry/). You can register a custom renderer for an existing drawable type via `backend.rendererRegistry.registerRenderer(drawableConstructor, renderer)`. A renderer implements `connect(backend)`, `disconnect()`, `render(drawable)`, and `flush()` — these map to GPU resource acquisition, release, per-drawable recording, and batch submission respectively.
+ExoJS resolves a renderer for each drawable type through the `RendererRegistry` (available from `@codexo/exojs/renderer-sdk`). You can register a custom renderer for an existing drawable type via `backend.rendererRegistry.registerRenderer(drawableConstructor, renderer)`. A renderer implements `connect(backend)`, `disconnect()`, `render(drawable)`, and `flush()` — these map to GPU resource acquisition, release, per-drawable recording, and batch submission respectively.
 
 Registering a custom renderer is an advanced extension point. For most custom rendering needs — procedural geometry between draws, a single custom shape that doesn't fit `Mesh` — `CallbackRenderPass` is the simpler and more intentional path.
 

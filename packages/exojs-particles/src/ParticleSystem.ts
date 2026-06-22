@@ -5,8 +5,8 @@ import { Rectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs';
 import { Spritesheet } from '@codexo/exojs';
 import { Texture } from '@codexo/exojs';
-import type { RenderPlanBuilder } from '@codexo/exojs/rendering';
-import type { RenderBackend } from '@codexo/exojs/rendering';
+import type { RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 
 import { ParticleGpuState } from '#gpu/ParticleGpuState';
 import type { DeathModule } from '#modules/DeathModule';

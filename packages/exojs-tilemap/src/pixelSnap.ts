@@ -1,4 +1,4 @@
-import type { PixelSnapMode } from '@codexo/exojs/rendering';
+import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
 const validPixelSnapModes: ReadonlySet<string> = new Set<string>(['none', 'position', 'geometry']);
 

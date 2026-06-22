@@ -129,8 +129,11 @@ export class Button extends Widget {
   };
 
   private readonly _onKey = (event: KeyEvent): void => {
-    const channel = event.channel as Keyboard;
+    const channel = event.channel;
 
+    // `channel` is a generic numeric input channel (KeyEvent.channel is `number`),
+    // intentionally compared against the Keyboard enum constants — see KeyEvent docs.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (this.enabled && (channel === Keyboard.Enter || channel === Keyboard.Space)) {
       event.preventDefault();
       this.onClick.dispatch(this);

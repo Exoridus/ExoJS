@@ -4,6 +4,6 @@ export * from '#core/index';
 export type { AssetLoadRequest, Extension } from '#extensions/index';
 export * from '#input/index';
 export * from '#math/index';
-export * from '#rendering/index';
+export * from '#rendering/public';
 export * from '#resources/index';
 export * from '#ui/index';

@@ -1,5 +1,5 @@
 import type { Rectangle } from '@codexo/exojs';
-import { Drawable } from '@codexo/exojs/rendering';
+import { Drawable } from '@codexo/exojs/renderer-sdk';
 
 import type { ChunkPage } from './chunkGeometry';
 import { buildChunkPages } from './chunkGeometry';

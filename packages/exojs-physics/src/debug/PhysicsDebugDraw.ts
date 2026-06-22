@@ -1,7 +1,8 @@
-import type { Application, RenderBackend } from '@codexo/exojs';
+import type { Application } from '@codexo/exojs';
 import { Color, Graphics } from '@codexo/exojs';
 import type { DebugLayerViewMode } from '@codexo/exojs/debug';
 import { DebugLayer } from '@codexo/exojs/debug';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 
 import type { CandidatePair } from '../broadphase/BroadPhase';
 import { SweepAndPrune } from '../broadphase/SweepAndPrune';

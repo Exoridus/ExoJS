@@ -1,0 +1,95 @@
+/// <reference types="@webgpu/types" />
+
+// @codexo/exojs application-facing rendering surface. Re-exported by the root
+// barrel (`src/index.ts`). Backend/renderer-author internals (abstract renderers,
+// concrete backend renderers, VAOs, shader programs, glyph/text layout helpers)
+// are intentionally NOT here — they live in the internal `#rendering/index`
+// barrel and, for the curated public author surface, in `@codexo/exojs/renderer-sdk`.
+
+export type { BackendRenderPass } from './BackendRenderPass';
+export type { CallbackRenderPassOptions } from './CallbackRenderPass';
+export { CallbackRenderPass } from './CallbackRenderPass';
+export type { CameraOptions } from './Camera';
+export { Camera } from './Camera';
+export { Container } from './Container';
+export { Drawable } from './Drawable';
+export type { PixelSnapMode } from './pixelSnap';
+export { RenderBackendType } from './RenderBackendType';
+export { RenderBatch } from './RenderBatch';
+export type { DrawBatchOptions, DrawGeometryOptions, RenderOptions, RenderToOptions } from './RenderingContext';
+export { RenderingContext } from './RenderingContext';
+export type { MaskSource } from './RenderNode';
+export { RenderNode } from './RenderNode';
+export type { RenderNodePassOptions } from './RenderNodePass';
+export { RenderNodePass } from './RenderNodePass';
+export type { RenderPassOptions } from './RenderPass';
+export { RenderPass } from './RenderPass';
+export { RenderPipeline } from './RenderPipeline';
+export type { RenderStats } from './RenderStats';
+export { createRenderStats, resetRenderStats } from './RenderStats';
+export { RenderTarget } from './RenderTarget';
+export { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, ShaderPrimitives, WrapModes } from './types';
+export type { ViewFollowOptions, ViewFollowTarget, ViewShakeOptions } from './View';
+export { View, ViewFlags } from './View';
+export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
+export { BlurFilter } from '#rendering/filters/BlurFilter';
+export { ColorFilter } from '#rendering/filters/ColorFilter';
+export { Filter } from '#rendering/filters/Filter';
+export type { LutFilterOptions, LutMode } from '#rendering/filters/LutFilter';
+export { LutFilter } from '#rendering/filters/LutFilter';
+export type { ShaderFilterUniformValue, WebGl2ShaderFilterOptions } from '#rendering/filters/WebGl2ShaderFilter';
+export { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
+export type { WebGpuShaderFilterOptions } from '#rendering/filters/WebGpuShaderFilter';
+export { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
+export { Geometry } from '#rendering/geometry/Geometry';
+export type { AttributeType, GeometryAttribute, GeometryOptions, GeometryUsage, Topology } from '#rendering/geometry/GeometryAttribute';
+export type { GradientStop, GradientToTextureOptions, GradientType } from '#rendering/gradient/Gradient';
+export { Gradient } from '#rendering/gradient/Gradient';
+export { LinearGradient } from '#rendering/gradient/LinearGradient';
+export { RadialGradient } from '#rendering/gradient/RadialGradient';
+export type { MaterialOptions, UniformValue } from '#rendering/material/Material';
+export { Material } from '#rendering/material/Material';
+export { MeshMaterial } from '#rendering/material/MeshMaterial';
+export type { ShaderSourceOptions } from '#rendering/material/ShaderSource';
+export { ShaderSource } from '#rendering/material/ShaderSource';
+export { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+export type { MeshOptions } from '#rendering/mesh/Mesh';
+export { Mesh } from '#rendering/mesh/Mesh';
+export { Graphics } from '#rendering/primitives/Graphics';
+export type { ShaderProgram } from '#rendering/shader/Shader';
+export { Shader } from '#rendering/shader/Shader';
+export { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
+export { ShaderUniform } from '#rendering/shader/ShaderUniform';
+export type { AnimatedSpriteClipDefinition, AnimatedSpritePlayOptions } from '#rendering/sprite/AnimatedSprite';
+export { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
+export type { NineSliceInsets, NineSliceModes, NineSliceOptions } from '#rendering/sprite/nineSlice';
+export { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+export { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
+export type { RepeatingSpriteOptions } from '#rendering/sprite/repeatingSpritePlan';
+export { Sprite, SpriteFlags } from '#rendering/sprite/Sprite';
+export type { SpritesheetData, SpritesheetFrame } from '#rendering/sprite/Spritesheet';
+export { Spritesheet } from '#rendering/sprite/Spritesheet';
+export { AbstractText } from '#rendering/text/AbstractText';
+export type { BitmapTextOptions } from '#rendering/text/BitmapText';
+export { BitmapText, BmFontAdapter } from '#rendering/text/BitmapText';
+export type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
+export { BmFont } from '#rendering/text/BmFont';
+export type { AtlasMode } from '#rendering/text/GlyphAtlas';
+export { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+export type { FontFormat, HTMLTextOptions } from '#rendering/text/HTMLText';
+export { HTMLText } from '#rendering/text/HTMLText';
+export type { LayoutOptions } from '#rendering/text/LayoutOptions';
+export { Text } from '#rendering/text/Text';
+export type { FontFamily, FontRegistry, FontWeight, GradientAxis, StyleChangeHint, TextStyleOptions } from '#rendering/text/TextStyle';
+export { TextStyle } from '#rendering/text/TextStyle';
+export type { GlyphInfo, GlyphKey, GlyphPlacement, GlyphProvider, TextAlignment, TextLayoutStyle, TextPageQuads, TextSize } from '#rendering/text/types';
+export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
+export { DataTexture } from '#rendering/texture/DataTexture';
+export { RenderTexture } from '#rendering/texture/RenderTexture';
+export type { RepeatFit, RepeatMode, RepeatPlan, RepeatSegment } from '#rendering/texture/repeat';
+export type { SamplerOptions } from '#rendering/texture/Sampler';
+export { Sampler } from '#rendering/texture/Sampler';
+export { Texture } from '#rendering/texture/Texture';
+export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';
+export { TextureRegion } from '#rendering/texture/TextureRegion';
+export { Video } from '#rendering/video/Video';

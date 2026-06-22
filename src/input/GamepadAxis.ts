@@ -144,7 +144,7 @@ export class GamepadAxis {
 
 const axis = (offset: number): GamepadAxisChannel => (ChannelOffset.Gamepads + offset) as GamepadAxisChannel;
 
-/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/no-namespace */
 /**
  * Channel-identifier constants. The axis section starts after the 32-slot
  * button block: 24 named axes (offsets 32..55) plus 8 reserved slots
@@ -192,4 +192,4 @@ export namespace GamepadAxis {
   export const AuxiliaryAxis3Positive = axis(55);
   // Offsets 56..63 reserved for future named axes / custom mapping use.
 }
-/* eslint-enable @typescript-eslint/no-namespace, @typescript-eslint/naming-convention */
+/* eslint-enable @typescript-eslint/no-namespace */

@@ -1,4 +1,4 @@
-import type { Texture, View, WebGl2Backend, WebGl2RenderBufferRuntime, WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/rendering';
+import type { Texture, View, WebGl2Backend, WebGl2RenderBufferRuntime, WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/renderer-sdk';
 import {
   AbstractWebGl2Renderer,
   type BlendModes,
@@ -9,7 +9,7 @@ import {
   Shader,
   WebGl2RenderBuffer,
   WebGl2VertexArrayObject,
-} from '@codexo/exojs/rendering';
+} from '@codexo/exojs/renderer-sdk';
 
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';

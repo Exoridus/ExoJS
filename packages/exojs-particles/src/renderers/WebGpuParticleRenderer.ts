@@ -1,11 +1,11 @@
 ﻿/// <reference types="@webgpu/types" />
 
-import type { BlendModes } from '@codexo/exojs/rendering';
-import type { WebGpuBackend } from '@codexo/exojs/rendering';
-import { Texture } from '@codexo/exojs/rendering';
-import { AbstractWebGpuRenderer } from '@codexo/exojs/rendering';
-import { getWebGpuBlendState } from '@codexo/exojs/rendering';
-import { stencilContentDepthStencilState } from '@codexo/exojs/rendering';
+import type { BlendModes } from '@codexo/exojs/renderer-sdk';
+import type { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import { Texture } from '@codexo/exojs/renderer-sdk';
+import { AbstractWebGpuRenderer } from '@codexo/exojs/renderer-sdk';
+import { getWebGpuBlendState } from '@codexo/exojs/renderer-sdk';
+import { stencilContentDepthStencilState } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
 

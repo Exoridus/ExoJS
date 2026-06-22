@@ -1,8 +1,12 @@
 // @codexo/exojs/renderer-sdk — curated backend-author surface.
-// Advanced symbols for renderer and backend authors.
-// Dual-exported in PR-1 (also on root barrel); root removal happens in PR-2.
+// Advanced symbols for renderer and backend authors (abstract renderers, render
+// backends, low-level GL/GPU building blocks). Ordinary application code should
+// import from the root `@codexo/exojs` barrel; these symbols are intentionally
+// kept out of it (see src/rendering/public.ts).
 
 export { Drawable } from '#rendering/Drawable';
+export type { PixelSnapMode } from '#rendering/pixelSnap';
+export type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 export type { RenderBackend } from '#rendering/RenderBackend';
 export { RenderBackendType } from '#rendering/RenderBackendType';
 export type { DrawableConstructor, Renderer } from '#rendering/Renderer';

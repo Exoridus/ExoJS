@@ -1,6 +1,6 @@
 import type { Extension, RendererBinding } from '@codexo/exojs/extensions';
-import type { RenderBackend } from '@codexo/exojs/rendering';
-import { RenderBackendType } from '@codexo/exojs/rendering';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
+import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
 
 import { WebGl2ParticleRenderer } from '#renderers/WebGl2ParticleRenderer';
 import { WebGpuParticleRenderer } from '#renderers/WebGpuParticleRenderer';

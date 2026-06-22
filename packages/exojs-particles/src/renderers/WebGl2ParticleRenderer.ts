@@ -1,13 +1,13 @@
-﻿import type { BlendModes } from '@codexo/exojs/rendering';
-import type { Texture } from '@codexo/exojs/rendering';
-import type { View } from '@codexo/exojs/rendering';
-import type { WebGl2Backend } from '@codexo/exojs/rendering';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/rendering';
-import { Shader } from '@codexo/exojs/rendering';
-import { AbstractWebGl2Renderer } from '@codexo/exojs/rendering';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from '@codexo/exojs/rendering';
-import { createWebGl2ShaderProgram } from '@codexo/exojs/rendering';
-import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/rendering';
+﻿import type { BlendModes } from '@codexo/exojs/renderer-sdk';
+import type { Texture } from '@codexo/exojs/renderer-sdk';
+import type { View } from '@codexo/exojs/renderer-sdk';
+import type { WebGl2Backend } from '@codexo/exojs/renderer-sdk';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/renderer-sdk';
+import { Shader } from '@codexo/exojs/renderer-sdk';
+import { AbstractWebGl2Renderer } from '@codexo/exojs/renderer-sdk';
+import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from '@codexo/exojs/renderer-sdk';
+import { createWebGl2ShaderProgram } from '@codexo/exojs/renderer-sdk';
+import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
 
