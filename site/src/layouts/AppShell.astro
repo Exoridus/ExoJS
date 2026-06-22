@@ -5,6 +5,7 @@ import '@fontsource/space-grotesk/600.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '../styles/global.scss';
+import { ExoHeader } from '../components/ExoHeader';
 
 interface Props {
     title?: string;
@@ -50,16 +51,10 @@ const currentLocale = Astro.currentLocale === 'de' ? 'de' : 'en';
     <body>
         <a class="skip-link" href="#main-content">Skip to main content</a>
         <div class="app-shell">
-            <exo-header base-url={import.meta.env.BASE_URL} current-path={currentPath} locale={currentLocale}>
-                <div slot="search" aria-hidden="true"></div>
-            </exo-header>
+            <ExoHeader client:load baseUrl={import.meta.env.BASE_URL} currentPath={currentPath} locale={currentLocale} />
             <main id="main-content" tabindex="-1" class="app-shell__main">
                 <slot />
             </main>
         </div>
-
-        <script>
-            import '../components/ExoHeader';
-        </script>
     </body>
 </html>

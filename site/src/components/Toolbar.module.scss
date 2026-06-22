@@ -1,0 +1,31 @@
+@use '../styles/colors' as *;
+@use '../styles/tokens' as *;
+
+.root {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    margin: 0;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    border-bottom: 1px solid oklch(30% 0.014 245);
+    background: oklch(18% 0.012 245);
+    font-family: var(--f-mono);
+}
+
+.title {
+    flex: 1 0 auto;
+    line-height: 1.1;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: oklch(94% 0.005 245);
+}
+
+::slotted([data-role='toolbar-status']) {
+    margin-left: 8px;
+    font-size: 11px;
+    color: oklch(70% 0.012 245);
+}

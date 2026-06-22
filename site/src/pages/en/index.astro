@@ -1,6 +1,7 @@
 ---
 import AppShell from '../../layouts/AppShell.astro';
 import { Code } from 'astro:components';
+import { GuideExamplePreview } from '../../components/GuideExamplePreview';
 import { appInfo } from '../../lib/app-info';
 import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
 import { getExampleExecutionSource } from '../../lib/example-sources';
@@ -17,7 +18,6 @@ const demoCount = getAllExamples().length;
 const heroExample = getExamplesForChapter('particles').find(entry => entry.slug === 'bonfire');
 const heroExampleTitle = heroExample?.title ?? 'Bonfire';
 const heroExampleSource = getExampleExecutionSource('particles', 'bonfire');
-const heroExampleCaps = JSON.stringify(heroExample?.capabilities ?? []);
 
 const heroSnippet = `import {
   Application, Keyboard, Scene,
@@ -157,7 +157,14 @@ const examples = [
                 <p>Not a video or a GIF — this is the engine running in the page. Hit play, then open it in the Playground and edit it live.</p>
             </div>
             <div class="live-hero-stage">
-                <guide-example-preview chapter="particles" slug="bonfire" title={heroExampleTitle} sourcecode={heroExampleSource} capabilities={heroExampleCaps}></guide-example-preview>
+                <GuideExamplePreview
+                    client:visible
+                    chapter="particles"
+                    slug="bonfire"
+                    title={heroExampleTitle}
+                    sourceCode={heroExampleSource}
+                    capabilities={heroExample?.capabilities ?? []}
+                />
             </div>
             <div class="live-hero-actions">
                 <a class="btn btn-ghost" href={`${import.meta.env.BASE_URL}en/playground/?example=particles/bonfire`}>Open in Playground</a>
@@ -244,10 +251,6 @@ const examples = [
         </section>
     </div>
 </AppShell>
-
-<script>
-    import '../../components/GuideExamplePreview';
-</script>
 
 <style>
     .home {
@@ -564,10 +567,6 @@ const examples = [
         overflow: hidden;
         box-shadow: var(--shadow-2);
         background: var(--bg-code);
-    }
-
-    .live-hero-stage guide-example-preview {
-        display: block;
     }
 
     .live-hero-actions {

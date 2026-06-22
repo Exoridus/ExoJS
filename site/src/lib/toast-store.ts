@@ -1,5 +1,5 @@
 // Tiny module-level toast store. Components call `showToast` imperatively
-// and the root `<exo-toast-stack>` subscribes to render them. No portal
+// and the root React `<ToastStack>` subscribes to render them. No portal
 // or global-window hook is needed — the stack sits inside the shell's
 // shadow root, which is always mounted.
 

@@ -1,0 +1,92 @@
+.root {
+    display: block;
+}
+
+section {
+    display: block;
+    padding: 0 0 0.2rem;
+}
+
+.toggle {
+    appearance: none;
+    width: 100%;
+    min-height: 32px;
+    padding: 0 0.48rem;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    text-align: left;
+}
+
+.toggle:hover {
+    background: color-mix(in oklab, var(--bg-panel), transparent 8%);
+}
+
+.toggle:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent-line);
+}
+
+.title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.67rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
+    padding-left: 0.5rem;
+}
+
+.count {
+    min-width: 16px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in oklab, var(--accent-line), transparent 25%);
+    color: var(--fg-faint);
+    font-size: 0.58rem;
+    font-weight: 600;
+}
+
+.chevron {
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid var(--fg-faint);
+    border-bottom: 1.5px solid var(--fg-faint);
+    transform: rotate(45deg);
+}
+
+.chevron[data-expanded] {
+    transform: rotate(225deg);
+}
+
+.content {
+    display: block;
+}
+
+@media (max-width: 1119px) {
+    .toggle {
+        min-height: 44px;
+    }
+}

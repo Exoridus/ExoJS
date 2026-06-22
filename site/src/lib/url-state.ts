@@ -28,7 +28,10 @@ export function readUrlState(): UrlState {
     const queryExample = url.searchParams.get('example');
     if (queryVersion || queryExample) {
         const version = queryVersion && queryVersion.length > 0 ? queryVersion : null;
-        const example = queryExample && queryExample.length > 0 ? (queryExample.endsWith('.js') ? queryExample : `${queryExample}.js`) : null;
+        let example: string | null = null;
+        if (queryExample && queryExample.length > 0) {
+            example = queryExample.endsWith('.js') ? queryExample : `${queryExample}.js`;
+        }
         return { version, example };
     }
 

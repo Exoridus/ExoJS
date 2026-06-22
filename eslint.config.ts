@@ -1,7 +1,9 @@
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
+import eslintReact from '@eslint-react/eslint-plugin';
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import security from 'eslint-plugin-security';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unicorn from 'eslint-plugin-unicorn';
@@ -11,17 +13,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   {
-    ignores: [
-      'dist/**',
-      'node_modules/**',
-      'src/vendor/**',
-      'site/dist/**',
-      'site/node_modules/**',
-      'site/public/vendor/**',
-      'site/src/**',
-      'coverage/**',
-      '**/*.min.*',
-    ],
+    ignores: ['dist/**', 'node_modules/**', 'src/vendor/**', 'site/dist/**', 'site/node_modules/**', 'site/public/vendor/**', 'coverage/**', '**/*.min.*'],
   },
 
   // Base JavaScript recommendations
@@ -587,6 +579,110 @@ export default defineConfig([
       ],
       'no-console': 'off',
       'max-lines': 'off',
+    },
+  },
+
+  // Site React components. Astro files are type-checked by `astro check`; this
+  // block covers the TypeScript/TSX islands that ship browser interactivity.
+  {
+    files: ['site/src/**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.es2024,
+      },
+    },
+    plugins: {
+      '@eslint-react': eslintReact,
+      'react-hooks': reactHooks,
+      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
+    },
+    rules: {
+      ...eslintReact.configs['recommended-typescript'].rules,
+      ...eslintReact.configs['disable-conflict-eslint-plugin-react-hooks'].rules,
+      ...reactHooks.configs.recommended.rules,
+
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+
+      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
+      '@typescript-eslint/array-type': 'off',
+      '@typescript-eslint/consistent-indexed-object-style': 'off',
+      '@typescript-eslint/consistent-type-definitions': 'off',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        {
+          checksVoidReturn: {
+            arguments: false,
+            attributes: false,
+          },
+        },
+      ],
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/prefer-regexp-exec': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      '@typescript-eslint/prefer-optional-chain': 'warn',
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        {
+          allowNumber: true,
+          allowBoolean: false,
+          allowAny: false,
+          allowNullish: false,
+          allowRegExp: false,
+        },
+      ],
+      // Disabled for site/src to match the engine: `strict-boolean-expressions`
+      // is turned off across every practical src/ directory (core, input, math,
+      // rendering, audio, resources, …). The site's URL/version/runtime helpers
+      // are the same class of nullable-string code, so holding only site code to
+      // it would be an inconsistent double standard.
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+
+      '@eslint-react/dom-no-unsafe-iframe-sandbox': 'error',
+      '@eslint-react/no-array-index-key': 'warn',
+      '@eslint-react/no-nested-component-definitions': 'error',
+      '@eslint-react/no-unstable-default-props': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+
+      curly: 'error',
+      eqeqeq: ['error', 'always'],
+      // Allow console.error/console.warn for intentional diagnostics (e.g. the
+      // fetch/parse error logging in request-manager.ts); only console.log/debug warn.
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-nested-ternary': 'warn',
+      'object-shorthand': 'error',
+      'prefer-object-spread': 'error',
+      'prefer-template': 'error',
+      radix: 'error',
     },
   },
 
