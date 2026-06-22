@@ -39,7 +39,7 @@ export interface ExampleBrowserProps {
 }
 
 export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
-    const [examples, setExamples] = useState<ExamplesMap>(new Map());
+    const [examples, setExamples] = useState<ExamplesMap>(() => new Map());
     const [activeExample, setActiveExample] = useState<Example | null>(null);
     const [availableTags, setAvailableTags] = useState<string[]>([]);
     const [versions, setVersions] = useState<ReadonlyArray<VersionInfo>>([]);
@@ -53,11 +53,14 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
     const appHeaderRef = useRef<AppHeaderHandle | null>(null);
     const editorRef = useRef<EditorHandle | null>(null);
     const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
-    const previousVersionId = useRef<string | null>(null);
-    const missingExampleToastEnabled = useRef(false);
+    const previousVersionIdRef = useRef<string | null>(null);
+    const missingExampleToastEnabledRef = useRef(false);
     const selectedVersionRef = useRef<VersionInfo | null>(null);
     const activeExampleRef = useRef<Example | null>(null);
-    const bodyOverflowBeforeDrawerOpen = useRef<string | null>(null);
+    const bodyOverflowBeforeDrawerOpenRef = useRef<string | null>(null);
+    // Late-bound to break the showMissingExampleToast <-> ensureExamplesLoaded cycle
+    // (the toast action calls it, but it is declared after the toast helper).
+    const ensureExamplesLoadedRef = useRef<(versionId: string) => Promise<void>>(() => Promise.resolve());
 
     useEffect(() => {
         selectedVersionRef.current = selectedVersion;
@@ -68,16 +71,14 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
     }, [activeExample]);
 
     const unlockBodyScroll = useCallback((): void => {
-        if (bodyOverflowBeforeDrawerOpen.current !== null) {
-            document.body.style.overflow = bodyOverflowBeforeDrawerOpen.current;
-            bodyOverflowBeforeDrawerOpen.current = null;
+        if (bodyOverflowBeforeDrawerOpenRef.current !== null) {
+            document.body.style.overflow = bodyOverflowBeforeDrawerOpenRef.current;
+            bodyOverflowBeforeDrawerOpenRef.current = null;
         }
     }, []);
 
     const lockBodyScroll = useCallback((): void => {
-        if (bodyOverflowBeforeDrawerOpen.current === null) {
-            bodyOverflowBeforeDrawerOpen.current = document.body.style.overflow;
-        }
+        bodyOverflowBeforeDrawerOpenRef.current ??= document.body.style.overflow;
         document.body.style.overflow = 'hidden';
     }, []);
 
@@ -96,7 +97,7 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
     }, []);
 
     const showMissingExampleToast = useCallback((missingPath: string, currentVersionId: string): void => {
-        const previousId = previousVersionId.current;
+        const previousId = previousVersionIdRef.current;
         const action =
             previousId && previousId !== currentVersionId
                 ? {
@@ -104,12 +105,12 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
                       onClick: () => {
                           const next = getVersionById(previousId);
                           if (!next) return;
-                          previousVersionId.current = selectedVersionRef.current?.id ?? null;
-                          missingExampleToastEnabled.current = true;
+                          previousVersionIdRef.current = selectedVersionRef.current?.id ?? null;
+                          missingExampleToastEnabledRef.current = true;
                           setSelectedVersion(next);
                           storeSelectedVersion(previousId);
                           writeUrlState({ version: previousId });
-                          void ensureExamplesLoaded(previousId);
+                          void ensureExamplesLoadedRef.current(previousId);
                       },
                   }
                 : undefined;
@@ -137,8 +138,8 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
                 }
             }
 
-            if (missingExampleToastEnabled.current) {
-                missingExampleToastEnabled.current = false;
+            if (missingExampleToastEnabledRef.current) {
+                missingExampleToastEnabledRef.current = false;
                 if (fellBack && requestedPath) showMissingExampleToast(requestedPath, versionId);
             }
         },
@@ -165,6 +166,10 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
         },
         [syncExampleState],
     );
+
+    useEffect(() => {
+        ensureExamplesLoadedRef.current = ensureExamplesLoaded;
+    }, [ensureExamplesLoaded]);
 
     const syncVersionState = useCallback((): void => {
         const nextVersions = getVersions();
@@ -215,9 +220,14 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
         const desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
         const compactMobileMediaQuery = window.matchMedia('(max-width: 760px)');
         const syncBreakpoints = (): void => {
+            // Mirror viewport media-query state into React — the canonical
+            // "subscribe to an external system, setState on change" effect use.
+            // The synchronous initial call is the SSR-safe form of that pattern.
+            /* eslint-disable @eslint-react/set-state-in-effect */
             setIsCompactMobile(compactMobileMediaQuery.matches);
             setSidebarOpen(desktopMediaQuery.matches && !compactMobileMediaQuery.matches);
             if (!compactMobileMediaQuery.matches) setExamplesSheetOpen(false);
+            /* eslint-enable @eslint-react/set-state-in-effect */
         };
         syncBreakpoints();
         desktopMediaQuery.addEventListener('change', syncBreakpoints);
@@ -287,8 +297,8 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
     const selectVersion = (id: string): void => {
         const next = getVersionById(id);
         if (!next || selectedVersionRef.current?.id === id) return;
-        previousVersionId.current = selectedVersionRef.current?.id ?? null;
-        missingExampleToastEnabled.current = true;
+        previousVersionIdRef.current = selectedVersionRef.current?.id ?? null;
+        missingExampleToastEnabledRef.current = true;
         setSelectedVersion(next);
         selectedVersionRef.current = next;
         storeSelectedVersion(id);

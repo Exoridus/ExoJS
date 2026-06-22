@@ -66,7 +66,13 @@ export async function detectRuntimeSupport(): Promise<void> {
 
     _webgpuSupported = caps.webgpuAdapter !== null;
     _webgl2Supported = caps.webgl2;
-    _autoRendererStatus = _webgpuSupported ? 'webgpu' : _webgl2Supported ? 'webgl2' : 'unsupported';
+    if (_webgpuSupported) {
+        _autoRendererStatus = 'webgpu';
+    } else if (_webgl2Supported) {
+        _autoRendererStatus = 'webgl2';
+    } else {
+        _autoRendererStatus = 'unsupported';
+    }
 
     _capabilitySnapshot = {
         webgl2: caps.webgl2,

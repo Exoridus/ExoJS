@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 import { css, cx } from './react-utils';
 import styles from './ThemeToggle.module.scss';
@@ -7,24 +7,23 @@ const STORAGE_KEY = 'exo-theme';
 
 type Theme = 'dark' | 'light';
 
-function resolveInitialTheme(): Theme {
-    if (typeof window === 'undefined') return 'dark';
-    const fromStorage = window.localStorage.getItem(STORAGE_KEY);
-    if (fromStorage === 'dark' || fromStorage === 'light') return fromStorage;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+function subscribeTheme(onChange: () => void): () => void {
+    const observer = new MutationObserver(onChange);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+}
+
+function getThemeSnapshot(): Theme {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
 }
 
 export function ThemeToggle(): JSX.Element {
-    const [theme, setTheme] = useState<Theme>('dark');
-
-    useEffect(() => {
-        const initial = resolveInitialTheme();
-        setTheme(initial);
-        applyTheme(initial);
-    }, []);
+    // The DOM `data-theme` is the source of truth (set pre-hydration by the AppShell
+    // inline script). Subscribing to it keeps the toggle in sync without a
+    // setState-in-effect and stays hydration-safe via the 'dark' server snapshot.
+    const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, () => 'dark');
 
     const chooseTheme = (nextTheme: Theme): void => {
-        setTheme(nextTheme);
         window.localStorage.setItem(STORAGE_KEY, nextTheme);
         applyTheme(nextTheme);
     };

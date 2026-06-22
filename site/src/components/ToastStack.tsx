@@ -1,18 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 import { dismissToast, getToasts, subscribeToasts, type ToastMessage } from '../lib/toast-store';
 import { css } from './react-utils';
 import styles from './ToastStack.module.scss';
 
-export function ToastStack(): JSX.Element {
-    const [toasts, setToasts] = useState<ReadonlyArray<ToastMessage>>([]);
+const EMPTY_TOASTS: ReadonlyArray<ToastMessage> = [];
 
-    useEffect(() => {
-        setToasts(getToasts());
-        return subscribeToasts(nextToasts => {
-            setToasts(nextToasts);
-        });
-    }, []);
+export function ToastStack(): JSX.Element {
+    // `getToasts` returns a stable module-level array ref (mutated only on change),
+    // so it is a valid useSyncExternalStore snapshot. getServerSnapshot = empty.
+    const toasts = useSyncExternalStore(subscribeToasts, getToasts, () => EMPTY_TOASTS);
 
     return (
         <div className={css(styles, 'root')}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import styles from './LanguagePicker.module.scss';
 import { css, cx } from './react-utils';
@@ -14,14 +14,12 @@ export interface LanguagePickerProps {
 }
 
 export function LanguagePicker({ baseUrl, locale }: LanguagePickerProps): JSX.Element {
-    const [language, setLanguage] = useState<Language>(locale === 'de' ? 'de' : 'en');
+    const language: Language = locale === 'de' ? 'de' : 'en';
 
     useEffect(() => {
-        const nextLanguage = locale === 'de' ? 'de' : 'en';
-        setLanguage(nextLanguage);
-        document.documentElement.setAttribute('lang', nextLanguage);
-        window.localStorage.setItem(STORAGE_KEY, nextLanguage);
-    }, [locale]);
+        document.documentElement.setAttribute('lang', language);
+        window.localStorage.setItem(STORAGE_KEY, language);
+    }, [language]);
 
     const chooseLanguage = (nextLanguage: Language): void => {
         if (language === nextLanguage) return;

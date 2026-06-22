@@ -665,7 +665,12 @@ export default defineConfig([
           allowRegExp: false,
         },
       ],
-      '@typescript-eslint/strict-boolean-expressions': 'warn',
+      // Disabled for site/src to match the engine: `strict-boolean-expressions`
+      // is turned off across every practical src/ directory (core, input, math,
+      // rendering, audio, resources, …). The site's URL/version/runtime helpers
+      // are the same class of nullable-string code, so holding only site code to
+      // it would be an inconsistent double standard.
+      '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/unbound-method': 'off',
 
       '@eslint-react/dom-no-unsafe-iframe-sandbox': 'error',
@@ -679,7 +684,9 @@ export default defineConfig([
 
       curly: 'error',
       eqeqeq: ['error', 'always'],
-      'no-console': 'warn',
+      // Allow console.error/console.warn for intentional diagnostics (e.g. the
+      // fetch/parse error logging in request-manager.ts); only console.log/debug warn.
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-nested-ternary': 'warn',
       'object-shorthand': 'error',
       'prefer-object-spread': 'error',

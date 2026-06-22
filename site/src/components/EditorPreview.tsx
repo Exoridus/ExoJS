@@ -63,18 +63,20 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
     const sourceRef = useRef<string | null>(sourceCode);
     const exampleRef = useRef<Example | null>(exampleMeta);
     const versionRef = useRef(selectedVersionId);
-    const canvasMutationObserver = useRef<MutationObserver | null>(null);
-    const canvasAttributeObserver = useRef<MutationObserver | null>(null);
-    const currentCanvas = useRef({ width: 0, height: 0, zoom: 1 });
+    const canvasMutationObserverRef = useRef<MutationObserver | null>(null);
+    const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
+    const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1 });
 
     sourceRef.current = sourceCode;
     exampleRef.current = exampleMeta;
     versionRef.current = selectedVersionId;
 
     useEffect(() => {
+        // Bump the iframe cache-buster to force a reload when the source changes.
+        // eslint-disable-next-line @eslint-react/set-state-in-effect -- reload preview on source change
         setUpdateId(value => value + 1);
-        disconnectCanvasObservers(canvasMutationObserver, canvasAttributeObserver);
-        currentCanvas.current = { width: 0, height: 0, zoom: 1 };
+        disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+        currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
         rootRef.current?.style.removeProperty('--canvas-w');
         rootRef.current?.style.removeProperty('--canvas-h');
         rootRef.current?.style.removeProperty('--preview-zoom');
@@ -83,10 +85,10 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
 
     useEffect(() => {
         const recalculateZoom = (): void => {
-            const { width, height } = currentCanvas.current;
+            const { width, height } = currentCanvasRef.current;
             if (!width) return;
             const zoom = Math.min(1, window.innerWidth / width);
-            currentCanvas.current = { width, height, zoom };
+            currentCanvasRef.current = { width, height, zoom };
             rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
             onCanvasSize?.({ width, height, zoom });
         };
@@ -151,7 +153,7 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
     };
 
     const watchForCanvas = (iframeBody: HTMLBodyElement): void => {
-        disconnectCanvasObservers(canvasMutationObserver, canvasAttributeObserver);
+        disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
 
         const existing = iframeBody.querySelector('canvas');
         if (existing instanceof HTMLCanvasElement) {

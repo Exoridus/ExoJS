@@ -73,6 +73,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
         if (loadKey === loadKeyRef.current) return;
         loadKeyRef.current = loadKey;
 
+        // Reset the editor for the newly-selected example before loading its source
+        // asynchronously below. This is a prop-change reset (not a render-derived
+        // value); the React-idiomatic alternative — a `key` remount — would re-init
+        // Monaco on every example switch, so we suppress the heuristic here instead.
+        /* eslint-disable @eslint-react/set-state-in-effect */
         setSourceCode(null);
         setOriginalSourceCode(null);
         setExecutionCode(null);
@@ -80,6 +85,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
         setSourceLoadError(null);
         setPreviewErrors([]);
         setDiagnostics([]);
+        /* eslint-enable @eslint-react/set-state-in-effect */
 
         if (!activeExample || !selectedVersionId) return;
 
@@ -266,8 +272,8 @@ function renderErrors(errors: PreviewErrorEntry[]): JSX.Element | null {
                 <span className={css(styles, 'error-summary-count')}>{errors.length}</span>
             </summary>
             <div className={css(styles, 'error-body')}>
-                {errors.map((error, index) => (
-                    <article className={css(styles, 'error-item')} key={`${error.summary}-${index}`}>
+                {errors.map(error => (
+                    <article className={css(styles, 'error-item')} key={`${error.summary}::${error.details ?? ''}`}>
                         <h3 className={css(styles, 'error-item-title')}>{error.summary}</h3>
                         {error.details && error.details !== error.summary && <pre className={css(styles, 'error-details')}>{error.details}</pre>}
                     </article>

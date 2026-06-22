@@ -28,14 +28,15 @@ export function Navigation({ activeExample, availableTags, examples, loaded, loa
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
     const [showAllTags, setShowAllTags] = useState(false);
-    const [overriddenCategories, setOverriddenCategories] = useState<Map<string, boolean>>(new Map());
+    const [overriddenCategories, setOverriddenCategories] = useState<Map<string, boolean>>(() => new Map());
 
     const allExamples = useMemo(() => Array.from(examples.values()).flat(), [examples]);
     const tagCounts = useMemo(() => getTagCounts(allExamples), [allExamples]);
     const allTags = useMemo(() => ['all', ...availableTags], [availableTags]);
     const defaultTags = useMemo(() => buildDefaultTags(allTags, tagCounts), [allTags, tagCounts]);
     const activeTag = activeTagFilter ?? 'all';
-    const visibleTags = showAllTags || allTags.length <= defaultTags.length ? allTags : defaultTags.includes(activeTag) ? defaultTags : [...defaultTags, activeTag];
+    const tagsWithActive = defaultTags.includes(activeTag) ? defaultTags : [...defaultTags, activeTag];
+    const visibleTags = showAllTags || allTags.length <= defaultTags.length ? allTags : tagsWithActive;
     const canToggleTags = allTags.length > defaultTags.length;
     const hiddenCount = Math.max(0, allTags.length - defaultTags.length);
     const filteredExamples = useMemo(
