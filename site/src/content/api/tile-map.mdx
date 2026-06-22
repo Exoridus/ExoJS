@@ -40,7 +40,7 @@ and local tile ID, so different tilesets may have different tile dimensions.
 - `destroy(): void`
 - `getLayerById(id: number): TileLayer | undefined`
 - `getLayerByName(name: string): TileLayer | undefined`
-- `getObjectLayer(name: string): ObjectLayer | undefined`
+- `getObjectLayer(name: string): ObjectLayer<S> | undefined`
 - `getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null`
 - `getTileLayer(name: string): TileLayer | undefined`
 - `getTileset(name: string): TileSet | undefined`
@@ -61,7 +61,7 @@ and local tile ID, so different tilesets may have different tile dimensions.
 - `width: number`
 - `destroyed: boolean`
 - `layers: readonly TileLayer[]`
-- `objectLayers: readonly ObjectLayer[]`
+- `objectLayers: readonly ObjectLayer<ObjectSchema>[]`
 - `pixelHeight: number`
 - `pixelWidth: number`
 - `revision: number`

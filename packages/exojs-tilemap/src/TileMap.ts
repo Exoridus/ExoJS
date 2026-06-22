@@ -1,4 +1,4 @@
-import type { ObjectLayer } from './ObjectLayer';
+import type { ObjectLayer, ObjectSchema } from './ObjectLayer';
 import { type TileLayer } from './TileLayer';
 import type { TileMapViewOptions } from './TileMapView';
 import { TileMapView } from './TileMapView';
@@ -231,9 +231,16 @@ export class TileMap {
 
   /**
    * Get an object layer by name (first match in insertion order), or undefined.
+   *
+   * Supply an {@link ObjectSchema} type argument `S` to obtain a typed view of
+   * the layer — `getObjectLayer<LevelObjects>('Entities')` returns an
+   * `ObjectLayer<LevelObjects>` whose {@link ObjectLayer.byType} / {@link
+   * ObjectLayer.where} accessors narrow `properties`. The schema is a static
+   * developer promise only; no runtime validation is performed and the call
+   * remains fully back-compatible when omitted.
    */
-  public getObjectLayer(name: string): ObjectLayer | undefined {
-    return this._objectLayers.find(layer => layer.name === name);
+  public getObjectLayer<S extends ObjectSchema = ObjectSchema>(name: string): ObjectLayer<S> | undefined {
+    return this._objectLayers.find(layer => layer.name === name) as ObjectLayer<S> | undefined;
   }
 
   // ── Scene composition ─────────────────────────────────────────────────

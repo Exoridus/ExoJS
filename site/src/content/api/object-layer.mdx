@@ -1,15 +1,15 @@
 ---
 title: "ObjectLayer"
-description: "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). Query with query."
+description: "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged."
 symbol: "ObjectLayer"
 kind: "class"
 subsystem: "tilemap"
 importPath: "@codexo/exojs-tilemap"
-memberCount: 14
+memberCount: 17
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-tilemap/src/ObjectLayer.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L121"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L208"
 ---
 ## Import
 
@@ -18,17 +18,27 @@ sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/s
 A data-only layer of TileMapObjects — spawn points, trigger zones,
 collision regions, markers. Object layers are not rendered by the tile
 renderer; they are parsed and exposed for gameplay use (e.g. building physics
-colliders, placing entities). Query with query.
+colliders, placing entities).
+
+Query with query (untyped, fully back-compatible) or, when an
+ObjectSchema type argument `S` is supplied, with the typed accessors
+byType, byKind, and where — these narrow `properties`
+to the developer-declared shape. The schema is **opt-in**: the default type
+parameter reproduces the original untyped behaviour, so
+`new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.
 
 ## Constructors
 
-- `new(options: ObjectLayerOptions): ObjectLayer`
+- `new(options: ObjectLayerOptions): ObjectLayer<S>`
 
 ## Methods
 
-- `getObjectById(id: number): TileMapObject | undefined`
-- `getObjectByName(name: string): TileMapObject | undefined`
-- `query(filter: ObjectQuery): TileMapObject[]`
+- `byKind(kind: K): Extract<RectangleObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<EllipseObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<PointObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<PolygonObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<PolylineObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<TileObject<Readonly<Record<string, TilePropertyValue>>>, object>[]`
+- `byType(type: T): TypedObject<S, T>[]`
+- `getObjectById(id: number): TileMapObject<Readonly<Record<string, TilePropertyValue>>> | undefined`
+- `getObjectByName(name: string): TileMapObject<Readonly<Record<string, TilePropertyValue>>> | undefined`
+- `query(filter: ObjectQuery): TileMapObject<Readonly<Record<string, TilePropertyValue>>>[]`
+- `where(type: T, predicate: object): TypedObject<S, T>[]`
 
 ## Properties
 
@@ -36,7 +46,7 @@ colliders, placing entities). Query with query.
 - `id: number`
 - `kind: "object"`
 - `name: string`
-- `objects: readonly TileMapObject[]`
+- `objects: readonly TileMapObject<Readonly<Record<string, TilePropertyValue>>>[]`
 - `offsetX: number`
 - `offsetY: number`
 - `opacity: number`
@@ -45,4 +55,4 @@ colliders, placing entities). Query with query.
 
 ## Source
 
-[packages/exojs-tilemap/src/ObjectLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L121)
+[packages/exojs-tilemap/src/ObjectLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L208)
