@@ -79,7 +79,7 @@ export class ContactGraph {
       }
 
       const isSensor = a.isSensor || b.isSensor;
-      const key = pairKey(a, b);
+      const key = pairKey(a.id, b.id);
       const existing = this._records.get(key);
       const record = existing ?? createRecord(a, b, isSensor);
       const touching = isSensor ? testOverlap(a, b) : collide(a, b, record.manifold);
@@ -158,8 +158,21 @@ export class ContactGraph {
   }
 }
 
-/** Integer key for an unordered collider pair (`a.id < b.id` guaranteed by the broad phase). */
-const pairKey = (a: Collider, b: Collider): number => (a.id << 16) | b.id;
+/**
+ * Stride for packing two collider ids into one pair key. Multiplying by this
+ * (rather than a 32-bit `<<`) keeps the key collision-free up to ~67M (2^26)
+ * ids per world, within JS's 2^53 safe-integer range.
+ * @internal
+ */
+export const pairKeyStride = 0x4000000; // 2^26
+
+/**
+ * Integer key for an unordered collider pair (`aId < bId` is guaranteed by the
+ * broad phase). The previous `(aId << 16) | bId` silently collided once any id
+ * reached 65536, because JS bitwise operators wrap at 32 bits.
+ * @internal
+ */
+export const pairKey = (aId: number, bId: number): number => aId * pairKeyStride + bId;
 
 const createRecord = (a: Collider, b: Collider, isSensor: boolean): ContactRecord => ({
   a,
