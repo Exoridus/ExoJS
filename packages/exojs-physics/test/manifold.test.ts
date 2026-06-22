@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Manifold } from '../src/collision/Manifold';
 import { collide } from '../src/collision/narrowphase';
-import { BoxShape, CircleShape, PhysicsWorld } from '../src/index';
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '../src/index';
 import { colliderAt } from './support';
 
 const manifold = new Manifold();
@@ -79,8 +79,8 @@ describe('narrow phase — manifold generation (gate B-2)', () => {
   it('feature ids stay stable across a slow horizontal approach (SG-M1)', () => {
     const world = new PhysicsWorld();
     const a = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
-    const movingBody = world.createBody({ type: 'static', position: { x: 20, y: 0 } });
-    const b = movingBody.createCollider({ shape: new BoxShape(10, 10) });
+    const movingBody = world.add(new PhysicsBody({ type: 'static', position: { x: 20, y: 0 } }));
+    const b = movingBody.addCollider({ shape: new BoxShape(10, 10) });
 
     let previousIds: number[] | null = null;
 

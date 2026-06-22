@@ -21,6 +21,8 @@ export interface BodyOptions {
   gravityScale?: number;
   /** When `true`, the body never rotates under contacts (infinite rotational inertia). Default `false`. */
   fixedRotation?: boolean;
+  /** Colliders to attach up-front. Each may be a {@link Collider} instance or its {@link ColliderOptions}. */
+  colliders?: Array<Collider | ColliderOptions>;
 }
 
 /**
@@ -42,7 +44,6 @@ export interface BodyOwner {
  * directly; reposition it (teleport, no velocity) with {@link setTransform}.
  */
 export class PhysicsBody {
-  public readonly id: number;
   public readonly type: BodyType;
 
   /** Linear damping applied to the velocity each sub-step. */
@@ -88,7 +89,9 @@ export class PhysicsBody {
   private _forceY = 0;
   private _torque = 0;
 
-  private readonly _owner: BodyOwner;
+  private _id = -1;
+  private _owner: BodyOwner | null = null;
+  private _attached = false;
   private readonly _transform: Transform;
   private readonly _colliders: Collider[] = [];
   private _comX = 0;
@@ -96,15 +99,32 @@ export class PhysicsBody {
   private _massReady = false;
   private _destroyed = false;
 
-  public constructor(owner: BodyOwner, id: number, options: BodyOptions = {}) {
-    this.id = id;
+  public constructor(options: BodyOptions = {}) {
     this.type = options.type ?? 'dynamic';
-    this._owner = owner;
     this._transform = createTransform(options.position?.x ?? 0, options.position?.y ?? 0, options.angle ?? 0);
     this.linearDamping = options.linearDamping ?? 0;
     this.angularDamping = options.angularDamping ?? 0;
     this.gravityScale = options.gravityScale ?? 1;
     this.fixedRotation = options.fixedRotation ?? false;
+
+    // Build up-front colliders now (no id/world registration until the body
+    // joins a world via `world.add()`). They sit in `_colliders` unsynchronised;
+    // `_attachToWorld` assigns ids, registers them and computes the mass model.
+    if (options.colliders) {
+      for (const entry of options.colliders) {
+        this._colliders.push(entry instanceof Collider ? entry : new Collider(entry));
+      }
+    }
+  }
+
+  /** Stable id, assigned when the body joins a world via `world.add()`; `-1` until then. */
+  public get id(): number {
+    return this._id;
+  }
+
+  /** `true` once the body has been added to a world (guards against double-add). */
+  public get attached(): boolean {
+    return this._attached;
   }
 
   /** World X. */
@@ -161,22 +181,36 @@ export class PhysicsBody {
     return this._destroyed;
   }
 
-  /** Attach a new collider, recomputing mass and synchronising world geometry. */
-  public createCollider(options: ColliderOptions): Collider {
+  /**
+   * Attach a collider to this body. Accepts a {@link Collider} instance or its
+   * {@link ColliderOptions} (a convenience that constructs the collider for you).
+   * When the body is already in a world, the collider is id-allocated, registered,
+   * the mass model is recomputed and the world geometry synchronised immediately;
+   * on a free-standing body the collider is simply held until `world.add()`.
+   * Returns the collider.
+   */
+  public addCollider(collider: Collider | ColliderOptions): Collider {
     if (this._destroyed) {
-      throw new Error('PhysicsBody: cannot create a collider on a destroyed body.');
+      throw new Error('PhysicsBody: cannot add a collider to a destroyed body.');
     }
 
     // Collider imports PhysicsBody type-only (erased), so this value import is
     // one-directional — no runtime cycle.
-    const collider = new Collider(this._owner._allocateColliderId(), this, options);
+    const instance = collider instanceof Collider ? collider : new Collider(collider);
 
-    this._colliders.push(collider);
-    this._recomputeMass();
-    collider.synchronize(this._transform);
-    this._owner._registerCollider(collider);
+    this._colliders.push(instance);
 
-    return collider;
+    // Before the body joins a world there is no owner to allocate ids / register
+    // with; `_attachToWorld` does that (and the mass/sync pass) for every held
+    // collider. Once attached, mirror the world's create order exactly.
+    if (this._attached && this._owner) {
+      instance._attach(this, this._owner._allocateColliderId());
+      this._recomputeMass();
+      instance.synchronize(this._transform);
+      this._owner._registerCollider(instance);
+    }
+
+    return instance;
   }
 
   /**
@@ -326,6 +360,43 @@ export class PhysicsBody {
     if (index !== -1) {
       this._colliders.splice(index, 1);
       this._recomputeMass();
+    }
+  }
+
+  /**
+   * @internal — join `owner`'s world with the allocated `id`. Allocates ids for
+   * and registers every held collider, then aggregates the mass model and
+   * synchronises world geometry. Called once by {@link PhysicsWorld.add}.
+   *
+   * Ordering matters and mirrors the per-collider create path exactly: ids and
+   * the body link go on first, then a single mass recompute over the full
+   * collider set (so the centre of mass / inertia aggregate is correct), then
+   * `synchronize` over every collider (the cached world geometry the broad/narrow
+   * phase reads), then world registration last. Recomputing mass before all
+   * colliders are linked, or syncing before the mass model exists, would feed the
+   * solver a stale CoM and produce subtle integration bugs.
+   */
+  public _attachToWorld(owner: BodyOwner, id: number): void {
+    if (this._destroyed) {
+      throw new Error('PhysicsBody: cannot add a destroyed body to a world.');
+    }
+
+    this._owner = owner;
+    this._id = id;
+    this._attached = true;
+
+    for (const collider of this._colliders) {
+      collider._attach(this, owner._allocateColliderId());
+    }
+
+    this._recomputeMass();
+
+    for (const collider of this._colliders) {
+      collider.synchronize(this._transform);
+    }
+
+    for (const collider of this._colliders) {
+      owner._registerCollider(collider);
     }
   }
 

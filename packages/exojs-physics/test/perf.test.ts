@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BoxShape, PhysicsWorld } from '../src/index';
-import type { PhysicsBody } from '../src/PhysicsBody';
+import { PhysicsBody } from '../src/PhysicsBody';
 
 /**
  * Phase-2B performance gates (spec `04` §3): P-1 steady-state allocation and P-2
@@ -27,7 +27,9 @@ const buildField = (columns: number, rows: number): { world: PhysicsWorld; bodie
   const floorTop = 1000;
   const width = columns * spacing + 200;
 
-  world.createStaticCollider({ shape: new BoxShape(width, 40), position: { x: width / 2, y: floorTop + 20 }, friction: 0.5 });
+  world.add(
+    new PhysicsBody({ type: 'static', position: { x: width / 2, y: floorTop + 20 }, colliders: [{ shape: new BoxShape(width, 40), friction: 0.5 }] }),
+  );
 
   const bodies: PhysicsBody[] = [];
 
@@ -35,9 +37,14 @@ const buildField = (columns: number, rows: number): { world: PhysicsWorld; bodie
     const x = 100 + c * spacing;
 
     for (let r = 0; r < rows; r++) {
-      const body = world.createBody({ type: 'dynamic', position: { x, y: floorTop - size / 2 - 1 - r * size } });
+      const body = world.add(
+        new PhysicsBody({
+          type: 'dynamic',
+          position: { x, y: floorTop - size / 2 - 1 - r * size },
+          colliders: [{ shape: new BoxShape(size, size), density: 1, friction: 0.5 }],
+        }),
+      );
 
-      body.createCollider({ shape: new BoxShape(size, size), density: 1, friction: 0.5 });
       bodies.push(body);
     }
   }

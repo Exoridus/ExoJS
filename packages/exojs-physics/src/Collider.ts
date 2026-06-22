@@ -40,8 +40,7 @@ export interface ColliderOptions {
  * immutable (rebuild the collider to change geometry).
  */
 export class Collider {
-  public readonly id: number;
-  public readonly body: PhysicsBody;
+  /** Stable id, assigned when the owning body joins a world (`-1` until then). */
   public readonly shape: Shape;
   public readonly offsetX: number;
   public readonly offsetY: number;
@@ -53,6 +52,8 @@ export class Collider {
   public isSensor: boolean;
   public readonly filter: CollisionFilter;
 
+  private _id = -1;
+  private _body: PhysicsBody | null = null;
   private readonly _localTransform: Transform;
   private readonly _worldTransform: Transform = createTransform();
   private readonly _aabb: Aabb = createAabb();
@@ -62,15 +63,13 @@ export class Collider {
 
   private _destroyed = false;
 
-  public constructor(id: number, body: PhysicsBody, options: ColliderOptions) {
+  public constructor(options: ColliderOptions) {
     const density = options.density ?? 1;
 
     if (!Number.isFinite(density) || density < 0) {
       throw new RangeError(`Collider: density must be a non-negative finite number, received ${density}.`);
     }
 
-    this.id = id;
-    this.body = body;
     this.shape = options.shape;
     this.offsetX = options.offset?.x ?? 0;
     this.offsetY = options.offset?.y ?? 0;
@@ -90,6 +89,23 @@ export class Collider {
       this._worldVertices = [];
       this._worldNormals = [];
     }
+  }
+
+  /** Stable id, assigned when the owning body joins a world via `world.add()`; `-1` until then. */
+  public get id(): number {
+    return this._id;
+  }
+
+  /**
+   * The body this collider belongs to. `null` until the collider has been added
+   * to a body that has joined a world (free-standing colliders have no body yet).
+   */
+  public get body(): PhysicsBody {
+    if (this._body === null) {
+      throw new Error('Collider: this collider has not been attached to a body in a world yet.');
+    }
+
+    return this._body;
   }
 
   /** The collider's world AABB (valid after the latest {@link synchronize}). */
@@ -175,6 +191,12 @@ export class Collider {
     this._aabb.minY = minY;
     this._aabb.maxX = maxX;
     this._aabb.maxY = maxY;
+  }
+
+  /** @internal — bind this collider to its body and id (called when the body joins a world). */
+  public _attach(body: PhysicsBody, id: number): void {
+    this._body = body;
+    this._id = id;
   }
 
   /** Internal: mark destroyed (called by the world). */
