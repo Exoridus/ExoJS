@@ -105,7 +105,7 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
         return () => {
             window.removeEventListener('resize', recalculateZoom);
             window.removeEventListener('keydown', preventScroll);
-            disconnectCanvasObservers(canvasMutationObserver, canvasAttributeObserver);
+            disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
         };
     }, [onCanvasSize]);
 
@@ -134,7 +134,7 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
     const applyCanvasSize = (width: number, height: number): void => {
         if (!width || !height) return;
         const zoom = Math.min(1, window.innerWidth / width);
-        currentCanvas.current = { width, height, zoom };
+        currentCanvasRef.current = { width, height, zoom };
         rootRef.current?.style.setProperty('--canvas-w', `${width}px`);
         rootRef.current?.style.setProperty('--canvas-h', `${height}px`);
         rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
@@ -143,10 +143,10 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
 
     const observeCanvas = (canvas: HTMLCanvasElement): void => {
         applyCanvasSize(canvas.width, canvas.height);
-        canvasAttributeObserver.current = new MutationObserver(() => {
+        canvasAttributeObserverRef.current = new MutationObserver(() => {
             applyCanvasSize(canvas.width, canvas.height);
         });
-        canvasAttributeObserver.current.observe(canvas, {
+        canvasAttributeObserverRef.current.observe(canvas, {
             attributes: true,
             attributeFilter: ['width', 'height'],
         });
@@ -161,14 +161,14 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
             return;
         }
 
-        canvasMutationObserver.current = new MutationObserver(() => {
+        canvasMutationObserverRef.current = new MutationObserver(() => {
             const canvas = iframeBody.querySelector('canvas');
             if (!(canvas instanceof HTMLCanvasElement)) return;
-            canvasMutationObserver.current?.disconnect();
-            canvasMutationObserver.current = null;
+            canvasMutationObserverRef.current?.disconnect();
+            canvasMutationObserverRef.current = null;
             observeCanvas(canvas);
         });
-        canvasMutationObserver.current.observe(iframeBody, { childList: true, subtree: true });
+        canvasMutationObserverRef.current.observe(iframeBody, { childList: true, subtree: true });
     };
 
     const onLoadIframe = (event: SyntheticEvent<HTMLIFrameElement>): void => {

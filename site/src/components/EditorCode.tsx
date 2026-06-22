@@ -4,7 +4,7 @@ import MonacoReactEditor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import { type ChangeEvent, forwardRef, type RefObject, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type ChangeEvent, forwardRef, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID } from '../lib/versions';
@@ -123,10 +123,10 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
     const modelRef = useRef<monaco.editor.ITextModel | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const autoRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const autoRefreshRef = useRef(autoRefresh);
-    const typingsAppliedVersion = useRef<string | null>(null);
-    const disposables = useRef<monaco.IDisposable[]>([]);
+    const typingsAppliedVersionRef = useRef<string | null>(null);
+    const disposablesRef = useRef<monaco.IDisposable[]>([]);
     const sourceCodeRef = useRef(sourceCode);
     const selectedVersionRef = useRef(selectedVersionId);
 
@@ -138,14 +138,17 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
     }, [autoRefresh]);
 
     useEffect(() => {
+        // Reset the editor buffer when the selected example (sourcePath) or its loaded
+        // source changes — a prop-change reset, not render-derived state.
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
         setEditorValue(sourceCode ?? '');
         onDirty(false);
     }, [onDirty, sourceCode, sourcePath]);
 
     useEffect(() => {
         if (!selectedVersionId) return;
-        void ensureTypingsForVersion(selectedVersionId, selectedVersionRef, typingsAppliedVersion, () =>
-            updateDiagnostics(modelRef.current, selectedVersionRef.current, typingsAppliedVersion.current, onDiagnostic),
+        void ensureTypingsForVersion(selectedVersionId, selectedVersionRef, typingsAppliedVersionRef, () =>
+            updateDiagnostics(modelRef.current, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic),
         );
     }, [onDiagnostic, selectedVersionId]);
 
@@ -162,17 +165,17 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
 
     useEffect(
         () => () => {
-            if (autoRefreshTimer.current !== null) {
-                clearTimeout(autoRefreshTimer.current);
-                autoRefreshTimer.current = null;
+            if (autoRefreshTimerRef.current !== null) {
+                clearTimeout(autoRefreshTimerRef.current);
+                autoRefreshTimerRef.current = null;
             }
-            for (const disposable of disposables.current) disposable.dispose();
-            disposables.current = [];
+            for (const disposable of disposablesRef.current) disposable.dispose();
+            disposablesRef.current = [];
         },
         [],
     );
 
-    const triggerRefresh = async (): Promise<void> => {
+    const triggerRefresh = useCallback(async (): Promise<void> => {
         const editor = editorRef.current;
         if (!editor) return;
         const code = editor.getValue();
@@ -182,7 +185,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
             executionCode: language === 'typescript' ? executionCode : undefined,
         });
         onDirty(false);
-    };
+    }, [language, onUpdateCode, onDirty]);
 
     useImperativeHandle(
         ref,
@@ -206,7 +209,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
         modelRef.current = editor.getModel();
         window.monaco = monacoApi;
 
-        disposables.current.push(
+        disposablesRef.current.push(
             editor.onDidChangeCursorSelection(event => {
                 const selection = event.selection;
                 const position = selection.getPosition();
@@ -218,9 +221,9 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
                 const dirty = editor.getValue() !== sourceCodeRef.current;
                 onDirty(dirty);
                 if (autoRefreshRef.current && dirty) {
-                    if (autoRefreshTimer.current !== null) clearTimeout(autoRefreshTimer.current);
-                    autoRefreshTimer.current = setTimeout(() => {
-                        autoRefreshTimer.current = null;
+                    if (autoRefreshTimerRef.current !== null) clearTimeout(autoRefreshTimerRef.current);
+                    autoRefreshTimerRef.current = setTimeout(() => {
+                        autoRefreshTimerRef.current = null;
                         if (autoRefreshRef.current) void triggerRefresh();
                     }, 800);
                 }
@@ -229,7 +232,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
                 const model = editor.getModel();
                 if (!model) return;
                 if (resources.some(resource => resource.toString() === model.uri.toString())) {
-                    updateDiagnostics(model, selectedVersionRef.current, typingsAppliedVersion.current, onDiagnostic);
+                    updateDiagnostics(model, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
                 }
             }),
         );
@@ -240,7 +243,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
         }
 
         onCursorChange({ lineNumber: 1, column: 1, selectionLength: 0 });
-        updateDiagnostics(editor.getModel(), selectedVersionRef.current, typingsAppliedVersion.current, onDiagnostic);
+        updateDiagnostics(editor.getModel(), selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
         requestAnimationFrame(() => editor.layout());
     };
 

@@ -13,16 +13,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   {
-    ignores: [
-      'dist/**',
-      'node_modules/**',
-      'src/vendor/**',
-      'site/dist/**',
-      'site/node_modules/**',
-      'site/public/vendor/**',
-      'coverage/**',
-      '**/*.min.*',
-    ],
+    ignores: ['dist/**', 'node_modules/**', 'src/vendor/**', 'site/dist/**', 'site/node_modules/**', 'site/public/vendor/**', 'coverage/**', '**/*.min.*'],
   },
 
   // Base JavaScript recommendations
@@ -272,7 +263,7 @@ export default defineConfig([
 
       // Unicorn
       'unicorn/error-message': 'error',
-      'unicorn/no-for-each': 'warn',
+      'unicorn/no-array-for-each': 'warn',
       'unicorn/no-instanceof-array': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
@@ -511,7 +502,7 @@ export default defineConfig([
 
       // Unicorn
       'unicorn/error-message': 'error',
-      'unicorn/no-for-each': 'warn',
+      'unicorn/no-array-for-each': 'warn',
       'unicorn/no-instanceof-array': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
