@@ -8,7 +8,7 @@ import type { Loadable, Loader } from '#resources/Loader';
 import { applyCommonFields, writeCommonFields } from './commonFields';
 import { registerCoreSerializers } from './coreSerializers';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
-import { defaultSerializationRegistry } from './SerializationRegistry';
+import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
 import { SERIALIZATION_VERSION, type SerializedNode, type SerializedScene } from './types';
 
 // Core serializers register lazily (not as an import side effect) so they
@@ -26,11 +26,11 @@ function ensureCoreSerializers(): void {
   registerCoreSerializers(defaultSerializationRegistry);
 }
 
-function createSerializeContext(loader: Loader | null): SerializeContext {
+function createSerializeContext(loader: Loader | null, registry: SerializationRegistry): SerializeContext {
   const ctx: SerializeContext = {
     version: SERIALIZATION_VERSION,
     loader,
-    writeNode: node => writeNodeWith(node, ctx),
+    writeNode: node => writeNodeWith(node, ctx, registry),
     keyFor: resource => {
       if (resource === null || resource === undefined || typeof resource !== 'object' || loader === null) {
         return null;
@@ -54,11 +54,11 @@ function createSerializeContext(loader: Loader | null): SerializeContext {
   return ctx;
 }
 
-function createDeserializeContext(loader: Loader | null, version: number): DeserializeContext {
+function createDeserializeContext(loader: Loader | null, version: number, registry: SerializationRegistry): DeserializeContext {
   const ctx: DeserializeContext = {
     version,
     loader,
-    readNode: data => readNodeWith(data, ctx),
+    readNode: data => readNodeWith(data, ctx, registry),
     resolveAsset: <T>(source: string | null | undefined, type: AssetConstructor<T>): T | null => {
       if (source === null || source === undefined || loader === null) {
         return null;
@@ -80,8 +80,8 @@ function createDeserializeContext(loader: Loader | null, version: number): Deser
   return ctx;
 }
 
-function writeNodeWith(node: SceneNode, ctx: SerializeContext): SerializedNode {
-  const entry = defaultSerializationRegistry.resolveByNode(node);
+function writeNodeWith(node: SceneNode, ctx: SerializeContext, registry: SerializationRegistry): SerializedNode {
+  const entry = registry.resolveByNode(node);
 
   if (entry === undefined) {
     throw new Error(`No serializer registered for node type "${node.constructor.name}". Register one via registerSerializer().`);
@@ -95,8 +95,8 @@ function writeNodeWith(node: SceneNode, ctx: SerializeContext): SerializedNode {
   return out;
 }
 
-function readNodeWith(data: SerializedNode, ctx: DeserializeContext): SceneNode {
-  const entry = defaultSerializationRegistry.resolveByName(data.type);
+function readNodeWith(data: SerializedNode, ctx: DeserializeContext, registry: SerializationRegistry): SceneNode {
+  const entry = registry.resolveByName(data.type);
 
   if (entry === undefined) {
     throw new Error(`No serializer registered for type "${data.type}". Register one via registerSerializer().`);
@@ -114,10 +114,10 @@ function readNodeWith(data: SerializedNode, ctx: DeserializeContext): SceneNode 
  * {@link Loader} so texture/asset references resolve to their source keys.
  * @internal
  */
-export function serializeTree(node: SceneNode, loader: Loader | null = null): SerializedNode {
+export function serializeTree(node: SceneNode, loader: Loader | null = null, registry: SerializationRegistry = defaultSerializationRegistry): SerializedNode {
   ensureCoreSerializers();
 
-  return writeNodeWith(node, createSerializeContext(loader));
+  return writeNodeWith(node, createSerializeContext(loader, registry), registry);
 }
 
 /**
@@ -125,10 +125,10 @@ export function serializeTree(node: SceneNode, loader: Loader | null = null): Se
  * must be pre-loaded into `loader`.
  * @internal
  */
-export function deserializeTree(data: SerializedNode, loader: Loader | null = null): SceneNode {
+export function deserializeTree(data: SerializedNode, loader: Loader | null = null, registry: SerializationRegistry = defaultSerializationRegistry): SceneNode {
   ensureCoreSerializers();
 
-  return readNodeWith(data, createDeserializeContext(loader, SERIALIZATION_VERSION));
+  return readNodeWith(data, createDeserializeContext(loader, SERIALIZATION_VERSION, registry), registry);
 }
 
 /**
@@ -138,10 +138,15 @@ export function deserializeTree(data: SerializedNode, loader: Loader | null = nu
  * eagerly-created scene root.
  * @internal
  */
-export function deserializeInto(container: Container, data: SerializedNode, loader: Loader | null = null): void {
+export function deserializeInto(
+  container: Container,
+  data: SerializedNode,
+  loader: Loader | null = null,
+  registry: SerializationRegistry = defaultSerializationRegistry,
+): void {
   ensureCoreSerializers();
 
-  const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION);
+  const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION, registry);
 
   container.removeChildren();
   applyCommonFields(container, data);

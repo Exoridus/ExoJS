@@ -28,7 +28,7 @@ import { Color } from './Color';
 import { computeLetterboxLayout } from './letterbox';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
-import { defaultSerializationRegistry } from './serialization/SerializationRegistry';
+import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
 import { Time } from './Time';
@@ -232,6 +232,14 @@ export class Application {
    * 600+ via `app.systems.add(...)`. Scene-scoped systems live on `scene.systems`.
    */
   public readonly systems = new SystemRegistry();
+  /**
+   * App-scoped serializer registry, chained to the global
+   * {@link defaultSerializationRegistry}. Extension serializers materialise here
+   * rather than globally, so two {@link Application} instances in one process
+   * keep their extension serializers isolated; core and globally-registered
+   * (via `registerSerializer`) serializers remain shared through the fallback.
+   */
+  public readonly serializers = new SerializationRegistry(defaultSerializationRegistry);
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
@@ -327,7 +335,7 @@ export class Application {
 
     try {
       materializeAssetBindings(this.loader, [...coreAssetBindings, ...this._snapshot.assets]);
-      materializeSerializerBindings(defaultSerializationRegistry, this._snapshot.serializers);
+      materializeSerializerBindings(this.serializers, this._snapshot.serializers);
     } catch (error) {
       try {
         this.loader.destroy();

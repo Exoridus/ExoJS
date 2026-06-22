@@ -46,6 +46,15 @@ export class SerializationRegistry {
   private readonly _byName = new Map<string, SerializerEntry>();
 
   /**
+   * @param _fallback Optional parent registry consulted when this registry has
+   *   no own entry for a lookup. An {@link Application} owns its own registry
+   *   chained to the {@link defaultSerializationRegistry}, so app-scoped
+   *   extension serializers stay isolated per Application while core and
+   *   globally-registered serializers remain shared.
+   */
+  public constructor(private readonly _fallback: SerializationRegistry | null = null) {}
+
+  /**
    * Register `serializer` for `ctor` under `typeName`. Re-registering the same
    * `(typeName, ctor)` pair overwrites silently; registering an existing
    * `typeName` against a **different** constructor throws.
@@ -69,7 +78,7 @@ export class SerializationRegistry {
    * @internal
    */
   public resolveByNode(node: SceneNode): SerializerEntry | undefined {
-    return this._byCtor.resolve(node.constructor as SceneNodeConstructor);
+    return this._byCtor.resolve(node.constructor as SceneNodeConstructor) ?? this._fallback?.resolveByNode(node);
   }
 
   /**
@@ -77,12 +86,12 @@ export class SerializationRegistry {
    * @internal
    */
   public resolveByName(typeName: string): SerializerEntry | undefined {
-    return this._byName.get(typeName);
+    return this._byName.get(typeName) ?? this._fallback?.resolveByName(typeName);
   }
 
   /** Returns `true` if a serializer is registered under `typeName`. */
   public hasType(typeName: string): boolean {
-    return this._byName.has(typeName);
+    return this._byName.has(typeName) || (this._fallback?.hasType(typeName) ?? false);
   }
 }
 
