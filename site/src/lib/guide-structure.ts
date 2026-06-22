@@ -354,6 +354,18 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 prerequisites: ['rendering/sprites'],
                 apiLinks: ['drawable', 'sprite', 'view'],
             },
+            {
+                slug: 'immediate-mode',
+                level: 'advanced',
+                learningGoals: [
+                    'draw procedural geometry without a scene node via drawGeometry',
+                    'instance thousands of like items as one draw call with RenderBatch',
+                    'know when immediate rendering beats the retained scene graph',
+                ],
+                prerequisites: ['rendering/graphics'],
+                examples: ['geometry-graphics/immediate-mode-rendering'],
+                apiLinks: ['rendering-context', 'render-batch', 'geometry', 'matrix', 'color'],
+            },
         ],
     },
     {

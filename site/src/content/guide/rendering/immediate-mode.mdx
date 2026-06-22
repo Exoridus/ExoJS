@@ -1,0 +1,158 @@
+---
+title: 'Immediate-mode rendering'
+description: 'Draw procedural geometry without a scene node using drawGeometry, and instance thousands of like items as a single draw call with RenderBatch.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# Immediate-mode rendering
+
+Most rendering in ExoJS is _retained_: you build a tree of [`SceneNode`](/ExoJS/en/api/scene-node/) objects — sprites, meshes, containers — and the engine walks it every frame, culls it, batches it, and draws it. The tree is the source of truth, and you mutate it between frames.
+
+Immediate-mode rendering is the opposite. You hand a [`Geometry`](/ExoJS/en/api/geometry/) and a world [`Matrix`](/ExoJS/en/api/matrix/) straight to the [`RenderingContext`](/ExoJS/en/api/rendering-context/) inside `Scene.draw`, and it draws right then — no node, no parent, no transform composition. Two methods cover it:
+
+- [`drawGeometry`](/ExoJS/en/api/rendering-context/) — draw **one** geometry with a raw transform. One draw call per call.
+- [`drawBatch`](/ExoJS/en/api/rendering-context/) — draw a [`RenderBatch`](/ExoJS/en/api/render-batch/) of **N** instances of one geometry as a **single** instanced draw call.
+
+## When to use it
+
+Reach for immediate mode when wrapping each item in a node would be wasteful and the data already lives in a plain array:
+
+- **Procedural or data-driven shapes** — debug gizmos, generated levels, charts, vector fields, particles you simulate yourself. The geometry is computed, not authored, so there is nothing to retain.
+- **Many like items as one draw call** — thousands of tiles, bullets, grass blades, sparks. A `RenderBatch` uploads the geometry once and submits every instance in a single instanced draw, where the scene graph would batch (or fail to batch) per node.
+- **Throwaway frames** — when the set of things to draw changes completely every frame, building and tearing down nodes costs more than just drawing.
+
+Stay with the scene graph when you need its services: parenting and transform inheritance, hit-testing, culling, filters, masks, `cacheAsBitmap`, or the editor/serialization tooling. Immediate mode is a deliberate escape hatch, not a replacement — you can freely mix both in the same `draw`.
+
+## Building geometry
+
+A `Geometry` is interleaved vertex data plus a layout. The immediate path expects the standard mesh layout: a `a_position` attribute (two floats), and optionally `a_texcoord` (two floats) and `a_color` (four bytes, normalized). An untextured, vertex-colored shape needs only position and color — and no material at all, because the default mesh material samples a 1×1 white texture and multiplies it by the vertex color and tint.
+
+```ts
+import { Geometry } from '@codexo/exojs';
+
+// A solid-color triangle: position (f32 x2) + color (u8 x4) per vertex.
+const stride = 12; // 8 bytes position + 4 bytes color
+const buffer = new ArrayBuffer(3 * stride);
+const view = new DataView(buffer);
+
+const corners = [
+    [0, -40],
+    [40, 40],
+    [-40, 40],
+];
+
+corners.forEach(([x, y], i) => {
+    const base = i * stride;
+    view.setFloat32(base + 0, x, true);
+    view.setFloat32(base + 4, y, true);
+    view.setUint8(base + 8, 120); // r
+    view.setUint8(base + 9, 200); // g
+    view.setUint8(base + 10, 255); // b
+    view.setUint8(base + 11, 255); // a
+});
+
+const triangle = new Geometry({
+    attributes: [
+        { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+        { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 8 },
+    ],
+    vertexData: buffer,
+    stride,
+    usage: 'static',
+});
+```
+
+Build the geometry once in `Scene.init` and keep it — it carries no transform, so the same shape is reused at any position. Geometry must use `triangle-list` topology (the default) for the immediate path; custom per-vertex attributes beyond position/texcoord/color are dropped.
+
+## Drawing one shape: drawGeometry
+
+`drawGeometry(geometry, transform, options?)` draws the geometry with `transform` as its raw world matrix. The matrix is taken verbatim as `a, b, c, d, tx, ty` — there is no position / rotation / scale / origin composition the way a node would apply. You build the world matrix yourself, which is the point: full control, zero overhead.
+
+```js
+draw(context) {
+    context.backend.clear();
+
+    // A row of the same triangle, each at a different position, rotation,
+    // and scale. Each call is its own flush and its own draw call.
+    for (let i = 0; i < 5; i++) {
+        const angle = this.elapsed + i;
+        const cos = Math.cos(angle) * 1.5;
+        const sin = Math.sin(angle) * 1.5;
+        const x = 200 + i * 160;
+
+        // Row-major affine: a, b, tx, c, d, ty.
+        this.transform.set(cos, -sin, x, sin, cos, 360);
+        context.drawGeometry(this.triangle, this.transform, { tint: this.tints[i] });
+    }
+}
+```
+
+The optional third argument carries a `tint` ([`Color`](/ExoJS/en/api/color/)) multiplied into the vertex colors, a custom `material` (must target `'mesh'`), and a `view` override. Each `drawGeometry` is flushed immediately, so it lands in call order relative to the surrounding `render` and `drawGeometry` calls — a shape drawn later layers on top. Because it flushes per call, `drawGeometry` is best for a handful of shapes; for many like items, batch them.
+
+## Drawing many: RenderBatch + drawBatch
+
+A [`RenderBatch`](/ExoJS/en/api/render-batch/) is one geometry plus one material drawn once with N per-instance `(transform, tint)` pairs — the instanced form of the immediate path. It collapses thousands of like items into a single draw call.
+
+```js
+import { Geometry, RenderBatch } from '@codexo/exojs';
+
+// In Scene.init — the geometry must be 'static' (the default); the batch
+// uploads it to the GPU once and caches it by identity.
+const sparkGeometry = new Geometry({
+    attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+    vertexData: new Float32Array([0, 0, 8, 0, 4, 8]),
+    stride: 8,
+    usage: 'static',
+});
+
+const batch = new RenderBatch(sparkGeometry);
+```
+
+Each frame, rebuild the instances and submit the batch. `clear` resets the instance count but **keeps** the pooled per-instance storage, so a steady-state batch allocates nothing across frames. `add` **copies** the transform and tint, so you can reuse one scratch `Matrix` for every instance:
+
+```js
+draw(context) {
+    context.backend.clear();
+
+    this.batch.clear();
+    for (const spark of this.sparks) {
+        const x = this.centerX + Math.cos(spark.angle) * spark.radius;
+        const y = this.centerY + Math.sin(spark.angle) * spark.radius;
+
+        // One scratch matrix, rewritten and copied into the batch per instance.
+        this.scratch.set(spark.scale, 0, x, 0, spark.scale, y);
+        this.batch.add(this.scratch, spark.tint);
+    }
+
+    // Every instance ships as ONE instanced draw call.
+    context.drawBatch(this.batch);
+}
+```
+
+A few rules the batch enforces:
+
+- The geometry must be `usage: 'static'` — the GPU buffer is uploaded once and cached by identity. Dynamic or stream geometry is rejected.
+- v1 renders batches with the default mesh material (per-instance tint over the geometry's vertex colors); a custom `RenderBatch.material` on the instanced path is not yet supported.
+- An empty batch (`count === 0`) is a no-op.
+
+Call `batch.destroy()` in `Scene.unload`/`destroy` to release the pooled storage. The geometry and any material are owned by you and are not destroyed with the batch.
+
+## Proving the draw call: RenderStats
+
+The payoff is visible in the per-frame counters. `context.stats.drawCalls` reports the number of GPU draw calls issued this frame. A batched field of 2,400 sparks adds exactly **one** to that count; drawing the same 2,400 sparks with one `drawGeometry` each adds 2,400. Read it at the end of `draw` to surface it in a HUD or the debug overlay:
+
+```js no-check
+const drawCalls = context.stats.drawCalls;
+hud.setStatus(`sparks via RenderBatch · drawCalls: ${drawCalls}`);
+```
+
+## Worked example
+
+The example draws procedural gears with one `drawGeometry` call each and a field of 2,400 sparks as a single `RenderBatch` draw. Toggle the spark field between the instanced batch and one `drawGeometry` per spark and watch the live `drawCalls` readout jump from a handful to thousands — the whole reason the batch exists.
+
+<ExamplePreview chapter="geometry-graphics" slug="immediate-mode-rendering" />
+
+## Where to go next
+
+Immediate mode shares the mesh vertex layout with [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/) — pass a `MeshMaterial` to `drawGeometry`'s options to drive the immediate path with your own GLSL/WGSL. To measure where the scene graph itself becomes the bottleneck before reaching for immediate mode, see the [Performance](/ExoJS/en/guide/debugging/performance/) chapter and its stress examples.
