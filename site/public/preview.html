@@ -69,6 +69,10 @@
                 var audioFxEntry;
                 var tiledEntry;
                 var tiledRegisterEntry;
+                var tilemapEntry;
+                var tilemapRegisterEntry;
+                var physicsEntry;
+                var physicsDebugEntry;
                 if (!safeVersion || safeVersion === 'current') {
                     exoEntry = './vendor/exojs/esm/index.js?no-cache=' + noCache;
                     exoDebugEntry = './vendor/exojs/esm/debug/index.js?no-cache=' + noCache;
@@ -79,6 +83,10 @@
                     audioFxEntry = './vendor/exojs-audio-fx/esm/index.js?no-cache=' + noCache;
                     tiledEntry = './vendor/exojs-tiled/esm/index.js?no-cache=' + noCache;
                     tiledRegisterEntry = './vendor/exojs-tiled/esm/register.js?no-cache=' + noCache;
+                    tilemapEntry = './vendor/exojs-tilemap/esm/index.js?no-cache=' + noCache;
+                    tilemapRegisterEntry = './vendor/exojs-tilemap/esm/register.js?no-cache=' + noCache;
+                    physicsEntry = './vendor/exojs-physics/esm/index.js?no-cache=' + noCache;
+                    physicsDebugEntry = './vendor/exojs-physics/esm/debug/index.js?no-cache=' + noCache;
                 } else {
                     // jsDelivr serves immutable npm tarballs — the version pin
                     // alone is enough, no cache-buster needed.
@@ -92,6 +100,10 @@
                     audioFxEntry = cdnBase + 'exojs-audio-fx@' + safeVersion + '/dist/esm/index.js';
                     tiledEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/index.js';
                     tiledRegisterEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/register.js';
+                    tilemapEntry = cdnBase + 'exojs-tilemap@' + safeVersion + '/dist/esm/index.js';
+                    tilemapRegisterEntry = cdnBase + 'exojs-tilemap@' + safeVersion + '/dist/esm/register.js';
+                    physicsEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/index.js';
+                    physicsDebugEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/debug/index.js';
                 }
 
                 var importMap = {
@@ -105,6 +117,10 @@
                         '@codexo/exojs-audio-fx': audioFxEntry,
                         '@codexo/exojs-tiled': tiledEntry,
                         '@codexo/exojs-tiled/register': tiledRegisterEntry,
+                        '@codexo/exojs-tilemap': tilemapEntry,
+                        '@codexo/exojs-tilemap/register': tilemapRegisterEntry,
+                        '@codexo/exojs-physics': physicsEntry,
+                        '@codexo/exojs-physics/debug': physicsDebugEntry,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
                     },
                 };

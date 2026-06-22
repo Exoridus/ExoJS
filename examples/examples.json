@@ -405,8 +405,7 @@
                 "debug"
             ],
             "capabilities": [
-                "pointer",
-                "audio"
+                "pointer"
             ]
         },
         {
@@ -1008,6 +1007,33 @@
             ]
         }
     ],
+    "physics": [
+        {
+            "slug": "sprite-follows-body",
+            "path": "physics/sprite-follows-body.js",
+            "language": "typescript",
+            "title": "Sprite Follows Body",
+            "description": "The minimal physics binding: world.attach builds a body + collider and binds it to a sprite, which then tracks the body each step as it falls onto a static floor.",
+            "backend": "core",
+            "tags": [
+                "physics",
+                "binding"
+            ]
+        },
+        {
+            "slug": "tiled-map-physics-actor",
+            "path": "physics/tiled-map-physics-actor.js",
+            "language": "typescript",
+            "title": "Tiled Map + Physics Actor",
+            "description": "Build static colliders from a tilemap object layer with the ObjectLayer-to-collider bridge, then drop a dynamic actor that falls and bounces across the rendered level.",
+            "backend": "core",
+            "tags": [
+                "physics",
+                "tilemap",
+                "collision"
+            ]
+        }
+    ],
     "render-targets": [
         {
             "slug": "bloom-lite",
@@ -1311,8 +1337,7 @@
                 "scene"
             ],
             "capabilities": [
-                "gamepad",
-                "audio"
+                "gamepad"
             ]
         },
         {
