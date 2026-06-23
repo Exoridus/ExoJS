@@ -114,7 +114,7 @@ const matchesWebmVideo = (arrayBuffer: ArrayBuffer): boolean => {
   const header = new Uint8Array(arrayBuffer);
   const matching = [0x1a, 0x45, 0xdf, 0xa3].every((byte, i) => byte === header[i]);
   const sliced = header.subarray(4, 4 + 4096);
-  const index = sliced.findIndex((el, i, arr) => arr[i] === 0x42 && arr[i + 1] === 0x82);
+  const index = sliced.findIndex((_el, i, arr) => arr[i] === 0x42 && arr[i + 1] === 0x82);
 
   if (!matching || index === -1) {
     return false;

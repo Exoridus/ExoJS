@@ -5,8 +5,7 @@ import type { AnyAssetConfig, AssetDefinitions } from './AssetDefinitions';
 // ---------------------------------------------------------------------------
 
 /** @internal */
-// eslint-disable-next-line unused-imports/no-unused-vars
-export class AssetImpl<Phantom> {
+export class AssetImpl {
   /** @internal */
   public readonly _config: AnyAssetConfig;
 

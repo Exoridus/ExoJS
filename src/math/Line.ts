@@ -120,7 +120,7 @@ export class Line implements ShapeLike {
     return [];
   }
 
-  public project(axis: Vector, result: Interval = new Interval()): Interval {
+  public project(_axis: Vector, result: Interval = new Interval()): Interval {
     return result;
   }
 

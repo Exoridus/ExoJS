@@ -822,7 +822,7 @@ export class Loader {
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
-      asset: (value instanceof AssetImpl ? value : new (Asset as new (c: AssetInput) => Asset<unknown>)(value)) as Asset<unknown>,
+      asset: value instanceof AssetImpl ? value : new (Asset as new (c: AssetInput) => Asset<unknown>)(value),
     }));
 
     return this._createLoadingQueue(items, results => {

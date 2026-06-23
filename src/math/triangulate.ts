@@ -174,7 +174,7 @@ function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: num
  * Returns true if vertex v is an ear: the triangle (previousVertexIndex, v, nextVertexIndex) contains
  * no other polygon vertex strictly inside it.
  */
-function isEar(vertices: ArrayLike<number>, prev: Uint32Array, next: Uint32Array, previousVertexIndex: number, v: number, nextVertexIndex: number): boolean {
+function isEar(vertices: ArrayLike<number>, _prev: Uint32Array, next: Uint32Array, previousVertexIndex: number, v: number, nextVertexIndex: number): boolean {
   const ax = vertices[previousVertexIndex * 2];
   const ay = vertices[previousVertexIndex * 2 + 1];
   const bx = vertices[v * 2];

@@ -84,35 +84,6 @@ const vertexStrideBytes = 16;
 /** Resolution uniform buffer size: vec2<f32> = 8 bytes, padded to 16 */
 const resolutionBufferBytes = 16;
 
-/**
- * Number of scalar floats written for a given uniform value type (used for
- * computing slot alignment in the user uniform buffer).
- */
-function uniformSlotFloats(value: ShaderFilterUniformValue): number {
-  if (
-    value instanceof Texture ||
-    (value instanceof Object && 'width' in value && 'height' in value && !(value instanceof Float32Array) && !(value instanceof Int32Array))
-  ) {
-    // Texture / RenderTexture — not placed in the uniform buffer
-    return 0;
-  }
-
-  if (typeof value === 'number') {
-    return 1;
-  }
-
-  if (value instanceof Float32Array) {
-    return value.length;
-  }
-
-  if (value instanceof Int32Array) {
-    return value.length;
-  }
-
-  // Readonly tuple
-  return (value as readonly number[]).length;
-}
-
 /** Returns true when the value is a texture (goes into a bind group, not a UBO). */
 function isTextureValue(value: ShaderFilterUniformValue): value is Texture | RenderTexture {
   return (
@@ -292,7 +263,7 @@ export class WebGpuShaderFilter extends Filter {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private _ensureConnected(backend: WebGpuBackend, output: RenderTexture): void {
+  private _ensureConnected(backend: WebGpuBackend, _output: RenderTexture): void {
     if (this._connection !== null) {
       return;
     }

@@ -93,7 +93,7 @@ export class Vector extends AbstractVector implements ShapeLike {
     return [this.clone().rperp().normalize()];
   }
 
-  public project(axis: Vector, interval: Interval = new Interval()): Interval {
+  public project(_axis: Vector, interval: Interval = new Interval()): Interval {
     return interval;
   }
 

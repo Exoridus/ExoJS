@@ -32,8 +32,6 @@ export class GestureRecognizer {
   public readonly onRotate: Signal<[angleDelta: number, center: Vector]>;
   public readonly onLongPress: Signal<[pointer: Pointer]>;
 
-  private readonly distanceThreshold: number;
-
   // Active touch pointers (only touch type; index in order of arrival).
   private readonly touchPointers = new Map<number, Pointer>();
 
@@ -48,12 +46,11 @@ export class GestureRecognizer {
   private readonly centerVec = new Vector();
 
   public constructor(
-    distanceThreshold: number,
+    _distanceThreshold: number,
     onPinch: Signal<[scale: number, center: Vector]>,
     onRotate: Signal<[angleDelta: number, center: Vector]>,
     onLongPress: Signal<[pointer: Pointer]>,
   ) {
-    this.distanceThreshold = distanceThreshold;
     this.onPinch = onPinch;
     this.onRotate = onRotate;
     this.onLongPress = onLongPress;
