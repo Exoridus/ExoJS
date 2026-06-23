@@ -37,7 +37,7 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
     let sum = 0;
     let count = 0;
     for (let t = lag; t < n; t++) {
-      sum += flux[t] * flux[t - lag];
+      sum += flux[t]! * flux[t - lag]!;
       count++;
     }
     acf[lagIndex] = count > 0 ? sum / count : 0;
@@ -46,13 +46,13 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
   // Normalise by the zero-lag ACF (energy) so output is in [-1, 1]
   let zeroLag = 0;
   for (let t = 0; t < n; t++) {
-    zeroLag += flux[t] * flux[t];
+    zeroLag += flux[t]! * flux[t]!;
   }
   zeroLag = n > 0 ? zeroLag / n : 1;
 
   const norm = zeroLag > 0 ? zeroLag : 1;
   for (let i = 0; i < lagCount; i++) {
-    acf[i] /= norm;
+    acf[i]! /= norm;
   }
 
   return acf;
@@ -73,23 +73,23 @@ export function findTempoPeaks(acf: Float32Array, minLag: number, hopSize: numbe
 
   // Find local maxima (peaks) in the ACF
   for (let i = 1; i < acf.length - 1; i++) {
-    if (acf[i] > acf[i - 1] && acf[i] > acf[i + 1] && acf[i] > 0) {
+    if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
       const lag = minLag + i;
       const bpm = (60 * sampleRate) / (lag * hopSize);
-      peaks.push({ bpm, score: acf[i], lag });
+      peaks.push({ bpm, score: acf[i]!, lag });
     }
   }
 
   // Also consider endpoints as peaks if they are maxima
-  if (acf.length > 0 && acf[0] > (acf[1] ?? 0)) {
+  if (acf.length > 0 && acf[0]! > (acf[1] ?? 0)) {
     const lag = minLag;
-    peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[0], lag });
+    peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[0]!, lag });
   }
   if (acf.length > 1) {
     const last = acf.length - 1;
-    if (acf[last] > acf[last - 1]) {
+    if (acf[last]! > acf[last - 1]!) {
       const lag = minLag + last;
-      peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[last], lag });
+      peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[last]!, lag });
     }
   }
 
@@ -114,7 +114,7 @@ export function findTempoPeaks(acf: Float32Array, minLag: number, hopSize: numbe
 export function applyTempoHysteresis(candidates: TempoCandidateResult[], currentBpm: number, currentScore: number): number {
   if (candidates.length === 0) return currentBpm;
 
-  const top = candidates[0];
+  const top = candidates[0]!;
 
   // First-time selection (no current BPM)
   if (currentBpm <= 0) return top.bpm;

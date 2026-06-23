@@ -293,7 +293,16 @@ export class Sprite extends Drawable {
    */
   public override getNormals(): Vector[] {
     if (this.flags.has(SpriteFlags.Normals)) {
-      const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
+      // vertices is a fixed 8-element Float32Array (4 corners).
+      const v = this.vertices;
+      const x1 = v[0]!;
+      const y1 = v[1]!;
+      const x2 = v[2]!;
+      const y2 = v[3]!;
+      const x3 = v[4]!;
+      const y3 = v[5]!;
+      const x4 = v[6]!;
+      const y4 = v[7]!;
 
       this._normals[0]
         .set(x2 - x1, y2 - y1)
@@ -323,7 +332,16 @@ export class Sprite extends Drawable {
    * scalar interval. Used by the SAT collision system.
    */
   public override project(axis: Vector, result: Interval = new Interval()): Interval {
-    const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
+    // vertices is a fixed 8-element Float32Array (4 corners).
+    const v = this.vertices;
+    const x1 = v[0]!;
+    const y1 = v[1]!;
+    const x2 = v[2]!;
+    const y2 = v[3]!;
+    const x3 = v[4]!;
+    const y3 = v[5]!;
+    const x4 = v[6]!;
+    const y4 = v[7]!;
     const proj1 = axis.dot(x1, y1);
     const proj2 = axis.dot(x2, y2);
     const proj3 = axis.dot(x3, y3);
@@ -342,7 +360,16 @@ export class Sprite extends Drawable {
       return this.getBounds().contains(x, y);
     }
 
-    const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
+    // vertices is a fixed 8-element Float32Array (4 corners).
+    const v = this.vertices;
+    const x1 = v[0]!;
+    const y1 = v[1]!;
+    const x2 = v[2]!;
+    const y2 = v[3]!;
+    const x3 = v[4]!;
+    const y3 = v[5]!;
+    const x4 = v[6]!;
+    const y4 = v[7]!;
 
     // Cross-product sign consistency: all four edge × (P-vertex) cross
     // products must share the same sign for P to lie inside the convex quad.

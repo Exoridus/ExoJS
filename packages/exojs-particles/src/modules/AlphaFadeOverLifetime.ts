@@ -39,11 +39,11 @@ export class AlphaFadeOverLifetime extends UpdateModule {
     const curve = this.curve;
 
     for (let i = 0; i < liveCount; i++) {
-      const t = elapsed[i] / lifetime[i];
+      const t = (elapsed[i] ?? 0) / (lifetime[i] ?? 1);
       const a = curve.evaluate(t);
       const alphaByte = (Math.max(0, Math.min(1, a)) * 255) & 255;
 
-      color[i] = (color[i] & 0x00ffffff) | (alphaByte << 24);
+      color[i] = ((color[i] ?? 0) & 0x00ffffff) | (alphaByte << 24);
     }
   }
 

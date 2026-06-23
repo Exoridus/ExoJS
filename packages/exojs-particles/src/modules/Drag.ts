@@ -26,8 +26,8 @@ export class Drag extends UpdateModule {
     const factor = 1 - this.drag * dt;
 
     for (let i = 0; i < liveCount; i++) {
-      velX[i] *= factor;
-      velY[i] *= factor;
+      velX[i] = (velX[i] ?? 0) * factor;
+      velY[i] = (velY[i] ?? 0) * factor;
     }
   }
 

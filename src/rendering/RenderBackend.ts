@@ -31,8 +31,7 @@ import type { View } from './View';
  */
 export interface RenderBackend {
   readonly backendType: RenderBackendType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly rendererRegistry: RendererRegistry<any>;
+  readonly rendererRegistry: RendererRegistry<RenderBackend>;
   readonly view: View;
   readonly renderTarget: RenderTarget;
   readonly stats: RenderStats;

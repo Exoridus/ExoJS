@@ -24,7 +24,9 @@ export class ShaderAttribute {
     this.index = index;
     this.name = name;
     this.type = type;
-    this.size = webGl2PrimitiveByteSizeMapping[type];
+    // The byte-size mapping is total over the GLSL attribute type GLenums the
+    // driver reports via `gl.getActiveAttrib`.
+    this.size = webGl2PrimitiveByteSizeMapping[type]!;
   }
 
   public destroy(): void {

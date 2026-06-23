@@ -26,7 +26,7 @@ export class RotateOverLifetime extends UpdateModule {
     const delta = this.angularAcceleration * dt;
 
     for (let i = 0; i < liveCount; i++) {
-      rotationSpeeds[i] += delta;
+      rotationSpeeds[i] = (rotationSpeeds[i] ?? 0) + delta;
     }
   }
 

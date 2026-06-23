@@ -111,7 +111,7 @@ export class PerformanceLayer extends DebugLayer {
     for (let i = 0; i < fpsSampleCount; i++) {
       const s = this._fpsSamples[i];
 
-      if (s > 0) {
+      if (s !== undefined && s > 0) {
         totalMs += s;
         validSamples++;
       }
@@ -160,7 +160,7 @@ export class PerformanceLayer extends DebugLayer {
 
       for (let i = 0; i < sparklineSampleCount; i++) {
         const sampleIndex = (oldest + i) % sparklineSampleCount;
-        const ms = this._sparkSamples[sampleIndex];
+        const ms = this._sparkSamples[sampleIndex] ?? 0;
         const px = sparklineX + i * stepX;
         const py = sparklineY + sparklineH - Math.min(1, ms / sparklineMaxMs) * sparklineH;
 

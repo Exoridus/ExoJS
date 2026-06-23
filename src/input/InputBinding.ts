@@ -97,7 +97,7 @@ export class InputBinding {
     for (const channel of this.channels) {
       const sample = channels[channel];
 
-      if (Math.abs(sample) > Math.abs(value)) {
+      if (sample !== undefined && Math.abs(sample) > Math.abs(value)) {
         value = sample;
       }
     }

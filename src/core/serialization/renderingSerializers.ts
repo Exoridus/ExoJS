@@ -16,7 +16,7 @@ import { Video } from '#rendering/video/Video';
 
 import type { NodeSerializer } from './NodeSerializer';
 import type { SerializationRegistry } from './SerializationRegistry';
-import { deserializeStyleOptions, serializeStyle } from './serializerHelpers';
+import { compact, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
 import type { SerializedNode } from './types';
 
 // ── Small helpers ────────────────────────────────────────────────────────────
@@ -46,13 +46,15 @@ const meshSerializer: NodeSerializer<Mesh> = {
     return out;
   },
   read(data, ctx) {
-    return new Mesh({
-      vertices: toF32(data.vertices),
-      indices: data.indices !== undefined ? toU16(data.indices) : undefined,
-      uvs: data.uvs !== undefined ? toF32(data.uvs) : undefined,
-      colors: data.colors !== undefined ? toU32(data.colors) : undefined,
-      texture: ctx.resolveAsset(typeof data.texture === 'string' ? data.texture : null, Texture),
-    });
+    return new Mesh(
+      compact({
+        vertices: toF32(data.vertices),
+        indices: data.indices !== undefined ? toU16(data.indices) : undefined,
+        uvs: data.uvs !== undefined ? toF32(data.uvs) : undefined,
+        colors: data.colors !== undefined ? toU32(data.colors) : undefined,
+        texture: ctx.resolveAsset(typeof data.texture === 'string' ? data.texture : null, Texture),
+      }),
+    );
   },
 };
 
@@ -108,13 +110,16 @@ const nineSliceSerializer: NodeSerializer<NineSliceSprite> = {
       throw new Error('NineSliceSprite deserialize requires its texture to be pre-loaded into the Loader.');
     }
 
-    return new NineSliceSprite(texture, {
-      slices: data.slices as NineSliceInsets,
-      border: data.border as NineSliceInsets,
-      modes: data.modes as NineSliceModes,
-      width: num(data.width),
-      height: num(data.height),
-    });
+    return new NineSliceSprite(
+      texture,
+      compact({
+        slices: data.slices as NineSliceInsets,
+        border: data.border as NineSliceInsets,
+        modes: data.modes as NineSliceModes,
+        width: num(data.width),
+        height: num(data.height),
+      }),
+    );
   },
 };
 
@@ -145,16 +150,19 @@ const repeatingSerializer: NodeSerializer<RepeatingSprite> = {
       throw new Error('RepeatingSprite deserialize requires its texture to be pre-loaded into the Loader.');
     }
 
-    return new RepeatingSprite(texture, {
-      width: num(data.width),
-      height: num(data.height),
-      modeX: data.modeX as RepeatMode,
-      modeY: data.modeY as RepeatMode,
-      fitX: data.fitX as RepeatFit,
-      fitY: data.fitY as RepeatFit,
-      offsetX: num(data.offsetX),
-      offsetY: num(data.offsetY),
-    });
+    return new RepeatingSprite(
+      texture,
+      compact({
+        width: num(data.width),
+        height: num(data.height),
+        modeX: data.modeX as RepeatMode,
+        modeY: data.modeY as RepeatMode,
+        fitX: data.fitX as RepeatFit,
+        fitY: data.fitY as RepeatFit,
+        offsetX: num(data.offsetX),
+        offsetY: num(data.offsetY),
+      }),
+    );
   },
 };
 
@@ -202,7 +210,7 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
             })
           : [];
 
-        clips[name] = { frames, fps: num(clip.fps), loop: typeof clip.loop === 'boolean' ? clip.loop : undefined };
+        clips[name] = compact({ frames, fps: num(clip.fps), loop: typeof clip.loop === 'boolean' ? clip.loop : undefined });
       }
     }
 
@@ -247,12 +255,16 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
 
     const layout = typeof data.layout === 'object' && data.layout !== null ? (data.layout as LayoutOptions) : undefined;
 
-    return new BitmapText(typeof data.text === 'string' ? data.text : '', font, {
-      ...deserializeStyleOptions(data.style),
-      msdf: data.msdf === true,
-      scale: num(data.scale),
-      layout,
-    });
+    return new BitmapText(
+      typeof data.text === 'string' ? data.text : '',
+      font,
+      compact({
+        ...deserializeStyleOptions(data.style),
+        msdf: data.msdf === true,
+        scale: num(data.scale),
+        layout,
+      }),
+    );
   },
 };
 
@@ -280,13 +292,16 @@ const videoSerializer: NodeSerializer<Video> = {
       element.src = data.src;
     }
 
-    return new Video(element, {
-      volume: num(data.volume),
-      loop: data.loop === true ? true : undefined,
-      playbackRate: num(data.playbackRate),
-      muted: data.muted === true ? true : undefined,
-      time: num(data.time),
-    });
+    return new Video(
+      element,
+      compact({
+        volume: num(data.volume),
+        loop: data.loop === true ? true : undefined,
+        playbackRate: num(data.playbackRate),
+        muted: data.muted === true ? true : undefined,
+        time: num(data.time),
+      }),
+    );
   },
 };
 

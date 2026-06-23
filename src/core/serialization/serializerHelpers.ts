@@ -2,6 +2,25 @@ import { Color } from '#core/Color';
 import type { FontWeight, TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextAlignment } from '#rendering/text/types';
 
+// ── Options bags ───────────────────────────────────────────────────────────────
+
+/**
+ * Return a shallow copy of `options` with every `undefined`-valued key removed,
+ * so an optional property is *omitted* rather than set to `undefined`. Lets a
+ * deserializer build an options bag from sparse JSON without forcing a default
+ * past a constructor's own `?? default` (and stays valid under
+ * `exactOptionalPropertyTypes`).
+ */
+export function compact<T extends object>(options: T): { [K in keyof T]: Exclude<T[K], undefined> } {
+  const out: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(options)) {
+    if (value !== undefined) out[key] = value;
+  }
+
+  return out as { [K in keyof T]: Exclude<T[K], undefined> };
+}
+
 // ── Colour ───────────────────────────────────────────────────────────────────
 
 /** Serialize a colour to `[r, g, b, a]` (r/g/b 0..255, a 0..1). */

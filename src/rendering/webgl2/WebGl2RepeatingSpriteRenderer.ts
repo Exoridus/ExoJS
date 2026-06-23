@@ -348,7 +348,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       const u32 = this._geoU32;
 
       for (let i = 0; i < chunk; i++) {
-        const q = quads[offset + i];
+        // In-bounds: `offset + i < offset + chunk <= quads.length`.
+        const q = quads[offset + i]!;
         const idx = (this._geoQuadCount + i) * geoWordsPerInstance;
 
         f32[idx + 0] = q.x0;

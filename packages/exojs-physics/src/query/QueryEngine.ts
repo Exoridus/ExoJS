@@ -171,6 +171,13 @@ export class QueryEngine {
   }
 }
 
+/**
+ * In-bounds read of a flat vertex/normal buffer. Every caller indexes within
+ * `0..count-1`, so the element always exists; the `0` fallback only discharges
+ * `noUncheckedIndexedAccess` for the unreachable case (no cast, no `!`).
+ */
+const at = (arr: readonly number[], i: number): number => arr[i] ?? 0;
+
 /** `true` when world point `(px, py)` lies inside `collider`'s shape. */
 const pointInCollider = (collider: Collider, px: number, py: number): boolean => {
   if (!aabbContainsPoint(collider.aabb, px, py)) {
@@ -191,7 +198,7 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
   const count = collider.shape.count;
 
   for (let i = 0; i < count; i++) {
-    if (normals[i * 2] * (px - verts[i * 2]) + normals[i * 2 + 1] * (py - verts[i * 2 + 1]) > 0) {
+    if (at(normals, i * 2) * (px - at(verts, i * 2)) + at(normals, i * 2 + 1) * (py - at(verts, i * 2 + 1)) > 0) {
       return false;
     }
   }
@@ -259,9 +266,9 @@ const rayCastPolygon = (collider: Collider, ox: number, oy: number, dx: number, 
   let entered = false;
 
   for (let i = 0; i < count; i++) {
-    const nx = normals[i * 2];
-    const ny = normals[i * 2 + 1];
-    const numerator = nx * (verts[i * 2] - ox) + ny * (verts[i * 2 + 1] - oy);
+    const nx = at(normals, i * 2);
+    const ny = at(normals, i * 2 + 1);
+    const numerator = nx * (at(verts, i * 2) - ox) + ny * (at(verts, i * 2 + 1) - oy);
     const denominator = nx * dx + ny * dy;
 
     if (denominator === 0) {
@@ -319,9 +326,9 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
   const out: Mutable2D = { x: 0, y: 0 };
 
   for (let i = 0; i < polygon.count; i++) {
-    applyTransform(transform, polygon.vertices[i * 2], polygon.vertices[i * 2 + 1], out);
+    applyTransform(transform, at(polygon.vertices, i * 2), at(polygon.vertices, i * 2 + 1), out);
     worldVertices.push(out.x, out.y);
-    applyRotation(transform, polygon.normals[i * 2], polygon.normals[i * 2 + 1], out);
+    applyRotation(transform, at(polygon.normals, i * 2), at(polygon.normals, i * 2 + 1), out);
     worldNormals.push(out.x, out.y);
   }
 

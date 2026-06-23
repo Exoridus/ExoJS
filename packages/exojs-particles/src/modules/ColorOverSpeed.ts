@@ -42,7 +42,9 @@ export class ColorOverSpeed extends UpdateModule {
     const span = Math.max(1e-5, this.maxSpeed - this.minSpeed);
 
     for (let i = 0; i < liveCount; i++) {
-      const speed = Math.sqrt(velX[i] * velX[i] + velY[i] * velY[i]);
+      const vx = velX[i] ?? 0;
+      const vy = velY[i] ?? 0;
+      const speed = Math.sqrt(vx * vx + vy * vy);
       const t = Math.max(0, Math.min(1, (speed - min) / span));
 
       color[i] = gradient.evaluateRgba(t);

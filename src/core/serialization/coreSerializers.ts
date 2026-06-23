@@ -10,7 +10,7 @@ import { Texture } from '#rendering/texture/Texture';
 import type { NodeSerializer } from './NodeSerializer';
 import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
-import { deserializeStyleOptions, serializeStyle } from './serializerHelpers';
+import { compact, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
 import type { SerializedNode } from './types';
 import { registerUiSerializers } from './uiSerializers';
 
@@ -97,12 +97,15 @@ const textSerializer: NodeSerializer<Text> = {
   read(data) {
     const layout = typeof data.layout === 'object' && data.layout !== null ? (data.layout as LayoutOptions) : undefined;
 
-    return new Text(typeof data.text === 'string' ? data.text : '', {
-      ...deserializeStyleOptions(data.style),
-      ...layout,
-      colorGlyphs: data.colorGlyphs === true,
-      sdfRadius: typeof data.sdfRadius === 'number' ? data.sdfRadius : undefined,
-    });
+    return new Text(
+      typeof data.text === 'string' ? data.text : '',
+      compact({
+        ...deserializeStyleOptions(data.style),
+        ...layout,
+        colorGlyphs: data.colorGlyphs === true,
+        sdfRadius: typeof data.sdfRadius === 'number' ? data.sdfRadius : undefined,
+      }),
+    );
   },
 };
 

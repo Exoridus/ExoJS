@@ -28,8 +28,8 @@ export class ApplyForce extends UpdateModule {
     const ay = this.accelerationY * dt;
 
     for (let i = 0; i < liveCount; i++) {
-      velX[i] += ax;
-      velY[i] += ay;
+      velX[i] = (velX[i] ?? 0) + ax;
+      velY[i] = (velY[i] ?? 0) + ay;
     }
   }
 

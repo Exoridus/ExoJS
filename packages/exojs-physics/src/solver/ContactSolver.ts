@@ -110,7 +110,8 @@ export class ContactSolver {
       const comBy = bodyB.worldCenterOfMassY;
 
       for (let i = 0; i < pointCount; i++) {
-        const point = manifold.points[i];
+        // i in 0..pointCount-1 and pointCount ≤ 2, so the manifold point exists.
+        const point = i === 0 ? manifold.points[0] : manifold.points[1];
         const rAx = point.x - comAx;
         const rAy = point.y - comAy;
         const rBx = point.x - comBx;
@@ -143,10 +144,10 @@ export class ContactSolver {
       }
 
       if (pointCount === 2) {
-        const rn1A = constraint.rAx[0] * ny - constraint.rAy[0] * nx;
-        const rn1B = constraint.rBx[0] * ny - constraint.rBy[0] * nx;
-        const rn2A = constraint.rAx[1] * ny - constraint.rAy[1] * nx;
-        const rn2B = constraint.rBx[1] * ny - constraint.rBy[1] * nx;
+        const rn1A = n(constraint.rAx, 0) * ny - n(constraint.rAy, 0) * nx;
+        const rn1B = n(constraint.rBx, 0) * ny - n(constraint.rBy, 0) * nx;
+        const rn2A = n(constraint.rAx, 1) * ny - n(constraint.rAy, 1) * nx;
+        const rn2B = n(constraint.rBx, 1) * ny - n(constraint.rBy, 1) * nx;
         const k11 = mA + mB + iA * rn1A * rn1A + iB * rn1B * rn1B;
         const k22 = mA + mB + iA * rn2A * rn2A + iB * rn2B * rn2B;
         const k12 = mA + mB + iA * rn1A * rn2A + iB * rn1B * rn2B;
@@ -172,17 +173,17 @@ export class ContactSolver {
   /** Re-apply the cached impulses from the previous step (warm-starting). */
   public warmStart(): void {
     for (let ci = 0; ci < this._count; ci++) {
-      const constraint = this._constraints[ci];
+      const constraint = this._at(ci);
       const bodyA = constraint.bodyA;
       const bodyB = constraint.bodyB;
 
       for (let i = 0; i < constraint.pointCount; i++) {
-        const normalImpulse = constraint.record.normalImpulse[i];
-        const tangentImpulse = constraint.record.tangentImpulse[i];
+        const normalImpulse = n(constraint.record.normalImpulse, i);
+        const tangentImpulse = n(constraint.record.tangentImpulse, i);
         const jx = normalImpulse * constraint.nx + tangentImpulse * constraint.tx;
         const jy = normalImpulse * constraint.ny + tangentImpulse * constraint.ty;
 
-        applyImpulse(bodyA, bodyB, constraint.rAx[i], constraint.rAy[i], constraint.rBx[i], constraint.rBy[i], jx, jy);
+        applyImpulse(bodyA, bodyB, n(constraint.rAx, i), n(constraint.rAy, i), n(constraint.rBx, i), n(constraint.rBy, i), jx, jy);
       }
     }
   }
@@ -191,7 +192,7 @@ export class ContactSolver {
   public solveVelocities(iterations: number): void {
     for (let iteration = 0; iteration < iterations; iteration++) {
       for (let ci = 0; ci < this._count; ci++) {
-        this._solveVelocityContact(this._constraints[ci]);
+        this._solveVelocityContact(this._at(ci));
       }
     }
   }
@@ -219,7 +220,7 @@ export class ContactSolver {
   public solvePositions(iterations: number): void {
     for (let iteration = 0; iteration < iterations; iteration++) {
       for (let ci = 0; ci < this._count; ci++) {
-        this._solvePositionContact(this._constraints[ci]);
+        this._solvePositionContact(this._at(ci));
       }
     }
   }
@@ -231,10 +232,10 @@ export class ContactSolver {
     const ny = constraint.ny;
 
     for (let i = 0; i < constraint.pointCount; i++) {
-      const rAx = constraint.rAx[i];
-      const rAy = constraint.rAy[i];
-      const rBx = constraint.rBx[i];
-      const rBy = constraint.rBy[i];
+      const rAx = n(constraint.rAx, i);
+      const rAy = n(constraint.rAy, i);
+      const rBx = n(constraint.rBx, i);
+      const rBy = n(constraint.rBy, i);
 
       // Displacement of the contact point on each body from corrections so far.
       const dispAx = bodyA._posCorrectionX - bodyA._angleCorrection * rAy;
@@ -243,9 +244,9 @@ export class ContactSolver {
       const dispBy = bodyB._posCorrectionY + bodyB._angleCorrection * rBx;
 
       // Current separation (negative = penetrating), recomputed each iteration.
-      const separation = -constraint.penetration[i] + (dispBx - dispAx) * nx + (dispBy - dispAy) * ny;
+      const separation = -n(constraint.penetration, i) + (dispBx - dispAx) * nx + (dispBy - dispAy) * ny;
       const correction = clamp(baumgarte * (separation + slop), -maxCorrection, 0);
-      const impulse = -correction * constraint.normalMass[i];
+      const impulse = -correction * n(constraint.normalMass, i);
       const jx = impulse * nx;
       const jy = impulse * ny;
 
@@ -264,16 +265,16 @@ export class ContactSolver {
     const bodyB = constraint.bodyB;
 
     for (let i = 0; i < constraint.pointCount; i++) {
-      const rAx = constraint.rAx[i];
-      const rAy = constraint.rAy[i];
-      const rBx = constraint.rBx[i];
-      const rBy = constraint.rBy[i];
+      const rAx = n(constraint.rAx, i);
+      const rAy = n(constraint.rAy, i);
+      const rBx = n(constraint.rBx, i);
+      const rBy = n(constraint.rBy, i);
       const vtX = bodyB.linearVelocityX - bodyB.angularVelocity * rBy - (bodyA.linearVelocityX - bodyA.angularVelocity * rAy);
       const vtY = bodyB.linearVelocityY + bodyB.angularVelocity * rBx - (bodyA.linearVelocityY + bodyA.angularVelocity * rAx);
       const vt = vtX * constraint.tx + vtY * constraint.ty;
-      const maxFriction = constraint.friction * constraint.record.normalImpulse[i];
-      const oldTangent = constraint.record.tangentImpulse[i];
-      const newTangent = clamp(oldTangent - constraint.tangentMass[i] * vt, -maxFriction, maxFriction);
+      const maxFriction = constraint.friction * n(constraint.record.normalImpulse, i);
+      const oldTangent = n(constraint.record.tangentImpulse, i);
+      const newTangent = clamp(oldTangent - n(constraint.tangentMass, i) * vt, -maxFriction, maxFriction);
       const deltaTangent = newTangent - oldTangent;
 
       constraint.record.tangentImpulse[i] = newTangent;
@@ -289,13 +290,13 @@ export class ContactSolver {
     const ny = constraint.ny;
 
     for (let i = 0; i < constraint.pointCount; i++) {
-      const rAx = constraint.rAx[i];
-      const rAy = constraint.rAy[i];
-      const rBx = constraint.rBx[i];
-      const rBy = constraint.rBy[i];
+      const rAx = n(constraint.rAx, i);
+      const rAy = n(constraint.rAy, i);
+      const rBx = n(constraint.rBx, i);
+      const rBy = n(constraint.rBy, i);
       const vn = normalVelocity(bodyA, bodyB, rAx, rAy, rBx, rBy, nx, ny);
-      const oldNormal = constraint.record.normalImpulse[i];
-      const newNormal = Math.max(0, oldNormal - constraint.normalMass[i] * (vn - constraint.velocityBias[i]));
+      const oldNormal = n(constraint.record.normalImpulse, i);
+      const newNormal = Math.max(0, oldNormal - n(constraint.normalMass, i) * (vn - n(constraint.velocityBias, i)));
       const deltaNormal = newNormal - oldNormal;
 
       constraint.record.normalImpulse[i] = newNormal;
@@ -313,14 +314,14 @@ export class ContactSolver {
     const bodyB = constraint.bodyB;
     const nx = constraint.nx;
     const ny = constraint.ny;
-    const a1 = constraint.record.normalImpulse[0];
-    const a2 = constraint.record.normalImpulse[1];
-    const vn1 = normalVelocity(bodyA, bodyB, constraint.rAx[0], constraint.rAy[0], constraint.rBx[0], constraint.rBy[0], nx, ny);
-    const vn2 = normalVelocity(bodyA, bodyB, constraint.rAx[1], constraint.rAy[1], constraint.rBx[1], constraint.rBy[1], nx, ny);
+    const a1 = n(constraint.record.normalImpulse, 0);
+    const a2 = n(constraint.record.normalImpulse, 1);
+    const vn1 = normalVelocity(bodyA, bodyB, n(constraint.rAx, 0), n(constraint.rAy, 0), n(constraint.rBx, 0), n(constraint.rBy, 0), nx, ny);
+    const vn2 = normalVelocity(bodyA, bodyB, n(constraint.rAx, 1), n(constraint.rAy, 1), n(constraint.rBx, 1), n(constraint.rBy, 1), nx, ny);
 
     // Residual at zero impulse: b = (vn − bias) − K·a.
-    const bx = vn1 - constraint.velocityBias[0] - (constraint.k11 * a1 + constraint.k12 * a2);
-    const by = vn2 - constraint.velocityBias[1] - (constraint.k12 * a1 + constraint.k22 * a2);
+    const bx = vn1 - n(constraint.velocityBias, 0) - (constraint.k11 * a1 + constraint.k12 * a2);
+    const by = vn2 - n(constraint.velocityBias, 1) - (constraint.k12 * a1 + constraint.k22 * a2);
 
     // Case 1 — both points active: x = −K⁻¹·b.
     let x1 = -(constraint.invK11 * bx + constraint.invK12 * by);
@@ -335,7 +336,7 @@ export class ContactSolver {
     }
 
     // Case 2 — only point 1 active (x2 = 0).
-    x1 = -constraint.normalMass[0] * bx;
+    x1 = -n(constraint.normalMass, 0) * bx;
     x2 = 0;
 
     if (x1 >= 0 && constraint.k12 * x1 + by >= 0) {
@@ -348,7 +349,7 @@ export class ContactSolver {
 
     // Case 3 — only point 2 active (x1 = 0).
     x1 = 0;
-    x2 = -constraint.normalMass[1] * by;
+    x2 = -n(constraint.normalMass, 1) * by;
 
     if (x2 >= 0 && constraint.k12 * x2 + bx >= 0) {
       this._applyBlock(constraint, x1 - a1, x2 - a2);
@@ -373,8 +374,8 @@ export class ContactSolver {
     const nx = constraint.nx;
     const ny = constraint.ny;
 
-    applyImpulse(bodyA, bodyB, constraint.rAx[0], constraint.rAy[0], constraint.rBx[0], constraint.rBy[0], d1 * nx, d1 * ny);
-    applyImpulse(bodyA, bodyB, constraint.rAx[1], constraint.rAy[1], constraint.rBx[1], constraint.rBy[1], d2 * nx, d2 * ny);
+    applyImpulse(bodyA, bodyB, n(constraint.rAx, 0), n(constraint.rAy, 0), n(constraint.rBx, 0), n(constraint.rBy, 0), d1 * nx, d1 * ny);
+    applyImpulse(bodyA, bodyB, n(constraint.rAx, 1), n(constraint.rAy, 1), n(constraint.rBx, 1), n(constraint.rBy, 1), d2 * nx, d2 * ny);
   }
 
   private _acquire(): ContactConstraint {
@@ -382,7 +383,23 @@ export class ContactSolver {
       this._constraints.push(new ContactConstraint());
     }
 
-    return this._constraints[this._count++];
+    return this._at(this._count++);
+  }
+
+  /**
+   * Pooled constraint at `ci`. Every caller indexes within `0..this._count-1`
+   * and `_count` never exceeds the pool length, so the entry always exists; the
+   * throw is unreachable and only discharges `noUncheckedIndexedAccess` without a
+   * cast or non-null assertion.
+   */
+  private _at(ci: number): ContactConstraint {
+    const constraint = this._constraints[ci];
+
+    if (constraint === undefined) {
+      throw new RangeError(`ContactSolver: constraint pool index ${ci} out of range.`);
+    }
+
+    return constraint;
   }
 }
 
@@ -406,3 +423,11 @@ const applyImpulse = (bodyA: PhysicsBody, bodyB: PhysicsBody, rAx: number, rAy: 
 };
 
 const clamp = (value: number, low: number, high: number): number => Math.min(Math.max(value, low), high);
+
+/**
+ * In-bounds read of a fixed-size (length-2) per-point scratch array. Every
+ * caller indexes within `0..pointCount-1` (pointCount ≤ 2), so the element
+ * always exists; the `0` fallback only discharges `noUncheckedIndexedAccess`
+ * for the unreachable case and keeps the `??` out of caller complexity.
+ */
+const n = (arr: readonly number[], i: number): number => arr[i] ?? 0;

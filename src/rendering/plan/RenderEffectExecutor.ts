@@ -61,7 +61,8 @@ export class RenderEffectExecutor {
           const output = isLast && needsBitmapCache ? cacheTexture! : backend.acquireRenderTexture(width, height);
 
           try {
-            effect.filters[index].apply(backend, finalTexture, output);
+            // In-bounds: index < effect.filters.length.
+            effect.filters[index]!.apply(backend, finalTexture, output);
           } catch (error) {
             if (output !== cacheTexture) {
               backend.releaseRenderTexture(output);

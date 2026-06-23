@@ -287,7 +287,8 @@ export function snapQuadsInto(source: readonly BoundaryQuad[], ctx: PixelSnapCon
   out.length = source.length;
 
   for (let i = 0; i < source.length; i++) {
-    const q = source[i];
+    // In-bounds: i < source.length.
+    const q = source[i]!;
     let t = out[i];
 
     if (t === undefined) {

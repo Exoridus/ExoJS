@@ -196,7 +196,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
 
       if (baseTexture !== null && shader.uniforms.has('u_texture')) {
         backend.bindTexture(baseTexture, 0);
-        shader.getUniform('u_texture').setValue(this._slotScratches[0]);
+        // In-bounds: `_slotScratches` is pre-allocated with `maxBatchTextures` (>= 1) entries.
+        shader.getUniform('u_texture').setValue(this._slotScratches[0]!);
       }
 
       this._bindCustomUniforms(shader, material, backend);
@@ -432,7 +433,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
         continue;
       }
 
-      const value = uniforms[name];
+      // `name` iterates own keys of `uniforms`, so the lookup is defined.
+      const value = uniforms[name]!;
       const uniform = shader.getUniform(name);
 
       if (value instanceof Texture || value instanceof RenderTexture) {
@@ -441,7 +443,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
         }
 
         backend.bindTexture(value, textureSlot);
-        uniform.setValue(this._slotScratches[textureSlot]);
+        // In-bounds: `textureSlot < maxBatchTextures` (guarded) and `_slotScratches`
+        // is pre-allocated with `maxBatchTextures` entries.
+        uniform.setValue(this._slotScratches[textureSlot]!);
         textureSlot++;
       } else {
         uniform.setValue(this._marshalUniformValue(value));
@@ -459,8 +463,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
         throw new Error(`SpriteMaterial requested more than ${maxBatchTextures - 1} texture bindings.`);
       }
 
-      backend.bindTexture(textures[name], textureSlot);
-      shader.getUniform(name).setValue(this._slotScratches[textureSlot]);
+      // `name` iterates own keys of `textures`, so the lookup is defined.
+      backend.bindTexture(textures[name]!, textureSlot);
+      shader.getUniform(name).setValue(this._slotScratches[textureSlot]!);
       textureSlot++;
     }
   }

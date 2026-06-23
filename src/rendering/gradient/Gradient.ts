@@ -77,8 +77,9 @@ export abstract class Gradient implements Cloneable, Destroyable {
     }
 
     for (let i = 0; i < this._stops.length; i++) {
-      const own = this._stops[i];
-      const their = other._stops[i];
+      // In-bounds: i < length, and lengths verified equal above.
+      const own = this._stops[i]!;
+      const their = other._stops[i]!;
 
       if (own.offset !== their.offset || !own.color.equals(their.color)) {
         return false;
@@ -127,13 +128,15 @@ export abstract class Gradient implements Cloneable, Destroyable {
    */
   protected sampleAt(t: number, out: Float32Array): void {
     const clamped = clamp(t, 0, 1);
-    const first = this._stops[0];
+    // Class invariant: _normalizeStops enforces at least 2 stops at construction.
+    const first = this._stops[0]!;
 
     let previousOffset = first.offset;
     let previousColor = first.color;
 
     for (let i = 1; i < this._stops.length; i++) {
-      const current = this._stops[i];
+      // In-bounds: i < length.
+      const current = this._stops[i]!;
 
       if (clamped <= current.offset) {
         const span = Math.max(current.offset - previousOffset, 0.000001);
@@ -178,7 +181,7 @@ export abstract class Gradient implements Cloneable, Destroyable {
       width,
       height,
       format: 'rgba8',
-      samplerOptions: options.samplerOptions,
+      ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
     });
     const buffer = texture.buffer;
 
@@ -192,10 +195,11 @@ export abstract class Gradient implements Cloneable, Destroyable {
 
         this.sampleAt(this.resolveT(u, v), this._sample);
 
-        buffer[offset] = toUnorm8(this._sample[0]);
-        buffer[offset + 1] = toUnorm8(this._sample[1]);
-        buffer[offset + 2] = toUnorm8(this._sample[2]);
-        buffer[offset + 3] = toUnorm8(this._sample[3]);
+        // _sample is a fixed 4-element Float32Array.
+        buffer[offset] = toUnorm8(this._sample[0]!);
+        buffer[offset + 1] = toUnorm8(this._sample[1]!);
+        buffer[offset + 2] = toUnorm8(this._sample[2]!);
+        buffer[offset + 3] = toUnorm8(this._sample[3]!);
         offset += 4;
       }
     }
@@ -210,7 +214,7 @@ export abstract class Gradient implements Cloneable, Destroyable {
       width,
       height,
       format: 'rgba32f',
-      samplerOptions: options.samplerOptions,
+      ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
     });
     const buffer = texture.buffer;
 
@@ -224,10 +228,11 @@ export abstract class Gradient implements Cloneable, Destroyable {
 
         this.sampleAt(this.resolveT(u, v), this._sample);
 
-        buffer[offset] = this._sample[0];
-        buffer[offset + 1] = this._sample[1];
-        buffer[offset + 2] = this._sample[2];
-        buffer[offset + 3] = this._sample[3];
+        // _sample is a fixed 4-element Float32Array.
+        buffer[offset] = this._sample[0]!;
+        buffer[offset + 1] = this._sample[1]!;
+        buffer[offset + 2] = this._sample[2]!;
+        buffer[offset + 3] = this._sample[3]!;
         offset += 4;
       }
     }

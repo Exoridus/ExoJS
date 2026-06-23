@@ -97,7 +97,7 @@ export class AudioStream implements Playable {
       sourceNode: this._sourceNode,
       loop,
       playbackRate,
-      startTime: options.time,
+      ...(options.time !== undefined && { startTime: options.time }),
     });
 
     this._activeVoice = voice;

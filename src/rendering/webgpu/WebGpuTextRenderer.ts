@@ -325,18 +325,19 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     });
 
     // Upload projection (3 × vec4<f32> = column-major mat3x3)
+    // `toArray` returns a fixed Float32Array(9); indices 0..8 are always valid.
     const m = backend.view.getTransform().toArray(false);
-    this._projData[0] = m[0];
-    this._projData[1] = m[1];
-    this._projData[2] = m[2];
+    this._projData[0] = m[0]!;
+    this._projData[1] = m[1]!;
+    this._projData[2] = m[2]!;
     this._projData[3] = 0;
-    this._projData[4] = m[3];
-    this._projData[5] = m[4];
-    this._projData[6] = m[5];
+    this._projData[4] = m[3]!;
+    this._projData[5] = m[4]!;
+    this._projData[6] = m[5]!;
     this._projData[7] = 0;
-    this._projData[8] = m[6];
-    this._projData[9] = m[7];
-    this._projData[10] = m[8];
+    this._projData[8] = m[6]!;
+    this._projData[9] = m[7]!;
+    this._projData[10] = m[8]!;
     this._projData[11] = 0;
     device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
 
@@ -361,12 +362,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       qi = 0;
 
     while (qi < quads.length) {
-      const first = quads[qi];
+      // qi/qj/k are all bounded by `quads.length` via the loop guards above.
+      const first = quads[qi]!;
       const firstTextureKey = this._textureKeyMap.get(first.atlasTexture);
 
       let qj = qi + 1;
       while (qj < quads.length) {
-        const pq = quads[qj];
+        const pq = quads[qj]!;
         if (pq.shaderType !== first.shaderType || this._textureKeyMap.get(pq.atlasTexture) !== firstTextureKey) break;
         qj++;
       }
@@ -375,22 +377,23 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       let batchIndexCount = 0;
 
       for (let k = qi; k < qj; k++) {
-        const { quads: batch, nodeIndex } = quads[k];
+        const { quads: batch, nodeIndex } = quads[k]!;
         const qVerts = batch.quadCount * 4;
         const { vertices, uvs, indices } = batch;
 
+        // vertices/uvs hold quadCount*4 vec2 entries; indices is fully iterated.
         for (let v = 0; v < qVerts; v++) {
           const w = (packedV + v) * vertexStrideWords;
           const vp = v * 2;
-          this._float32View[w + 0] = vertices[vp];
-          this._float32View[w + 1] = vertices[vp + 1];
-          this._float32View[w + 2] = uvs[vp];
-          this._float32View[w + 3] = uvs[vp + 1];
+          this._float32View[w + 0] = vertices[vp]!;
+          this._float32View[w + 1] = vertices[vp + 1]!;
+          this._float32View[w + 2] = uvs[vp]!;
+          this._float32View[w + 3] = uvs[vp + 1]!;
           this._float32View[w + 4] = nodeIndex;
         }
 
         for (let x = 0; x < indices.length; x++) {
-          this._indexData[packedI + x] = indices[x] + packedV;
+          this._indexData[packedI + x] = indices[x]! + packedV;
         }
 
         packedV += qVerts;
@@ -643,15 +646,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const base = ni * nodeFloats;
     const style = node.style;
 
+    // `toArray` returns a fixed Float32Array(9); indices 0..8 are always valid.
     const m = node.getGlobalTransform().toArray(false);
-    arr[base + 0] = m[0];
-    arr[base + 1] = m[1];
-    arr[base + 2] = m[2];
-    arr[base + 3] = m[6];
-    arr[base + 4] = m[3];
-    arr[base + 5] = m[4];
-    arr[base + 6] = m[5];
-    arr[base + 7] = m[7];
+    arr[base + 0] = m[0]!;
+    arr[base + 1] = m[1]!;
+    arr[base + 2] = m[2]!;
+    arr[base + 3] = m[6]!;
+    arr[base + 4] = m[3]!;
+    arr[base + 5] = m[4]!;
+    arr[base + 6] = m[5]!;
+    arr[base + 7] = m[7]!;
 
     const fc = style.fillColor;
     arr[base + 8] = fc.r / 255;

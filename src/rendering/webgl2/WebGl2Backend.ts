@@ -48,7 +48,9 @@ const glArgsToString = (gl: WebGL2RenderingContext, args: unknown[]): string =>
 const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingContext =>
   new Proxy(gl, {
     get(target, prop, receiver) {
-      const value = Reflect.get(target, prop, receiver);
+      // `Reflect.get` is typed `any`; contain it as `unknown` so the non-function
+      // branch returns a safe value and the function branch narrows via `typeof`.
+      const value: unknown = Reflect.get(target, prop, receiver);
       if (typeof value !== 'function') return value;
       const name = String(prop);
       return (...args: unknown[]) => {
@@ -286,7 +288,8 @@ export class WebGl2Backend implements RenderBackend {
     const instructions = group.instructions;
 
     for (let i = 0; i < instructions.length; i++) {
-      const command = instructions[i];
+      // In-bounds: `i` ranges over `0..instructions.length-1`.
+      const command = instructions[i]!;
 
       if (drawCommandUsesSharedTransform(command, this)) {
         this._writeTransformCommand(command);
@@ -420,6 +423,10 @@ export class WebGl2Backend implements RenderBackend {
       return this;
     }
 
+    if (transforms.length < count || tints.length < count) {
+      throw new Error(`drawInstanced requires ${count} transforms and tints (got ${transforms.length}/${tints.length}).`);
+    }
+
     const renderer = this.rendererRegistry.resolve(mesh);
 
     if (!(renderer instanceof WebGl2MeshRenderer)) {
@@ -431,10 +438,11 @@ export class WebGl2Backend implements RenderBackend {
     // Write each instance's (transform, tint) into a fresh, contiguous transform
     // slot — before the renderer's draw uploads the buffer (write-before-bind) —
     // then draw the geometry once over [startNodeIndex, startNodeIndex + count).
-    const startNodeIndex = this._transformBuffer.push(transforms[0], tints[0]);
+    // In-bounds: `i < count <= transforms.length` and `<= tints.length` (guarded above).
+    const startNodeIndex = this._transformBuffer.push(transforms[0]!, tints[0]!);
 
     for (let i = 1; i < count; i++) {
-      this._transformBuffer.push(transforms[i], tints[i]);
+      this._transformBuffer.push(transforms[i]!, tints[i]!);
     }
 
     renderer.drawInstancedBatch(mesh, startNodeIndex, count);
@@ -618,7 +626,8 @@ export class WebGl2Backend implements RenderBackend {
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
-      const texture = this._temporaryRenderTextures[index];
+      // In-bounds: `index` ranges over `0..length-1`.
+      const texture = this._temporaryRenderTextures[index]!;
 
       if (texture.width === width && texture.height === height) {
         this._temporaryRenderTextures.splice(index, 1);
@@ -1265,7 +1274,11 @@ export class WebGl2Backend implements RenderBackend {
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
       if (texture instanceof DataTexture) {
-        const formatInfo = webgl2DataTextureFormat(texture.format);
+        // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
+        // erased), so `texture.format` widens to `any`; the class invariant
+        // guarantees it is a `DataTextureFormat`, so restore that type here.
+        const format: DataTextureFormat = texture.format;
+        const formatInfo = webgl2DataTextureFormat(format);
         const region = texture._consumeDirtyRegion();
         const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
 
@@ -1376,7 +1389,8 @@ export class WebGl2Backend implements RenderBackend {
       return;
     }
 
-    const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
+    // In-bounds: the empty-stack case returned above, so the top entry exists.
+    const clip = this._clipPixelStack[this._clipPixelStack.length - 1]!;
     const scaleX = this._renderTarget.root && this._renderTarget.width > 0 ? this._canvas.width / this._renderTarget.width : 1;
     const scaleY = this._renderTarget.root && this._renderTarget.height > 0 ? this._canvas.height / this._renderTarget.height : 1;
     const x = Math.floor(clip.x * scaleX);

@@ -161,8 +161,9 @@ const intersectionLinePoly = (line: Line, polygon: Polygon): boolean => {
   const len = points.length;
 
   for (let i = 0; i < len; i++) {
-    const curr = points[i];
-    const next = points[(i + 1) % len];
+    // i and (i + 1) % len are valid indices into the length-`len` points array.
+    const curr = points[i]!;
+    const next = points[(i + 1) % len]!;
 
     if (
       intersectionLineLineSegments(
@@ -265,18 +266,20 @@ const intersectionCirclePoly = ({ x: cx, y: cy, radius }: Circle, { x: px, y: py
   const len = points.length;
 
   for (let i = 0; i < len; i++) {
-    const point = points[i];
+    // i, prev, next are all valid indices into the parallel length-`len`
+    // points/edges arrays.
+    const point = points[i]!;
     const pointX = circleX - point.x;
     const pointY = circleY - point.y;
     const prev = i === 0 ? len - 1 : i - 1;
     const next = (i + 1) % len;
-    const edge = edges[i];
+    const edge = edges[i]!;
 
-    if (shouldExcludeLeftVoronoi(circleX, circleY, points[prev], edges[prev], pointX, pointY, radius, edge.x, edge.y)) {
+    if (shouldExcludeLeftVoronoi(circleX, circleY, points[prev]!, edges[prev]!, pointX, pointY, radius, edge.x, edge.y)) {
       return false;
     }
 
-    if (shouldExcludeRightVoronoi(circleX, circleY, points[next], edges[next], pointX, pointY, radius, edge.x, edge.y)) {
+    if (shouldExcludeRightVoronoi(circleX, circleY, points[next]!, edges[next]!, pointX, pointY, radius, edge.x, edge.y)) {
       return false;
     }
 
@@ -604,8 +607,10 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
   let overlap = Infinity;
 
   for (let i = 0; i < len; i++) {
-    const pointA = points[i];
-    const pointB = points[(i + 1) % len];
+    // All polygon-vertex indices below (i, i+1, i-1, i+2, modulo len) are valid
+    // indices into the length-`len` points array.
+    const pointA = points[i]!;
+    const pointB = points[(i + 1) % len]!;
     const edgeAx = pointB.x - pointA.x;
     const edgeAy = pointB.y - pointA.y;
     const positionAx = x - pointA.x;
@@ -618,7 +623,7 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
     }
 
     if (region === VoronoiRegion.left) {
-      const prev = points[i === 0 ? len - 1 : i - 1];
+      const prev = points[i === 0 ? len - 1 : i - 1]!;
       const edgeBx = pointA.x - prev.x;
       const edgeBy = pointA.y - prev.y;
       const positionBx = x - prev.x;
@@ -640,7 +645,7 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
         containsB = false;
       }
     } else if (region === VoronoiRegion.right) {
-      const next = points[(i + 2) % len];
+      const next = points[(i + 2) % len]!;
       const edgeBx = next.x - pointB.x;
       const edgeBy = next.y - pointB.y;
       const positionBx = x - pointB.x;
@@ -764,7 +769,9 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
 const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
   const normalsA = shapeA.getNormals();
   const normalsB = shapeB.getNormals();
-  const projection = (normalsA[0] || normalsB[0]).clone();
+  // Any real Collidable yields at least one edge normal, so one of these is
+  // defined; the `||` chain preserves the prior "A's first else B's first" intent.
+  const projection = (normalsA[0] || normalsB[0])!.clone();
   const projA = new Interval();
   const projB = new Interval();
 

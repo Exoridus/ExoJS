@@ -68,7 +68,10 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
     points.pop();
     points.pop();
 
-    lastPoint.set(points[points.length - 2], points[points.length - 1]);
+    // After two pops the length is still >= 2 (entry guaranteed length >= 4).
+    const [lastX = 0, lastY = 0] = [points[points.length - 2], points[points.length - 1]];
+
+    lastPoint.set(lastX, lastY);
 
     const midPointX = lastPoint.x + (firstPoint.x - lastPoint.x) * 0.5;
     const midPointY = lastPoint.y + (firstPoint.y - lastPoint.y) * 0.5;
@@ -83,10 +86,12 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
   const length = points.length / 2;
   const stripVertices: number[] = [];
 
-  let p1x = points[0];
-  let p1y = points[1];
-  let p2x = points[2];
-  let p2y = points[3];
+  // Path has at least two (x, y) pairs here (closed paths get a midpoint inserted),
+  // so indices 0..3 are always populated.
+  let p1x = points[0]!;
+  let p1y = points[1]!;
+  let p2x = points[2]!;
+  let p2y = points[3]!;
   let p3x: number;
   let p3y: number;
 
@@ -108,14 +113,15 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
   stripVertices.push(p1x + perpx, p1y + perpy);
 
   for (let i = 1; i < length - 1; i++) {
-    p1x = points[(i - 1) * 2];
-    p1y = points[(i - 1) * 2 + 1];
+    // i in [1, length-2] => all three index triples (i-1, i, i+1) are in-bounds.
+    p1x = points[(i - 1) * 2]!;
+    p1y = points[(i - 1) * 2 + 1]!;
 
-    p2x = points[i * 2];
-    p2y = points[i * 2 + 1];
+    p2x = points[i * 2]!;
+    p2y = points[i * 2 + 1]!;
 
-    p3x = points[(i + 1) * 2];
-    p3y = points[(i + 1) * 2 + 1];
+    p3x = points[(i + 1) * 2]!;
+    p3y = points[(i + 1) * 2 + 1]!;
 
     perpx = -(p1y - p2y);
     perpy = p1x - p2x;
@@ -177,11 +183,12 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
     }
   }
 
-  p1x = points[(length - 2) * 2];
-  p1y = points[(length - 2) * 2 + 1];
+  // length >= 2 (see entry guard), so the last two vertices are populated.
+  p1x = points[(length - 2) * 2]!;
+  p1y = points[(length - 2) * 2 + 1]!;
 
-  p2x = points[(length - 1) * 2];
-  p2y = points[(length - 1) * 2 + 1];
+  p2x = points[(length - 1) * 2]!;
+  p2y = points[(length - 1) * 2 + 1]!;
 
   perpx = -(p1y - p2y);
   perpy = p1x - p2x;
@@ -317,8 +324,9 @@ export const buildPolygon = (points: number[]): MeshGeometryData => {
   const vertices = new Float32Array(points.length);
 
   for (let i = 0; i < length; i++) {
-    vertices[i * 2] = points[i * 2];
-    vertices[i * 2 + 1] = points[i * 2 + 1];
+    // i in [0, length-1] and length = points.length / 2, so both reads are in-bounds.
+    vertices[i * 2] = points[i * 2]!;
+    vertices[i * 2 + 1] = points[i * 2 + 1]!;
   }
 
   const indices = new Uint16Array(triangles);
@@ -379,7 +387,9 @@ export const buildRoundedRectangle = (x: number, y: number, width: number, heigh
 
   const perimeter: number[] = [];
 
-  for (const [centerX, centerY, startAngle] of corners) {
+  // Each corner is a fixed [centerX, centerY, startAngle] triple; the defaults
+  // never trigger but satisfy the indexed-access checker.
+  for (const [centerX = 0, centerY = 0, startAngle = 0] of corners) {
     for (let i = 0; i <= cornerSegments; i++) {
       const angle = startAngle + step * i;
       const px = centerX + Math.cos(angle) * r;
@@ -388,7 +398,7 @@ export const buildRoundedRectangle = (x: number, y: number, width: number, heigh
 
       // Skip a point coincident with the previous one (a side of zero straight
       // length, i.e. radius == half-side, makes adjacent arcs meet).
-      if (last >= 2 && Math.abs(perimeter[last - 2] - px) < 1e-4 && Math.abs(perimeter[last - 1] - py) < 1e-4) {
+      if (last >= 2 && Math.abs(perimeter[last - 2]! - px) < 1e-4 && Math.abs(perimeter[last - 1]! - py) < 1e-4) {
         continue;
       }
 
@@ -406,8 +416,9 @@ export const buildRoundedRectangle = (x: number, y: number, width: number, heigh
   for (let i = 0; i < perimeterCount; i++) {
     const offset = (i + 1) * 2;
 
-    vertices[offset] = perimeter[i * 2];
-    vertices[offset + 1] = perimeter[i * 2 + 1];
+    // i in [0, perimeterCount-1] and perimeterCount = perimeter.length / 2.
+    vertices[offset] = perimeter[i * 2]!;
+    vertices[offset + 1] = perimeter[i * 2 + 1]!;
   }
 
   const indices = new Uint16Array(perimeterCount * 3);
@@ -421,7 +432,8 @@ export const buildRoundedRectangle = (x: number, y: number, width: number, heigh
   }
 
   // Closed outline (repeat the first point) so the stroke pass seals the border.
-  const points = [...perimeter, perimeter[0], perimeter[1]];
+  // r > 0 here, so the corner arcs always emit at least one (x, y) pair.
+  const points = [...perimeter, perimeter[0]!, perimeter[1]!];
 
   return { vertices, indices, points };
 };

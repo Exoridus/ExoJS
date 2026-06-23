@@ -250,7 +250,7 @@ export class AudioAnalyser {
     let sum = 0;
     const count = hi - lo + 1;
     for (let i = lo; i <= hi; i++) {
-      sum += spectrum[i];
+      sum += spectrum[i]!;
     }
     return sum / (count * 255);
   }
@@ -553,10 +553,10 @@ function buildLogRanges(bandCount: number, fMin: number, fMax: number, fftSize: 
 
 function applyFilterbank(spectrum: Uint8Array | Float32Array, bands: MelBand[], out: Uint8Array | Float32Array): void {
   for (let b = 0; b < bands.length; b++) {
-    const { startBin, weights } = bands[b];
+    const { startBin, weights } = bands[b]!;
     let sum = 0;
     for (let i = 0; i < weights.length; i++) {
-      sum += spectrum[startBin + i] * weights[i];
+      sum += spectrum[startBin + i]! * weights[i]!;
     }
     out[b] = sum;
   }
@@ -564,11 +564,11 @@ function applyFilterbank(spectrum: Uint8Array | Float32Array, bands: MelBand[], 
 
 function applyLogRanges(spectrum: Uint8Array | Float32Array, ranges: LogBandRange[], out: Uint8Array | Float32Array): void {
   for (let b = 0; b < ranges.length; b++) {
-    const { startBin, endBin } = ranges[b];
+    const { startBin, endBin } = ranges[b]!;
     let sum = 0;
     const count = endBin - startBin + 1;
     for (let i = startBin; i <= endBin; i++) {
-      sum += spectrum[i];
+      sum += spectrum[i]!;
     }
     out[b] = sum / count;
   }

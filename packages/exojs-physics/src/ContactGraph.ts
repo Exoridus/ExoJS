@@ -202,7 +202,8 @@ const warmStartMatch = (record: ContactRecord): void => {
 
   for (let i = 0; i < 2; i++) {
     if (i < manifold.pointCount) {
-      const id = manifold.points[i].id;
+      // i ∈ {0,1} and within pointCount, so the manifold point exists.
+      const id = (i === 0 ? manifold.points[0] : manifold.points[1]).id;
       let normal = 0;
       let tangent = 0;
 
@@ -229,7 +230,8 @@ const makeCollisionEvent = (a: Collider, b: Collider, manifold: Manifold): Colli
   const points: ContactPoint[] = [];
 
   for (let i = 0; i < manifold.pointCount; i++) {
-    const p = manifold.points[i];
+    // i in 0..pointCount-1 and pointCount ≤ 2, so the manifold point exists.
+    const p = i === 0 ? manifold.points[0] : manifold.points[1];
 
     points.push(Object.freeze({ x: p.x, y: p.y, penetration: p.penetration }));
   }

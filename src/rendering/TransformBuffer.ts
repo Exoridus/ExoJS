@@ -147,7 +147,8 @@ export class TransformBuffer {
     this._frameHash = this._mix(this._frameHash, slot);
 
     for (let i = 0; i < floatsPerSlot; i++) {
-      this._frameHash = this._mix(this._frameHash, this._hashFloat(data[offset + i]));
+      // In-bounds: offset..offset+floatsPerSlot-1 is the just-written slot.
+      this._frameHash = this._mix(this._frameHash, this._hashFloat(data[offset + i]!));
     }
 
     this._writeCount++;
@@ -220,7 +221,8 @@ export class TransformBuffer {
   private _hashFloat(value: number): number {
     hashFloatScratch[0] = value;
 
-    return hashUintScratch[0] >>> 0;
+    // hashUintScratch is a 1-element view aliasing hashFloatScratch.
+    return hashUintScratch[0]! >>> 0;
   }
 
   private _mix(hash: number, value: number): number {

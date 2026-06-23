@@ -273,7 +273,8 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
 
   /** The last node in the voice chain before the bus — the output gain, or the last effect. */
   protected _tail(): AudioNode {
-    return this._effects.length > 0 ? this._effects[this._effects.length - 1].outputNode : this._output;
+    const lastEffect = this._effects[this._effects.length - 1];
+    return lastEffect !== undefined ? lastEffect.outputNode : this._output;
   }
 
   protected _connectOutput(): void {

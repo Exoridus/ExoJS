@@ -290,19 +290,20 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner {
   }
 
   private _updateNormals(normals: Vector[]): void {
-    normals[0]
+    // Callers always pass the 4-element normal array, so slots 0..3 exist.
+    normals[0]!
       .set(this.right - this.left, 0)
       .rperp()
       .normalize();
-    normals[1]
+    normals[1]!
       .set(0, this.bottom - this.top)
       .rperp()
       .normalize();
-    normals[2]
+    normals[2]!
       .set(this.left - this.right, 0)
       .rperp()
       .normalize();
-    normals[3]
+    normals[3]!
       .set(0, this.top - this.bottom)
       .rperp()
       .normalize();

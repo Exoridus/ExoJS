@@ -26,7 +26,8 @@ const completionStatusEnumKhr = 0x91b1;
 
 const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
   [ShaderPrimitives.Float]: (gl, location, value): void => {
-    gl.uniform1f(location, value[0]);
+    // In-bounds: scalar uniforms are backed by a typed array of length >= 1.
+    gl.uniform1f(location, value[0]!);
   },
   [ShaderPrimitives.FloatVec2]: (gl, location, value): void => {
     gl.uniform2fv(location, value);
@@ -39,7 +40,8 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
   },
 
   [ShaderPrimitives.Int]: (gl, location, value): void => {
-    gl.uniform1i(location, value[0]);
+    // In-bounds: scalar uniforms are backed by a typed array of length >= 1.
+    gl.uniform1i(location, value[0]!);
   },
   [ShaderPrimitives.IntVec2]: (gl, location, value): void => {
     gl.uniform2iv(location, value);
@@ -52,7 +54,8 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
   },
 
   [ShaderPrimitives.Bool]: (gl, location, value): void => {
-    gl.uniform1i(location, value[0]);
+    // In-bounds: scalar uniforms are backed by a typed array of length >= 1.
+    gl.uniform1i(location, value[0]!);
   },
   [ShaderPrimitives.BoolVec2]: (gl, location, value): void => {
     gl.uniform2iv(location, value);
@@ -75,7 +78,8 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
   },
 
   [ShaderPrimitives.Sampler2D]: (gl, location, value): void => {
-    gl.uniform1i(location, value[0]);
+    // In-bounds: scalar uniforms are backed by a typed array of length >= 1.
+    gl.uniform1i(location, value[0]!);
   },
 };
 
@@ -276,10 +280,17 @@ function extractUniforms(gl: WebGL2RenderingContext, program: WebGLProgram, shad
       continue;
     }
 
-    const data = new webGl2PrimitiveArrayConstructors[info.type](webGl2PrimitiveByteSizeMapping[info.type] * info.size);
+    const arrayConstructor = webGl2PrimitiveArrayConstructors[info.type];
+    const byteSize = webGl2PrimitiveByteSizeMapping[info.type];
+    const uploadFn = uniformUploadFunctions[info.type];
+
+    if (arrayConstructor === undefined || byteSize === undefined || uploadFn === undefined) {
+      throw new Error(`Unsupported uniform type ${info.type} for uniform "${info.name}".`);
+    }
+
+    const data = new arrayConstructor(byteSize * info.size);
     const uniform = new ShaderUniform(index, info.type, info.size, info.name, data);
     const location = gl.getUniformLocation(program, uniform.name);
-    const uploadFn = uniformUploadFunctions[info.type];
 
     shader.uniforms.set(uniform.name, uniform);
 

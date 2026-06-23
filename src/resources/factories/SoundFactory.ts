@@ -51,8 +51,8 @@ export class SoundFactory extends AbstractAssetFactory<Sound> {
 
     const sound = new Sound(audioBuffer, {
       ...options.playbackOptions,
-      poolSize: options.poolSize,
-      sprites: options.sprites,
+      ...(options.poolSize !== undefined && { poolSize: options.poolSize }),
+      ...(options.sprites !== undefined && { sprites: options.sprites }),
     });
 
     return sound;

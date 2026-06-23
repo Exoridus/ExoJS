@@ -136,19 +136,19 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       }
 
       const offset = writeIndex * wordsPerInstance;
-      const frame = textureIndex[i] < frameCount ? textureIndex[i] : fallbackFrame;
+      const frame = textureIndex[i]! < frameCount ? textureIndex[i]! : fallbackFrame;
       const uvBase = frame * 2;
 
-      f32[offset + 0] = posX[i];
-      f32[offset + 1] = posY[i];
-      f32[offset + 2] = scaleX[i];
-      f32[offset + 3] = scaleY[i];
-      f32[offset + 4] = rotations[i];
-      u32[offset + 5] = color[i];
-      f32[offset + 6] = uvMins[uvBase + 0];
-      f32[offset + 7] = uvMins[uvBase + 1];
-      f32[offset + 8] = uvMaxs[uvBase + 0];
-      f32[offset + 9] = uvMaxs[uvBase + 1];
+      f32[offset + 0] = posX[i]!;
+      f32[offset + 1] = posY[i]!;
+      f32[offset + 2] = scaleX[i]!;
+      f32[offset + 3] = scaleY[i]!;
+      f32[offset + 4] = rotations[i]!;
+      u32[offset + 5] = color[i]!;
+      f32[offset + 6] = uvMins[uvBase + 0]!;
+      f32[offset + 7] = uvMins[uvBase + 1]!;
+      f32[offset + 8] = uvMaxs[uvBase + 0]!;
+      f32[offset + 9] = uvMaxs[uvBase + 1]!;
 
       writeIndex++;
     }
@@ -198,7 +198,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     }
 
     for (let i = 0; i < frames.length; i++) {
-      const f = frames[i];
+      const f = frames[i]!;
       const o = i * 2;
       const minU = f.left / texW;
       const maxU = f.right / texW;

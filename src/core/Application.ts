@@ -307,14 +307,14 @@ export class Application {
         height: logicalHeight,
         pixelRatio: this._pixelRatio,
         tabIndex: this.canvas.tabIndex,
-        imageRendering: canvasOptions.imageRendering,
+        ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
       },
       loader: {
         basePath: loaderOptions.basePath ?? '',
         fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
-        cache: loaderOptions.cache,
-        cacheStrategy: loaderOptions.cacheStrategy,
-        concurrency: loaderOptions.concurrency,
+        ...(loaderOptions.cache !== undefined && { cache: loaderOptions.cache }),
+        ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
+        ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
       },
       rendering: {
         debug: renderingOptions.debug ?? defaultRenderingSettings.debug,

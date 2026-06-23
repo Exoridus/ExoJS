@@ -104,7 +104,7 @@ export class WebGpuComputePipeline {
         resource: {
           buffer: e.buffer,
           offset: e.offset ?? 0,
-          size: e.size,
+          ...(e.size !== undefined && { size: e.size }),
         },
       })),
     });

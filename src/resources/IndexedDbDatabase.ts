@@ -101,7 +101,12 @@ export class IndexedDbDatabase implements Database {
             .sort((a, b) => a - b);
 
           for (const v of migrationKeys) {
-            const ok = this._migrations[v](database, transaction);
+            const migration = this._migrations[v];
+            if (migration === undefined) {
+              continue;
+            }
+
+            const ok = migration(database, transaction);
 
             if (!ok) {
               transaction.abort();
@@ -153,7 +158,10 @@ export class IndexedDbDatabase implements Database {
     const store = await this.getObjectStore(type);
 
     return new Promise((resolve, reject) => {
-      const request = store.get(name);
+      // `IDBRequest.result` is typed `any`; the records this store writes in
+      // `save()` have the shape `{ name, data }`, so type the request to that
+      // record so `result.data` resolves as `T`.
+      const request = store.get(name) as IDBRequest<{ name: string; data: T } | undefined>;
 
       request.addEventListener('success', () => resolve(request.result?.data ?? null));
       request.addEventListener('error', () => reject(new Error('An error occurred while loading an item.')));

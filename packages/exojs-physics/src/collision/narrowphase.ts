@@ -4,6 +4,14 @@ import type { Manifold } from './Manifold';
 const eps = 1e-9;
 
 /**
+ * In-bounds read of a flat vertex/normal buffer. Every caller indexes within
+ * `0..count-1`, so the element always exists; the `0` fallback satisfies
+ * `noUncheckedIndexedAccess` for an unreachable case without a cast or `!`, and
+ * keeps the `??` out of the callers' cyclomatic complexity.
+ */
+const at = (arr: readonly number[], i: number): number => arr[i] ?? 0;
+
+/**
  * Generate the contact manifold for `a` vs `b`, writing into `manifold` and
  * returning `true` when the colliders touch. The manifold normal is oriented
  * from `a` toward `b`. Dispatches on shape pair; polygon/circle is handled by
@@ -83,7 +91,8 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
   let refEdge = 0;
 
   for (let i = 0; i < count; i++) {
-    const s = normals[i * 2] * (c.x - verts[i * 2]) + normals[i * 2 + 1] * (c.y - verts[i * 2 + 1]);
+    // Loop indices are in-bounds (0..count-1); `at` covers the unreachable case.
+    const s = at(normals, i * 2) * (c.x - at(verts, i * 2)) + at(normals, i * 2 + 1) * (c.y - at(verts, i * 2 + 1));
 
     if (s > r) {
       return false;
@@ -95,6 +104,10 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
     }
   }
 
+  // refEdge/j stay in 0..count-1, so these reads are in-bounds too.
+  const refNx = at(normals, refEdge * 2);
+  const refNy = at(normals, refEdge * 2 + 1);
+
   let nx: number;
   let ny: number;
   let penetration: number;
@@ -104,18 +117,18 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
 
   if (maxSep < eps) {
     // Centre inside the polygon: push out along the least-penetrating face.
-    nx = -normals[refEdge * 2];
-    ny = -normals[refEdge * 2 + 1];
+    nx = -refNx;
+    ny = -refNy;
     penetration = r - maxSep;
     px = c.x + nx * r;
     py = c.y + ny * r;
     id = refEdge;
   } else {
     const j = (refEdge + 1) % count;
-    const v1x = verts[refEdge * 2];
-    const v1y = verts[refEdge * 2 + 1];
-    const v2x = verts[j * 2];
-    const v2y = verts[j * 2 + 1];
+    const v1x = at(verts, refEdge * 2);
+    const v1y = at(verts, refEdge * 2 + 1);
+    const v2x = at(verts, j * 2);
+    const v2y = at(verts, j * 2 + 1);
     const u1 = (c.x - v1x) * (v2x - v1x) + (c.y - v1y) * (v2y - v1y);
     const u2 = (c.x - v2x) * (v1x - v2x) + (c.y - v2y) * (v1y - v2y);
 
@@ -131,8 +144,8 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
 
       const d = Math.sqrt(d2);
 
-      nx = d > eps ? -dx / d : -normals[refEdge * 2];
-      ny = d > eps ? -dy / d : -normals[refEdge * 2 + 1];
+      nx = d > eps ? -dx / d : -refNx;
+      ny = d > eps ? -dy / d : -refNy;
       penetration = r - d;
       px = v1x;
       py = v1y;
@@ -148,16 +161,16 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
 
       const d = Math.sqrt(d2);
 
-      nx = d > eps ? -dx / d : -normals[refEdge * 2];
-      ny = d > eps ? -dy / d : -normals[refEdge * 2 + 1];
+      nx = d > eps ? -dx / d : -refNx;
+      ny = d > eps ? -dy / d : -refNy;
       penetration = r - d;
       px = v2x;
       py = v2y;
       id = j;
     } else {
       // Face region.
-      nx = -normals[refEdge * 2];
-      ny = -normals[refEdge * 2 + 1];
+      nx = -refNx;
+      ny = -refNy;
       penetration = r - maxSep;
       px = c.x + nx * r;
       py = c.y + ny * r;
@@ -206,10 +219,11 @@ const findMaxSeparation = (a: CollisionProxy, b: CollisionProxy): { separation: 
   let bestEdge = 0;
 
   for (let i = 0; i < ac; i++) {
-    const nx = an[i * 2];
-    const ny = an[i * 2 + 1];
-    const vx = av[i * 2];
-    const vy = av[i * 2 + 1];
+    // i in 0..ac-1 and j in 0..bc-1, so every read below is in-bounds.
+    const nx = at(an, i * 2);
+    const ny = at(an, i * 2 + 1);
+    const vx = at(av, i * 2);
+    const vy = at(av, i * 2 + 1);
 
     // Support of b along -n = vertex of b minimising dot(n, vertex).
     let minDot = Infinity;
@@ -217,12 +231,14 @@ const findMaxSeparation = (a: CollisionProxy, b: CollisionProxy): { separation: 
     let sy = 0;
 
     for (let j = 0; j < bc; j++) {
-      const d = nx * bv[j * 2] + ny * bv[j * 2 + 1];
+      const bjx = at(bv, j * 2);
+      const bjy = at(bv, j * 2 + 1);
+      const d = nx * bjx + ny * bjy;
 
       if (d < minDot) {
         minDot = d;
-        sx = bv[j * 2];
-        sy = bv[j * 2 + 1];
+        sx = bjx;
+        sy = bjy;
       }
     }
 
@@ -247,7 +263,7 @@ const findIncidentFace = (refNx: number, refNy: number, inc: CollisionProxy, out
   let idx = 0;
 
   for (let i = 0; i < ic; i++) {
-    const d = refNx * inrm[i * 2] + refNy * inrm[i * 2 + 1];
+    const d = refNx * at(inrm, i * 2) + refNy * at(inrm, i * 2 + 1);
 
     if (d < minDot) {
       minDot = d;
@@ -257,11 +273,12 @@ const findIncidentFace = (refNx: number, refNy: number, inc: CollisionProxy, out
 
   const j = (idx + 1) % ic;
 
-  out[0].x = iv[idx * 2];
-  out[0].y = iv[idx * 2 + 1];
+  // idx/j in 0..ic-1; reads in-bounds. out is a fixed 2-tuple.
+  out[0].x = at(iv, idx * 2);
+  out[0].y = at(iv, idx * 2 + 1);
   out[0].id = idx;
-  out[1].x = iv[j * 2];
-  out[1].y = iv[j * 2 + 1];
+  out[1].x = at(iv, j * 2);
+  out[1].y = at(iv, j * 2 + 1);
   out[1].id = j;
 };
 
@@ -274,25 +291,33 @@ const clipSegment = (
   output: [ClipVertex, ClipVertex],
   syntheticId: number,
 ): number => {
+  // input/output are fixed 2-tuples; count never exceeds 2 (two boundary
+  // copies, or one copy plus the guarded intersection), so output[0]/output[1]
+  // are the only slots written and both always exist.
+  const in0 = input[0];
+  const in1 = input[1];
   let count = 0;
-  const d1 = nx * input[0].x + ny * input[0].y - offset;
-  const d2 = nx * input[1].x + ny * input[1].y - offset;
+  const d1 = nx * in0.x + ny * in0.y - offset;
+  const d2 = nx * in1.x + ny * in1.y - offset;
 
   if (d1 <= 0) {
-    copyClip(input[0], output[count++]);
+    copyClip(in0, count === 0 ? output[0] : output[1]);
+    count++;
   }
 
   if (d2 <= 0) {
-    copyClip(input[1], output[count++]);
+    copyClip(in1, count === 0 ? output[0] : output[1]);
+    count++;
   }
 
   if (d1 * d2 < 0 && count < 2) {
     const alpha = d1 / (d1 - d2);
-    const target = output[count++];
+    const target = count === 0 ? output[0] : output[1];
 
-    target.x = input[0].x + alpha * (input[1].x - input[0].x);
-    target.y = input[0].y + alpha * (input[1].y - input[0].y);
+    target.x = in0.x + alpha * (in1.x - in0.x);
+    target.y = in0.y + alpha * (in1.y - in0.y);
     target.id = syntheticId;
+    count++;
   }
 
   return count;
@@ -344,12 +369,13 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   const rn = ref.worldNormals;
   const rc = countOf(ref);
   const i2 = (refEdge + 1) % rc;
-  const v1x = rv[refEdge * 2];
-  const v1y = rv[refEdge * 2 + 1];
-  const v2x = rv[i2 * 2];
-  const v2y = rv[i2 * 2 + 1];
-  const refNx = rn[refEdge * 2];
-  const refNy = rn[refEdge * 2 + 1];
+  // refEdge/i2 in 0..rc-1, so these reads are in-bounds.
+  const v1x = at(rv, refEdge * 2);
+  const v1y = at(rv, refEdge * 2 + 1);
+  const v2x = at(rv, i2 * 2);
+  const v2y = at(rv, i2 * 2 + 1);
+  const refNx = at(rn, refEdge * 2);
+  const refNy = at(rn, refEdge * 2 + 1);
 
   const incident = newClipPair();
   findIncidentFace(refNx, refNy, inc, incident);
@@ -380,17 +406,21 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   manifold.normalY = flip ? -refNy : refNy;
 
   const refC = refNx * v1x + refNy * v1y;
+  const points = manifold.points;
   let cp = 0;
 
   for (let k = 0; k < 2; k++) {
-    const separation = refNx * clipped2[k].x + refNy * clipped2[k].y - refC;
+    // clipped2 is a fixed 2-tuple; k in {0,1} so the clip vertex always exists.
+    const cv = k === 0 ? clipped2[0] : clipped2[1];
+    const separation = refNx * cv.x + refNy * cv.y - refC;
 
     if (separation <= 0) {
-      const point = manifold.points[cp];
-      point.x = clipped2[k].x;
-      point.y = clipped2[k].y;
+      // cp reaches at most 2 (one per clip vertex); points[0]/points[1] exist.
+      const point = cp === 0 ? points[0] : points[1];
+      point.x = cv.x;
+      point.y = cv.y;
       point.penetration = -separation;
-      point.id = encodeId(flip, refEdge, clipped2[k].id);
+      point.id = encodeId(flip, refEdge, cv.id);
       cp++;
     }
   }
@@ -440,7 +470,8 @@ const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): 
   let refEdge = 0;
 
   for (let i = 0; i < count; i++) {
-    const s = normals[i * 2] * (c.x - verts[i * 2]) + normals[i * 2 + 1] * (c.y - verts[i * 2 + 1]);
+    // Loop indices are in-bounds (0..count-1); `at` covers the unreachable case.
+    const s = at(normals, i * 2) * (c.x - at(verts, i * 2)) + at(normals, i * 2 + 1) * (c.y - at(verts, i * 2 + 1));
 
     if (s > r) {
       return false;
@@ -457,10 +488,10 @@ const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): 
   }
 
   const j = (refEdge + 1) % count;
-  const v1x = verts[refEdge * 2];
-  const v1y = verts[refEdge * 2 + 1];
-  const v2x = verts[j * 2];
-  const v2y = verts[j * 2 + 1];
+  const v1x = at(verts, refEdge * 2);
+  const v1y = at(verts, refEdge * 2 + 1);
+  const v2x = at(verts, j * 2);
+  const v2y = at(verts, j * 2 + 1);
   const u1 = (c.x - v1x) * (v2x - v1x) + (c.y - v1y) * (v2y - v1y);
   const u2 = (c.x - v2x) * (v1x - v2x) + (c.y - v2y) * (v1y - v2y);
 

@@ -152,7 +152,7 @@ export class TileChunk implements ReadonlyTileChunk {
   /** @inheritdoc */
   public getRawAt(lx: number, ly: number): PackedTile {
     this._validateLocalCoord(lx, ly);
-    return this._tiles[this._index(lx, ly)];
+    return this._tiles[this._index(lx, ly)]!;
   }
 
   /** @inheritdoc */

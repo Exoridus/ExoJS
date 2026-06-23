@@ -21,8 +21,8 @@ export class JsonStore {
     this._storageName = storageName;
     this._store = new IndexedDbStore({
       name: options.name,
-      version: options.version,
-      migrations: options.migrations,
+      ...(options.version !== undefined && { version: options.version }),
+      ...(options.migrations !== undefined && { migrations: options.migrations }),
       storeNames: [storageName],
     });
   }

@@ -313,13 +313,14 @@ export class Gamepad {
     const { buttons: rawButtons, axes: rawAxes } = this._browserGamepad;
 
     for (const button of this._mapping.buttons) {
-      if (button.index >= rawButtons.length) {
+      const rawButton = rawButtons[button.index];
+      if (rawButton === undefined) {
         continue;
       }
 
       const offset = this._resolveOffset(button.channel);
       const previous = channels[offset];
-      const value = button.transformValue(rawButtons[button.index].value) || 0;
+      const value = button.transformValue(rawButton.value) || 0;
 
       if (previous === value) {
         continue;
@@ -335,13 +336,14 @@ export class Gamepad {
     }
 
     for (const axis of this._mapping.axes) {
-      if (axis.index >= rawAxes.length) {
+      const rawAxis = rawAxes[axis.index];
+      if (rawAxis === undefined) {
         continue;
       }
 
       const offset = this._resolveOffset(axis.channel);
       const previous = channels[offset];
-      const value = axis.transformValue(rawAxes[axis.index]) || 0;
+      const value = axis.transformValue(rawAxis) || 0;
 
       if (previous === value) {
         continue;
@@ -408,7 +410,9 @@ export class Gamepad {
   }
 
   private _createBinding(channel: InputChannel | readonly InputChannel[], options: InputBindingOptions = {}): InputBinding {
-    const list = Array.isArray(channel) ? channel : [channel as InputChannel];
+    // `Array.isArray` narrows `readonly T[] | T` to `any[]`, dropping the element
+    // type; annotate `list` so the element type is restored for `.map`.
+    const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const resolved = list.map(c => this._resolveExternalChannel(c));
     const binding = new InputBinding(resolved, options, this._detacher);
     this._bindings.add(binding);

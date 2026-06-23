@@ -109,7 +109,8 @@ export class Polygon implements ShapeLike {
     const sharedLength = Math.min(len, newLen);
 
     for (let i = 0; i < sharedLength; i++) {
-      this._points[i].copy(newPoints[i]);
+      // i < sharedLength = min(len, newLen), so both arrays are in-bounds.
+      this._points[i]!.copy(newPoints[i]!);
     }
 
     if (diff > 0) {
@@ -125,16 +126,18 @@ export class Polygon implements ShapeLike {
       }
     } else if (diff < 0) {
       for (let i = len; i < newLen; i++) {
-        this._points.push(newPoints[i].clone());
-        this._edges.push(newPoints[i].clone());
+        // i in [len, newLen-1], a valid index into newPoints.
+        this._points.push(newPoints[i]!.clone());
+        this._edges.push(newPoints[i]!.clone());
       }
     }
 
     for (let i = 0; i < newLen; i++) {
-      const curr = this._points[i];
-      const next = this._points[(i + 1) % newLen];
+      // _points and _edges both have length newLen here; i and (i+1)%newLen are valid.
+      const curr = this._points[i]!;
+      const next = this._points[(i + 1) % newLen]!;
 
-      this._edges[i].set(next.x - curr.x, next.y - curr.y);
+      this._edges[i]!.set(next.x - curr.x, next.y - curr.y);
     }
 
     this._normalsDirty = true;
@@ -211,7 +214,8 @@ export class Polygon implements ShapeLike {
       }
 
       for (let i = 0; i < n; i++) {
-        this._cachedNormals[i].copy(this._edges[i]).rperp().normalize();
+        // _cachedNormals was grown to >= n above; _edges has length n (= _points).
+        this._cachedNormals[i]!.copy(this._edges[i]!).rperp().normalize();
       }
 
       this._normalsDirty = false;
@@ -232,7 +236,9 @@ export class Polygon implements ShapeLike {
     let max = -Infinity;
 
     for (let i = 0; i < points.length; i++) {
-      const projection = nx * points[i].x + ny * points[i].y;
+      // i in [0, points.length-1].
+      const vertex = points[i]!;
+      const projection = nx * vertex.x + ny * vertex.y;
 
       if (projection < min) min = projection;
       if (projection > max) max = projection;

@@ -41,18 +41,22 @@ export class Curve implements LifetimeFunction<number> {
   public evaluate(t: number): number {
     const keys = this._keys;
     const last = keys.length - 1;
+    const first = keys[0];
+    const lastKey = keys[last];
 
-    if (t <= keys[0].t) return keys[0].v;
-    if (t >= keys[last].t) return keys[last].v;
+    if (first === undefined || lastKey === undefined) return 0;
+
+    if (t <= first.t) return first.v;
+    if (t >= lastKey.t) return lastKey.v;
 
     // Cache-friendly forward search: most callers sweep t monotonically.
     let segment = this._lastSegment;
 
-    if (t < keys[segment].t) {
+    if (t < (keys[segment]?.t ?? 0)) {
       segment = 0;
     }
 
-    while (segment < last && t > keys[segment + 1].t) {
+    while (segment < last && t > (keys[segment + 1]?.t ?? Infinity)) {
       segment++;
     }
 
@@ -60,6 +64,9 @@ export class Curve implements LifetimeFunction<number> {
 
     const a = keys[segment];
     const b = keys[segment + 1];
+
+    if (a === undefined || b === undefined) return lastKey.v;
+
     const ratio = (t - a.t) / (b.t - a.t);
 
     return a.v + (b.v - a.v) * ratio;

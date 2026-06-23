@@ -353,7 +353,7 @@ export class ParticleGpuState {
       view[3] = flipY ? 0 : 1;
     } else {
       for (let i = 0; i < frames.length; i++) {
-        const f = frames[i];
+        const f = frames[i]!;
         const o = i * 4;
         const minU = f.left / w;
         const maxU = f.right / w;
@@ -389,30 +389,30 @@ export class ParticleGpuState {
       const byteOffset2 = slot * 8;
       const byteOffset1 = slot * 4;
 
-      scratch2[0] = system.posX[slot];
-      scratch2[1] = system.posY[slot];
+      scratch2[0] = system.posX[slot]!;
+      scratch2[1] = system.posY[slot]!;
       queue.writeBuffer(this._positions, byteOffset2, scratch2.buffer, 0, 8);
 
-      scratch2[0] = system.velX[slot];
-      scratch2[1] = system.velY[slot];
+      scratch2[0] = system.velX[slot]!;
+      scratch2[1] = system.velY[slot]!;
       queue.writeBuffer(this._velocities, byteOffset2, scratch2.buffer, 0, 8);
 
-      scratch2[0] = system.scaleX[slot];
-      scratch2[1] = system.scaleY[slot];
+      scratch2[0] = system.scaleX[slot]!;
+      scratch2[1] = system.scaleY[slot]!;
       queue.writeBuffer(this._scales, byteOffset2, scratch2.buffer, 0, 8);
 
-      scratch2[0] = system.rotations[slot];
-      scratch2[1] = system.rotationSpeeds[slot];
+      scratch2[0] = system.rotations[slot]!;
+      scratch2[1] = system.rotationSpeeds[slot]!;
       queue.writeBuffer(this._rotInfo, byteOffset2, scratch2.buffer, 0, 8);
 
-      scratch2[0] = system.elapsed[slot];
-      scratch2[1] = system.lifetime[slot];
+      scratch2[0] = system.elapsed[slot]!;
+      scratch2[1] = system.lifetime[slot]!;
       queue.writeBuffer(this._timing, byteOffset2, scratch2.buffer, 0, 8);
 
-      scratch1[0] = system.color[slot];
+      scratch1[0] = system.color[slot]!;
       queue.writeBuffer(this._color, byteOffset1, scratch1.buffer, 0, 4);
 
-      scratch1[0] = system.textureIndex[slot];
+      scratch1[0] = system.textureIndex[slot]!;
       queue.writeBuffer(this._textureIndex, byteOffset1, scratch1.buffer, 0, 4);
     }
   }

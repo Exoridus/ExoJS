@@ -398,7 +398,9 @@ export class InputManager implements System {
   }
 
   private createBinding(channel: InputChannel | readonly InputChannel[], options: InputBindingOptions = {}): InputBinding {
-    const list = Array.isArray(channel) ? channel : [channel as InputChannel];
+    // `Array.isArray` narrows `readonly T[] | T` to `any[]`, dropping the element
+    // type; annotate `list` so the element type is restored for `.map`.
+    const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const slot = options.gamepadSlot ?? 0;
     const resolved = list.map(c => this.resolveExternalChannel(c, slot));
     const binding = new InputBinding(resolved, options, this.bindingDetacher);
@@ -736,7 +738,8 @@ export class InputManager implements System {
     let lastOccupiedSlot = -1;
 
     for (let i = gamepadSlots - 1; i >= 0; i--) {
-      if (this._gamepads[i].connected) {
+      const slotPad = this._gamepads[i];
+      if (slotPad !== undefined && slotPad.connected) {
         lastOccupiedSlot = i;
         break;
       }
@@ -745,19 +748,19 @@ export class InputManager implements System {
     pad._silentUnbind();
 
     for (let target = 0; target < gamepadSlots; target++) {
-      if (this._gamepads[target].connected) {
+      const targetPad = this._gamepads[target];
+      if (targetPad === undefined || targetPad.connected) {
         continue;
       }
 
       for (let source = target + 1; source < gamepadSlots; source++) {
         const sourcePad = this._gamepads[source];
 
-        if (!sourcePad.connected) {
+        if (sourcePad === undefined || !sourcePad.connected) {
           continue;
         }
 
         const browserIndex = sourcePad.browserGamepad?.index;
-        const targetPad = this._gamepads[target];
         const sourceSlot = sourcePad.slot;
 
         targetPad._rebindFrom(sourcePad);
@@ -774,9 +777,10 @@ export class InputManager implements System {
 
     if (lastOccupiedSlot >= 0) {
       const emptiedSlot = this._gamepads[lastOccupiedSlot];
-
-      emptiedSlot._dispatchDisconnect();
-      this.onGamepadDisconnected.dispatch(emptiedSlot);
+      if (emptiedSlot !== undefined) {
+        emptiedSlot._dispatchDisconnect();
+        this.onGamepadDisconnected.dispatch(emptiedSlot);
+      }
     }
   }
 

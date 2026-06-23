@@ -68,8 +68,8 @@ export class SystemRegistry implements Destroyable {
 
     this._ticking = true;
 
-    for (let index = 0; index < this._systems.length; index++) {
-      this._systems[index].update(delta);
+    for (const system of this._systems) {
+      system.update(delta);
     }
 
     this._ticking = false;
@@ -78,7 +78,7 @@ export class SystemRegistry implements Destroyable {
 
   public destroy(): void {
     for (let index = this._systems.length - 1; index >= 0; index--) {
-      this._systems[index].destroy();
+      this._systems[index]!.destroy();
     }
 
     this._systems.length = 0;

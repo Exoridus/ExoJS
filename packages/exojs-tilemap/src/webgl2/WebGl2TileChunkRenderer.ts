@@ -222,7 +222,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     const baseWord = nodeIndex & TILE_ROW_MASK;
 
     for (let i = 0; i < count; i++) {
-      const q = quads[offset + i];
+      const q = quads[offset + i]!;
       const idx = this._quadIndex * wordsPerInstance;
 
       f32[idx + 0] = q.x0;

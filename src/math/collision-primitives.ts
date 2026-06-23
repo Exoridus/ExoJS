@@ -133,8 +133,9 @@ const polygonContainsPoint = ({ x, y }: PointLike, points: PointLike[]): boolean
   let inside = false;
 
   for (let current = 0, previous = len - 1; current < len; previous = current++) {
-    const prev = points[previous];
-    const curr = points[current];
+    // current and previous are always valid indices into the length-`len` array.
+    const prev = points[previous]!;
+    const curr = points[current]!;
 
     if (curr.y > y !== prev.y > y && x < (prev.x - curr.x) * ((y - curr.y) / (prev.y - curr.y)) + curr.x) {
       inside = !inside;
@@ -155,12 +156,14 @@ const polygonsIntersect = (polygonA: PointLike[], polygonB: PointLike[]): boolea
   }
 
   for (let i = 0; i < polygonA.length; i++) {
-    const a1 = polygonA[i];
-    const a2 = polygonA[(i + 1) % polygonA.length];
+    // i and the modulo successor are valid indices into polygonA.
+    const a1 = polygonA[i]!;
+    const a2 = polygonA[(i + 1) % polygonA.length]!;
 
     for (let j = 0; j < polygonB.length; j++) {
-      const b1 = polygonB[j];
-      const b2 = polygonB[(j + 1) % polygonB.length];
+      // j and the modulo successor are valid indices into polygonB.
+      const b1 = polygonB[j]!;
+      const b2 = polygonB[(j + 1) % polygonB.length]!;
 
       if (segmentsIntersect(a1, a2, b1, b2)) {
         return true;
@@ -168,7 +171,8 @@ const polygonsIntersect = (polygonA: PointLike[], polygonB: PointLike[]): boolea
     }
   }
 
-  return polygonContainsPoint(polygonA[0], polygonB) || polygonContainsPoint(polygonB[0], polygonA);
+  // Both arrays are non-empty here (length-0 guard at function entry).
+  return polygonContainsPoint(polygonA[0]!, polygonB) || polygonContainsPoint(polygonB[0]!, polygonA);
 };
 
 /** Return `true` when two points are within `threshold` distance of each other. */

@@ -109,7 +109,12 @@ export class AnimatedSprite extends Sprite {
       throw new Error('AnimatedSprite clip names must be non-empty strings.');
     }
 
-    if (!Array.isArray(clip.frames) || clip.frames.length === 0) {
+    // Read the frames into a typed local first: `Array.isArray` narrows the
+    // `readonly Rectangle[]` to `any[]` on whichever reference it tests, so the
+    // runtime guard runs against the property while `.map` reads the typed local.
+    const frames: readonly Rectangle[] = clip.frames;
+
+    if (!Array.isArray(clip.frames) || frames.length === 0) {
       throw new Error(`AnimatedSprite clip "${name}" must define at least one frame.`);
     }
 
@@ -120,7 +125,7 @@ export class AnimatedSprite extends Sprite {
     }
 
     this._clips.set(name, {
-      frames: clip.frames.map(frame => frame.clone()),
+      frames: frames.map(frame => frame.clone()),
       frameDurationMs: 1000 / fps,
       loop: clip.loop ?? true,
     });
@@ -174,7 +179,8 @@ export class AnimatedSprite extends Sprite {
       this._currentClipName = name;
       this._currentFrameIndex = 0;
       this._elapsedFrameTimeMs = 0;
-      this._applyFrame(clip.frames[0]);
+      // Normalized clips always hold at least one frame.
+      this._applyFrame(clip.frames[0]!);
       this.onFrame.dispatch(name, 0);
     }
 
@@ -197,7 +203,8 @@ export class AnimatedSprite extends Sprite {
 
     if (clip && clip.frames.length > 0) {
       this._currentFrameIndex = 0;
-      this._applyFrame(clip.frames[0]);
+      // Guarded non-empty above.
+      this._applyFrame(clip.frames[0]!);
       this.onFrame.dispatch(this._currentClipName, 0);
     }
 
@@ -250,13 +257,15 @@ export class AnimatedSprite extends Sprite {
       if (nextFrame >= clip.frames.length) {
         if (this.loop) {
           this._currentFrameIndex = 0;
-          this._applyFrame(clip.frames[0]);
+          // clip has > 1 frame here (early-returned otherwise).
+          this._applyFrame(clip.frames[0]!);
           this.onFrame.dispatch(this._currentClipName, 0);
           continue;
         }
 
         this._currentFrameIndex = clip.frames.length - 1;
-        this._applyFrame(clip.frames[this._currentFrameIndex]);
+        // In-bounds: last frame index.
+        this._applyFrame(clip.frames[this._currentFrameIndex]!);
         this._playing = false;
         this.onComplete.dispatch(this._currentClipName);
 
@@ -264,7 +273,8 @@ export class AnimatedSprite extends Sprite {
       }
 
       this._currentFrameIndex = nextFrame;
-      this._applyFrame(clip.frames[this._currentFrameIndex]);
+      // In-bounds: nextFrame < frames.length.
+      this._applyFrame(clip.frames[this._currentFrameIndex]!);
       this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
     }
 

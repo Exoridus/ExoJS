@@ -46,36 +46,47 @@ export class ColorGradient implements LifetimeFunction<Color> {
   public evaluate(t: number, out: Color = this._scratch): Color {
     const keys = this._keys;
     const last = keys.length - 1;
+    const first = keys[0];
+    const lastKey = keys[last];
 
-    if (t <= keys[0].t) {
-      out.copy(keys[0].color);
+    if (first === undefined || lastKey === undefined) {
+      return out;
+    }
+
+    if (t <= first.t) {
+      out.copy(first.color);
 
       return out;
     }
 
-    if (t >= keys[last].t) {
-      out.copy(keys[last].color);
+    if (t >= lastKey.t) {
+      out.copy(lastKey.color);
 
       return out;
     }
 
     let segment = this._lastSegment;
 
-    if (t < keys[segment].t) {
+    if (t < (keys[segment]?.t ?? 0)) {
       segment = 0;
     }
 
-    while (segment < last && t > keys[segment + 1].t) {
+    while (segment < last && t > (keys[segment + 1]?.t ?? Infinity)) {
       segment++;
     }
 
     this._lastSegment = segment;
 
-    const a = keys[segment].color;
-    const b = keys[segment + 1].color;
-    const ka = keys[segment].t;
-    const kb = keys[segment + 1].t;
-    const ratio = (t - ka) / (kb - ka);
+    const lo = keys[segment];
+    const hi = keys[segment + 1];
+
+    if (lo === undefined || hi === undefined) {
+      return out;
+    }
+
+    const a = lo.color;
+    const b = hi.color;
+    const ratio = (t - lo.t) / (hi.t - lo.t);
 
     out.set(a.r + (b.r - a.r) * ratio, a.g + (b.g - a.g) * ratio, a.b + (b.b - a.b) * ratio, a.a + (b.a - a.a) * ratio);
 

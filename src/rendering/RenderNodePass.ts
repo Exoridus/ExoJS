@@ -44,13 +44,13 @@ export class RenderNodePass extends RenderPass {
     this._node = node;
     this._target = options?.target ?? null;
     this._clear = options?.clear ?? null;
-    this._renderOptions = { view: options?.view };
+    this._renderOptions = options?.view !== undefined ? { view: options.view } : {};
     this._redirect =
       this._target !== null
         ? new BackendTargetPass(backend => playRenderTree(this._node, backend), {
             target: this._target,
             view: options?.view ?? this._target.view,
-            clearColor: this._clear ?? undefined,
+            ...(this._clear !== null && { clearColor: this._clear }),
           })
         : null;
   }

@@ -370,7 +370,8 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const u32 = this._geoInstU32;
 
     for (let i = 0; i < quads.length; i++) {
-      const q = quads[i];
+      // i is bounded by quads.length via the for-loop guard.
+      const q = quads[i]!;
       const offset = (this._geoQuadCount + i) * words;
 
       f32[offset + 0] = q.x0;

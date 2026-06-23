@@ -167,7 +167,10 @@ export class FocusManager implements FocusHooks {
       nextIndex = (currentIndex + direction + count) % count;
     }
 
-    this.focus(focusables[nextIndex]);
+    const next = focusables[nextIndex];
+    if (next !== undefined) {
+      this.focus(next);
+    }
   }
 
   /**

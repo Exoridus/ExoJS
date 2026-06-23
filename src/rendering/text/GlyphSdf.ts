@@ -234,7 +234,8 @@ export class GlyphSdf {
     // gridInner[i]: squared distance to the nearest fully-inside pixel
     //               (inf for inside pixels, 0 for outside pixels)
     for (let i = 0; i < n; i++) {
-      const a = rgba[i * 4 + 3] / 255; // alpha 0..1 from the R channel (white glyph)
+      // In-bounds: rgba holds n RGBA texels (4*n entries).
+      const a = rgba[i * 4 + 3]! / 255; // alpha 0..1 from the R channel (white glyph)
       if (a === 1) {
         this._gridOuter[i] = 0;
         this._gridInner[i] = inf;
@@ -261,7 +262,8 @@ export class GlyphSdf {
     // Mapping: value = clamp(round(255 − 255 × (d / radius + cutoff)), 0, 255)
     // With cutoff = 0.5: edge (d=0) → 128, deep inside → 255, far outside → 0.
     for (let i = 0; i < n; i++) {
-      const d = this._gridOuter[i] - this._gridInner[i];
+      // In-bounds: grids and _out are all sized >= n.
+      const d = this._gridOuter[i]! - this._gridInner[i]!;
       this._out[i] = Math.max(0, Math.min(255, Math.round(255 - 255 * (d / this._radius + this._cutoff))));
     }
 
@@ -283,18 +285,19 @@ export class GlyphSdf {
 // Applied separably: one pass per column, then one pass per row + sqrt.
 
 function _edt2d(data: Float64Array, width: number, height: number, f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array): void {
-  // Vertical pass: transform along each column
+  // Vertical pass: transform along each column. All indices are in-bounds:
+  // y*width+x < width*height <= data.length, and y/x < height/width <= f/d.length.
   for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) f[y] = data[y * width + x];
+    for (let y = 0; y < height; y++) f[y] = data[y * width + x]!;
     _edt1d(f, d, v, z, height);
-    for (let y = 0; y < height; y++) data[y * width + x] = d[y];
+    for (let y = 0; y < height; y++) data[y * width + x] = d[y]!;
   }
 
   // Horizontal pass + sqrt: transform along each row, then take sqrt
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) f[x] = data[y * width + x];
+    for (let x = 0; x < width; x++) f[x] = data[y * width + x]!;
     _edt1d(f, d, v, z, width);
-    for (let x = 0; x < width; x++) data[y * width + x] = Math.sqrt(d[x]);
+    for (let x = 0; x < width; x++) data[y * width + x] = Math.sqrt(d[x]!);
   }
 }
 
@@ -312,9 +315,10 @@ function _edt1d(f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
     // Find the parabola intersection s (break-point) for site q.
     let s: number;
     do {
-      const r = v[k];
-      s = (f[q] + q * q - f[r] - r * r) / (2 * (q - r));
-      if (s > z[k]) break;
+      // k and q index within the valid envelope; v/f/z are sized >= n (+1 for z).
+      const r = v[k]!;
+      s = (f[q]! + q * q - f[r]! - r * r) / (2 * (q - r));
+      if (s > z[k]!) break;
       k--;
     } while (k >= 0);
 
@@ -326,8 +330,8 @@ function _edt1d(f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
 
   k = 0;
   for (let q = 0; q < n; q++) {
-    while (z[k + 1] < q) k++;
-    const r = v[k];
-    d[q] = (q - r) * (q - r) + f[r];
+    while (z[k + 1]! < q) k++;
+    const r = v[k]!;
+    d[q] = (q - r) * (q - r) + f[r]!;
   }
 }

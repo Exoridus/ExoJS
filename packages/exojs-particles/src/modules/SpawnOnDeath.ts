@@ -32,8 +32,8 @@ export class SpawnOnDeath extends DeathModule {
 
   public override onDeath(parent: ParticleSystem, slot: number): void {
     const target = this.targetSystem;
-    const x = parent.posX[slot];
-    const y = parent.posY[slot];
+    const x = parent.posX[slot] ?? 0;
+    const y = parent.posY[slot] ?? 0;
 
     // Snapshot the target's pre-spawn count so we can apply the
     // position to whichever slots the spawner adds.
@@ -48,8 +48,8 @@ export class SpawnOnDeath extends DeathModule {
     for (let i = 0; i < added; i++) {
       const dst = before + i;
 
-      target.posX[dst] += x;
-      target.posY[dst] += y;
+      target.posX[dst] = (target.posX[dst] ?? 0) + x;
+      target.posY[dst] = (target.posY[dst] ?? 0) + y;
     }
   }
 }

@@ -448,14 +448,16 @@ export class WebGpuShaderFilter extends Filter {
         } else if (value instanceof Int32Array) {
           // Int32Array values — reinterpret as float (best-effort for V1)
           for (let i = 0; i < value.length; i++) {
-            data[baseFloatIndex + i] = value[i];
+            // In-bounds: `i` < `value.length`.
+            data[baseFloatIndex + i] = value[i]!;
           }
         } else {
           // Readonly tuple [a], [a,b], [a,b,c], [a,b,c,d]
           const arr = value as readonly number[];
 
           for (let i = 0; i < arr.length; i++) {
-            data[baseFloatIndex + i] = arr[i];
+            // In-bounds: `i` < `arr.length`.
+            data[baseFloatIndex + i] = arr[i]!;
           }
         }
 

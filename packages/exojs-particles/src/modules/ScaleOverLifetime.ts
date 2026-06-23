@@ -34,7 +34,7 @@ export class ScaleOverLifetime extends UpdateModule {
     const curve = this.curve;
 
     for (let i = 0; i < liveCount; i++) {
-      const t = elapsed[i] / lifetime[i];
+      const t = (elapsed[i] ?? 0) / (lifetime[i] ?? 1);
       const s = curve.evaluate(t);
 
       scaleX[i] = s;

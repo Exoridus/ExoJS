@@ -8,14 +8,14 @@ import type { Loader } from '#resources/Loader';
 
 function intVal(line: string, key: string): number {
   const match = line.match(new RegExp(`\\b${key}=(-?\\d+)`));
-  return match ? parseInt(match[1], 10) : 0;
+  return match?.[1] !== undefined ? parseInt(match[1], 10) : 0;
 }
 
 function strVal(line: string, key: string): string {
   const match = line.match(new RegExp(`\\b${key}="([^"]*)"`));
-  if (match) return match[1];
+  if (match?.[1] !== undefined) return match[1];
   const bare = line.match(new RegExp(`\\b${key}=(\\S+)`));
-  return bare ? bare[1] : '';
+  return bare?.[1] ?? '';
 }
 
 /**
@@ -35,7 +35,7 @@ export function parseBmFontText(text: string): BmFontData {
     const line = raw.trim();
     if (line.length === 0) continue;
 
-    const tag = line.split(/\s/)[0];
+    const tag = line.split(/\s/)[0] ?? '';
 
     switch (tag) {
       case 'common': {

@@ -717,17 +717,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     const entries: GPUBindGroupEntry[] = [];
 
+    // resolvedBindings has length maxBatchTextures and was fully populated above.
     for (let i = 0; i < maxBatchTextures; i++) {
       entries.push({
         binding: i,
-        resource: resolvedBindings[i].view,
+        resource: resolvedBindings[i]!.view,
       });
     }
 
     for (let i = 0; i < maxBatchTextures; i++) {
       entries.push({
         binding: maxBatchTextures + i,
-        resource: resolvedBindings[i].sampler,
+        resource: resolvedBindings[i]!.sampler,
       });
     }
 
@@ -1046,13 +1047,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         data.set(value, baseFloatIndex);
       } else if (value instanceof Int32Array) {
         for (let i = 0; i < value.length; i++) {
-          data[baseFloatIndex + i] = value[i];
+          data[baseFloatIndex + i] = value[i]!;
         }
       } else {
         const arr = value as readonly number[];
 
         for (let i = 0; i < arr.length; i++) {
-          data[baseFloatIndex + i] = arr[i];
+          data[baseFloatIndex + i] = arr[i]!;
         }
       }
 

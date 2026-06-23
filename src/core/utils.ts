@@ -150,7 +150,7 @@ export const removeArrayItems = <T = unknown>(array: T[], startIndex: number, am
     const newLen = array.length - removeCount;
 
     for (let i = startIndex; i < newLen; i++) {
-      array[i] = array[i + removeCount];
+      array[i] = array[i + removeCount]!;
     }
 
     array.length = newLen;
