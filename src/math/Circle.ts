@@ -184,10 +184,13 @@ export class Circle implements ShapeLike {
       }
 
       for (let i = 0; i < points.length; i++) {
-        const p = points[i];
-        const next = points[(i + 1) % points.length];
+        // i and (i + 1) % length are valid indices; _normals was just sized to
+        // points.length above.
+        const p = points[i]!;
+        const next = points[(i + 1) % points.length]!;
+        const normal = this._normals[i]!;
 
-        this._normals[i]
+        normal
           .set(next.x - p.x, next.y - p.y)
           .rperp()
           .normalize();
@@ -289,7 +292,8 @@ export class Circle implements ShapeLike {
         const x = Math.cos(angle) * this._radius;
         const y = Math.sin(angle) * this._radius;
 
-        this._collisionVertices[i].set(this._radius + x, this._radius + y);
+        // i in [0, segments-1]; _collisionVertices was sized to `segments` above.
+        this._collisionVertices[i]!.set(this._radius + x, this._radius + y);
       }
 
       this._verticesDirty = false;

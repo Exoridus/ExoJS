@@ -23,12 +23,13 @@ export function triangulate(vertices: ArrayLike<number>): Uint32Array {
 
   if (n === 3) {
     // Return in CCW order; swap if input triangle is CW.
-    const ax = vertices[0];
-    const ay = vertices[1];
-    const bx = vertices[2];
-    const by = vertices[3];
-    const cx = vertices[4];
-    const cy = vertices[5];
+    // n === 3 guarantees indices 0..5 exist.
+    const ax = vertices[0]!;
+    const ay = vertices[1]!;
+    const bx = vertices[2]!;
+    const by = vertices[3]!;
+    const cx = vertices[4]!;
+    const cy = vertices[5]!;
 
     return isCcwTriangle(ax, ay, bx, by, cx, cy) ? new Uint32Array([0, 1, 2]) : new Uint32Array([2, 1, 0]);
   }
@@ -45,9 +46,10 @@ export function triangulate(vertices: ArrayLike<number>): Uint32Array {
   // Normalise to CCW: compute signed area; if negative (CW), reverse the list.
   if (signedArea(vertices) < 0) {
     for (let i = 0; i < n; i++) {
-      const tmp = prev[i];
+      // i in [0, n-1]; prev/next are length-n typed arrays.
+      const tmp = prev[i]!;
 
-      prev[i] = next[i];
+      prev[i] = next[i]!;
       next[i] = tmp;
     }
   }
@@ -66,16 +68,18 @@ export function triangulate(vertices: ArrayLike<number>): Uint32Array {
     const passStart = current;
 
     do {
-      const p = prev[current];
-      const nx = next[current];
+      // current/p/nx are always valid node indices in [0, n-1]; vertices holds
+      // 2n entries so every (idx * 2, idx * 2 + 1) read is in-bounds.
+      const p = prev[current]!;
+      const nx = next[current]!;
       const v = current;
 
-      const ax = vertices[p * 2];
-      const ay = vertices[p * 2 + 1];
-      const bx = vertices[v * 2];
-      const by = vertices[v * 2 + 1];
-      const cx = vertices[nx * 2];
-      const cy = vertices[nx * 2 + 1];
+      const ax = vertices[p * 2]!;
+      const ay = vertices[p * 2 + 1]!;
+      const bx = vertices[v * 2]!;
+      const by = vertices[v * 2 + 1]!;
+      const cx = vertices[nx * 2]!;
+      const cy = vertices[nx * 2 + 1]!;
 
       if (isCcwTriangle(ax, ay, bx, by, cx, cy) && isEar(vertices, prev, next, p, v, nx)) {
         // Emit triangle (prev, v, next).
@@ -93,7 +97,7 @@ export function triangulate(vertices: ArrayLike<number>): Uint32Array {
         break;
       }
 
-      current = next[current];
+      current = next[current]!;
     } while (current !== passStart);
 
     if (!earFound) {
@@ -105,14 +109,15 @@ export function triangulate(vertices: ArrayLike<number>): Uint32Array {
   // Emit the final triangle if exactly 3 vertices remain.
   // Emit in CCW order (the linked-list direction may be CW after prior clips on concave polygons).
   if (remaining === 3) {
-    const pa = prev[current];
-    const nc = next[current];
-    const ax = vertices[pa * 2];
-    const ay = vertices[pa * 2 + 1];
-    const bx = vertices[current * 2];
-    const by = vertices[current * 2 + 1];
-    const cx = vertices[nc * 2];
-    const cy = vertices[nc * 2 + 1];
+    // current/pa/nc are valid node indices; vertices holds 2n entries.
+    const pa = prev[current]!;
+    const nc = next[current]!;
+    const ax = vertices[pa * 2]!;
+    const ay = vertices[pa * 2 + 1]!;
+    const bx = vertices[current * 2]!;
+    const by = vertices[current * 2 + 1]!;
+    const cx = vertices[nc * 2]!;
+    const cy = vertices[nc * 2 + 1]!;
 
     if (isCcwTriangle(ax, ay, bx, by, cx, cy)) {
       out[outIdx++] = pa;
@@ -135,10 +140,11 @@ function signedArea(vertices: ArrayLike<number>): number {
 
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
-    const x0 = vertices[i * 2];
-    const y0 = vertices[i * 2 + 1];
-    const x1 = vertices[j * 2];
-    const y1 = vertices[j * 2 + 1];
+    // i, j in [0, n-1]; vertices holds 2n entries.
+    const x0 = vertices[i * 2]!;
+    const y0 = vertices[i * 2 + 1]!;
+    const x1 = vertices[j * 2]!;
+    const y1 = vertices[j * 2 + 1]!;
 
     area += x0 * y1 - x1 * y0;
   }
@@ -175,28 +181,30 @@ function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: num
  * no other polygon vertex strictly inside it.
  */
 function isEar(vertices: ArrayLike<number>, _prev: Uint32Array, next: Uint32Array, previousVertexIndex: number, v: number, nextVertexIndex: number): boolean {
-  const ax = vertices[previousVertexIndex * 2];
-  const ay = vertices[previousVertexIndex * 2 + 1];
-  const bx = vertices[v * 2];
-  const by = vertices[v * 2 + 1];
-  const cx = vertices[nextVertexIndex * 2];
-  const cy = vertices[nextVertexIndex * 2 + 1];
+  // The three indices are valid node indices; vertices holds 2n entries.
+  const ax = vertices[previousVertexIndex * 2]!;
+  const ay = vertices[previousVertexIndex * 2 + 1]!;
+  const bx = vertices[v * 2]!;
+  const by = vertices[v * 2 + 1]!;
+  const cx = vertices[nextVertexIndex * 2]!;
+  const cy = vertices[nextVertexIndex * 2 + 1]!;
 
   // Walk all remaining vertices and check if any lie strictly inside the ear triangle.
   // Skip the three ear vertices themselves — they can never be "inside" by strict test,
   // but we exclude them explicitly for clarity and to avoid floating-point edge cases.
-  let node = next[nextVertexIndex];
+  let node = next[nextVertexIndex]!;
 
   while (node !== previousVertexIndex) {
     if (node !== v) {
-      const px = vertices[node * 2];
-      const py = vertices[node * 2 + 1];
+      // node is a valid node index in [0, n-1]; vertices holds 2n entries.
+      const px = vertices[node * 2]!;
+      const py = vertices[node * 2 + 1]!;
 
       if (pointInTriangle(px, py, ax, ay, bx, by, cx, cy)) {
         return false;
       }
     }
-    node = next[node];
+    node = next[node]!;
   }
 
   return true;

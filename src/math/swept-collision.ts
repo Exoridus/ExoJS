@@ -220,8 +220,9 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
   const cornerYs = [top, top, bottom, bottom];
 
   for (let i = 0; i < 4; i++) {
-    const corX = cornerXs[i];
-    const corY = cornerYs[i];
+    // cornerXs/cornerYs are 4-element arrays; i in [0, 3].
+    const corX = cornerXs[i]!;
+    const corY = cornerYs[i]!;
     const cdx = cx - corX;
     const cdy = cy - corY;
     const b = 2 * (cdx * deltaX + cdy * deltaY);

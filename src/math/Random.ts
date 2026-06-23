@@ -79,16 +79,29 @@ export class Random {
    * half-open interval `[min, max)`. Defaults to `[0, 1)`.
    */
   public next(min = 0, max = 1): number {
+    // _state is a fixed Uint32Array(4); indices 0..3 are always present. Read the
+    // four words into locals so the xoshiro128** advance avoids compound writes
+    // to a typed-array slot the compiler treats as possibly-undefined.
     const state = this._state;
-    const result = Math.imul(rotl(Math.imul(state[1], 5), 7), 9) >>> 0;
-    const t = state[1] << 9;
+    let s0 = state[0]!;
+    let s1 = state[1]!;
+    let s2 = state[2]!;
+    let s3 = state[3]!;
 
-    state[2] ^= state[0];
-    state[3] ^= state[1];
-    state[1] ^= state[2];
-    state[0] ^= state[3];
-    state[2] ^= t;
-    state[3] = rotl(state[3], 11);
+    const result = Math.imul(rotl(Math.imul(s1, 5), 7), 9) >>> 0;
+    const t = s1 << 9;
+
+    s2 ^= s0;
+    s3 ^= s1;
+    s1 ^= s2;
+    s0 ^= s3;
+    s2 ^= t;
+    s3 = rotl(s3, 11);
+
+    state[0] = s0;
+    state[1] = s1;
+    state[2] = s2;
+    state[3] = s3;
 
     this._value = result * normalize * (max - min) + min;
 
