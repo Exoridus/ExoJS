@@ -209,7 +209,7 @@ export class WebGl2StencilClipper {
       unbind: (): void => {
         gl.bindVertexArray(null);
       },
-      draw: (vao: WebGl2VertexArrayObject, size: number, start: number, type: number): void => {
+      draw: (_vao: WebGl2VertexArrayObject, size: number, start: number, type: number): void => {
         gl.drawArrays(type, start, size);
       },
       destroy: (vao: WebGl2VertexArrayObject): void => {

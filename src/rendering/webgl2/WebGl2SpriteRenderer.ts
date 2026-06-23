@@ -570,7 +570,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
       unbind: (): void => {
         connection.gl.bindVertexArray(null);
       },
-      draw: (vao, size, start, type): void => {
+      draw: (_vao, size, start, type): void => {
         connection.gl.drawArrays(type, start, size);
       },
       drawInstanced: (_vao, count, start, instanceCount, type): void => {

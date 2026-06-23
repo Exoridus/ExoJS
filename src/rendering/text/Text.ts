@@ -69,9 +69,6 @@ export class Text extends AbstractText {
   private _destroyed = false;
   private _faceLoadVersion = 0;
 
-  /** Resolves when an in-flight FontFace load finishes. Null when no face load is pending. */
-  private _faceLoadPromise: Promise<void> | null = null;
-
   /** Per-page quad geometry built by `_rebuild()`. */
   private _pageQuads: TextPageQuads[] = [];
   private _textBounds: TextSize = { width: 0, height: 0 };
@@ -84,7 +81,7 @@ export class Text extends AbstractText {
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
 
     const face = this._extractFace(options);
-    if (face !== null) this._faceLoadPromise = this._loadFace(face);
+    if (face !== null) void this._loadFace(face);
 
     this._rebuild('font');
   }
@@ -97,7 +94,7 @@ export class Text extends AbstractText {
     this._style = v instanceof TextStyle ? v : new TextStyle(v);
     if (!(v instanceof TextStyle)) {
       const face = this._extractFace(v);
-      if (face !== null) this._faceLoadPromise = this._loadFace(face);
+      if (face !== null) void this._loadFace(face);
     }
     this._rebuild('font');
   }
@@ -171,7 +168,6 @@ export class Text extends AbstractText {
   public override destroy(): void {
     this._destroyed = true;
     this._faceLoadVersion++;
-    this._faceLoadPromise = null;
     this._pageQuads = [];
     this._atlas = null;
     super.destroy();
