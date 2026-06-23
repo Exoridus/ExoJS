@@ -1,6 +1,7 @@
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import eslintReact from '@eslint-react/eslint-plugin';
 import js from '@eslint/js';
+import vitest from '@vitest/eslint-plugin';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -1054,6 +1055,32 @@ export default defineConfig([
       // complex element types (unions, inline object literals). The base config
       // forces always-[] otherwise, which reads poorly for Array<{ ... }>.
       '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
+    },
+  },
+
+  // Vitest test-quality rules: the recommended set + `no-focused-tests` promoted
+  // to error so an accidentally committed `.only` fails CI. Layered on top of the
+  // structural test config above; covers both root and package test suites.
+  {
+    ...vitest.configs.recommended,
+    files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.ts'],
+    rules: {
+      ...vitest.configs.recommended.rules,
+      // Primary value: block an accidentally committed `.only`.
+      'vitest/no-focused-tests': 'error',
+      // 27 deliberate device-conditional skips (WebGPU adapter / device-loss
+      // guards). Keep them visible but non-blocking rather than churn them.
+      'vitest/no-disabled-tests': 'warn',
+      // False positives in this suite, kept off:
+      //  - expect-expect: assertions run through shared helpers (mountControls,
+      //    renderText, …) the rule cannot see (148 hits).
+      //  - no-conditional-expect / no-standalone-expect: browser tests use
+      //    `if (!device) return` skip guards and assert via helpers.
+      //  - valid-title: parametrised `test(name, …)` over a case array.
+      'vitest/expect-expect': 'off',
+      'vitest/no-conditional-expect': 'off',
+      'vitest/no-standalone-expect': 'off',
+      'vitest/valid-title': 'off',
     },
   },
 
