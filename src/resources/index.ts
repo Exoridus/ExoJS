@@ -1,34 +1,58 @@
-export * from './AbstractAssetFactory';
+export { AbstractAssetFactory } from './AbstractAssetFactory';
 export { Asset } from './Asset';
-export * from './AssetDefinitions';
-export * from './AssetFactory';
-export * from './AssetManifest';
+export type { AnyAssetConfig, AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
+export type { AssetFactory } from './AssetFactory';
+export type { AssetEntry, AssetManifest, LoadBundleOptions } from './AssetManifest';
+export { BundleLoadError, defineAssetManifest } from './AssetManifest';
 export type { InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
-export * from './CacheFirstStrategy';
-export * from './CacheStore';
-export * from './CacheStrategy';
-export * from './Database';
+export { CacheFirstStrategy } from './CacheFirstStrategy';
+export type { CacheStore } from './CacheStore';
+export type { CacheRequest, CacheStrategy } from './CacheStrategy';
+export type { Database } from './Database';
 export type { AssetConstructor } from './FactoryRegistry';
-export * from './IndexedDbDatabase';
-export * from './IndexedDbStore';
-export * from './JsonStore';
-export * from './Loader';
-export * from './LoadingQueue';
-export * from './NetworkOnlyStrategy';
-export * from './tokens';
-export * from '#resources/factories/BinaryFactory';
+export { IndexedDbDatabase } from './IndexedDbDatabase';
+export type { IndexedDbStoreOptions } from './IndexedDbStore';
+export { IndexedDbStore } from './IndexedDbStore';
+export type { JsonStoreOptions } from './JsonStore';
+export { JsonStore } from './JsonStore';
+export type {
+  AssetLoaderContext,
+  BatchValue,
+  ConstrainedLoadable,
+  ExtensionTokenTypeMap,
+  ExtensionTypeMap,
+  InferLoadedMap,
+  Loadable,
+  LoadByPath,
+  LoaderOptions,
+  LoadReturn,
+} from './Loader';
+export { Loader } from './Loader';
+export type { LoadingProgress } from './LoadingQueue';
+export { LoadingQueue } from './LoadingQueue';
+export { NetworkOnlyStrategy } from './NetworkOnlyStrategy';
+export { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
+export { BinaryFactory } from '#resources/factories/BinaryFactory';
 export { BmFontLoaderFactory } from '#resources/factories/BmFontFactory';
-export * from '#resources/factories/CsvFactory';
-export * from '#resources/factories/FontFactory';
-export * from '#resources/factories/ImageFactory';
-export * from '#resources/factories/JsonFactory';
-export * from '#resources/factories/MusicFactory';
-export * from '#resources/factories/SoundFactory';
-export * from '#resources/factories/SubtitleFactory';
-export * from '#resources/factories/SvgFactory';
-export * from '#resources/factories/TextFactory';
-export * from '#resources/factories/TextureFactory';
-export * from '#resources/factories/VideoFactory';
-export * from '#resources/factories/WasmFactory';
-export * from '#resources/factories/XmlFactory';
+export type { CsvFactoryOptions } from '#resources/factories/CsvFactory';
+export { CsvFactory } from '#resources/factories/CsvFactory';
+export type { FontFactoryOptions } from '#resources/factories/FontFactory';
+export { FontFactory } from '#resources/factories/FontFactory';
+export type { DecodedImage, ImageFactoryOptions } from '#resources/factories/ImageFactory';
+export { ImageFactory } from '#resources/factories/ImageFactory';
+export { JsonFactory } from '#resources/factories/JsonFactory';
+export type { MusicFactoryOptions } from '#resources/factories/MusicFactory';
+export { MusicFactory } from '#resources/factories/MusicFactory';
+export type { SoundFactoryOptions } from '#resources/factories/SoundFactory';
+export { SoundFactory } from '#resources/factories/SoundFactory';
+export { SubtitleFactory } from '#resources/factories/SubtitleFactory';
+export type { SvgFactoryOptions } from '#resources/factories/SvgFactory';
+export { SvgFactory } from '#resources/factories/SvgFactory';
+export { TextFactory } from '#resources/factories/TextFactory';
+export type { TextureFactoryOptions } from '#resources/factories/TextureFactory';
+export { TextureFactory } from '#resources/factories/TextureFactory';
+export type { VideoFactoryOptions } from '#resources/factories/VideoFactory';
+export { VideoFactory } from '#resources/factories/VideoFactory';
+export { WasmFactory } from '#resources/factories/WasmFactory';
+export { XmlFactory } from '#resources/factories/XmlFactory';
