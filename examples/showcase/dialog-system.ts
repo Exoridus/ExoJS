@@ -56,7 +56,7 @@ class DialogSystemScene extends Scene {
         this.namePlate = new Text(lines[0].speaker, { fillColor: new Color(255, 214, 120), fontSize: 26, fontWeight: 'bold' });
         this.namePlate.setPosition(textX, height * 0.5);
 
-        this.box = new Text('', { fillColor: Color.white, fontSize: 32, lineHeight: 1.3 }, { maxWidth: width * 0.55 });
+        this.box = new Text('', { fillColor: Color.white, fontSize: 32, lineHeight: 1.3, maxWidth: width * 0.55 });
         this.box.setPosition(textX, height * 0.56);
 
         this.choicePrompt = new Text('', { fillColor: new Color(150, 220, 255), fontSize: 20 });

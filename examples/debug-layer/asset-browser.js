@@ -129,7 +129,7 @@ class AssetBrowserScene extends Scene {
     txtNoAssets = new Text('globalThis.assets is not available.\nRun this example in the ExoJS playground.', { fillColor: C.dim, fontSize: 16 });
     txtEmptyCat = new Text('(empty)', { fillColor: C.dimDark, fontSize: 13 });
     txtNoSel = new Text('Select an asset from the list.', { fillColor: C.dimDark, fontSize: 14 });
-    txtMeta = new Text('', { fillColor: C.white, fontSize: 13 }, { maxWidth: PREVIEW_W - 80 });
+    txtMeta = new Text('', { fillColor: C.white, fontSize: 13, maxWidth: PREVIEW_W - 80 });
     txtAudioIcon = new Text('', { fillColor: C.white, fontSize: 28 });
     txtAnimPlay = new Text('', { fillColor: C.white, fontSize: 12 });
     txtAnimFrame = new Text('', { fillColor: C.dim, fontSize: 11 });

@@ -80,6 +80,7 @@ export { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 export type { FontFormat, HTMLTextOptions } from '#rendering/text/HTMLText';
 export { HTMLText } from '#rendering/text/HTMLText';
 export type { LayoutOptions } from '#rendering/text/LayoutOptions';
+export type { TextOptions } from '#rendering/text/Text';
 export { Text } from '#rendering/text/Text';
 export type { FontFamily, FontRegistry, FontWeight, GradientAxis, StyleChangeHint, TextStyleOptions } from '#rendering/text/TextStyle';
 export { TextStyle } from '#rendering/text/TextStyle';

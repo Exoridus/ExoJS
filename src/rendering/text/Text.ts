@@ -12,6 +12,23 @@ import type { TextPageQuads, TextSize } from './types';
 export type { TextPageQuads };
 
 /**
+ * Construction options for a {@link Text} node — a flat merge of visual
+ * {@link TextStyleOptions} (appearance) and {@link LayoutOptions} (flow /
+ * overflow), plus two construction-only flags. The two source interfaces share
+ * no keys, so the flat shape is unambiguous.
+ *
+ * ```ts
+ * const label = new Text('Hello', { fillColor, fontSize: 24, maxWidth: 360 });
+ * ```
+ */
+export interface TextOptions extends TextStyleOptions, LayoutOptions {
+  /** Use a colour-glyph (emoji) atlas + the `text-color` shader. Construction-only. */
+  colorGlyphs?: boolean;
+  /** SDF buffer radius in pixels. Construction-only. */
+  sdfRadius?: number;
+}
+
+/**
  * GPU-accelerated text node that rasterizes individual glyphs into a shared
  * per-font-variant {@link GlyphAtlas} using the SDF (Signed Distance Field)
  * technique and renders them through the `text-sdf` shader.
@@ -59,17 +76,15 @@ export class Text extends AbstractText {
   private _pageQuads: TextPageQuads[] = [];
   private _textBounds: TextSize = { width: 0, height: 0 };
 
-  public constructor(text: string, style?: TextStyle | TextStyleOptions, layout?: LayoutOptions, options: { colorGlyphs?: boolean; sdfRadius?: number } = {}) {
+  public constructor(text: string, options: TextOptions = {}) {
     super(text);
-    this._style = style instanceof TextStyle ? style : new TextStyle(style);
-    this._layout = layout ?? {};
+    this._style = new TextStyle(options);
+    this._layout = options;
     this._colorGlyphs = options.colorGlyphs ?? false;
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
 
-    if (!(style instanceof TextStyle) && style !== undefined) {
-      const face = this._extractFace(style);
-      if (face !== null) this._faceLoadPromise = this._loadFace(face);
-    }
+    const face = this._extractFace(options);
+    if (face !== null) this._faceLoadPromise = this._loadFace(face);
 
     this._rebuild('font');
   }
