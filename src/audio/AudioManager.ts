@@ -1,5 +1,6 @@
 import { Signal } from '#core/Signal';
 import type { System } from '#core/System';
+import type { Time } from '#core/Time';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
@@ -132,8 +133,8 @@ export class AudioManager implements System {
     });
   }
 
-  /** Called once per frame from Application.update(). */
-  public update(): void {
+  /** Called once per frame from Application.update(). The frame delta is unused here (hence `_delta`); present for {@link System} contract compliance. */
+  public update(_delta: Time): void {
     this.listener._tick();
     // Tick spatial voices and prune ended ones.
     for (const voice of this._spatial) {

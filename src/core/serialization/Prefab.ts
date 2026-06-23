@@ -1,6 +1,7 @@
 import type { SceneNode } from '#core/SceneNode';
 import type { Loader } from '#resources/Loader';
 
+import type { SerializationRegistry } from './SerializationRegistry';
 import { deserializeTree, serializeTree } from './serialize';
 import type { SerializedNode } from './types';
 
@@ -28,10 +29,12 @@ export class Prefab {
 
   /**
    * Capture `node`'s subtree as a prefab. Pass the {@link Loader} so texture and
-   * other asset references resolve to their source keys.
+   * other asset references resolve to their source keys. Pass `app.serializers`
+   * as `registry` to resolve app-scoped (extension) serializers; defaults to the
+   * global registry.
    */
-  public static from(node: SceneNode, loader: Loader | null = null): Prefab {
-    return new Prefab(serializeTree(node, loader));
+  public static from(node: SceneNode, loader: Loader | null = null, registry?: SerializationRegistry): Prefab {
+    return new Prefab(serializeTree(node, loader, registry));
   }
 
   /**
@@ -46,9 +49,11 @@ export class Prefab {
   /**
    * Instantiate a fresh, independent copy of the captured subtree. Referenced
    * assets must be pre-loaded into `loader`. Call repeatedly for many instances.
+   * Pass `app.serializers` as `registry` to resolve app-scoped (extension)
+   * serializers; defaults to the global registry.
    */
-  public instantiate(loader: Loader | null = null): SceneNode {
-    return deserializeTree(this._descriptor, loader);
+  public instantiate(loader: Loader | null = null, registry?: SerializationRegistry): SceneNode {
+    return deserializeTree(this._descriptor, loader, registry);
   }
 
   /** The underlying JSON descriptor (JSON-serialisable). Treat as read-only. The standard `JSON.stringify(prefab)` hook. */

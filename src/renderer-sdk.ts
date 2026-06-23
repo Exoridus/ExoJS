@@ -3,6 +3,13 @@
 // backends, low-level GL/GPU building blocks). Ordinary application code should
 // import from the root `@codexo/exojs` barrel; these symbols are intentionally
 // kept out of it (see src/rendering/public.ts).
+//
+// Custom renderers extend the ABSTRACT renderers below (AbstractWebGl2Renderer /
+// AbstractWebGl2BatchedRenderer / AbstractWebGpuRenderer) — the subclass-stable
+// contract used by the exojs-particles and exojs-tilemap packages. The engine's
+// built-in CONCRETE renderers (WebGl2SpriteRenderer, WebGpuMeshRenderer, …) are
+// internal and intentionally NOT exported here: they are coupled to internal
+// sprite/mesh data paths and are not a stable subclassing surface pre-1.0.
 
 export { Drawable } from '#rendering/Drawable';
 export type { PixelSnapMode } from '#rendering/pixelSnap';

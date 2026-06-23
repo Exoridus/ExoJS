@@ -3,8 +3,9 @@
 // @codexo/exojs application-facing rendering surface. Re-exported by the root
 // barrel (`src/index.ts`). Backend/renderer-author internals (abstract renderers,
 // concrete backend renderers, VAOs, shader programs, glyph/text layout helpers)
-// are intentionally NOT here — they live in the internal `#rendering/index`
-// barrel and, for the curated public author surface, in `@codexo/exojs/renderer-sdk`.
+// are intentionally NOT here — they live in their own modules under
+// `#rendering/**` and, for the curated public author surface, in
+// `@codexo/exojs/renderer-sdk`.
 
 export type { BackendRenderPass } from './BackendRenderPass';
 export type { CallbackRenderPassOptions } from './CallbackRenderPass';

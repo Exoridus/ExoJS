@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
 import type { System } from '#core/System';
+import type { Time } from '#core/Time';
 import { stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
 import { getDistance } from '#math/utils';
@@ -333,7 +334,7 @@ export class InputManager implements System {
    * the channel buffer, fires the corresponding Signals, then evaluates
    * each registered binding.
    */
-  public update(): this {
+  public update(_delta: Time): void {
     this.updateGamepads();
 
     for (const binding of this.bindings) {
@@ -343,8 +344,6 @@ export class InputManager implements System {
     if (this.flags.value !== InputManagerFlag.None) {
       this.updateEvents();
     }
-
-    return this;
   }
 
   public destroy(): void {

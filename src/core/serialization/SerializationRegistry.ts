@@ -93,6 +93,18 @@ export class SerializationRegistry {
   public hasType(typeName: string): boolean {
     return this._byName.has(typeName) || (this._fallback?.hasType(typeName) ?? false);
   }
+
+  /**
+   * Remove every own registration (both the name and constructor maps). The
+   * fallback chain is left untouched. Test infrastructure only — used to reset
+   * the {@link defaultSerializationRegistry} between suites so process-wide
+   * registrations do not leak across them.
+   * @internal
+   */
+  public clear(): void {
+    this._byName.clear();
+    this._byCtor.destroy();
+  }
 }
 
 /**
@@ -103,7 +115,10 @@ export class SerializationRegistry {
 export const defaultSerializationRegistry = new SerializationRegistry();
 
 /**
- * Register a custom {@link NodeSerializer} on the {@link defaultSerializationRegistry}.
+ * Register a custom {@link NodeSerializer}. Defaults to the
+ * {@link defaultSerializationRegistry}; pass `app.serializers` to register the
+ * type only for that {@link Application} (it stays isolated from other apps and
+ * from the global registry, resolving through the fallback chain).
  *
  * Use this to make your own {@link SceneNode} subclasses serializable. Delegate
  * to a base type's behaviour by composing with the framework helpers, or
@@ -116,6 +131,11 @@ export const defaultSerializationRegistry = new SerializationRegistry();
  * });
  * ```
  */
-export function registerSerializer<T extends SceneNode>(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>): void {
-  defaultSerializationRegistry.register(typeName, ctor, serializer);
+export function registerSerializer<T extends SceneNode>(
+  typeName: string,
+  ctor: SceneNodeConstructor<T>,
+  serializer: NodeSerializer<T>,
+  registry: SerializationRegistry = defaultSerializationRegistry,
+): void {
+  registry.register(typeName, ctor, serializer);
 }

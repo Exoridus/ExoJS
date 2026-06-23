@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { System } from '#core/System';
+import type { Time } from '#core/Time';
 import type { PointLike } from '#math/PointLike';
 import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
@@ -252,7 +253,7 @@ export class InteractionManager implements InteractionHooks, System {
    * activity; every signal handler that enqueues an event sets `_dirty =
    * true`, and `update()` clears it at the top before draining the queue.
    */
-  public update(): void {
+  public update(_delta: Time): void {
     if (!this._dirty) return;
     this._dirty = false;
 

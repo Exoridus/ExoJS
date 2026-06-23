@@ -1,6 +1,9 @@
+import { AudioManager } from '#audio/AudioManager';
 import { Scene } from '#core/Scene';
 import type { System } from '#core/System';
 import { Time } from '#core/Time';
+import { InputManager } from '#input/InputManager';
+import { InteractionManager } from '#input/InteractionManager';
 
 // Scene-bound system registry: systems tick after Scene.update in ascending
 // `order`, structural mutations during a tick are deferred, and systems are
@@ -122,5 +125,13 @@ describe('Scene.systems', () => {
     expect(late.updates).toBe(1);
 
     scene.destroy();
+  });
+});
+
+describe('System.update contract', () => {
+  test('InputManager, InteractionManager, AudioManager all satisfy (delta: Time) => void', () => {
+    expectTypeOf(InputManager.prototype.update).toEqualTypeOf<(delta: Time) => void>();
+    expectTypeOf(InteractionManager.prototype.update).toEqualTypeOf<(delta: Time) => void>();
+    expectTypeOf(AudioManager.prototype.update).toEqualTypeOf<(delta: Time) => void>();
   });
 });

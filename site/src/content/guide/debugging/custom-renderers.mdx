@@ -129,6 +129,8 @@ Direct backend access is deliberately unabstracted — you are writing raw WebGP
 
 ExoJS resolves a renderer for each drawable type through the `RendererRegistry` (available from `@codexo/exojs/renderer-sdk`). You can register a custom renderer for an existing drawable type via `backend.rendererRegistry.registerRenderer(drawableConstructor, renderer)`. A renderer implements `connect(backend)`, `disconnect()`, `render(drawable)`, and `flush()` — these map to GPU resource acquisition, release, per-drawable recording, and batch submission respectively.
 
+In practice you build a custom renderer by extending one of the **abstract** base renderers from `@codexo/exojs/renderer-sdk` — `AbstractWebGl2Renderer` / `AbstractWebGl2BatchedRenderer` (WebGL2) or `AbstractWebGpuRenderer` (WebGPU) — which is exactly how the `@codexo/exojs-particles` and `@codexo/exojs-tilemap` packages build theirs. The engine's built-in *concrete* renderers (e.g. `WebGl2SpriteRenderer`) are internal: coupled to internal sprite/mesh data paths and intentionally not part of the SDK surface, so don't subclass them directly.
+
 Registering a custom renderer is an advanced extension point. For most custom rendering needs — procedural geometry between draws, a single custom shape that doesn't fit `Mesh` — `CallbackRenderPass` is the simpler and more intentional path.
 
 ## When to use which
