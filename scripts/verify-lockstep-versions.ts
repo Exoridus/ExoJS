@@ -1,9 +1,9 @@
 /**
- * Verifies that all five official ExoJS packages share the same version.
+ * Verifies that all six official ExoJS packages share the same version.
  *
  * The lockstep version contract: @codexo/exojs, @codexo/exojs-particles,
- * @codexo/exojs-tilemap, @codexo/exojs-tiled, and @codexo/exojs-physics must
- * all be on the same X.Y.Z version for every coordinated release.
+ * @codexo/exojs-tilemap, @codexo/exojs-tiled, @codexo/exojs-physics, and
+ * @codexo/exojs-audio-fx must all be on the same X.Y.Z version per release.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -32,6 +32,7 @@ const extensionPkgs = [
   readPackage('packages/exojs-tilemap/package.json'),
   readPackage('packages/exojs-tiled/package.json'),
   readPackage('packages/exojs-physics/package.json'),
+  readPackage('packages/exojs-audio-fx/package.json'),
 ];
 const packages = [corePkg, ...extensionPkgs];
 
@@ -42,7 +43,7 @@ if (versions.length !== 1) {
   for (const p of packages) {
     process.stderr.write(`  ${p.name}: ${p.version}\n`);
   }
-  process.stderr.write('\nAll five packages must be on the same version before release.\n' + 'Update all five package.json files to the same version.\n');
+  process.stderr.write('\nAll six packages must be on the same version before release.\n' + 'Update all six package.json files to the same version.\n');
   process.exit(1);
 }
 
@@ -67,4 +68,4 @@ if (peerProblems.length > 0) {
   process.exit(1);
 }
 
-process.stdout.write(`verify-lockstep: all 5 packages at v${versions[0]}; extension peer ranges = "${expectedPeer}" ✓\n`);
+process.stdout.write(`verify-lockstep: all ${packages.length} packages at v${versions[0]}; extension peer ranges = "${expectedPeer}" ✓\n`);
