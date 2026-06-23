@@ -1,5 +1,4 @@
 import type { VectorLike } from '../types';
-import type { ShapeType } from './Shape';
 import { Shape } from './Shape';
 
 /** Vertices closer than this (px) are treated as coincident → degenerate. */
@@ -15,7 +14,7 @@ const weldEpsilon = 1e-4;
  * the narrow phase allocation-free; both are frozen.
  */
 export class PolygonShape extends Shape {
-  public readonly type: ShapeType = 'polygon';
+  public readonly type = 'polygon' as const;
 
   /** Local-space vertices, CCW, flattened. */
   public readonly vertices: readonly number[];

@@ -12,7 +12,7 @@ import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
-import type { Shape } from './shapes/Shape';
+import type { AnyShape } from './shapes/AnyShape';
 import { TimeStepper } from './TimeStepper';
 import type { BodyType, CollisionFilter, VectorLike } from './types';
 
@@ -48,7 +48,7 @@ export interface AttachOptions {
   /** When `true`, the body never rotates under contacts. Default `false`. */
   fixedRotation?: boolean;
   /** The collider geometry. */
-  shape: Shape;
+  shape: AnyShape;
   /** Body-local offset of the collider. Default `(0, 0)`. */
   offset?: VectorLike;
   /** Body-local rotation of the collider (radians). Default `0`. */
@@ -290,7 +290,7 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /** Colliders overlapping `shape` placed at `position`/`angle`. Fresh array. */
-  public overlapShape(shape: Shape, position: VectorLike, filter?: QueryFilter, angle?: number): Collider[] {
+  public overlapShape(shape: AnyShape, position: VectorLike, filter?: QueryFilter, angle?: number): Collider[] {
     return this._query.overlapShape(shape, position, filter, angle);
   }
 

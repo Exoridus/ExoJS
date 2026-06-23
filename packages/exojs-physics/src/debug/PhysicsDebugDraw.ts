@@ -10,8 +10,6 @@ import type { Collider } from '../Collider';
 import { Manifold } from '../collision/Manifold';
 import { collide } from '../collision/narrowphase';
 import type { PhysicsWorld } from '../PhysicsWorld';
-import type { CircleShape } from '../shapes/CircleShape';
-import type { PolygonShape } from '../shapes/PolygonShape';
 
 /** Toggles for the physics debug overlay. */
 export interface PhysicsDebugDrawOptions {
@@ -132,7 +130,7 @@ export class PhysicsDebugDraw extends DebugLayer {
 
     if (collider.shape.type === 'circle') {
       const c = collider.worldCenter;
-      const r = (collider.shape as CircleShape).radius;
+      const r = collider.shape.radius;
 
       this._strokeCircle(gfx, c.x, c.y, r);
       // A spoke to the surface conveys orientation once bodies rotate.
@@ -143,7 +141,7 @@ export class PhysicsDebugDraw extends DebugLayer {
     }
 
     const verts = collider.worldVertices;
-    const count = (collider.shape as PolygonShape).count;
+    const count = collider.shape.count;
 
     gfx.moveTo(verts[0], verts[1]);
 
