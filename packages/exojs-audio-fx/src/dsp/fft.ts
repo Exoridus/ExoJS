@@ -14,7 +14,7 @@ export function hannWindow(real: Float32Array, imag: Float32Array): void {
   const n = real.length;
   for (let i = 0; i < n; i++) {
     const w = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n - 1)));
-    real[i] *= w;
+    real[i]! *= w;
     imag[i] = 0;
   }
 }
@@ -30,11 +30,11 @@ function bitReverse(real: Float32Array, imag: Float32Array): void {
     }
     j ^= bit;
     if (i < j) {
-      let tmp = real[i];
-      real[i] = real[j];
+      let tmp = real[i]!;
+      real[i] = real[j]!;
       real[j] = tmp;
-      tmp = imag[i];
-      imag[i] = imag[j];
+      tmp = imag[i]!;
+      imag[i] = imag[j]!;
       imag[j] = tmp;
     }
   }
@@ -57,12 +57,12 @@ export function fft(real: Float32Array, imag: Float32Array): void {
         const angle = angleStep * k;
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
-        const re = real[i + k + halfLen] * cos - imag[i + k + halfLen] * sin;
-        const im = real[i + k + halfLen] * sin + imag[i + k + halfLen] * cos;
-        real[i + k + halfLen] = real[i + k] - re;
-        imag[i + k + halfLen] = imag[i + k] - im;
-        real[i + k] += re;
-        imag[i + k] += im;
+        const re = real[i + k + halfLen]! * cos - imag[i + k + halfLen]! * sin;
+        const im = real[i + k + halfLen]! * sin + imag[i + k + halfLen]! * cos;
+        real[i + k + halfLen] = real[i + k]! - re;
+        imag[i + k + halfLen] = imag[i + k]! - im;
+        real[i + k]! += re;
+        imag[i + k]! += im;
       }
     }
   }
@@ -76,7 +76,7 @@ export function magnitudeSpectrum(real: Float32Array, imag: Float32Array): Float
   const bins = real.length >> 1;
   const mag = new Float32Array(bins);
   for (let i = 0; i < bins; i++) {
-    mag[i] = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]);
+    mag[i] = Math.sqrt(real[i]! * real[i]! + imag[i]! * imag[i]!);
   }
   return mag;
 }

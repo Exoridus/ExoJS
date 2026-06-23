@@ -438,7 +438,7 @@ export class BeatDetector {
           const lookahead = (message.lookahead as UpcomingBeat[]) ?? [];
           this._lookahead = Object.freeze(lookahead);
           if (lookahead.length > 0) {
-            this.onBeatPredicted.dispatch(lookahead[0]);
+            this.onBeatPredicted.dispatch(lookahead[0]!);
           }
         }
         break;
