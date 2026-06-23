@@ -1,4 +1,3 @@
-import type { ShapeType } from './Shape';
 import { Shape } from './Shape';
 
 /**
@@ -6,7 +5,7 @@ import { Shape } from './Shape';
  * The cheapest shape for both broad- and narrow-phase.
  */
 export class CircleShape extends Shape {
-  public readonly type: ShapeType = 'circle';
+  public readonly type = 'circle' as const;
   public readonly radius: number;
   public readonly boundingRadius: number;
   public readonly area: number;

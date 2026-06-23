@@ -1,5 +1,3 @@
-import type { CircleShape } from '../shapes/CircleShape';
-import type { PolygonShape } from '../shapes/PolygonShape';
 import type { CollisionProxy } from './CollisionProxy';
 import type { Manifold } from './Manifold';
 
@@ -24,8 +22,11 @@ export const collide = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold
   return tb === 'circle' ? collideCirclePolygon(b, a, manifold, true) : collidePolygons(a, b, manifold);
 };
 
-const radiusOf = (collider: CollisionProxy): number => (collider.shape as CircleShape).radius;
-const countOf = (collider: CollisionProxy): number => (collider.shape as PolygonShape).count;
+// radiusOf/countOf are only ever called after the `collide` dispatch has matched
+// the shape kind, so the discriminant always holds; the fallback is unreachable
+// but keeps these allocation-free helpers cast-free and type-safe.
+const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'circle' ? collider.shape.radius : 0);
+const countOf = (collider: CollisionProxy): number => (collider.shape.type === 'polygon' ? collider.shape.count : 0);
 
 const collideCircles = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
   const ca = a.worldCenter;

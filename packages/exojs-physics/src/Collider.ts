@@ -3,16 +3,14 @@ import { createAabb } from './Aabb';
 import type { Mutable2D, Transform } from './math';
 import { applyRotation, applyTransform, composeTransforms, createTransform } from './math';
 import type { PhysicsBody } from './PhysicsBody';
-import type { CircleShape } from './shapes/CircleShape';
-import type { PolygonShape } from './shapes/PolygonShape';
-import type { Shape } from './shapes/Shape';
+import type { AnyShape } from './shapes/AnyShape';
 import type { CollisionFilter, VectorLike } from './types';
 import { resolveFilter } from './types';
 
 /** Construction options for a collider. */
 export interface ColliderOptions {
   /** The collision geometry. */
-  shape: Shape;
+  shape: AnyShape;
   /** Density (mass per px²) for the owning body's mass; ignored for static/kinematic. Default `1`. */
   density?: number;
   /** Coulomb friction coefficient (used by the solver once dynamics ship). Default `0.2`. */
@@ -41,7 +39,7 @@ export interface ColliderOptions {
  */
 export class Collider {
   /** Stable id, assigned when the owning body joins a world (`-1` until then). */
-  public readonly shape: Shape;
+  public readonly shape: AnyShape;
   public readonly offsetX: number;
   public readonly offsetY: number;
   public readonly localRotation: number;
@@ -82,7 +80,7 @@ export class Collider {
     this._localTransform = createTransform(this.offsetX, this.offsetY, this.localRotation);
 
     if (this.shape.type === 'polygon') {
-      const polygon = this.shape as PolygonShape;
+      const polygon = this.shape;
       this._worldVertices = new Array<number>(polygon.count * 2).fill(0);
       this._worldNormals = new Array<number>(polygon.count * 2).fill(0);
     } else {
@@ -152,7 +150,7 @@ export class Collider {
     const world = composeTransforms(bodyTransform, this._localTransform, this._worldTransform);
 
     if (this.shape.type === 'circle') {
-      const radius = (this.shape as CircleShape).radius;
+      const radius = this.shape.radius;
 
       this._worldCenter.x = world.x;
       this._worldCenter.y = world.y;
@@ -164,7 +162,7 @@ export class Collider {
       return;
     }
 
-    const polygon = this.shape as PolygonShape;
+    const polygon = this.shape;
     const local = polygon.vertices;
     const normals = polygon.normals;
     const out: Mutable2D = { x: 0, y: 0 };

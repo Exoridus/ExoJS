@@ -6,9 +6,7 @@ import { testOverlap } from '../collision/narrowphase';
 import type { Mutable2D } from '../math';
 import { applyRotation, applyTransform, createTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { CircleShape } from '../shapes/CircleShape';
-import type { PolygonShape } from '../shapes/PolygonShape';
-import type { Shape } from '../shapes/Shape';
+import type { AnyShape } from '../shapes/AnyShape';
 import type { VectorLike } from '../types';
 import { resolveFilter, shouldCollide } from '../types';
 
@@ -154,7 +152,7 @@ export class QueryEngine {
   }
 
   /** Colliders overlapping `shape` placed at `position`/`angle`. Allocates a fresh array. */
-  public overlapShape(shape: Shape, position: VectorLike, filter?: QueryFilter, angle = 0): Collider[] {
+  public overlapShape(shape: AnyShape, position: VectorLike, filter?: QueryFilter, angle = 0): Collider[] {
     const proxy = makeProxy(shape, position.x, position.y, angle);
     const out: Collider[] = [];
     const resolved = filter ? resolveFilter(filter) : null;
@@ -181,7 +179,7 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
 
   if (collider.shape.type === 'circle') {
     const c = collider.worldCenter;
-    const r = (collider.shape as CircleShape).radius;
+    const r = collider.shape.radius;
     const dx = px - c.x;
     const dy = py - c.y;
 
@@ -190,7 +188,7 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
 
   const verts = collider.worldVertices;
   const normals = collider.worldNormals;
-  const count = (collider.shape as PolygonShape).count;
+  const count = collider.shape.count;
 
   for (let i = 0; i < count; i++) {
     if (normals[i * 2] * (px - verts[i * 2]) + normals[i * 2 + 1] * (py - verts[i * 2 + 1]) > 0) {
@@ -212,7 +210,8 @@ const rayCastCollider = (collider: Collider, ox: number, oy: number, dx: number,
 
 const rayCastCircle = (collider: Collider, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
   const c = collider.worldCenter;
-  const r = (collider.shape as CircleShape).radius;
+  // Dispatched only for circle colliders; the fallback is unreachable.
+  const r = collider.shape.type === 'circle' ? collider.shape.radius : 0;
   const mx = ox - c.x;
   const my = oy - c.y;
   const b = mx * dx + my * dy;
@@ -250,7 +249,8 @@ const rayCastCircle = (collider: Collider, ox: number, oy: number, dx: number, d
 const rayCastPolygon = (collider: Collider, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
   const verts = collider.worldVertices;
   const normals = collider.worldNormals;
-  const count = (collider.shape as PolygonShape).count;
+  // Dispatched only for polygon colliders; the fallback is unreachable.
+  const count = collider.shape.type === 'polygon' ? collider.shape.count : 0;
 
   let tmin = 0;
   let tmax = maxDistance;
@@ -307,12 +307,12 @@ const rayCastPolygon = (collider: Collider, ox: number, oy: number, dx: number, 
 };
 
 /** Build a throwaway collision proxy for a shape placed at `(x, y)` with `angle`. */
-const makeProxy = (shape: Shape, x: number, y: number, angle: number): CollisionProxy => {
+const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): CollisionProxy => {
   if (shape.type === 'circle') {
     return { shape, worldCenter: { x, y }, worldVertices: [], worldNormals: [] };
   }
 
-  const polygon = shape as PolygonShape;
+  const polygon = shape;
   const transform = createTransform(x, y, angle);
   const worldVertices: number[] = [];
   const worldNormals: number[] = [];

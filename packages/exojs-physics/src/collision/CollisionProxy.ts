@@ -1,5 +1,5 @@
 import type { Mutable2D } from '../math';
-import type { Shape } from '../shapes/Shape';
+import type { AnyShape } from '../shapes/AnyShape';
 
 /**
  * The geometric surface the narrow phase needs: a shape plus its cached world
@@ -8,7 +8,7 @@ import type { Shape } from '../shapes/Shape';
  * allocating a body/collider.
  */
 export interface CollisionProxy {
-  readonly shape: Shape;
+  readonly shape: AnyShape;
   readonly worldCenter: Readonly<Mutable2D>;
   readonly worldVertices: readonly number[];
   readonly worldNormals: readonly number[];
