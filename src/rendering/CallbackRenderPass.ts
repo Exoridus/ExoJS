@@ -55,7 +55,7 @@ export class CallbackRenderPass extends RenderPass {
         ? new BackendTargetPass(() => this._runCallback(), {
             target,
             view: options?.view ?? target.view,
-            clearColor: this._clear ?? undefined,
+            ...(this._clear !== null && { clearColor: this._clear }),
           })
         : null;
   }

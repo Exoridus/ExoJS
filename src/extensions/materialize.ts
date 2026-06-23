@@ -76,7 +76,14 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
   for (const binding of bindings) {
     const handler: AssetHandler = binding.create(loader);
 
-    loader.bindAsset({ type: binding.type, typeNames: binding.typeNames, extensions: binding.extensions }, handler);
+    loader.bindAsset(
+      {
+        type: binding.type,
+        ...(binding.typeNames !== undefined && { typeNames: binding.typeNames }),
+        ...(binding.extensions !== undefined && { extensions: binding.extensions }),
+      },
+      handler,
+    );
   }
 }
 

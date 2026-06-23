@@ -410,9 +410,12 @@ export class Loader {
 
       Object.defineProperty(syntheticCtor, 'name', { value: typeName });
       this._assetTypeMap.set(typeName, syntheticCtor);
+
+      const boundIdentityKey = ctorOrHandler.getIdentityKey?.bind(ctorOrHandler);
+
       this._handlerFunctions.set(syntheticCtor, {
         load: (config, ctx) => ctorOrHandler.load(config, ctx),
-        getIdentityKey: ctorOrHandler.getIdentityKey?.bind(ctorOrHandler),
+        ...(boundIdentityKey !== undefined && { getIdentityKey: boundIdentityKey }),
       });
     }
 
@@ -1186,7 +1189,7 @@ export class Loader {
 
     this._handlerFunctions.set(keys.type, {
       load: (config, ctx) => handler.load(toRequest(config), ctx),
-      getIdentityKey: boundIdentityKey ? config => boundIdentityKey(toRequest(config)) : undefined,
+      ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
     });
 
     for (const name of resolvedNames) {

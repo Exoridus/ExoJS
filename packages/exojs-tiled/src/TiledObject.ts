@@ -19,13 +19,13 @@ export class TiledObject {
   public readonly height: number;
   public readonly rotation: number;
   public readonly visible: boolean;
-  public readonly gid?: number;
+  public readonly gid?: number | undefined;
   public readonly point: boolean;
   public readonly ellipse: boolean;
-  public readonly polygon?: readonly TiledPointData[];
-  public readonly polyline?: readonly TiledPointData[];
-  public readonly text?: TiledTextData;
-  public readonly template?: string;
+  public readonly polygon?: readonly TiledPointData[] | undefined;
+  public readonly polyline?: readonly TiledPointData[] | undefined;
+  public readonly text?: TiledTextData | undefined;
+  public readonly template?: string | undefined;
   public readonly properties: readonly TiledPropertyData[];
 
   public constructor(data: TiledObjectData) {

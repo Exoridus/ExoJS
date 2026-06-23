@@ -34,7 +34,7 @@ export class TiledMap {
   public readonly data: TiledMapData;
 
   public readonly orientation: TiledOrientation;
-  public readonly renderOrder?: TiledRenderOrder;
+  public readonly renderOrder?: TiledRenderOrder | undefined;
   public readonly class: string;
   /** Map width in tiles. */
   public readonly width: number;
@@ -45,7 +45,7 @@ export class TiledMap {
   /** Tile grid cell height in pixels. */
   public readonly tileHeight: number;
   public readonly infinite: boolean;
-  public readonly backgroundColor?: string;
+  public readonly backgroundColor?: string | undefined;
   public readonly layers: readonly TiledLayer[];
   /** Tilesets used by this map, sorted by {@link TiledTileset.firstGid} ascending. */
   public readonly tilesets: readonly TiledTileset[];

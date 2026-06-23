@@ -42,7 +42,7 @@ export interface TiledClassPropertyValueData { readonly [name: string]: string |
 export interface TiledPropertyData {
   readonly name: string;
   readonly type: TiledPropertyType;
-  readonly propertytype?: string;
+  readonly propertytype?: string | undefined;
   readonly value: string | number | boolean | TiledClassPropertyValueData;
 }
 
@@ -67,15 +67,15 @@ export interface TiledTileData {
   /** Local tile id within the owning tileset. */
   readonly id: number;
   /** Tile class (`class`/`type` field depending on Tiled version). */
-  readonly type?: string;
-  readonly properties?: readonly TiledPropertyData[];
-  readonly animation?: readonly TiledAnimationFrameData[];
+  readonly type?: string | undefined;
+  readonly properties?: readonly TiledPropertyData[] | undefined;
+  readonly animation?: readonly TiledAnimationFrameData[] | undefined;
   /** Per-tile collision shapes, structurally identical to an object layer. */
-  readonly objectgroup?: TiledObjectLayerData;
+  readonly objectgroup?: TiledObjectLayerData | undefined;
   /** Collection-of-images tile source, relative to the tileset's location. */
-  readonly image?: string;
-  readonly imagewidth?: number;
-  readonly imageheight?: number;
+  readonly image?: string | undefined;
+  readonly imagewidth?: number | undefined;
+  readonly imageheight?: number | undefined;
 }
 
 // ── Tileset ──────────────────────────────────────────────────────────────────
@@ -86,23 +86,23 @@ export interface TiledTileData {
  */
 export interface TiledTilesetData {
   readonly name: string;
-  readonly class?: string;
+  readonly class?: string | undefined;
   readonly tilewidth: number;
   readonly tileheight: number;
   readonly tilecount: number;
   readonly columns: number;
-  readonly spacing?: number;
-  readonly margin?: number;
+  readonly spacing?: number | undefined;
+  readonly margin?: number | undefined;
   /** Single-image ("atlas") tileset source, relative to the tileset's location. Absent for collection-of-images tilesets. */
-  readonly image?: string;
-  readonly imagewidth?: number;
-  readonly imageheight?: number;
-  readonly tileoffset?: TiledPointData;
-  readonly objectalignment?: string;
-  readonly tiles?: readonly TiledTileData[];
-  readonly properties?: readonly TiledPropertyData[];
-  readonly tiledversion?: string;
-  readonly version?: string | number;
+  readonly image?: string | undefined;
+  readonly imagewidth?: number | undefined;
+  readonly imageheight?: number | undefined;
+  readonly tileoffset?: TiledPointData | undefined;
+  readonly objectalignment?: string | undefined;
+  readonly tiles?: readonly TiledTileData[] | undefined;
+  readonly properties?: readonly TiledPropertyData[] | undefined;
+  readonly tiledversion?: string | undefined;
+  readonly version?: string | number | undefined;
 }
 
 /** A map's `tilesets[]` entry referencing an external `.tsj` file by relative path. */
@@ -122,17 +122,17 @@ export type TiledTilesetRefData = TiledExternalTilesetRefData | TiledEmbeddedTil
 /** Text rendering options for a `text` object (object layers). */
 export interface TiledTextData {
   readonly text: string;
-  readonly bold?: boolean;
-  readonly color?: string;
-  readonly fontfamily?: string;
-  readonly halign?: 'center' | 'right' | 'justify' | 'left';
-  readonly italic?: boolean;
-  readonly kerning?: boolean;
-  readonly pixelsize?: number;
-  readonly strikeout?: boolean;
-  readonly underline?: boolean;
-  readonly valign?: 'center' | 'bottom' | 'top';
-  readonly wrap?: boolean;
+  readonly bold?: boolean | undefined;
+  readonly color?: string | undefined;
+  readonly fontfamily?: string | undefined;
+  readonly halign?: 'center' | 'right' | 'justify' | 'left' | undefined;
+  readonly italic?: boolean | undefined;
+  readonly kerning?: boolean | undefined;
+  readonly pixelsize?: number | undefined;
+  readonly strikeout?: boolean | undefined;
+  readonly underline?: boolean | undefined;
+  readonly valign?: 'center' | 'bottom' | 'top' | undefined;
+  readonly wrap?: boolean | undefined;
 }
 
 /**
@@ -153,15 +153,15 @@ export interface TiledObjectData {
   readonly rotation: number;
   readonly visible: boolean;
   /** Tile object reference; may carry flip/rotation flag bits in the high bits. */
-  readonly gid?: number;
-  readonly point?: boolean;
-  readonly ellipse?: boolean;
-  readonly polygon?: readonly TiledPointData[];
-  readonly polyline?: readonly TiledPointData[];
-  readonly text?: TiledTextData;
+  readonly gid?: number | undefined;
+  readonly point?: boolean | undefined;
+  readonly ellipse?: boolean | undefined;
+  readonly polygon?: readonly TiledPointData[] | undefined;
+  readonly polyline?: readonly TiledPointData[] | undefined;
+  readonly text?: TiledTextData | undefined;
   /** Path to a `.tx` object template this object was instantiated from. */
-  readonly template?: string;
-  readonly properties?: readonly TiledPropertyData[];
+  readonly template?: string | undefined;
+  readonly properties?: readonly TiledPropertyData[] | undefined;
 }
 
 // ── Layers ───────────────────────────────────────────────────────────────────
@@ -170,17 +170,17 @@ export interface TiledObjectData {
 export interface TiledLayerDataBase {
   readonly id: number;
   readonly name: string;
-  readonly class?: string;
+  readonly class?: string | undefined;
   readonly visible: boolean;
   readonly opacity: number;
   readonly x: number;
   readonly y: number;
-  readonly offsetx?: number;
-  readonly offsety?: number;
-  readonly parallaxx?: number;
-  readonly parallaxy?: number;
-  readonly tintcolor?: string;
-  readonly properties?: readonly TiledPropertyData[];
+  readonly offsetx?: number | undefined;
+  readonly offsety?: number | undefined;
+  readonly parallaxx?: number | undefined;
+  readonly parallaxy?: number | undefined;
+  readonly tintcolor?: string | undefined;
+  readonly properties?: readonly TiledPropertyData[] | undefined;
 }
 
 /** A chunk of tile data within an infinite tile layer. */
@@ -200,13 +200,13 @@ export interface TiledTileLayerData extends TiledLayerDataBase {
   readonly type: 'tilelayer';
   readonly width: number;
   readonly height: number;
-  readonly data?: readonly number[];
-  readonly chunks?: readonly TiledChunkData[];
+  readonly data?: readonly number[] | undefined;
+  readonly chunks?: readonly TiledChunkData[] | undefined;
 }
 
 export interface TiledObjectLayerData extends TiledLayerDataBase {
   readonly type: 'objectgroup';
-  readonly draworder?: 'topdown' | 'index';
+  readonly draworder?: 'topdown' | 'index' | undefined;
   readonly objects: readonly TiledObjectData[];
 }
 
@@ -214,8 +214,8 @@ export interface TiledImageLayerData extends TiledLayerDataBase {
   readonly type: 'imagelayer';
   /** Image source, relative to the map's location. Empty string if unset. */
   readonly image: string;
-  readonly repeatx?: boolean;
-  readonly repeaty?: boolean;
+  readonly repeatx?: boolean | undefined;
+  readonly repeaty?: boolean | undefined;
 }
 
 export interface TiledGroupLayerData extends TiledLayerDataBase {
@@ -238,10 +238,10 @@ export type TiledRenderOrder = 'right-down' | 'right-up' | 'left-down' | 'left-u
 export interface TiledMapData {
   readonly type: 'map';
   readonly version: string | number;
-  readonly tiledversion?: string;
-  readonly class?: string;
+  readonly tiledversion?: string | undefined;
+  readonly class?: string | undefined;
   readonly orientation: TiledOrientation;
-  readonly renderorder?: TiledRenderOrder;
+  readonly renderorder?: TiledRenderOrder | undefined;
   /** Map width in tiles. */
   readonly width: number;
   /** Map height in tiles. */
@@ -251,11 +251,11 @@ export interface TiledMapData {
   /** Tile grid cell height in pixels. */
   readonly tileheight: number;
   readonly infinite: boolean;
-  readonly compressionlevel?: number;
-  readonly nextlayerid?: number;
-  readonly nextobjectid?: number;
-  readonly backgroundcolor?: string;
+  readonly compressionlevel?: number | undefined;
+  readonly nextlayerid?: number | undefined;
+  readonly nextobjectid?: number | undefined;
+  readonly backgroundcolor?: string | undefined;
   readonly layers: readonly TiledLayerData[];
   readonly tilesets: readonly TiledTilesetRefData[];
-  readonly properties?: readonly TiledPropertyData[];
+  readonly properties?: readonly TiledPropertyData[] | undefined;
 }

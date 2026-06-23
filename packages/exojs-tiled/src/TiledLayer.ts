@@ -35,7 +35,7 @@ export abstract class TiledLayer {
   public readonly offsetY: number;
   public readonly parallaxX: number;
   public readonly parallaxY: number;
-  public readonly tintColor?: string;
+  public readonly tintColor?: string | undefined;
   public readonly properties: readonly TiledPropertyData[];
 
   protected constructor(data: TiledLayerDataBase) {
@@ -71,8 +71,8 @@ export class TiledTileLayer extends TiledLayer {
 
   public readonly width: number;
   public readonly height: number;
-  public readonly data?: readonly number[];
-  public readonly chunks?: readonly TiledChunkData[];
+  public readonly data?: readonly number[] | undefined;
+  public readonly chunks?: readonly TiledChunkData[] | undefined;
 
   public constructor(data: TiledTileLayerData) {
     super(data);

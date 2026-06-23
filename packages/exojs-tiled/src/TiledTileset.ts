@@ -10,13 +10,13 @@ import type { TiledPointData, TiledPropertyData, TiledTileData, TiledTilesetData
  */
 export interface TiledTilesetResources {
   /** Resolved URL of the external `.tsj` file, or `undefined` for an embedded tileset. */
-  readonly source?: string;
+  readonly source?: string | undefined;
   /** Resolved URL of the tileset's atlas {@link TiledTilesetData.image}, or `undefined` for a collection-of-images tileset. */
-  readonly imageUrl?: string;
+  readonly imageUrl?: string | undefined;
   /** Texture loaded for {@link imageUrl}. */
-  readonly texture?: Texture;
+  readonly texture?: Texture | undefined;
   /** Textures loaded for collection-of-images {@link TiledTileData.image} entries, keyed by local tile id. */
-  readonly tileTextures?: ReadonlyMap<number, Texture>;
+  readonly tileTextures?: ReadonlyMap<number, Texture> | undefined;
 }
 
 /**
@@ -31,7 +31,7 @@ export class TiledTileset {
   /** First global tile id owned by this tileset. */
   public readonly firstGid: number;
   /** Resolved URL of the external `.tsj` file, or `undefined` for an embedded tileset. */
-  public readonly source?: string;
+  public readonly source?: string | undefined;
   public readonly name: string;
   public readonly class: string;
   public readonly tileWidth: number;
@@ -41,13 +41,13 @@ export class TiledTileset {
   public readonly spacing: number;
   public readonly margin: number;
   /** Resolved URL of the tileset's atlas image, or `undefined` for a collection-of-images tileset. */
-  public readonly imageUrl?: string;
-  public readonly imageWidth?: number;
-  public readonly imageHeight?: number;
+  public readonly imageUrl?: string | undefined;
+  public readonly imageWidth?: number | undefined;
+  public readonly imageHeight?: number | undefined;
   /** Texture loaded for {@link imageUrl}. Loader-owned; not destroyed by {@link TiledMap.destroy}. */
-  public readonly texture?: Texture;
+  public readonly texture?: Texture | undefined;
   public readonly tileOffset: TiledPointData;
-  public readonly objectAlignment?: string;
+  public readonly objectAlignment?: string | undefined;
   public readonly tiles: readonly TiledTileData[];
   /** Textures loaded for collection-of-images tiles, keyed by local tile id. Loader-owned. */
   public readonly tileTextures: ReadonlyMap<number, Texture>;

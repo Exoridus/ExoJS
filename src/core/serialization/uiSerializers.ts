@@ -8,7 +8,7 @@ import { UIRoot } from '#ui/UIRoot';
 
 import type { NodeSerializer } from './NodeSerializer';
 import type { SerializationRegistry } from './SerializationRegistry';
-import { arrayToColor, colorToArray, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
+import { arrayToColor, colorToArray, compact, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
 import type { SerializedNode } from './types';
 
 const num = (value: unknown): number | undefined => (typeof value === 'number' ? value : undefined);
@@ -61,14 +61,16 @@ const panelSerializer: NodeSerializer<Panel> = {
     return out;
   },
   read(data, ctx) {
-    const panel = new Panel({
-      width: num(data.width),
-      height: num(data.height),
-      color: arrayToColor(data.color),
-      borderColor: arrayToColor(data.borderColor),
-      borderWidth: num(data.borderWidth),
-      cornerRadius: num(data.cornerRadius),
-    });
+    const panel = new Panel(
+      compact({
+        width: num(data.width),
+        height: num(data.height),
+        color: arrayToColor(data.color),
+        borderColor: arrayToColor(data.borderColor),
+        borderWidth: num(data.borderWidth),
+        cornerRadius: num(data.cornerRadius),
+      }),
+    );
 
     if (data.enabled === false) panel.enabled = false;
 
@@ -105,18 +107,20 @@ const buttonSerializer: NodeSerializer<Button> = {
     return out;
   },
   read(data) {
-    const button = new Button({
-      width: num(data.width),
-      height: num(data.height),
-      label: typeof data.label === 'string' ? data.label : undefined,
-      cornerRadius: num(data.cornerRadius),
-      color: arrayToColor(data.color),
-      hoverColor: arrayToColor(data.hoverColor),
-      pressedColor: arrayToColor(data.pressedColor),
-      disabledColor: arrayToColor(data.disabledColor),
-      textColor: arrayToColor(data.textColor),
-      fontSize: num(data.fontSize),
-    });
+    const button = new Button(
+      compact({
+        width: num(data.width),
+        height: num(data.height),
+        label: typeof data.label === 'string' ? data.label : undefined,
+        cornerRadius: num(data.cornerRadius),
+        color: arrayToColor(data.color),
+        hoverColor: arrayToColor(data.hoverColor),
+        pressedColor: arrayToColor(data.pressedColor),
+        disabledColor: arrayToColor(data.disabledColor),
+        textColor: arrayToColor(data.textColor),
+        fontSize: num(data.fontSize),
+      }),
+    );
 
     if (data.enabled === false) button.enabled = false;
 
@@ -142,14 +146,16 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
     return out;
   },
   read(data) {
-    const bar = new ProgressBar({
-      width: num(data.width),
-      height: num(data.height),
-      value: num(data.value),
-      trackColor: arrayToColor(data.trackColor),
-      fillColor: arrayToColor(data.fillColor),
-      cornerRadius: num(data.cornerRadius),
-    });
+    const bar = new ProgressBar(
+      compact({
+        width: num(data.width),
+        height: num(data.height),
+        value: num(data.value),
+        trackColor: arrayToColor(data.trackColor),
+        fillColor: arrayToColor(data.fillColor),
+        cornerRadius: num(data.cornerRadius),
+      }),
+    );
 
     if (data.enabled === false) bar.enabled = false;
 
@@ -173,11 +179,13 @@ const stackSerializer: NodeSerializer<Stack> = {
     return out;
   },
   read(data, ctx) {
-    const stack = new Stack({
-      direction: data.direction === 'row' || data.direction === 'column' ? data.direction : undefined,
-      spacing: num(data.spacing),
-      padding: num(data.padding),
-    });
+    const stack = new Stack(
+      compact({
+        direction: data.direction === 'row' || data.direction === 'column' ? data.direction : undefined,
+        spacing: num(data.spacing),
+        padding: num(data.padding),
+      }),
+    );
 
     if (data.enabled === false) stack.enabled = false;
 

@@ -181,7 +181,7 @@ export abstract class Gradient implements Cloneable, Destroyable {
       width,
       height,
       format: 'rgba8',
-      samplerOptions: options.samplerOptions,
+      ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
     });
     const buffer = texture.buffer;
 
@@ -214,7 +214,7 @@ export abstract class Gradient implements Cloneable, Destroyable {
       width,
       height,
       format: 'rgba32f',
-      samplerOptions: options.samplerOptions,
+      ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
     });
     const buffer = texture.buffer;
 

@@ -78,7 +78,7 @@ const vendorProductPairPattern = /\b([0-9a-f]{4})[-: ]([0-9a-f]{4})\b/i;
 const vidPidPattern = /vid[_:\s]*([0-9a-f]{4}).{0,8}pid[_:\s]*([0-9a-f]{4})/i;
 
 const createStaticGamepadDefinition = (name: string, createMapping: () => GamepadMapping, ids?: string | string[]): GamepadDefinition => ({
-  ids,
+  ...(ids !== undefined && { ids }),
   name,
   resolve: () => ({
     name,

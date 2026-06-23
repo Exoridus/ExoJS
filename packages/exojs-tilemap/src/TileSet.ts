@@ -143,7 +143,7 @@ export class TileSet {
       : undefined;
     (this._definitions as Map<number, TileDefinition>).set(localTileId, {
       localTileId,
-      properties: props,
+      ...(props !== undefined && { properties: props }),
     });
   }
 
@@ -159,7 +159,7 @@ export class TileSet {
       const props = def.properties
         ? Object.freeze({ ...def.properties })
         : undefined;
-      map.set(def.localTileId, { localTileId: def.localTileId, properties: props });
+      map.set(def.localTileId, { localTileId: def.localTileId, ...(props !== undefined && { properties: props }) });
     }
   }
 

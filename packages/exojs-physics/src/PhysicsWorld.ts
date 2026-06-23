@@ -118,7 +118,10 @@ export class PhysicsWorld implements BodyOwner {
 
   public constructor(options: PhysicsWorldOptions = {}) {
     this.gravity = new Vector(options.gravity?.x ?? 0, options.gravity?.y ?? 0);
-    this.timeStepper = new TimeStepper({ fixedDelta: options.fixedDelta, maxSubSteps: options.maxSubSteps });
+    this.timeStepper = new TimeStepper({
+      ...(options.fixedDelta !== undefined && { fixedDelta: options.fixedDelta }),
+      ...(options.maxSubSteps !== undefined && { maxSubSteps: options.maxSubSteps }),
+    });
     this.interpolation = options.interpolation ?? true;
     this.velocityIterations = options.velocityIterations ?? 8;
     this.positionIterations = options.positionIterations ?? 3;
@@ -174,21 +177,21 @@ export class PhysicsWorld implements BodyOwner {
    */
   public attach(node: SceneNode, options: AttachOptions): PhysicsBody {
     const body = new PhysicsBody({
-      type: options.type,
-      position: options.position,
-      angle: options.angle,
-      gravityScale: options.gravityScale,
-      fixedRotation: options.fixedRotation,
+      ...(options.type !== undefined && { type: options.type }),
+      ...(options.position !== undefined && { position: options.position }),
+      ...(options.angle !== undefined && { angle: options.angle }),
+      ...(options.gravityScale !== undefined && { gravityScale: options.gravityScale }),
+      ...(options.fixedRotation !== undefined && { fixedRotation: options.fixedRotation }),
       colliders: [
         new Collider({
           shape: options.shape,
-          offset: options.offset,
-          rotation: options.rotation,
-          density: options.density,
-          friction: options.friction,
-          restitution: options.restitution,
-          isSensor: options.isSensor,
-          filter: options.filter,
+          ...(options.offset !== undefined && { offset: options.offset }),
+          ...(options.rotation !== undefined && { rotation: options.rotation }),
+          ...(options.density !== undefined && { density: options.density }),
+          ...(options.friction !== undefined && { friction: options.friction }),
+          ...(options.restitution !== undefined && { restitution: options.restitution }),
+          ...(options.isSensor !== undefined && { isSensor: options.isSensor }),
+          ...(options.filter !== undefined && { filter: options.filter }),
         }),
       ],
     });
