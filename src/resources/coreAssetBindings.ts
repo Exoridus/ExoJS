@@ -137,8 +137,7 @@ const subtitleBinding = binding(SubtitleAsset as unknown as AssetConstructor, { 
       const text = await context.fetchText(source);
       const url = source.split('?')[0].toLowerCase();
       const fmt = url.endsWith('.srt') ? 'srt' : 'vtt';
-      const fakeResponse = { text: () => Promise.resolve(text), url: source } as unknown as Response;
-      const intermediate = await factory.process(fakeResponse);
+      const intermediate = await factory.process({ text: () => Promise.resolve(text), url: source });
       return factory.create({ ...intermediate, fmt });
     },
     destroy() {

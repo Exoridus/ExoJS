@@ -90,28 +90,26 @@ after in-place mutation is the caller's responsibility (call
 - `clip: boolean`
 - `clipShape: Rectangle | Geometry | null`
 - `collisionType: CollisionType`
-- `colors: Uint32Array<ArrayBufferLike> | null`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
 - `focusable: boolean`
-- `geometry: Geometry | null`
-- `indices: Uint16Array<ArrayBufferLike> | null`
-- `material: MeshMaterial | null`
 - `name: string | null`
 - `preserveDrawOrder: boolean`
 - `tabIndex: number`
-- `uvs: Float32Array<ArrayBufferLike> | null`
-- `vertices: Float32Array`
 - `anchor: ObservableVector`
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
+- `colors: Uint32Array<ArrayBufferLike> | null`
 - `cullable: boolean`
 - `filters: readonly Filter[]`
+- `geometry: Geometry | null`
 - `indexCount: number`
+- `indices: Uint16Array<ArrayBufferLike> | null`
 - `interactive: boolean`
 - `isAlignedBox: boolean`
 - `mask: MaskSource`
+- `material: MeshMaterial | null`
 - `origin: ObservableVector`
 - `parent: Container | null`
 - `pixelSnapMode: PixelSnapMode`
@@ -122,7 +120,9 @@ after in-place mutation is the caller's responsibility (call
 - `skewY: number`
 - `texture: Texture | RenderTexture | null`
 - `tint: Color`
+- `uvs: Float32Array<ArrayBufferLike> | null`
 - `vertexCount: number`
+- `vertices: Float32Array`
 - `visible: boolean`
 - `x: number`
 - `y: number`

@@ -71,16 +71,41 @@ export interface MeshOptions {
  * `recomputeLocalBounds()`).
  */
 export class Mesh extends Drawable {
-  public readonly vertices: Float32Array;
-  public readonly indices: Uint16Array | null;
-  public readonly uvs: Float32Array | null;
-  public readonly colors: Uint32Array | null;
+  // Backing fields are `protected` so the pooled `ImmediateMesh` subclass can
+  // reconfigure them in place; the public getters keep the data read-only for
+  // every external consumer (the v1 immutable-after-construction contract).
+  protected _vertices: Float32Array;
+  protected _indices: Uint16Array | null;
+  protected _uvs: Float32Array | null;
+  protected _colors: Uint32Array | null;
+  protected _material: MeshMaterial | null;
+  protected _geometry: Geometry | null;
+
+  public get vertices(): Float32Array {
+    return this._vertices;
+  }
+
+  public get indices(): Uint16Array | null {
+    return this._indices;
+  }
+
+  public get uvs(): Float32Array | null {
+    return this._uvs;
+  }
+
+  public get colors(): Uint32Array | null {
+    return this._colors;
+  }
 
   /** Custom material attached to this mesh, or `null` for the default mesh path. */
-  public readonly material: MeshMaterial | null;
+  public get material(): MeshMaterial | null {
+    return this._material;
+  }
 
   /** Source geometry when constructed from the geometry form, otherwise `null`. */
-  public readonly geometry: Geometry | null;
+  public get geometry(): Geometry | null {
+    return this._geometry;
+  }
 
   private _texture: Texture | RenderTexture | null;
 
@@ -150,12 +175,12 @@ export class Mesh extends Drawable {
       throw new Error(`Non-indexed Mesh requires a vertex count that is a multiple of 3 (got ${vertexCount}).`);
     }
 
-    this.vertices = vertices;
-    this.indices = indices;
-    this.uvs = uvs;
-    this.colors = colors;
-    this.material = material;
-    this.geometry = geometry;
+    this._vertices = vertices;
+    this._indices = indices;
+    this._uvs = uvs;
+    this._colors = colors;
+    this._material = material;
+    this._geometry = geometry;
     this._texture = texture;
 
     this.recomputeLocalBounds();

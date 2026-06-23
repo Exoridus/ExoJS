@@ -10,20 +10,6 @@ import { Mesh, readGeometry } from './Mesh';
 const placeholderVertices = (): Float32Array => new Float32Array([0, 0, 1, 0, 0, 1]);
 
 /**
- * Writable view over the (publicly `readonly`) {@link Mesh} data fields. The
- * pooled immediate mesh reconfigures these in place between draws; the readonly
- * cast mirrors the pattern the WebGPU mesh renderer uses for its draw-call slots.
- */
-interface MutableMeshFields {
-  vertices: Float32Array;
-  indices: Uint16Array | null;
-  uvs: Float32Array | null;
-  colors: Uint32Array | null;
-  material: MeshMaterial | null;
-  geometry: Geometry | null;
-}
-
-/**
  * Pooled, reconfigurable mesh backing the immediate {@link RenderingContext.drawGeometry}
  * path. It never enters the scene graph: it is reconfigured per call, submitted
  * via `backend.draw`, and flushed immediately, so a single instance is reused
@@ -61,14 +47,12 @@ export class ImmediateMesh extends Mesh {
    * @internal
    */
   public configure(geometry: Geometry, transform: Matrix, material: MeshMaterial | null, tint: Color | null): void {
-    const fields = this as unknown as MutableMeshFields;
-
     this._flattenGeometry(geometry);
     // Single immediate draws go through the dynamic (non-static-cached) path, so
     // the geometry reference is left off the mesh — only the flattened arrays are
     // consumed. (The batch source path sets it for the shared GPU buffer cache.)
-    fields.geometry = null;
-    fields.material = material;
+    this._geometry = null;
+    this._material = material;
     this._rawTransform = transform;
     // setTint ignores a falsy argument, so a missing tint must reset to white
     // rather than retain the previous draw's tint through the pool.
@@ -84,11 +68,9 @@ export class ImmediateMesh extends Mesh {
    * @internal
    */
   public configureBatchSource(geometry: Geometry, material: MeshMaterial | null): void {
-    const fields = this as unknown as MutableMeshFields;
-
     this._flattenGeometry(geometry);
-    fields.geometry = geometry;
-    fields.material = material;
+    this._geometry = geometry;
+    this._material = material;
     this._rawTransform = null;
     this.setTint(Color.white);
   }
@@ -100,13 +82,12 @@ export class ImmediateMesh extends Mesh {
       return;
     }
 
-    const fields = this as unknown as MutableMeshFields;
     const data = readGeometry(geometry);
 
-    fields.vertices = data.vertices;
-    fields.uvs = data.uvs;
-    fields.colors = data.colors;
-    fields.indices = data.indices;
+    this._vertices = data.vertices;
+    this._uvs = data.uvs;
+    this._colors = data.colors;
+    this._indices = data.indices;
     this._sourceGeometry = geometry;
     this._sourceVersion = geometry.version;
   }

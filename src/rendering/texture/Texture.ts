@@ -167,6 +167,15 @@ export class Texture {
   }
 
   /**
+   * Increment the version counter so backends re-upload on the next frame.
+   * @internal — for subclasses (e.g. {@link DataTexture}) that mutate texture
+   * data through paths the base setters don't cover.
+   */
+  protected _bumpVersion(): void {
+    this._version++;
+  }
+
+  /**
    * Register a callback to be invoked just before this texture is destroyed.
    * Useful for backends to release their GPU-side texture objects.
    */
