@@ -179,7 +179,8 @@ export class AnimatedSprite extends Sprite {
       this._currentClipName = name;
       this._currentFrameIndex = 0;
       this._elapsedFrameTimeMs = 0;
-      this._applyFrame(clip.frames[0]);
+      // Normalized clips always hold at least one frame.
+      this._applyFrame(clip.frames[0]!);
       this.onFrame.dispatch(name, 0);
     }
 
@@ -202,7 +203,8 @@ export class AnimatedSprite extends Sprite {
 
     if (clip && clip.frames.length > 0) {
       this._currentFrameIndex = 0;
-      this._applyFrame(clip.frames[0]);
+      // Guarded non-empty above.
+      this._applyFrame(clip.frames[0]!);
       this.onFrame.dispatch(this._currentClipName, 0);
     }
 
@@ -255,13 +257,15 @@ export class AnimatedSprite extends Sprite {
       if (nextFrame >= clip.frames.length) {
         if (this.loop) {
           this._currentFrameIndex = 0;
-          this._applyFrame(clip.frames[0]);
+          // clip has > 1 frame here (early-returned otherwise).
+          this._applyFrame(clip.frames[0]!);
           this.onFrame.dispatch(this._currentClipName, 0);
           continue;
         }
 
         this._currentFrameIndex = clip.frames.length - 1;
-        this._applyFrame(clip.frames[this._currentFrameIndex]);
+        // In-bounds: last frame index.
+        this._applyFrame(clip.frames[this._currentFrameIndex]!);
         this._playing = false;
         this.onComplete.dispatch(this._currentClipName);
 
@@ -269,7 +273,8 @@ export class AnimatedSprite extends Sprite {
       }
 
       this._currentFrameIndex = nextFrame;
-      this._applyFrame(clip.frames[this._currentFrameIndex]);
+      // In-bounds: nextFrame < frames.length.
+      this._applyFrame(clip.frames[this._currentFrameIndex]!);
       this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
     }
 

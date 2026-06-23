@@ -167,8 +167,9 @@ export class Mesh extends Drawable {
       }
 
       for (let i = 0; i < indices.length; i++) {
-        if (indices[i] >= vertexCount) {
-          throw new Error(`Mesh index ${indices[i]} at position ${i} is out of range for vertex count ${vertexCount}.`);
+        // In-bounds: `i` < `indices.length`.
+        if (indices[i]! >= vertexCount) {
+          throw new Error(`Mesh index ${indices[i]!} at position ${i} is out of range for vertex count ${vertexCount}.`);
         }
       }
     } else if (vertexCount % 3 !== 0) {
@@ -217,8 +218,9 @@ export class Mesh extends Drawable {
     let maxY = -Infinity;
 
     for (let i = 0; i < this.vertices.length; i += 2) {
-      const x = this.vertices[i];
-      const y = this.vertices[i + 1];
+      // In-bounds: `vertices.length` is an even (x, y) count (validated on construction).
+      const x = this.vertices[i]!;
+      const y = this.vertices[i + 1]!;
       if (x < minX) minX = x;
       if (x > maxX) maxX = x;
       if (y < minY) minY = y;

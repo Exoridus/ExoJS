@@ -177,8 +177,11 @@ export class Geometry {
 
     if (indices !== null) {
       for (let i = 0; i < indices.length; i++) {
-        if (indices[i] >= vertexCount) {
-          throw new Error(`Geometry index ${indices[i]} at position ${i} is out of range for vertex count ${vertexCount}.`);
+        // In-bounds: i < length.
+        const index = indices[i]!;
+
+        if (index >= vertexCount) {
+          throw new Error(`Geometry index ${index} at position ${i} is out of range for vertex count ${vertexCount}.`);
         }
       }
     }

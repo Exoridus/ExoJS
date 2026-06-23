@@ -68,9 +68,18 @@ export class WebGl2ShaderBlock {
     const len = indices.length;
 
     for (let i = 0; i < len; i++) {
-      const { type, size, name } = gl.getActiveUniform(program, indices[i])!;
-      const data = new webGl2PrimitiveArrayConstructors[type](blockData, offsets[i], webGl2PrimitiveByteSizeMapping[type] * size);
-      const uniform = new ShaderUniform(indices[i], type, size, name, data);
+      // In-bounds: `i` < `len` (= `indices.length`); `offsets` is parallel to `indices`.
+      const index = indices[i]!;
+      const { type, size, name } = gl.getActiveUniform(program, index)!;
+      const arrayConstructor = webGl2PrimitiveArrayConstructors[type];
+      const byteSize = webGl2PrimitiveByteSizeMapping[type];
+
+      if (arrayConstructor === undefined || byteSize === undefined) {
+        throw new Error(`Unsupported uniform type ${type} for uniform "${name}".`);
+      }
+
+      const data = new arrayConstructor(blockData, offsets[i], byteSize * size);
+      const uniform = new ShaderUniform(index, type, size, name, data);
 
       this._uniforms.set(uniform.propName, uniform);
     }

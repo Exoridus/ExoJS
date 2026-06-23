@@ -271,7 +271,8 @@ export class Graphics extends Container {
     }
 
     this.drawPath(path);
-    this.moveTo(path[path.length - 2], path[path.length - 1]);
+    // path has (segments + 1) * 2 >= 6 entries, so the last pair is present.
+    this.moveTo(path[path.length - 2]!, path[path.length - 1]!);
 
     return this;
   }
@@ -503,8 +504,9 @@ const computeBoundsUvs = (vertices: Float32Array): Float32Array => {
   let maxY = -Infinity;
 
   for (let i = 0; i < vertices.length; i += 2) {
-    const x = vertices[i];
-    const y = vertices[i + 1];
+    // vertices is a flat (x, y) pair array, so i and i+1 are both in-bounds.
+    const x = vertices[i]!;
+    const y = vertices[i + 1]!;
 
     if (x < minX) minX = x;
     if (x > maxX) maxX = x;
@@ -519,8 +521,9 @@ const computeBoundsUvs = (vertices: Float32Array): Float32Array => {
   const uvs = new Float32Array(vertices.length);
 
   for (let i = 0; i < vertices.length; i += 2) {
-    uvs[i] = (vertices[i] - minX) * invX;
-    uvs[i + 1] = (vertices[i + 1] - minY) * invY;
+    // vertices is a flat (x, y) pair array, so i and i+1 are both in-bounds.
+    uvs[i] = (vertices[i]! - minX) * invX;
+    uvs[i + 1] = (vertices[i + 1]! - minY) * invY;
   }
 
   return uvs;

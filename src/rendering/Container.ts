@@ -145,7 +145,8 @@ export class Container extends RenderNode {
       throw new Error(`getChildAt: Index (${index}) does not exist.`);
     }
 
-    return this._children[index];
+    // Bounds-checked above.
+    return this._children[index]!;
   }
 
   /** Remove `child` from this container. No-op if not present. */
@@ -233,7 +234,8 @@ export class Container extends RenderNode {
     }
 
     for (let index = 0; index < this._children.length; index++) {
-      this._children[index]._collect(builder, index);
+      // In-bounds: index < length.
+      this._children[index]!._collect(builder, index);
     }
   }
 
@@ -241,7 +243,8 @@ export class Container extends RenderNode {
     const children = this._children;
 
     for (let i = 0; i < children.length; i++) {
-      if (children[i].contains(x, y)) {
+      // In-bounds: i < length.
+      if (children[i]!.contains(x, y)) {
         return true;
       }
     }

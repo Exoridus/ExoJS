@@ -246,15 +246,16 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const style = node.style;
 
     // Transform (texels 0-1)
+    // In-bounds: `toArray(false)` returns the fixed 9-element mat3 column-major array.
     const m = node.getGlobalTransform().toArray(false); // col-major: [a,c,0, b,d,0, tx,ty,1]
-    arr[base + 0] = m[0]; // a
-    arr[base + 1] = m[1]; // c
-    arr[base + 2] = m[2]; // 0
-    arr[base + 3] = m[6]; // tx
-    arr[base + 4] = m[3]; // b
-    arr[base + 5] = m[4]; // d
-    arr[base + 6] = m[5]; // 0
-    arr[base + 7] = m[7]; // ty
+    arr[base + 0] = m[0]!; // a
+    arr[base + 1] = m[1]!; // c
+    arr[base + 2] = m[2]!; // 0
+    arr[base + 3] = m[6]!; // tx
+    arr[base + 4] = m[3]!; // b
+    arr[base + 5] = m[4]!; // d
+    arr[base + 6] = m[5]!; // 0
+    arr[base + 7] = m[7]!; // ty
 
     // Fill color (texel 2)
     const fc = style.fillColor;
@@ -371,12 +372,14 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     let i = 0;
 
     while (i < quads.length) {
-      const first = quads[i];
+      // In-bounds: `i` < `quads.length` per the loop guard.
+      const first = quads[i]!;
       const firstTextureKey = this._textureKeyMap.get(first.atlasTexture);
 
       let j = i + 1;
       while (j < quads.length) {
-        const pq = quads[j];
+        // In-bounds: `j` < `quads.length` per the loop guard.
+        const pq = quads[j]!;
         if (pq.shaderType !== first.shaderType || this._textureKeyMap.get(pq.atlasTexture) !== firstTextureKey) break;
         j++;
       }
@@ -387,8 +390,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       let totalVerts = 0;
       let totalIndices = 0;
       for (let k = i; k < j; k++) {
-        totalVerts += quads[k].quads.quadCount * 4;
-        totalIndices += quads[k].quads.indices.length;
+        // In-bounds: `k` ranges over `[i, j)` ⊆ `[0, quads.length)`.
+        totalVerts += quads[k]!.quads.quadCount * 4;
+        totalIndices += quads[k]!.quads.indices.length;
       }
 
       this._ensureVertexCapacity(totalVerts);
@@ -399,22 +403,25 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       let baseV = 0; // vertex base for current quad group (for index rewriting)
 
       for (let k = i; k < j; k++) {
-        const { quads: batch, nodeIndex } = quads[k];
+        // In-bounds: `k` ranges over `[i, j)` ⊆ `[0, quads.length)`.
+        const { quads: batch, nodeIndex } = quads[k]!;
         const qVerts = batch.quadCount * 4;
         const { vertices, uvs, indices } = batch;
 
         for (let v = 0; v < qVerts; v++) {
           const w = (vOffset + v) * vertexStrideWords;
           const vp = v * 2;
-          this._float32View[w + 0] = vertices[vp];
-          this._float32View[w + 1] = vertices[vp + 1];
-          this._float32View[w + 2] = uvs[vp];
-          this._float32View[w + 3] = uvs[vp + 1];
+          // In-bounds: `vp + 1 < qVerts * 2`; `vertices`/`uvs` carry 2 floats per quad vertex.
+          this._float32View[w + 0] = vertices[vp]!;
+          this._float32View[w + 1] = vertices[vp + 1]!;
+          this._float32View[w + 2] = uvs[vp]!;
+          this._float32View[w + 3] = uvs[vp + 1]!;
           this._float32View[w + 4] = nodeIndex;
         }
 
         for (let x = 0; x < indices.length; x++) {
-          this._indexData[iOffset + x] = indices[x] + baseV;
+          // In-bounds: `x` < `indices.length`.
+          this._indexData[iOffset + x] = indices[x]! + baseV;
         }
 
         vOffset += qVerts;

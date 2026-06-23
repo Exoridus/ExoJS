@@ -100,7 +100,8 @@ export class RenderPlanPlayer {
       let preInstructionIndex = context.passInstructionIndex;
 
       for (let gi = 0; gi < groups.length; gi++) {
-        const group = groups[gi];
+        // In-bounds: gi < groups.length.
+        const group = groups[gi]!;
 
         hooks._prepareRenderGroupUpload(
           group,
@@ -115,7 +116,10 @@ export class RenderPlanPlayer {
     for (const entry of scope.entries) {
       if (entry.kind === RenderEntryKind.Draw) {
         if (currentGroup === null) {
-          currentGroup = groups[groupCursor];
+          // Invariant: collectRenderGroups yields groups whose total instruction
+          // count equals the draw-entry count, and groupCursor only advances when
+          // a group is fully consumed, so a group exists for every draw entry.
+          currentGroup = groups[groupCursor]!;
           currentInstructionIndex = 0;
 
           hooks._beginRenderGroup?.(currentGroup);

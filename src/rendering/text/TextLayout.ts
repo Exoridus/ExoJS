@@ -71,7 +71,8 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
   let maxLineWidth = 0;
 
   for (let lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
-    const line = allLines[lineIndex];
+    // In-bounds: lineIndex < allLines.length.
+    const line = allLines[lineIndex]!;
     const lineY = lineIndex * computedLineHeight;
     let cursorX = 0;
     let wordCount = 0;
@@ -109,7 +110,8 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
   const lastLineIndex = linePlacements.length - 1;
 
   for (let li = 0; li < linePlacements.length; li++) {
-    const line = linePlacements[li];
+    // In-bounds: li < linePlacements.length.
+    const line = linePlacements[li]!;
     let offsetX = 0;
 
     if (align === 'right') {
@@ -188,7 +190,8 @@ export function buildTextPageQuads(placements: readonly GlyphPlacement[]): TextP
     const indices = new Uint16Array(n * 6);
 
     for (let i = 0; i < n; i++) {
-      const p = pagePlacements[i];
+      // In-bounds: i < n === pagePlacements.length.
+      const p = pagePlacements[i]!;
       const v = i * 8;
       const baseV = i * 4;
       const idxBase = i * 6;

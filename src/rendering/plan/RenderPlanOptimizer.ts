@@ -24,7 +24,8 @@ export class RenderPlanOptimizer {
       });
 
       for (let i = 0; i < indexed.length; i++) {
-        scope.entries[i] = indexed[i].entry;
+        // In-bounds: i < indexed.length, and entries was the source of indexed.
+        scope.entries[i] = indexed[i]!.entry;
       }
     }
 
@@ -50,7 +51,8 @@ export class RenderPlanOptimizer {
     let segStart = 0;
 
     for (let i = 0; i <= n; i++) {
-      const entry = i < n ? entries[i] : null;
+      // In-bounds when i < n.
+      const entry = i < n ? entries[i]! : null;
       const isBoundary = entry === null || entry.kind === RenderEntryKind.Group || entry.kind === RenderEntryKind.Barrier;
 
       if (isBoundary && i > segStart) {
@@ -106,7 +108,8 @@ export class RenderPlanOptimizer {
     const draws: Array<{ entry: DrawScopeEntry; origIdx: number }> = [];
 
     for (let i = start; i < end; i++) {
-      const entry = entries[i];
+      // In-bounds: start..end-1 lie within entries.
+      const entry = entries[i]!;
 
       if (entry.kind === RenderEntryKind.Draw) {
         draws.push({ entry, origIdx: i });
@@ -168,8 +171,13 @@ export class RenderPlanOptimizer {
 
       positions.sort((a, b) => a - b);
 
-      const first = positions[0];
-      const last = positions[positions.length - 1];
+      if (positions.length === 0) {
+        continue;
+      }
+
+      // Non-empty (guarded above); positions are valid indices in [segStart, segEnd).
+      const first = positions[0]!;
+      const last = positions[positions.length - 1]!;
 
       if (last - first + 1 === positions.length) {
         continue;
@@ -178,7 +186,8 @@ export class RenderPlanOptimizer {
       let blocked = false;
 
       for (let p = first + 1; p < last && !blocked; p++) {
-        const mid = entries[p];
+        // In-bounds: p in (first, last) ⊂ [segStart, segEnd).
+        const mid = entries[p]!;
 
         if (mid.kind !== RenderEntryKind.Draw) {
           continue;
@@ -186,7 +195,8 @@ export class RenderPlanOptimizer {
 
         const midKey = groupKey(mid.command.material);
 
-        if (midKey === groupKey(group[0].entry.command.material)) {
+        // group has length >= 1 (guarded above).
+        if (midKey === groupKey(group[0]!.entry.command.material)) {
           continue;
         }
 
@@ -206,21 +216,26 @@ export class RenderPlanOptimizer {
       const beforeFirst: ScopeEntry[] = [];
 
       for (let p = segStart; p < first; p++) {
-        beforeFirst.push(entries[p]);
+        // In-bounds: p < first <= segEnd.
+        beforeFirst.push(entries[p]!);
       }
 
       const afterLast: ScopeEntry[] = [];
 
       for (let p = last + 1; p < segEnd; p++) {
-        afterLast.push(entries[p]);
+        // In-bounds: p < segEnd.
+        afterLast.push(entries[p]!);
       }
 
       const groupSet = new Set(group.map(g => g.entry));
       const betweenNonGroup: ScopeEntry[] = [];
 
       for (let p = first; p <= last; p++) {
-        if (!groupSet.has(entries[p] as DrawScopeEntry)) {
-          betweenNonGroup.push(entries[p]);
+        // In-bounds: first..last ⊂ [segStart, segEnd).
+        const entry = entries[p]!;
+
+        if (!groupSet.has(entry as DrawScopeEntry)) {
+          betweenNonGroup.push(entry);
         }
       }
 
@@ -228,7 +243,8 @@ export class RenderPlanOptimizer {
       const reordered: ScopeEntry[] = [...beforeFirst, ...groupEntries, ...betweenNonGroup, ...afterLast];
 
       for (let p = segStart; p < segEnd; p++) {
-        entries[p] = reordered[p - segStart];
+        // reordered has exactly segEnd-segStart entries; p-segStart is in-bounds.
+        entries[p] = reordered[p - segStart]!;
       }
 
       break;

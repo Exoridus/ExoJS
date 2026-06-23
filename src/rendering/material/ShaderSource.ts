@@ -222,6 +222,9 @@ function parseGlslUniforms(vertex: string, fragment: string): Record<string, str
     let match: RegExpExecArray | null;
     while ((match = glslUniformPattern.exec(stripped)) !== null) {
       const [, type, name] = match;
+      if (type === undefined || name === undefined) {
+        continue;
+      }
       result[name] = type;
     }
   }
@@ -240,6 +243,9 @@ function parseWgslUniforms(source: string): Record<string, string> {
   let match: RegExpExecArray | null;
   while ((match = wgslUserUniformPattern.exec(stripped)) !== null) {
     const [, name, type] = match;
+    if (name === undefined || type === undefined) {
+      continue;
+    }
     result[name] = type.trim();
   }
 

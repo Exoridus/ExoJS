@@ -464,7 +464,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     let defaultUniformIndex = 0;
 
     for (let i = 0; i < this._drawCallCount; i++) {
-      const dc = this._drawCalls[i];
+      // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
+      const dc = this._drawCalls[i]!;
 
       if (dc.customShader === null) {
         // Default path: CPU-bake transform into vertex positions.
@@ -516,7 +517,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       let drawCursor = 0;
 
       for (let i = 0; i < this._drawCallCount; i++) {
-        const dc = this._drawCalls[i];
+        // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
+        const dc = this._drawCalls[i]!;
         if (dc.customShader !== material) continue;
 
         this._writeMeshVerticesIntoBuffer(dc.mesh, vWritten, resources.vertexFloatView, resources.vertexUintView);
@@ -589,7 +591,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const customDrawCursors = new Map<Material, number>();
 
     for (let i = 0; i < this._drawCallCount; i++) {
-      const dc = this._drawCalls[i];
+      // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
+      const dc = this._drawCalls[i]!;
 
       if (dc.customShader === null) {
         const batchLength = this._getStaticBatchLength(i);
@@ -892,28 +895,31 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       const tx = matrix.x;
       const ty = matrix.y;
 
+      // vertices/uvs/colors are sized to vertexCount (×2 for the vec2 attrs);
+      // sourceIndex/i stay within bounds for the whole loop.
       for (let i = 0; i < vertexCount; i++) {
         const sourceIndex = i * 2;
         const targetIndex = (vertexStart + i) * wordsPerVertex;
-        const px = vertices[sourceIndex];
-        const py = vertices[sourceIndex + 1];
+        const px = vertices[sourceIndex]!;
+        const py = vertices[sourceIndex + 1]!;
 
         this._float32View[targetIndex + 0] = a * px + b * py + tx;
         this._float32View[targetIndex + 1] = c * px + d * py + ty;
-        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex] : 0;
-        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1] : 0;
-        this._uint32View[targetIndex + 4] = colors !== null ? colors[i] : 0xffffffff;
+        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
+        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
+        this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
       }
     } else {
       // Should not happen — default path always bakes. Defensive no-op.
+      // Same bounds reasoning as the bake branch above.
       for (let i = 0; i < vertexCount; i++) {
         const sourceIndex = i * 2;
         const targetIndex = (vertexStart + i) * wordsPerVertex;
-        this._float32View[targetIndex + 0] = vertices[sourceIndex];
-        this._float32View[targetIndex + 1] = vertices[sourceIndex + 1];
-        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex] : 0;
-        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1] : 0;
-        this._uint32View[targetIndex + 4] = colors !== null ? colors[i] : 0xffffffff;
+        this._float32View[targetIndex + 0] = vertices[sourceIndex]!;
+        this._float32View[targetIndex + 1] = vertices[sourceIndex + 1]!;
+        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
+        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
+        this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
       }
     }
   }
@@ -1000,7 +1006,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 
   private _getStaticBatchLength(startIndex: number): number {
-    const first = this._drawCalls[startIndex];
+    // Called with startIndex < _drawCallCount; the loop keeps i < _drawCallCount.
+    const first = this._drawCalls[startIndex]!;
 
     if (!this._isStaticBatchCandidate(first)) {
       return 1;
@@ -1009,7 +1016,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     let length = 1;
 
     for (let i = startIndex + 1; i < this._drawCallCount; i++) {
-      const next = this._drawCalls[i];
+      const next = this._drawCalls[i]!;
 
       if (!this._isSameStaticBatch(first, next)) {
         break;
@@ -1048,7 +1055,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     let maxNodeIndex = 0;
 
     for (let i = 0; i < batchLength; i++) {
-      const nodeIndex = this._drawCalls[startIndex + i].command!.nodeIndex >>> 0;
+      // batchLength is bounded so startIndex + i stays < _drawCallCount.
+      const nodeIndex = this._drawCalls[startIndex + i]!.command!.nodeIndex >>> 0;
 
       this._instancedNodeIndexData[i] = nodeIndex;
 
@@ -1543,15 +1551,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const colors = mesh.colors;
     const vertexCount = mesh.vertexCount;
 
+    // vertices/uvs/colors are sized to vertexCount (×2 for the vec2 attrs).
     for (let i = 0; i < vertexCount; i++) {
       const sourceIndex = i * 2;
       const targetIndex = (vertexStart + i) * wordsPerVertex;
 
-      floatView[targetIndex + 0] = vertices[sourceIndex];
-      floatView[targetIndex + 1] = vertices[sourceIndex + 1];
-      floatView[targetIndex + 2] = uvs !== null ? uvs[sourceIndex] : 0;
-      floatView[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1] : 0;
-      uintView[targetIndex + 4] = colors !== null ? colors[i] : 0xffffffff;
+      floatView[targetIndex + 0] = vertices[sourceIndex]!;
+      floatView[targetIndex + 1] = vertices[sourceIndex + 1]!;
+      floatView[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
+      floatView[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
+      uintView[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
     }
   }
 
@@ -1763,12 +1772,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         data.set(value, baseFloatIndex);
       } else if (value instanceof Int32Array) {
         for (let i = 0; i < value.length; i++) {
-          data[baseFloatIndex + i] = value[i];
+          data[baseFloatIndex + i] = value[i]!;
         }
       } else {
         const arr = value as readonly number[];
         for (let i = 0; i < arr.length; i++) {
-          data[baseFloatIndex + i] = arr[i];
+          data[baseFloatIndex + i] = arr[i]!;
         }
       }
 

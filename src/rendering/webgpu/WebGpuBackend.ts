@@ -259,7 +259,8 @@ export class WebGpuBackend implements RenderBackend {
     const instructions = group.instructions;
 
     for (let i = 0; i < instructions.length; i++) {
-      const command = instructions[i];
+      // i is bounded by instructions.length via the for-loop guard.
+      const command = instructions[i]!;
 
       if (drawCommandUsesSharedTransform(command, this)) {
         storage.writeCommand(command, this._resolveSnapTransform(command.drawable));
@@ -331,11 +332,13 @@ export class WebGpuBackend implements RenderBackend {
     // Write each instance's (transform, tint) into a fresh, contiguous transform
     // slot before the renderer's draw uploads the storage buffer, then draw the
     // geometry once over [startNodeIndex, startNodeIndex + count).
+    // Contract: transforms/tints are parallel arrays of length >= count
+    // (count > 0 is guaranteed by the early return above).
     const storage = this._getTransformStorage();
-    const startNodeIndex = storage.pushValues(transforms[0], tints[0]);
+    const startNodeIndex = storage.pushValues(transforms[0]!, tints[0]!);
 
     for (let i = 1; i < count; i++) {
-      storage.pushValues(transforms[i], tints[i]);
+      storage.pushValues(transforms[i]!, tints[i]!);
     }
 
     renderer.drawInstancedBatch(mesh, startNodeIndex, count);
@@ -480,7 +483,8 @@ export class WebGpuBackend implements RenderBackend {
       return null;
     }
 
-    const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
+    // Non-empty checked above, so the top-of-stack element exists.
+    const clip = this._clipPixelStack[this._clipPixelStack.length - 1]!;
     const scaleX = this._renderTarget.root && this._renderTarget.width > 0 ? this._canvas.width / this._renderTarget.width : 1;
     const scaleY = this._renderTarget.root && this._renderTarget.height > 0 ? this._canvas.height / this._renderTarget.height : 1;
 
@@ -494,7 +498,8 @@ export class WebGpuBackend implements RenderBackend {
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
-      const texture = this._temporaryRenderTextures[index];
+      // index is bounded by the array length via the for-loop guard.
+      const texture = this._temporaryRenderTextures[index]!;
 
       if (texture.width === width && texture.height === height) {
         this._temporaryRenderTextures.splice(index, 1);

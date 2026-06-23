@@ -127,7 +127,8 @@ export class WebGl2StencilClipper {
     const out = this._positions;
 
     for (let i = 0; i < drawCount; i++) {
-      const vertexIndex = indices !== null ? indices[i] : i;
+      // In-bounds: when `indices` is non-null, `drawCount === indices.length`.
+      const vertexIndex = indices !== null ? indices[i]! : i;
       const base = vertexIndex * stride + position.offset;
 
       out[i * 2] = view.getFloat32(base, true);

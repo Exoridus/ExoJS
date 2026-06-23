@@ -180,12 +180,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     }
 
     for (let i = 0; i < this._pendingDraws.length; i++) {
-      const draw = this._pendingDraws[i];
+      // In-bounds: `i` ranges over `0..length-1`.
+      const draw = this._pendingDraws[i]!;
 
       if (this._canBatchStatic(draw)) {
         let end = i + 1;
 
-        while (end < this._pendingDraws.length && this._isSameBatch(this._pendingDraws[end - 1], this._pendingDraws[end])) {
+        // In-bounds: `end` and `end - 1` stay within `0..length-1` per the loop guard.
+        while (end < this._pendingDraws.length && this._isSameBatch(this._pendingDraws[end - 1]!, this._pendingDraws[end]!)) {
           end++;
         }
 
@@ -342,7 +344,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   }
 
   private _drawStaticBatch(batch: PendingMeshDraw[], backend: WebGl2Backend, connection: MeshRendererConnection): void {
-    const first = batch[0];
+    // Callers only invoke this with a non-empty batch (slice of >= 1 or [draw]).
+    const first = batch[0]!;
     const geometry = first.mesh.geometry!;
     const cacheEntry = this._getOrCreateStaticGeometryEntry(geometry, first.mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, first.shader, connection.gl, connection.dynamicNodeIndexBuffer);
@@ -354,7 +357,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     this._ensureNodeIndexCapacity(batch.length);
 
     for (let i = 0; i < batch.length; i++) {
-      const command = batch[i].command!;
+      // In-bounds: `i` ranges over `0..batch.length-1`.
+      const command = batch[i]!.command!;
       const nodeIndex = command.nodeIndex >>> 0;
 
       this._nodeIndexData[i] = nodeIndex;
@@ -604,18 +608,20 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       const word = (vertexStart + i) * vertexStrideWords;
       const pair = i * 2;
 
-      floatView[word] = positions[pair];
-      floatView[word + 1] = positions[pair + 1];
+      // In-bounds: `pair + 1 < vertices.length` (vertexCount = vertices.length / 2);
+      // `uvs`/`colors` lengths were validated against the vertex data on construction.
+      floatView[word] = positions[pair]!;
+      floatView[word + 1] = positions[pair + 1]!;
 
       if (uvs !== null) {
-        floatView[word + 2] = uvs[pair];
-        floatView[word + 3] = uvs[pair + 1];
+        floatView[word + 2] = uvs[pair]!;
+        floatView[word + 3] = uvs[pair + 1]!;
       } else {
         floatView[word + 2] = 0;
         floatView[word + 3] = 0;
       }
 
-      uintView[word + 4] = colors !== null ? colors[i] : defaultVertexColor;
+      uintView[word + 4] = colors !== null ? colors[i]! : defaultVertexColor;
     }
   }
 
@@ -806,7 +812,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
         continue;
       }
 
-      const value = uniforms[name];
+      // `name` iterates own keys of `uniforms`, so the lookup is defined.
+      const value = uniforms[name]!;
       const uniform = shader.getUniform(name);
 
       if (value instanceof Texture || value instanceof RenderTexture) {
@@ -814,7 +821,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
           throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
         }
         backend.bindTexture(value, textureSlot);
-        uniform.setValue(this._slotScratches[textureSlot]);
+        // In-bounds: `textureSlot < maxCustomTextureSlots` (guarded) and
+        // `_slotScratches` has `maxCustomTextureSlots + 1` pre-allocated entries.
+        uniform.setValue(this._slotScratches[textureSlot]!);
         textureSlot++;
       } else {
         uniform.setValue(this._marshalUniformValue(value));
@@ -831,8 +840,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
         throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
       }
 
-      backend.bindTexture(textures[name], textureSlot);
-      shader.getUniform(name).setValue(this._slotScratches[textureSlot]);
+      // `name` iterates own keys of `textures`, so the lookup is defined.
+      backend.bindTexture(textures[name]!, textureSlot);
+      shader.getUniform(name).setValue(this._slotScratches[textureSlot]!);
       textureSlot++;
     }
   }

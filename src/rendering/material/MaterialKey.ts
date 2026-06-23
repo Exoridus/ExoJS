@@ -91,11 +91,13 @@ export const deriveBindKey = (materialId: number, uniforms: Record<string, Unifo
   const entries: string[] = [];
 
   for (const name of Object.keys(textures)) {
-    entries.push(`t:${name}=${getTextureId(textures[name])}`);
+    // `name` comes from `Object.keys(textures)`, so the lookup is defined.
+    entries.push(`t:${name}=${getTextureId(textures[name]!)}`);
   }
 
   for (const name of Object.keys(uniforms)) {
-    const value = uniforms[name];
+    // `name` comes from `Object.keys(uniforms)`, so the lookup is defined.
+    const value = uniforms[name]!;
 
     if (isTextureBinding(value)) {
       entries.push(`u:${name}=${getTextureId(value)}`);

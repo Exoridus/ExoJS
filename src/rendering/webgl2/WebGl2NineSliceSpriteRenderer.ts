@@ -188,7 +188,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const flipY = texture.flipY;
 
     for (let i = start; i < end; i++) {
-      const q = quads[i];
+      // In-bounds: callers pass `[start, end)` ⊆ `[0, quads.length)`.
+      const q = quads[i]!;
       const idx = this._quadIndex * wordsPerInstance;
 
       f32[idx + 0] = q.x0;

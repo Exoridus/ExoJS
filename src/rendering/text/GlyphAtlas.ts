@@ -275,7 +275,8 @@ export class GlyphAtlas implements GlyphProvider {
     if (cached !== undefined) return cached;
 
     const font = this._cssFont(fontSize);
-    const page = this._pages[0];
+    // Invariant: a base page is always present (constructor + clear add one).
+    const page = this._pages[0]!;
     const pair = page.measureGlyph(prev + next, font).width;
     const a = page.measureGlyph(prev, font).width;
     const b = page.measureGlyph(next, font).width;
@@ -359,7 +360,8 @@ export class GlyphAtlas implements GlyphProvider {
 
   private _rasterizeCanvas(char: string, size: number, key: GlyphKey): GlyphInfo {
     const font = this._cssFont(size);
-    const metrics = this._pages[0].measureGlyph(char, font);
+    // Invariant: a base page is always present (constructor + clear add one).
+    const metrics = this._pages[0]!.measureGlyph(char, font);
 
     const ascent = Math.ceil(
       (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? size * 0.8,
