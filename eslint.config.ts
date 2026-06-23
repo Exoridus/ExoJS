@@ -98,7 +98,6 @@ export default defineConfig([
       'no-useless-return': 'error',
       'object-shorthand': 'error',
       'prefer-object-spread': 'error',
-      'prefer-promise-reject-errors': 'error',
       'prefer-template': 'error',
       radix: 'error',
       // Base rules disabled in favor of TS / plugin variants.
@@ -107,7 +106,6 @@ export default defineConfig([
 
       // TypeScript correctness
       '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
-      '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/ban-ts-comment': [
         'error',
         {
@@ -118,7 +116,6 @@ export default defineConfig([
         },
       ],
       '@typescript-eslint/class-literal-property-style': 'warn',
-      '@typescript-eslint/consistent-indexed-object-style': ['error', 'record'],
       '@typescript-eslint/consistent-type-assertions': [
         'error',
         {
@@ -126,7 +123,6 @@ export default defineConfig([
           objectLiteralTypeAssertions: 'never',
         },
       ],
-      '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/default-param-last': 'error',
       '@typescript-eslint/explicit-function-return-type': [
@@ -138,20 +134,15 @@ export default defineConfig([
         },
       ],
       '@typescript-eslint/explicit-member-accessibility': 'warn',
-      '@typescript-eslint/no-base-to-string': 'error',
       '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
       '@typescript-eslint/no-deprecated': 'warn',
-      '@typescript-eslint/no-duplicate-enum-values': 'error',
-      '@typescript-eslint/no-duplicate-type-constituents': 'error',
       '@typescript-eslint/no-empty-function': [
         'warn',
         {
           allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-for-in-array': 'error',
       '@typescript-eslint/no-meaningless-void-operator': 'error',
       '@typescript-eslint/no-misused-promises': [
         'error',
@@ -164,7 +155,6 @@ export default defineConfig([
       ],
       '@typescript-eslint/no-mixed-enums': 'error',
       '@typescript-eslint/no-non-null-asserted-nullish-coalescing': 'error',
-      '@typescript-eslint/no-non-null-asserted-optional-chain': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
@@ -182,18 +172,12 @@ export default defineConfig([
       // Base no-unused-vars handled by `unused-imports/no-unused-vars` above.
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
-      '@typescript-eslint/only-throw-error': 'error',
       '@typescript-eslint/prefer-for-of': 'off',
-      '@typescript-eslint/prefer-function-type': 'error',
-      '@typescript-eslint/prefer-includes': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'warn',
-      '@typescript-eslint/prefer-promise-reject-errors': 'error',
       '@typescript-eslint/prefer-readonly': 'off',
       '@typescript-eslint/prefer-reduce-type-parameter': 'error',
       '@typescript-eslint/prefer-regexp-exec': 'off',
-      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
-      '@typescript-eslint/prefer-ts-expect-error': 'error',
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
@@ -348,7 +332,6 @@ export default defineConfig([
       'no-useless-return': 'error',
       'object-shorthand': 'error',
       'prefer-object-spread': 'error',
-      'prefer-promise-reject-errors': 'error',
       'prefer-template': 'error',
       radix: 'error',
       'no-shadow': 'off',
@@ -356,7 +339,6 @@ export default defineConfig([
 
       // TypeScript correctness
       '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
-      '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/ban-ts-comment': [
         'error',
         {
@@ -367,7 +349,6 @@ export default defineConfig([
         },
       ],
       '@typescript-eslint/class-literal-property-style': 'warn',
-      '@typescript-eslint/consistent-indexed-object-style': ['error', 'record'],
       '@typescript-eslint/consistent-type-assertions': [
         'error',
         {
@@ -375,7 +356,6 @@ export default defineConfig([
           objectLiteralTypeAssertions: 'never',
         },
       ],
-      '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/default-param-last': 'error',
       '@typescript-eslint/explicit-function-return-type': [
@@ -387,20 +367,15 @@ export default defineConfig([
         },
       ],
       '@typescript-eslint/explicit-member-accessibility': 'warn',
-      '@typescript-eslint/no-base-to-string': 'error',
       '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
       '@typescript-eslint/no-deprecated': 'warn',
-      '@typescript-eslint/no-duplicate-enum-values': 'error',
-      '@typescript-eslint/no-duplicate-type-constituents': 'error',
       '@typescript-eslint/no-empty-function': [
         'warn',
         {
           allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-for-in-array': 'error',
       '@typescript-eslint/no-meaningless-void-operator': 'error',
       '@typescript-eslint/no-misused-promises': [
         'error',
@@ -413,7 +388,6 @@ export default defineConfig([
       ],
       '@typescript-eslint/no-mixed-enums': 'error',
       '@typescript-eslint/no-non-null-asserted-nullish-coalescing': 'error',
-      '@typescript-eslint/no-non-null-asserted-optional-chain': 'error',
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
@@ -430,18 +404,12 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-return': 'warn',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
-      '@typescript-eslint/only-throw-error': 'error',
       '@typescript-eslint/prefer-for-of': 'off',
-      '@typescript-eslint/prefer-function-type': 'error',
-      '@typescript-eslint/prefer-includes': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'warn',
-      '@typescript-eslint/prefer-promise-reject-errors': 'error',
       '@typescript-eslint/prefer-readonly': 'off',
       '@typescript-eslint/prefer-reduce-type-parameter': 'error',
       '@typescript-eslint/prefer-regexp-exec': 'off',
-      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
-      '@typescript-eslint/prefer-ts-expect-error': 'error',
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
@@ -1105,7 +1073,6 @@ export default defineConfig([
     },
     rules: {
       'no-console': 'warn',
-      '@typescript-eslint/no-var-requires': 'off',
       '@typescript-eslint/no-require-imports': 'warn',
       '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/no-unsafe-assignment': 'warn',
