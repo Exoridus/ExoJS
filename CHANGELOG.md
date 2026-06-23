@@ -12,6 +12,90 @@ merged pull requests and commits since the previous tag (each with its commit /
 PR link); `pnpm release:notes` then renders that section into the published
 GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
 
+## [0.14.0] - 2026-06-23
+
+The architecture release. Two new packages — `@codexo/exojs-physics` (a native
+2D collision, query, and dynamics world) and `@codexo/exojs-audio-fx` (the audio
+effect suite, extracted from core) — join the lockstep set. Core gains a UI
+layer, scene-graph serialization with prefabs and save files, immediate-mode
+rendering, an ordered System scheduler, and a multi-instance-safe foundation
+(deterministic disposal, app-owned managers). The Scene model is simplified to a
+single active scene. This is a pre-1.0 release and includes intentional breaking
+changes; see **Changed** and **Removed**.
+
+### Added
+
+- **`@codexo/exojs-physics` — native 2D physics.** Shapes, colliders, and bodies
+  with an SAP broadphase, manifold narrow-phase, and a warm-started
+  sequential-impulse solver (2×2 block normal LCP + NGS position correction,
+  pre-gravity restitution). Contact graph and events, spatial queries,
+  scene-graph binding, and a `/debug` draw subpath. Allocation-free per step;
+  the dynamics surface (`velocity`, `applyForce`/`Torque`/`Impulse`) is public
+  (#131, #140, #141, #142, #143, #155, #156).
+- **`@codexo/exojs-audio-fx` — audio effect package.** Extracted from core: the
+  `*Effect` suite, `AudioAnalyser`, `BeatDetector`, worklets, and DSP helpers.
+  Core keeps the audio engine and effect base classes (#133).
+- **UI core.** `scene.ui` with a `Widget`/`Label`/`Panel`/`Button`/`ProgressBar`
+  set, row/column/stack layout and anchoring, a `FocusManager` with keyboard
+  navigation, and `app.focus` (#138).
+- **Scene-graph serialization.** `SerializationRegistry`, `NodeSerializer`,
+  `Prefab`, and `SaveManager` with `Scene.serialize`/`deserialize`; serializers
+  for containers, sprites, text, meshes, graphics, nine-slice/repeating sprites,
+  animated sprites, bitmap text, video, and UI widgets. Tilemap nodes serialize
+  through an extension binding (#144, #145, #146, #147, #148).
+- **Immediate-mode rendering.** `RenderingContext.drawGeometry` for one-off
+  geometry and `RenderBatch` + `drawBatch` for instanced draws collapsing to a
+  single draw call (#150, #151, #159).
+- **System scheduler.** `app.systems` and `scene.systems` run the core managers
+  as ordered systems; `update` signatures converge on `(delta: Time)` (#134).
+- **Design-space coordinates.** Automatic DPR handling, letterbox sizing, and
+  `canvas`-mount / `sizingMode` options on `Application` (#130).
+- **Typed tilemap object layers.** Object layers and queries converted from
+  Tiled object groups, plus an `ObjectKind` `as const` schema and a generic
+  `ObjectLayer<S>` with `byType`/`byKind`/`where` (#132, #157).
+- **Combined Tiled + physics examples** with an `ObjectLayer`→collider bridge
+  (#160), a rebuilt example catalog on a shared runtime helper kit, and a live
+  hero example with an expandable playground preview.
+
+### Changed
+
+- **Audio re-architecture.** `Sound`/`AudioStream`/`AudioGenerator` descriptors
+  with a voice capability matrix; the audio singleton is gone and `AudioFilter`
+  becomes `AudioEffect`. Playback defers until the autoplay gesture unlocks
+  audio (#133).
+- **Multi-instance foundation.** `Destroyable`/`DisposalScope` for deterministic
+  teardown; `Interaction`, `Audio`, `Random`, and the serializer registry are
+  app-owned rather than process singletons; `ObservableVector` sheds per-node
+  closures (#133, #134, #154).
+- **BREAKING — API hygiene.** Value-type footgun fixes (`Matrix.getInverse`,
+  `Color.toRgba`, honest `Rectangle` types), curated barrels, and namespaced
+  utilities (`MathUtils`, `MeshBuilder`, `Sweep`, `Collision`, …) (#135).
+- **BREAKING — `Random` engine.** Mersenne Twister replaced with xoshiro128\*\*
+  and SplitMix32 seeding; the `iteration` getter is removed (#137).
+- **BREAKING — physics body construction.** `new PhysicsBody({ colliders })` +
+  `world.add`/`world.attach` replace `createBody`/`createStaticCollider` (#156).
+- **BREAKING — rendering barrel.** Backend renderer internals move behind the
+  `@codexo/exojs/renderer-sdk` subpath; the root barrel is curated (#153).
+- **Site islands migrated from Lit to React** (#149); a shared `Registry<K,V>`
+  primitive backs constructor-keyed dispatch (#136).
+
+### Removed
+
+- **BREAKING — scene stack.** `SceneStackMode`, `SceneParticipation`,
+  `pushScene`, and `popScene` are removed in favor of one active scene with
+  `setScene`, fade transitions, and `scene.paused` (#139).
+
+### Fixed
+
+- Physics contact pair keys no longer collide past 65,536 body IDs (#155).
+- New and mutated textures upload correctly after their first bind, and pointer
+  coordinates map to backing-store pixels when the canvas is scaled (#130).
+
+### Docs
+
+- ADR on shared geometry with separate collision detection (#158) and an
+  immediate-mode rendering guide (#159).
+
 ## [0.13.0] - 2026-06-13
 
 The scalable-sprites and tilemap release. `TextureRegion`, `NineSliceSprite`,

@@ -22,10 +22,9 @@ const extractV013Section = (): string => {
   return content.slice(afterStart + 1, nextSection === -1 ? undefined : nextSection);
 };
 
-/** Load package.json manifests for the 4 lockstep packages. */
-const loadPackageJson = (name: string): Record<string, unknown> =>
-  JSON.parse(readFileSync(resolve(repoRoot, 'packages', name.replace('@codexo/', ''), 'package.json'), 'utf8'));
-
+// Historical invariants for the shipped 0.13.0 section. Live package-version
+// coherence is asserted by the CURRENT release's test (changelog-v0.14.test.ts),
+// not here — that check moves forward with each release.
 describe('v0.13 release text invariants', () => {
   const section = extractV013Section();
 
@@ -81,33 +80,5 @@ describe('v0.13 release text invariants', () => {
 
   it('does not describe TiledMap as raw parsed source', () => {
     expect(section).toMatch(/structured/);
-  });
-});
-
-describe('package manifest / changelog version coherence', () => {
-  const packages = ['@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled'];
-
-  for (const pkg of packages) {
-    it(`${pkg} manifest version is 0.13.0`, () => {
-      const manifest = loadPackageJson(pkg);
-      expect(manifest.version).toBe('0.13.0');
-    });
-
-    it(`${pkg} peer dependency range is 0.13.x`, () => {
-      const manifest = loadPackageJson(pkg);
-      const peers = (manifest.peerDependencies ?? {}) as Record<string, string>;
-      expect(peers['@codexo/exojs']).toBe('0.13.x');
-    });
-  }
-
-  it('@codexo/exojs-tiled has @codexo/exojs-tilemap as a regular dependency', () => {
-    const manifest = loadPackageJson('@codexo/exojs-tiled');
-    const deps = (manifest.dependencies ?? {}) as Record<string, string>;
-    expect(deps['@codexo/exojs-tilemap']).toBeDefined();
-  });
-
-  it('root package version is 0.13.0', () => {
-    const root = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
-    expect(root.version).toBe('0.13.0');
   });
 });

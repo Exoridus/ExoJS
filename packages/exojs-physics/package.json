@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-physics",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Native 2D collision, query and sensor runtime for ExoJS.",
   "repository": {
     "type": "git",
@@ -38,7 +38,7 @@
     "test": "vitest run --root ../.. --project=exojs-physics"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.13.x"
+    "@codexo/exojs": "0.14.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",

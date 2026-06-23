@@ -1,19 +1,21 @@
 # Releasing ExoJS
 
-The coordinated release publishes the four lockstep packages — `@codexo/exojs`,
-`@codexo/exojs-particles`, `@codexo/exojs-tilemap`, `@codexo/exojs-tiled` — at one
-shared version via the two-stage, build-once pipeline (`scripts/release/`).
+The coordinated release publishes the six lockstep packages — `@codexo/exojs`,
+`@codexo/exojs-particles`, `@codexo/exojs-tilemap`, `@codexo/exojs-tiled`,
+`@codexo/exojs-physics`, `@codexo/exojs-audio-fx` — at one shared version via the
+two-stage, build-once pipeline (`scripts/release/`).
 
 ## Normal release
 
 1. Land everything on `main`. Curate the `## [Unreleased]` CHANGELOG section into
    `## [x.y.z] - YYYY-MM-DD` (a concrete date — `release:notes` rejects "Unreleased").
-2. Bump all four package versions in lockstep (and the peer ranges to `x.y.x`).
+2. Bump all six package versions in lockstep (and the peer ranges to `x.y.x`).
 3. Tag and push: `git tag -a vX.Y.Z <commit> -m "ExoJS vX.Y.Z" && git push origin refs/tags/vX.Y.Z`.
 4. The `Release` workflow checks out the **tag**, runs the full CI gate, builds
-   once, packs/hashes/attw/consumer-tests the four tarballs, publishes them via
-   OIDC (Core → Particles → Tilemap → Tiled) to a staging dist-tag, promotes all
-   four to `latest`, and creates the GitHub release with the Full ZIP.
+   once, packs/hashes/attw/consumer-tests the six tarballs, publishes them via
+   OIDC (Core → Particles → Tilemap → Tiled → Physics → Audio-FX) to a staging
+   dist-tag, promotes all six to `latest`, and creates the GitHub release with
+   the Full ZIP.
 
 The workflow checks out the **tag commit**, so any fix to the release _scripts_
 must be on the tag — re-point the tag (`git tag -d` + `git tag -a` + force-push)
@@ -55,6 +57,8 @@ npm dist-tag add @codexo/exojs@X.Y.Z latest
 npm dist-tag add @codexo/exojs-particles@X.Y.Z latest
 npm dist-tag add @codexo/exojs-tilemap@X.Y.Z latest
 npm dist-tag add @codexo/exojs-tiled@X.Y.Z latest
+npm dist-tag add @codexo/exojs-physics@X.Y.Z latest
+npm dist-tag add @codexo/exojs-audio-fx@X.Y.Z latest
 ```
 
 The packages are already published and immutable at this point — this only moves
