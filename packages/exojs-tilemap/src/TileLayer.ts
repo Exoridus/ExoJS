@@ -276,7 +276,7 @@ export class TileLayer {
     const decoded = unpackTile(packed);
     if (!decoded) return null;
     if (decoded.tilesetIndex >= this.tilesets.length) return null;
-    const tileset = this.tilesets[decoded.tilesetIndex];
+    const tileset = this.tilesets[decoded.tilesetIndex]!;
     if (decoded.localTileId >= tileset.tileCount) return null;
     return {
       tileset,
@@ -440,7 +440,7 @@ export class TileLayer {
             const decoded = unpackTile(packed);
             if (!decoded) continue;
             if (decoded.tilesetIndex >= this.tilesets.length) continue;
-            const tileset = this.tilesets[decoded.tilesetIndex];
+            const tileset = this.tilesets[decoded.tilesetIndex]!;
             if (decoded.localTileId >= tileset.tileCount) continue;
             yield {
               tx: chunkStartTx + lx,

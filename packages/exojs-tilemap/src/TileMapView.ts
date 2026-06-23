@@ -408,7 +408,7 @@ export class TileMapView {
       );
     }
 
-    return matches[0].id;
+    return matches[0]!.id;
   }
 
   /** Assign a freshly created node to the first band that selects its layer. */
