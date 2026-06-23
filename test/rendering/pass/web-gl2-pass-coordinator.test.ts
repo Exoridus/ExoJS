@@ -234,8 +234,8 @@ describe('WebGl2PassCoordinator', () => {
 });
 
 describe('render pass internals are not publicly exported', () => {
-  test('the rendering barrel exposes neither the coordinator nor the stencil enum', async () => {
-    const rendering = (await import('#rendering/index')) as unknown as Record<string, unknown>;
+  test('the app-facing rendering surface exposes neither the coordinator nor the stencil enum', async () => {
+    const rendering = (await import('#rendering/public')) as unknown as Record<string, unknown>;
 
     expect(rendering['WebGl2PassCoordinator']).toBeUndefined();
     expect(rendering['StencilAttachmentMode']).toBeUndefined();

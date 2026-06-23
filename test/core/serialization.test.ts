@@ -5,8 +5,8 @@ import { Scene } from '#core/Scene';
 import { SceneNode } from '#core/SceneNode';
 import { Prefab } from '#core/serialization/Prefab';
 import { SaveManager } from '#core/serialization/SaveManager';
-import { registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
-import { deserializeTree, serializeTree } from '#core/serialization/serialize';
+import { defaultSerializationRegistry, registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
+import { _resetDefaultSerializers, deserializeTree, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
@@ -75,6 +75,11 @@ const mockPool = { getAtlas: vi.fn(() => mockAtlas) };
 
 beforeEach(() => resetDefaultGlyphAtlasPool(mockPool as unknown as GlyphAtlasPool));
 afterEach(() => resetDefaultGlyphAtlasPool());
+
+// Tests here register serializers on the process-wide default registry and lazy-init
+// the core serializers; reset both module states after each test so registrations do
+// not leak into sibling suites (e.g. the `Marker` custom-serializer test).
+afterEach(_resetDefaultSerializers);
 
 /**
  * Minimal {@link Loader} stand-in implementing only the two methods the
@@ -289,6 +294,42 @@ describe('serialization — custom serializer', () => {
     const restored = deserializeTree(data) as Marker;
     expect(restored.kind).toBe('checkpoint');
     expect(restored.x).toBe(5);
+  });
+
+  it('registers app-scoped without leaking into the global registry', () => {
+    class AppOnly extends SceneNode {
+      public tag = 'app';
+    }
+
+    // `app.serializers` is a SerializationRegistry chained to the global one;
+    // construct that directly to keep the test free of a full Application.
+    const appSerializers = new SerializationRegistry(defaultSerializationRegistry);
+    const serializer = {
+      write: (node: AppOnly) => ({ tag: node.tag }),
+      read: () => new AppOnly(),
+    };
+
+    registerSerializer('AppOnly', AppOnly, serializer, appSerializers);
+
+    // The app-scoped registry resolves it, but the global registry does not.
+    expect(appSerializers.hasType('AppOnly')).toBe(true);
+    expect(appSerializers.resolveByName('AppOnly')?.serializer).toBe(serializer);
+    expect(defaultSerializationRegistry.hasType('AppOnly')).toBe(false);
+  });
+});
+
+describe('serialization — default-registry reset', () => {
+  it('clears the lazily-registered core serializers until the next use', () => {
+    // serializeTree lazy-registers the core serializers on the global registry.
+    serializeTree(new Container());
+    expect(defaultSerializationRegistry.hasType('Container')).toBe(true);
+
+    _resetDefaultSerializers();
+    expect(defaultSerializationRegistry.hasType('Container')).toBe(false);
+
+    // The next serialize re-arms the latch and re-registers the core serializers.
+    serializeTree(new Container());
+    expect(defaultSerializationRegistry.hasType('Container')).toBe(true);
   });
 });
 

@@ -26,6 +26,23 @@ function ensureCoreSerializers(): void {
   registerCoreSerializers(defaultSerializationRegistry);
 }
 
+/**
+ * Reset the process-wide serialization state so test suites do not leak
+ * registrations into one another. Clears both module-level states: the
+ * {@link defaultSerializationRegistry} **and** the `_coreRegistered` latch. Both
+ * are mandatory — clearing the registry alone would leave the latch `true`, so
+ * the core serializers would never re-register and later round-trips would fail
+ * with spurious "No serializer registered" errors.
+ *
+ * Not exported from the public barrel; import via the direct module path in
+ * tests.
+ * @internal — For unit tests only.
+ */
+export function _resetDefaultSerializers(): void {
+  _coreRegistered = false;
+  defaultSerializationRegistry.clear();
+}
+
 function createSerializeContext(loader: Loader | null, registry: SerializationRegistry): SerializeContext {
   const ctx: SerializeContext = {
     version: SERIALIZATION_VERSION,
