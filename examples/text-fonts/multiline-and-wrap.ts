@@ -39,12 +39,12 @@ class MultilineAndWrapScene extends Scene {
 
         this.titleB = new Text('Word wrap @ 360px — at word boundaries', { fillColor: titleColor, fontSize: 16 });
         this.titleB.setPosition(colX(1), titleY);
-        this.textB = new Text(paragraph, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 360 });
+        this.textB = new Text(paragraph, { fillColor: Color.white, fontSize: 22, maxWidth: 360 });
         this.textB.setPosition(colX(1), bodyY);
 
         this.titleC = new Text('Break words @ 280px — splits a token', { fillColor: titleColor, fontSize: 16 });
         this.titleC.setPosition(colX(2), titleY);
-        this.textC = new Text(longToken, { fillColor: Color.white, fontSize: 22 }, { maxWidth: 280, breakWords: true });
+        this.textC = new Text(longToken, { fillColor: Color.white, fontSize: 22, maxWidth: 280, breakWords: true });
         this.textC.setPosition(colX(2), bodyY);
     }
 

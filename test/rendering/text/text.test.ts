@@ -151,7 +151,8 @@ describe('Text', () => {
 
   test('style getter returns the current TextStyle', () => {
     const style = new TextStyle({ fontSize: 20 });
-    const text = new Text('Hi', style);
+    const text = new Text('Hi');
+    text.style = style;
 
     expect(text.style).toBe(style);
   });
@@ -179,8 +180,8 @@ describe('Text', () => {
   });
 
   test('update() with tint-only hint does not rebuild geometry', () => {
-    const style = new TextStyle({ fontSize: 16 });
-    const text = new Text('Hi', style);
+    const text = new Text('Hi', { fontSize: 16 });
+    const style = text.style;
     const quadsBefore = text.pageQuads[0];
 
     // Consume initial dirty from constructor
@@ -195,8 +196,8 @@ describe('Text', () => {
   });
 
   test('update() triggers rebuild for layout hint', () => {
-    const style = new TextStyle({ fontSize: 16 });
-    const text = new Text('Hi', style);
+    const text = new Text('Hi', { fontSize: 16 });
+    const style = text.style;
     const quadsBefore = text.pageQuads[0];
 
     style.fontSize = 32; // layout hint
@@ -207,8 +208,8 @@ describe('Text', () => {
   });
 
   test('style property mutations are deferred to update()', () => {
-    const style = new TextStyle({ fontSize: 16 });
-    const text = new Text('Hi', style);
+    const text = new Text('Hi', { fontSize: 16 });
+    const style = text.style;
     const quadsBefore = text.pageQuads[0];
 
     style.fontFamily = 'Georgia'; // font hint — must NOT rebuild immediately
@@ -221,7 +222,7 @@ describe('Text', () => {
 
   test('colorGlyphs flag is accessible', () => {
     const normal = new Text('Hi');
-    const emoji = new Text('👋', undefined, undefined, { colorGlyphs: true });
+    const emoji = new Text('👋', { colorGlyphs: true });
 
     expect(normal.colorGlyphs).toBe(false);
     expect(emoji.colorGlyphs).toBe(true);

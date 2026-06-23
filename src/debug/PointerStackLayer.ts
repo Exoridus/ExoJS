@@ -6,7 +6,7 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Text as Text } from '#rendering/text/Text';
-import { TextStyle } from '#rendering/text/TextStyle';
+import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { DebugLayerViewMode } from './DebugLayer';
 import { DebugLayer } from './DebugLayer';
@@ -103,12 +103,12 @@ export class PointerStackLayer extends DebugLayer {
   // -----------------------------------------------------------------------
 
   private _build(): void {
-    const style = new TextStyle({
+    const style: TextStyleOptions = {
       fontSize: textSize,
       fontFamily: 'Arial',
       fontWeight: 'normal',
       fillColor: textColor,
-    });
+    };
 
     this._bg = new Graphics();
     this._bg.fillColor = bgColor;
@@ -122,7 +122,7 @@ export class PointerStackLayer extends DebugLayer {
     const totalLines = maxEntries + 2; // header row + cursor row + entries
 
     for (let i = 0; i < totalLines; i++) {
-      const t = new Text('', style.clone());
+      const t = new Text('', style);
 
       t.x = panelPad;
       t.y = panelPad + i * lineH;

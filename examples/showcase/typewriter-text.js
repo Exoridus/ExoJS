@@ -25,7 +25,7 @@ class TypewriterTextScene extends Scene {
     init(loader) {
         const { width, height } = this.app.canvas;
         this.sound = loader.get(Sound, 'tick');
-        this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56 }, { maxWidth: 900 });
+        this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56, maxWidth: 900 });
         this.text.setAnchor(0, 0.5).setPosition(width * 0.12, height / 2);
         this.state = { count: 0 };
         // Shown while the browser still blocks audio (`app.audio.locked`); the

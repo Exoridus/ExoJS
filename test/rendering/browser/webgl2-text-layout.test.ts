@@ -292,7 +292,7 @@ describe('Text layout WebGL2 browser', () => {
   test('"ABC" lays out as horizontally separated, non-overlapping glyphs', async () => {
     const backend = await createBackend(192, 64);
     // Wide letterSpacing guarantees a visible gap between glyphs regardless of the font.
-    const text = new Text('ABC', { fillColor: Color.white, fontSize: 30 }, { letterSpacing: 18 });
+    const text = new Text('ABC', { fillColor: Color.white, fontSize: 30, letterSpacing: 18 });
 
     try {
       // Drives the real in-browser GPU path (real atlas texture, real shaders);
@@ -322,7 +322,7 @@ describe('Text layout WebGL2 browser', () => {
   test('wrapped text splits across at least two vertical line bands', async () => {
     const backend = await createBackend(128, 128);
     // "AAA BBB" cannot fit both words within 56px → wraps to two lines.
-    const text = new Text('AAA BBB', { fillColor: Color.white, fontSize: 24, lineHeight: 1.6 }, { maxWidth: 56 });
+    const text = new Text('AAA BBB', { fillColor: Color.white, fontSize: 24, lineHeight: 1.6, maxWidth: 56 });
 
     try {
       render(backend, text);

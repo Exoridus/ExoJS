@@ -8,7 +8,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { Text as Text } from '#rendering/text/Text';
-import { TextStyle } from '#rendering/text/TextStyle';
+import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
 
@@ -212,23 +212,22 @@ export class RenderPassInspectorLayer extends DebugLayer {
   }
 
   private _build(): void {
-    const style = new TextStyle({
+    const style: TextStyleOptions = {
       fontSize: textSize,
       fontFamily: 'Arial',
       fontWeight: 'normal',
       fillColor: textColor,
-    });
+    };
 
     this._bg = new Graphics();
-    const headerStyle = style.clone();
-    headerStyle.fillColor = headerColor;
+    const headerStyle: TextStyleOptions = { ...style, fillColor: headerColor };
     this._header = new Text('', headerStyle);
     this._header.x = panelX + panelPadding;
     this._header.y = panelY + panelPadding;
 
     this._lines = [];
     for (let i = 0; i < panelMaxLines; i++) {
-      const line = new Text('', style.clone());
+      const line = new Text('', style);
       line.x = panelX + panelPadding;
       line.y = panelY + panelPadding + panelLineH + i * panelLineH;
       this._lines.push(line);

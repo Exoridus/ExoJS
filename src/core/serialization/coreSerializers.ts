@@ -97,7 +97,9 @@ const textSerializer: NodeSerializer<Text> = {
   read(data) {
     const layout = typeof data.layout === 'object' && data.layout !== null ? (data.layout as LayoutOptions) : undefined;
 
-    return new Text(typeof data.text === 'string' ? data.text : '', deserializeStyleOptions(data.style), layout, {
+    return new Text(typeof data.text === 'string' ? data.text : '', {
+      ...deserializeStyleOptions(data.style),
+      ...layout,
       colorGlyphs: data.colorGlyphs === true,
       sdfRadius: typeof data.sdfRadius === 'number' ? data.sdfRadius : undefined,
     });

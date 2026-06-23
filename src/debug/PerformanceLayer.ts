@@ -6,7 +6,7 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Text as Text } from '#rendering/text/Text';
-import { TextStyle } from '#rendering/text/TextStyle';
+import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
 
@@ -196,22 +196,22 @@ export class PerformanceLayer extends DebugLayer {
   // -----------------------------------------------------------------------
 
   private _build(): void {
-    const style = new TextStyle({
+    const style: TextStyleOptions = {
       fontSize: textSize,
       fontFamily: 'Arial',
       fontWeight: 'normal',
       fillColor: textColor,
-    });
+    };
 
     const bg = new Graphics();
 
     bg.fillColor = bgColor;
     bg.drawRectangle(panelX, panelY, panelW, panelH);
 
-    this._textFps = new Text('FPS: -', style.clone());
-    this._textFrame = new Text('Frame: -', style.clone());
-    this._textDraws = new Text('Draws: -', style.clone());
-    this._textNodes = new Text('Nodes: -', style.clone());
+    this._textFps = new Text('FPS: -', style);
+    this._textFrame = new Text('Frame: -', style);
+    this._textDraws = new Text('Draws: -', style);
+    this._textNodes = new Text('Nodes: -', style);
 
     this._textFps.x = panelX + 8;
     this._textFps.y = panelY + 8;
