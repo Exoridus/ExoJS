@@ -111,7 +111,7 @@ export class Signal<Args extends unknown[] = []> {
     this._dispatching = true;
 
     for (let i = 0; i < length; i++) {
-      if (this._handlers[i](...params) === false) {
+      if (this._handlers[i]!(...params) === false) {
         break;
       }
     }

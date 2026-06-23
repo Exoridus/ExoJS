@@ -88,7 +88,7 @@ export class DisposalScope implements Destroyable {
 
     for (let index = this._order.length - 1; index >= 0; index--) {
       try {
-        this._order[index].destroy();
+        this._order[index]!.destroy();
       } catch (error) {
         errors.push(error);
       }

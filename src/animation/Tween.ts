@@ -382,7 +382,7 @@ export class Tween<T extends object = object> {
     for (const key of keys) {
       const start = this._startValues[key];
       const end = properties[key];
-      if (end === undefined) continue;
+      if (start === undefined || end === undefined) continue;
       (this._target as Record<string, unknown>)[key] = start + (end - start) * easedT;
     }
 

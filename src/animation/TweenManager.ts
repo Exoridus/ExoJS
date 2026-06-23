@@ -46,19 +46,23 @@ export class TweenManager implements System {
    * ```
    */
   public sequence(tweens: readonly Tween[]): Tween {
-    if (tweens.length === 0) {
+    const [first] = tweens;
+
+    if (first === undefined) {
       throw new Error('[ExoJS] TweenManager.sequence() requires at least one tween.');
     }
 
     for (let i = 0; i < tweens.length - 1; i++) {
-      tweens[i].chain(tweens[i + 1]);
+      const current = tweens[i];
+      const next = tweens[i + 1];
+      if (current !== undefined && next !== undefined) current.chain(next);
     }
 
     for (const tween of tweens) {
       this.add(tween);
     }
 
-    return tweens[0];
+    return first;
   }
 
   /**
