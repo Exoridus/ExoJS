@@ -1,6 +1,6 @@
 import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
+import type { DrawableConstructor } from '#rendering/Renderer';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
 import type { Loader } from '#resources/Loader';
 
@@ -31,7 +31,7 @@ export function materializeRendererBindings(backend: RenderBackend, bindings: re
 
     if (renderer === undefined) continue;
 
-    backend.rendererRegistry.bindRenderer(binding.targets, renderer as Renderer<typeof backend, never>);
+    backend.rendererRegistry.bindRenderer(binding.targets, renderer);
   }
 }
 
