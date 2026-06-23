@@ -168,7 +168,7 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
-      '@typescript-eslint/no-shadow': 'warn',
+      '@typescript-eslint/no-shadow': 'error',
       '@typescript-eslint/no-unsafe-call': 'warn',
       '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
       '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
@@ -209,7 +209,7 @@ export default defineConfig([
       '@typescript-eslint/strict-boolean-expressions': 'warn',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/unbound-method': 'warn',
-      '@typescript-eslint/unified-signatures': 'warn',
+      '@typescript-eslint/unified-signatures': 'error',
 
       // Engine-specific naming convention
       '@typescript-eslint/naming-convention': [
@@ -417,7 +417,7 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
-      '@typescript-eslint/no-shadow': 'warn',
+      '@typescript-eslint/no-shadow': 'error',
       '@typescript-eslint/no-unsafe-call': 'warn',
       '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
       '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
@@ -457,7 +457,7 @@ export default defineConfig([
       '@typescript-eslint/strict-boolean-expressions': 'warn',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/unbound-method': 'warn',
-      '@typescript-eslint/unified-signatures': 'warn',
+      '@typescript-eslint/unified-signatures': 'error',
 
       // Engine-standard naming convention
       '@typescript-eslint/naming-convention': [
