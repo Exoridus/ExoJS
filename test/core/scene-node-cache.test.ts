@@ -229,4 +229,46 @@ describe('SceneNode.getBounds() — dirty-flag cache', () => {
 
     parent.destroy();
   });
+
+  test('cascade short-circuit skips no level: deep leaf move updates bounds at every ancestor', () => {
+    // A three-level chain whose extent is driven by the leaf, so a stale level
+    // would be observable as an un-grown getBounds() at that level. Containers
+    // sit at the origin; moving the leaf to a far corner must expand the union
+    // bounds (origin .. leaf) at every ancestor.
+    const grandparent = new Container();
+    const parent = new Container();
+    const leaf = new TestDrawable(10, 10);
+
+    grandparent.addChild(parent);
+    parent.addChild(leaf);
+    leaf.setPosition(0, 0);
+
+    // Warm every cache so each level holds a clean (non-dirty) bounds rect.
+    const grandparentW1 = grandparent.getBounds().width;
+    const parentW1 = parent.getBounds().width;
+    const leafW1 = leaf.getBounds().width;
+
+    expect(leafW1).toBeCloseTo(10);
+    expect(parentW1).toBeCloseTo(10);
+    expect(grandparentW1).toBeCloseTo(10);
+
+    // Move the deepest leaf once. The upward cascade must re-mark every
+    // ancestor; the short-circuit may only stop at an already-dirty one.
+    leaf.setPosition(300, 400);
+
+    // Each level must report the grown bounds — none may be skipped. The leaf
+    // itself merely translates (width unchanged), but every container's union
+    // with the far-moved leaf must now span out to the leaf.
+    expect(leaf.getBounds().x).toBeCloseTo(300);
+    expect(leaf.getBounds().y).toBeCloseTo(400);
+
+    expect(parent.getBounds().width).toBeCloseTo(310);
+    expect(parent.getBounds().height).toBeCloseTo(410);
+    expect(grandparent.getBounds().width).toBeCloseTo(310);
+    expect(grandparent.getBounds().height).toBeCloseTo(410);
+
+    leaf.destroy();
+    parent.destroy();
+    grandparent.destroy();
+  });
 });

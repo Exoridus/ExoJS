@@ -384,9 +384,9 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     const view = backend.view;
 
-    if (this._currentView !== view || this._currentViewId !== (view as unknown as { updateId: number }).updateId) {
+    if (this._currentView !== view || this._currentViewId !== view.updateId) {
       this._currentView = view;
-      this._currentViewId = (view as unknown as { updateId: number }).updateId;
+      this._currentViewId = view.updateId;
       const proj = view.getTransform().toArray(false);
       this._shaderPathShader.getUniform('u_projection').setValue(proj);
       this._geoPathShader.getUniform('u_projection').setValue(proj);

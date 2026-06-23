@@ -393,55 +393,61 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const uvMaxX = (texCoords[2] & 0xffff) / 0xffff;
     const uvMaxY = ((texCoords[2] >>> 16) & 0xffff) / 0xffff;
 
-    this._uniformData.set([
-      projection[0],
-      projection[1],
-      0,
-      0,
-      projection[3],
-      projection[4],
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      projection[6],
-      projection[7],
-      0,
-      projection[8],
+    const u = this._uniformData;
 
-      transform[0],
-      transform[1],
-      0,
-      0,
-      transform[3],
-      transform[4],
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      transform[6],
-      transform[7],
-      0,
-      transform[8],
+    // projection mat4 (col-major, padded to 4×4)
+    u[0] = projection[0];
+    u[1] = projection[1];
+    u[2] = 0;
+    u[3] = 0;
+    u[4] = projection[3];
+    u[5] = projection[4];
+    u[6] = 0;
+    u[7] = 0;
+    u[8] = 0;
+    u[9] = 0;
+    u[10] = 1;
+    u[11] = 0;
+    u[12] = projection[6];
+    u[13] = projection[7];
+    u[14] = 0;
+    u[15] = projection[8];
 
-      shouldPremultiplySample ? 1 : 0,
-      0,
-      0,
-      0,
+    // transform mat4 (col-major, padded to 4×4)
+    u[16] = transform[0];
+    u[17] = transform[1];
+    u[18] = 0;
+    u[19] = 0;
+    u[20] = transform[3];
+    u[21] = transform[4];
+    u[22] = 0;
+    u[23] = 0;
+    u[24] = 0;
+    u[25] = 0;
+    u[26] = 1;
+    u[27] = 0;
+    u[28] = transform[6];
+    u[29] = transform[7];
+    u[30] = 0;
+    u[31] = transform[8];
 
-      quadMinX,
-      quadMinY,
-      quadSizeX,
-      quadSizeY,
-      uvMinX,
-      uvMinY,
-      uvMaxX,
-      uvMaxY,
-    ]);
+    // flags vec4
+    u[32] = shouldPremultiplySample ? 1 : 0;
+    u[33] = 0;
+    u[34] = 0;
+    u[35] = 0;
+
+    // localBounds vec4
+    u[36] = quadMinX;
+    u[37] = quadMinY;
+    u[38] = quadSizeX;
+    u[39] = quadSizeY;
+
+    // uvBounds vec4
+    u[40] = uvMinX;
+    u[41] = uvMinY;
+    u[42] = uvMaxX;
+    u[43] = uvMaxY;
   }
 
   private _writeInstanceData(system: ParticleSystem): number {

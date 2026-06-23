@@ -555,15 +555,21 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */
   public _invalidateBoundsCascade(): void {
+    // Mark own bounds + notify interaction for THIS node unconditionally —
+    // the manager filters to tracked interactive nodes so this call is O(1)
+    // for the common case (non-interactive node — fast Set.has miss).
     this.flags.push(SceneNodeTransformFlags.BoundsRect);
-
-    // Notify the InteractionManager so it can mark the quadtree entry stale.
-    // The manager filters to only tracked interactive nodes so this call is
-    // O(1) for the common case (non-interactive node — fast Set.has miss).
     this._stage?.interaction._notifyBoundsInvalidated(this as unknown as RenderNode);
 
-    if (this._parentNode) {
-      this._parentNode._invalidateBoundsCascade();
+    // Walk up, but stop at the first ancestor already flagged dirty: if a parent
+    // is already BoundsRect-dirty, its whole ancestor chain was already cascaded,
+    // so re-walking it is redundant work.
+    let ancestor = this._parentNode;
+
+    while (ancestor !== null && !ancestor.flags.has(SceneNodeTransformFlags.BoundsRect)) {
+      ancestor.flags.push(SceneNodeTransformFlags.BoundsRect);
+      ancestor._stage?.interaction._notifyBoundsInvalidated(ancestor);
+      ancestor = ancestor.parent;
     }
   }
 

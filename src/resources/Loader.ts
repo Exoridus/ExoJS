@@ -36,7 +36,7 @@ import {
  * with {@link Loader.load} and related methods.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Loadable = abstract new (...args: any[]) => any;
+export type Loadable = abstract new (...args: any[]) => unknown;
 
 /** Maps each key of an `AssetInput` map to its resolved runtime resource type. */
 export type InferLoadedMap<M extends Record<string, AssetInput>> = {
@@ -694,7 +694,7 @@ export class Loader {
       const container = arg0 as Assets<Record<string, AssetInput>>;
       const items = Object.entries(container.entries).map(([alias, a]) => ({
         alias,
-        asset: a as Asset<unknown>,
+        asset: a,
       }));
 
       return this._createLoadingQueue(items, results => {
@@ -1004,7 +1004,7 @@ export class Loader {
       const container = arg0 as Assets<Record<string, AssetInput>>;
 
       for (const [alias, a] of Object.entries(container.entries)) {
-        const assetRef = a as Asset<unknown>;
+        const assetRef = a;
         const ctor = this._assetTypeMap.get(assetRef.type);
 
         if (!ctor) continue;

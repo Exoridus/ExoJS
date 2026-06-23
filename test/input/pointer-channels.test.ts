@@ -441,7 +441,7 @@ describe('Pointer coordinate mapping — scaled canvas', () => {
     return canvas;
   };
 
-  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Record<number, Pointer> }).pointers[id];
+  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Map<number, Pointer> }).pointers.get(id)!;
 
   test('constructor maps CSS-display coordinates to design pixels', () => {
     const canvas = createScaledCanvas();
@@ -508,7 +508,7 @@ describe('Pointer coordinate mapping — pixelRatio > 1', () => {
     return canvas;
   };
 
-  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Record<number, Pointer> }).pointers[id];
+  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Map<number, Pointer> }).pointers.get(id)!;
 
   test('pointer position is in design pixels regardless of pixelRatio', () => {
     const canvas = createDprCanvas();

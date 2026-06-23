@@ -63,7 +63,7 @@ export class InputManager implements System {
   private readonly _app: Application;
   private readonly canvas: HTMLCanvasElement;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
-  private readonly pointers: Record<number, Pointer> = {};
+  private readonly pointers = new Map<number, Pointer>();
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
   private readonly bindings: Set<InputBinding> = new Set<InputBinding>();
@@ -194,13 +194,13 @@ export class InputManager implements System {
    * no active pointer is present. Used by debug layers to show cursor info.
    */
   public getPrimaryPointerPosition(): { x: number; y: number } | null {
-    for (const pointer of Object.values(this.pointers)) {
+    for (const pointer of this.pointers.values()) {
       if (pointer.isPrimary && pointer.currentState !== PointerState.Cancelled) {
         return { x: pointer.x, y: pointer.y };
       }
     }
 
-    for (const pointer of Object.values(this.pointers)) {
+    for (const pointer of this.pointers.values()) {
       if (pointer.currentState !== PointerState.Cancelled) {
         return { x: pointer.x, y: pointer.y };
       }
@@ -210,7 +210,13 @@ export class InputManager implements System {
   }
 
   public get pointersInCanvas(): boolean {
-    return Object.values(this.pointers).some(pointer => pointer.currentState !== PointerState.OutsideCanvas && pointer.currentState !== PointerState.Cancelled);
+    for (const pointer of this.pointers.values()) {
+      if (pointer.currentState !== PointerState.OutsideCanvas && pointer.currentState !== PointerState.Cancelled) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public get canvasFocused(): boolean {
@@ -345,9 +351,11 @@ export class InputManager implements System {
     this.removeEventListeners();
     this.gestureRecognizer.destroy();
 
-    for (const pointer of Object.values(this.pointers)) {
+    for (const pointer of this.pointers.values()) {
       pointer.destroy();
     }
+
+    this.pointers.clear();
 
     for (const pad of this._gamepads) {
       pad.destroy();
@@ -490,12 +498,12 @@ export class InputManager implements System {
       return;
     }
 
-    this.pointers[event.pointerId] = new Pointer(event, this._app, this.canvas, this.channels, slot);
+    this.pointers.set(event.pointerId, new Pointer(event, this._app, this.canvas, this.channels, slot));
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 
   private handlePointerLeave(event: PointerEvent): void {
-    const pointer = this.pointers[event.pointerId];
+    const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
       return;
@@ -511,7 +519,7 @@ export class InputManager implements System {
     this.canvas.focus();
     this.canvasFocusedValue = true;
 
-    const pointer = this.pointers[event.pointerId];
+    const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
       return;
@@ -525,7 +533,7 @@ export class InputManager implements System {
   }
 
   private handlePointerMove(event: PointerEvent): void {
-    const pointer = this.pointers[event.pointerId];
+    const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
       return;
@@ -537,7 +545,7 @@ export class InputManager implements System {
   }
 
   private handlePointerUp(event: PointerEvent): void {
-    const pointer = this.pointers[event.pointerId];
+    const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
       return;
@@ -551,7 +559,7 @@ export class InputManager implements System {
   }
 
   private handlePointerCancel(event: PointerEvent): void {
-    const pointer = this.pointers[event.pointerId];
+    const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
       return;
@@ -803,7 +811,7 @@ export class InputManager implements System {
   }
 
   private updatePointerEvents(): void {
-    for (const pointer of Object.values(this.pointers)) {
+    for (const pointer of this.pointers.values()) {
       const { stateFlags } = pointer;
 
       if (stateFlags.value === PointerStateFlag.None) {
@@ -844,7 +852,7 @@ export class InputManager implements System {
 
       if (stateFlags.pop(PointerStateFlag.Leave)) {
         this.onPointerLeave.dispatch(pointer);
-        delete this.pointers[pointer.id];
+        this.pointers.delete(pointer.id);
       }
     }
   }

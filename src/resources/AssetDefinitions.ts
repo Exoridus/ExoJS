@@ -48,8 +48,7 @@ export type AnyAssetConfig = {
   [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'];
 }[keyof AssetDefinitions];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AssetInput = AnyAssetConfig | Asset<any>;
+export type AssetInput = AnyAssetConfig | Asset<unknown>;
 
 export type InferAssetResource<I extends AssetInput> =
   I extends Asset<infer T> ? T : I extends { type: infer K extends keyof AssetDefinitions } ? AssetDefinitions[K]['resource'] : never;

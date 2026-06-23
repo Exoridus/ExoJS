@@ -1,5 +1,52 @@
+import { Interval } from '#math/Interval';
 import { Polygon } from '#math/Polygon';
 import { Vector } from '#math/Vector';
+
+describe('Polygon.project()', () => {
+  // Unit square centred at origin with vertices at (0,0), (10,0), (10,10), (0,10).
+  const makeSquare = () => new Polygon([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10)]);
+
+  test('(a) axis-aligned projection on (1,0) gives correct min/max', () => {
+    const polygon = makeSquare();
+    const result = polygon.project(new Vector(1, 0));
+
+    expect(result.min).toBe(0);
+    expect(result.max).toBe(10);
+
+    polygon.destroy();
+  });
+
+  test('(a) axis-aligned projection on (0,1) gives correct min/max', () => {
+    const polygon = makeSquare();
+    const result = polygon.project(new Vector(0, 1));
+
+    expect(result.min).toBe(0);
+    expect(result.max).toBe(10);
+
+    polygon.destroy();
+  });
+
+  test('(b) unnormalized axis (2,0) produces the same result as (1,0)', () => {
+    const polygon = makeSquare();
+    const normalized = polygon.project(new Vector(1, 0));
+    const unnormalized = polygon.project(new Vector(2, 0));
+
+    expect(unnormalized.min).toBeCloseTo(normalized.min);
+    expect(unnormalized.max).toBeCloseTo(normalized.max);
+
+    polygon.destroy();
+  });
+
+  test('(c) provided result interval is returned as the same reference', () => {
+    const polygon = makeSquare();
+    const result = new Interval();
+    const returned = polygon.project(new Vector(1, 0), result);
+
+    expect(returned).toBe(result);
+
+    polygon.destroy();
+  });
+});
 
 describe('Polygon', () => {
   test('setPoints handles shrinking point arrays safely', () => {
