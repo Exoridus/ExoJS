@@ -23,13 +23,13 @@
 // degrees, clockwise) is converted to radians on the body.
 
 import {
+    type AnyShape,
     BoxShape,
     CircleShape,
     type CollisionFilter,
     PhysicsBody,
     type PhysicsWorld,
     PolygonShape,
-    type Shape,
 } from '@codexo/exojs-physics';
 import { ObjectKind, type ObjectLayer, type TileMapObject } from '@codexo/exojs-tilemap';
 
@@ -110,7 +110,7 @@ export function buildCollidersFromObjectLayer(
 
 /** A shape plus the world position its origin should be placed at. */
 interface ShapePlacement {
-    readonly shape: Shape;
+    readonly shape: AnyShape;
     readonly x: number;
     readonly y: number;
 }

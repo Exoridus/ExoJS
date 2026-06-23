@@ -15,6 +15,7 @@ export { type PhysicsBuildInfo,physicsBuildInfo } from './physicsBuildInfo';
 export type { AttachOptions, PhysicsWorldOptions } from './PhysicsWorld';
 export { PhysicsWorld } from './PhysicsWorld';
 export type { QueryFilter, RayHit } from './query/QueryEngine';
+export type { AnyShape } from './shapes/AnyShape';
 export { BoxShape } from './shapes/BoxShape';
 export { CircleShape } from './shapes/CircleShape';
 export { PolygonShape } from './shapes/PolygonShape';
