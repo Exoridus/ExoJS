@@ -189,7 +189,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
     this._dirty = { full: true, x: 0, y: 0, width: this.width, height: this.height };
     this.setSize(this.width, this.height);
     // setSize is a no-op when dimensions don't change; force version bump for sync detection.
-    (this as unknown as { _version: number })._version++;
+    this._bumpVersion();
 
     return this;
   }
@@ -227,7 +227,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       this._dirty = { full: false, x: minX, y: minY, width: maxX - minX, height: maxY - minY };
     }
 
-    (this as unknown as { _version: number })._version++;
+    this._bumpVersion();
 
     return this;
   }

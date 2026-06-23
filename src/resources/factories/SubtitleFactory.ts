@@ -11,6 +11,17 @@ interface SubtitleIntermediate {
   text: string;
 }
 
+/**
+ * The narrow slice of `Response` that {@link SubtitleFactory.process} actually
+ * reads. A real `Response` satisfies it structurally, so the network/cache
+ * strategies still pass their fetched response unchanged — but an in-memory
+ * `{ text, url }` source (see `coreAssetBindings`) also fits without a cast.
+ */
+interface SubtitleSource {
+  text(): Promise<string>;
+  url: string;
+}
+
 // ---------------------------------------------------------------------------
 // VTT helpers
 // ---------------------------------------------------------------------------
@@ -229,7 +240,7 @@ export class SubtitleFactory extends AbstractAssetFactory<VTTCue[]> {
    * Reads the response body as UTF-8 text and records the subtitle format
    * derived from the response URL's file extension.
    */
-  public async process(response: Response): Promise<SubtitleIntermediate> {
+  public async process(response: SubtitleSource): Promise<SubtitleIntermediate> {
     const text = await response.text();
     const url = response.url.split('?')[0].toLowerCase();
     const fmt: SubtitleFormat = url.endsWith('.srt') ? 'srt' : 'vtt';
