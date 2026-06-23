@@ -366,7 +366,7 @@ describe('BeatDetector', () => {
   // ---- Settling ----
 
   describe('settling period', () => {
-    it('default settling is 1500ms', () => {
+    it('default settling is 1500ms', async () => {
       const d = new BeatDetector();
       // Can't test worklet settling directly (no real audio), but we can
       // confirm the option is correctly passed to the worklet via processorOptions
@@ -378,10 +378,10 @@ describe('BeatDetector', () => {
       });
       d.destroy();
       const d2 = new BeatDetector({ settlingMs: 1500 });
-      // The promise resolves async; just check the object was constructed
-      d2.ready.then(() => {
-        expect(capturedProcessorOptions?.['settlingMs']).toBe(1500);
-      });
+      // The worklet (and thus the processorOptions capture) is created when
+      // `ready` resolves — await it so the assertion actually runs.
+      await d2.ready;
+      expect(capturedProcessorOptions?.['settlingMs']).toBe(1500);
       d2.destroy();
     });
   });
