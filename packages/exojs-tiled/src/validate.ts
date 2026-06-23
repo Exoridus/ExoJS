@@ -444,6 +444,7 @@ export function validateTiledLayerData(raw: unknown, source: string, path: strin
 export function checkTiledLayerInfiniteConsistency(layers: readonly TiledLayerData[], infinite: boolean, source: string, path: string): void {
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
+    if (layer === undefined) continue;
     const layerPath = joinPath(path, i);
 
     if (layer.type === 'tilelayer') {

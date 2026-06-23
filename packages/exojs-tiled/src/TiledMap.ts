@@ -141,6 +141,10 @@ export class TiledMap {
     const indexToRuntime: Array<TileSet | null> = [];
     for (let i = 0; i < this.tilesets.length; i++) {
       const tiledTs = this.tilesets[i];
+      if (!tiledTs) {
+        indexToRuntime.push(null);
+        continue;
+      }
       if (!tiledTs.texture) {
         if (tiledTs.tileTextures.size > 0) {
           throw new TiledFormatError(
@@ -245,14 +249,16 @@ function resolveGid(
   // Find owning tileset: rightmost with firstGid <= baseGid (tilesets sorted asc).
   let tsIdx = -1;
   for (let t = tiledTilesets.length - 1; t >= 0; t--) {
-    if (baseGid >= tiledTilesets[t].firstGid) { tsIdx = t; break; }
+    const candidate = tiledTilesets[t];
+    if (candidate && baseGid >= candidate.firstGid) { tsIdx = t; break; }
   }
   if (tsIdx === -1) return null;
+  const owningTs = tiledTilesets[tsIdx];
   const runtimeTs = indexToRuntime[tsIdx];
-  if (!runtimeTs) return null; // tileset was skipped (no atlas image)
+  if (!owningTs || !runtimeTs) return null; // tileset was skipped (no atlas image)
   return {
     tileset: runtimeTs,
-    localTileId: baseGid - tiledTilesets[tsIdx].firstGid,
+    localTileId: baseGid - owningTs.firstGid,
     transform,
   };
 }
@@ -265,7 +271,9 @@ function populateTileLayer(
   indexToRuntime: ReadonlyArray<TileSet | null>,
 ): void {
   for (let i = 0; i < gids.length; i++) {
-    const tile = resolveGid(gids[i], tiledTilesets, indexToRuntime);
+    const gid = gids[i];
+    if (gid === undefined) continue;
+    const tile = resolveGid(gid, tiledTilesets, indexToRuntime);
     if (!tile) continue;
     layer.setTileAt(i % layer.width, Math.floor(i / layer.width), tile);
   }
@@ -365,6 +373,7 @@ function sortAndValidateTilesetRanges(tilesets: readonly TiledTileset[], source:
   for (let i = 1; i < sorted.length; i++) {
     const previous = sorted[i - 1];
     const current = sorted[i];
+    if (previous === undefined || current === undefined) continue;
 
     if (current.firstGid === previous.firstGid) {
       throw new TiledFormatError(source, 'tilesets', `duplicate firstgid ${current.firstGid} (tilesets "${previous.name}" and "${current.name}")`);
@@ -385,6 +394,7 @@ function sortAndValidateTilesetRanges(tilesets: readonly TiledTileset[], source:
 function walkLayers(layers: readonly TiledLayer[], path: string, visit: (layer: TiledLayer, layerPath: string) => void): void {
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
+    if (layer === undefined) continue;
     const layerPath = `${path}[${i}]`;
 
     visit(layer, layerPath);
@@ -398,6 +408,7 @@ function walkLayers(layers: readonly TiledLayer[], path: string, visit: (layer: 
 function checkGidArray(gids: readonly number[], map: TiledMap, source: string, path: string): void {
   for (let i = 0; i < gids.length; i++) {
     const gid = gids[i];
+    if (gid === undefined) continue;
 
     if (gid !== 0 && map.findTilesetForGid(gid) === undefined) {
       throw new TiledFormatError(source, `${path}[${i}]`, `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`);
@@ -414,12 +425,16 @@ function checkGidCoverage(map: TiledMap, source: string): void {
 
       if (layer.chunks !== undefined) {
         for (let c = 0; c < layer.chunks.length; c++) {
-          checkGidArray(layer.chunks[c].data, map, source, `${layerPath}.chunks[${c}].data`);
+          const chunk = layer.chunks[c];
+          if (chunk === undefined) continue;
+          checkGidArray(chunk.data, map, source, `${layerPath}.chunks[${c}].data`);
         }
       }
     } else if (layer instanceof TiledObjectLayer) {
       for (let o = 0; o < layer.objects.length; o++) {
-        const gid = layer.objects[o].gid;
+        const object = layer.objects[o];
+        if (object === undefined) continue;
+        const gid = object.gid;
 
         if (gid !== undefined && map.findTilesetForGid(gid) === undefined) {
           throw new TiledFormatError(source, `${layerPath}.objects[${o}].gid`, `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`);
