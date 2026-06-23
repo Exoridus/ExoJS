@@ -143,12 +143,12 @@ export class PhysicsDebugDraw extends DebugLayer {
     const verts = collider.worldVertices;
     const count = collider.shape.count;
 
-    gfx.moveTo(verts[0], verts[1]);
+    gfx.moveTo(at(verts, 0), at(verts, 1));
 
     for (let i = 1; i <= count; i++) {
       const j = i % count;
 
-      gfx.lineTo(verts[j * 2], verts[j * 2 + 1]);
+      gfx.lineTo(at(verts, j * 2), at(verts, j * 2 + 1));
     }
   }
 
@@ -209,7 +209,8 @@ export class PhysicsDebugDraw extends DebugLayer {
       }
 
       for (let i = 0; i < this._manifold.pointCount; i++) {
-        const point = this._manifold.points[i];
+        // i in 0..pointCount-1 and pointCount ≤ 2, so the point always exists.
+        const point = i === 0 ? this._manifold.points[0] : this._manifold.points[1];
 
         if (this.options.drawContacts) {
           gfx.lineColor = colorContact;
@@ -233,3 +234,6 @@ const colorForType = (type: 'dynamic' | 'static' | 'kinematic'): Color => {
 
   return type === 'kinematic' ? colorKinematic : colorDynamic;
 };
+
+/** In-bounds read of a flat vertex buffer; the `0` fallback is unreachable. */
+const at = (arr: readonly number[], i: number): number => arr[i] ?? 0;

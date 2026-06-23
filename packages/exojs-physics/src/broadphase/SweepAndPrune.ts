@@ -27,7 +27,14 @@ export class SweepAndPrune implements BroadPhase {
     const count = sorted.length;
 
     for (let i = 0; i < count; i++) {
+      // i/j stay within 0..count-1, so the entries always exist; the guards only
+      // discharge `noUncheckedIndexedAccess` and never actually skip a collider.
       const a = sorted[i];
+
+      if (a === undefined) {
+        continue;
+      }
+
       const aBox = a.aabb;
       const aMaxX = aBox.maxX;
       const aMinY = aBox.minY;
@@ -35,6 +42,11 @@ export class SweepAndPrune implements BroadPhase {
 
       for (let j = i + 1; j < count; j++) {
         const b = sorted[j];
+
+        if (b === undefined) {
+          continue;
+        }
+
         const bBox = b.aabb;
 
         // X intervals are sorted: once b starts past a's right edge, so do all

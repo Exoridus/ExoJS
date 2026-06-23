@@ -44,8 +44,8 @@ export class PolygonShape extends Shape {
       }
 
       // Reject coincident consecutive (and wrap-around) vertices.
-      const px = points.length >= 2 ? points[points.length - 2] : NaN;
-      const py = points.length >= 2 ? points[points.length - 1] : NaN;
+      const px = points.length >= 2 ? (points[points.length - 2] ?? NaN) : NaN;
+      const py = points.length >= 2 ? (points[points.length - 1] ?? NaN) : NaN;
 
       if (Math.hypot(vertex.x - px, vertex.y - py) < weldEpsilon) {
         continue;
@@ -54,13 +54,10 @@ export class PolygonShape extends Shape {
       points.push(vertex.x, vertex.y);
     }
 
-    let count = points.length / 2;
-
     // Drop a wrap-around duplicate (last ≈ first).
-    if (count >= 2 && Math.hypot(points[0] - points[points.length - 2], points[1] - points[points.length - 1]) < weldEpsilon) {
-      points.length -= 2;
-      count -= 1;
-    }
+    dropWrapAroundDuplicate(points);
+
+    const count = points.length / 2;
 
     if (count < 3) {
       throw new RangeError(`PolygonShape: needs at least 3 distinct vertices after welding, received ${count}.`);
@@ -88,11 +85,13 @@ export class PolygonShape extends Shape {
     let inertiaOrigin = 0;
 
     for (let i = 0; i < count; i++) {
-      const ix = points[i * 2];
-      const iy = points[i * 2 + 1];
       const j = (i + 1) % count;
-      const jx = points[j * 2];
-      const jy = points[j * 2 + 1];
+      // Indices are provably in-bounds (0..count-1 over a length-2*count array);
+      // the `?? 0` fallbacks can never fire and keep the math byte-identical.
+      const ix = points[i * 2] ?? 0;
+      const iy = points[i * 2 + 1] ?? 0;
+      const jx = points[j * 2] ?? 0;
+      const jy = points[j * 2 + 1] ?? 0;
       const cross = ix * jy - jx * iy;
 
       cx += (ix + jx) * cross;
@@ -119,6 +118,22 @@ export class PolygonShape extends Shape {
   }
 }
 
+/** Strip a trailing vertex that coincides with the first (wrap-around weld). */
+const dropWrapAroundDuplicate = (points: number[]): void => {
+  if (points.length < 4) {
+    return;
+  }
+
+  const firstX = points[0] ?? NaN;
+  const firstY = points[1] ?? NaN;
+  const lastX = points[points.length - 2] ?? NaN;
+  const lastY = points[points.length - 1] ?? NaN;
+
+  if (Math.hypot(firstX - lastX, firstY - lastY) < weldEpsilon) {
+    points.length -= 2;
+  }
+};
+
 /** Signed area (positive = CCW). */
 const signedArea = (points: number[]): number => {
   const count = points.length / 2;
@@ -126,7 +141,11 @@ const signedArea = (points: number[]): number => {
 
   for (let i = 0; i < count; i++) {
     const j = (i + 1) % count;
-    sum += points[i * 2] * points[j * 2 + 1] - points[j * 2] * points[i * 2 + 1];
+    const ix = points[i * 2] ?? 0;
+    const iy = points[i * 2 + 1] ?? 0;
+    const jx = points[j * 2] ?? 0;
+    const jy = points[j * 2 + 1] ?? 0;
+    sum += ix * jy - jx * iy;
   }
 
   return sum / 2;
@@ -137,11 +156,13 @@ const reverseWinding = (points: number[]): void => {
 
   for (let i = 0; i < Math.floor(count / 2); i++) {
     const j = count - 1 - i;
-    const ix = points[i * 2];
-    const iy = points[i * 2 + 1];
+    const ix = points[i * 2] ?? 0;
+    const iy = points[i * 2 + 1] ?? 0;
+    const jx = points[j * 2] ?? 0;
+    const jy = points[j * 2 + 1] ?? 0;
 
-    points[i * 2] = points[j * 2];
-    points[i * 2 + 1] = points[j * 2 + 1];
+    points[i * 2] = jx;
+    points[i * 2 + 1] = jy;
     points[j * 2] = ix;
     points[j * 2 + 1] = iy;
   }
@@ -154,8 +175,12 @@ const computeNormals = (points: number[]): number[] => {
 
   for (let i = 0; i < count; i++) {
     const j = (i + 1) % count;
-    const ex = points[j * 2] - points[i * 2];
-    const ey = points[j * 2 + 1] - points[i * 2 + 1];
+    const ix = points[i * 2] ?? 0;
+    const iy = points[i * 2 + 1] ?? 0;
+    const jx = points[j * 2] ?? 0;
+    const jy = points[j * 2 + 1] ?? 0;
+    const ex = jx - ix;
+    const ey = jy - iy;
     const length = Math.hypot(ex, ey);
 
     normals.push(ey / length, -ex / length);
@@ -172,10 +197,16 @@ const assertConvex = (points: number[]): void => {
     const a = i;
     const b = (i + 1) % count;
     const c = (i + 2) % count;
-    const e1x = points[b * 2] - points[a * 2];
-    const e1y = points[b * 2 + 1] - points[a * 2 + 1];
-    const e2x = points[c * 2] - points[b * 2];
-    const e2y = points[c * 2 + 1] - points[b * 2 + 1];
+    const ax = points[a * 2] ?? 0;
+    const ay = points[a * 2 + 1] ?? 0;
+    const bx = points[b * 2] ?? 0;
+    const by = points[b * 2 + 1] ?? 0;
+    const cx = points[c * 2] ?? 0;
+    const cy = points[c * 2 + 1] ?? 0;
+    const e1x = bx - ax;
+    const e1y = by - ay;
+    const e2x = cx - bx;
+    const e2y = cy - by;
 
     // CCW polygon ⇒ every cross product must be ≥ 0 (strictly > 0 for no collinear run).
     if (e1x * e2y - e1y * e2x <= 0) {
@@ -188,7 +219,7 @@ const boundingRadiusOf = (points: number[]): number => {
   let max = 0;
 
   for (let i = 0; i < points.length; i += 2) {
-    max = Math.max(max, Math.hypot(points[i], points[i + 1]));
+    max = Math.max(max, Math.hypot(points[i] ?? 0, points[i + 1] ?? 0));
   }
 
   return max;

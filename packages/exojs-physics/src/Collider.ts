@@ -172,7 +172,7 @@ export class Collider {
     let maxY = -Infinity;
 
     for (let i = 0; i < polygon.count; i++) {
-      applyTransform(world, local[i * 2], local[i * 2 + 1], out);
+      applyTransform(world, at(local, i * 2), at(local, i * 2 + 1), out);
       this._worldVertices[i * 2] = out.x;
       this._worldVertices[i * 2 + 1] = out.y;
       minX = out.x < minX ? out.x : minX;
@@ -180,7 +180,7 @@ export class Collider {
       maxX = out.x > maxX ? out.x : maxX;
       maxY = out.y > maxY ? out.y : maxY;
 
-      applyRotation(world, normals[i * 2], normals[i * 2 + 1], out);
+      applyRotation(world, at(normals, i * 2), at(normals, i * 2 + 1), out);
       this._worldNormals[i * 2] = out.x;
       this._worldNormals[i * 2 + 1] = out.y;
     }
@@ -202,3 +202,6 @@ export class Collider {
     this._destroyed = true;
   }
 }
+
+/** In-bounds read of a flat vertex/normal buffer; the `0` fallback is unreachable. */
+const at = (arr: readonly number[], i: number): number => arr[i] ?? 0;
