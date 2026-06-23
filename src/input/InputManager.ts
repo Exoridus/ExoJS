@@ -398,7 +398,9 @@ export class InputManager implements System {
   }
 
   private createBinding(channel: InputChannel | readonly InputChannel[], options: InputBindingOptions = {}): InputBinding {
-    const list = Array.isArray(channel) ? channel : [channel as InputChannel];
+    // `Array.isArray` narrows `readonly T[] | T` to `any[]`, dropping the element
+    // type; annotate `list` so the element type is restored for `.map`.
+    const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const slot = options.gamepadSlot ?? 0;
     const resolved = list.map(c => this.resolveExternalChannel(c, slot));
     const binding = new InputBinding(resolved, options, this.bindingDetacher);

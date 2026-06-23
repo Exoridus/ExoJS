@@ -467,7 +467,10 @@ export class Loader {
     if (typeof source === 'string') {
       this._addManifestEntry(ctor, source, source);
     } else if (Array.isArray(source)) {
-      for (const path of source) {
+      // `Array.isArray` narrows the union to `any[]`, dropping the element type;
+      // the only array member of the union is `readonly string[]`.
+      const paths: readonly string[] = source;
+      for (const path of paths) {
         this._addManifestEntry(ctor, path, path);
       }
     } else {

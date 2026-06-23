@@ -59,8 +59,12 @@ export class WebGl2ShaderBlock {
     const gl = this._context;
     const program = this._program;
     const blockData = this._blockData;
-    const indices = gl.getActiveUniformBlockParameter(program, this.index, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
-    const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
+    // `getActiveUniformBlockParameter`/`getActiveUniforms` are typed `any` in
+    // lib.dom; the WebGL2 spec returns a Uint32Array of active uniform indices
+    // for UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES and an Int32Array of byte offsets
+    // for UNIFORM_OFFSET.
+    const indices = gl.getActiveUniformBlockParameter(program, this.index, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES) as Uint32Array;
+    const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET) as Int32Array;
     const len = indices.length;
 
     for (let i = 0; i < len; i++) {

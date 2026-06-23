@@ -109,7 +109,12 @@ export class AnimatedSprite extends Sprite {
       throw new Error('AnimatedSprite clip names must be non-empty strings.');
     }
 
-    if (!Array.isArray(clip.frames) || clip.frames.length === 0) {
+    // Read the frames into a typed local first: `Array.isArray` narrows the
+    // `readonly Rectangle[]` to `any[]` on whichever reference it tests, so the
+    // runtime guard runs against the property while `.map` reads the typed local.
+    const frames: readonly Rectangle[] = clip.frames;
+
+    if (!Array.isArray(clip.frames) || frames.length === 0) {
       throw new Error(`AnimatedSprite clip "${name}" must define at least one frame.`);
     }
 
@@ -120,7 +125,7 @@ export class AnimatedSprite extends Sprite {
     }
 
     this._clips.set(name, {
-      frames: clip.frames.map(frame => frame.clone()),
+      frames: frames.map(frame => frame.clone()),
       frameDurationMs: 1000 / fps,
       loop: clip.loop ?? true,
     });

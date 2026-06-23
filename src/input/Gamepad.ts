@@ -408,7 +408,9 @@ export class Gamepad {
   }
 
   private _createBinding(channel: InputChannel | readonly InputChannel[], options: InputBindingOptions = {}): InputBinding {
-    const list = Array.isArray(channel) ? channel : [channel as InputChannel];
+    // `Array.isArray` narrows `readonly T[] | T` to `any[]`, dropping the element
+    // type; annotate `list` so the element type is restored for `.map`.
+    const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const resolved = list.map(c => this._resolveExternalChannel(c));
     const binding = new InputBinding(resolved, options, this._detacher);
     this._bindings.add(binding);

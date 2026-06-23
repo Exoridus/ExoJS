@@ -1103,7 +1103,11 @@ export class WebGpuBackend implements RenderBackend {
       state.sampler = this._createSampler(texture);
 
       if (texture instanceof DataTexture) {
-        const formatInfo = webgpuDataTextureFormat(texture.format);
+        // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
+        // erased), so `texture.format` widens to `any`; the class invariant
+        // guarantees it is a `DataTextureFormat`, so restore that type here.
+        const format: DataTextureFormat = texture.format;
+        const formatInfo = webgpuDataTextureFormat(format);
         const region = texture._consumeDirtyRegion();
         const isFullUpload = region === null || region.full || !state.hasContent;
 
@@ -1266,7 +1270,10 @@ export class WebGpuBackend implements RenderBackend {
 
   private _getGpuTextureFormat(texture: Texture | RenderTexture): GPUTextureFormat {
     if (texture instanceof DataTexture) {
-      return webgpuDataTextureFormat(texture.format).gpuFormat;
+      // `instanceof DataTexture` erases the generic, widening `format` to `any`;
+      // the class invariant guarantees it is a `DataTextureFormat`.
+      const format: DataTextureFormat = texture.format;
+      return webgpuDataTextureFormat(format).gpuFormat;
     }
     return managedTextureFormat;
   }

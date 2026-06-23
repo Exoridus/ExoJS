@@ -48,7 +48,9 @@ const glArgsToString = (gl: WebGL2RenderingContext, args: unknown[]): string =>
 const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingContext =>
   new Proxy(gl, {
     get(target, prop, receiver) {
-      const value = Reflect.get(target, prop, receiver);
+      // `Reflect.get` is typed `any`; contain it as `unknown` so the non-function
+      // branch returns a safe value and the function branch narrows via `typeof`.
+      const value: unknown = Reflect.get(target, prop, receiver);
       if (typeof value !== 'function') return value;
       const name = String(prop);
       return (...args: unknown[]) => {
@@ -1265,7 +1267,11 @@ export class WebGl2Backend implements RenderBackend {
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
       if (texture instanceof DataTexture) {
-        const formatInfo = webgl2DataTextureFormat(texture.format);
+        // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
+        // erased), so `texture.format` widens to `any`; the class invariant
+        // guarantees it is a `DataTextureFormat`, so restore that type here.
+        const format: DataTextureFormat = texture.format;
+        const formatInfo = webgl2DataTextureFormat(format);
         const region = texture._consumeDirtyRegion();
         const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
 
