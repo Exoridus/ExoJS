@@ -49,13 +49,14 @@ export class VelocityOverLifetime extends UpdateModule {
     const prev = this._prevSample;
 
     for (let i = 0; i < liveCount; i++) {
-      const t = elapsed[i] / lifetime[i];
+      const t = (elapsed[i] ?? 0) / (lifetime[i] ?? 1);
       const sample = curve.evaluate(t);
-      const last = prev[i] === 0 ? 1 : prev[i];
+      const prevSample = prev[i] ?? 1;
+      const last = prevSample === 0 ? 1 : prevSample;
       const delta = sample / last;
 
-      velX[i] *= delta;
-      velY[i] *= delta;
+      velX[i] = (velX[i] ?? 0) * delta;
+      velY[i] = (velY[i] ?? 0) * delta;
       prev[i] = sample === 0 ? 1e-6 : sample;
     }
   }

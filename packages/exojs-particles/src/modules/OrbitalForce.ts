@@ -37,11 +37,11 @@ export class OrbitalForce extends UpdateModule {
     const omega = angularSpeed * dt;
 
     for (let i = 0; i < liveCount; i++) {
-      const dx = posX[i] - x;
-      const dy = posY[i] - y;
+      const dx = (posX[i] ?? 0) - x;
+      const dy = (posY[i] ?? 0) - y;
       // Perpendicular vector: (-dy, dx) for counter-clockwise.
-      velX[i] += -dy * omega;
-      velY[i] += dx * omega;
+      velX[i] = (velX[i] ?? 0) + -dy * omega;
+      velY[i] = (velY[i] ?? 0) + dx * omega;
     }
   }
 

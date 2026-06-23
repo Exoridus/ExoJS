@@ -341,7 +341,7 @@ export class ParticleSystem extends Drawable {
     let count = 0;
 
     for (let i = 0; i < this.liveCount; i++) {
-      if (this.alive[i]) count++;
+      if (this.alive[i] === 1) count++;
     }
 
     return count;
@@ -496,7 +496,7 @@ export class ParticleSystem extends Drawable {
 
     // 1. Spawn (CPU writes SoA in both modes).
     for (let i = 0; i < this._spawnModules.length; i++) {
-      this._spawnModules[i].apply(this, dt);
+      this._spawnModules[i]!.apply(this, dt);
     }
 
     if (this._gpuMode) {
@@ -558,7 +558,7 @@ export class ParticleSystem extends Drawable {
     // Mark every currently-alive slot dirty so the initial upload
     // matches CPU state; subsequent frames only push deltas.
     for (let i = 0; i < this.liveCount; i++) {
-      if (this.alive[i]) this._gpuDirtySlots.add(i);
+      if (this.alive[i] === 1) this._gpuDirtySlots.add(i);
     }
   }
 
@@ -611,14 +611,14 @@ export class ParticleSystem extends Drawable {
     const liveCount = this.liveCount;
 
     for (let i = 0; i < liveCount; i++) {
-      posX[i] += velX[i] * dt;
-      posY[i] += velY[i] * dt;
-      rotations[i] += rotationSpeeds[i] * dt;
-      elapsed[i] += dt;
+      posX[i] = posX[i]! + velX[i]! * dt;
+      posY[i] = posY[i]! + velY[i]! * dt;
+      rotations[i] = rotations[i]! + rotationSpeeds[i]! * dt;
+      elapsed[i] = elapsed[i]! + dt;
     }
 
     for (let i = 0; i < this._updateModules.length; i++) {
-      this._updateModules[i].apply(this, dt);
+      this._updateModules[i]!.apply(this, dt);
     }
 
     // Compact: forward pass, fire death modules on expired, copy survivors down.
@@ -628,9 +628,9 @@ export class ParticleSystem extends Drawable {
     let writeIndex = 0;
 
     for (let readIndex = 0; readIndex < this.liveCount; readIndex++) {
-      if (elapsed[readIndex] >= lifetime[readIndex]) {
+      if (elapsed[readIndex]! >= lifetime[readIndex]!) {
         for (let m = 0; m < deathModules.length; m++) {
-          deathModules[m].onDeath(this, readIndex);
+          deathModules[m]!.onDeath(this, readIndex);
         }
         alive[readIndex] = 0;
         continue;
@@ -666,11 +666,11 @@ export class ParticleSystem extends Drawable {
     for (let i = 0; i < liveCount; i++) {
       if (alive[i] === 0) continue;
 
-      elapsed[i] += dt;
+      elapsed[i] = elapsed[i]! + dt;
 
-      if (elapsed[i] >= lifetime[i]) {
+      if (elapsed[i]! >= lifetime[i]!) {
         for (let m = 0; m < deathModules.length; m++) {
-          deathModules[m].onDeath(this, i);
+          deathModules[m]!.onDeath(this, i);
         }
         alive[i] = 0;
         lifetime[i] = -1; // sentinel — GPU shader skips
@@ -698,17 +698,17 @@ export class ParticleSystem extends Drawable {
   }
 
   private _copySlot(from: number, to: number): void {
-    this.posX[to] = this.posX[from];
-    this.posY[to] = this.posY[from];
-    this.velX[to] = this.velX[from];
-    this.velY[to] = this.velY[from];
-    this.scaleX[to] = this.scaleX[from];
-    this.scaleY[to] = this.scaleY[from];
-    this.rotations[to] = this.rotations[from];
-    this.rotationSpeeds[to] = this.rotationSpeeds[from];
-    this.color[to] = this.color[from];
-    this.elapsed[to] = this.elapsed[from];
-    this.lifetime[to] = this.lifetime[from];
-    this.textureIndex[to] = this.textureIndex[from];
+    this.posX[to] = this.posX[from]!;
+    this.posY[to] = this.posY[from]!;
+    this.velX[to] = this.velX[from]!;
+    this.velY[to] = this.velY[from]!;
+    this.scaleX[to] = this.scaleX[from]!;
+    this.scaleY[to] = this.scaleY[from]!;
+    this.rotations[to] = this.rotations[from]!;
+    this.rotationSpeeds[to] = this.rotationSpeeds[from]!;
+    this.color[to] = this.color[from]!;
+    this.elapsed[to] = this.elapsed[from]!;
+    this.lifetime[to] = this.lifetime[from]!;
+    this.textureIndex[to] = this.textureIndex[from]!;
   }
 }

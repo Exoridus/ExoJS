@@ -67,9 +67,12 @@ export class BurstSpawn extends SpawnModule {
 
     this._elapsed += dt;
 
-    while (this._nextIndex < schedule.length && this._elapsed >= schedule[this._nextIndex].time) {
-      this._spawnBurst(system, schedule[this._nextIndex].count);
+    let next = schedule[this._nextIndex];
+
+    while (next !== undefined && this._elapsed >= next.time) {
+      this._spawnBurst(system, next.count);
       this._nextIndex++;
+      next = schedule[this._nextIndex];
     }
 
     if (cfg.loop && this._nextIndex >= schedule.length) {

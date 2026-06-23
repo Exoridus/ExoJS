@@ -32,7 +32,7 @@ export class ColorOverLifetime extends UpdateModule {
     const gradient = this.gradient;
 
     for (let i = 0; i < liveCount; i++) {
-      const t = elapsed[i] / lifetime[i];
+      const t = (elapsed[i] ?? 0) / (lifetime[i] ?? 1);
 
       color[i] = gradient.evaluateRgba(t);
     }

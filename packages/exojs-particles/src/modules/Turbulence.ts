@@ -42,13 +42,13 @@ export class Turbulence extends UpdateModule {
     const { posX, posY, velX, velY, liveCount } = system;
 
     for (let i = 0; i < liveCount; i++) {
-      const x = posX[i] * f;
-      const y = posY[i] * f;
+      const x = (posX[i] ?? 0) * f;
+      const y = (posY[i] ?? 0) * f;
       const nx = valueNoise2(x + t, y);
       const ny = valueNoise2(x, y + t + 17.31);
 
-      velX[i] += (nx * 2 - 1) * s;
-      velY[i] += (ny * 2 - 1) * s;
+      velX[i] = (velX[i] ?? 0) + (nx * 2 - 1) * s;
+      velY[i] = (velY[i] ?? 0) + (ny * 2 - 1) * s;
     }
   }
 

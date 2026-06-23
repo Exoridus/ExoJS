@@ -36,8 +36,8 @@ export class AttractToPoint extends UpdateModule {
     const { x, y, strength, falloff } = this;
 
     for (let i = 0; i < liveCount; i++) {
-      const dx = x - posX[i];
-      const dy = y - posY[i];
+      const dx = x - (posX[i] ?? 0);
+      const dy = y - (posY[i] ?? 0);
       const distSq = dx * dx + dy * dy;
       const dist = Math.sqrt(distSq);
 
@@ -46,8 +46,8 @@ export class AttractToPoint extends UpdateModule {
       const k = falloff > 0 ? Math.min(1, dist / falloff) : 1;
       const a = (strength * k * dt) / dist;
 
-      velX[i] += dx * a;
-      velY[i] += dy * a;
+      velX[i] = (velX[i] ?? 0) + dx * a;
+      velY[i] = (velY[i] ?? 0) + dy * a;
     }
   }
 

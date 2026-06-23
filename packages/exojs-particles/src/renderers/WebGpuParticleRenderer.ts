@@ -186,7 +186,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // that destroy happens strictly between submits, so no pass holds a
     // reference to a buffer that has since been destroyed.
     for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
-      const drawCall = this._drawCalls[drawCallIndex];
+      const drawCall = this._drawCalls[drawCallIndex]!;
       const system = drawCall.system;
       const particleCount = system.liveCount;
 
@@ -384,52 +384,52 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const shouldPremultiplySample = backend.shouldPremultiplyTextureSample(texture);
     const vertices = system.vertices;
     const texCoords = system.texCoords;
-    const quadMinX = vertices[0];
-    const quadMinY = vertices[1];
-    const quadSizeX = vertices[2] - vertices[0];
-    const quadSizeY = vertices[3] - vertices[1];
-    const uvMinX = (texCoords[0] & 0xffff) / 0xffff;
-    const uvMinY = ((texCoords[0] >>> 16) & 0xffff) / 0xffff;
-    const uvMaxX = (texCoords[2] & 0xffff) / 0xffff;
-    const uvMaxY = ((texCoords[2] >>> 16) & 0xffff) / 0xffff;
+    const quadMinX = vertices[0]!;
+    const quadMinY = vertices[1]!;
+    const quadSizeX = vertices[2]! - vertices[0]!;
+    const quadSizeY = vertices[3]! - vertices[1]!;
+    const uvMinX = (texCoords[0]! & 0xffff) / 0xffff;
+    const uvMinY = ((texCoords[0]! >>> 16) & 0xffff) / 0xffff;
+    const uvMaxX = (texCoords[2]! & 0xffff) / 0xffff;
+    const uvMaxY = ((texCoords[2]! >>> 16) & 0xffff) / 0xffff;
 
     const u = this._uniformData;
 
     // projection mat4 (col-major, padded to 4×4)
-    u[0] = projection[0];
-    u[1] = projection[1];
+    u[0] = projection[0]!;
+    u[1] = projection[1]!;
     u[2] = 0;
     u[3] = 0;
-    u[4] = projection[3];
-    u[5] = projection[4];
+    u[4] = projection[3]!;
+    u[5] = projection[4]!;
     u[6] = 0;
     u[7] = 0;
     u[8] = 0;
     u[9] = 0;
     u[10] = 1;
     u[11] = 0;
-    u[12] = projection[6];
-    u[13] = projection[7];
+    u[12] = projection[6]!;
+    u[13] = projection[7]!;
     u[14] = 0;
-    u[15] = projection[8];
+    u[15] = projection[8]!;
 
     // transform mat4 (col-major, padded to 4×4)
-    u[16] = transform[0];
-    u[17] = transform[1];
+    u[16] = transform[0]!;
+    u[17] = transform[1]!;
     u[18] = 0;
     u[19] = 0;
-    u[20] = transform[3];
-    u[21] = transform[4];
+    u[20] = transform[3]!;
+    u[21] = transform[4]!;
     u[22] = 0;
     u[23] = 0;
     u[24] = 0;
     u[25] = 0;
     u[26] = 1;
     u[27] = 0;
-    u[28] = transform[6];
-    u[29] = transform[7];
+    u[28] = transform[6]!;
+    u[29] = transform[7]!;
     u[30] = 0;
-    u[31] = transform[8];
+    u[31] = transform[8]!;
 
     // flags vec4
     u[32] = shouldPremultiplySample ? 1 : 0;
@@ -468,19 +468,19 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       }
 
       const targetIndex = writeIndex * instanceWords;
-      const frame = textureIndex[particleIndex] < frameCount ? textureIndex[particleIndex] : 0;
+      const frame = textureIndex[particleIndex]! < frameCount ? textureIndex[particleIndex]! : 0;
       const uvBase = frame * 2;
 
-      f32[targetIndex + 0] = posX[particleIndex];
-      f32[targetIndex + 1] = posY[particleIndex];
-      f32[targetIndex + 2] = scaleX[particleIndex];
-      f32[targetIndex + 3] = scaleY[particleIndex];
-      f32[targetIndex + 4] = rotations[particleIndex];
-      u32[targetIndex + 5] = color[particleIndex];
-      f32[targetIndex + 6] = uvMins[uvBase + 0];
-      f32[targetIndex + 7] = uvMins[uvBase + 1];
-      f32[targetIndex + 8] = uvMaxs[uvBase + 0];
-      f32[targetIndex + 9] = uvMaxs[uvBase + 1];
+      f32[targetIndex + 0] = posX[particleIndex]!;
+      f32[targetIndex + 1] = posY[particleIndex]!;
+      f32[targetIndex + 2] = scaleX[particleIndex]!;
+      f32[targetIndex + 3] = scaleY[particleIndex]!;
+      f32[targetIndex + 4] = rotations[particleIndex]!;
+      u32[targetIndex + 5] = color[particleIndex]!;
+      f32[targetIndex + 6] = uvMins[uvBase + 0]!;
+      f32[targetIndex + 7] = uvMins[uvBase + 1]!;
+      f32[targetIndex + 8] = uvMaxs[uvBase + 0]!;
+      f32[targetIndex + 9] = uvMaxs[uvBase + 1]!;
 
       writeIndex++;
     }
@@ -529,7 +529,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     }
 
     for (let i = 0; i < frames.length; i++) {
-      const f = frames[i];
+      const f = frames[i]!;
       const o = i * 2;
       const minU = f.left / texW;
       const maxU = f.right / texW;

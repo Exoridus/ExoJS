@@ -34,8 +34,8 @@ export class RepelFromPoint extends UpdateModule {
     const radiusSq = radius * radius;
 
     for (let i = 0; i < liveCount; i++) {
-      const dx = posX[i] - x;
-      const dy = posY[i] - y;
+      const dx = (posX[i] ?? 0) - x;
+      const dy = (posY[i] ?? 0) - y;
       const distSq = dx * dx + dy * dy;
 
       if (distSq < 1e-10) continue;
@@ -45,8 +45,8 @@ export class RepelFromPoint extends UpdateModule {
       const falloff = radius > 0 ? 1 - dist / radius : 1;
       const a = (strength * falloff * dt) / dist;
 
-      velX[i] += dx * a;
-      velY[i] += dy * a;
+      velX[i] = (velX[i] ?? 0) + dx * a;
+      velY[i] = (velY[i] ?? 0) + dy * a;
     }
   }
 
