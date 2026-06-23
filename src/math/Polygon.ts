@@ -221,10 +221,24 @@ export class Polygon implements ShapeLike {
   }
 
   public project(axis: Vector, result: Interval = new Interval()): Interval {
-    const normal = axis.clone().normalize();
-    const projections = this._points.map(point => normal.dot(point.x, point.y));
+    // Normalize the axis into scalars (project() is public and may receive an
+    // unnormalized axis; SAT already passes unit normals, so this is a no-op there).
+    const length = Math.sqrt(axis.x * axis.x + axis.y * axis.y) || 1;
+    const nx = axis.x / length;
+    const ny = axis.y / length;
 
-    return result.set(Math.min(...projections), Math.max(...projections));
+    const points = this._points;
+    let min = Infinity;
+    let max = -Infinity;
+
+    for (let i = 0; i < points.length; i++) {
+      const projection = nx * points[i].x + ny * points[i].y;
+
+      if (projection < min) min = projection;
+      if (projection > max) max = projection;
+    }
+
+    return result.set(min, max);
   }
 
   public contains(x: number, y: number): boolean {
@@ -288,6 +302,11 @@ export class Polygon implements ShapeLike {
     this._edges.length = 0;
   }
 
+  /**
+   * Shared scratch `Polygon` instance for intermediate calculations. Never
+   * retain the reference across frames or async boundaries.
+   * @internal
+   */
   public static get temp(): Polygon {
     if (temp === null) {
       temp = new Polygon();

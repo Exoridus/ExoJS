@@ -183,6 +183,11 @@ export class Time implements Cloneable {
   public static readonly oneMinute = new Time(1, Time.minutes);
   public static readonly oneHour = new Time(1, Time.hours);
 
+  /**
+   * Shared scratch {@link Time} instance for intermediate calculations. Never
+   * retain the reference across frames or async boundaries.
+   * @internal
+   */
   public static get temp(): Time {
     if (temp === null) {
       temp = new Time();

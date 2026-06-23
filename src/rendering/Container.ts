@@ -238,7 +238,15 @@ export class Container extends RenderNode {
   }
 
   public override contains(x: number, y: number): boolean {
-    return this._children.some(child => child.contains(x, y));
+    const children = this._children;
+
+    for (let i = 0; i < children.length; i++) {
+      if (children[i].contains(x, y)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   protected override _invalidateChildrenTransform(): void {
