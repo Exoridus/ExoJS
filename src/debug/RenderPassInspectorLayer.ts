@@ -257,7 +257,11 @@ export class RenderPassInspectorLayer extends DebugLayer {
           dim: false,
         });
         for (let i = 0; i < entry.filters.length; i++) {
-          lines.push({ text: `  ${i}. ${entry.filters[i].constructor.name}`, dim: false });
+          const filter = entry.filters[i];
+          if (filter === undefined) {
+            continue;
+          }
+          lines.push({ text: `  ${i}. ${filter.constructor.name}`, dim: false });
         }
       }
     }
@@ -276,8 +280,11 @@ export class RenderPassInspectorLayer extends DebugLayer {
     const visibleCount = Math.min(lines.length, this._lines.length);
     for (let i = 0; i < this._lines.length; i++) {
       const line = this._lines[i];
-      if (i < visibleCount) {
-        const entry = lines[i];
+      if (line === undefined) {
+        continue;
+      }
+      const entry = i < visibleCount ? lines[i] : undefined;
+      if (entry !== undefined) {
         line.text = entry.text;
         line.style.fillColor = entry.dim ? dimColor : textColor;
         line.visible = true;
@@ -290,9 +297,11 @@ export class RenderPassInspectorLayer extends DebugLayer {
     if (lines.length > this._lines.length) {
       const last = this._lines[this._lines.length - 1];
       const overflow = lines.length - this._lines.length;
-      last.text = `... (+${overflow} more)`;
-      last.style.fillColor = dimColor;
-      last.visible = true;
+      if (last !== undefined) {
+        last.text = `... (+${overflow} more)`;
+        last.style.fillColor = dimColor;
+        last.visible = true;
+      }
     }
 
     // Resize background to fit content.

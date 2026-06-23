@@ -1600,6 +1600,7 @@ export class Loader {
     if (index === -1) return;
 
     const [entry] = this._backgroundQueue.splice(index, 1);
+    if (entry === undefined) return;
 
     this._startBackgroundEntry(entry);
   }

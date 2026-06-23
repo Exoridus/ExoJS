@@ -86,7 +86,7 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
         if (value === 'auto') {
           cue.line = 'auto';
         } else {
-          const [linePart, alignPart] = value.split(',');
+          const [linePart = '', alignPart] = value.split(',');
           const num = parseFloat(linePart);
 
           if (!Number.isNaN(num)) {
@@ -100,7 +100,7 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
         break;
       }
       case 'position': {
-        const [posPart, alignPart] = value.split(',');
+        const [posPart = '', alignPart] = value.split(',');
         const num = parseFloat(posPart);
 
         if (!Number.isNaN(num)) {
@@ -135,19 +135,19 @@ const parseVtt = (source: string): VTTCue[] => {
   let i = 0;
 
   // Skip header and any blank lines/metadata before first cue
-  while (i < lines.length && !lines[i].includes('-->')) {
+  while (i < lines.length && !(lines[i] ?? '').includes('-->')) {
     i++;
   }
 
   while (i < lines.length) {
-    const line = lines[i].trim();
+    const line = (lines[i] ?? '').trim();
 
     if (line.includes('-->')) {
       const arrowIndex = line.indexOf('-->');
       const startString = line.slice(0, arrowIndex).trim();
       const rest = line.slice(arrowIndex + 3).trim();
       const restTokens = rest.split(/\s+/);
-      const endString = restTokens[0];
+      const endString = restTokens[0] ?? '';
       const settingsString = restTokens.slice(1).join(' ');
       const start = parseVttTimestamp(startString);
       const end = parseVttTimestamp(endString);
@@ -155,8 +155,12 @@ const parseVtt = (source: string): VTTCue[] => {
       i++;
       const textLines: string[] = [];
 
-      while (i < lines.length && lines[i].trim() !== '') {
-        textLines.push(lines[i]);
+      while (i < lines.length) {
+        const textLine = lines[i];
+        if (textLine === undefined || textLine.trim() === '') {
+          break;
+        }
+        textLines.push(textLine);
         i++;
       }
 
@@ -201,7 +205,7 @@ const parseSrt = (source: string): VTTCue[] => {
 
     let timingIndex = 0;
 
-    if (/^\d+$/.test(lines[0].trim())) {
+    if (/^\d+$/.test((lines[0] ?? '').trim())) {
       timingIndex = 1;
     }
 
@@ -242,7 +246,7 @@ export class SubtitleFactory extends AbstractAssetFactory<VTTCue[]> {
    */
   public async process(response: SubtitleSource): Promise<SubtitleIntermediate> {
     const text = await response.text();
-    const url = response.url.split('?')[0].toLowerCase();
+    const url = (response.url.split('?')[0] ?? response.url).toLowerCase();
     const fmt: SubtitleFormat = url.endsWith('.srt') ? 'srt' : 'vtt';
 
     return { fmt, text };

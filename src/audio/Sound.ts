@@ -538,7 +538,7 @@ export class Sound implements Playable {
 
   private _pruneEndedVoices(): void {
     for (let i = this._activeVoices.length - 1; i >= 0; i--) {
-      if (this._activeVoices[i].voice.ended) {
+      if (this._activeVoices[i]?.voice.ended === true) {
         this._activeVoices.splice(i, 1);
       }
     }
@@ -566,6 +566,9 @@ export class Sound implements Playable {
 
     for (let i = 0; i < this._activeVoices.length; i++) {
       const src = this._activeVoices[i];
+      if (src === undefined) {
+        continue;
+      }
       const elapsed = now - src.startedAt;
       const remaining = src.effectiveDuration - elapsed;
 

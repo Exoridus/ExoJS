@@ -95,7 +95,12 @@ const parseProductKey = (id: string): string | null => {
     return null;
   }
 
-  return `${match[1].toLowerCase()}:${match[2].toLowerCase()}`;
+  const [, vendor, product] = match;
+  if (vendor === undefined || product === undefined) {
+    return null;
+  }
+
+  return `${vendor.toLowerCase()}:${product.toLowerCase()}`;
 };
 
 const parseName = (label: string): string | null => {

@@ -656,7 +656,12 @@ export class InteractionManager implements InteractionHooks, System {
       const children = node.children;
 
       for (let i = children.length - 1; i >= 0; i--) {
-        const hit = this._hitTestNode(children[i], x, y);
+        const child = children[i];
+        if (child === undefined) {
+          continue;
+        }
+
+        const hit = this._hitTestNode(child, x, y);
 
         if (hit) {
           return hit;
@@ -810,7 +815,10 @@ export class InteractionManager implements InteractionHooks, System {
       if (node instanceof Container) {
         // Push in reverse so iteration preserves child insertion order.
         for (let index = node.children.length - 1; index >= 0; index--) {
-          stack.push(node.children[index]);
+          const child = node.children[index];
+          if (child !== undefined) {
+            stack.push(child);
+          }
         }
       }
     }

@@ -313,13 +313,14 @@ export class Gamepad {
     const { buttons: rawButtons, axes: rawAxes } = this._browserGamepad;
 
     for (const button of this._mapping.buttons) {
-      if (button.index >= rawButtons.length) {
+      const rawButton = rawButtons[button.index];
+      if (rawButton === undefined) {
         continue;
       }
 
       const offset = this._resolveOffset(button.channel);
       const previous = channels[offset];
-      const value = button.transformValue(rawButtons[button.index].value) || 0;
+      const value = button.transformValue(rawButton.value) || 0;
 
       if (previous === value) {
         continue;
@@ -335,13 +336,14 @@ export class Gamepad {
     }
 
     for (const axis of this._mapping.axes) {
-      if (axis.index >= rawAxes.length) {
+      const rawAxis = rawAxes[axis.index];
+      if (rawAxis === undefined) {
         continue;
       }
 
       const offset = this._resolveOffset(axis.channel);
       const previous = channels[offset];
-      const value = axis.transformValue(rawAxes[axis.index]) || 0;
+      const value = axis.transformValue(rawAxis) || 0;
 
       if (previous === value) {
         continue;

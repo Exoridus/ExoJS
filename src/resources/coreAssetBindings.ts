@@ -135,7 +135,7 @@ const subtitleBinding = binding(SubtitleAsset as unknown as AssetConstructor, { 
   return {
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<VTTCue[]> {
       const text = await context.fetchText(source);
-      const url = source.split('?')[0].toLowerCase();
+      const url = (source.split('?')[0] ?? source).toLowerCase();
       const fmt = url.endsWith('.srt') ? 'srt' : 'vtt';
       const intermediate = await factory.process({ text: () => Promise.resolve(text), url: source });
       return factory.create({ ...intermediate, fmt });

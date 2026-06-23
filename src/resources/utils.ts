@@ -101,11 +101,11 @@ const matchesAvifImage = (arrayBuffer: ArrayBuffer): boolean => {
 
   const header = new Uint8Array(arrayBuffer);
 
-  if (String.fromCharCode(header[4], header[5], header[6], header[7]) !== 'ftyp') {
+  if (String.fromCharCode(header[4] ?? 0, header[5] ?? 0, header[6] ?? 0, header[7] ?? 0) !== 'ftyp') {
     return false;
   }
 
-  const brand = String.fromCharCode(header[8], header[9], header[10], header[11]);
+  const brand = String.fromCharCode(header[8] ?? 0, header[9] ?? 0, header[10] ?? 0, header[11] ?? 0);
 
   return brand === 'avif' || brand === 'avis';
 };
@@ -145,7 +145,7 @@ export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
       continue;
     }
 
-    if (type.pattern.every((p, i) => (header[i] & type.mask[i]) === p)) {
+    if (type.pattern.every((p, i) => ((header[i] ?? 0) & (type.mask[i] ?? 0)) === p)) {
       return type.mimeType;
     }
   }

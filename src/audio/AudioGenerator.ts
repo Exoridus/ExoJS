@@ -192,7 +192,7 @@ export class AudioGenerator implements Playable {
 
   private _pruneEndedVoices(): void {
     for (let i = this._activeVoices.length - 1; i >= 0; i--) {
-      if (this._activeVoices[i].voice.ended) {
+      if (this._activeVoices[i]?.voice.ended === true) {
         this._activeVoices.splice(i, 1);
       }
     }
@@ -204,8 +204,9 @@ export class AudioGenerator implements Playable {
       let oldest = 0;
       let oldestTime = Infinity;
       for (let i = 0; i < this._activeVoices.length; i++) {
-        if (this._activeVoices[i].startedAt < oldestTime) {
-          oldestTime = this._activeVoices[i].startedAt;
+        const pooled = this._activeVoices[i];
+        if (pooled !== undefined && pooled.startedAt < oldestTime) {
+          oldestTime = pooled.startedAt;
           oldest = i;
         }
       }

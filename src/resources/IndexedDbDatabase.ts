@@ -101,7 +101,12 @@ export class IndexedDbDatabase implements Database {
             .sort((a, b) => a - b);
 
           for (const v of migrationKeys) {
-            const ok = this._migrations[v](database, transaction);
+            const migration = this._migrations[v];
+            if (migration === undefined) {
+              continue;
+            }
+
+            const ok = migration(database, transaction);
 
             if (!ok) {
               transaction.abort();
