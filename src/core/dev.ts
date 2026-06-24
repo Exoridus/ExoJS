@@ -34,27 +34,32 @@ const _warned = new Set<string>();
 /**
  * Assert `condition` at dev/test time. Throws with `[ExoJS] message` when the
  * condition is falsy and `__DEV__` is true. No-op in production builds.
+ *
+ * `message` is optional — omit it for invariant/in-bounds checks where the
+ * stack trace already localizes the failure. Prefer a constant string over a
+ * template literal: arguments are evaluated before the (stripped) body runs, so
+ * an interpolated message still allocates in production.
  */
-export function assert(condition: boolean, message: string): asserts condition {
+export function assert(condition: boolean, message?: string): asserts condition {
   if (__DEV__ && !condition) {
-    throw new Error(`[ExoJS] ${message}`);
+    throw new Error(`[ExoJS] ${message ?? 'assertion failed'}`);
   }
 }
 
 /**
  * Assert that `value` is neither `null` nor `undefined`. Returns the value so
  * it can be used inline in an expression. No-op in production builds (returns
- * the value cast to `T` without checking).
+ * the value cast to `T` without checking). `message` is optional.
  */
-export function assertDefined<T>(value: T | null | undefined, message: string): T {
+export function assertDefined<T>(value: T | null | undefined, message?: string): T {
   if (__DEV__ && (value === null || value === undefined)) {
-    throw new Error(`[ExoJS] ${message}`);
+    throw new Error(`[ExoJS] ${message ?? 'expected a defined value'}`);
   }
   return value as T;
 }
 
 /** @internal — alias for {@link assert}; kept for backward compatibility. */
-export function invariant(condition: boolean, message: string): asserts condition {
+export function invariant(condition: boolean, message?: string): asserts condition {
   assert(condition, message);
 }
 
