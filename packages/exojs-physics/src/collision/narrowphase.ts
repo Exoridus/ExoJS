@@ -4,14 +4,6 @@ import type { Manifold } from './Manifold';
 const eps = 1e-9;
 
 /**
- * In-bounds read of a flat vertex/normal buffer. Every caller indexes within
- * `0..count-1`, so the element always exists; the `0` fallback satisfies
- * `noUncheckedIndexedAccess` for an unreachable case without a cast or `!`, and
- * keeps the `??` out of the callers' cyclomatic complexity.
- */
-const at = (arr: readonly number[], i: number): number => arr[i] ?? 0;
-
-/**
  * Generate the contact manifold for `a` vs `b`, writing into `manifold` and
  * returning `true` when the colliders touch. The manifold normal is oriented
  * from `a` toward `b`. Dispatches on shape pair; polygon/circle is handled by
@@ -91,8 +83,12 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
   let refEdge = 0;
 
   for (let i = 0; i < count; i++) {
-    // Loop indices are in-bounds (0..count-1); `at` covers the unreachable case.
-    const s = at(normals, i * 2) * (c.x - at(verts, i * 2)) + at(normals, i * 2 + 1) * (c.y - at(verts, i * 2 + 1));
+    // Loop indices are provably in-bounds (0..count-1); the `!` is zero-cost.
+    const enx = normals[i * 2]!;
+    const eny = normals[i * 2 + 1]!;
+    const evx = verts[i * 2]!;
+    const evy = verts[i * 2 + 1]!;
+    const s = enx * (c.x - evx) + eny * (c.y - evy);
 
     if (s > r) {
       return false;
@@ -105,8 +101,8 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
   }
 
   // refEdge/j stay in 0..count-1, so these reads are in-bounds too.
-  const refNx = at(normals, refEdge * 2);
-  const refNy = at(normals, refEdge * 2 + 1);
+  const refNx = normals[refEdge * 2]!;
+  const refNy = normals[refEdge * 2 + 1]!;
 
   let nx: number;
   let ny: number;
@@ -125,10 +121,10 @@ const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, m
     id = refEdge;
   } else {
     const j = (refEdge + 1) % count;
-    const v1x = at(verts, refEdge * 2);
-    const v1y = at(verts, refEdge * 2 + 1);
-    const v2x = at(verts, j * 2);
-    const v2y = at(verts, j * 2 + 1);
+    const v1x = verts[refEdge * 2]!;
+    const v1y = verts[refEdge * 2 + 1]!;
+    const v2x = verts[j * 2]!;
+    const v2y = verts[j * 2 + 1]!;
     const u1 = (c.x - v1x) * (v2x - v1x) + (c.y - v1y) * (v2y - v1y);
     const u2 = (c.x - v2x) * (v1x - v2x) + (c.y - v2y) * (v1y - v2y);
 
@@ -220,10 +216,10 @@ const findMaxSeparation = (a: CollisionProxy, b: CollisionProxy): { separation: 
 
   for (let i = 0; i < ac; i++) {
     // i in 0..ac-1 and j in 0..bc-1, so every read below is in-bounds.
-    const nx = at(an, i * 2);
-    const ny = at(an, i * 2 + 1);
-    const vx = at(av, i * 2);
-    const vy = at(av, i * 2 + 1);
+    const nx = an[i * 2]!;
+    const ny = an[i * 2 + 1]!;
+    const vx = av[i * 2]!;
+    const vy = av[i * 2 + 1]!;
 
     // Support of b along -n = vertex of b minimising dot(n, vertex).
     let minDot = Infinity;
@@ -231,8 +227,8 @@ const findMaxSeparation = (a: CollisionProxy, b: CollisionProxy): { separation: 
     let sy = 0;
 
     for (let j = 0; j < bc; j++) {
-      const bjx = at(bv, j * 2);
-      const bjy = at(bv, j * 2 + 1);
+      const bjx = bv[j * 2]!;
+      const bjy = bv[j * 2 + 1]!;
       const d = nx * bjx + ny * bjy;
 
       if (d < minDot) {
@@ -263,7 +259,9 @@ const findIncidentFace = (refNx: number, refNy: number, inc: CollisionProxy, out
   let idx = 0;
 
   for (let i = 0; i < ic; i++) {
-    const d = refNx * at(inrm, i * 2) + refNy * at(inrm, i * 2 + 1);
+    const inx = inrm[i * 2]!;
+    const iny = inrm[i * 2 + 1]!;
+    const d = refNx * inx + refNy * iny;
 
     if (d < minDot) {
       minDot = d;
@@ -274,11 +272,11 @@ const findIncidentFace = (refNx: number, refNy: number, inc: CollisionProxy, out
   const j = (idx + 1) % ic;
 
   // idx/j in 0..ic-1; reads in-bounds. out is a fixed 2-tuple.
-  out[0].x = at(iv, idx * 2);
-  out[0].y = at(iv, idx * 2 + 1);
+  out[0].x = iv[idx * 2]!;
+  out[0].y = iv[idx * 2 + 1]!;
   out[0].id = idx;
-  out[1].x = at(iv, j * 2);
-  out[1].y = at(iv, j * 2 + 1);
+  out[1].x = iv[j * 2]!;
+  out[1].y = iv[j * 2 + 1]!;
   out[1].id = j;
 };
 
@@ -370,12 +368,12 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   const rc = countOf(ref);
   const i2 = (refEdge + 1) % rc;
   // refEdge/i2 in 0..rc-1, so these reads are in-bounds.
-  const v1x = at(rv, refEdge * 2);
-  const v1y = at(rv, refEdge * 2 + 1);
-  const v2x = at(rv, i2 * 2);
-  const v2y = at(rv, i2 * 2 + 1);
-  const refNx = at(rn, refEdge * 2);
-  const refNy = at(rn, refEdge * 2 + 1);
+  const v1x = rv[refEdge * 2]!;
+  const v1y = rv[refEdge * 2 + 1]!;
+  const v2x = rv[i2 * 2]!;
+  const v2y = rv[i2 * 2 + 1]!;
+  const refNx = rn[refEdge * 2]!;
+  const refNy = rn[refEdge * 2 + 1]!;
 
   const incident = newClipPair();
   findIncidentFace(refNx, refNy, inc, incident);
@@ -470,8 +468,12 @@ const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): 
   let refEdge = 0;
 
   for (let i = 0; i < count; i++) {
-    // Loop indices are in-bounds (0..count-1); `at` covers the unreachable case.
-    const s = at(normals, i * 2) * (c.x - at(verts, i * 2)) + at(normals, i * 2 + 1) * (c.y - at(verts, i * 2 + 1));
+    // Loop indices are provably in-bounds (0..count-1); the `!` is zero-cost.
+    const enx = normals[i * 2]!;
+    const eny = normals[i * 2 + 1]!;
+    const evx = verts[i * 2]!;
+    const evy = verts[i * 2 + 1]!;
+    const s = enx * (c.x - evx) + eny * (c.y - evy);
 
     if (s > r) {
       return false;
@@ -488,10 +490,10 @@ const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): 
   }
 
   const j = (refEdge + 1) % count;
-  const v1x = at(verts, refEdge * 2);
-  const v1y = at(verts, refEdge * 2 + 1);
-  const v2x = at(verts, j * 2);
-  const v2y = at(verts, j * 2 + 1);
+  const v1x = verts[refEdge * 2]!;
+  const v1y = verts[refEdge * 2 + 1]!;
+  const v2x = verts[j * 2]!;
+  const v2y = verts[j * 2 + 1]!;
   const u1 = (c.x - v1x) * (v2x - v1x) + (c.y - v1y) * (v2y - v1y);
   const u2 = (c.x - v2x) * (v1x - v2x) + (c.y - v2y) * (v1y - v2y);
 
