@@ -49,6 +49,17 @@ describe.runIf(hasProductionBuild)('production build stripping', () => {
     expect(content).toContain('false');
   });
 
+  it('strips the dev-helper bodies to no-ops (no throw)', () => {
+    // `__DEV__` → `false` turns every `if (false && …) throw …` into dead code,
+    // so Rollup's DCE empties the helper bodies. assert/assertDefined/invariant
+    // become no-ops with no runtime cost — independent of the consumer's
+    // minifier. This is the call-site-agnostic guarantee for the modular tree.
+    // Anchor on the `throw new` code pattern: the surviving `throw`/`[ExoJS]`
+    // tokens live only in the doc comment, which Rollup keeps verbatim.
+    const content = read('dist/esm/core/dev.js');
+    expect(content).not.toMatch(/throw new /);
+  });
+
   it('has no unresolved __VERSION__ or __REVISION__ in the dev helper', () => {
     const content = read('dist/esm/core/dev.js');
     expect(content).not.toMatch(/(?<![a-zA-Z0-9_$])__VERSION__(?![a-zA-Z0-9_$])/);
@@ -97,6 +108,17 @@ describe.runIf(hasProductionBuild)('production build stripping', () => {
     expect(bundle).not.toMatch(/(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/);
     expect(bundle).not.toMatch(/(?<![a-zA-Z0-9_$])__VERSION__(?![a-zA-Z0-9_$])/);
     expect(bundle).not.toMatch(/(?<![a-zA-Z0-9_$])__REVISION__(?![a-zA-Z0-9_$])/);
+  });
+
+  it('drops dev-assert callsites from the single-file bundle (terser pure_funcs)', () => {
+    // The production bundle is minified with `pure_funcs` listing the dev
+    // helpers, so their now-empty callsites — and the interpolated message
+    // allocations passed to them — are removed outright. These two messages are
+    // the dev-`assert()` callsites currently reachable in the bundle; if they
+    // move, update the anchors (the strip guarantee itself is unchanged).
+    const bundle = read('dist/exo.esm.js');
+    expect(bundle).not.toContain('BmFont: texture count');
+    expect(bundle).not.toContain('glyph page index');
   });
 
   it('the debug bundle has no unresolved constants', () => {
