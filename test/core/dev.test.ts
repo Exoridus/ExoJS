@@ -20,6 +20,10 @@ describe('assert', () => {
   test('throws an Error instance', () => {
     expect(() => assert(false, 'err')).toThrow(Error);
   });
+
+  test('falls back to a default message when none is given', () => {
+    expect(() => assert(false)).toThrow('[ExoJS] assertion failed');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -45,6 +49,14 @@ describe('assertDefined', () => {
   test('throws an Error instance', () => {
     expect(() => assertDefined(null, 'err')).toThrow(Error);
   });
+
+  test('falls back to a default message when none is given', () => {
+    expect(() => assertDefined(null)).toThrow('[ExoJS] expected a defined value');
+  });
+
+  test('returns the value with no message argument', () => {
+    expect(assertDefined(42)).toBe(42);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -62,6 +74,10 @@ describe('invariant', () => {
 
   test('throws an Error instance', () => {
     expect(() => invariant(false, 'err')).toThrow(Error);
+  });
+
+  test('falls back to a default message when none is given', () => {
+    expect(() => invariant(false)).toThrow('[ExoJS] assertion failed');
   });
 });
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
+import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
 import type { RollupOptions } from 'rollup';
 import { string } from 'rollup-plugin-string';
@@ -29,6 +30,14 @@ const constantReplacementPlugin = replace({
   values: defines,
 });
 
+// In production, drop dev-only diagnostic calls (assert/assertDefined/invariant/
+// warnOnce) from the single-file bundles and minify them. `__DEV__` is already
+// replaced with `false` here, so the helper bodies are empty — `pure_funcs`
+// removes the now side-effect-free callsites (and their argument allocations)
+// outright. The modular `dist/esm` tree is intentionally left unminified so
+// consumers can tree-shake it themselves.
+const productionMinifyPlugins = buildMode === 'production' ? [terser({ compress: { pure_funcs: ['assert', 'assertDefined', 'invariant', 'warnOnce'] } })] : [];
+
 const bundled: RollupOptions = {
   input: 'src/index.ts',
   output: {
@@ -44,6 +53,7 @@ const bundled: RollupOptions = {
       compilerOptions: { incremental: false },
       outputToFilesystem: false,
     }),
+    ...productionMinifyPlugins,
   ],
 };
 
@@ -68,6 +78,7 @@ const debugBundled: RollupOptions = {
       compilerOptions: { incremental: false },
       outputToFilesystem: false,
     }),
+    ...productionMinifyPlugins,
   ],
 };
 

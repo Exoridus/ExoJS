@@ -980,6 +980,17 @@ export default defineConfig([
     },
   },
 
+  // Physics indexes flat vertex/normal buffers (`number[]`) at provably in-bounds
+  // positions; those reads use `arr[i]!` — the same convention core's hot math
+  // paths use. Allow the non-null assertion here (packages discourage it by
+  // default; the audio-fx override below does the same for its hot code).
+  {
+    files: ['packages/exojs-physics/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+
   // Tests (Jest)
   {
     files: ['test/**/*.ts'],

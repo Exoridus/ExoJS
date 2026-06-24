@@ -87,11 +87,11 @@ export class PolygonShape extends Shape {
     for (let i = 0; i < count; i++) {
       const j = (i + 1) % count;
       // Indices are provably in-bounds (0..count-1 over a length-2*count array);
-      // the `?? 0` fallbacks can never fire and keep the math byte-identical.
-      const ix = points[i * 2] ?? 0;
-      const iy = points[i * 2 + 1] ?? 0;
-      const jx = points[j * 2] ?? 0;
-      const jy = points[j * 2 + 1] ?? 0;
+      // the `!` is zero-cost; a violation would surface as NaN, not a silent 0.
+      const ix = points[i * 2]!;
+      const iy = points[i * 2 + 1]!;
+      const jx = points[j * 2]!;
+      const jy = points[j * 2 + 1]!;
       const cross = ix * jy - jx * iy;
 
       cx += (ix + jx) * cross;
@@ -141,10 +141,10 @@ const signedArea = (points: number[]): number => {
 
   for (let i = 0; i < count; i++) {
     const j = (i + 1) % count;
-    const ix = points[i * 2] ?? 0;
-    const iy = points[i * 2 + 1] ?? 0;
-    const jx = points[j * 2] ?? 0;
-    const jy = points[j * 2 + 1] ?? 0;
+    const ix = points[i * 2]!;
+    const iy = points[i * 2 + 1]!;
+    const jx = points[j * 2]!;
+    const jy = points[j * 2 + 1]!;
     sum += ix * jy - jx * iy;
   }
 
@@ -156,10 +156,10 @@ const reverseWinding = (points: number[]): void => {
 
   for (let i = 0; i < Math.floor(count / 2); i++) {
     const j = count - 1 - i;
-    const ix = points[i * 2] ?? 0;
-    const iy = points[i * 2 + 1] ?? 0;
-    const jx = points[j * 2] ?? 0;
-    const jy = points[j * 2 + 1] ?? 0;
+    const ix = points[i * 2]!;
+    const iy = points[i * 2 + 1]!;
+    const jx = points[j * 2]!;
+    const jy = points[j * 2 + 1]!;
 
     points[i * 2] = jx;
     points[i * 2 + 1] = jy;
@@ -175,10 +175,10 @@ const computeNormals = (points: number[]): number[] => {
 
   for (let i = 0; i < count; i++) {
     const j = (i + 1) % count;
-    const ix = points[i * 2] ?? 0;
-    const iy = points[i * 2 + 1] ?? 0;
-    const jx = points[j * 2] ?? 0;
-    const jy = points[j * 2 + 1] ?? 0;
+    const ix = points[i * 2]!;
+    const iy = points[i * 2 + 1]!;
+    const jx = points[j * 2]!;
+    const jy = points[j * 2 + 1]!;
     const ex = jx - ix;
     const ey = jy - iy;
     const length = Math.hypot(ex, ey);
@@ -197,12 +197,12 @@ const assertConvex = (points: number[]): void => {
     const a = i;
     const b = (i + 1) % count;
     const c = (i + 2) % count;
-    const ax = points[a * 2] ?? 0;
-    const ay = points[a * 2 + 1] ?? 0;
-    const bx = points[b * 2] ?? 0;
-    const by = points[b * 2 + 1] ?? 0;
-    const cx = points[c * 2] ?? 0;
-    const cy = points[c * 2 + 1] ?? 0;
+    const ax = points[a * 2]!;
+    const ay = points[a * 2 + 1]!;
+    const bx = points[b * 2]!;
+    const by = points[b * 2 + 1]!;
+    const cx = points[c * 2]!;
+    const cy = points[c * 2 + 1]!;
     const e1x = bx - ax;
     const e1y = by - ay;
     const e2x = cx - bx;
@@ -219,7 +219,7 @@ const boundingRadiusOf = (points: number[]): number => {
   let max = 0;
 
   for (let i = 0; i < points.length; i += 2) {
-    max = Math.max(max, Math.hypot(points[i] ?? 0, points[i + 1] ?? 0));
+    max = Math.max(max, Math.hypot(points[i]!, points[i + 1]!));
   }
 
   return max;

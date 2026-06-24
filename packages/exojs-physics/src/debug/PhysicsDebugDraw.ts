@@ -143,12 +143,12 @@ export class PhysicsDebugDraw extends DebugLayer {
     const verts = collider.worldVertices;
     const count = collider.shape.count;
 
-    gfx.moveTo(at(verts, 0), at(verts, 1));
+    gfx.moveTo(verts[0]!, verts[1]!);
 
     for (let i = 1; i <= count; i++) {
       const j = i % count;
 
-      gfx.lineTo(at(verts, j * 2), at(verts, j * 2 + 1));
+      gfx.lineTo(verts[j * 2]!, verts[j * 2 + 1]!);
     }
   }
 
@@ -234,6 +234,3 @@ const colorForType = (type: 'dynamic' | 'static' | 'kinematic'): Color => {
 
   return type === 'kinematic' ? colorKinematic : colorDynamic;
 };
-
-/** In-bounds read of a flat vertex buffer; the `0` fallback is unreachable. */
-const at = (arr: readonly number[], i: number): number => arr[i] ?? 0;
