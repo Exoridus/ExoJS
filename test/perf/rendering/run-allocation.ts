@@ -1,0 +1,87 @@
+/**
+ * Allocation bench launcher — runs the sampler across the sprite, nine-slice and
+ * repeating families and writes the numbers to `.workspace/output/render-perf/`.
+ *
+ *   node --import tsx/esm test/perf/rendering/run-allocation.ts
+ *   (or: pnpm perf:renderers:alloc)
+ *
+ * Scenes are built directly via the `fixtures` builders rather than through
+ * {@link buildScenarioCatalog}: the catalog pulls in the tilemap fixtures, whose
+ * `@codexo/*` package imports resolve to `src` (no built dist) and then hit raw
+ * `.frag` GLSL imports that node/tsx cannot load — only the vitest projects wire
+ * the GLSL handling. So the tilemap family is profiled by the allocation TEST
+ * (run under vitest), not here.
+ *
+ * Spec 04 "Harte Regel": no perf PR merges without a before/after number on the
+ * scenes it targets. STILL UNCOVERED here and needing dedicated fixtures before
+ * slices 2c/2e/2f can be judged: deep container nesting + effect/barrier nodes
+ * (→ 2c collectRenderGroups), mixed-zIndex/material optimizer load (→ 2b/2f), and
+ * mesh/graphics scenes (→ 2e). 2d (TransformBuffer hash) is CPU time, not
+ * allocation — it needs a wall-clock profile, not this sampler.
+ *
+ * @internal Test/perf-only.
+ */
+ 
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import type { FrameAllocation } from './allocation';
+import { measureFrameAllocation } from './allocation';
+import { buildNineSliceScene, buildRepeatingScene, buildSpriteScene, makeTextures } from './fixtures';
+import type { WebGl2Harness } from './harness';
+import { createWebGl2Harness } from './harness';
+
+const VIEW = { w: 1280, h: 720 };
+
+interface Sample {
+  readonly id: string;
+  build(harness: WebGl2Harness): { root: import('#rendering/RenderNode').RenderNode; beforeFrame?: () => void };
+}
+
+const movingSprites = (count: number) => (harness: WebGl2Harness): { root: import('#rendering/RenderNode').RenderNode; beforeFrame?: () => void } => {
+  const { root, sprites } = buildSpriteScene({ count, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h });
+  let frame = 0;
+  const beforeFrame = (): void => {
+    frame++;
+    const dx = frame % 2 === 0 ? 1 : -1;
+    for (const sprite of sprites) {
+      sprite.setPosition(sprite.position.x + dx, sprite.position.y);
+    }
+  };
+
+  return { root, beforeFrame };
+};
+
+const SAMPLES: readonly Sample[] = [
+  { id: 'sprite/1000/1tex/static', build: () => ({ root: buildSpriteScene({ count: 1000, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  { id: 'sprite/1000/1tex/moving', build: movingSprites(1000) },
+  { id: 'sprite/1000/8tex/static', build: () => ({ root: buildSpriteScene({ count: 1000, textures: makeTextures(8), assign: 'cycle', viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  { id: 'sprite/10000/1tex/static', build: () => ({ root: buildSpriteScene({ count: 10000, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  { id: 'sprite/10000/1tex/moving', build: movingSprites(10000) },
+  { id: 'nine-slice/100/1tex/stretch', build: () => ({ root: buildNineSliceScene({ count: 100, textures: makeTextures(1), slice: 16, width: 96, height: 96, fill: 'stretch', viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  { id: 'nine-slice/100/8tex/stretch', build: () => ({ root: buildNineSliceScene({ count: 100, textures: makeTextures(8), assign: 'cycle', slice: 16, width: 96, height: 96, fill: 'stretch', viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  { id: 'repeating/geometry/100/1tex', build: () => ({ root: buildRepeatingScene({ count: 100, textures: makeTextures(1), path: 'geometry', width: 128, height: 128, modeX: 'repeat', modeY: 'repeat', viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  { id: 'repeating/shader/100/1tex', build: () => ({ root: buildRepeatingScene({ count: 100, textures: makeTextures(1), path: 'shader', width: 128, height: 128, modeX: 'repeat', modeY: 'repeat', viewW: VIEW.w, viewH: VIEW.h }).root }) },
+];
+
+const results: Array<FrameAllocation & { id: string }> = [];
+
+for (const sample of SAMPLES) {
+  const harness = createWebGl2Harness();
+  const scene = sample.build(harness);
+  const alloc = await measureFrameAllocation(harness, scene.root, { beforeFrame: scene.beforeFrame });
+
+  results.push({ id: sample.id, ...alloc });
+  console.log(`${sample.id.padEnd(34)} ${(alloc.bytesPerFrame / 1024).toFixed(2).padStart(9)} KB/frame`);
+
+  scene.root.destroy();
+  harness.destroy();
+}
+
+const outDir = resolve(process.cwd(), '.workspace/output/render-perf');
+mkdirSync(outDir, { recursive: true });
+
+const outPath = resolve(outDir, 'allocation.json');
+writeFileSync(outPath, `${JSON.stringify({ results }, null, 2)}\n`);
+
+console.log(`\nWrote ${outPath}`);
