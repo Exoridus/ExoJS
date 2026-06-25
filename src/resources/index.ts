@@ -16,8 +16,6 @@ export type { IndexedDbKeyValueStoreOptions } from './IndexedDbKeyValueStore';
 export { IndexedDbKeyValueStore } from './IndexedDbKeyValueStore';
 export type { IndexedDbStoreOptions } from './IndexedDbStore';
 export { IndexedDbStore } from './IndexedDbStore';
-export type { JsonStoreOptions } from './JsonStore';
-export { JsonStore } from './JsonStore';
 export type { KeyValueStore } from './KeyValueStore';
 export type {
   AssetLoaderContext,

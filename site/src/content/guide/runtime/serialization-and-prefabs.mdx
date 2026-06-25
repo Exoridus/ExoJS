@@ -1,6 +1,6 @@
 ---
 title: 'Serialization & prefabs'
-description: 'Serialize scenes to JSON and back, capture reusable prefabs, persist save slots with SaveManager, and register serializers for your own node types.'
+description: 'Serialize scenes to JSON and back, capture reusable prefabs, persist save slots with a key-value store, and register serializers for your own node types.'
 ---
 
 # Serialization & prefabs
@@ -49,18 +49,22 @@ for (let i = 0; i < 10; i++) {
 
 ## Persisting saves
 
-[`SaveManager`](/ExoJS/en/api/save-manager/) is a thin helper over `JsonStore` that saves and restores a scene's structural state by named slot. Pair it with your own game-state persistence (score, inventory, quest flags) for a complete save system — the serializer owns the *world layout*, your code owns the *gameplay variables*.
+The engine ships the save **primitives**, not a save *system*: [`Scene.serialize()`](/ExoJS/en/api/scene/) captures a scene's structural state, and a `KeyValueStore` persists it under a slot key. Slot naming, profiles, autosave, and metadata are game-specific, so pair this with your own game-state persistence (score, inventory, quest flags) for a complete save system — the serializer owns the *world layout*, your code owns the *gameplay variables*.
 
 ```ts
-import { SaveManager, type Scene } from '@codexo/exojs';
+import { WebStorageStore, type Scene, type SerializedScene } from '@codexo/exojs';
 
 declare const scene: Scene;
 
-const saves = new SaveManager();
+const store = new WebStorageStore(localStorage, { prefix: 'mygame:' });
 
-void saves.save('slot-1', scene); // serialize + persist
-void saves.load('slot-1', scene); // fetch + deserialize (resolves false if empty)
+await store.set('slot-1', scene.serialize()); // serialize + persist
+
+const data = await store.get<SerializedScene>('slot-1'); // fetch
+if (data) scene.deserialize(data); // restore
 ```
+
+Choose the backend by capability: [`WebStorageStore`](/ExoJS/en/api/web-storage-store/) for small synchronous JSON saves, [`IndexedDbKeyValueStore`](/ExoJS/en/api/indexed-db-key-value-store/) for large or binary saves, [`MemoryStore`](/ExoJS/en/api/memory-store/) for tests. They share one `KeyValueStore` interface, so swapping is a one-line change.
 
 ## Custom node types
 
