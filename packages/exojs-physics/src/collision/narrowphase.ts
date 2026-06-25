@@ -404,7 +404,10 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   // Reference-face tangent (the side-plane direction).
   let tx = v2x - v1x;
   let ty = v2y - v1y;
-  const tl = Math.hypot(tx, ty);
+  // sqrt(x²+y²) over Math.hypot — avoids hypot's variadic/internal-allocation
+  // path on the narrow-phase hot path; the operands are bounded edge lengths,
+  // so the overflow protection hypot adds is not needed here.
+  const tl = Math.sqrt(tx * tx + ty * ty);
   tx /= tl;
   ty /= tl;
 

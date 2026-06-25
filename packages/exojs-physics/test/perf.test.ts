@@ -15,11 +15,11 @@ import { measureAllocationRate } from './allocationSampler';
  * regression guard is asserted. P-1 (allocation) is measured with V8's
  * allocation sampling profiler (see allocationSampler.ts — a heapUsed delta
  * cannot see the short-lived per-step garbage; it previously read ~0 and made
- * the engine look allocation-free when it was not). The narrow/broad-phase
- * scratch reuse roughly halves per-step allocation (~1560 → ~810 KB/step); the
- * remainder is dominated by the contact solver and ContactGraph and is tracked
- * as a follow-up (W4 spec backlog). The gate is a regression guard for the
- * reuse win, not a zero-allocation assertion.
+ * the engine look allocation-free when it was not). Scratch reuse (W4) plus the
+ * W7 allocation-free ContactGraph iterators and in-place sorts bring the steady-
+ * state rate ~1560 → ~810 → ~484 KB/step. The remainder is V8 double-boxing in
+ * the scalar float hot loops (solver block LCP, narrow-phase clip — both verified
+ * allocation-free), removable only by an invasive typed-array rewrite (post-1.0).
  */
 
 const FRAME = 1 / 60;
@@ -116,11 +116,17 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
 
     console.log(`[P-1] ${(bytesPerStep / 1024).toFixed(2)} KB/step allocation (sampling profiler)`);
 
-    // Regression guard for the scratch-reuse win: ~810 KB/step after reuse vs
-    // ~1560 KB/step before (narrow/broad-phase pooling roughly halves it). The
-    // remaining ~810 KB is dominated by the contact solver (_solveNormalBlock) +
-    // ContactGraph.update — outside this slice's scope (W4 spec backlog). The
-    // threshold sits between the two rates, so losing the reuse trips the gate.
-    expect(bytesPerStep).toBeLessThan(1_100 * 1024);
+    // Sharp gate (W7): the ContactGraph iterators + broad-phase/contact sorts are
+    // now allocation-free (forEach with a bound method instead of entry-tuple
+    // destructuring; an in-place heap sort instead of Array.prototype.sort's temp
+    // buffer), dropping the steady-state rate ~810 → ~484 KB/step. The remainder
+    // is not poolable garbage: it is V8 double-boxing + sampler misattribution in
+    // the scalar float hot loops (the solver block LCP and narrow-phase clip are
+    // verified allocation-free — see _solveNormalBlock/collide), removable only by
+    // an invasive typed-array solver rewrite (post-1.0 follow-up). Measured ~484
+    // KB/step (±1, very stable); the gate sits at 600 KB — tight enough that
+    // reverting the W7 reuse (≈810) trips it, with headroom for cross-machine V8
+    // boxing variance.
+    expect(bytesPerStep).toBeLessThan(600 * 1024);
   });
 });

@@ -3,6 +3,7 @@ import type { Collider } from './Collider';
 import { Manifold } from './collision/Manifold';
 import { collide, testOverlap } from './collision/narrowphase';
 import type { CollisionEvent, ContactPoint, SensorEvent } from './events';
+import { sortInPlace } from './sort';
 import { shouldCollide } from './types';
 
 /**
@@ -66,9 +67,8 @@ export class ContactGraph {
     this.sensorExit.length = 0;
     this.solidContacts.length = 0;
 
-    for (const record of this._records.values()) {
-      record.seen = false;
-    }
+    // eslint-disable-next-line unicorn/no-array-for-each -- forEach is the allocation-free path; for…of over a Map allocates an iterator every step (W7 10a).
+    this._records.forEach(resetSeen);
 
     for (const pair of pairs) {
       const a = pair.a;
@@ -109,22 +109,18 @@ export class ContactGraph {
       }
     }
 
-    // Pairs that left the broad phase entirely while touching → fire end.
-    for (const [key, record] of this._records) {
-      if (!record.seen) {
-        if (record.touching) {
-          this._emitEnd(record);
-        }
+    // Pairs that left the broad phase entirely while touching → fire end. forEach
+    // + thisArg is the allocation-free iteration (for…of allocates an entry tuple
+    // per record each step); the thisArg binds `this`, so unbound-method is a
+    // false positive here (W7 10a).
+    // eslint-disable-next-line unicorn/no-array-for-each, @typescript-eslint/unbound-method
+    this._records.forEach(this._removeIfUnseen, this);
 
-        this._records.delete(key);
-      }
-    }
-
-    this.collisionStart.sort(byColliderPair);
-    this.collisionEnd.sort(byColliderPair);
-    this.sensorEnter.sort(bySensorPair);
-    this.sensorExit.sort(bySensorPair);
-    this.solidContacts.sort(byRecordPair);
+    sortInPlace(this.collisionStart, byColliderPair);
+    sortInPlace(this.collisionEnd, byColliderPair);
+    sortInPlace(this.sensorEnter, bySensorPair);
+    sortInPlace(this.sensorExit, bySensorPair);
+    sortInPlace(this.solidContacts, byRecordPair);
   }
 
   /** Remove every record referencing `collider` (called when a collider is destroyed). */
@@ -156,7 +152,29 @@ export class ContactGraph {
       this.collisionEnd.push(makeEndEvent(record.a, record.b));
     }
   }
+
+  /**
+   * `Map.forEach` callback (its `this` bound via the forEach thisArg) — drops a
+   * record the latest pass did not see, firing an end event if it was touching.
+   * A method reference + thisArg keeps the per-step iteration allocation-free,
+   * unlike `for (const [key, record] of map)` which allocates an entry tuple per
+   * record (~1000/step). Deleting the current entry during forEach is safe.
+   */
+  private _removeIfUnseen(record: ContactRecord, key: number): void {
+    if (!record.seen) {
+      if (record.touching) {
+        this._emitEnd(record);
+      }
+
+      this._records.delete(key);
+    }
+  }
 }
+
+/** `Map.forEach` callback — clears the per-pass `seen` flag (no iterator allocation). */
+const resetSeen = (record: ContactRecord): void => {
+  record.seen = false;
+};
 
 /**
  * Stride for packing two collider ids into one pair key. Multiplying by this
