@@ -127,8 +127,7 @@ The fix: start audio in response to a click, tap, or keypress:
 
 ```js no-check
 button.addEventListener('click', () => {
-    app.audio.resume(); // or play your first sound here
-    mySound.play();
+    mySound.play(); // the engine resumes the AudioContext on the first user gesture
 });
 ```
 

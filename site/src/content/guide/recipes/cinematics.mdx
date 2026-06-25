@@ -54,7 +54,7 @@ class CinematicScene extends Scene {
 
         // Title reveal — 1 second, starts after 1.6s delay
         this.titleState = { count: 0 };
-        this.titleText = new Text('', { fill: 'white', fontSize: 56 });
+        this.titleText = new Text('', { fillColor: Color.white, fontSize: 56 });
         this.titleText.setPosition(150, 120);
 
         this.app.tweens.create(this.titleState)
