@@ -506,6 +506,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     // Shader-path VAO (uses float4 uvParams, not packed unorm16)
     this._shaderBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._shaderData, BufferUsage.DynamicDraw).connect(
       this._createBufRuntime(conn, 'shader'),
+      backend.accountant,
     );
 
     this._shaderVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
@@ -516,7 +517,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       .connect(this._createVaoRuntime(conn, 'shader'));
 
     // Geometry-path VAO (packed unorm16 UVs, same layout as NineSlice)
-    this._geoBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._geoData, BufferUsage.DynamicDraw).connect(this._createBufRuntime(conn, 'geo'));
+    this._geoBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._geoData, BufferUsage.DynamicDraw).connect(this._createBufRuntime(conn, 'geo'), backend.accountant);
 
     this._geoVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, geoStrideBytes, 0, false, 1)

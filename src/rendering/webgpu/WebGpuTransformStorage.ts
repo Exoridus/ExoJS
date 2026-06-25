@@ -1,6 +1,7 @@
 import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
+import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 
@@ -13,6 +14,9 @@ export class WebGpuTransformStorage {
   private _storageCapacity = 0;
   private _storageHash = 0;
   private _storageCount = -1;
+  private _accountant: GpuResourceAccountant | null = null;
+  /** GPU bytes currently booked for the storage buffer with the resource accountant. */
+  private _accountedBytes = 0;
 
   /**
    * Underlying shared transform buffer. Exposed for internal stats / tests
@@ -70,7 +74,9 @@ export class WebGpuTransformStorage {
    * objects are destroyed or re-created. Capacity only grows, never shrinks.
    * @internal
    */
-  public reserve(device: GPUDevice, recordCount: number): void {
+  public reserve(device: GPUDevice, recordCount: number, accountant?: GpuResourceAccountant): void {
+    this._accountant = accountant ?? this._accountant;
+
     const minCount = Math.max(1, recordCount);
     const requiredBytes = minCount * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
 
@@ -81,7 +87,9 @@ export class WebGpuTransformStorage {
     this._growBuffer(device, requiredBytes);
   }
 
-  public getBuffer(device: GPUDevice, minCount: number): { readonly buffer: GPUBuffer; readonly count: number } {
+  public getBuffer(device: GPUDevice, minCount: number, accountant?: GpuResourceAccountant): { readonly buffer: GPUBuffer; readonly count: number } {
+    this._accountant = accountant ?? this._accountant;
+
     const requiredCount = Math.max(1, minCount);
     const requiredBytes = requiredCount * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
     const snapshot = this._buffer.commitSnapshot(requiredCount);
@@ -95,6 +103,7 @@ export class WebGpuTransformStorage {
 
       device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, bytes);
       this._buffer.recordUpload(snapshot.count);
+      this._accountant?.recordBufferUpload(bytes);
       this._storageHash = snapshot.hash;
       this._storageCount = snapshot.count;
     }
@@ -111,6 +120,11 @@ export class WebGpuTransformStorage {
     this._storageCapacity = 0;
     this._storageHash = 0;
     this._storageCount = -1;
+
+    if (this._accountedBytes > 0) {
+      this._accountant?.free(this._accountedBytes);
+      this._accountedBytes = 0;
+    }
   }
 
   private _growBuffer(device: GPUDevice, requiredBytes: number): void {
@@ -128,5 +142,7 @@ export class WebGpuTransformStorage {
     this._storageCapacity = nextCapacity;
     this._storageHash = 0;
     this._storageCount = -1;
+    // Re-book the storage footprint (free the prior buffer's bytes, allocate the new).
+    this._accountedBytes = this._accountant?.reallocate(this._accountedBytes, nextCapacity) ?? this._accountedBytes;
   }
 }

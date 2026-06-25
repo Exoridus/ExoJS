@@ -111,9 +111,11 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
     this.connection = this.createConnection(gl);
     this.indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this.indexData, BufferUsage.StaticDraw).connect(
       this.createBufferRuntime(this.connection),
+      backend.accountant,
     );
     this.vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this.vertexData, BufferUsage.DynamicDraw).connect(
       this.createBufferRuntime(this.connection),
+      backend.accountant,
     );
     this.shader.sync();
     this.vao = this.createVao(gl, this.indexBuffer, this.vertexBuffer).connect(this.createVaoRuntime(this.connection));

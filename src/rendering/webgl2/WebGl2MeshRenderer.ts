@@ -251,12 +251,15 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     const buffers = new Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number }>();
     const dynamicIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
     const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
     const dynamicNodeIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._nodeIndexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
 
     const dynamicVaoHandle = gl.createVertexArray();
@@ -550,11 +553,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     this._packIndices(mesh, 0, indexData);
 
+    const accountant = this.getBackend().accountant;
     const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, floatView, BufferUsage.StaticDraw).connect(
       this._createBufferRuntime(connection.gl, connection.buffers),
+      accountant,
     );
     const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indexData, BufferUsage.StaticDraw).connect(
       this._createBufferRuntime(connection.gl, connection.buffers),
+      accountant,
     );
 
     vertexBuffer.upload(floatView);

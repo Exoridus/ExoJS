@@ -34,6 +34,14 @@ export class WebGpuStorageBuffer {
   }
 
   /**
+   * Optional sink invoked after each {@link read} with the number of bytes read
+   * back GPU → CPU. Lets a consumer route readback traffic into a backend's
+   * resource accountant (`RenderStats.downloadBytes` / `downloadCount`) without
+   * coupling this primitive to the backend. Defaults to a no-op.
+   */
+  public onReadback: ((bytes: number) => void) | null = null;
+
+  /**
    * Copy this buffer's contents into a CPU-mappable readback buffer and
    * await the result. Allocates the readback buffer lazily on first call;
    * subsequent calls re-use it.
@@ -66,6 +74,8 @@ export class WebGpuStorageBuffer {
     bytes.set(mapped.subarray(0, target.byteLength));
 
     this._readbackBuffer.unmap();
+
+    this.onReadback?.(target.byteLength);
   }
 
   public destroy(): void {

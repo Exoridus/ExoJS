@@ -231,6 +231,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     this._connection = this._createConnection(gl);
     this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(this._connection),
+      backend.accountant,
     );
     this._shader.sync();
 
