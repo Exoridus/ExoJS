@@ -451,6 +451,34 @@ describe('SG-MR — mass ratios', () => {
     expect(floorPenetration).toBeLessThanOrEqual(1);
     expect(light.y).toBeLessThan(floorTop); // light box centre still above the floor surface
   });
+
+  it('SG-MR3: characterises the ~100:1 envelope edge — a crushed light box stays shallowly bounded above the floor (no tunnelling)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const size = 32;
+    const floorTop = 300;
+
+    addFloor(world, floorTop);
+
+    const light = addBox(world, 0, floorTop - size / 2 - 1, size, size, { density: 1 });
+    addBox(world, 0, floorTop - size - size / 2 - 2, size, size, { density: 100 });
+
+    advance(world, 5);
+
+    expectAllFinite(world);
+
+    // ~100:1 is the top of the supported resting envelope: the squeezed light box
+    // settles a small, bounded distance into the floor (~1.4px here — a few times
+    // the 0.25px slop, but far less than its 16px half-extent) and its centre
+    // never sinks below the surface. Past this ratio the velocity-capped soft
+    // push-out (`maxBiasVelocity`, ContactSolver.ts) lets penetration grow
+    // sharply (≈6px at 500:1, fully through by ~5000:1) — a documented
+    // soft-constraint tradeoff, not a defect (see the operating-envelope note on
+    // PhysicsWorld). This gate pins the edge so a regression into deep
+    // penetration at 100:1 is caught.
+    const floorPenetration = light.y + size / 2 - floorTop;
+    expect(floorPenetration).toBeLessThanOrEqual(2);
+    expect(light.y).toBeLessThan(floorTop);
+  });
 });
 
 // ── SG-K: kinematic interaction ───────────────────────────────────────────
@@ -573,6 +601,26 @@ describe('SG-X — failure safety', () => {
 
     expect(starts).toBe(1);
     expect(ends).toBe(0);
+  });
+
+  it('SG-X5: a body faster than the floor thickness per frame tunnels but stays finite (no CCD)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const floorTop = 300;
+
+    addFloor(world, floorTop); // 40px thick
+
+    const bullet = addBox(world, 0, floorTop - 100, 16);
+    bullet.linearVelocityY = 1e6; // » floor thickness per frame at 1/60 s
+
+    advance(world, 1);
+
+    // Detection runs once per frame with no swept/continuous test (no CCD), so a
+    // body that moves farther than the floor thickness in a single frame passes
+    // straight through. The only contract under such speeds is finiteness — no
+    // NaN/Inf blow-up — which this gate pins. Reliably stopping fast projectiles
+    // is a v0.16 CCD / bullet-mode item (see the operating-envelope note).
+    expectAllFinite(world);
+    expect(bullet.y).toBeGreaterThan(floorTop); // tunnelled through (documented limitation)
   });
 });
 

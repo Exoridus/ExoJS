@@ -24,7 +24,12 @@ export interface PhysicsWorldOptions {
   fixedDelta?: number;
   /** Maximum fixed steps per `step` call (spiral-of-death guard). Default `8`. */
   maxSubSteps?: number;
-  /** TGS-Soft sub-steps per fixed step (the solver's stiffness scales with this, not iteration count). Default `4`. Must be ≥ 1. */
+  /**
+   * TGS-Soft sub-steps per fixed step (the solver's stiffness scales with this,
+   * not iteration count). Default `4`. Must be ≥ 1. Values below `2` visibly
+   * degrade tall-stack stability (a 10-box tower jitters at `1`), so the default
+   * is load-bearing — do not lower it for performance.
+   */
   subStepCount?: number;
   /** Soft-contact stiffness in Hz (the contact behaves as a damped spring at this frequency). Default `30`. */
   contactHertz?: number;
@@ -86,6 +91,21 @@ export interface AttachOptions {
  * stiffness from the iteration count keeps tall towers stable. The detection
  * backend sits behind an internal seam, so the solver is swappable without
  * touching this public surface.
+ *
+ * **Operating envelope.** The soft solver trades a little accuracy for
+ * robustness, so it has a few documented limits — each stays finite/stable and
+ * each is pinned by a gate in `dynamics.test.ts`:
+ * - **Mass ratio** — resting stacks are slop-accurate up to ~100:1. Beyond that
+ *   the velocity-capped soft push-out (`maxBiasVelocity`) lets the lighter body
+ *   settle progressively deeper (≈6px at 500:1, fully through a thin floor by
+ *   ~5000:1) — always finite, never exploding (SG-MR3).
+ * - **No CCD** — detection runs once per fixed step with no swept test, so a
+ *   body that travels farther than an obstacle's thickness in one step tunnels
+ *   straight through it (it stays finite). Reliably stopping fast projectiles is
+ *   a future bullet-mode feature (SG-X5).
+ * - **{@link PhysicsWorldOptions.subStepCount}** — the default `4` is
+ *   load-bearing for tall-stack stability; lowering it below `2` visibly
+ *   degrades stacking, so do not reduce it for performance.
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */
