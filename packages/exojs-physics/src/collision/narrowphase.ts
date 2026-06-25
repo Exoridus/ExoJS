@@ -203,8 +203,28 @@ const newClipPair = (): [ClipVertex, ClipVertex] => [
   { x: 0, y: 0, id: 0 },
 ];
 
-/** Max separation of `b` from any face of `a`, with the supporting face index. */
-const findMaxSeparation = (a: CollisionProxy, b: CollisionProxy): { separation: number; edge: number } => {
+// Module-local clip scratch reused across collidePolygons calls instead of
+// allocating a fresh pair per contact. The narrow phase is single-threaded and
+// non-reentrant — a world step calls `collide` strictly sequentially per pair,
+// with no nested self-call or async — so module-global scratch is safe and may
+// be shared across worlds (world-isolation.test.ts guards the multi-world
+// invariant). The three pairs MUST stay separate: incident → clipped1 →
+// clipped2 are simultaneously live (each clip reads the previous clip's output).
+const _incidentScratch = newClipPair();
+const _clipped1Scratch = newClipPair();
+const _clipped2Scratch = newClipPair();
+
+interface Separation {
+  separation: number;
+  edge: number;
+}
+
+// Two separate scratches: collidePolygons holds sepA and sepB at the same time.
+const _sepA: Separation = { separation: 0, edge: 0 };
+const _sepB: Separation = { separation: 0, edge: 0 };
+
+/** Max separation of `b` from any face of `a`, with the supporting face index. Writes into and returns `out` (allocation-free). */
+const findMaxSeparation = (a: CollisionProxy, b: CollisionProxy, out: Separation): Separation => {
   const av = a.worldVertices;
   const an = a.worldNormals;
   const ac = countOf(a);
@@ -246,7 +266,10 @@ const findMaxSeparation = (a: CollisionProxy, b: CollisionProxy): { separation: 
     }
   }
 
-  return { separation: best, edge: bestEdge };
+  out.separation = best;
+  out.edge = bestEdge;
+
+  return out;
 };
 
 /** Incident face of `inc` = the face most anti-parallel to the reference normal. */
@@ -332,13 +355,13 @@ const encodeId = (flip: boolean, refEdge: number, incidentId: number): number =>
 
 /** Convex polygon vs convex polygon: SAT reference face + Sutherland-Hodgman clip. */
 const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
-  const sepA = findMaxSeparation(a, b);
+  const sepA = findMaxSeparation(a, b, _sepA);
 
   if (sepA.separation >= 0) {
     return false;
   }
 
-  const sepB = findMaxSeparation(b, a);
+  const sepB = findMaxSeparation(b, a, _sepB);
 
   if (sepB.separation >= 0) {
     return false;
@@ -375,7 +398,7 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   const refNx = rn[refEdge * 2]!;
   const refNy = rn[refEdge * 2 + 1]!;
 
-  const incident = newClipPair();
+  const incident = _incidentScratch;
   findIncidentFace(refNx, refNy, inc, incident);
 
   // Reference-face tangent (the side-plane direction).
@@ -388,13 +411,13 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   const negSide = -(tx * v1x + ty * v1y);
   const posSide = tx * v2x + ty * v2y;
 
-  const clipped1 = newClipPair();
+  const clipped1 = _clipped1Scratch;
 
   if (clipSegment(-tx, -ty, negSide, incident, clipped1, encodeId(flip, refEdge, 0xffe)) < 2) {
     return false;
   }
 
-  const clipped2 = newClipPair();
+  const clipped2 = _clipped2Scratch;
 
   if (clipSegment(tx, ty, posSide, clipped1, clipped2, encodeId(flip, refEdge, 0xfff)) < 2) {
     return false;
@@ -454,7 +477,7 @@ export const testOverlap = (a: CollisionProxy, b: CollisionProxy): boolean => {
     return circlePolygonOverlap(b, a);
   }
 
-  return findMaxSeparation(a, b).separation < 0 && findMaxSeparation(b, a).separation < 0;
+  return findMaxSeparation(a, b, _sepA).separation < 0 && findMaxSeparation(b, a, _sepB).separation < 0;
 };
 
 const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): boolean => {

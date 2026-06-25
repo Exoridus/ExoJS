@@ -56,6 +56,10 @@ export class Collider {
   private readonly _worldTransform: Transform = createTransform();
   private readonly _aabb: Aabb = createAabb();
   private readonly _worldCenter: Mutable2D = { x: 0, y: 0 };
+  // Reused per-vertex scratch for synchronize()'s polygon transform loop so a
+  // collider sync allocates nothing. Instance-private: never held across the
+  // call, never aliased between colliders.
+  private readonly _syncScratch: Mutable2D = { x: 0, y: 0 };
   private readonly _worldVertices: number[];
   private readonly _worldNormals: number[];
 
@@ -165,7 +169,7 @@ export class Collider {
     const polygon = this.shape;
     const local = polygon.vertices;
     const normals = polygon.normals;
-    const out: Mutable2D = { x: 0, y: 0 };
+    const out = this._syncScratch;
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
