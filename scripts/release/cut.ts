@@ -84,8 +84,9 @@ function runCapture(cmd: string): string {
 // ── Pre-flight checks ──────────────────────────────────────────────────────
 
 function assertCleanTree(): void {
-  const dirty = runCapture('git diff-index --quiet HEAD -- ; echo $?');
-  if (dirty !== '0') {
+  try {
+    execSync('git diff-index --quiet HEAD --', { stdio: 'pipe', cwd: repoRoot });
+  } catch {
     die('Working tree is dirty. Commit or stash changes before cutting a release.');
   }
 }
