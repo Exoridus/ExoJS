@@ -154,6 +154,20 @@ export class RenderPlanOptimizer {
       return;
     }
 
+    // O(1) position lookup. Each `entries.indexOf(entry, segStart)` below was an
+    // O(n) scan; with many same-z draws (e.g. cycled textures over a flat list)
+    // that made this method O(n^2). A scope's entries are distinct objects, so a
+    // single Map over `entries[segStart..segEnd)` yields the same first-match
+    // index `indexOf` returned — and the only reorder this method performs is the
+    // last thing it does before `break`, so no lookup ever runs against stale
+    // positions (the map stays valid for the whole scan).
+    const positionIndex = new Map<ScopeEntry, number>();
+
+    for (let i = segStart; i < segEnd; i++) {
+      // In-bounds: i in [segStart, segEnd).
+      positionIndex.set(entries[i]!, i);
+    }
+
     for (const group of keyGroups.values()) {
       if (group.length <= 1) {
         continue;
@@ -162,9 +176,10 @@ export class RenderPlanOptimizer {
       const positions: number[] = [];
 
       for (const g of group) {
-        const pos = entries.indexOf(g.entry, segStart);
+        const pos = positionIndex.get(g.entry);
 
-        if (pos >= segStart && pos < segEnd) {
+        // The map holds only entries in [segStart, segEnd); a hit is in range.
+        if (pos !== undefined) {
           positions.push(pos);
         }
       }
