@@ -3,6 +3,7 @@ import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { type BmFont } from '#rendering/text/BmFont';
 
 import { Asset, AssetImpl } from './Asset';
+import { parseContainer } from './AssetContainer';
 import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
@@ -232,6 +233,8 @@ interface HandlerEntry {
   load: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>;
   /** Optional discriminator for in-flight identity keying; overrides source-only default. */
   getIdentityKey?: (config: unknown) => string;
+  /** Optional byte-source constructor used by container loading (bypasses fetch). */
+  createFromBytes?: (bytes: ArrayBuffer, options?: unknown) => Promise<unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -594,6 +597,46 @@ export class Loader {
     if (failures.length > 0) {
       throw new BundleLoadError(name, failures);
     }
+  }
+
+  /**
+   * Load every asset packed into a binary container (`.exoa`) in a **single
+   * request**. Unlike {@link loadBundle} (one fetch per entry), a container is
+   * one file with an embedded index: its bytes are fetched once (and cached
+   * cross-session like any asset), then each slice is unpacked through its
+   * type's handler and stored under the entry's alias — retrievable with
+   * {@link get} exactly as if it had been loaded individually.
+   *
+   * Each entry's asset type must support byte-source construction
+   * ({@link AssetHandler.createFromBytes}); the factory-backed core types
+   * (textures, audio, JSON, text, binary, …) do. Throws on a malformed
+   * container, an unknown type, or a type that cannot be built from bytes.
+   *
+   * @param url Path to the container file, resolved against the loader base path.
+   */
+  public async loadContainer(url: string): Promise<void> {
+    const buffer = await this._contextFetch<ArrayBuffer>(url, '__ctx_binary', response => response.arrayBuffer());
+    const { entries, dataStart } = parseContainer(buffer);
+
+    // Resolve every type up front so an unknown type fails before any asset is stored.
+    const resolved = entries.map(entry => {
+      const type = this._assetTypeMap.get(entry.type);
+
+      if (!type) {
+        throw new Error(`Container "${url}" references unknown asset type "${entry.type}".`);
+      }
+
+      return { entry, type };
+    });
+
+    await Promise.all(
+      resolved.map(({ entry, type }) => {
+        const start = dataStart + entry.offset;
+        const slice = buffer.slice(start, start + entry.length);
+
+        return this._injectSource(type, entry.alias, slice, entry.options);
+      }),
+    );
   }
 
   /**
@@ -1186,10 +1229,12 @@ export class Loader {
     };
 
     const boundIdentityKey = handler.getIdentityKey?.bind(handler);
+    const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
 
     this._handlerFunctions.set(keys.type, {
       load: (config, ctx) => handler.load(toRequest(config), ctx),
       ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
+      ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
     });
 
     for (const name of resolvedNames) {
@@ -1544,6 +1589,27 @@ export class Loader {
       { storageName, key: source, url, requestOptions: this._fetchOptions, factory, options: undefined },
       this._stores,
     ) as Promise<T>;
+  }
+
+  /**
+   * Construct an asset from in-memory `bytes` (no fetch) and store it under
+   * `alias`. Uses the type's {@link AssetHandler.createFromBytes} when present,
+   * otherwise a `register()`-style factory; throws if neither can build from
+   * bytes. The backing path for {@link loadContainer}.
+   */
+  private async _injectSource(type: AssetConstructor, alias: string, bytes: ArrayBuffer, options?: unknown): Promise<void> {
+    const handlerEntry = this._handlerFunctions.get(type);
+    let resource: unknown;
+
+    if (handlerEntry?.createFromBytes) {
+      resource = await handlerEntry.createFromBytes(bytes, options);
+    } else if (this._registry.has(type)) {
+      resource = await this._registry.resolve(type).create(bytes, options);
+    } else {
+      throw new Error(`Asset type "${type.name}" cannot be built from container bytes (no createFromBytes handler).`);
+    }
+
+    this._storeResource(type, alias, resource);
   }
 
   private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {

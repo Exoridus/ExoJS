@@ -48,6 +48,19 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
    */
   getIdentityKey?(request: AssetLoadRequest<Options>): string;
   load(request: AssetLoadRequest<Options>, context: AssetLoaderContext): Promise<Result>;
+  /**
+   * Optionally produce the asset directly from in-memory bytes, bypassing the
+   * network and cache. This is what lets the type be packed into an asset
+   * container ({@link Loader.loadContainer} — one fetch yields N assets): the
+   * loader hands the handler the asset's slice instead of a URL.
+   *
+   * Implement it when the asset can be built from its raw bytes alone (the
+   * factory-backed core handlers do). Omit it when loading needs a URL fetch,
+   * sub-asset resolution, or anything bytes alone cannot supply — such types
+   * cannot be embedded in a container and raise a clear error if attempted.
+   * @advanced
+   */
+  createFromBytes?(bytes: ArrayBuffer, options?: Options): Promise<Result>;
   destroy?(): void;
 }
 

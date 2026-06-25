@@ -37,6 +37,9 @@ function binaryFactoryHandler<T>(
         const raw = await context.fetchArrayBuffer(source);
         return factory.create(raw, options);
       },
+      createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
+        return factory.create(bytes, options);
+      },
       destroy() {
         factory.destroy();
       },
@@ -52,6 +55,9 @@ function textFactoryHandler<T>(makeFactory: () => { create(raw: string, options?
       async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<T> {
         const raw = await context.fetchText(source);
         return factory.create(raw, options);
+      },
+      createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
+        return factory.create(new TextDecoder().decode(bytes), options);
       },
       destroy() {
         factory.destroy();
@@ -116,11 +122,17 @@ const jsonBinding = binding(Json as unknown as AssetConstructor, { typeNames: ['
   async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<unknown> {
     return context.fetchJson(source);
   },
+  createFromBytes(bytes: ArrayBuffer): Promise<unknown> {
+    return Promise.resolve(JSON.parse(new TextDecoder().decode(bytes)));
+  },
 }));
 
 const textBinding = binding(TextAsset as unknown as AssetConstructor, { typeNames: ['text'] }, () => ({
   async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<string> {
     return context.fetchText(source);
+  },
+  createFromBytes(bytes: ArrayBuffer): Promise<string> {
+    return Promise.resolve(new TextDecoder().decode(bytes));
   },
 }));
 
