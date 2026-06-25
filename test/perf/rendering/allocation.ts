@@ -15,10 +15,11 @@
  * young generation does not help; the concurrent collector still runs.
  *
  * Instead this uses V8's **allocation sampling profiler** via `node:inspector`
- * (`HeapProfiler.startSampling`), which records at allocation time and therefore
- * counts dead-on-arrival objects too. It is statistical (one sample per
- * `samplingInterval` bytes) but accurate over a window of many frames, and needs
- * no `--expose-gc`.
+ * (`HeapProfiler.startSampling` *with* the `includeObjectsCollectedBy*GC` flags —
+ * without them it reports only objects still live at stop and misses the dead-on-
+ * arrival plan garbage entirely, a ~500× undercount). It records at allocation
+ * time, is statistical (one sample per `samplingInterval` bytes) but accurate over
+ * a window of many frames, and needs no `--expose-gc`.
  *
  * @internal Test/perf-only.
  */
@@ -33,7 +34,12 @@ export interface FrameAllocationOptions {
   readonly frames?: number;
   /** Warm-up frames before sampling, so one-time cache/buffer/pool growth is excluded (default 30). */
   readonly warmup?: number;
-  /** Sampling interval in bytes (default 64 — one sample per ~64 B allocated). */
+  /**
+   * Sampling interval in bytes (default 512). Finer (smaller) intervals count
+   * small allocations more precisely but bloat the inspector profile — at 64 a
+   * multi-MB/frame scene over 200 frames overflows V8's 512 MB string cap on the
+   * profile transfer. 512 stays accurate over the window while keeping it small.
+   */
   readonly samplingInterval?: number;
   /** Per-frame mutation (move sprites, pan camera) — runs inside the sampled loop. */
   readonly beforeFrame?: () => void;
@@ -70,7 +76,7 @@ const sumSelfSize = (node: import('node:inspector').HeapProfiler.SamplingHeapPro
 export const measureFrameAllocation = async (harness: WebGl2Harness, root: RenderNode, options: FrameAllocationOptions = {}): Promise<FrameAllocation> => {
   const frames = options.frames ?? 200;
   const warmup = options.warmup ?? 30;
-  const samplingInterval = options.samplingInterval ?? 64;
+  const samplingInterval = options.samplingInterval ?? 512;
   const { beforeFrame } = options;
 
   // Warm-up: let caches/buffers/pools reach steady size so their one-time growth
@@ -95,7 +101,16 @@ export const measureFrameAllocation = async (harness: WebGl2Harness, root: Rende
     });
 
   await post('HeapProfiler.enable');
-  await post('HeapProfiler.startSampling', { samplingInterval });
+  // CRITICAL: without these two flags the sampling profiler reports only objects
+  // still LIVE at stopSampling — it discards everything the GC reclaimed during
+  // the window, i.e. exactly the immediately-dead plan garbage we want to count.
+  // (Measured: omitting them undercounts a known 1000-object/frame allocation by
+  // ~500×.) Requires Node ≥ 20; older runtimes ignore the extra keys.
+  await post('HeapProfiler.startSampling', {
+    samplingInterval,
+    includeObjectsCollectedByMajorGC: true,
+    includeObjectsCollectedByMinorGC: true,
+  });
 
   for (let i = 0; i < frames; i++) {
     renderOnce(harness, root, beforeFrame);
