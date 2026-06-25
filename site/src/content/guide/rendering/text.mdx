@@ -21,14 +21,13 @@ const label = new Text('Hello', {
 });
 ```
 
-The second argument is a `TextStyleOptions` object — all properties are optional, all have defaults. The `TextStyle` is stored as `text.style`. Assign a new style to rebuild the mesh; mutating style fields alone does not rebuild:
+The second argument is a `TextOptions` object — a flat merge of [`TextStyleOptions`](/ExoJS/en/api/text-style/) (visual appearance) and `LayoutOptions` (flow and overflow). All properties are optional and have defaults. The live `TextStyle` is stored as `text.style`; mutating its fields is cheap and is applied automatically before the next render pass — no manual rebuild call is needed:
 
 ```js
-import { Color, TextStyle } from '@codexo/exojs';
+import { Color } from '@codexo/exojs';
 
-label.style.fontSize = 32;
-label.style.fillColor = Color.tomato;
-label.style = label.style; // apply style changes and rebuild
+label.style.fontSize = 32;            // rebuilds the glyph mesh on the next draw
+label.style.fillColor = Color.tomato; // updates only the mesh tint — no atlas work
 ```
 
 ## Font loading
@@ -46,7 +45,7 @@ init(loader) {
     this.title = new Text('Custom Font', {
         fontFamily: 'MyFont',
         fontSize: 48,
-        fill: 'white',
+        fillColor: Color.white,
     });
 }
 ```
@@ -55,51 +54,67 @@ The `FontFace` asset is registered with the document's `document.fonts` set. Onc
 
 ## Style properties
 
-`TextStyle` exposes these configurable properties:
+The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style/). All properties are optional:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `fontFamily` | `string` | `'Arial'` | CSS font family name |
-| `fontSize` | `number` | `20` | Font size in pixels |
-| `fontWeight` | `string` | `'bold'` | CSS font weight |
+| `fontWeight` | `FontWeight` | `'normal'` | CSS font weight (`'normal'`, `'bold'`, or `'100'`–`'900'`) |
 | `fontStyle` | `'normal' \| 'italic'` | `'normal'` | Font style |
-| `fill` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Stored style property (not currently applied by the renderer) |
-| `fillColor` | `Color` | `Color.white` | Tint used when building the text mesh |
-| `stroke` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Stored style property (not currently applied by the renderer) |
-| `strokeThickness` | `number` | `1` | Stored style property (not currently applied by the renderer) |
-| `align` | `'left' \| 'center' \| 'right'` | `'left'` | Text alignment |
-| `lineHeight` | `number` | `1.2` | Multiplier on `fontSize` for vertical spacing |
-| `wordWrap` | `boolean` | `false` | Style flag (currently not applied by the layout engine) |
-| `wordWrapWidth` | `number` | `100` | Style width hint (currently not applied by the layout engine) |
-| `baseline` | `CanvasTextBaseline` | `'alphabetic'` | Stored style property (not currently applied by the renderer) |
-| `lineJoin` | `CanvasLineJoin` | `'miter'` | Stored style property (not currently applied by the renderer) |
-| `miterLimit` | `number` | `10` | Stored style property (not currently applied by the renderer) |
-| `padding` | `number` | `0` | Stored style property (not currently applied by the renderer) |
+| `fontSize` | `number` | `20` | Font size in pixels |
+| `fillColor` | `Color` | `Color.white` | Glyph fill colour |
+| `outlineColor` | `Color` | `Color.black` | SDF outline colour |
+| `outlineWidth` | `number` | `0` | Outline width in SDF units (`0`–`0.5`); `0` disables the outline |
+| `align` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment |
+| `lineHeight` | `number` | `1.2` | Line-height multiplier on `fontSize` |
+| `leading` | `number` | `0` | Extra pixel gap between lines |
+| `shadowColor` | `Color` | `Color.black` | Drop-shadow colour |
+| `shadowOffsetX` | `number` | `0` | Horizontal shadow offset in pixels |
+| `shadowOffsetY` | `number` | `0` | Vertical shadow offset in pixels |
+| `shadowAlpha` | `number` | `0` | Shadow opacity (`0`–`1`); `0` disables the shadow |
+| `shadowBlur` | `number` | `0` | Shadow blur softness (`0`–`1`) |
+| `gradientColors` | `[Color, Color] \| null` | `null` | Two-stop fill gradient `[top, bottom]`; overrides `fillColor` |
+| `gradientAxis` | `'vertical' \| 'horizontal'` | `'vertical'` | Gradient orientation |
 
-Current renderer path applies `fontFamily`, `fontSize`, `fontWeight`, `fontStyle`, `align`, `lineHeight`, and `fillColor`. Other `TextStyle` fields are currently stored but not applied.
+Text flow and overflow come from `LayoutOptions`, merged into the same options object:
 
-Glyphs are rasterized in white, and the mesh tint is initialized from `fillColor` when the mesh is rebuilt.
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `maxWidth` | `number` | — | Word-wrap boundary in pixels; longer lines break at word boundaries |
+| `maxHeight` | `number` | — | Clip boundary in pixels |
+| `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | Behaviour when text exceeds `maxHeight` |
+| `letterSpacing` | `number` | `0` | Extra pixel gap between glyphs |
+| `breakWords` | `boolean` | `false` | Break words wider than `maxWidth` at character boundaries |
+| `whiteSpace` | `'normal' \| 'pre' \| 'pre-line'` | `'pre-line'` | Whitespace handling |
+
+Glyphs are rasterized into the shared SDF atlas; the mesh tint is initialized from `fillColor` when the mesh is built.
 
 ## Multiline text and wrap settings
 
 Multiline text works by embedding `\n` characters in the string:
 
 ```js
+import { Color, Text } from '@codexo/exojs';
+
 const dialog = new Text('Line one\nLine two\nLine three', {
-    fill: 'white',
+    fillColor: Color.white,
     fontSize: 18,
     lineHeight: 1.5,
 });
 ```
 
-`wordWrap` and `wordWrapWidth` are available on `TextStyle`, but the current text layout only applies explicit line breaks (`\n`) and alignment:
+To wrap long runs automatically, set `maxWidth` (in pixels) — lines that exceed it break at word boundaries. Add `breakWords: true` to also split individual words that are wider than `maxWidth`:
 
 ```js
+import { Color, Text } from '@codexo/exojs';
+
+const longString = 'A long run of text that wraps automatically once it exceeds the layout width.';
+
 const wrapped = new Text(longString, {
-    fill: 'white',
+    fillColor: Color.white,
     fontSize: 16,
-    wordWrap: true,
-    wordWrapWidth: 400,
+    maxWidth: 400,
+    breakWords: true,
 });
 ```
 
@@ -108,12 +123,14 @@ const wrapped = new Text(longString, {
 The `align` property controls horizontal positioning relative to the `Text` node's local origin:
 
 ```js
+import { Color, Text } from '@codexo/exojs';
+
 const centered = new Text('Centered Title', {
     align: 'center',
-    fill: 'white',
+    fillColor: Color.white,
     fontSize: 32,
 });
-centered.setPosition(canvasWidth / 2, 20);
+centered.setPosition(400, 20);
 ```
 
 A center-aligned text node at `(400, 20)` centers its glyphs horizontally around `x=400` in local space.
@@ -124,16 +141,15 @@ A center-aligned text node at `(400, 20)` centers its glyphs horizontally around
 
 ```js
 this.ui = new Container();
-this.scoreLabel = new Text('Score: 0', { fill: 'white', fontSize: 24 });
+this.scoreLabel = new Text('Score: 0', { fillColor: Color.white, fontSize: 24 });
 this.scoreLabel.setPosition(10, 10);
 this.ui.addChild(this.scoreLabel);
 this.addChild(this.ui);
 ```
 
-The text node's internal mesh is a `Container` child. Assigning to `text.text` destroys the previous mesh and builds a new one. This means:
-- Changing text every frame is fine — the old mesh is discarded and a fresh one is built.
-- Mutating `style` fields alone does not rebuild the mesh.
-- To apply style changes, assign `text.style = ...` so the mesh is rebuilt.
+The text node's internal mesh is a `Container` child. Assigning to `text.text` rebuilds the glyph mesh. This means:
+- Changing text every frame is fine — the mesh is rebuilt on demand, at most once per frame.
+- Mutating `style` fields (e.g. `text.style.fillColor = ...`) is also picked up automatically before the next draw — no manual rebuild needed.
 
 ## Text constraints
 
