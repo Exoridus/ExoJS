@@ -14,13 +14,13 @@ import {
 } from '#core/serialization/read';
 import { _resetDefaultSerializers, deserializeTree, migrate } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
-import { Container } from '#rendering/Container';
-import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
+import { type Container } from '#rendering/Container';
+import { type RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
-import { Text } from '#rendering/text/Text';
+import { type Text } from '#rendering/text/Text';
 import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
 import type { Loadable, Loader } from '#resources/Loader';
