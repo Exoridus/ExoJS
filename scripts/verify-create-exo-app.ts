@@ -9,11 +9,9 @@ const tmpRoot = join(rootDir, '.workspace', 'tmp', 'create-exo-app');
 const cliSrc = join(rootDir, 'packages', 'create-exo-app', 'src', 'index.ts');
 const templatesDir = join(rootDir, 'packages', 'create-exo-app', 'templates');
 
-// Templates must pin the current root core version with a caret, so a freshly
-// scaffolded app resolves the just-released `@codexo/exojs`. Read it live so a
-// version bump never needs a manual edit here.
-const rootVersion = (JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf-8')) as { version: string }).version;
-const expectedCoreRange = `^${rootVersion}`;
+// Templates use the `latest` dist-tag so freshly scaffolded apps always resolve
+// the newest published @codexo/exojs without needing template edits per release.
+const EXPECTED_CORE_RANGE = 'latest';
 
 const TEMPLATES = ['minimal', 'game-starter', 'audio-reactive'] as const;
 type TemplateName = (typeof TEMPLATES)[number];
@@ -153,7 +151,7 @@ for (const t of TEMPLATES) {
   }
 }
 
-// 7. Template @codexo/exojs dependency pins the current root version
+// 7. Template @codexo/exojs dependency uses "latest" dist-tag
 console.log('\n7. Template @codexo/exojs dependency');
 const seenCoreRanges = new Set<string>();
 for (const t of TEMPLATES) {
@@ -167,9 +165,9 @@ for (const t of TEMPLATES) {
     }
     seenCoreRanges.add(range);
     check(
-      range === expectedCoreRange,
-      `${t}: @codexo/exojs "${range}" matches root (${expectedCoreRange})`,
-      `${t}: @codexo/exojs "${range}" does not match root (${expectedCoreRange}) — stale or wrong pin`,
+      range === EXPECTED_CORE_RANGE,
+      `${t}: @codexo/exojs "${range}" ✓`,
+      `${t}: @codexo/exojs "${range}" should be "${EXPECTED_CORE_RANGE}"`,
     );
     check(!range.startsWith('workspace:'), `${t}: no workspace: protocol`, `${t}: uses workspace: protocol ("${range}") — not publishable`);
   } catch {
@@ -178,8 +176,8 @@ for (const t of TEMPLATES) {
 }
 check(
   seenCoreRanges.size === 1,
-  `all templates agree on one core version (${[...seenCoreRanges].join(', ')})`,
-  `templates disagree on core version: ${[...seenCoreRanges].join(', ')}`,
+  `all templates agree on one core range (${[...seenCoreRanges].join(', ')})`,
+  `templates disagree on core range: ${[...seenCoreRanges].join(', ')}`,
 );
 
 // Summary
