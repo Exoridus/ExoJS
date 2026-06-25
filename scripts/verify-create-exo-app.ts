@@ -164,11 +164,7 @@ for (const t of TEMPLATES) {
       continue;
     }
     seenCoreRanges.add(range);
-    check(
-      range === EXPECTED_CORE_RANGE,
-      `${t}: @codexo/exojs "${range}" ✓`,
-      `${t}: @codexo/exojs "${range}" should be "${EXPECTED_CORE_RANGE}"`,
-    );
+    check(range === EXPECTED_CORE_RANGE, `${t}: @codexo/exojs "${range}" ✓`, `${t}: @codexo/exojs "${range}" should be "${EXPECTED_CORE_RANGE}"`);
     check(!range.startsWith('workspace:'), `${t}: no workspace: protocol`, `${t}: uses workspace: protocol ("${range}") — not publishable`);
   } catch {
     fail(`${t}: could not read scaffolded package.json dependency`);
