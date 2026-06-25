@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_comment": "Shared baseline compiler options for every ExoJS package. Package-local configs add rootDir/outDir/include/exclude, customConditions (package-specific source condition), and any package-specific lib/types/paths. Stricter options (noUncheckedIndexedAccess, exactOptionalPropertyTypes, module:Preserve, skipLibCheck:false) are intentionally NOT enabled here — the tree does not yet satisfy them; migrate intentionally.",
+  "_comment": "Shared baseline compiler options for every ExoJS package. Package-local configs add rootDir/outDir/include/exclude, customConditions (package-specific source condition), and any package-specific lib/types/paths. Strict type-safety flags including noUncheckedIndexedAccess and exactOptionalPropertyTypes are enabled below (turned on in v0.15 once the whole tree satisfied them). The remaining stricter options (module:Preserve, skipLibCheck:false) are intentionally NOT enabled yet.",
   "compilerOptions": {
     "target": "es2022",
     "module": "esnext",
