@@ -1,4 +1,5 @@
 import type { Collider } from '../Collider';
+import { sortInPlace } from '../sort';
 import type { BroadPhase, CandidatePair } from './BroadPhase';
 
 /**
@@ -29,7 +30,7 @@ export class SweepAndPrune implements BroadPhase {
       sorted.push(collider);
     }
 
-    sorted.sort(byMinX);
+    sortInPlace(sorted, byMinX);
 
     const count = sorted.length;
 
@@ -83,7 +84,7 @@ export class SweepAndPrune implements BroadPhase {
       }
     }
 
-    out.sort(byPairId);
+    sortInPlace(out, byPairId);
 
     return out;
   }
