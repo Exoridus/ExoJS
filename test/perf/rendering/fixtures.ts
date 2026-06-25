@@ -198,8 +198,9 @@ export const buildRepeatingScene = (config: RepeatingSceneConfig): RepeatingScen
 // ── Complex scenes (high plan-allocation) ──────────────────────────────────
 // A flat sprite list collapses to ~1 scope and batches into ~1 draw, so it
 // allocates almost nothing per frame. These exercise the paths the cheap path
-// hides: many Group scopes (deep nesting → per-scope collectRenderGroups, 2c),
-// per-drawable Mesh draws (2e), and per-effect Barrier scopes + child plans (2c).
+// hides: many Group scopes (deep nesting → per-scope plan work the inline group
+// walk of 2c made allocation-free), per-drawable Mesh draws (2e), and per-effect
+// Barrier scopes + child plans (2c).
 
 /** Local-space unit quad (x,y pairs) sized `size`, for a textured {@link Mesh}. */
 const quadVertices = (size: number): Float32Array => new Float32Array([0, 0, size, 0, size, size, 0, size]);
@@ -222,7 +223,8 @@ export interface NestedSceneConfig {
  * `count` sprites packed into a balanced container hierarchy: groups of
  * `perContainer` sprites, each group a chain of `depth` nested containers under
  * the root. A flat list is ~1 scope; this is ~`count / perContainer × depth`
- * Group scopes, so it exercises the per-scope `collectRenderGroups` allocation.
+ * Group scopes, so it stresses the per-scope plan playback that 2c made
+ * allocation-free (it formerly materialized a `RenderGroup[]` per scope).
  */
 export const buildNestedScene = (config: NestedSceneConfig): SpriteScene => {
   const { count, perContainer = 8, depth = 2, textures, assign = 'cycle', viewW = 1280, viewH = 720 } = config;
@@ -298,7 +300,7 @@ export interface FilteredSceneConfig {
 /**
  * `count` sprites each carrying a {@link ColorFilter}, so the plan emits a
  * Barrier scope + child plan per sprite (the effect-node path through
- * `collectRenderGroups` / `RenderEffectExecutor`, 2c).
+ * `RenderEffectExecutor` and the per-scope plan playback 2c made allocation-free).
  */
 export const buildFilteredScene = (config: FilteredSceneConfig): SpriteScene => {
   const { count, textures, assign = 'cycle', viewW = 1280, viewH = 720 } = config;

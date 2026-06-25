@@ -229,8 +229,8 @@ export class RenderPlanBuilder {
     command.seq = placementSeq;
     command.zIndex = placementZ;
     // Reset the optimizer's batch index: a recycled command must not carry a
-    // stale groupIndex from a previous frame (collectRenderGroups would coalesce
-    // on it before optimize() runs).
+    // stale groupIndex from a previous frame (the plan player's group-adjacency
+    // walk would coalesce on it before optimize() runs).
     command.groupIndex = undefined;
     command.material = drawable._getOrComputeMaterialKey(this.backend);
     command.minX = bounds.left;

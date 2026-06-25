@@ -2,8 +2,10 @@
  * Allocation sampler for the render-perf harness.
  *
  * Measures the render plan's per-frame **allocation rate** — every byte a frame
- * allocates, including the immediately-dead throwaway objects (`DrawCommand`,
- * `MaterialKey`, `ScopeEntry`, the per-scope `RenderGroup[]` …).
+ * allocates, including the immediately-dead throwaway objects the plan still
+ * produces (per-frame closures, mesh batch records, filter scratch …). The big
+ * historical sources — `DrawCommand`/`ScopeEntry`/`MaterialKey` (pooled in 2b)
+ * and the per-scope `RenderGroup[]` (eliminated in 2c) — no longer allocate.
  *
  * ── Why not a `heapUsed` delta ──────────────────────────────────────────────
  * The obvious approach — GC to a floor, render N frames, diff `heapUsed` — does

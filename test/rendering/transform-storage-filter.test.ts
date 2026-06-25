@@ -1,11 +1,12 @@
 import { Color } from '#core/Color';
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope } from '#rendering/plan/RenderScope';
+import type { DrawScopeEntry, GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { TransformBuffer } from '#rendering/TransformBuffer';
+
+import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
 const floatsPerSlot = 12;
 
@@ -101,15 +102,15 @@ const playFiltered = (scope: GroupScope): FilteredPlayback => {
 
   const backend = {
     rendererRegistry: makeRegistry(),
-    _prepareRenderGroupUpload(group: RenderGroup) {
-      for (const command of group.instructions) {
+    _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+      forEachGroupCommand(entries, startIndex, count, command => {
         if (drawCommandUsesSharedTransform(command, this as unknown as RenderBackend)) {
           buffer.write(command.nodeIndex, command.drawable.getGlobalTransform(), command.drawable.tint);
           writtenNodeIndices.push(command.nodeIndex);
         } else {
           buffer.recordSkippedWrite();
         }
-      }
+      });
     },
     _prepareDrawCommand() {
       // Mirrors the refactored backend contract: no transform write here.

@@ -1,11 +1,12 @@
 import { Color } from '#core/Color';
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
+import type { DrawScopeEntry, GroupScope, GroupScopeEntry, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { TransformBuffer } from '#rendering/TransformBuffer';
+
+import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
 const floatsPerSlot = 12;
 
@@ -95,10 +96,10 @@ const packPerGroupUpload = (scope: GroupScope): TransformBuffer => {
   buffer.begin();
 
   const backend = {
-    _prepareRenderGroupUpload(group: RenderGroup) {
-      for (const command of group.instructions) {
+    _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+      forEachGroupCommand(entries, startIndex, count, command => {
         buffer.write(command.nodeIndex, command.drawable.getGlobalTransform(), command.drawable.tint);
-      }
+      });
     },
     _prepareDrawCommand() {
       // Mirrors the refactored backend contract: no transform write here.

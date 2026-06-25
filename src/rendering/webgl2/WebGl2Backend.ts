@@ -9,8 +9,8 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
-import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
+import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -274,7 +274,7 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _prepareRenderGroupUpload(group: RenderGroup): void {
+  public _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number): void {
     // Pack the whole render group's world transforms (+ tint) into the shared
     // transform buffer at the group's upload boundary, keyed by each draw
     // command's stable nodeIndex. Every draw the player will submit for this
@@ -282,14 +282,23 @@ export class WebGl2Backend implements RenderBackend {
     // write previously done in `_prepareDrawCommand` is no longer needed and
     // the buffer is filled one contiguous group slice at a time.
     //
+    // The group is the entries range `[startIndex, startIndex + count)`; every
+    // entry in it is a draw, so the player no longer materializes a group array.
+    //
     // Renderers that pack their own per-node data (Text, Particle) never read
     // the shared buffer, so their commands are skipped — no consuming draw ever
     // references their slots (nodeIndex is unique per command).
-    const instructions = group.instructions;
+    const end = startIndex + count;
 
-    for (let i = 0; i < instructions.length; i++) {
-      // In-bounds: `i` ranges over `0..instructions.length-1`.
-      const command = instructions[i]!;
+    for (let i = startIndex; i < end; i++) {
+      const entry = entries[i]!;
+
+      // Every entry in a group run is a draw; narrow to read its command.
+      if (entry.kind !== RenderEntryKind.Draw) {
+        continue;
+      }
+
+      const command = entry.command;
 
       if (drawCommandUsesSharedTransform(command, this)) {
         this._writeTransformCommand(command);

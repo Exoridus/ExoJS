@@ -25,21 +25,24 @@ import { buildScenarioCatalog } from './scenarios';
  * Budgets ratchet down per slice; run with `--disableConsoleIntercept` to see them.
  */
 
-// Sprite reference budgets (bytes/frame), measured against src. empty ≈ 2.6 KB
-// (harness/recorder floor). After Slice 2b (DrawCommand/ScopeEntry pooled,
-// MaterialKey cached): static ≈ 317 KB (was ≈ 644), moving ≈ 580 KB (was ≈ 916).
+// Sprite reference budgets (bytes/frame), measured against src. empty ≈ 2.2 KB
+// (harness/recorder floor). After Slice 2c (collectRenderGroups eliminated — the
+// plan player walks groupIndex adjacency over scope.entries inline, so no
+// per-scope RenderGroup[]/instructions[] is materialized each frame): static
+// ≈ 288 KB (was ≈ 318 post-2b), moving ≈ 550 KB (was ≈ 578).
 const EMPTY_BUDGET = 16 * 1024;
-const STATIC_BUDGET = 420 * 1024;
-const MOVING_BUDGET = 768 * 1024;
+const STATIC_BUDGET = 384 * 1024;
+const MOVING_BUDGET = 736 * 1024;
 
 // Complex-scene budgets — these exercise the paths flat sprites hide: many Group
-// scopes (deep nesting → per-scope collectRenderGroups, 2c), per-drawable Mesh
-// draws (2e), and per-effect Barrier scopes + child plans (2c). Source-accurate
-// post-2b status quo (nested ≈ 430, mesh ≈ 779, filtered ≈ 1425 KB) + ~1.3×
-// headroom; tighten as 2c (nested/filtered) and 2e (mesh) land.
-const NESTED_BUDGET = 576 * 1024;
+// scopes (deep nesting → per-scope plan work, 2c) and per-effect Barrier scopes
+// + child plans (2c). 2c eliminated the per-scope group materialization, so the
+// scope-heavy scenes dropped the most: nested 431→363, filtered 1425→1310 KB.
+// Source-accurate post-2c status quo + ~1.3× headroom; mesh stays its post-2b
+// budget (per-drawable Mesh draws are 2e's target — tighten when 2e lands).
+const NESTED_BUDGET = 480 * 1024;
 const MESH_BUDGET = 1024 * 1024;
-const FILTERED_BUDGET = 1856 * 1024;
+const FILTERED_BUDGET = 1728 * 1024;
 
 const findScenario = (id: string): ReturnType<typeof buildScenarioCatalog>[number] => {
   const scenario = buildScenarioCatalog('full').find(s => s.id === id);

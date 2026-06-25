@@ -23,11 +23,11 @@
  * by the allocation TEST (run under vitest), not here.
  *
  * Spec 04 "Harte Regel": no perf PR merges without a before/after number on the
- * scenes it targets. STILL UNCOVERED here and needing dedicated fixtures before
- * slices 2c/2e/2f can be judged: deep container nesting + effect/barrier nodes
- * (→ 2c collectRenderGroups), mixed-zIndex/material optimizer load (→ 2b/2f), and
- * mesh/graphics scenes (→ 2e). 2d (TransformBuffer hash) is CPU time, not
- * allocation — it needs a wall-clock profile, not this sampler.
+ * scenes it targets. The allocation TEST now covers deep container nesting +
+ * effect/barrier nodes (the per-scope plan-playback path 2c addressed) and
+ * mesh/graphics scenes (→ 2e); this standalone launcher stays GLSL-free and so
+ * still cannot profile the tilemap family. 2d (TransformBuffer hash) is CPU
+ * time, not allocation — it needs a wall-clock profile, not this sampler.
  *
  * @internal Test/perf-only.
  */
