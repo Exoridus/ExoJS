@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import type { RenderNode } from '#rendering/RenderNode';
+
 import { measureFrameAllocation } from './allocation';
-import { buildSpriteScene, makeTextures } from './fixtures';
+import { buildFilteredScene, buildMeshScene, buildNestedScene, buildSpriteScene, makeTextures } from './fixtures';
 import { createWebGl2Harness } from './harness';
 import { buildScenarioCatalog } from './scenarios';
 
 /**
  * Render-plan allocation gate (spec 04 §2a). Samples the per-frame allocation
- * RATE (throwaway garbage, not retained heap) on an empty, a static, and a moving
- * reference scene via the V8 allocation sampling profiler (see `allocation.ts`).
+ * RATE (throwaway garbage, not retained heap) on reference scenes via the V8
+ * allocation sampling profiler (see `allocation.ts`).
  *
  * The sampler needs no `--expose-gc` and the budget is always enforced — but it
  * is only correct because `allocation.ts` passes `includeObjectsCollectedBy*GC`
@@ -16,24 +18,28 @@ import { buildScenarioCatalog } from './scenarios';
  * live at stop, discarding the immediately-dead plan garbage (a ~500× undercount).
  * The `sampler counts dead garbage` test below guards that invariant.
  *
- * Budgets are the measured status quo plus headroom; they tighten as 2b–2f drive
- * the static scene toward ~0 plan garbage/frame.
- *
  * NOTE: the source-accurate numbers come from THIS test (the vitest `rendering-perf`
  * project resolves `#*` imports to `src` and wires GLSL). The standalone
- * `pnpm perf:renderers:alloc` launcher resolves `#*` to the built `dist/esm` (its
- * `default` import condition) and so reports the LAST BUILD, not the working tree —
- * use it only as a rough cross-check, not as the before/after gate.
+ * `pnpm perf:renderers:alloc` launcher resolves `#*` to the built `dist/esm` and so
+ * reports the LAST BUILD, not the working tree — use it only as a rough cross-check.
+ * Budgets ratchet down per slice; run with `--disableConsoleIntercept` to see them.
  */
 
-// Budgets (bytes/frame), measured against src. empty ≈ 2.6 KB (harness/recorder
-// floor). After Slice 2b (DrawCommand/ScopeEntry pooled, MaterialKey cached):
-// static ≈ 317 KB (was ≈ 644), moving ≈ 580 KB (was ≈ 916). The remainder is the
-// RenderPlanOptimizer (→ 2f) + per-scope collectRenderGroups (→ 2c). ~1.3× headroom
-// for the statistical sampler; tighten again per following slice.
+// Sprite reference budgets (bytes/frame), measured against src. empty ≈ 2.6 KB
+// (harness/recorder floor). After Slice 2b (DrawCommand/ScopeEntry pooled,
+// MaterialKey cached): static ≈ 317 KB (was ≈ 644), moving ≈ 580 KB (was ≈ 916).
 const EMPTY_BUDGET = 16 * 1024;
 const STATIC_BUDGET = 420 * 1024;
 const MOVING_BUDGET = 768 * 1024;
+
+// Complex-scene budgets — these exercise the paths flat sprites hide: many Group
+// scopes (deep nesting → per-scope collectRenderGroups, 2c), per-drawable Mesh
+// draws (2e), and per-effect Barrier scopes + child plans (2c). Source-accurate
+// post-2b status quo (nested ≈ 430, mesh ≈ 779, filtered ≈ 1425 KB) + ~1.3×
+// headroom; tighten as 2c (nested/filtered) and 2e (mesh) land.
+const NESTED_BUDGET = 576 * 1024;
+const MESH_BUDGET = 1024 * 1024;
+const FILTERED_BUDGET = 1856 * 1024;
 
 const findScenario = (id: string): ReturnType<typeof buildScenarioCatalog>[number] => {
   const scenario = buildScenarioCatalog('full').find(s => s.id === id);
@@ -47,6 +53,19 @@ const findScenario = (id: string): ReturnType<typeof buildScenarioCatalog>[numbe
 
 const log = (label: string, bytesPerFrame: number): void => {
   console.log(`[alloc] ${label.padEnd(20)} ${(bytesPerFrame / 1024).toFixed(2).padStart(9)} KB/frame`);
+};
+
+/** Build-and-measure a scene whose root is supplied directly (no scenario catalog). */
+const measureScene = async (label: string, root: RenderNode, budget: number): Promise<void> => {
+  const harness = createWebGl2Harness();
+
+  const alloc = await measureFrameAllocation(harness, root);
+  log(label, alloc.bytesPerFrame);
+
+  root.destroy();
+  harness.destroy();
+
+  expect(alloc.bytesPerFrame).toBeLessThan(budget);
 };
 
 describe('render-plan allocation gate', () => {
@@ -115,4 +134,11 @@ describe('render-plan allocation gate', () => {
 
     expect(alloc.bytesPerFrame).toBeLessThan(MOVING_BUDGET);
   });
+
+  it('nested hierarchy (deep group scopes) stays within budget', () =>
+    measureScene('nested/1000 d4', buildNestedScene({ count: 1000, perContainer: 8, depth: 4, textures: makeTextures(1) }).root, NESTED_BUDGET));
+
+  it('mesh drawables stay within budget', () => measureScene('mesh/1000', buildMeshScene({ count: 1000, textures: makeTextures(1) }).root, MESH_BUDGET));
+
+  it('effect-barrier scene stays within budget', () => measureScene('filtered/100', buildFilteredScene({ count: 100, textures: makeTextures(1) }).root, FILTERED_BUDGET));
 });
