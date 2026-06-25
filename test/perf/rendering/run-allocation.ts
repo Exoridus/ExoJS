@@ -31,7 +31,7 @@
  *
  * @internal Test/perf-only.
  */
- 
+
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -48,33 +48,95 @@ interface Sample {
   build(harness: WebGl2Harness): { root: import('#rendering/RenderNode').RenderNode; beforeFrame?: () => void };
 }
 
-const movingSprites = (count: number) => (harness: WebGl2Harness): { root: import('#rendering/RenderNode').RenderNode; beforeFrame?: () => void } => {
-  const { root, sprites } = buildSpriteScene({ count, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h });
-  let frame = 0;
-  const beforeFrame = (): void => {
-    frame++;
-    const dx = frame % 2 === 0 ? 1 : -1;
-    for (const sprite of sprites) {
-      sprite.setPosition(sprite.position.x + dx, sprite.position.y);
-    }
-  };
+const movingSprites =
+  (count: number) =>
+  (harness: WebGl2Harness): { root: import('#rendering/RenderNode').RenderNode; beforeFrame?: () => void } => {
+    const { root, sprites } = buildSpriteScene({ count, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h });
+    let frame = 0;
+    const beforeFrame = (): void => {
+      frame++;
+      const dx = frame % 2 === 0 ? 1 : -1;
+      for (const sprite of sprites) {
+        sprite.setPosition(sprite.position.x + dx, sprite.position.y);
+      }
+    };
 
-  return { root, beforeFrame };
-};
+    return { root, beforeFrame };
+  };
 
 const SAMPLES: readonly Sample[] = [
   { id: 'sprite/1000/1tex/static', build: () => ({ root: buildSpriteScene({ count: 1000, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
   { id: 'sprite/1000/1tex/moving', build: movingSprites(1000) },
-  { id: 'sprite/1000/8tex/static', build: () => ({ root: buildSpriteScene({ count: 1000, textures: makeTextures(8), assign: 'cycle', viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  {
+    id: 'sprite/1000/8tex/static',
+    build: () => ({ root: buildSpriteScene({ count: 1000, textures: makeTextures(8), assign: 'cycle', viewW: VIEW.w, viewH: VIEW.h }).root }),
+  },
   { id: 'sprite/10000/1tex/static', build: () => ({ root: buildSpriteScene({ count: 10000, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
   { id: 'sprite/10000/1tex/moving', build: movingSprites(10000) },
-  { id: 'nine-slice/100/1tex/stretch', build: () => ({ root: buildNineSliceScene({ count: 100, textures: makeTextures(1), slice: 16, width: 96, height: 96, fill: 'stretch', viewW: VIEW.w, viewH: VIEW.h }).root }) },
-  { id: 'nine-slice/100/8tex/stretch', build: () => ({ root: buildNineSliceScene({ count: 100, textures: makeTextures(8), assign: 'cycle', slice: 16, width: 96, height: 96, fill: 'stretch', viewW: VIEW.w, viewH: VIEW.h }).root }) },
-  { id: 'repeating/geometry/100/1tex', build: () => ({ root: buildRepeatingScene({ count: 100, textures: makeTextures(1), path: 'geometry', width: 128, height: 128, modeX: 'repeat', modeY: 'repeat', viewW: VIEW.w, viewH: VIEW.h }).root }) },
-  { id: 'repeating/shader/100/1tex', build: () => ({ root: buildRepeatingScene({ count: 100, textures: makeTextures(1), path: 'shader', width: 128, height: 128, modeX: 'repeat', modeY: 'repeat', viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  {
+    id: 'nine-slice/100/1tex/stretch',
+    build: () => ({
+      root: buildNineSliceScene({ count: 100, textures: makeTextures(1), slice: 16, width: 96, height: 96, fill: 'stretch', viewW: VIEW.w, viewH: VIEW.h })
+        .root,
+    }),
+  },
+  {
+    id: 'nine-slice/100/8tex/stretch',
+    build: () => ({
+      root: buildNineSliceScene({
+        count: 100,
+        textures: makeTextures(8),
+        assign: 'cycle',
+        slice: 16,
+        width: 96,
+        height: 96,
+        fill: 'stretch',
+        viewW: VIEW.w,
+        viewH: VIEW.h,
+      }).root,
+    }),
+  },
+  {
+    id: 'repeating/geometry/100/1tex',
+    build: () => ({
+      root: buildRepeatingScene({
+        count: 100,
+        textures: makeTextures(1),
+        path: 'geometry',
+        width: 128,
+        height: 128,
+        modeX: 'repeat',
+        modeY: 'repeat',
+        viewW: VIEW.w,
+        viewH: VIEW.h,
+      }).root,
+    }),
+  },
+  {
+    id: 'repeating/shader/100/1tex',
+    build: () => ({
+      root: buildRepeatingScene({
+        count: 100,
+        textures: makeTextures(1),
+        path: 'shader',
+        width: 128,
+        height: 128,
+        modeX: 'repeat',
+        modeY: 'repeat',
+        viewW: VIEW.w,
+        viewH: VIEW.h,
+      }).root,
+    }),
+  },
   // Complex scenes — the ones that decide 2b-2f ROI (flat sprite lists barely allocate).
-  { id: 'nested/1000/8per/d2', build: () => ({ root: buildNestedScene({ count: 1000, perContainer: 8, depth: 2, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
-  { id: 'nested/1000/8per/d4', build: () => ({ root: buildNestedScene({ count: 1000, perContainer: 8, depth: 4, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  {
+    id: 'nested/1000/8per/d2',
+    build: () => ({ root: buildNestedScene({ count: 1000, perContainer: 8, depth: 2, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }),
+  },
+  {
+    id: 'nested/1000/8per/d4',
+    build: () => ({ root: buildNestedScene({ count: 1000, perContainer: 8, depth: 4, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }),
+  },
   { id: 'mesh/1000/1tex', build: () => ({ root: buildMeshScene({ count: 1000, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
   { id: 'filtered/100/1tex', build: () => ({ root: buildFilteredScene({ count: 100, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
 ];

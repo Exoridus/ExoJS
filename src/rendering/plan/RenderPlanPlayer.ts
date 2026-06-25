@@ -150,7 +150,12 @@ export class RenderPlanPlayer {
 
         const count = groupRunLength(entries, i);
 
-        hooks._prepareRenderGroupUpload(entries, i, count, this._createRenderGroupPlaybackContext(count, preInstructionIndex, context.passGroupIndex + groupOrdinal));
+        hooks._prepareRenderGroupUpload(
+          entries,
+          i,
+          count,
+          this._createRenderGroupPlaybackContext(count, preInstructionIndex, context.passGroupIndex + groupOrdinal),
+        );
         preInstructionIndex += count;
         groupOrdinal++;
         i += count;
@@ -216,7 +221,11 @@ export class RenderPlanPlayer {
     };
   }
 
-  private static _createRenderGroupPlaybackContext(groupInstructionCount: number, firstPassInstructionIndex: number, passGroupIndex: number): RenderGroupPlaybackContext {
+  private static _createRenderGroupPlaybackContext(
+    groupInstructionCount: number,
+    firstPassInstructionIndex: number,
+    passGroupIndex: number,
+  ): RenderGroupPlaybackContext {
     return Object.freeze({
       groupInstructionCount,
       firstPassInstructionIndex,

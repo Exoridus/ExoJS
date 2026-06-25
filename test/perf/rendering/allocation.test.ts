@@ -145,5 +145,6 @@ describe('render-plan allocation gate', () => {
 
   it('mesh drawables stay within budget', () => measureScene('mesh/1000', buildMeshScene({ count: 1000, textures: makeTextures(1) }).root, MESH_BUDGET));
 
-  it('effect-barrier scene stays within budget', () => measureScene('filtered/100', buildFilteredScene({ count: 100, textures: makeTextures(1) }).root, FILTERED_BUDGET));
+  it('effect-barrier scene stays within budget', () =>
+    measureScene('filtered/100', buildFilteredScene({ count: 100, textures: makeTextures(1) }).root, FILTERED_BUDGET));
 });
