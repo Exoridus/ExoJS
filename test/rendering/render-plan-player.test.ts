@@ -1,9 +1,10 @@
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
+import type { DrawScopeEntry, GroupScope, GroupScopeEntry, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
+
+import { renderGroupFromRange } from './helpers/collectRenderGroups';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -70,15 +71,24 @@ const createPlaybackSpy = (): PlaybackSpy => {
   const slots: string[] = [];
   const uploads: string[] = [];
 
+  // Reconstruct each group's drawable ids from the `(entries, startIndex, count)`
+  // range the refactored hooks pass — the player no longer materializes a group.
+  const groupIds = (entries: readonly ScopeEntry[], startIndex: number, count: number): string =>
+    renderGroupFromRange(entries, startIndex, count)
+      .instructions.map(command => (command.drawable as BoxDrawable).id)
+      .join(',');
+
   const backend = {
-    _beginRenderGroup(group: RenderGroup) {
-      events.push(`begin:${group.instructions.map(command => (command.drawable as BoxDrawable).id).join(',')}`);
+    _beginRenderGroup(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+      events.push(`begin:${groupIds(entries, startIndex, count)}`);
     },
     _prepareRenderGroupUpload(
-      group: RenderGroup,
+      entries: readonly ScopeEntry[],
+      startIndex: number,
+      count: number,
       context: { groupInstructionCount: number; firstPassInstructionIndex: number; lastPassInstructionIndex: number; passGroupIndex: number },
     ) {
-      const ids = group.instructions.map(command => (command.drawable as BoxDrawable).id).join(',');
+      const ids = groupIds(entries, startIndex, count);
       const upload = `${ids}:${context.groupInstructionCount}:${context.firstPassInstructionIndex}:${context.lastPassInstructionIndex}:${context.passGroupIndex}`;
 
       uploads.push(upload);
@@ -98,8 +108,8 @@ const createPlaybackSpy = (): PlaybackSpy => {
 
       return this;
     },
-    _endRenderGroup(group: RenderGroup) {
-      events.push(`end:${group.instructions.map(command => (command.drawable as BoxDrawable).id).join(',')}`);
+    _endRenderGroup(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+      events.push(`end:${groupIds(entries, startIndex, count)}`);
     },
   } as unknown as RenderBackend;
 

@@ -56,7 +56,10 @@ export class WebGl2StencilClipper {
     this._shader.connect(createWebGl2ShaderProgram(gl));
     this._shader.sync();
 
-    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._positions, BufferUsage.DynamicDraw).connect(this._createBufferRuntime(gl));
+    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._positions, BufferUsage.DynamicDraw).connect(
+      this._createBufferRuntime(gl),
+      backend.accountant,
+    );
     const vao = new WebGl2VertexArrayObject(RenderingPrimitives.Triangles)
       .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, positionStrideBytes, 0)
       .connect(this._createVaoRuntime(gl, vaoHandle));

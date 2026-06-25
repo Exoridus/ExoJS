@@ -33,25 +33,28 @@ export const enum RenderEntryKind {
  * incompatible state.
  */
 export interface MaterialKey {
-  readonly rendererId: number;
-  readonly blendMode: BlendModes;
-  readonly textureId: number;
-  readonly shaderId: number;
-  readonly pipelineKey: number;
-  readonly bindKey: number;
+  rendererId: number;
+  blendMode: BlendModes;
+  textureId: number;
+  shaderId: number;
+  pipelineKey: number;
+  bindKey: number;
 }
 
 /** @internal */
 export interface DrawCommand {
   readonly kind: RenderEntryKind.Draw;
-  readonly drawable: Drawable;
+  /** Mutable so the builder can recycle a pooled command across frames. */
+  drawable: Drawable;
   nodeIndex: number;
   seq: number;
   zIndex: number;
   material: MaterialKey;
   /** Assigned by the optimizer; consecutive draws with the same groupIndex
-   *  form a batch-safe unit.  Undefined before optimisation. */
-  groupIndex?: number;
+   *  form a batch-safe unit.  `undefined` before optimisation (and reset to
+   *  `undefined` when a pooled command is recycled). Required-but-nullable so the
+   *  builder can explicitly clear it under `exactOptionalPropertyTypes`. */
+  groupIndex: number | undefined;
   minX: number;
   minY: number;
   maxX: number;
@@ -166,25 +169,55 @@ const getMaterial = (drawable: Drawable): Material | null => {
  *
  * @internal
  */
-export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | null): MaterialKey => {
+export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | null): MaterialKey =>
+  writeMaterialKeyInto(
+    {
+      rendererId: 0,
+      blendMode: drawable.blendMode,
+      textureId: -1,
+      shaderId: -1,
+      pipelineKey: 0,
+      bindKey: 0,
+    },
+    drawable,
+    backend,
+  );
+
+/**
+ * In-place variant of {@link makeMaterialKey}: derives the same material key but
+ * writes it into `target` instead of allocating a fresh object. Used by the
+ * per-drawable material-key cache (Slice 2b) so a cache miss reuses the held key
+ * rather than producing per-frame garbage. Returns `target` for chaining.
+ *
+ * @internal
+ */
+export const writeMaterialKeyInto = (target: MaterialKey, drawable: Drawable, backend: RenderBackend | null): MaterialKey => {
   const rendererId = getRendererId(drawable, backend);
   const blendMode = drawable.blendMode;
   const textureId = getTextureId(drawable);
   const shaderId = getShaderId(drawable);
   const material = getMaterial(drawable);
 
-  const pipelineKey = material !== null ? material.pipelineKey : rendererId * 31 + blendMode;
-  const bindKey = material !== null ? material.bindKey : rendererId * 31 + (textureId > 0 ? textureId : 0);
+  target.rendererId = rendererId;
+  target.blendMode = blendMode;
+  target.textureId = textureId;
+  target.shaderId = shaderId;
+  target.pipelineKey = material !== null ? material.pipelineKey : rendererId * 31 + blendMode;
+  target.bindKey = material !== null ? material.bindKey : rendererId * 31 + (textureId > 0 ? textureId : 0);
 
-  return {
-    rendererId,
-    blendMode,
-    textureId,
-    shaderId,
-    pipelineKey,
-    bindKey,
-  };
+  return target;
 };
+
+/**
+ * Whether `drawable` carries its own {@link Material}. Such a drawable can mutate
+ * its material's `pipelineKey`/`bindKey` internally without notifying the node,
+ * so its material key must not be cached — it is recomputed every frame. The
+ * default (material-less) path is safe to cache and invalidate via the existing
+ * `invalidateCache` setters.
+ *
+ * @internal
+ */
+export const drawableHasOwnMaterial = (drawable: Drawable): boolean => getMaterial(drawable) !== null;
 
 /**
  * Whether a draw command's renderer reads the shared {@link TransformBuffer} /

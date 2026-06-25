@@ -2,9 +2,9 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { RenderEntryKind } from './RenderCommand';
 import { RenderEffectExecutor } from './RenderEffectExecutor';
-import { collectRenderGroups, type RenderGroup, type RenderInstruction } from './RenderInstruction';
+import type { RenderInstruction } from './RenderInstruction';
 import type { RenderPlan } from './RenderPlan';
-import type { GroupScope, RenderScope } from './RenderScope';
+import type { GroupScope, RenderScope, ScopeEntry } from './RenderScope';
 
 interface RenderInstructionSlot {
   readonly groupInstructionIndex: number;
@@ -23,15 +23,55 @@ interface RenderPlanPlaybackContext {
   passGroupIndex: number;
 }
 
+/**
+ * Playback hooks the backend may implement. The render-group hooks describe a
+ * batch unit as the entries range `entries[startIndex, startIndex + count)` —
+ * every entry in that range is a {@link RenderEntryKind.Draw}, so the backend
+ * reads each command via `entries[i].command`. The plan player no longer
+ * materializes a `RenderGroup[]` per scope (Slice 2c); the range carries the
+ * same information allocation-free.
+ */
 interface RenderPlanPlaybackHooks {
   _beginDrawPlan?(nodeCount: number): void;
-  _beginRenderGroup?(group: RenderGroup): void;
-  _prepareRenderGroupUpload?(group: RenderGroup, context: RenderGroupPlaybackContext): void;
+  _beginRenderGroup?(entries: readonly ScopeEntry[], startIndex: number, count: number): void;
+  _prepareRenderGroupUpload?(entries: readonly ScopeEntry[], startIndex: number, count: number, context: RenderGroupPlaybackContext): void;
   _prepareRenderInstructionSlot?(instruction: RenderInstruction, slot: RenderInstructionSlot): void;
   _prepareDrawCommand?(instruction: RenderInstruction): void;
-  _endRenderGroup?(group: RenderGroup): void;
+  _endRenderGroup?(entries: readonly ScopeEntry[], startIndex: number, count: number): void;
   _endDrawPlan?(): void;
 }
+
+/**
+ * Length of the batch run starting at `entries[startIndex]` (which must be a
+ * draw): the maximal span of consecutive draw entries sharing the same defined
+ * `groupIndex`. A draw with `groupIndex === undefined` is its own singleton run
+ * (it never coalesces), and any non-draw entry ends the run. This is exactly the
+ * adjacency the (deleted) `collectRenderGroups` materialized, walked in place.
+ */
+const groupRunLength = (entries: readonly ScopeEntry[], startIndex: number): number => {
+  const first = entries[startIndex];
+
+  // Callers only enter with a draw at `startIndex`.
+  const groupIndex = (first as Extract<ScopeEntry, { kind: RenderEntryKind.Draw }>).command.groupIndex;
+
+  if (groupIndex === undefined) {
+    return 1;
+  }
+
+  let count = 1;
+
+  for (let i = startIndex + 1; i < entries.length; i++) {
+    const entry = entries[i]!;
+
+    if (entry.kind !== RenderEntryKind.Draw || entry.command.groupIndex !== groupIndex) {
+      break;
+    }
+
+    count++;
+  }
+
+  return count;
+};
 
 /** @internal */
 export class RenderPlanPlayer {
@@ -80,10 +120,7 @@ export class RenderPlanPlayer {
   }
 
   private static _playGroup(scope: GroupScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
-    const groups = collectRenderGroups(scope);
-    let groupCursor = 0;
-    let currentGroup: RenderGroup | null = null;
-    let currentInstructionIndex = 0;
+    const entries = scope.entries;
 
     // Phase 1 — populate the CPU transform buffer for all groups in this scope
     // before any renderer draws execute. Without this separation, each
@@ -96,33 +133,52 @@ export class RenderPlanPlayer {
     // calls bindTransformBufferTexture/getTransformStorageBuffer, so all
     // subsequent flushes within the same scope find an unchanged hash and skip
     // the upload entirely.
+    //
+    // The pre-pass walks `groupIndex` adjacency directly over `entries` — the
+    // same runs the (deleted) `collectRenderGroups` produced, in the same order
+    // — so no `RenderGroup[]`/`instructions[]` is materialized per scope/frame.
     if (hooks._prepareRenderGroupUpload !== undefined) {
       let preInstructionIndex = context.passInstructionIndex;
+      let groupOrdinal = 0;
 
-      for (let gi = 0; gi < groups.length; gi++) {
-        // In-bounds: gi < groups.length.
-        const group = groups[gi]!;
+      for (let i = 0; i < entries.length; ) {
+        if (entries[i]!.kind !== RenderEntryKind.Draw) {
+          i++;
+
+          continue;
+        }
+
+        const count = groupRunLength(entries, i);
 
         hooks._prepareRenderGroupUpload(
-          group,
-          this._createRenderGroupPlaybackContext(group.instructions.length, preInstructionIndex, context.passGroupIndex + gi),
+          entries,
+          i,
+          count,
+          this._createRenderGroupPlaybackContext(count, preInstructionIndex, context.passGroupIndex + groupOrdinal),
         );
-        preInstructionIndex += group.instructions.length;
+        preInstructionIndex += count;
+        groupOrdinal++;
+        i += count;
       }
     }
 
     // Phase 2 — execute draws in document order. Transform writes are already
     // done; _prepareRenderGroupUpload is intentionally not called a second time.
-    for (const entry of scope.entries) {
+    // Group boundaries are the same `groupIndex` adjacency Phase 1 walked.
+    let groupStart = -1;
+    let groupCount = 0;
+    let currentInstructionIndex = 0;
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i]!;
+
       if (entry.kind === RenderEntryKind.Draw) {
-        if (currentGroup === null) {
-          // Invariant: collectRenderGroups yields groups whose total instruction
-          // count equals the draw-entry count, and groupCursor only advances when
-          // a group is fully consumed, so a group exists for every draw entry.
-          currentGroup = groups[groupCursor]!;
+        if (groupStart === -1) {
+          groupStart = i;
+          groupCount = groupRunLength(entries, i);
           currentInstructionIndex = 0;
 
-          hooks._beginRenderGroup?.(currentGroup);
+          hooks._beginRenderGroup?.(entries, groupStart, groupCount);
           context.passGroupIndex++;
         }
 
@@ -142,11 +198,11 @@ export class RenderPlanPlayer {
         currentInstructionIndex++;
         context.passInstructionIndex++;
 
-        if (currentGroup !== null && currentInstructionIndex === currentGroup.instructions.length) {
-          hooks._endRenderGroup?.(currentGroup);
-          currentGroup = null;
+        if (currentInstructionIndex === groupCount) {
+          hooks._endRenderGroup?.(entries, groupStart, groupCount);
+          groupStart = -1;
+          groupCount = 0;
           currentInstructionIndex = 0;
-          groupCursor++;
         }
       } else if (entry.kind === RenderEntryKind.Group) {
         this._playGroup(entry.scope, backend, hooks, context);

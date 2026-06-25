@@ -7,10 +7,11 @@ import { Vector } from '#math/Vector';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
-import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
+import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -77,6 +78,8 @@ interface ManagedTextureState {
   version: number;
   width: number;
   height: number;
+  /** GPU bytes currently booked for this texture's storage (0 until first upload). */
+  accountedBytes: number;
 }
 
 interface ManagedRenderTargetState {
@@ -168,6 +171,7 @@ export class WebGl2Backend implements RenderBackend {
   private _clearColor: Color = new Color();
   private _boundFramebuffer: WebGLFramebuffer | null = null;
   private readonly _stats: RenderStats = createRenderStats();
+  private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private readonly _transformBuffer = new TransformBuffer();
   private _transformTexture: DataTexture<'rgba32f'> | null = null;
   private _transformTextureHash = 0;
@@ -241,6 +245,16 @@ export class WebGl2Backend implements RenderBackend {
     return this._stats;
   }
 
+  /**
+   * Per-backend GPU resource accountant (VRAM / upload / download bookkeeping).
+   * Used by this backend's renderers (e.g. batched vertex/index buffers) to
+   * book their own allocations and uploads. Not part of any public surface.
+   * @internal
+   */
+  public get accountant(): GpuResourceAccountant {
+    return this._accountant;
+  }
+
   /** @internal */
   public get activeDrawCommand(): DrawCommand | null {
     return this._activeDrawCommand;
@@ -274,7 +288,7 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _prepareRenderGroupUpload(group: RenderGroup): void {
+  public _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number): void {
     // Pack the whole render group's world transforms (+ tint) into the shared
     // transform buffer at the group's upload boundary, keyed by each draw
     // command's stable nodeIndex. Every draw the player will submit for this
@@ -282,14 +296,23 @@ export class WebGl2Backend implements RenderBackend {
     // write previously done in `_prepareDrawCommand` is no longer needed and
     // the buffer is filled one contiguous group slice at a time.
     //
+    // The group is the entries range `[startIndex, startIndex + count)`; every
+    // entry in it is a draw, so the player no longer materializes a group array.
+    //
     // Renderers that pack their own per-node data (Text, Particle) never read
     // the shared buffer, so their commands are skipped — no consuming draw ever
     // references their slots (nodeIndex is unique per command).
-    const instructions = group.instructions;
+    const end = startIndex + count;
 
-    for (let i = 0; i < instructions.length; i++) {
-      // In-bounds: `i` ranges over `0..instructions.length-1`.
-      const command = instructions[i]!;
+    for (let i = startIndex; i < end; i++) {
+      const entry = entries[i]!;
+
+      // Every entry in a group run is a draw; narrow to read its command.
+      if (entry.kind !== RenderEntryKind.Draw) {
+        continue;
+      }
+
+      const command = entry.command;
 
       if (drawCommandUsesSharedTransform(command, this)) {
         this._writeTransformCommand(command);
@@ -967,6 +990,32 @@ export class WebGl2Backend implements RenderBackend {
     return texture;
   }
 
+  /**
+   * Re-book a managed texture's GPU storage with the resource accountant after a
+   * full `texImage2D` (re)allocation: frees the previously booked size (if any —
+   * e.g. on resize) and allocates the new `width · height · bytesPerPixel`
+   * footprint, including the mip chain when the texture generates mips.
+   */
+  private _bookTextureStorage(state: ManagedTextureState, texture: Texture | RenderTexture, bytesPerPixel: number): void {
+    const nextBytes = estimateTextureBytes(texture.width, texture.height, bytesPerPixel, this._textureMipLevelCount(texture));
+
+    state.accountedBytes = this._accountant.reallocate(state.accountedBytes, nextBytes);
+  }
+
+  private _textureMipLevelCount(texture: Texture | RenderTexture): number {
+    if (!texture.generateMipMap) {
+      return 1;
+    }
+
+    const maxSize = Math.max(texture.width, texture.height);
+
+    if (maxSize <= 1) {
+      return 1;
+    }
+
+    return Math.floor(Math.log2(maxSize)) + 1;
+  }
+
   private _destroyManagedResources(): void {
     for (const renderTarget of [...this._renderTargetStates.keys()]) {
       this._evictRenderTarget(renderTarget, false);
@@ -1021,6 +1070,7 @@ export class WebGl2Backend implements RenderBackend {
         version: -1,
         width: 0,
         height: 0,
+        accountedBytes: 0,
       };
 
       this._textureStates.set(texture, state);
@@ -1095,6 +1145,8 @@ export class WebGl2Backend implements RenderBackend {
       }
 
       this._context.deleteTexture(state.handle);
+      this._accountant.free(state.accountedBytes);
+      state.accountedBytes = 0;
       this._textureStates.delete(texture);
     }
 
@@ -1292,8 +1344,12 @@ export class WebGl2Backend implements RenderBackend {
         // packing for the upload, then restore the GL default.
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
+        const bytesPerPixel = dataTextureBytesPerPixel(format);
+
         if (needsAlloc || region === null || region.full) {
           gl.texImage2D(gl.TEXTURE_2D, 0, formatInfo.internalFormat, texture.width, texture.height, 0, formatInfo.format, formatInfo.type, texture.buffer);
+          this._bookTextureStorage(state, texture, bytesPerPixel);
+          this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
         } else {
           // Partial upload: pack a contiguous sub-region from the row-major
           // buffer into a temporary view that gl.texSubImage2D can read.
@@ -1312,21 +1368,28 @@ export class WebGl2Backend implements RenderBackend {
           }
 
           gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView);
+          this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
         }
 
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       } else if (texture instanceof RenderTexture) {
         if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+          this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
+          this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
         } else {
           gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+          this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
         }
       } else if (texture.source) {
         if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+          this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
         } else {
           gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
         }
+
+        this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
       }
 
       if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
@@ -1402,6 +1465,9 @@ export class WebGl2Backend implements RenderBackend {
     gl.scissor(x, y, width, height);
   }
 }
+
+// Content + render textures upload as gl.RGBA / gl.UNSIGNED_BYTE = 4 bytes/px.
+const RGBA8_BYTES_PER_PIXEL = 4;
 
 interface WebGl2DataTextureFormatInfo {
   readonly internalFormat: number; // gl.R8 / gl.R32F / gl.RGBA8 / gl.RGBA32F

@@ -1,4 +1,4 @@
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from './RenderCommand';
+import type { DrawCommand } from './RenderCommand';
 import type { GroupScope } from './RenderScope';
 
 /**
@@ -12,83 +12,12 @@ import type { GroupScope } from './RenderScope';
  * stable {@link DrawCommand.nodeIndex} (within the `[0, plan.nodeCount)`
  * slot space).
  *
+ * Batch units (maximal runs of consecutive instructions in a {@link GroupScope}
+ * sharing GPU pipeline/bind state) are not materialized: the plan player walks
+ * each instruction's {@link DrawCommand.groupIndex} adjacency directly over
+ * `scope.entries` (Slice 2c), and the upload-boundary hooks receive an entries
+ * range rather than a collected group array — keeping playback allocation-free.
+ *
  * @internal
  */
 export type RenderInstruction = DrawCommand;
-
-/**
- * A materialized batch unit: a maximal run of consecutive
- * {@link RenderInstruction}s within a single {@link GroupScope} that share a
- * GPU pipeline/bind state and may therefore be submitted together.
- *
- * The optimizer ({@link RenderPlanOptimizer}) already stamps this grouping
- * implicitly onto each {@link DrawCommand.groupIndex}; a `RenderGroup` makes
- * that batch unit explicit as a value without altering playback. The mesh
- * renderers continue to detect batches by comparing adjacent `groupIndex`es,
- * so this representation is purely additive.
- *
- * @internal
- */
-export interface RenderGroup {
-  /** Optimizer-assigned batch identity shared by every instruction in the run. */
-  readonly groupIndex: number;
-  /** Pipeline/bind state shared by the run; taken from its first instruction. */
-  readonly material: MaterialKey;
-  /** Draw instructions in submit order. */
-  readonly instructions: readonly RenderInstruction[];
-}
-
-interface MutableRenderGroup {
-  groupIndex: number;
-  material: MaterialKey;
-  instructions: RenderInstruction[];
-}
-
-/**
- * Materialize the {@link RenderGroup} batch units contained directly in
- * `scope`. Consecutive draw instructions that share a defined `groupIndex`
- * coalesce into one group; any non-draw entry (a nested group or barrier)
- * breaks the run, and a draw whose `groupIndex` is still `undefined` (i.e.
- * the plan has not been optimized) forms its own singleton group — mirroring
- * the adjacency semantics the mesh renderers already rely on.
- *
- * This is a read-only view over an (optimized) scope; it does not mutate the
- * plan or affect playback order.
- *
- * @internal
- */
-export function collectRenderGroups(scope: GroupScope): RenderGroup[] {
-  const groups: RenderGroup[] = [];
-  let current: MutableRenderGroup | null = null;
-
-  for (const entry of scope.entries) {
-    if (entry.kind !== RenderEntryKind.Draw) {
-      current = null;
-
-      continue;
-    }
-
-    const command = entry.command;
-    const groupIndex = command.groupIndex;
-
-    if (current !== null && groupIndex !== undefined && groupIndex === current.groupIndex) {
-      current.instructions.push(command);
-
-      continue;
-    }
-
-    current = {
-      groupIndex: groupIndex ?? 0,
-      material: command.material,
-      instructions: [command],
-    };
-    groups.push(current);
-
-    if (groupIndex === undefined) {
-      // Unoptimized / non-batchable draw: never coalesce with the next one.
-      current = null;
-    }
-  }
-
-  return groups;
-}

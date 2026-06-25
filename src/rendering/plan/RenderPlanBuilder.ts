@@ -5,14 +5,17 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
-import { type DrawCommand, makeMaterialKey, RenderEntryKind } from './RenderCommand';
+import { type DrawCommand, RenderEntryKind } from './RenderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';
-import { type BarrierScope, ClipKind, type EffectDescriptor, type GroupScope, type ScopeEntry } from './RenderScope';
-
-interface PendingEntryPlacement {
-  seq: number;
-  zIndex: number;
-}
+import {
+  type BarrierScope,
+  type BarrierScopeEntry,
+  ClipKind,
+  type DrawScopeEntry,
+  type EffectDescriptor,
+  type GroupScope,
+  type GroupScopeEntry,
+} from './RenderScope';
 
 interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
@@ -51,7 +54,31 @@ export class RenderPlanBuilder {
   private readonly _groupPool: MutableGroupScope[] = [];
   private readonly _scopeStack: MutableGroupScope[] = [];
   private _groupPoolCursor = 0;
-  private _pendingEntryPlacement: PendingEntryPlacement | null = null;
+
+  // Frame-persistent free-lists (Slice 2b). Each lives on the builder INSTANCE
+  // (never module-global) to keep the multi-instance invariant: a second app /
+  // backend uses its own builder and its own pools. Cursors reset every frame in
+  // build() + _resetRuntimeState(); the backing objects survive and are mutated
+  // in place, so a steady-state static scene allocates zero plan objects.
+  private readonly _commandPool: DrawCommand[] = [];
+  private _commandPoolCursor = 0;
+  private readonly _drawEntryPool: DrawScopeEntry[] = [];
+  private _drawEntryPoolCursor = 0;
+  private readonly _groupEntryPool: GroupScopeEntry[] = [];
+  private _groupEntryPoolCursor = 0;
+  private readonly _barrierEntryPool: BarrierScopeEntry[] = [];
+  private _barrierEntryPoolCursor = 0;
+
+  // Reserved placement (replaces the per-call `{ seq, zIndex }` literal).
+  private _reservedSeq = 0;
+  private _reservedZ = 0;
+
+  // Placement inherited by emitDraw from a drawable emitNode (replaces the
+  // `_pendingEntryPlacement` object); `_hasPending` distinguishes "no pending".
+  private _hasPending = false;
+  private _pendingSeq = 0;
+  private _pendingZ = 0;
+
   private _nodeIndex = 0;
 
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
@@ -59,8 +86,12 @@ export class RenderPlanBuilder {
     this._view = null;
     this._plan.reset();
     this._groupPoolCursor = 0;
+    this._commandPoolCursor = 0;
+    this._drawEntryPoolCursor = 0;
+    this._groupEntryPoolCursor = 0;
+    this._barrierEntryPoolCursor = 0;
     this._scopeStack.length = 0;
-    this._pendingEntryPlacement = null;
+    this._hasPending = false;
     this._nodeIndex = 0;
 
     const rootScope = this._acquireGroupScope(false);
@@ -92,7 +123,9 @@ export class RenderPlanBuilder {
   }
 
   public emitNode(node: RenderNode, seq?: number): void {
-    const placement = this._reserveEntryPlacement(seq, node.zIndex);
+    this._reserveEntryPlacement(seq, node.zIndex);
+    const reservedSeq = this._reservedSeq;
+    const reservedZ = this._reservedZ;
 
     if (node._renderPlanHasBarrierEffects()) {
       const effect = this._createEffectDescriptor(node);
@@ -131,12 +164,7 @@ export class RenderPlanBuilder {
         height,
       };
 
-      this._pushEntry({
-        kind: RenderEntryKind.Barrier,
-        seq: placement.seq,
-        zIndex: placement.zIndex,
-        scope: barrierScope,
-      });
+      this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
 
       if (childPlan !== null) {
         this._scopeStack.push(childPlan);
@@ -152,12 +180,14 @@ export class RenderPlanBuilder {
     }
 
     if (node._isDrawableForRenderPlan()) {
-      this._pendingEntryPlacement = placement;
+      this._hasPending = true;
+      this._pendingSeq = reservedSeq;
+      this._pendingZ = reservedZ;
 
       try {
         node._collectForRenderPlan(this);
       } finally {
-        this._pendingEntryPlacement = null;
+        this._hasPending = false;
       }
 
       return;
@@ -165,12 +195,7 @@ export class RenderPlanBuilder {
 
     const groupScope = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
 
-    this._pushEntry({
-      kind: RenderEntryKind.Group,
-      seq: placement.seq,
-      zIndex: placement.zIndex,
-      scope: groupScope,
-    });
+    this._pushGroupEntry(reservedSeq, reservedZ, groupScope);
 
     this._scopeStack.push(groupScope);
 
@@ -182,40 +207,48 @@ export class RenderPlanBuilder {
   }
 
   public emitDraw(drawable: Drawable, seq?: number): void {
-    const pendingPlacement = this._pendingEntryPlacement;
+    const hasPending = this._hasPending;
+    const pendingSeq = this._pendingSeq;
+    const pendingZ = this._pendingZ;
 
-    if (pendingPlacement !== null) {
-      this._pendingEntryPlacement = null;
+    if (hasPending) {
+      this._hasPending = false;
     }
 
-    const zIndex = pendingPlacement?.zIndex ?? drawable.zIndex;
-    const placement = this._reserveEntryPlacement(seq ?? pendingPlacement?.seq, zIndex);
-    const bounds = drawable.getBounds();
-    const command: DrawCommand = {
-      kind: RenderEntryKind.Draw,
-      drawable,
-      nodeIndex: this._nodeIndex++,
-      seq: placement.seq,
-      zIndex: placement.zIndex,
-      material: makeMaterialKey(drawable, this.backend),
-      minX: bounds.left,
-      minY: bounds.top,
-      maxX: bounds.right,
-      maxY: bounds.bottom,
-    };
+    const zIndex = hasPending ? pendingZ : drawable.zIndex;
 
-    this._pushEntry({
-      kind: RenderEntryKind.Draw,
-      seq: placement.seq,
-      zIndex: placement.zIndex,
-      command,
-    });
+    this._reserveEntryPlacement(seq ?? (hasPending ? pendingSeq : undefined), zIndex);
+
+    const placementSeq = this._reservedSeq;
+    const placementZ = this._reservedZ;
+    const bounds = drawable.getBounds();
+    const command = this._acquireDrawCommand();
+
+    command.drawable = drawable;
+    command.nodeIndex = this._nodeIndex++;
+    command.seq = placementSeq;
+    command.zIndex = placementZ;
+    // Reset the optimizer's batch index: a recycled command must not carry a
+    // stale groupIndex from a previous frame (the plan player's group-adjacency
+    // walk would coalesce on it before optimize() runs).
+    command.groupIndex = undefined;
+    command.material = drawable._getOrComputeMaterialKey(this.backend);
+    command.minX = bounds.left;
+    command.minY = bounds.top;
+    command.maxX = bounds.right;
+    command.maxY = bounds.bottom;
+
+    this._pushDrawEntry(placementSeq, placementZ, command);
   }
 
   private _resetRuntimeState(): void {
     this._scopeStack.length = 0;
-    this._pendingEntryPlacement = null;
+    this._hasPending = false;
     this._groupPoolCursor = 0;
+    this._commandPoolCursor = 0;
+    this._drawEntryPoolCursor = 0;
+    this._groupEntryPoolCursor = 0;
+    this._barrierEntryPoolCursor = 0;
     this._view = null;
     this._nodeIndex = 0;
   }
@@ -242,7 +275,84 @@ export class RenderPlanBuilder {
     return scope;
   }
 
-  private _reserveEntryPlacement(seq: number | undefined, zIndex: number): PendingEntryPlacement {
+  private _acquireDrawCommand(): DrawCommand {
+    const pooled = this._commandPool[this._commandPoolCursor];
+
+    if (pooled !== undefined) {
+      this._commandPoolCursor++;
+
+      return pooled;
+    }
+
+    const command: DrawCommand = {
+      kind: RenderEntryKind.Draw,
+      drawable: undefined as unknown as Drawable,
+      nodeIndex: 0,
+      seq: 0,
+      zIndex: 0,
+      material: undefined as unknown as DrawCommand['material'],
+      groupIndex: undefined,
+      minX: 0,
+      minY: 0,
+      maxX: 0,
+      maxY: 0,
+    };
+
+    this._commandPool[this._commandPoolCursor] = command;
+    this._commandPoolCursor++;
+
+    return command;
+  }
+
+  private _pushDrawEntry(seq: number, zIndex: number, command: DrawCommand): void {
+    let entry = this._drawEntryPool[this._drawEntryPoolCursor];
+
+    if (entry === undefined) {
+      entry = { kind: RenderEntryKind.Draw, seq, zIndex, command };
+      this._drawEntryPool[this._drawEntryPoolCursor] = entry;
+    } else {
+      entry.seq = seq;
+      entry.zIndex = zIndex;
+      entry.command = command;
+    }
+
+    this._drawEntryPoolCursor++;
+    this._currentScope().entries.push(entry);
+  }
+
+  private _pushGroupEntry(seq: number, zIndex: number, scope: GroupScope): void {
+    let entry = this._groupEntryPool[this._groupEntryPoolCursor];
+
+    if (entry === undefined) {
+      entry = { kind: RenderEntryKind.Group, seq, zIndex, scope };
+      this._groupEntryPool[this._groupEntryPoolCursor] = entry;
+    } else {
+      entry.seq = seq;
+      entry.zIndex = zIndex;
+      entry.scope = scope;
+    }
+
+    this._groupEntryPoolCursor++;
+    this._currentScope().entries.push(entry);
+  }
+
+  private _pushBarrierEntry(seq: number, zIndex: number, scope: BarrierScope): void {
+    let entry = this._barrierEntryPool[this._barrierEntryPoolCursor];
+
+    if (entry === undefined) {
+      entry = { kind: RenderEntryKind.Barrier, seq, zIndex, scope };
+      this._barrierEntryPool[this._barrierEntryPoolCursor] = entry;
+    } else {
+      entry.seq = seq;
+      entry.zIndex = zIndex;
+      entry.scope = scope;
+    }
+
+    this._barrierEntryPoolCursor++;
+    this._currentScope().entries.push(entry);
+  }
+
+  private _reserveEntryPlacement(seq: number | undefined, zIndex: number): void {
     const scope = this._currentScope();
     const nextSeq = seq ?? scope._nextSeq;
 
@@ -256,11 +366,8 @@ export class RenderPlanBuilder {
       scope.hasMixedZ = true;
     }
 
-    return { seq: nextSeq, zIndex };
-  }
-
-  private _pushEntry(entry: ScopeEntry): void {
-    this._currentScope().entries.push(entry);
+    this._reservedSeq = nextSeq;
+    this._reservedZ = zIndex;
   }
 
   private _currentScope(): MutableGroupScope {

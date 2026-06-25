@@ -10,10 +10,11 @@ import { Vector } from '#math/Vector';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
-import { type DrawCommand, drawCommandUsesSharedTransform } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
+import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -42,6 +43,8 @@ interface ManagedWebGpuTextureState {
   height: number;
   mipLevelCount: number;
   hasContent: boolean;
+  /** GPU bytes currently booked for this texture's storage with the resource accountant. */
+  accountedBytes: number;
 }
 
 interface PixelClipBoundsState {
@@ -52,6 +55,8 @@ interface PixelClipBoundsState {
 }
 
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
+// Managed content + render textures use rgba8unorm = 4 bytes/px.
+const MANAGED_TEXTURE_BYTES_PER_PIXEL = 4;
 
 /**
  * WebGPU implementation of {@link RenderBackend}. Manages the GPU device,
@@ -114,6 +119,7 @@ export class WebGpuBackend implements RenderBackend {
   private _clearRequested = false;
   private _hasPresentedFrame = false;
   private readonly _stats: RenderStats = createRenderStats();
+  private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private _transformStorage: WebGpuTransformStorage | null = new WebGpuTransformStorage();
   private _activeDrawCommand: DrawCommand | null = null;
   private _passCoordinatorInstance: WebGpuPassCoordinator | null = null;
@@ -181,6 +187,17 @@ export class WebGpuBackend implements RenderBackend {
     return this._stats;
   }
 
+  /**
+   * Per-backend GPU resource accountant (VRAM / upload / download bookkeeping).
+   * Shared with this backend's transform storage and compute readback paths so
+   * they can book their own allocations and uploads. Not part of any public
+   * surface.
+   * @internal
+   */
+  public get accountant(): GpuResourceAccountant {
+    return this._accountant;
+  }
+
   /** @internal */
   public get activeDrawCommand(): DrawCommand | null {
     return this._activeDrawCommand;
@@ -238,7 +255,7 @@ export class WebGpuBackend implements RenderBackend {
     // destroy and replace the buffer mid-frame while earlier command buffers
     // may still reference the old allocation.
     if (nodeCount > 0 && this._device !== null && !this._deviceLost) {
-      storage.reserve(this._device, nodeCount);
+      storage.reserve(this._device, nodeCount, this._accountant);
     }
 
     this._activeDrawCommand = null;
@@ -246,21 +263,30 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public _prepareRenderGroupUpload(group: RenderGroup): void {
+  public _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number): void {
     // Pack the whole render group's world transforms (+ tint) into the shared
     // transform storage at the group's upload boundary, keyed by each draw
     // command's stable nodeIndex. Every draw the player will submit for this
     // group is covered here, before the group's first draw.
     //
+    // The group is the entries range `[startIndex, startIndex + count)`; every
+    // entry in it is a draw, so the player no longer materializes a group array.
+    //
     // Renderers that pack their own per-node data (Text, Particle) never read
     // the shared storage, so their commands are skipped — no consuming draw
     // ever references their slots (nodeIndex is unique per command).
     const storage = this._getTransformStorage();
-    const instructions = group.instructions;
+    const end = startIndex + count;
 
-    for (let i = 0; i < instructions.length; i++) {
-      // i is bounded by instructions.length via the for-loop guard.
-      const command = instructions[i]!;
+    for (let i = startIndex; i < end; i++) {
+      const entry = entries[i]!;
+
+      // Every entry in a group run is a draw; narrow to read its command.
+      if (entry.kind !== RenderEntryKind.Draw) {
+        continue;
+      }
+
+      const command = entry.command;
 
       if (drawCommandUsesSharedTransform(command, this)) {
         storage.writeCommand(command, this._resolveSnapTransform(command.drawable));
@@ -713,7 +739,7 @@ export class WebGpuBackend implements RenderBackend {
 
   /** @internal */
   public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly count: number } {
-    return this._getTransformStorage().getBuffer(this.device, minCount);
+    return this._getTransformStorage().getBuffer(this.device, minCount, this._accountant);
   }
 
   /**
@@ -1051,6 +1077,8 @@ export class WebGpuBackend implements RenderBackend {
         usage: this._getTextureUsage(texture),
       });
 
+      const mipLevelCount = this._getMipLevelCount(texture);
+
       state = {
         texture: gpuTexture,
         view: gpuTexture.createView(),
@@ -1058,9 +1086,12 @@ export class WebGpuBackend implements RenderBackend {
         version: -1,
         width: texture.width,
         height: texture.height,
-        mipLevelCount: this._getMipLevelCount(texture),
+        mipLevelCount,
         hasContent: false,
+        accountedBytes: 0,
       };
+
+      state.accountedBytes = this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount));
 
       const destroyHandler = (): void => {
         this._evictTexture(texture);
@@ -1103,6 +1134,8 @@ export class WebGpuBackend implements RenderBackend {
         state.height = texture.height;
         state.mipLevelCount = mipLevelCount;
         state.hasContent = false;
+        // Free the previous storage before booking the new size (no transient spike).
+        state.accountedBytes = this._accountant.reallocate(state.accountedBytes, this._estimateTextureBytes(texture, mipLevelCount));
       }
 
       state.sampler = this._createSampler(texture);
@@ -1126,6 +1159,7 @@ export class WebGpuBackend implements RenderBackend {
             },
             { width: texture.width, height: texture.height },
           );
+          this._accountant.recordTextureUpload(texture.width * texture.height * formatInfo.bytesPerPixel);
         } else {
           // Partial upload: pack the dirty region into a contiguous buffer.
           const channels = formatInfo.channels;
@@ -1147,6 +1181,7 @@ export class WebGpuBackend implements RenderBackend {
             { bytesPerRow: region.width * bytesPerPixel, rowsPerImage: region.height },
             { width: region.width, height: region.height },
           );
+          this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
         }
 
         state.hasContent = true;
@@ -1166,6 +1201,7 @@ export class WebGpuBackend implements RenderBackend {
             height: texture.height,
           },
         );
+        this._accountant.recordTextureUpload(texture.width * texture.height * MANAGED_TEXTURE_BYTES_PER_PIXEL);
 
         if (state.mipLevelCount > 1) {
           this._generateMipmaps(state.texture, state.mipLevelCount);
@@ -1189,6 +1225,8 @@ export class WebGpuBackend implements RenderBackend {
 
     if (state) {
       state.texture.destroy();
+      this._accountant.free(state.accountedBytes);
+      state.accountedBytes = 0;
       this._textureStates.delete(texture);
     }
 
@@ -1323,6 +1361,23 @@ export class WebGpuBackend implements RenderBackend {
       default:
         return 'nearest';
     }
+  }
+
+  /** Bytes per pixel for a texture's GPU format (DataTexture formats, else managed `rgba8unorm`). */
+  private _textureBytesPerPixel(texture: Texture | RenderTexture): number {
+    if (texture instanceof DataTexture) {
+      // `instanceof DataTexture` erases the generic, widening `format` to `any`;
+      // the class invariant guarantees it is a `DataTextureFormat`.
+      const format: DataTextureFormat = texture.format;
+      return dataTextureBytesPerPixel(format);
+    }
+
+    return MANAGED_TEXTURE_BYTES_PER_PIXEL;
+  }
+
+  /** Estimated VRAM bytes for a texture's storage (base level + mip chain). */
+  private _estimateTextureBytes(texture: Texture | RenderTexture, mipLevelCount: number): number {
+    return estimateTextureBytes(texture.width, texture.height, this._textureBytesPerPixel(texture), mipLevelCount);
   }
 
   private _getMipLevelCount(texture: Texture | RenderTexture): number {

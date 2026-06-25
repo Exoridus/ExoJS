@@ -1,11 +1,12 @@
 import { Color } from '#core/Color';
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope } from '#rendering/plan/RenderScope';
+import type { DrawScopeEntry, GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
+
+import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
 // Sprite/Mesh-like: renderer reads shared transform storage.
 class ConsumingDrawable extends Drawable {
@@ -95,14 +96,14 @@ const playGroupUpload = (scope: GroupScope): GroupUploadPlayback => {
 
   const backend = {
     rendererRegistry: makeRegistry(),
-    _prepareRenderGroupUpload(group: RenderGroup) {
-      for (const command of group.instructions) {
+    _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+      forEachGroupCommand(entries, startIndex, count, command => {
         if (drawCommandUsesSharedTransform(command, this as unknown as RenderBackend)) {
           storage.writeCommand(command);
         } else {
           storage.recordSkippedWrite();
         }
-      }
+      });
     },
     _prepareDrawCommand(command: DrawCommand) {
       prepareDrawCommandCalls.push(command);
@@ -262,14 +263,14 @@ describe('WebGPU group-upload: nodeIndex slot contract', () => {
 
     const backend = {
       rendererRegistry: makeRegistry(),
-      _prepareRenderGroupUpload(group: RenderGroup) {
-        for (const cmd of group.instructions) {
+      _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+        forEachGroupCommand(entries, startIndex, count, cmd => {
           if (drawCommandUsesSharedTransform(cmd, this as unknown as RenderBackend)) {
             storage2.writeCommand(cmd);
           } else {
             storage2.recordSkippedWrite();
           }
-        }
+        });
       },
       _prepareDrawCommand() {},
       draw(drawable: Drawable) {

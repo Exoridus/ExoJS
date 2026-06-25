@@ -261,6 +261,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     this._connection = this._createConnection(gl);
     this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(this._connection),
+      backend.accountant,
     );
     this._shader.sync();
 

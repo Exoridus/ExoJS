@@ -1,12 +1,13 @@
 import { Color } from '#core/Color';
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
-import type { RenderGroup } from '#rendering/plan/RenderInstruction';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
-import type { DrawScopeEntry, GroupScope } from '#rendering/plan/RenderScope';
+import type { DrawScopeEntry, GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
+
+import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
 // Sprite/Mesh-like: renderer reads the shared transform storage.
 class ConsumingDrawable extends Drawable {
@@ -47,8 +48,8 @@ const material = (key: number): MaterialKey => ({
 });
 
 // One coalescing group: every command shares the same groupIndex/material key,
-// so `collectRenderGroups` packs them into a single RenderGroup → a single
-// upload boundary fires for the whole run.
+// so the plan player walks them as a single group run → a single upload
+// boundary fires for the whole run.
 const createDrawCommand = (drawable: Drawable, nodeIndex: number): DrawCommand => ({
   kind: RenderEntryKind.Draw,
   drawable,
@@ -101,14 +102,14 @@ class Webgl2UploadModel {
     const buffer = this.buffer;
     const backend = {
       rendererRegistry: makeRegistry(),
-      _prepareRenderGroupUpload(group: RenderGroup) {
-        for (const command of group.instructions) {
+      _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+        forEachGroupCommand(entries, startIndex, count, command => {
           if (drawCommandUsesSharedTransform(command, this as unknown as RenderBackend)) {
             buffer.write(command.nodeIndex, command.drawable.getGlobalTransform(), command.drawable.tint);
           } else {
             buffer.recordSkippedWrite();
           }
-        }
+        });
       },
       _prepareDrawCommand() {
         // Refactored backend contract: no transform write in this hook.
@@ -180,14 +181,14 @@ const withGpuBufferUsage = (run: () => void): void => {
 const playWebgpu = (storage: WebGpuTransformStorage, scope: GroupScope): void => {
   const backend = {
     rendererRegistry: makeRegistry(),
-    _prepareRenderGroupUpload(group: RenderGroup) {
-      for (const command of group.instructions) {
+    _prepareRenderGroupUpload(entries: readonly ScopeEntry[], startIndex: number, count: number) {
+      forEachGroupCommand(entries, startIndex, count, command => {
         if (drawCommandUsesSharedTransform(command, this as unknown as RenderBackend)) {
           storage.writeCommand(command);
         } else {
           storage.recordSkippedWrite();
         }
-      }
+      });
     },
     _prepareDrawCommand() {},
     draw() {

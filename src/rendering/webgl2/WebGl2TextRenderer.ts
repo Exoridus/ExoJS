@@ -160,9 +160,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
     const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
 
     const vaoHandle = gl.createVertexArray();

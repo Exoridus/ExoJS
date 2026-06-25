@@ -62,9 +62,11 @@ export class WebGl2MaskCompositor {
     const bufferHandles = new Map<WebGl2RenderBuffer, WebGLBuffer>();
     const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw).connect(
       this._createBufferRuntime(gl, bufferHandles),
+      backend.accountant,
     );
     const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, bufferHandles),
+      backend.accountant,
     );
 
     // Force shader finalize so getAttribute() below sees a populated

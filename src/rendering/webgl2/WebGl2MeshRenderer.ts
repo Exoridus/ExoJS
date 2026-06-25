@@ -37,14 +37,19 @@ interface MeshRendererConnection {
   readonly dynamicNodeIndexBuffer: WebGl2RenderBuffer;
 }
 
+// Mutable so the per-frame pool (`_pendingDraws` + `_pendingCount` cursor) can
+// reuse slots: `render()` overwrites every field of a reclaimed slot instead of
+// allocating a fresh literal. EVERY field must be rewritten per reuse (a stale
+// `command`/`material`/`texture`/`supportsInstancing` from the previous frame
+// would render a ghost mesh).
 interface PendingMeshDraw {
-  readonly mesh: Mesh;
-  readonly command: DrawCommand | null;
-  readonly material: Material | null;
-  readonly shader: Shader;
-  readonly blendMode: BlendModes;
-  readonly texture: Texture | RenderTexture;
-  readonly supportsInstancing: boolean;
+  mesh: Mesh;
+  command: DrawCommand | null;
+  material: Material | null;
+  shader: Shader;
+  blendMode: BlendModes;
+  texture: Texture | RenderTexture;
+  supportsInstancing: boolean;
 }
 
 interface StaticGeometryCacheEntry {
@@ -78,7 +83,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
   private _nodeIndexData: Uint32Array = new Uint32Array(initialNodeIndexCapacity);
 
+  // Frame-persistent pool of pending-draw slots. `render()` fills slots front to
+  // back up to `_pendingCount`; `flush()` consumes `[0, _pendingCount)` and then
+  // only resets the cursor (the slot objects survive for the next frame, so no
+  // PendingMeshDraw literal is allocated per mesh per frame).
   private readonly _pendingDraws: PendingMeshDraw[] = [];
+  private _pendingCount = 0;
   private readonly _staticGeometryCache = new Map<Geometry, StaticGeometryCacheEntry>();
   private _connection: MeshRendererConnection | null = null;
   private _currentBlendMode: BlendModes | null = null;
@@ -105,15 +115,25 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     const command = backend.activeDrawCommand;
     const supportsInstancing = material === null ? true : this._isInstancingCompatible(shader);
 
-    this._pendingDraws.push({
-      mesh,
-      command,
-      material,
-      shader,
-      blendMode,
-      texture,
-      supportsInstancing,
-    });
+    // Reuse a pooled slot if one exists at the cursor, otherwise grow the pool.
+    // Overwrite every field (see PendingMeshDraw): a forgotten field leaks the
+    // previous frame's mesh into this slot.
+    let slot = this._pendingDraws[this._pendingCount];
+
+    if (slot === undefined) {
+      slot = { mesh, command, material, shader, blendMode, texture, supportsInstancing };
+      this._pendingDraws.push(slot);
+    } else {
+      slot.mesh = mesh;
+      slot.command = command;
+      slot.material = material;
+      slot.shader = shader;
+      slot.blendMode = blendMode;
+      slot.texture = texture;
+      slot.supportsInstancing = supportsInstancing;
+    }
+
+    this._pendingCount++;
   }
 
   /**
@@ -173,35 +193,37 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   public flush(): void {
     const backend = this.getBackendOrNull();
     const connection = this._connection;
+    const count = this._pendingCount;
 
-    if (backend === null || connection === null || this._pendingDraws.length === 0) {
-      this._pendingDraws.length = 0;
+    if (backend === null || connection === null || count === 0) {
+      this._pendingCount = 0;
       return;
     }
 
-    for (let i = 0; i < this._pendingDraws.length; i++) {
-      // In-bounds: `i` ranges over `0..length-1`.
+    for (let i = 0; i < count; i++) {
+      // In-bounds: `i` ranges over `0..count-1` (pool slots filled by render()).
       const draw = this._pendingDraws[i]!;
 
       if (this._canBatchStatic(draw)) {
         let end = i + 1;
 
-        // In-bounds: `end` and `end - 1` stay within `0..length-1` per the loop guard.
-        while (end < this._pendingDraws.length && this._isSameBatch(this._pendingDraws[end - 1]!, this._pendingDraws[end]!)) {
+        // In-bounds: `end` and `end - 1` stay within `0..count-1` per the loop guard.
+        while (end < count && this._isSameBatch(this._pendingDraws[end - 1]!, this._pendingDraws[end]!)) {
           end++;
         }
 
         if (end - i >= 2) {
-          this._drawStaticBatch(this._pendingDraws.slice(i, end), backend, connection);
+          this._drawStaticBatch(i, end, backend, connection);
           i = end - 1;
           continue;
         }
       }
 
-      this._drawSingle(draw, backend, connection);
+      this._drawSingle(i, backend, connection);
     }
 
-    this._pendingDraws.length = 0;
+    // Reset only the cursor; pooled slots stay allocated for the next frame.
+    this._pendingCount = 0;
   }
 
   public destroy(): void {
@@ -229,12 +251,15 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     const buffers = new Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number }>();
     const dynamicIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
     const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
     const dynamicNodeIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._nodeIndexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
+      backend.accountant,
     );
 
     const dynamicVaoHandle = gl.createVertexArray();
@@ -292,11 +317,15 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     this._connection = null;
     this._currentBlendMode = null;
     this._pendingDraws.length = 0;
+    this._pendingCount = 0;
   }
 
-  private _drawSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
+  private _drawSingle(index: number, backend: WebGl2Backend, connection: MeshRendererConnection): void {
+    // In-bounds: callers pass an index in `0..count-1`.
+    const draw = this._pendingDraws[index]!;
+
     if (this._canBatchStatic(draw)) {
-      this._drawStaticBatch([draw], backend, connection);
+      this._drawStaticBatch(index, index + 1, backend, connection);
       return;
     }
 
@@ -343,10 +372,18 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     backend.stats.drawCalls++;
   }
 
-  private _drawStaticBatch(batch: PendingMeshDraw[], backend: WebGl2Backend, connection: MeshRendererConnection): void {
-    // Callers only invoke this with a non-empty batch (slice of >= 1 or [draw]).
-    const first = batch[0]!;
+  /**
+   * Draw the pooled pending-draws in the half-open range `[start, end)` as one
+   * instanced batch. Callers (flush single-draw and run-batching) guarantee
+   * `end > start` and that every slot in the range shares geometry/shader/
+   * material/blend/texture (see {@link _isSameBatch}). Iterating the range
+   * in place avoids the per-batch array copy a `slice()` would allocate.
+   */
+  private _drawStaticBatch(start: number, end: number, backend: WebGl2Backend, connection: MeshRendererConnection): void {
+    // In-bounds: `start < end <= _pendingCount`, so `start` is a filled slot.
+    const first = this._pendingDraws[start]!;
     const geometry = first.mesh.geometry!;
+    const count = end - start;
     const cacheEntry = this._getOrCreateStaticGeometryEntry(geometry, first.mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, first.shader, connection.gl, connection.dynamicNodeIndexBuffer);
 
@@ -354,11 +391,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     let maxNodeIndex = 0;
 
-    this._ensureNodeIndexCapacity(batch.length);
+    this._ensureNodeIndexCapacity(count);
 
-    for (let i = 0; i < batch.length; i++) {
-      // In-bounds: `i` ranges over `0..batch.length-1`.
-      const command = batch[i]!.command!;
+    for (let i = 0; i < count; i++) {
+      // In-bounds: `start + i` ranges over `[start, end)`, all filled slots.
+      const command = this._pendingDraws[start + i]!.command!;
       const nodeIndex = command.nodeIndex >>> 0;
 
       this._nodeIndexData[i] = nodeIndex;
@@ -370,8 +407,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     this._bindInstancedShaderState(first.shader, first.texture, first.material, backend, maxNodeIndex);
     backend.bindVertexArrayObject(vao);
-    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, batch.length));
-    vao.drawInstanced(cacheEntry.indexCount, 0, batch.length, RenderingPrimitives.Triangles);
+    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, count));
+    vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -516,11 +553,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     this._packIndices(mesh, 0, indexData);
 
+    const accountant = this.getBackend().accountant;
     const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, floatView, BufferUsage.StaticDraw).connect(
       this._createBufferRuntime(connection.gl, connection.buffers),
+      accountant,
     );
     const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indexData, BufferUsage.StaticDraw).connect(
       this._createBufferRuntime(connection.gl, connection.buffers),
+      accountant,
     );
 
     vertexBuffer.upload(floatView);
