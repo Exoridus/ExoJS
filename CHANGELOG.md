@@ -4,55 +4,64 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.14.0] - 2026-06-26
 
-Release notes are curated at release time, not per pull request. When a version
-is cut, this section is renamed to `## [x.y.z] - YYYY-MM-DD` and filled from the
-merged pull requests and commits since the previous tag (each with its commit /
-PR link); `pnpm release:notes` then renders that section into the published
-GitHub release with a `PREVIOUS_TAG...CURRENT_TAG` compare link.
-
-## [0.14.0] - 2026-06-23
-
-The architecture release. Two new packages — `@codexo/exojs-physics` (a native
-2D collision, query, and dynamics world) and `@codexo/exojs-audio-fx` (the audio
-effect suite, extracted from core) — join the lockstep set. Core gains a UI
-layer, scene-graph serialization with prefabs and save files, immediate-mode
-rendering, an ordered System scheduler, and a multi-instance-safe foundation
-(deterministic disposal, app-owned managers). The Scene model is simplified to a
-single active scene. This is a pre-1.0 release and includes intentional breaking
-changes; see **Changed** and **Removed**.
+The architecture and hardening release. Two new packages —
+`@codexo/exojs-physics` (a native 2D physics world with a TGS-Soft solver) and
+`@codexo/exojs-audio-fx` (the audio effect suite, extracted from core) — join the
+lockstep set. Core gains a UI layer, scene-graph serialization with prefabs,
+immediate-mode rendering, an ordered System scheduler, and a multi-instance-safe
+foundation. The type system reaches its strictest configuration
+(`noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` across all packages,
+zero `as any`, zero `ts-ignore`). Save-slot persistence moves to a new
+`KeyValueStore` surface with three swappable backends. This is a pre-1.0 release
+and includes intentional breaking changes; see **Changed** and **Removed**.
 
 ### Added
 
-- **`@codexo/exojs-physics` — native 2D physics.** Shapes, colliders, and bodies
-  with an SAP broadphase, manifold narrow-phase, and a warm-started
-  sequential-impulse solver (2×2 block normal LCP + NGS position correction,
-  pre-gravity restitution). Contact graph and events, spatial queries,
-  scene-graph binding, and a `/debug` draw subpath. Allocation-free per step;
-  the dynamics surface (`velocity`, `applyForce`/`Torque`/`Impulse`) is public
-  (#131, #140, #141, #142, #143, #155, #156).
+- **`@codexo/exojs-physics` — native 2D physics.** Circles, boxes, capsules, and
+  convex polygons; static, kinematic, and dynamic bodies; SAP broadphase; manifold
+  narrow-phase; warm-started TGS-Soft solver (sub-stepped soft-constraint, 2×2
+  block normal LCP) stable to 20+ box stacks. Contact graph, collision events,
+  spatial queries, scene-graph binding, and a `/debug` draw subpath. Allocation
+  measured and halved per step (V8 heap-sampler verified); the dynamics surface
+  (`velocity`, `applyForce`/`Torque`/`Impulse`) is fully public (#131, #140, #141,
+  #142, #143, #155, #156, #177, #180, #181).
 - **`@codexo/exojs-audio-fx` — audio effect package.** Extracted from core: the
   `*Effect` suite, `AudioAnalyser`, `BeatDetector`, worklets, and DSP helpers.
   Core keeps the audio engine and effect base classes (#133).
 - **UI core.** `scene.ui` with a `Widget`/`Label`/`Panel`/`Button`/`ProgressBar`
   set, row/column/stack layout and anchoring, a `FocusManager` with keyboard
   navigation, and `app.focus` (#138).
-- **Scene-graph serialization.** `SerializationRegistry`, `NodeSerializer`,
-  `Prefab`, and `SaveManager` with `Scene.serialize`/`deserialize`; serializers
-  for containers, sprites, text, meshes, graphics, nine-slice/repeating sprites,
-  animated sprites, bitmap text, video, and UI widgets. Tilemap nodes serialize
-  through an extension binding (#144, #145, #146, #147, #148).
+- **Scene-graph serialization.** `SerializationRegistry`, `NodeSerializer`, and
+  `Prefab` with `Scene.serialize`/`deserialize`; serializers for containers,
+  sprites, text, meshes, graphics, nine-slice/repeating sprites, animated sprites,
+  bitmap text, video, and UI widgets. Tilemap nodes serialize through an extension
+  binding. Pair with a `KeyValueStore` for save-slot persistence (#144, #145, #146,
+  #147, #148).
+- **`KeyValueStore` interface + three backends.** `WebStorageStore` wraps
+  `localStorage`/`sessionStorage` with JSON serialization. `IndexedDbKeyValueStore`
+  stores values via structured clone — `Blob`s and `ArrayBuffer`s round-trip
+  natively. `MemoryStore` is an in-process `Map` for tests and ephemeral state.
+  All three share one `async` interface; swapping backends is a one-line change
+  (#178).
+- **Binary asset containers.** `Loader.loadContainer(url)` fetches a single
+  archive, injects each entry directly into the cache, and triggers `onLoaded`
+  callbacks — one HTTP request in place of N individual asset fetches. A
+  `build-container` script bundles assets at build time (#179).
 - **Immediate-mode rendering.** `RenderingContext.drawGeometry` for one-off
   geometry and `RenderBatch` + `drawBatch` for instanced draws collapsing to a
   single draw call (#150, #151, #159).
 - **System scheduler.** `app.systems` and `scene.systems` run the core managers
-  as ordered systems; `update` signatures converge on `(delta: Time)` (#134).
+  as ordered systems with deterministic tick bands (#134).
 - **Design-space coordinates.** Automatic DPR handling, letterbox sizing, and
   `canvas`-mount / `sizingMode` options on `Application` (#130).
-- **Typed tilemap object layers.** Object layers and queries converted from
-  Tiled object groups, plus an `ObjectKind` `as const` schema and a generic
+- **Typed tilemap object layers.** Object layers and queries converted from Tiled
+  object groups, plus an `ObjectKind` `as const` schema and a generic
   `ObjectLayer<S>` with `byType`/`byKind`/`where` (#132, #157).
+- **GPU resource accounting in `RenderStats`.** `gpuMemoryBytes` tracks an
+  accumulated VRAM estimate; `textureUploadBytes` and `bufferUploadBytes` count
+  bytes transferred each frame (#173).
 - **Combined Tiled + physics examples** with an `ObjectLayer`→collider bridge
   (#160), a rebuilt example catalog on a shared runtime helper kit, and a live
   hero example with an expandable playground preview.
@@ -74,8 +83,31 @@ changes; see **Changed** and **Removed**.
   and SplitMix32 seeding; the `iteration` getter is removed (#137).
 - **BREAKING — physics body construction.** `new PhysicsBody({ colliders })` +
   `world.add`/`world.attach` replace `createBody`/`createStaticCollider` (#156).
+- **BREAKING — physics solver config.** `velocityIterations`/`positionIterations`
+  replaced by `subStepCount` (default 4), `contactHertz` (default 30), and
+  `dampingRatio` (default 10) for the TGS-Soft solver (#181).
 - **BREAKING — rendering barrel.** Backend renderer internals move behind the
   `@codexo/exojs/renderer-sdk` subpath; the root barrel is curated (#153).
+- **BREAKING — `Text` constructor.** The multi-argument overload is removed in
+  favour of `new Text(text, options?)` (#165).
+- **BREAKING — `System.update` signature.** All system `update` methods now
+  receive `(delta: Time)` (#164).
+- **BREAKING — `SerializationRegistry` is app-owned.** Access through
+  `app.serializers`; the process-singleton accessor is removed (#164).
+- **BREAKING — `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`
+  enabled.** Both flags are now `true` across all packages. Code that indexed
+  arrays without narrowing will need guards or non-null assertions (#171).
+- **Render-plan performance.** `DrawCommand`, `MaterialKey`, and `ScopeEntry`
+  objects are pooled; static 1,000-sprite scenes shed ~55 % of per-frame
+  allocation. `RenderPlanOptimizer` overlap grouping goes O(n²) → O(n) via a
+  `Map`-based index — 10,000-sprite / 8-texture scenes optimize in ~2.3 ms vs
+  ~14 ms (~6×), grouping bit-identical (#173, #175).
+- **Production bundle size.** A `terser` `pure_funcs` pass strips dev-assert
+  calls from production builds; `exo.esm.js` shrinks from 1.66 MB to 625 KB
+  (#172).
+- **Strict lint and type rules.** `noUnusedLocals`/`noUnusedParameters` enforced;
+  `@vitest/eslint-plugin` flags non-awaited promise assertions and focused tests;
+  explicit barrel re-exports replace wildcards throughout (#163, #166, #167, #168).
 - **Site islands migrated from Lit to React** (#149); a shared `Registry<K,V>`
   primitive backs constructor-keyed dispatch (#136).
 
@@ -90,9 +122,20 @@ changes; see **Changed** and **Removed**.
 - Physics contact pair keys no longer collide past 65,536 body IDs (#155).
 - New and mutated textures upload correctly after their first bind, and pointer
   coordinates map to backing-store pixels when the canvas is scaled (#130).
+- Deserialization validates the data boundary on entry — malformed or absent
+  fields no longer reach node constructors. `NineSliceSprite.slices` absent no
+  longer throws; non-object children in a serialized scene are silently skipped
+  (#177).
 
 ### Docs
 
+- Text API guide corrected: stale property names removed, property table
+  rewritten, mutation-sync behaviour documented (#183).
+- Storage and serialization guides written for the `KeyValueStore` surface (#183).
+- `SceneManager` API page documents the single-scene, no-stack model (#183).
+- Physics solver operating envelope characterised — mass-ratio ceiling (100:1) and
+  no-CCD disclaimer added to class docs, backed by `SG-MR3` and `SG-X5`
+  regression tests (#184).
 - ADR on shared geometry with separate collision detection (#158) and an
   immediate-mode rendering guide (#159).
 

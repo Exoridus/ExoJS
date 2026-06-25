@@ -79,6 +79,7 @@
     "verify:quick": "pnpm typecheck && pnpm typecheck:guides && pnpm typecheck:examples && pnpm typecheck:packages && pnpm lint:all && pnpm format:check && pnpm docs:api:check",
     "verify:ci": "pnpm verify:quick && pnpm test",
     "release": "tsx ./scripts/release.ts",
+    "release:cut": "tsx ./scripts/release/cut.ts",
     "release:prepare": "tsx ./scripts/release/run.ts prepare",
     "release:full-zip": "tsx ./scripts/release/run.ts full-zip",
     "release:publish": "tsx ./scripts/release/run.ts publish",
