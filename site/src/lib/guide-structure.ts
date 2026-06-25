@@ -223,10 +223,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 learningGoals: [
                     'serialize a scene to JSON and restore it',
                     'capture reusable prefabs and instantiate many independent copies',
-                    'persist save slots with SaveManager and register serializers for custom node types',
+                    'persist save slots with a key-value store and register serializers for custom node types',
                 ],
                 prerequisites: ['runtime/scene-graph'],
-                apiLinks: ['scene', 'prefab', 'save-manager', 'serialization-registry', 'scene-node'],
+                apiLinks: ['scene', 'prefab', 'web-storage-store', 'serialization-registry', 'scene-node'],
             },
         ],
     },

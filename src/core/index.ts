@@ -24,7 +24,6 @@ export { SceneManager } from './SceneManager';
 export { SceneNode } from './SceneNode';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from './serialization/NodeSerializer';
 export { Prefab } from './serialization/Prefab';
-export { SaveManager } from './serialization/SaveManager';
 export type { SceneNodeConstructor } from './serialization/SerializationRegistry';
 export { registerSerializer, SerializationRegistry } from './serialization/SerializationRegistry';
 export type { AssetRef, SerializedNode, SerializedScene } from './serialization/types';

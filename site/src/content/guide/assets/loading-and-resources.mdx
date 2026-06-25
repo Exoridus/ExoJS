@@ -396,14 +396,18 @@ On first load, assets are fetched from the network and written to IndexedDB. On 
 
 If you supply a custom `storeNames` array, include `'__ctx_text'`, `'__ctx_json'`, and `'__ctx_binary'` if your custom asset handlers call `context.fetchText`, `context.fetchJson`, or `context.fetchArrayBuffer`.
 
-## Save data with JsonStore
+## Save data with a key-value store
 
-For user save data (settings, profiles, checkpoints), use `JsonStore`. It is a thin JSON-first layer on IndexedDB:
+The cache above persists *loaded assets*. For **user save data** (settings, profiles, checkpoints) use a `KeyValueStore` instead — a small key/value surface whose backend you pick by capability:
+
+- [`WebStorageStore`](/ExoJS/en/api/web-storage-store/) — `localStorage`/`sessionStorage`, JSON-serialized: small, synchronous, strings only.
+- [`IndexedDbKeyValueStore`](/ExoJS/en/api/indexed-db-key-value-store/) — IndexedDB via structured clone: large, async, stores `Blob`s and `ArrayBuffer`s natively.
+- [`MemoryStore`](/ExoJS/en/api/memory-store/) — in-memory and ephemeral, for tests and throwaway data.
 
 ```js
-import { JsonStore } from '@codexo/exojs';
+import { WebStorageStore } from '@codexo/exojs';
 
-const saves = new JsonStore('my-game-saves');
+const saves = new WebStorageStore(localStorage, { prefix: 'my-game:' });
 
 await saves.set('slot-1', {
     level: 4,
@@ -415,7 +419,7 @@ const slot = await saves.get('slot-1'); // object | null
 await saves.delete('slot-1');
 ```
 
-`JsonStore` stores one JSON payload per key. Non-serializable values throw at write time.
+All three share one async interface, so swapping `WebStorageStore` for `IndexedDbKeyValueStore` — when a save outgrows Web Storage's ~5 MB quota or needs binary data — is a one-line change. To persist an entire scene, pair a store with [`Scene.serialize()`](/ExoJS/en/api/scene/).
 
 ## Custom asset types (advanced)
 

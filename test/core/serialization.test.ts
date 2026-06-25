@@ -4,7 +4,6 @@ import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 import { SceneNode } from '#core/SceneNode';
 import { Prefab } from '#core/serialization/Prefab';
-import { SaveManager } from '#core/serialization/SaveManager';
 import { defaultSerializationRegistry, registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import { _resetDefaultSerializers, deserializeTree, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
@@ -26,7 +25,6 @@ import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
-import type { JsonStore } from '#resources/JsonStore';
 import type { Loadable, Loader } from '#resources/Loader';
 import { Button } from '#ui/Button';
 import { Label } from '#ui/Label';
@@ -614,55 +612,6 @@ describe('serialization — Prefab', () => {
     const rebuilt = Prefab.fromJSON(json);
 
     expect((rebuilt.instantiate() as Container).name).toBe('enemy');
-  });
-});
-
-describe('serialization — SaveManager', () => {
-  function fakeJsonStore(): JsonStore {
-    const records = new Map<string, unknown>();
-
-    return {
-      set: (key: string, data: unknown) => {
-        records.set(key, JSON.parse(JSON.stringify(data)));
-
-        return Promise.resolve();
-      },
-      get: (key: string) => Promise.resolve(records.has(key) ? records.get(key) : null),
-      has: (key: string) => Promise.resolve(records.has(key)),
-      delete: (key: string) => Promise.resolve(records.delete(key)),
-    } as unknown as JsonStore;
-  }
-
-  it('saves and restores a scene by slot', async () => {
-    const saves = new SaveManager(fakeJsonStore());
-    const scene = new Scene();
-    const child = new Container();
-
-    child.name = 'hud';
-    child.setPosition(5, 6);
-    scene.addChild(child);
-
-    await saves.save('slot-1', scene);
-    expect(await saves.has('slot-1')).toBe(true);
-
-    const target = new Scene();
-    const loaded = await saves.load('slot-1', target);
-
-    expect(loaded).toBe(true);
-    expect(target.root.children).toHaveLength(1);
-    expect(target.root.children[0].name).toBe('hud');
-    expect(target.root.children[0].x).toBe(5);
-
-    scene.destroy();
-    target.destroy();
-  });
-
-  it('returns false when loading a missing slot', async () => {
-    const saves = new SaveManager(fakeJsonStore());
-    const scene = new Scene();
-
-    expect(await saves.load('nope', scene)).toBe(false);
-    scene.destroy();
   });
 });
 

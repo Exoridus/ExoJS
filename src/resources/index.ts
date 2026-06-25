@@ -12,10 +12,11 @@ export type { CacheRequest, CacheStrategy } from './CacheStrategy';
 export type { Database } from './Database';
 export type { AssetConstructor } from './FactoryRegistry';
 export { IndexedDbDatabase } from './IndexedDbDatabase';
+export type { IndexedDbKeyValueStoreOptions } from './IndexedDbKeyValueStore';
+export { IndexedDbKeyValueStore } from './IndexedDbKeyValueStore';
 export type { IndexedDbStoreOptions } from './IndexedDbStore';
 export { IndexedDbStore } from './IndexedDbStore';
-export type { JsonStoreOptions } from './JsonStore';
-export { JsonStore } from './JsonStore';
+export type { KeyValueStore } from './KeyValueStore';
 export type {
   AssetLoaderContext,
   BatchValue,
@@ -31,8 +32,11 @@ export type {
 export { Loader } from './Loader';
 export type { LoadingProgress } from './LoadingQueue';
 export { LoadingQueue } from './LoadingQueue';
+export { MemoryStore } from './MemoryStore';
 export { NetworkOnlyStrategy } from './NetworkOnlyStrategy';
 export { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
+export type { WebStorageStoreOptions } from './WebStorageStore';
+export { WebStorageStore } from './WebStorageStore';
 export { BinaryFactory } from '#resources/factories/BinaryFactory';
 export { BmFontLoaderFactory } from '#resources/factories/BmFontFactory';
 export type { CsvFactoryOptions } from '#resources/factories/CsvFactory';

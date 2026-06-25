@@ -1,0 +1,42 @@
+---
+title: "WebStorageStore"
+description: "KeyValueStore over the Web Storage API (`localStorage` or `sessionStorage`). Web Storage holds only strings, so values are JSON-serialized on write and parsed on read — they must be JSON-serializable (**no** Blobs/`ArrayBuffer`s; use IndexedDbKeyValueStore for those). The backend is synchronous with a small (~5–10 MB) quota; the async interface wraps it so call sites stay uniform across stores. This is the moral successor of the former `JsonStore`: JSON is intrinsic here because the backend can only hold strings."
+symbol: "WebStorageStore"
+kind: "class"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+memberCount: 6
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Source"]
+sourcePath: "src/resources/WebStorageStore.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/WebStorageStore.ts#L31"
+---
+## Import
+
+`import { WebStorageStore } from '@codexo/exojs'`
+
+KeyValueStore over the Web Storage API (`localStorage` or
+`sessionStorage`).
+
+Web Storage holds only strings, so values are JSON-serialized on write and
+parsed on read — they must be JSON-serializable (**no** Blobs/`ArrayBuffer`s;
+use IndexedDbKeyValueStore for those). The backend is synchronous with
+a small (~5–10 MB) quota; the async interface wraps it so call sites stay
+uniform across stores. This is the moral successor of the former `JsonStore`:
+JSON is intrinsic here because the backend can only hold strings.
+
+## Constructors
+
+- `new(storage: Storage, options: WebStorageStoreOptions): WebStorageStore`
+
+## Methods
+
+- `clear(): Promise<boolean>`
+- `delete(key: string): Promise<boolean>`
+- `get(key: string): Promise<T | null>`
+- `has(key: string): Promise<boolean>`
+- `set(key: string, value: unknown): Promise<void>`
+
+## Source
+
+[src/resources/WebStorageStore.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/WebStorageStore.ts#L31)
