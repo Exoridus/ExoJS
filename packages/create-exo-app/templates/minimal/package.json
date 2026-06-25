@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codexo/exojs": "^0.12.0"
+    "@codexo/exojs": "^0.14.0"
   },
   "devDependencies": {
     "typescript": "^5.8.0",
