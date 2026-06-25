@@ -38,10 +38,12 @@ const MOVING_BUDGET = 736 * 1024;
 // scopes (deep nesting → per-scope plan work, 2c) and per-effect Barrier scopes
 // + child plans (2c). 2c eliminated the per-scope group materialization, so the
 // scope-heavy scenes dropped the most: nested 431→363, filtered 1425→1310 KB.
-// Source-accurate post-2c status quo + ~1.3× headroom; mesh stays its post-2b
-// budget (per-drawable Mesh draws are 2e's target — tighten when 2e lands).
+// 2e eliminated the WebGl2 mesh renderer's per-batch `slice()` copy and the
+// per-mesh `PendingMeshDraw` literal (the queue now pools its slots and
+// `_drawStaticBatch` walks an index range), dropping mesh 753→644 KB.
+// Source-accurate post-2e status quo + ~1.3× headroom.
 const NESTED_BUDGET = 480 * 1024;
-const MESH_BUDGET = 1024 * 1024;
+const MESH_BUDGET = 832 * 1024;
 const FILTERED_BUDGET = 1728 * 1024;
 
 const findScenario = (id: string): ReturnType<typeof buildScenarioCatalog>[number] => {
