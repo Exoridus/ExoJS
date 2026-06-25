@@ -5,16 +5,16 @@ import { PhysicsBody } from '../src/PhysicsBody';
 
 /**
  * The Solver Correctness & Stability matrix (spec `04` §2), exercised over the
- * Phase-2A/2B dynamics spike (warm-started sequential-impulse velocity solver
- * with a 2-point block normal solve + an NGS position-correction pass). All run
- * in the **standard solver config** (≤8 velocity iterations, ≤3 position
- * iterations, slop ≤ 0.5px, 1px/s restitution threshold) at the default
- * `fixedDelta = 1/60 s`. Coordinates are ExoJS pixels with +Y down, so gravity
- * is `(0, +g)` and "up" is decreasing y.
+ * native **TGS-Soft** solver (Box2D-v3 "soft step": sub-stepping + soft-constraint
+ * bias + relax pass + a 2-point block normal solve, with a separate restitution
+ * pass). All run in the **default solver config** (`subStepCount = 4`,
+ * `contactHertz = 30`, `dampingRatio = 10`, slop 0.25px, 1px/s restitution
+ * threshold) at the default `fixedDelta = 1/60 s`. Coordinates are ExoJS pixels
+ * with +Y down, so gravity is `(0, +g)` and "up" is decreasing y.
  *
- * Gates the native solver does **not** meet in the standard config (notably
- * SG-S2: a 20-box tower) are characterised in `dynamics-limits.test.ts` and fed
- * to the SGATE — they are not asserted at the spec target here.
+ * SG-S2 (a 20-box tower) — the gate the previous sequential-impulse + NGS solver
+ * could not meet (lateral tipping past ~10 boxes) — is now asserted here: TGS-Soft
+ * decouples stiffness from the iteration count and holds it stable.
  */
 
 const GRAVITY = 1000; // px/s²
@@ -349,18 +349,55 @@ describe('SG-S — stacking', () => {
 
     expect(Math.abs(boxes[9].x)).toBeLessThanOrEqual(1);
 
-    // Max penetration (floor contact + every adjacent pair). At the spec's 5s
-    // mark the tower is still gently compressing under its own weight: max
-    // penetration ~0.63px, converging to the 0.25px slop by ~15s (verified
-    // stable over 25s+). The 0.5px design target is approached but not met
-    // within 5s at the conservative correction gain — see the SGATE report.
+    // Max penetration (floor contact + every adjacent pair). TGS-Soft settles the
+    // tower to the 0.25px slop well within 5s (the soft bias pushes out the excess
+    // each sub-step), comfortably meeting the 0.5px design target the old NGS pass
+    // only approached.
     let maxPenetration = boxes[0].y + size / 2 - floorTop;
 
     for (let i = 0; i < boxes.length - 1; i++) {
       maxPenetration = Math.max(maxPenetration, size - (boxes[i].y - boxes[i + 1].y));
     }
 
-    expect(maxPenetration).toBeLessThanOrEqual(0.7);
+    expect(maxPenetration).toBeLessThanOrEqual(0.5);
+  });
+
+  it('SG-S2: a 20-box tower stays upright and settles (the old solver tipped past ~10)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const size = 32;
+    const gap = 1;
+    const floorTop = 300;
+
+    addFloor(world, floorTop);
+
+    const boxes: PhysicsBody[] = [];
+
+    for (let i = 0; i < 20; i++) {
+      const bottomY = floorTop - gap * (i + 1) - i * size;
+
+      boxes.push(addBox(world, 0, bottomY - size / 2, size));
+    }
+
+    advance(world, 8);
+
+    expectAllFinite(world);
+
+    // Rest: every box slow, no lateral tip (the sequential-impulse + NGS solver
+    // grew an exponential lateral mode here), penetration bounded.
+    let maxDrift = 0;
+    let maxPenetration = boxes[0].y + size / 2 - floorTop;
+
+    for (let i = 0; i < boxes.length; i++) {
+      expect(speed(boxes[i])).toBeLessThanOrEqual(1);
+      maxDrift = Math.max(maxDrift, Math.abs(boxes[i].x));
+
+      if (i < boxes.length - 1) {
+        maxPenetration = Math.max(maxPenetration, size - (boxes[i].y - boxes[i + 1].y));
+      }
+    }
+
+    expect(maxDrift).toBeLessThanOrEqual(3);
+    expect(maxPenetration).toBeLessThanOrEqual(1);
   });
 
   it('SG-S5: a stack shoved horizontally leans but stays bounded (no explosion)', () => {

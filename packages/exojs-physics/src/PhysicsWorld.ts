@@ -22,13 +22,15 @@ export interface PhysicsWorldOptions {
   gravity?: VectorLike;
   /** Fixed timestep in seconds. Default `1 / 60`. */
   fixedDelta?: number;
-  /** Maximum sub-steps per `step` (spiral-of-death guard). Default `8`. */
+  /** Maximum fixed steps per `step` call (spiral-of-death guard). Default `8`. */
   maxSubSteps?: number;
-  /** Sequential-impulse velocity iterations per sub-step. Default `8`. */
-  velocityIterations?: number;
-  /** Split-impulse position-correction iterations per sub-step. Default `3`. */
-  positionIterations?: number;
-  /** Interpolate bound nodes between sub-steps (reserved; no effect yet). Default `true`. */
+  /** TGS-Soft sub-steps per fixed step (the solver's stiffness scales with this, not iteration count). Default `4`. Must be ≥ 1. */
+  subStepCount?: number;
+  /** Soft-contact stiffness in Hz (the contact behaves as a damped spring at this frequency). Default `30`. */
+  contactHertz?: number;
+  /** Soft-contact damping ratio (≥ 1 keeps contacts from oscillating). Default `10`. */
+  dampingRatio?: number;
+  /** Interpolate bound nodes between fixed steps (reserved; no effect yet). Default `true`. */
   interpolation?: boolean;
 }
 
@@ -76,12 +78,14 @@ export interface AttachOptions {
  * bound node transforms. It holds **no module-level state**, so any number of
  * worlds run in isolation (gate I-1).
  *
- * The dynamics are a native, warm-started **sequential-impulse** solver: a
- * 2-point block normal solve plus a non-linear Gauss-Seidel position-correction
- * pass. It integrates gravity/forces/impulses, resolves contacts and keeps
- * moderate stacks stable; very tall towers (beyond ~10 high) are a known limit
- * of the iteration budget. The detection backend sits behind an internal seam,
- * so the solver is swappable without touching this public surface.
+ * The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 "soft
+ * step"): each fixed step runs detection once, then several sub-steps, each
+ * integrating gravity over the sub-step and solving contacts with a soft
+ * position bias plus a bias-free relax pass; a 2-point block normal solve
+ * propagates stack loads, and restitution is a separate final pass. Decoupling
+ * stiffness from the iteration count keeps tall towers stable. The detection
+ * backend sits behind an internal seam, so the solver is swappable without
+ * touching this public surface.
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */
@@ -97,12 +101,14 @@ export class PhysicsWorld implements BodyOwner {
   public readonly gravity: Vector;
   /** The fixed-step accumulator. */
   public readonly timeStepper: TimeStepper;
-  /** Whether bound nodes interpolate between sub-steps (reserved; no effect yet). */
+  /** Whether bound nodes interpolate between fixed steps (reserved; no effect yet). */
   public readonly interpolation: boolean;
-  /** Sequential-impulse velocity iterations per sub-step. */
-  public readonly velocityIterations: number;
-  /** Split-impulse position-correction iterations per sub-step. */
-  public readonly positionIterations: number;
+  /** TGS-Soft sub-steps per fixed step. */
+  public readonly subStepCount: number;
+  /** Soft-contact stiffness in Hz. */
+  public readonly contactHertz: number;
+  /** Soft-contact damping ratio. */
+  public readonly dampingRatio: number;
 
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
   private readonly _bodies: PhysicsBody[] = [];
@@ -123,8 +129,16 @@ export class PhysicsWorld implements BodyOwner {
       ...(options.maxSubSteps !== undefined && { maxSubSteps: options.maxSubSteps }),
     });
     this.interpolation = options.interpolation ?? true;
-    this.velocityIterations = options.velocityIterations ?? 8;
-    this.positionIterations = options.positionIterations ?? 3;
+
+    const subStepCount = options.subStepCount ?? 4;
+
+    if (!Number.isInteger(subStepCount) || subStepCount < 1) {
+      throw new RangeError(`PhysicsWorld: subStepCount must be an integer ≥ 1, received ${subStepCount}.`);
+    }
+
+    this.subStepCount = subStepCount;
+    this.contactHertz = options.contactHertz ?? 30;
+    this.dampingRatio = options.dampingRatio ?? 10;
     this._query = new QueryEngine(this._colliders);
   }
 
@@ -215,9 +229,11 @@ export class PhysicsWorld implements BodyOwner {
   // ── stepping ───────────────────────────────────────────────────────────
 
   /**
-   * Advance the world by `frameDeltaSeconds`. Accumulates into fixed sub-steps;
-   * each sub-step integrates velocities, runs detection, solves contacts and
-   * integrates positions. Then dispatches events and writes bound node transforms.
+   * Advance the world by `frameDeltaSeconds`. Accumulates into fixed steps; each
+   * fixed step runs detection once, then a TGS-Soft sub-step loop (integrate
+   * gravity, solve contacts with a soft bias, integrate positions, relax) and a
+   * restitution pass, then writes the accumulated motion into each body. Finally
+   * dispatches events and writes bound node transforms.
    */
   public step(frameDeltaSeconds: number): void {
     this._assertAlive();
@@ -225,24 +241,51 @@ export class PhysicsWorld implements BodyOwner {
     const steps = this.timeStepper.advance(frameDeltaSeconds);
 
     if (steps > 0) {
-      const dt = this.timeStepper.fixedDelta;
+      const subStepCount = this.subStepCount;
+      const h = this.timeStepper.fixedDelta / subStepCount;
       const gravityX = this.gravity.x;
       const gravityY = this.gravity.y;
+      const contactHertz = this.contactHertz;
+      const dampingRatio = this.dampingRatio;
 
       for (let step = 0; step < steps; step++) {
-        // Integrate velocities (gravity + forces), refresh geometry, then detect.
-        for (const body of this._bodies) {
-          body._snapshotVelocity();
-          body._integrateVelocity(dt, gravityX, gravityY);
-          body.synchronizeColliders();
+        // Detection runs once per fixed step (collider geometry is already current
+        // from the previous frame's finalize / attach / setTransform). TGS-Soft
+        // reuses the manifolds across the sub-steps below.
+        this._backend.detect(this._colliders);
+        this._backend.prepareSolve(h, contactHertz, dampingRatio);
+
+        for (let subStep = 0; subStep < subStepCount; subStep++) {
+          // Integrate gravity/forces over the sub-step (forces persist across
+          // sub-steps; cleared once per frame by `_finalizePosition`).
+          for (const body of this._bodies) {
+            body._integrateVelocity(h, gravityX, gravityY);
+          }
+
+          // Warm-start every sub-step (Box2D-v3 soft step): the relax pass leaves
+          // each contact's normal velocity at zero, so re-applying the
+          // accumulated impulse re-balances exactly this sub-step's gravity — the
+          // impulse converges to the per-sub-step load (m·h·g), not the per-frame
+          // load, which is what keeps tall stacks from pumping energy.
+          this._backend.warmStart();
+
+          // Main soft-bias velocity solve, integrate positions (accumulating
+          // per-body delta), then the bias-free relax pass.
+          this._backend.solveVelocities(true);
+
+          for (const body of this._bodies) {
+            body._integratePosition(h);
+          }
+
+          this._backend.solveVelocities(false);
         }
 
-        this._backend.detect(this._colliders);
-        this._backend.solve(this.velocityIterations, this.positionIterations);
+        // Separate restitution pass, then write the accumulated delta into each
+        // body's transform and re-sync collider geometry.
+        this._backend.applyRestitution();
 
-        // Integrate positions from the solved velocities.
         for (const body of this._bodies) {
-          body._integratePosition(dt);
+          body._finalizePosition();
         }
       }
 

@@ -15,10 +15,16 @@ export interface PhysicsBackend {
   readonly contactGraph: ContactGraph;
   /** The latest broad-phase candidate pairs (read-only; for debug draw). */
   readonly candidatePairs: readonly CandidatePair[];
-  /** Run one detection pass over `colliders`, refreshing the contact graph. */
+  /** Run one detection pass over `colliders`, refreshing the contact graph. Once per frame (TGS reuses the manifolds across sub-steps). */
   detect(colliders: readonly Collider[]): void;
-  /** Solve the contact-graph's solid contacts: warm-start + velocity iterations, then an NGS position pass. */
-  solve(velocityIterations: number, positionIterations: number): void;
+  /** Build the per-frame contact constraints from the solid contacts. `h` is the sub-step duration; the soft factors derive from it plus `contactHertz`/`dampingRatio`. Call once per frame after {@link detect}. */
+  prepareSolve(h: number, contactHertz: number, dampingRatio: number): void;
+  /** Re-apply the cached warm-start impulses to the contacting bodies (first sub-step only). */
+  warmStart(): void;
+  /** One velocity pass over the solid contacts. `useBias` selects the main soft-bias pass; `false` is the relax pass. */
+  solveVelocities(useBias: boolean): void;
+  /** Restitution pass, run once per frame after the sub-step loop. */
+  applyRestitution(): void;
   /** Forget any state referencing `collider` (called on destruction). */
   removeCollider(collider: Collider): void;
   /** Release all backend state. */

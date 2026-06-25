@@ -71,19 +71,16 @@ export class PhysicsBody {
   /** Angular velocity in rad/s. */
   public angularVelocity = 0;
 
-  /** @internal — Transient position correction X accumulated by the NGS position solver and applied to the transform each sub-step. */
-  public _posCorrectionX = 0;
-  /** @internal — Transient position correction Y accumulated by the NGS position solver. */
-  public _posCorrectionY = 0;
-  /** @internal — Transient angle correction (radians) accumulated by the NGS position solver. */
-  public _angleCorrection = 0;
-
-  /** @internal — Velocity snapshot taken before this sub-step's gravity, so the restitution bias keys off the true impact speed (not the per-step gravity increment). */
-  public _prevVx = 0;
-  /** @internal — Velocity snapshot (Y) before this sub-step's gravity. */
-  public _prevVy = 0;
-  /** @internal — Angular-velocity snapshot before this sub-step's gravity. */
-  public _prevW = 0;
+  /** @internal — Delta position X accumulated across the frame's sub-steps by the TGS integrator; written into the transform once per frame by {@link _finalizePosition}. */
+  public _deltaPosX = 0;
+  /** @internal — Delta position Y accumulated across the frame's sub-steps by the TGS integrator. */
+  public _deltaPosY = 0;
+  /** @internal — Delta rotation (radians) accumulated across the frame's sub-steps by the TGS integrator. */
+  public _deltaAngle = 0;
+  /** @internal — `cos(_deltaAngle)`, cached so the solver can rotate the contact anchors by the live sub-step rotation without a per-contact trig call. */
+  public _deltaCos = 1;
+  /** @internal — `sin(_deltaAngle)`, cached alongside {@link _deltaCos}. */
+  public _deltaSin = 0;
 
   private _forceX = 0;
   private _forceY = 0;
@@ -292,65 +289,98 @@ export class PhysicsBody {
     return this;
   }
 
-  /** @internal — snapshot the current velocity (before this sub-step's gravity) for the restitution bias. */
-  public _snapshotVelocity(): void {
-    this._prevVx = this.linearVelocityX;
-    this._prevVy = this.linearVelocityY;
-    this._prevW = this.angularVelocity;
-  }
-
   /**
    * @internal — integrate velocity from gravity, accumulated forces/torque and
-   * damping over `dt`. No-op for static/kinematic (infinite mass keeps their
-   * velocity solver-driven only). Clears the force/torque accumulators.
+   * damping over the sub-step `h`. No-op for static/kinematic (infinite mass
+   * keeps their velocity solver-driven only). Called once per TGS sub-step, so
+   * gravity/forces are applied with `h` each sub-step (`N·h = dt`, same total
+   * impulse, but the small-step position error scales with `h²`). The
+   * force/torque accumulators are **not** cleared here — they are consumed by
+   * every sub-step and cleared once per frame by {@link _finalizePosition}.
    */
-  public _integrateVelocity(dt: number, gravityX: number, gravityY: number): void {
+  public _integrateVelocity(h: number, gravityX: number, gravityY: number): void {
     if (this.invMass === 0) {
       return;
     }
 
-    this.linearVelocityX += (gravityX * this.gravityScale + this._forceX * this.invMass) * dt;
-    this.linearVelocityY += (gravityY * this.gravityScale + this._forceY * this.invMass) * dt;
-    this.angularVelocity += this._torque * this.invInertia * dt;
+    this.linearVelocityX += (gravityX * this.gravityScale + this._forceX * this.invMass) * h;
+    this.linearVelocityY += (gravityY * this.gravityScale + this._forceY * this.invMass) * h;
+    this.angularVelocity += this._torque * this.invInertia * h;
 
     // Exponential damping (no-op when damping is 0).
-    this.linearVelocityX /= 1 + dt * this.linearDamping;
-    this.linearVelocityY /= 1 + dt * this.linearDamping;
-    this.angularVelocity /= 1 + dt * this.angularDamping;
-
-    this._forceX = 0;
-    this._forceY = 0;
-    this._torque = 0;
+    this.linearVelocityX /= 1 + h * this.linearDamping;
+    this.linearVelocityY /= 1 + h * this.linearDamping;
+    this.angularVelocity /= 1 + h * this.angularDamping;
   }
 
   /**
-   * @internal — integrate position from the current velocity over `dt` plus any
-   * accumulated NGS position correction, rotating about the centre of mass.
-   * Static bodies never move; dynamic + kinematic bodies advance by their
-   * velocity. The position correction is geometric (it never changes velocity)
-   * and is consumed here.
+   * @internal — accumulate this sub-step's velocity into the per-frame delta
+   * position/rotation (TGS sub-stepping). The transform itself is **not** moved
+   * here; {@link _finalizePosition} writes the accumulated delta once per frame.
+   * Tracking the delta (rather than moving the transform each sub-step) lets the
+   * solver recompute contact separation from it without re-running detection or
+   * re-syncing collider geometry per sub-step. Static bodies never move.
    */
-  public _integratePosition(dt: number): void {
+  public _integratePosition(h: number): void {
     if (this.type === 'static') {
-      this._posCorrectionX = 0;
-      this._posCorrectionY = 0;
-      this._angleCorrection = 0;
+      return;
+    }
+
+    this._deltaPosX += this.linearVelocityX * h;
+    this._deltaPosY += this.linearVelocityY * h;
+    this._deltaAngle += this.angularVelocity * h;
+
+    // Cache the rotation so the solver can rotate the contact anchors by the
+    // live sub-step rotation (TGS): without it the anchors stay frozen at frame
+    // start and a tilting tower's restoring torque is mis-computed, so the tilt
+    // grows instead of being corrected. Only non-zero rotation pays the trig.
+    if (this._deltaAngle !== 0) {
+      this._deltaCos = Math.cos(this._deltaAngle);
+      this._deltaSin = Math.sin(this._deltaAngle);
+    }
+  }
+
+  /**
+   * @internal — apply the frame's accumulated delta position/rotation to the
+   * transform (rotating about the centre of mass), re-sync collider geometry and
+   * clear the force/torque accumulators. Called once per frame after the
+   * sub-step loop. Static bodies never move; the force clear still runs (forces
+   * are a no-op on infinite mass but the accumulator is reset for consistency).
+   */
+  public _finalizePosition(): void {
+    this._forceX = 0;
+    this._forceY = 0;
+    this._torque = 0;
+
+    if (this.type === 'static' || (this._deltaPosX === 0 && this._deltaPosY === 0 && this._deltaAngle === 0)) {
+      this._resetDelta();
 
       return;
     }
 
-    const newComX = this.worldCenterOfMassX + this.linearVelocityX * dt + this._posCorrectionX;
-    const newComY = this.worldCenterOfMassY + this.linearVelocityY * dt + this._posCorrectionY;
-    const newAngle = this._transform.angle + this.angularVelocity * dt + this._angleCorrection;
+    const newComX = this.worldCenterOfMassX + this._deltaPosX;
+    const newComY = this.worldCenterOfMassY + this._deltaPosY;
+    const newAngle = this._transform.angle + this._deltaAngle;
     const cos = Math.cos(newAngle);
     const sin = Math.sin(newAngle);
 
     // origin = newCoM − R(newAngle)·comLocal (so rotation pivots about the CoM).
     setTransform(this._transform, newComX - (cos * this._comX - sin * this._comY), newComY - (sin * this._comX + cos * this._comY), newAngle);
 
-    this._posCorrectionX = 0;
-    this._posCorrectionY = 0;
-    this._angleCorrection = 0;
+    this._resetDelta();
+
+    for (const collider of this._colliders) {
+      collider.synchronize(this._transform);
+    }
+  }
+
+  /** Clear the per-frame TGS delta accumulators (position, rotation and its cached cos/sin). */
+  private _resetDelta(): void {
+    this._deltaPosX = 0;
+    this._deltaPosY = 0;
+    this._deltaAngle = 0;
+    this._deltaCos = 1;
+    this._deltaSin = 0;
   }
 
   /** Internal: detach a collider (called by the world during destruction). */
