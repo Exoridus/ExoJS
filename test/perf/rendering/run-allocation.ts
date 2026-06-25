@@ -1,33 +1,22 @@
 /**
- * Allocation bench launcher — runs the sampler across the sprite, nine-slice and
- * repeating families and writes the numbers to `.workspace/output/render-perf/`.
+ * Allocation bench launcher — samples per-frame plan allocation across the
+ * sprite, nine-slice, repeating, nested, mesh, effect-barrier AND tilemap
+ * families, and writes the numbers to `.workspace/output/render-perf/`.
  *
- *   node --import tsx/esm test/perf/rendering/run-allocation.ts
- *   (or: pnpm perf:renderers:alloc)
+ *   pnpm perf:renderers:alloc
  *
- * ⚠️ RESOLVES TO `dist`, NOT THE WORKING TREE. This launcher runs under plain
- * `node --import tsx/esm`, so the package's `#*` subpath imports resolve via their
- * `default` condition to `./dist/esm/*.js` — i.e. the LAST BUILD, not your edited
- * `src`. (The `@codexo/source` condition would point at `src`, but then tsx chokes
- * on the raw `.frag`/`.vert` GLSL imports, which only the vitest projects wire up.)
- * For a source-accurate before/after gate use the allocation TEST instead
- * (`vitest --project=rendering-perf test/perf/rendering/allocation.test.ts`,
- * add `--disableConsoleIntercept` to see the per-scene numbers); that project
- * resolves `#*` → `src` and handles GLSL. Treat this script's numbers as a coarse
- * post-build cross-check only.
+ * SOURCE-ACCURATE. The `perf:renderers:alloc` script passes
+ * `--conditions=@codexo/source` (so the `#*` imports resolve to `src`, not the
+ * last `dist` build) and `--import ./scripts/glsl-register.mjs` — a node ESM
+ * loader hook that loads `.vert`/`.frag` as source text (the node/tsx counterpart
+ * of the vitest `realShaderPlugin`) and installs the `__DEV__`/`__VERSION__`/
+ * `__REVISION__` build-constant globals. Those three pieces are what a plain
+ * `node --import tsx/esm` run lacks: it would resolve to `dist`, choke on the raw
+ * GLSL imports, and throw `__DEV__ is not defined`. Always run via the script.
  *
- * Scenes are built directly via the `fixtures` builders rather than through
- * {@link buildScenarioCatalog}: the catalog pulls in the tilemap fixtures, whose
- * `@codexo/*` package imports resolve to `src` (no built dist) and then hit raw
- * `.frag` GLSL imports that node/tsx cannot load. So the tilemap family is profiled
- * by the allocation TEST (run under vitest), not here.
- *
- * Spec 04 "Harte Regel": no perf PR merges without a before/after number on the
- * scenes it targets. The allocation TEST now covers deep container nesting +
- * effect/barrier nodes (the per-scope plan-playback path 2c addressed) and
- * mesh/graphics scenes (→ 2e); this standalone launcher stays GLSL-free and so
- * still cannot profile the tilemap family. 2d (TransformBuffer hash) is CPU
- * time, not allocation — it needs a wall-clock profile, not this sampler.
+ * The vitest `rendering-perf` allocation TEST measures the same way and is the CI
+ * gate; this launcher is the all-scenes sweep (incl. tilemap, which needs the
+ * extension's chunk shaders — hence the GLSL loader).
  *
  * @internal Test/perf-only.
  */
@@ -40,6 +29,7 @@ import { measureFrameAllocation } from './allocation';
 import { buildFilteredScene, buildMeshScene, buildNestedScene, buildNineSliceScene, buildRepeatingScene, buildSpriteScene, makeTextures } from './fixtures';
 import type { WebGl2Harness } from './harness';
 import { createWebGl2Harness } from './harness';
+import { buildTilemapScene, makeTilesets, wireTilemapRenderers } from './tilemapFixtures';
 
 const VIEW = { w: 1280, h: 720 };
 
@@ -139,6 +129,34 @@ const SAMPLES: readonly Sample[] = [
   },
   { id: 'mesh/1000/1tex', build: () => ({ root: buildMeshScene({ count: 1000, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
   { id: 'filtered/100/1tex', build: () => ({ root: buildFilteredScene({ count: 100, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h }).root }) },
+  // Tilemap — measurable source-accurate now that the GLSL loader handles the
+  // chunk shaders (this family used to be excluded). static = chunk geometry
+  // fully cached; pan = camera moves but geometry is reused (revision unchanged).
+  {
+    id: 'tilemap/80x64/static',
+    build: harness => {
+      wireTilemapRenderers(harness.backend);
+      const scene = buildTilemapScene({ widthTiles: 80, heightTiles: 64, chunkSize: 32, tilesets: makeTilesets(1) });
+      harness.view.reset(scene.pixelWidth / 2, scene.pixelHeight / 2, scene.pixelWidth, scene.pixelHeight);
+
+      return { root: scene.node };
+    },
+  },
+  {
+    id: 'tilemap/80x64/pan',
+    build: harness => {
+      wireTilemapRenderers(harness.backend);
+      const scene = buildTilemapScene({ widthTiles: 80, heightTiles: 64, chunkSize: 32, tilesets: makeTilesets(1) });
+      harness.view.reset(scene.pixelWidth / 2, scene.pixelHeight / 2, scene.pixelWidth, scene.pixelHeight);
+      let frame = 0;
+      const beforeFrame = (): void => {
+        frame++;
+        harness.view.setCenter(scene.pixelWidth / 2 + (frame % 8) * 16, scene.pixelHeight / 2);
+      };
+
+      return { root: scene.node, beforeFrame };
+    },
+  },
 ];
 
 const results: Array<FrameAllocation & { id: string }> = [];

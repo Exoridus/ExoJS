@@ -118,7 +118,7 @@
     "perf:renderers": "tsx test/perf/rendering/run-sweep.ts full",
     "perf:renderers:quick": "tsx test/perf/rendering/run-sweep.ts quick",
     "perf:renderers:browser": "vitest run --project=browser-webgl-chromium webgl2-renderer-perf",
-    "perf:renderers:alloc": "node --import tsx/esm test/perf/rendering/run-allocation.ts",
+    "perf:renderers:alloc": "node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-allocation.ts",
     "perf:bench:rendering": "tsx test/perf/rendering-benchmark.ts",
     "perf:bench:audio": "tsx test/perf/audio-benchmark.ts",
     "perf:bench:collision": "tsx test/perf/collision-benchmark.ts",
