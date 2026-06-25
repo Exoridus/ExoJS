@@ -1,6 +1,8 @@
 import { Color } from '#core/Color';
-import type { FontWeight, TextStyleOptions } from '#rendering/text/TextStyle';
-import type { TextAlignment } from '#rendering/text/types';
+import type { LayoutOptions } from '#rendering/text/LayoutOptions';
+import type { TextStyleOptions } from '#rendering/text/TextStyle';
+
+import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, TEXT_ALIGNMENTS } from './read';
 
 // ── Options bags ───────────────────────────────────────────────────────────────
 
@@ -91,7 +93,10 @@ export function deserializeStyleOptions(data: unknown): TextStyleOptions | undef
   const options: TextStyleOptions = {};
 
   if (typeof source.fontFamily === 'string') options.fontFamily = source.fontFamily;
-  if (typeof source.fontWeight === 'string') options.fontWeight = source.fontWeight as FontWeight;
+
+  const fontWeight = readEnum(source, 'fontWeight', FONT_WEIGHTS);
+  if (fontWeight !== undefined) options.fontWeight = fontWeight;
+
   if (source.fontStyle === 'italic' || source.fontStyle === 'normal') options.fontStyle = source.fontStyle;
   if (typeof source.fontSize === 'number') options.fontSize = source.fontSize;
 
@@ -102,7 +107,10 @@ export function deserializeStyleOptions(data: unknown): TextStyleOptions | undef
   if (outlineColor !== undefined) options.outlineColor = outlineColor;
 
   if (typeof source.outlineWidth === 'number') options.outlineWidth = source.outlineWidth;
-  if (typeof source.align === 'string') options.align = source.align as TextAlignment;
+
+  const align = readEnum(source, 'align', TEXT_ALIGNMENTS);
+  if (align !== undefined) options.align = align;
+
   if (typeof source.lineHeight === 'number') options.lineHeight = source.lineHeight;
   if (typeof source.leading === 'number') options.leading = source.leading;
 
@@ -128,4 +136,47 @@ export function deserializeStyleOptions(data: unknown): TextStyleOptions | undef
   }
 
   return options;
+}
+
+// ── LayoutOptions ─────────────────────────────────────────────────────────────
+
+const OVERFLOWS = ['visible', 'clip', 'ellipsis'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['overflow']>>;
+const DIRECTIONS = ['ltr', 'rtl'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['direction']>>;
+const WHITE_SPACES = ['normal', 'pre', 'pre-line'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['whiteSpace']>>;
+
+/**
+ * Rebuild {@link LayoutOptions} from a serialized layout object, dropping
+ * unknown or mistyped fields. Returns `undefined` when nothing valid remains,
+ * so a corrupt `layout` value degrades to the node's constructor defaults.
+ */
+export function readLayoutOptions(value: unknown): LayoutOptions | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+
+  const source = value as Record<string, unknown>;
+  const out: LayoutOptions = {};
+
+  const maxWidth = readNumber(source, 'maxWidth');
+  if (maxWidth !== undefined) out.maxWidth = maxWidth;
+
+  const maxHeight = readNumber(source, 'maxHeight');
+  if (maxHeight !== undefined) out.maxHeight = maxHeight;
+
+  const overflow = readEnum(source, 'overflow', OVERFLOWS);
+  if (overflow !== undefined) out.overflow = overflow;
+
+  const letterSpacing = readNumber(source, 'letterSpacing');
+  if (letterSpacing !== undefined) out.letterSpacing = letterSpacing;
+
+  const direction = readEnum(source, 'direction', DIRECTIONS);
+  if (direction !== undefined) out.direction = direction;
+
+  const breakWords = readBoolean(source, 'breakWords');
+  if (breakWords !== undefined) out.breakWords = breakWords;
+
+  const whiteSpace = readEnum(source, 'whiteSpace', WHITE_SPACES);
+  if (whiteSpace !== undefined) out.whiteSpace = whiteSpace;
+
+  return Object.keys(out).length > 0 ? out : undefined;
 }

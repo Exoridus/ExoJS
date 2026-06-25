@@ -7,11 +7,11 @@ import { Stack } from '#ui/Stack';
 import { UIRoot } from '#ui/UIRoot';
 
 import type { NodeSerializer } from './NodeSerializer';
+import { asSerializedNode } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { arrayToColor, colorToArray, compact, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
-import type { SerializedNode } from './types';
 
-const num = (value: unknown): number | undefined => (typeof value === 'number' ? value : undefined);
+const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
 // Widget composition note: widgets own internal children (a Label's Text, a
 // Panel's background Graphics, etc.) that their constructors rebuild — those are
@@ -77,7 +77,8 @@ const panelSerializer: NodeSerializer<Panel> = {
     const children = data.children;
     if (Array.isArray(children)) {
       for (const child of children) {
-        panel.addChild(ctx.readNode(child as SerializedNode) as RenderNode);
+        const childNode = asSerializedNode(child);
+        if (childNode !== null) panel.addChild(ctx.readNode(childNode) as RenderNode);
       }
     }
 
@@ -192,7 +193,8 @@ const stackSerializer: NodeSerializer<Stack> = {
     const children = data.children;
     if (Array.isArray(children)) {
       for (const child of children) {
-        stack.addChild(ctx.readNode(child as SerializedNode) as RenderNode);
+        const childNode = asSerializedNode(child);
+        if (childNode !== null) stack.addChild(ctx.readNode(childNode) as RenderNode);
       }
 
       stack.layout();
@@ -214,7 +216,8 @@ const uiRootSerializer: NodeSerializer<UIRoot> = {
 
     if (Array.isArray(children)) {
       for (const child of children) {
-        root.addChild(ctx.readNode(child as SerializedNode) as RenderNode);
+        const childNode = asSerializedNode(child);
+        if (childNode !== null) root.addChild(ctx.readNode(childNode) as RenderNode);
       }
     }
 

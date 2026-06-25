@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BoxShape, PhysicsWorld } from '../src/index';
 import { PhysicsBody } from '../src/PhysicsBody';
+import { measureAllocationRate } from './allocationSampler';
 
 /**
  * Phase-2B performance gates (spec `04` §3): P-1 steady-state allocation and P-2
@@ -11,13 +12,17 @@ import { PhysicsBody } from '../src/PhysicsBody';
  *
  * P-2 (step time) is **recorded** on the reference machine, not enforced as a
  * tight CI threshold (machine-dependent) — only a generous catastrophic-
- * regression guard is asserted. P-1 (allocation) is measured as the retained
- * heap delta across steps; with `--expose-gc` it is forced-collected for a clean
- * number, otherwise it is an upper bound. Numbers are printed for the record.
+ * regression guard is asserted. P-1 (allocation) is measured with V8's
+ * allocation sampling profiler (see allocationSampler.ts — a heapUsed delta
+ * cannot see the short-lived per-step garbage; it previously read ~0 and made
+ * the engine look allocation-free when it was not). The narrow/broad-phase
+ * scratch reuse roughly halves per-step allocation (~1560 → ~810 KB/step); the
+ * remainder is dominated by the contact solver and ContactGraph and is tracked
+ * as a follow-up (W4 spec backlog). The gate is a regression guard for the
+ * reuse win, not a zero-allocation assertion.
  */
 
 const FRAME = 1 / 60;
-const forceGc = (globalThis as { gc?: () => void }).gc;
 
 /** A wide field of `columns` independent `rows`-high box stacks on a static floor. */
 const buildField = (columns: number, rows: number): { world: PhysicsWorld; bodies: PhysicsBody[] } => {
@@ -63,7 +68,7 @@ const stepTimes = (world: PhysicsWorld, steps: number): number => {
 };
 
 describe('physics dynamics performance (P-1 / P-2)', () => {
-  it('1,000-body settled field: step time + steady-state allocation', () => {
+  it('1,000-body settled field: step time + steady-state allocation', async () => {
     const { world, bodies } = buildField(200, 5);
 
     expect(bodies.length).toBe(1000);
@@ -76,20 +81,7 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
     // P-2 — steady-state step time.
     const msPerStep = stepTimes(world, 180);
 
-    // P-1 — retained heap delta across steady-state steps.
-    forceGc?.();
-    const heapBefore = process.memoryUsage().heapUsed;
-
-    for (let i = 0; i < 300; i++) {
-      world.step(FRAME);
-    }
-
-    forceGc?.();
-    const heapAfter = process.memoryUsage().heapUsed;
-    const bytesPerStep = (heapAfter - heapBefore) / 300;
-
     console.log(`[P-2] ${msPerStep.toFixed(3)} ms/step · 1,000 bodies (${(1000 / msPerStep).toFixed(0)} body-steps/ms · ${(16.67 / msPerStep).toFixed(0)}× headroom at 60fps)`);
-    console.log(`[P-1] ${(bytesPerStep / 1024).toFixed(2)} KB/step retained heap${forceGc ? ' (forced GC)' : ' (upper bound, no --expose-gc)'}`);
 
     // Sanity: nothing exploded.
     for (const body of bodies) {
@@ -100,9 +92,35 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
     // Catastrophic-regression guard only (P-2 is recorded, not tightly enforced).
     expect(msPerStep).toBeLessThan(100);
 
-    // With forced GC the steady-state allocation should be near zero (pooling).
-    if (forceGc) {
-      expect(bytesPerStep).toBeLessThan(8 * 1024);
+    // P-1 — steady-state allocation rate via the sampling profiler. The scene is
+    // already settled (every contact persistent, no begin/end events allocate in
+    // the window), so the sampler measures only the per-step narrow/broad-phase
+    // and solver work.
+    //
+    // Skipped entirely under istanbul coverage: it instruments the physics package
+    // source, which both inflates the per-step allocation ~7× (measured ~5.8 MB vs
+    // ~0.8 MB — the absolute byte gate is meaningless) and slows the 200-iteration
+    // sampling run past the test timeout. The sharp gate runs in the normal
+    // `pnpm test` run + `verify:ci`. (Detection: istanbul prefixes every function
+    // with a `cov_…()` prologue; globalThis.__coverage__ is not yet populated at
+    // test time. The render-perf gate needs no guard — its src resolves via
+    // #*-subpath imports istanbul leaves alone.)
+    if (world.step.toString().includes('cov_')) {
+      console.log('[P-1] allocation gate skipped under coverage (instrumentation inflates + slows the measurement)');
+
+      return;
     }
+
+    const alloc = await measureAllocationRate(() => world.step(FRAME), { iterations: 200 });
+    const bytesPerStep = alloc.bytesPerIteration;
+
+    console.log(`[P-1] ${(bytesPerStep / 1024).toFixed(2)} KB/step allocation (sampling profiler)`);
+
+    // Regression guard for the scratch-reuse win: ~810 KB/step after reuse vs
+    // ~1560 KB/step before (narrow/broad-phase pooling roughly halves it). The
+    // remaining ~810 KB is dominated by the contact solver (_solveNormalBlock) +
+    // ContactGraph.update — outside this slice's scope (W4 spec backlog). The
+    // threshold sits between the two rates, so losing the reuse trips the gate.
+    expect(bytesPerStep).toBeLessThan(1_100 * 1024);
   });
 });

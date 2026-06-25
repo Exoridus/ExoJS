@@ -11,12 +11,19 @@ import type { BroadPhase, CandidatePair } from './BroadPhase';
  */
 export class SweepAndPrune implements BroadPhase {
   private readonly _sorted: Collider[] = [];
+  // Pooled CandidatePair objects, reused across steps instead of allocating one
+  // per overlapping pair. `out` holds references into the pool and is consumed
+  // within the same step (ContactGraph reads pair.a/pair.b before the next
+  // computePairs overwrites the pool), so the reuse is safe.
+  private readonly _pairPool: CandidatePair[] = [];
 
   public computePairs(colliders: readonly Collider[], out: CandidatePair[]): CandidatePair[] {
     out.length = 0;
 
     const sorted = this._sorted;
     sorted.length = 0;
+    const pool = this._pairPool;
+    let poolCount = 0;
 
     for (const collider of colliders) {
       sorted.push(collider);
@@ -59,7 +66,20 @@ export class SweepAndPrune implements BroadPhase {
           continue;
         }
 
-        out.push(a.id < b.id ? { a, b } : { a: b, b: a });
+        const lo = a.id < b.id ? a : b;
+        const hi = a.id < b.id ? b : a;
+        let pair = pool[poolCount];
+
+        if (pair === undefined) {
+          pair = { a: lo, b: hi };
+          pool.push(pair);
+        } else {
+          pair.a = lo;
+          pair.b = hi;
+        }
+
+        poolCount++;
+        out.push(pair);
       }
     }
 

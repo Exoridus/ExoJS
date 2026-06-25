@@ -8,6 +8,7 @@ import type { Loadable, Loader } from '#resources/Loader';
 import { applyCommonFields, writeCommonFields } from './commonFields';
 import { registerCoreSerializers } from './coreSerializers';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
+import { asObject, asSerializedNode } from './read';
 import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
 import { SERIALIZATION_VERSION, type SerializedNode, type SerializedScene } from './types';
 
@@ -172,24 +173,48 @@ export function deserializeInto(
 
   if (Array.isArray(children)) {
     for (const child of children) {
-      container.addChild(ctx.readNode(child as SerializedNode) as RenderNode);
+      const childNode = asSerializedNode(child);
+      if (childNode !== null) container.addChild(ctx.readNode(childNode) as RenderNode);
     }
   }
 }
 
 /**
- * Validate and migrate a {@link SerializedScene} to the current
- * {@link SERIALIZATION_VERSION}. Throws if the data is newer than supported.
+ * Validate and migrate a serialized scene document to the current
+ * {@link SERIALIZATION_VERSION}, returning a structurally-sound
+ * {@link SerializedScene}.
+ *
+ * This is the **untrusted top-level boundary**: the parameter is `unknown`
+ * because a save file / cloud document is not guaranteed to match the type. The
+ * frame (`version`/`root`/`ui`) is validated here so downstream `deserialize*`
+ * paths can rely on `root` being a real node. Throws on a non-object document,
+ * a version newer than supported, or a missing/invalid root; an invalid `ui` is
+ * dropped (it is optional) rather than thrown.
+ *
  * The migration chain is empty at v1; future version bumps register
  * version→version+1 transforms here.
  * @internal
  */
-export function migrate(data: SerializedScene): SerializedScene {
-  const version = typeof data.version === 'number' ? data.version : 0;
+export function migrate(data: unknown): SerializedScene {
+  const scene = asObject(data);
+
+  if (scene === null) {
+    throw new Error('Cannot deserialize scene: the document is not an object.');
+  }
+
+  const version = typeof scene.version === 'number' ? scene.version : 0;
 
   if (version > SERIALIZATION_VERSION) {
     throw new Error(`Cannot deserialize scene: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
   }
 
-  return data;
+  const root = asSerializedNode(scene.root);
+
+  if (root === null) {
+    throw new Error('Cannot deserialize scene: the document has no valid root node.');
+  }
+
+  const ui = asSerializedNode(scene.ui);
+
+  return ui !== null ? { version, root, ui } : { version, root };
 }

@@ -3,15 +3,14 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
-import type { LayoutOptions } from '#rendering/text/LayoutOptions';
 import { SDF_RADIUS, Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 
 import type { NodeSerializer } from './NodeSerializer';
+import { asSerializedNode } from './read';
 import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
-import { compact, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
-import type { SerializedNode } from './types';
+import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
 import { registerUiSerializers } from './uiSerializers';
 
 // ── Container ────────────────────────────────────────────────────────────────
@@ -30,7 +29,8 @@ const containerSerializer: NodeSerializer<Container> = {
 
     if (Array.isArray(children)) {
       for (const child of children) {
-        node.addChild(ctx.readNode(child as SerializedNode) as RenderNode);
+        const childNode = asSerializedNode(child);
+        if (childNode !== null) node.addChild(ctx.readNode(childNode) as RenderNode);
       }
     }
 
@@ -95,7 +95,7 @@ const textSerializer: NodeSerializer<Text> = {
     return out;
   },
   read(data) {
-    const layout = typeof data.layout === 'object' && data.layout !== null ? (data.layout as LayoutOptions) : undefined;
+    const layout = readLayoutOptions(data.layout);
 
     return new Text(
       typeof data.text === 'string' ? data.text : '',
