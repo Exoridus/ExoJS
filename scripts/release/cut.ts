@@ -93,7 +93,8 @@ function assertCleanTree(): void {
 
 function assertChangelogSection(version: string): void {
   const changelog = readFileSync(resolve(repoRoot, 'CHANGELOG.md'), 'utf8');
-  const pattern = new RegExp(`^## \\[${version.replace('.', '\\.').replace('.', '\\.')}\\] - \\d{4}-\\d{2}-\\d{2}`, 'm');
+  const escapedVersion = version.replace(/\./g, '\\.');
+  const pattern = new RegExp(`^## \\[${escapedVersion}\\] - \\d{4}-\\d{2}-\\d{2}`, 'm');
   if (!pattern.test(changelog)) {
     die(
       `CHANGELOG.md does not have a dated section for [${version}].\n` +
