@@ -1,5 +1,7 @@
 import { Color } from '#core/Color';
+import { drawableHasOwnMaterial, type MaterialKey, writeMaterialKeyInto } from '#rendering/plan/RenderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { isPixelSnapMode, type PixelSnapMode } from './pixelSnap';
 import { RenderNode } from './RenderNode';
@@ -16,6 +18,16 @@ export class Drawable extends RenderNode {
   private _tint: Color = Color.white.clone();
   private _blendMode: BlendModes = BlendModes.Normal;
   private _pixelSnapMode: PixelSnapMode = 'none';
+
+  /**
+   * Cached material key (Slice 2b). `null` until first computed or after
+   * {@link invalidateCache}. Bound to {@link _materialKeyBackend} so a backend
+   * switch (multi-app / multi-backend) recomputes rather than returning stale
+   * renderer ids. Drawables that carry their own {@link Material} bypass this
+   * cache entirely (the material can mutate its keys without notifying us).
+   */
+  private _materialKey: MaterialKey | null = null;
+  private _materialKeyBackend: RenderBackend | null = null;
 
   public get tint(): Color {
     return this._tint;
@@ -108,6 +120,64 @@ export class Drawable extends RenderNode {
   /** @internal */
   public override _renderPlanGetBlendMode(): BlendModes {
     return this._blendMode;
+  }
+
+  /**
+   * Resolve this drawable's {@link MaterialKey}, reusing a cached key when valid
+   * (Slice 2b). The cache busts on any tint/blend/texture/material/shader/
+   * pixel-snap mutation via {@link invalidateCache}, and on a backend switch.
+   *
+   * Drawables that own a {@link Material} are never cached — the material can
+   * change its `pipelineKey`/`bindKey` internally without notifying the node —
+   * so they recompute into the held key (still zero per-frame allocation).
+   *
+   * @internal
+   */
+  public _getOrComputeMaterialKey(backend: RenderBackend): MaterialKey {
+    const cached = this._materialKey;
+
+    if (cached !== null) {
+      if (drawableHasOwnMaterial(this)) {
+        // Own-material path: never trust the cache, but reuse the held object.
+        return writeMaterialKeyInto(cached, this, backend);
+      }
+
+      if (this._materialKeyBackend === backend) {
+        return cached;
+      }
+
+      // Backend switched: recompute into the held key, rebind to the backend.
+      this._materialKeyBackend = backend;
+
+      return writeMaterialKeyInto(cached, this, backend);
+    }
+
+    const key = writeMaterialKeyInto(
+      {
+        rendererId: 0,
+        blendMode: this._blendMode,
+        textureId: -1,
+        shaderId: -1,
+        pipelineKey: 0,
+        bindKey: 0,
+      },
+      this,
+      backend,
+    );
+
+    this._materialKey = key;
+    this._materialKeyBackend = backend;
+
+    return key;
+  }
+
+  public override invalidateCache(): this {
+    super.invalidateCache();
+    // Bust the cached material key; next emitDraw recomputes it. The held object
+    // is kept and rewritten in place on the next miss (no re-allocation).
+    this._materialKeyBackend = null;
+
+    return this;
   }
 
   public override destroy(): void {

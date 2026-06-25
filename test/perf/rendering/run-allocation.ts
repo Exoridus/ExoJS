@@ -5,12 +5,22 @@
  *   node --import tsx/esm test/perf/rendering/run-allocation.ts
  *   (or: pnpm perf:renderers:alloc)
  *
+ * ⚠️ RESOLVES TO `dist`, NOT THE WORKING TREE. This launcher runs under plain
+ * `node --import tsx/esm`, so the package's `#*` subpath imports resolve via their
+ * `default` condition to `./dist/esm/*.js` — i.e. the LAST BUILD, not your edited
+ * `src`. (The `@codexo/source` condition would point at `src`, but then tsx chokes
+ * on the raw `.frag`/`.vert` GLSL imports, which only the vitest projects wire up.)
+ * For a source-accurate before/after gate use the allocation TEST instead
+ * (`vitest --project=rendering-perf test/perf/rendering/allocation.test.ts`,
+ * add `--disableConsoleIntercept` to see the per-scene numbers); that project
+ * resolves `#*` → `src` and handles GLSL. Treat this script's numbers as a coarse
+ * post-build cross-check only.
+ *
  * Scenes are built directly via the `fixtures` builders rather than through
  * {@link buildScenarioCatalog}: the catalog pulls in the tilemap fixtures, whose
  * `@codexo/*` package imports resolve to `src` (no built dist) and then hit raw
- * `.frag` GLSL imports that node/tsx cannot load — only the vitest projects wire
- * the GLSL handling. So the tilemap family is profiled by the allocation TEST
- * (run under vitest), not here.
+ * `.frag` GLSL imports that node/tsx cannot load. So the tilemap family is profiled
+ * by the allocation TEST (run under vitest), not here.
  *
  * Spec 04 "Harte Regel": no perf PR merges without a before/after number on the
  * scenes it targets. STILL UNCOVERED here and needing dedicated fixtures before

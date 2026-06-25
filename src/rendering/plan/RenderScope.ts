@@ -29,28 +29,34 @@ export interface EffectDescriptor {
   readonly blendMode: BlendModes;
 }
 
-/** @internal */
+/**
+ * @internal
+ *
+ * `seq`/`zIndex`/`command` are mutable so the {@link RenderPlanBuilder} can
+ * recycle a pooled entry across frames (Slice 2b). `kind` stays `readonly` —
+ * a pooled entry never changes its discriminant.
+ */
 export interface DrawScopeEntry {
   readonly kind: RenderEntryKind.Draw;
-  readonly seq: number;
-  readonly zIndex: number;
-  readonly command: DrawCommand;
+  seq: number;
+  zIndex: number;
+  command: DrawCommand;
 }
 
 /** @internal */
 export interface GroupScopeEntry {
   readonly kind: RenderEntryKind.Group;
-  readonly seq: number;
-  readonly zIndex: number;
-  readonly scope: GroupScope;
+  seq: number;
+  zIndex: number;
+  scope: GroupScope;
 }
 
 /** @internal */
 export interface BarrierScopeEntry {
   readonly kind: RenderEntryKind.Barrier;
-  readonly seq: number;
-  readonly zIndex: number;
-  readonly scope: BarrierScope;
+  seq: number;
+  zIndex: number;
+  scope: BarrierScope;
 }
 
 /** @internal */

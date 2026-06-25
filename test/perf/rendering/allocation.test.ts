@@ -16,15 +16,24 @@ import { buildScenarioCatalog } from './scenarios';
  * live at stop, discarding the immediately-dead plan garbage (a ~500× undercount).
  * The `sampler counts dead garbage` test below guards that invariant.
  *
- * Budgets are the measured status quo (`pnpm perf:renderers:alloc`) plus headroom;
- * they tighten as 2b–2f drive the static scene toward ~0 plan garbage/frame.
+ * Budgets are the measured status quo plus headroom; they tighten as 2b–2f drive
+ * the static scene toward ~0 plan garbage/frame.
+ *
+ * NOTE: the source-accurate numbers come from THIS test (the vitest `rendering-perf`
+ * project resolves `#*` imports to `src` and wires GLSL). The standalone
+ * `pnpm perf:renderers:alloc` launcher resolves `#*` to the built `dist/esm` (its
+ * `default` import condition) and so reports the LAST BUILD, not the working tree —
+ * use it only as a rough cross-check, not as the before/after gate.
  */
 
-// Status-quo budgets (bytes/frame), measured: empty ≈ 3 KB (harness/recorder
-// floor), static ≈ 645 KB, moving ≈ 1020 KB. ~1.5× headroom; tighten per slice.
+// Budgets (bytes/frame), measured against src. empty ≈ 2.6 KB (harness/recorder
+// floor). After Slice 2b (DrawCommand/ScopeEntry pooled, MaterialKey cached):
+// static ≈ 317 KB (was ≈ 644), moving ≈ 580 KB (was ≈ 916). The remainder is the
+// RenderPlanOptimizer (→ 2f) + per-scope collectRenderGroups (→ 2c). ~1.3× headroom
+// for the statistical sampler; tighten again per following slice.
 const EMPTY_BUDGET = 16 * 1024;
-const STATIC_BUDGET = 1024 * 1024;
-const MOVING_BUDGET = 1536 * 1024;
+const STATIC_BUDGET = 420 * 1024;
+const MOVING_BUDGET = 768 * 1024;
 
 const findScenario = (id: string): ReturnType<typeof buildScenarioCatalog>[number] => {
   const scenario = buildScenarioCatalog('full').find(s => s.id === id);
