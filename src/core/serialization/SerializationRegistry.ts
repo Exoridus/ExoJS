@@ -127,7 +127,7 @@ export const defaultSerializationRegistry = new SerializationRegistry();
  * ```ts
  * registerSerializer('PowerUp', PowerUp, {
  *   write: (node) => ({ kind: node.kind }),
- *   read: (data) => new PowerUp(data.kind as string),
+ *   read: (data) => new PowerUp(typeof data.kind === 'string' ? data.kind : ''),
  * });
  * ```
  */

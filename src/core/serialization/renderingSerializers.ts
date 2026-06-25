@@ -9,22 +9,62 @@ import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { BitmapText } from '#rendering/text/BitmapText';
 import { BmFont } from '#rendering/text/BmFont';
-import type { LayoutOptions } from '#rendering/text/LayoutOptions';
-import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
 import type { NodeSerializer } from './NodeSerializer';
+import { asNumberArray, asObject, asSerializedNode, readBoolean, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
-import { compact, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
-import type { SerializedNode } from './types';
+import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 
 const toF32 = (value: unknown): Float32Array => (Array.isArray(value) ? new Float32Array(value.map(Number)) : new Float32Array());
 const toU16 = (value: unknown): Uint16Array => (Array.isArray(value) ? new Uint16Array(value.map(Number)) : new Uint16Array());
 const toU32 = (value: unknown): Uint32Array => (Array.isArray(value) ? new Uint32Array(value.map(Number)) : new Uint32Array());
-const num = (value: unknown): number | undefined => (typeof value === 'number' ? value : undefined);
+const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+
+/** Read a {@link NineSliceInsets} from JSON, defaulting any missing/invalid edge to 0 (never `undefined` — `slices` is required and `undefined` would crash `normalizeInsets`). */
+const readInsets = (value: unknown): NineSliceInsets => {
+  const source = asObject(value);
+
+  return {
+    left: num(source?.left) ?? 0,
+    top: num(source?.top) ?? 0,
+    right: num(source?.right) ?? 0,
+    bottom: num(source?.bottom) ?? 0,
+  };
+};
+
+/** Read {@link NineSliceModes} from JSON, keeping only valid enum fields (invalid ones fall back to the renderer's defaults). */
+const readModes = (value: unknown): NineSliceModes | undefined => {
+  const source = asObject(value);
+
+  if (source === null) {
+    return undefined;
+  }
+
+  const out: { -readonly [K in keyof NineSliceModes]: NineSliceModes[K] } = {};
+
+  const edges = readEnum(source, 'edges', REPEAT_MODES);
+  if (edges !== undefined) out.edges = edges;
+  const center = readEnum(source, 'center', REPEAT_MODES);
+  if (center !== undefined) out.center = center;
+  const top = readEnum(source, 'top', REPEAT_MODES);
+  if (top !== undefined) out.top = top;
+  const right = readEnum(source, 'right', REPEAT_MODES);
+  if (right !== undefined) out.right = right;
+  const bottom = readEnum(source, 'bottom', REPEAT_MODES);
+  if (bottom !== undefined) out.bottom = bottom;
+  const left = readEnum(source, 'left', REPEAT_MODES);
+  if (left !== undefined) out.left = left;
+  const edgeFit = readEnum(source, 'edgeFit', REPEAT_FITS);
+  if (edgeFit !== undefined) out.edgeFit = edgeFit;
+  const centerFit = readEnum(source, 'centerFit', REPEAT_FITS);
+  if (centerFit !== undefined) out.centerFit = centerFit;
+
+  return out;
+};
 
 // ── Mesh ─────────────────────────────────────────────────────────────────────
 
@@ -78,7 +118,8 @@ const graphicsSerializer: NodeSerializer<Graphics> = {
 
     if (Array.isArray(children)) {
       for (const child of children) {
-        node.addChild(ctx.readNode(child as SerializedNode) as RenderNode);
+        const childNode = asSerializedNode(child);
+        if (childNode !== null) node.addChild(ctx.readNode(childNode) as RenderNode);
       }
     }
 
@@ -113,9 +154,9 @@ const nineSliceSerializer: NodeSerializer<NineSliceSprite> = {
     return new NineSliceSprite(
       texture,
       compact({
-        slices: data.slices as NineSliceInsets,
-        border: data.border as NineSliceInsets,
-        modes: data.modes as NineSliceModes,
+        slices: readInsets(data.slices),
+        border: asObject(data.border) !== null ? readInsets(data.border) : undefined,
+        modes: readModes(data.modes),
         width: num(data.width),
         height: num(data.height),
       }),
@@ -155,10 +196,10 @@ const repeatingSerializer: NodeSerializer<RepeatingSprite> = {
       compact({
         width: num(data.width),
         height: num(data.height),
-        modeX: data.modeX as RepeatMode,
-        modeY: data.modeY as RepeatMode,
-        fitX: data.fitX as RepeatFit,
-        fitY: data.fitY as RepeatFit,
+        modeX: readEnum(data, 'modeX', REPEAT_MODES),
+        modeY: readEnum(data, 'modeY', REPEAT_MODES),
+        fitX: readEnum(data, 'fitX', REPEAT_FITS),
+        fitY: readEnum(data, 'fitY', REPEAT_FITS),
         offsetX: num(data.offsetX),
         offsetY: num(data.offsetY),
       }),
@@ -199,18 +240,25 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
     const clips: Record<string, AnimatedSpriteClipDefinition> = {};
     const clipsData = data.clips;
 
-    if (typeof clipsData === 'object' && clipsData !== null) {
-      for (const [name, raw] of Object.entries(clipsData as Record<string, unknown>)) {
-        const clip = raw as { frames?: unknown; fps?: unknown; loop?: unknown };
+    const clipsObject = asObject(clipsData);
+
+    if (clipsObject !== null) {
+      for (const [name, raw] of Object.entries(clipsObject)) {
+        const clip = asObject(raw);
+
+        if (clip === null) {
+          continue;
+        }
+
         const frames = Array.isArray(clip.frames)
           ? clip.frames.map(frame => {
-              const values = frame as number[];
+              const values = asNumberArray(frame) ?? [];
 
-              return new Rectangle(Number(values[0]), Number(values[1]), Number(values[2]), Number(values[3]));
+              return new Rectangle(values[0] ?? 0, values[1] ?? 0, values[2] ?? 0, values[3] ?? 0);
             })
           : [];
 
-        clips[name] = compact({ frames, fps: num(clip.fps), loop: typeof clip.loop === 'boolean' ? clip.loop : undefined });
+        clips[name] = compact({ frames, fps: num(clip.fps), loop: readBoolean(clip, 'loop') });
       }
     }
 
@@ -253,7 +301,7 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
       throw new Error('BitmapText deserialize requires its BmFont to be pre-loaded into the Loader.');
     }
 
-    const layout = typeof data.layout === 'object' && data.layout !== null ? (data.layout as LayoutOptions) : undefined;
+    const layout = readLayoutOptions(data.layout);
 
     return new BitmapText(
       typeof data.text === 'string' ? data.text : '',
