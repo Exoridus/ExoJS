@@ -40,13 +40,7 @@ const LOCKSTEP_DIRS: Array<{ name: string; dir: string }> = [
   { name: '@codexo/exojs-audio-fx', dir: 'packages/exojs-audio-fx' },
 ];
 
-const EXTENSION_NAMES = new Set([
-  '@codexo/exojs-particles',
-  '@codexo/exojs-tilemap',
-  '@codexo/exojs-tiled',
-  '@codexo/exojs-physics',
-  '@codexo/exojs-audio-fx',
-]);
+const EXTENSION_NAMES = new Set(['@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled', '@codexo/exojs-physics', '@codexo/exojs-audio-fx']);
 
 const log = (msg: string): void => process.stdout.write(`${msg}\n`);
 const die = (msg: string): never => {
@@ -96,10 +90,7 @@ function assertChangelogSection(version: string): void {
   const escapedVersion = version.replace(/\./g, '\\.');
   const pattern = new RegExp(`^## \\[${escapedVersion}\\] - \\d{4}-\\d{2}-\\d{2}`, 'm');
   if (!pattern.test(changelog)) {
-    die(
-      `CHANGELOG.md does not have a dated section for [${version}].\n` +
-      `Add "## [${version}] - YYYY-MM-DD" with release notes before cutting.`,
-    );
+    die(`CHANGELOG.md does not have a dated section for [${version}].\n` + `Add "## [${version}] - YYYY-MM-DD" with release notes before cutting.`);
   }
 }
 

@@ -8,18 +8,19 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 
 ## Packages
 
-| Package | Description |
-|---|---|
-| `@codexo/exojs` | Core runtime — scene graph, rendering, audio, UI, serialization |
-| `@codexo/exojs-physics` | Native 2D physics — shapes, constraints, TGS-Soft solver |
-| `@codexo/exojs-particles` | GPU-driven particles (WebGPU compute) with CPU fallback |
-| `@codexo/exojs-tilemap` | Format-independent tilemap runtime and object layers |
-| `@codexo/exojs-tiled` | Tiled JSON adapter and scene-graph conversion |
-| `@codexo/exojs-audio-fx` | Audio effects — biquad filters, analyser, beat detection, worklets |
+| Package                   | Description                                                        |
+| ------------------------- | ------------------------------------------------------------------ |
+| `@codexo/exojs`           | Core runtime — scene graph, rendering, audio, UI, serialization    |
+| `@codexo/exojs-physics`   | Native 2D physics — shapes, constraints, TGS-Soft solver           |
+| `@codexo/exojs-particles` | GPU-driven particles (WebGPU compute) with CPU fallback            |
+| `@codexo/exojs-tilemap`   | Format-independent tilemap runtime and object layers               |
+| `@codexo/exojs-tiled`     | Tiled JSON adapter and scene-graph conversion                      |
+| `@codexo/exojs-audio-fx`  | Audio effects — biquad filters, analyser, beat detection, worklets |
 
 ## Features
 
 **Rendering**
+
 - WebGPU-first with automatic WebGL2 fallback; force either backend with one option
 - Drawables: `Sprite`, `AnimatedSprite`, `NineSliceSprite`, `RepeatingSprite`, `Graphics`, `Text` (SDF), `BitmapText`, `Video`
 - Rendering composition: `RenderTexture`, `RenderPipeline`, filter chains, visual masks, cache-as-bitmap
@@ -28,30 +29,36 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 - Render stats with GPU memory accounting (`gpuMemoryBytes`, texture/buffer upload bytes)
 
 **Scene & UI**
+
 - `Application`, `Scene`, `SceneManager` — one active scene with `setScene`, fade transitions, and `scene.paused`
 - `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, anchoring, and a `FocusManager` with keyboard and gamepad navigation
 
 **Physics** (`@codexo/exojs-physics`)
+
 - Circles, boxes, capsules, and convex polygons; static, kinematic, and dynamic bodies
 - SAP broadphase, manifold narrow-phase, warm-started TGS-Soft solver (sub-stepped, stable to 20+ box stacks)
 - Contact graph, collision events, spatial queries; allocation-free per step (V8-sampler verified)
 - Scene-graph binding and a `/debug` draw subpath
 
 **Audio**
+
 - Voice capability matrix across `Sound`, `AudioStream`, and `AudioGenerator`
 - Spatial panning, audio sprites, frequency and waveform analysis
 - `@codexo/exojs-audio-fx`: `BiquadEffect`, `AudioAnalyser`, `BeatDetector`, worklets, and DSP helpers
 
 **Assets & Storage**
+
 - Typed `Loader` with manifest/bundle workflow (`defineAssetManifest`, `loadBundle`)
 - Binary asset containers (`loader.loadContainer`) for bundled distribution
 - Key-value persistence: `WebStorageStore` (localStorage/sessionStorage), `IndexedDbKeyValueStore` (structured-clone, binary-safe), `MemoryStore` (tests/ephemeral)
 
 **Serialization**
+
 - `Scene.serialize` / `deserialize` captures scene structure — nodes, drawables, UI, tilemap
 - `SerializationRegistry` and `Prefab` for templates; pairs with any `KeyValueStore` for save-slot persistence
 
 **Architecture**
+
 - `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` across the full codebase — zero `as any`, zero `ts-ignore`
 - Ordered `SystemRegistry` (`app.systems`, `scene.systems`) with deterministic tick bands
 - Deterministic disposal via `Destroyable` / `DisposalScope`; all managers are app-owned, not process singletons
@@ -156,7 +163,7 @@ Directional work toward the `1.0.0` API freeze. Priorities may shift — nothing
 ```ts
 new Application({ backend: { type: 'webgpu' } });
 new Application({ backend: { type: 'webgl2' } });
-new Application({ backend: { type: 'auto' } });   // default
+new Application({ backend: { type: 'auto' } }); // default
 ```
 
 ## Development
