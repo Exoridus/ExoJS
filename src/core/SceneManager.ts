@@ -227,6 +227,8 @@ export class SceneManager {
       if (ui !== null) {
         this._app.interaction.attachUIRoot(ui);
       }
+
+      scene.onLoad.dispatch();
     } catch (error) {
       let cleanupError: unknown = null;
 
@@ -258,6 +260,7 @@ export class SceneManager {
   }
 
   private async _disposeScene(scene: Scene): Promise<void> {
+    scene.onUnload.dispatch();
     this.onStopScene.dispatch(scene);
     await scene.unload(this._app.loader);
 

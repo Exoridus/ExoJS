@@ -1,15 +1,15 @@
 ---
 title: "TweenManager"
-description: "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. Created tweens are tracked automatically; manually constructed tweens can be opted in via TweenManager.add. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically."
+description: "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. Created tweens are tracked automatically; manually constructed tweens can be opted in via TweenManager.add. Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically."
 symbol: "TweenManager"
 kind: "class"
 subsystem: "animation"
 importPath: "@codexo/exojs"
-memberCount: 8
+memberCount: 11
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/animation/TweenManager.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts#L17"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts#L26"
 ---
 ## Import
 
@@ -19,6 +19,9 @@ Owns and advances a collection of Tween instances, driving them
 once per frame from Application.update. Created tweens are tracked
 automatically; manually constructed tweens can be opted in via
 TweenManager.add.
+
+Custom updatables (such as TweenSequencer) can be registered via
+TweenManager.addTicker so they share the same frame tick.
 
 Update iteration uses a snapshot so callbacks may freely add or remove
 tweens during the same frame without corrupting the loop. Completed and
@@ -31,13 +34,16 @@ stopped tweens are evicted automatically.
 ## Methods
 
 - `add(tween: Tween): this`
+- `addTicker(ticker: Ticker): this`
 - `clear(): this`
 - `create(target: T): Tween<T>`
+- `createSequencer(): TweenSequencer`
 - `destroy(): void`
 - `remove(tween: Tween): this`
+- `removeTicker(ticker: Ticker): this`
 - `sequence(tweens: readonly Tween<object>[]): Tween`
 - `update(delta: Time): void`
 
 ## Source
 
-[src/animation/TweenManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts#L17)
+[src/animation/TweenManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts#L26)

@@ -8,6 +8,7 @@ import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
 import { DisposalScope } from './DisposalScope';
+import { Signal } from './Signal';
 import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
 import { SystemRegistry } from './SystemRegistry';
@@ -115,6 +116,11 @@ export class Scene {
    * (show a panel on `scene.ui`, then set `scene.paused = true`).
    */
   public paused = false;
+
+  /** Dispatched after the scene finishes loading (after load() and init() complete). */
+  public readonly onLoad = new Signal();
+  /** Dispatched when the scene is about to be unloaded. */
+  public readonly onUnload = new Signal();
 
   private _inputs: SceneInputs | null = null;
   private _tweens: SceneTweens | null = null;
@@ -368,6 +374,8 @@ export class Scene {
     this._inputs = null;
     this._tweens = null;
     this._systems = null;
+    this.onLoad.destroy();
+    this.onUnload.destroy();
     this._root.destroy();
     this._app = null;
   }

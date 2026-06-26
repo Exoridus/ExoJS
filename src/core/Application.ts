@@ -246,6 +246,8 @@ export class Application {
   public readonly onVisibilityChange = new Signal<[visible: boolean]>();
   public readonly onBackendLost = new Signal();
   public readonly onBackendRestored = new Signal();
+  /** Dispatched when an unhandled error occurs in scene lifecycle. */
+  public readonly onError = new Signal<[error: Error]>();
   public pauseOnHidden = false;
 
   private readonly _updateHandler: () => void;
@@ -606,6 +608,7 @@ export class Application {
       cancelAnimationFrame(this._frameRequest);
       void this.scene.setScene(null).catch((error: unknown) => {
         console.error('Application.stop() failed to unload the active scene.', error);
+        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       });
       this._activeClock.stop();
       this._frameClock.stop();
@@ -799,6 +802,7 @@ export class Application {
     this.onVisibilityChange.destroy();
     this.onBackendLost.destroy();
     this.onBackendRestored.destroy();
+    this.onError.destroy();
   }
 
   private _onDocumentVisibilityChange(): void {

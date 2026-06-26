@@ -1,3 +1,4 @@
+import { Signal } from './Signal';
 import type { System } from './System';
 import type { Time } from './Time';
 import type { Destroyable } from './types';
@@ -18,6 +19,11 @@ export class SystemRegistry implements Destroyable {
   private readonly _pending: Array<{ add: boolean; system: System }> = [];
   private _ticking = false;
   private _sorted = true;
+
+  /** Dispatched when a system is added to this registry. */
+  public readonly onAdd = new Signal<[system: System]>();
+  /** Dispatched when a system is removed from this registry. */
+  public readonly onRemove = new Signal<[system: System]>();
 
   /** Add `system`; returns it for fluent capture. Ticks from the next frame. */
   public add<T extends System>(system: T): T {
@@ -84,6 +90,8 @@ export class SystemRegistry implements Destroyable {
     this._systems.length = 0;
     this._set.clear();
     this._pending.length = 0;
+    this.onAdd.destroy();
+    this.onRemove.destroy();
   }
 
   private _insert(system: System): void {
@@ -91,6 +99,7 @@ export class SystemRegistry implements Destroyable {
       this._set.add(system);
       this._systems.push(system);
       this._sorted = false;
+      this.onAdd.dispatch(system);
     }
   }
 
@@ -105,6 +114,7 @@ export class SystemRegistry implements Destroyable {
       this._systems.splice(index, 1);
     }
 
+    this.onRemove.dispatch(system);
     return true;
   }
 
