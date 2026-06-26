@@ -1,0 +1,50 @@
+---
+title: "ImageLayer"
+description: "A data-only image layer: a single image (texture + resolved URL) placed as a background or foreground layer. Image layers are not rendered by the tile renderer — they are exposed as data for a renderer or follow-up scene node to consume. Parallax, opacity, tint, offset, and repeat flags are carried from the source Tiled map."
+symbol: "ImageLayer"
+kind: "class"
+subsystem: "tilemap"
+importPath: "@codexo/exojs-tilemap"
+memberCount: 16
+tier: "advanced"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "packages/exojs-tilemap/src/ImageLayer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ImageLayer.ts#L46"
+---
+## Import
+
+`import { ImageLayer } from '@codexo/exojs-tilemap'`
+
+A data-only image layer: a single image (texture + resolved URL) placed as a
+background or foreground layer. Image layers are not rendered by the tile
+renderer — they are exposed as data for a renderer or follow-up scene node to
+consume.
+
+Parallax, opacity, tint, offset, and repeat flags are carried from the
+source Tiled map.
+
+## Constructors
+
+- `new(options: ImageLayerOptions): ImageLayer`
+
+## Properties
+
+- `class: string`
+- `id: number`
+- `image: string`
+- `kind: "image"`
+- `name: string`
+- `offsetX: number`
+- `offsetY: number`
+- `opacity: number`
+- `parallaxX: number`
+- `parallaxY: number`
+- `repeatX: boolean`
+- `repeatY: boolean`
+- `texture: Texture | null`
+- `tintColor: number | null`
+- `visible: boolean`
+
+## Source
+
+[packages/exojs-tilemap/src/ImageLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ImageLayer.ts#L46)
