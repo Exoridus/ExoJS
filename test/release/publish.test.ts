@@ -51,7 +51,7 @@ const publishedPackages = (invocations: CommandInvocation[]): string[] => publis
 const liveOptions = (): PublishOptions => ({ ...defaultPublishOptions('0.13.0'), dryRun: false, checkExisting: true });
 
 describe('publishRelease — dry-run', () => {
-  it('publishes all four to the temp dist-tag in Core→Particles→Tilemap→Tiled order, every call carries --dry-run', () => {
+  it('publishes all six to latest in Core→Particles→Tilemap→Tiled→Physics→AudioFx order, every call carries --dry-run', () => {
     const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? fail('E404') : ok()));
     const report = publishRelease(manifest, defaultPublishOptions('0.13.0'), runner, resolveArtifact);
 
@@ -72,34 +72,28 @@ describe('publishRelease — dry-run', () => {
     for (const call of published) {
       expect(call.args).toContain('--dry-run');
       expect(call.args).toContain('--tag');
-      expect(call.args[call.args.indexOf('--tag') + 1]).toBe('staging-0.13.0');
+      expect(call.args[call.args.indexOf('--tag') + 1]).toBe('latest');
     }
-    // Promotion happens but as dry-run (no real latest move).
-    expect(report.packages.every(p => p.promote === 'skipped-dry-run')).toBe(true);
+    // No dist-tag calls — we publish directly to latest.
+    expect(distTagCalls(runner.invocations)).toHaveLength(0);
   });
 });
 
 describe('publishRelease — live happy path', () => {
-  it('publishes then promotes all four to latest', () => {
+  it('publishes all six directly to latest', () => {
     const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? fail('E404') : ok()));
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
     expect(report.ok).toBe(true);
     expect(report.packages.map(p => p.publish)).toEqual(['published', 'published', 'published', 'published', 'published', 'published']);
-    expect(report.packages.map(p => p.promote)).toEqual(['promoted', 'promoted', 'promoted', 'promoted', 'promoted', 'promoted']);
 
-    // dist-tag promotion runs once per package, AFTER all publishes, to `latest`.
-    const tags = distTagCalls(runner.invocations);
-    expect(tags).toHaveLength(6);
-    expect(tags.map(t => t.args[3])).toEqual(['latest', 'latest', 'latest', 'latest', 'latest', 'latest']);
-    const firstTagIndex = runner.invocations.findIndex(i => i.args[0] === 'dist-tag');
-    const lastPublishIndex = runner.invocations.map(i => i.args[0]).lastIndexOf('publish');
-    expect(firstTagIndex).toBeGreaterThan(lastPublishIndex);
+    // No dist-tag promotion step — direct publish replaces the former staging→promote flow.
+    expect(distTagCalls(runner.invocations)).toHaveLength(0);
   });
 });
 
 describe('publishRelease — idempotent resume', () => {
-  it('skips versions already on the registry and still publishes the rest, then promotes', () => {
+  it('skips versions already on the registry and still publishes the rest', () => {
     // Core already present; particles + tilemap + tiled not.
     const runner = createRecordingRunner(inv => {
       if (inv.args[0] === 'view') {
@@ -116,7 +110,7 @@ describe('publishRelease — idempotent resume', () => {
     expect(report.packages[3].publish).toBe('published');
     expect(report.packages[4].publish).toBe('published');
     expect(report.packages[5].publish).toBe('published');
-    // Core was NOT re-published…
+    // Core was NOT re-published.
     expect(publishedPackages(runner.invocations)).toEqual([
       resolveArtifact(tarballName('@codexo/exojs-particles')),
       resolveArtifact(tarballName('@codexo/exojs-tilemap')),
@@ -124,22 +118,19 @@ describe('publishRelease — idempotent resume', () => {
       resolveArtifact(tarballName('@codexo/exojs-physics')),
       resolveArtifact(tarballName('@codexo/exojs-audio-fx')),
     ]);
-    // …but it still gets promoted to latest along with the others.
-    expect(report.packages.map(p => p.promote)).toEqual(['promoted', 'promoted', 'promoted', 'promoted', 'promoted', 'promoted']);
   });
 
-  it('a fully-published release re-run promotes everything and publishes nothing', () => {
+  it('a fully-published release re-run publishes nothing', () => {
     const runner = createRecordingRunner(inv => (inv.args[0] === 'view' ? ok('0.13.0') : ok()));
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
     expect(report.ok).toBe(true);
     expect(publishCalls(runner.invocations)).toHaveLength(0);
     expect(report.packages.every(p => p.publish === 'already-published')).toBe(true);
-    expect(report.packages.every(p => p.promote === 'promoted')).toBe(true);
   });
 });
 
-describe('publishRelease — partial failure never promotes latest', () => {
+describe('publishRelease — partial failure stops the chain', () => {
   const failOn = (failedPkg: string) =>
     createRecordingRunner((inv): CommandResult => {
       if (inv.args[0] === 'view') return fail('E404');
@@ -149,7 +140,7 @@ describe('publishRelease — partial failure never promotes latest', () => {
       return ok();
     });
 
-  it('Core fails → Particles/Tilemap/Tiled never attempted, no promotion, ok=false', () => {
+  it('Core fails → Particles/Tilemap/Tiled never attempted, ok=false', () => {
     const runner = failOn('@codexo/exojs');
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
@@ -163,7 +154,7 @@ describe('publishRelease — partial failure never promotes latest', () => {
     expect(publishCalls(runner.invocations)).toHaveLength(1);
   });
 
-  it('Particles fails → Core published but NOT promoted, Tilemap/Tiled never attempted, ok=false', () => {
+  it('Particles fails → Core published, Tilemap/Tiled never attempted, ok=false', () => {
     const runner = failOn('@codexo/exojs-particles');
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
@@ -172,12 +163,10 @@ describe('publishRelease — partial failure never promotes latest', () => {
     expect(report.packages[1].publish).toBe('failed');
     expect(report.packages[2].publish).toBe('not-attempted');
     expect(report.packages[3].publish).toBe('not-attempted');
-    // The crux: a partial failure promotes nothing to latest — not even Core.
     expect(distTagCalls(runner.invocations)).toHaveLength(0);
-    expect(report.packages.every(p => p.promote === 'not-attempted')).toBe(true);
   });
 
-  it('Tiled fails → Core+Particles+Tilemap published but no promotion, ok=false', () => {
+  it('Tiled fails → Core+Particles+Tilemap published but chain stops, ok=false', () => {
     const runner = failOn('@codexo/exojs-tiled');
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
@@ -218,20 +207,6 @@ describe('publishRelease — build-once guarantee', () => {
 });
 
 describe('publishRelease — no false success', () => {
-  it('reports ok=false if the final latest promotion fails after publishing', () => {
-    const runner = createRecordingRunner(inv => {
-      if (inv.args[0] === 'view') return fail('E404');
-      if (inv.args[0] === 'dist-tag') return fail('promotion blew up');
-      return ok();
-    });
-    const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
-
-    expect(report.ok).toBe(false);
-    // All four published, but promotion failed on the first → ok stays false.
-    expect(report.packages.every(p => p.publish === 'published')).toBe(true);
-    expect(report.packages.some(p => p.promote === 'failed')).toBe(true);
-  });
-
   it('skips npm view entirely when checkExisting is false', () => {
     const runner = createRecordingRunner(() => ok());
     const report = publishRelease(manifest, { ...liveOptions(), checkExisting: false }, runner, resolveArtifact);

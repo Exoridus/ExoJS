@@ -189,13 +189,13 @@ const doPublish = (): void => {
     provenance: has('--execute'),
   };
 
-  log(`\n→ Publish (${options.dryRun ? 'DRY-RUN' : 'EXECUTE'}) — dist-tag ${options.distTag} → ${options.promoteTag}`);
+  log(`\n→ Publish (${options.dryRun ? 'DRY-RUN' : 'EXECUTE'}) — dist-tag ${options.distTag}`);
   log(`  revision: ${manifest.shortRevision}`);
   const report = publishRelease(manifest, options, runner, file => resolve(stagingDir, file));
 
   if (report.abortReason) die(`publish aborted: ${report.abortReason}`);
   for (const p of report.packages) {
-    log(`  ${p.name}@${p.version}: publish=${p.publish} promote=${p.promote}${p.detail ? ` — ${p.detail}` : ''}`);
+    log(`  ${p.name}@${p.version}: publish=${p.publish}${p.detail ? ` — ${p.detail}` : ''}`);
   }
   if (!report.ok) die('publish reported failure.');
   log(`\n✓ publish ${options.dryRun ? 'dry-run' : 'run'} complete (ok).`);

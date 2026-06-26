@@ -44,8 +44,9 @@ pushed (leaving an untagged version in the tree indefinitely).
 
 6. **Watch the CI.** The `Release` workflow checks out the **tag commit**, runs the
    full CI gate, builds once, packs/hashes/attw/consumer-tests the six tarballs,
-   and publishes them via OIDC (Core → Particles → Tilemap → Tiled → Physics →
-   Audio-FX). A GitHub release with the Full ZIP is created automatically.
+   and publishes them directly to the `latest` dist-tag via OIDC (Core →
+   Particles → Tilemap → Tiled → Physics → Audio-FX). A GitHub release with
+   the Full ZIP is created automatically.
 
 7. **Confirm the release.** After CI completes, verify:
 
@@ -72,8 +73,8 @@ first time it reaches that package. Bootstrap it ahead of time instead:
    first real tarball with a local `npm login`).
 2. **Immediately** create its Trusted Publisher config on npmjs.com:
    - Repository `Exoridus/ExoJS`, workflow `release.yml`, no environment.
-   - **Enable both the publish AND the dist-tag/tag-management action** (configs
-     created before 2026-05-20 are publish-only by default).
+   - Enable the **publish** action (OIDC publishes directly to `latest` — no
+     dist-tag promotion step).
 3. Ensure its `package.json` has a `repository` field with the monorepo
    `directory` subpath — `npm publish --provenance` refuses to build the SLSA
    attestation without it. `verify:release-matrix` enforces this.
@@ -82,23 +83,3 @@ first time it reaches that package. Bootstrap it ahead of time instead:
 
 From then on every publish (including the new package's first real release) flows
 through OIDC with provenance, with no manual step during the release itself.
-
-## Known limitation — `latest` promotion under OIDC
-
-The publish stage promotes to `latest` with `npm dist-tag add`. OIDC mints a
-token **only for `npm publish`**, not for `dist-tag add`, so the promotion step
-fails with `E401` under pure Trusted Publishing. Until the pipeline is reworked
-(publish directly to `latest`, or use a granular dist-tag token), promote
-manually after a successful publish:
-
-```
-npm dist-tag add @codexo/exojs@X.Y.Z latest
-npm dist-tag add @codexo/exojs-particles@X.Y.Z latest
-npm dist-tag add @codexo/exojs-tilemap@X.Y.Z latest
-npm dist-tag add @codexo/exojs-tiled@X.Y.Z latest
-npm dist-tag add @codexo/exojs-physics@X.Y.Z latest
-npm dist-tag add @codexo/exojs-audio-fx@X.Y.Z latest
-```
-
-The packages are already published and immutable at this point — this only moves
-the tag. `npm logout` afterwards if you logged in locally for this.
