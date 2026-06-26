@@ -57,6 +57,47 @@ const bundled: RollupOptions = {
   ],
 };
 
+// Unminified IIFE global bundle for CDN script-tag usage (both dev and production).
+const iife: RollupOptions = {
+  input: 'src/index.ts',
+  output: {
+    file: 'dist/exo.iife.js',
+    format: 'iife',
+    name: 'ExoJS',
+    sourcemap: true,
+  },
+  plugins: [
+    constantReplacementPlugin,
+    resolve({ mainFields: ['browser', 'module', 'main'], exportConditions: sourceConditions }),
+    glslPlugin,
+    typescript({
+      compilerOptions: { incremental: false },
+      outputToFilesystem: false,
+    }),
+  ],
+};
+
+// Minified IIFE global bundle for CDN production use (production only).
+const iifeMin: RollupOptions = {
+  input: 'src/index.ts',
+  output: {
+    file: 'dist/exo.iife.min.js',
+    format: 'iife',
+    name: 'ExoJS',
+    sourcemap: true,
+  },
+  plugins: [
+    constantReplacementPlugin,
+    resolve({ mainFields: ['browser', 'module', 'main'], exportConditions: sourceConditions }),
+    glslPlugin,
+    typescript({
+      compilerOptions: { incremental: false },
+      outputToFilesystem: false,
+    }),
+    terser({ compress: { pure_funcs: ['assert', 'assertDefined', 'invariant', 'warnOnce'] } }),
+  ],
+};
+
 const debugBundled: RollupOptions = {
   input: 'src/debug/index.ts',
   // All `#` imports are core dependencies — mark them external so the debug
@@ -106,4 +147,6 @@ const modules: RollupOptions = {
   ],
 };
 
-export default [bundled, debugBundled, modules];
+const productionOnlyConfigs = buildMode === 'production' ? [iifeMin] : [];
+
+export default [bundled, debugBundled, modules, iife, ...productionOnlyConfigs];

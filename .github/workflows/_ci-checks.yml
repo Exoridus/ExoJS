@@ -368,6 +368,9 @@ jobs:
       - name: Build core
         run: pnpm build
 
+      - name: Check bundle sizes
+        run: pnpm size
+
       # The extension packages each have their own rollup build; pnpm runs them
       # in workspace-dependency order (tilemap before tiled). A broken package
       # build is now caught here instead of only at release time.
