@@ -2,7 +2,7 @@ import { type AssetLoaderContext, Texture, TextureRegion } from '@codexo/exojs';
 import { TileSet } from '@codexo/exojs-tilemap';
 
 import type { LdtkData, LdtkTilesetDef } from './LdtkData';
-import { LdtkMap } from './LdtkMap';
+import type { LdtkMap } from './LdtkMap';
 import { ldtkToTileMap } from './ldtkToTileMap';
 
 // ── URL resolution ────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ async function loadLdtkTileset(
   if (!def.relPath) return null;
 
   const imageUrl = resolveLdtkUrl(def.relPath, ldtkSource);
-  const texture = await context.loader.load(Texture, imageUrl);
+  const texture = (await context.loader.load(Texture, imageUrl)) as Texture;
 
   const tileSize = def.tileGridSize;
   const spacing = def.spacing ?? 0;

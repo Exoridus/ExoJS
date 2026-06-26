@@ -1,6 +1,5 @@
-import { createContext, useContext } from 'react';
-
 import type { Application } from '@codexo/exojs';
+import { createContext, useContext } from 'react';
 
 /**
  * Internal React context that carries the active {@link Application} instance

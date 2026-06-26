@@ -1,5 +1,5 @@
-import type { TileMapObject, TileProperties, TilePropertyValue } from '@codexo/exojs-tilemap';
-import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import type { TileMapObject, TileProperties, TilePropertyValue, TileSet } from '@codexo/exojs-tilemap';
+import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap } from '@codexo/exojs-tilemap';
 
 import type {
   LdtkData,
@@ -9,7 +9,7 @@ import type {
   LdtkLevel,
   LdtkTileData,
 } from './LdtkData';
-import { LDTK_FLIP_X, LDTK_FLIP_Y } from './LdtkData';
+import { ldtkFlipX, ldtkFlipY } from './LdtkData';
 import { LdtkMap } from './LdtkMap';
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -62,6 +62,7 @@ export function ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): L
 
 // ── Level conversion ──────────────────────────────────────────────────────────
 
+// eslint-disable-next-line complexity
 function convertLevel(
   level: LdtkLevel,
   levelIndex: number,
@@ -201,8 +202,8 @@ function populateTileLayer(
       tileset,
       localTileId,
       transform: {
-        flipX: (f & LDTK_FLIP_X) !== 0,
-        flipY: (f & LDTK_FLIP_Y) !== 0,
+        flipX: (f & ldtkFlipX) !== 0,
+        flipY: (f & ldtkFlipY) !== 0,
         diagonal: false,
       },
     });

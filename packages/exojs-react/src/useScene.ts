@@ -1,6 +1,5 @@
-import { type DependencyList, useEffect, useState } from 'react';
-
 import { ApplicationStatus, type Scene } from '@codexo/exojs';
+import { type DependencyList, useEffect, useState } from 'react';
 
 import { useExoApp } from './useExoApp';
 
@@ -30,6 +29,7 @@ import { useExoApp } from './useExoApp';
  * }
  * ```
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export function useScene<T extends Scene>(SceneClass: new () => T, deps: DependencyList = []): T | null {
   const app = useExoApp();
   const [scene, setScene] = useState<T | null>(null);
@@ -64,7 +64,6 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
     // SceneClass is intentionally excluded from deps: a new class reference
     // (e.g. inline arrow class) on every render would recreate the scene
     // each frame. Pass an explicit deps array to react to changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app, ...deps]);
 
   return scene;

@@ -1,6 +1,7 @@
 // Side-effect-free public API for @codexo/exojs-aseprite.
 // No registration is performed on import.
 
+export { asepriteBinding,AsepriteFormatError } from './asepriteBinding';
 export type {
   AsepriteArrayData,
   AsepriteData,
@@ -16,9 +17,8 @@ export type {
   AsepriteSliceKey,
 } from './AsepriteData';
 export { isAsepriteArrayData } from './AsepriteData';
-export { AsepriteSheet } from './AsepriteSheet';
-export { AsepriteFormatError, asepriteBinding } from './asepriteBinding';
 export { asepriteExtension } from './asepriteExtension';
+export { AsepriteSheet } from './AsepriteSheet';
 
 // ── Module augmentation — typed load calls ────────────────────────────────────
 import type { AsepriteSheet } from './AsepriteSheet';

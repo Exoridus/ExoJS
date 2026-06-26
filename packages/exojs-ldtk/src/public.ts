@@ -2,8 +2,8 @@
 // No registration is performed on import.
 
 // ── Extension wiring ──────────────────────────────────────────────────────────
-export { ldtkExtension } from './ldtkExtension';
 export { ldtkMapBinding } from './ldtkBinding';
+export { ldtkExtension } from './ldtkExtension';
 
 // ── Parsed source model ───────────────────────────────────────────────────────
 export { LdtkMap } from './LdtkMap';

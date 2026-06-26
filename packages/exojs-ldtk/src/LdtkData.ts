@@ -8,13 +8,15 @@
  * @see https://ldtk.io/json/
  */
 
+/* eslint-disable @typescript-eslint/naming-convention -- LDtk uses __ prefix for runtime fields */
+
 // ── Tile data ─────────────────────────────────────────────────────────────────
 
 /** Flip-bit constants for {@link LdtkTileData.f}. */
-export const LDTK_FLIP_NONE = 0;
-export const LDTK_FLIP_X = 1;
-export const LDTK_FLIP_Y = 2;
-export const LDTK_FLIP_XY = 3;
+export const ldtkFlipNone = 0;
+export const ldtkFlipX = 1;
+export const ldtkFlipY = 2;
+export const ldtkFlipXy = 3;
 
 /** A single tile placed in a Tiles or AutoLayer layer instance. */
 export interface LdtkTileData {

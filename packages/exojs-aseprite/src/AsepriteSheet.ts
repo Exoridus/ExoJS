@@ -1,6 +1,6 @@
-import { AnimatedSprite, type AnimatedSpriteClipDefinition, Rectangle, Spritesheet, type Texture } from '@codexo/exojs';
+import { AnimatedSprite, type AnimatedSpriteClipDefinition, type Rectangle, Spritesheet, type Texture } from '@codexo/exojs';
 
-import { isAsepriteArrayData, type AsepriteData, type AsepriteFrameData } from './AsepriteData';
+import { type AsepriteData, type AsepriteFrameData,isAsepriteArrayData } from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of

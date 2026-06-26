@@ -12,13 +12,13 @@ import { AsepriteSheet } from './AsepriteSheet';
 // ── URL resolution ───────────────────────────────────────────────────────────
 
 /** Matches references that are already absolute: scheme, `//`, `/`, data/blob. */
-const ABSOLUTE_REF = /^(?:[a-z][a-z\d+.-]*:|\/\/|\/)/i;
+const absoluteRefPattern = /^(?:[a-z][a-z\d+.-]*:|\/\/|\/)/i;
 
 /** Matches a base that has an explicit scheme (absolute URL). */
-const ABSOLUTE_BASE = /^[a-z][a-z\d+.-]*:/i;
+const absoluteBasePattern = /^[a-z][a-z\d+.-]*:/i;
 
 /** Synthetic origin used to borrow `URL`'s `../`/`./` collapsing. */
-const SYNTHETIC_ORIGIN = 'https://exojs.invalid/';
+const syntheticOrigin = 'https://exojs.invalid/';
 
 /**
  * Resolves `ref` (the image path read from an Aseprite JSON file) relative to
@@ -30,17 +30,17 @@ const SYNTHETIC_ORIGIN = 'https://exojs.invalid/';
  *   then strips the origin from the result.
  */
 function resolveAsepriteUrl(ref: string, base: string): string {
-  if (ABSOLUTE_REF.test(ref)) {
+  if (absoluteRefPattern.test(ref)) {
     return ref;
   }
 
-  if (ABSOLUTE_BASE.test(base)) {
+  if (absoluteBasePattern.test(base)) {
     return new URL(ref, base).href;
   }
 
-  const resolved = new URL(ref, SYNTHETIC_ORIGIN + base.replace(/^\/+/, ''));
+  const resolved = new URL(ref, syntheticOrigin + base.replace(/^\/+/, ''));
 
-  return resolved.href.slice(SYNTHETIC_ORIGIN.length);
+  return resolved.href.slice(syntheticOrigin.length);
 }
 
 // ── Validation ───────────────────────────────────────────────────────────────
@@ -75,17 +75,17 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
     throw new AsepriteFormatError(source, 'missing required field "frames"');
   }
 
-  if (!('meta' in doc) || typeof doc['meta'] !== 'object' || doc['meta'] === null) {
+  if (!('meta' in doc) || typeof doc.meta !== 'object' || doc.meta === null) {
     throw new AsepriteFormatError(source, 'missing required field "meta"');
   }
 
-  const meta = doc['meta'] as Record<string, unknown>;
+  const meta = doc.meta as Record<string, unknown>;
 
-  if (typeof meta['image'] !== 'string' || meta['image'].length === 0) {
+  if (typeof meta.image !== 'string' || meta.image.length === 0) {
     throw new AsepriteFormatError(source, '"meta.image" must be a non-empty string');
   }
 
-  const frames = doc['frames'];
+  const frames = doc.frames;
 
   if (!Array.isArray(frames) && (typeof frames !== 'object' || frames === null)) {
     throw new AsepriteFormatError(source, '"frames" must be an array or an object');

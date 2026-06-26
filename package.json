@@ -94,7 +94,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
     "typecheck:guides": "tsx scripts/extract-guide-snippets.ts && tsc --noEmit -p tsconfig.guides.json",
-    "typecheck:packages": "pnpm --filter \"@codexo/exojs-particles\" --filter \"@codexo/exojs-tilemap\" --filter \"@codexo/exojs-tiled\" --filter \"@codexo/exojs-physics\" --filter \"@codexo/exojs-audio-fx\" typecheck",
+    "typecheck:packages": "pnpm --filter \"@codexo/exojs-particles\" --filter \"@codexo/exojs-tilemap\" --filter \"@codexo/exojs-tiled\" --filter \"@codexo/exojs-physics\" --filter \"@codexo/exojs-audio-fx\" --filter \"@codexo/exojs-aseprite\" --filter \"@codexo/exojs-ldtk\" --filter \"@codexo/exojs-react\" typecheck",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.js\" \"site/src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.js\" \"site/src/**/*.{ts,tsx}\"",
     "site:lint": "eslint \"site/src/**/*.{ts,tsx}\"",
