@@ -36,6 +36,7 @@ codexo-bg-*
 !.gitmojirc.json
 !.prettierignore
 !.prettierrc
+!.size-limit.cjs
 
 # Allowlist tracked dot-directories. The directory itself plus all
 # non-dotfile contents (workflow YAMLs, husky hooks, etc.). Dotfiles
