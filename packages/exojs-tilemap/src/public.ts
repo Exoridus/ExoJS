@@ -59,3 +59,8 @@ export {
   tileToChunkCoord,
   tileToLocalInChunk,
 } from './types';
+// Wang autotiling: automatic tile selection based on neighbor bitmasks.
+export type { AutoTileOptions } from './autoTile';
+export { autoTile } from './autoTile';
+export type { WangSetOptions } from './WangSet';
+export { WangSet } from './WangSet';
