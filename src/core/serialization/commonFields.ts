@@ -30,6 +30,7 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
   if (!node.visible) out.visible = false;
   if (node.zIndex !== 0) out.zIndex = node.zIndex;
   if (!node.cullable) out.cullable = false;
+  if (node.cullArea !== null) out.cullArea = [node.cullArea.x, node.cullArea.y, node.cullArea.width, node.cullArea.height];
   if (node.name !== null) out.name = node.name;
 
   if (node instanceof RenderNode) {
@@ -88,6 +89,13 @@ export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
   if (data.visible === false) node.visible = false;
   if (typeof data.zIndex === 'number') node.zIndex = data.zIndex;
   if (data.cullable === false) node.cullable = false;
+
+  const cullArea = data.cullArea;
+
+  if (Array.isArray(cullArea) && cullArea.length === 4) {
+    node.cullArea = new Rectangle(Number(cullArea[0]), Number(cullArea[1]), Number(cullArea[2]), Number(cullArea[3]));
+  }
+
   if (typeof data.name === 'string') node.name = data.name;
 
   if (node instanceof RenderNode) {
