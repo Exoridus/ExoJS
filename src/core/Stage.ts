@@ -1,5 +1,7 @@
 import type { RenderNode } from '#rendering/RenderNode';
 
+import type { Application } from './Application';
+
 /**
  * Friend-class hooks a scene node uses to notify its owning interaction service
  * of lifecycle and bounds changes. Implemented by `InteractionManager`. Kept on
@@ -41,4 +43,10 @@ export interface FocusHooks {
 export interface Stage {
   readonly interaction: InteractionHooks;
   readonly focus: FocusHooks;
+  /**
+   * The owning {@link Application}. Present in all production stages created by
+   * {@link InteractionManager}; may be absent in lightweight test stubs (hence
+   * optional). Widgets that need input access should use `this._stage?.app`.
+   */
+  readonly app?: Application;
 }

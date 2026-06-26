@@ -139,8 +139,8 @@ export class InteractionManager implements InteractionHooks, System {
 
   public constructor(app: Application) {
     this._app = app;
-    this._stage = { interaction: this, focus: app.focus };
-    this._uiStage = { interaction: this._uiInteraction, focus: app.focus };
+    this._stage = { interaction: this, focus: app.focus, app };
+    this._uiStage = { interaction: this._uiInteraction, focus: app.focus, app };
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
