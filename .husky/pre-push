@@ -16,10 +16,14 @@
 # Refs being pushed are read from stdin in the format:
 #   <local_ref> <local_sha> <remote_ref> <remote_sha>
 is_tag_push=0
+null_sha="0000000000000000000000000000000000000000"
 
 while read local_ref local_sha remote_ref remote_sha; do
     case "$remote_ref" in
-        refs/tags/*) is_tag_push=1 ;;
+        refs/tags/*)
+            # Deletions (local_sha == null) must not trigger verify:release.
+            [ "$local_sha" != "$null_sha" ] && is_tag_push=1
+            ;;
     esac
 done
 
