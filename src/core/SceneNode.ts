@@ -109,6 +109,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _parentNode: Container | null = null;
   private _zIndex = 0;
   private _cullable = true;
+  private _cullArea: Rectangle | null = null;
 
   /**
    * Optional human-readable identity for this node. Defaults to `null`.
@@ -208,12 +209,29 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
+  /**
+   * When `false`, this node is never culled by the viewport check and is
+   * always considered in-view. Defaults to `true`.
+   */
   public get cullable(): boolean {
     return this._cullable;
   }
 
   public set cullable(cullable: boolean) {
     this._cullable = cullable;
+  }
+
+  /**
+   * Custom rectangle used for viewport cull intersection test.
+   * When set, replaces the default node bounds in cull checks.
+   * Set to `null` to restore default bounds-based culling.
+   */
+  public get cullArea(): Rectangle | null {
+    return this._cullArea;
+  }
+
+  public set cullArea(rect: Rectangle | null) {
+    this._cullArea = rect;
   }
 
   /**
@@ -487,7 +505,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
       return true;
     }
 
-    return view.getBounds().intersectsWith(this.getBounds());
+    const bounds = this._cullArea ?? this.getBounds();
+
+    return view.getBounds().intersectsWith(bounds);
   }
 
   public destroy(): void {
