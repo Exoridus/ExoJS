@@ -195,6 +195,8 @@ export class TiledMap {
             opacity: layer.opacity,
             offsetX: layer.offsetX,
             offsetY: layer.offsetY,
+            parallaxX: layer.parallaxX,
+            parallaxY: layer.parallaxY,
           });
           if (layer.data) {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime);

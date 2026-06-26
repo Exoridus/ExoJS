@@ -43,6 +43,16 @@ export interface TileLayerOptions {
   readonly offsetX?: number;
   /** Layer pixel offset Y. Default 0. */
   readonly offsetY?: number;
+  /**
+   * Parallax scroll factor on the X axis. `1.0` = full camera speed (normal),
+   * `0.5` = half speed (farther away), `0.0` = stationary. Default 1.
+   */
+  readonly parallaxX?: number;
+  /**
+   * Parallax scroll factor on the Y axis. `1.0` = full camera speed (normal),
+   * `0.5` = half speed (farther away), `0.0` = stationary. Default 1.
+   */
+  readonly parallaxY?: number;
   /** Layer properties (copied and frozen). */
   readonly properties?: TileProperties;
 }
@@ -101,6 +111,16 @@ export class TileLayer {
   public offsetX: number;
   /** Vertical pixel offset (mutable). */
   public offsetY: number;
+  /**
+   * Parallax scroll factor on the X axis.
+   * `1.0` = full camera speed, `0.5` = half speed, `0.0` = stationary.
+   */
+  public readonly parallaxX: number;
+  /**
+   * Parallax scroll factor on the Y axis.
+   * `1.0` = full camera speed, `0.5` = half speed, `0.0` = stationary.
+   */
+  public readonly parallaxY: number;
 
   /** Immutable layer properties. */
   public readonly properties: TileProperties;
@@ -154,6 +174,12 @@ export class TileLayer {
       throw new Error('TileLayer offset must be finite numbers.');
     }
 
+    const parallaxX = options.parallaxX ?? 1;
+    const parallaxY = options.parallaxY ?? 1;
+    if (!Number.isFinite(parallaxX) || !Number.isFinite(parallaxY)) {
+      throw new Error('TileLayer parallax must be finite numbers.');
+    }
+
     this.id = options.id;
     this.name = options.name;
     this.width = options.width;
@@ -167,6 +193,8 @@ export class TileLayer {
     this.opacity = opacity;
     this.offsetX = offsetX;
     this.offsetY = offsetY;
+    this.parallaxX = parallaxX;
+    this.parallaxY = parallaxY;
     this.properties = options.properties
       ? Object.freeze({ ...options.properties })
       : Object.freeze({});
