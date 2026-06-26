@@ -304,6 +304,10 @@ export class Loader {
   private _concurrency: number;
   private _nextTypeId = 1;
 
+  private _fgBatchActive = 0;
+  private _fgBatchLoaded = 0;
+  private _fgBatchTotal = 0;
+
   private _backgroundQueue: QueueEntry[] = [];
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
@@ -318,6 +322,15 @@ export class Loader {
   public readonly onLoaded = new Signal<[type: AssetConstructor, alias: string, resource: unknown]>();
   /** Dispatched when an asset fails to load during background or bundle loading. */
   public readonly onError = new Signal<[type: AssetConstructor, alias: string, error: Error]>();
+
+  /** Fired when the first asset in a new load batch starts fetching. */
+  public readonly onLoadStart = new Signal<[key: string, url: string]>();
+  /** Fired after each asset settles (loaded or failed). `loaded` = resolved count, `total` = batch size. */
+  public readonly onLoadProgress = new Signal<[loaded: number, total: number, key: string]>();
+  /** Fired when all queued assets in the batch have settled. */
+  public readonly onLoadComplete = new Signal();
+  /** Fired when an asset fails to load. Does NOT prevent onLoadComplete. */
+  public readonly onLoadError = new Signal<[key: string, error: Error]>();
 
   public constructor(options: LoaderOptions = {}) {
     this._basePath = options.basePath ?? '';
@@ -770,14 +783,17 @@ export class Loader {
       // FontAsset requires a family option — infer it from the filename when not provided
       const options: unknown = ctor === FontAsset ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
+      this._onFgBatchStart(path, path);
       let notifyFn: ((success: boolean) => void) | null = null;
       const promise = this._loadSingle(ctor, path, options).then(
         v => {
           notifyFn?.(true);
+          this._onFgBatchSettled(path, true);
           return v;
         },
         e => {
           notifyFn?.(false);
+          this._onFgBatchSettled(path, false, this._normalizeError(e));
           throw e;
         },
       );
@@ -793,14 +809,17 @@ export class Loader {
       const options = arg2;
 
       if (typeof source === 'string') {
+        this._onFgBatchStart(source, source);
         let notifyFn: ((success: boolean) => void) | null = null;
         const promise = this._loadSingle(ctor, source, options).then(
           v => {
             notifyFn?.(true);
+            this._onFgBatchSettled(source, true);
             return v;
           },
           e => {
             notifyFn?.(false);
+            this._onFgBatchSettled(source, false, this._normalizeError(e));
             throw e;
           },
         );
@@ -815,18 +834,21 @@ export class Loader {
         const paths = source as readonly string[];
         let notifyFn: ((success: boolean) => void) | null = null;
         const results: unknown[] = new Array(paths.length);
-        const promises = paths.map((path, i) =>
-          this._loadSingle(ctor, path, options).then(
+        const promises = paths.map((path, i) => {
+          this._onFgBatchStart(path, path);
+          return this._loadSingle(ctor, path, options).then(
             v => {
               results[i] = v;
               notifyFn?.(true);
+              this._onFgBatchSettled(path, true);
             },
             e => {
               notifyFn?.(false);
+              this._onFgBatchSettled(path, false, this._normalizeError(e));
               throw e;
             },
-          ),
-        );
+          );
+        });
 
         const promise = Promise.all(promises).then(() => results);
 
@@ -847,13 +869,17 @@ export class Loader {
             ? options
             : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
 
+        this._onFgBatchStart(alias, path);
+
         return this._loadSingle(ctor, alias, itemOptions, path).then(
           v => {
             result[alias] = v;
             notifyFn?.(true);
+            this._onFgBatchSettled(alias, true);
           },
           e => {
             notifyFn?.(false);
+            this._onFgBatchSettled(alias, false, this._normalizeError(e));
             throw e;
           },
         );
@@ -1320,6 +1346,10 @@ export class Loader {
     this.onBundleProgress.destroy();
     this.onLoaded.destroy();
     this.onError.destroy();
+    this.onLoadStart.destroy();
+    this.onLoadProgress.destroy();
+    this.onLoadComplete.destroy();
+    this.onLoadError.destroy();
   }
 
   // -----------------------------------------------------------------------
@@ -1410,6 +1440,7 @@ export class Loader {
     let notifyFn: ((success: boolean) => void) | null = null;
 
     const itemPromises = items.map(({ alias, asset }) => {
+      this._onFgBatchStart(alias, asset.source);
       const ctor = this._assetTypeMap.get(asset.type);
 
       if (!ctor) {
@@ -1420,6 +1451,7 @@ export class Loader {
           },
           error => {
             notifyFn?.(false);
+            this._onFgBatchSettled(alias, false, this._normalizeError(error));
             throw error;
           },
         );
@@ -1429,9 +1461,11 @@ export class Loader {
         resource => {
           results.set(alias, resource);
           notifyFn?.(true);
+          this._onFgBatchSettled(alias, true);
         },
         error => {
           notifyFn?.(false);
+          this._onFgBatchSettled(alias, false, this._normalizeError(error));
           throw error;
         },
       );
@@ -1638,6 +1672,39 @@ export class Loader {
       throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, {
         cause: error,
       });
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Internal — foreground batch tracking
+  // -----------------------------------------------------------------------
+
+  private _onFgBatchStart(key: string, url: string): void {
+    if (this._fgBatchActive === 0) {
+      this._fgBatchLoaded = 0;
+    }
+
+    this._fgBatchActive++;
+    this._fgBatchTotal++;
+
+    if (this._fgBatchActive === 1) {
+      this.onLoadStart.dispatch(key, url);
+    }
+  }
+
+  private _onFgBatchSettled(key: string, success: boolean, error?: Error): void {
+    if (success) {
+      this._fgBatchLoaded++;
+    } else if (error !== undefined) {
+      this.onLoadError.dispatch(key, error);
+    }
+
+    this._fgBatchActive--;
+    this.onLoadProgress.dispatch(this._fgBatchLoaded, this._fgBatchTotal, key);
+
+    if (this._fgBatchActive === 0) {
+      this._fgBatchTotal = 0;
+      this.onLoadComplete.dispatch();
     }
   }
 
