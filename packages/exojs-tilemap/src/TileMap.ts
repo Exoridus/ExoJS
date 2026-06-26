@@ -31,6 +31,16 @@ export interface TileMapOptions {
   readonly chunkWidth?: number;
   /** Chunk height for layers (default 32). */
   readonly chunkHeight?: number;
+  /** Map class/type string (Tiled `class`). Defaults to `''`. */
+  readonly class?: string;
+  /**
+   * Map background colour as a `0xRRGGBB` integer, or `null` (Tiled
+   * `backgroundcolor`). Informational — the renderer does not auto-clear to it.
+   * Default `null`.
+   */
+  readonly backgroundColor?: number | null;
+  /** Tile draw order (Tiled `renderorder`), informational. Default `'right-down'`. */
+  readonly renderOrder?: string;
   /** Map-level properties (copied and frozen). */
   readonly properties?: TileProperties;
 }
@@ -73,6 +83,13 @@ export class TileMap {
   /** Default chunk height for layers. */
   public readonly chunkHeight: number;
 
+  /** Map class/type string (Tiled `class`; may be empty). */
+  public readonly class: string;
+  /** Map background colour as `0xRRGGBB`, or `null`. Informational. */
+  public readonly backgroundColor: number | null;
+  /** Tile draw order (Tiled `renderorder`). Informational. */
+  public readonly renderOrder: string;
+
   /** Map-level properties (immutable). */
   public readonly properties: TileProperties;
 
@@ -105,6 +122,9 @@ export class TileMap {
     this.tileHeight = options.tileHeight;
     this.chunkWidth = chunkWidth;
     this.chunkHeight = chunkHeight;
+    this.class = options.class ?? '';
+    this.backgroundColor = options.backgroundColor ?? null;
+    this.renderOrder = options.renderOrder ?? 'right-down';
 
     this._tilesets = options.tilesets ? [...options.tilesets] : [];
     this.properties = options.properties

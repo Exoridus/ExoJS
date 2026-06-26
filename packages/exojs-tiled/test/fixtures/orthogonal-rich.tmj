@@ -9,6 +9,7 @@
   "tilewidth": 16,
   "tileheight": 16,
   "infinite": false,
+  "class": "level",
   "backgroundcolor": "#223344",
   "properties": [
     { "name": "mood", "type": "string", "value": "calm" }
@@ -18,6 +19,8 @@
       "id": 1,
       "name": "Ground",
       "type": "tilelayer",
+      "class": "terrainLayer",
+      "tintcolor": "#ff8800",
       "visible": true,
       "opacity": 0.5,
       "x": 0,
@@ -42,7 +45,7 @@
       "opacity": 1,
       "x": 0,
       "y": 0,
-      "draworder": "topdown",
+      "draworder": "index",
       "objects": [
         {
           "id": 1, "name": "hero", "type": "spawn",
@@ -96,6 +99,7 @@
     {
       "firstgid": 1,
       "name": "tiles-a",
+      "class": "terrainSet",
       "image": "tiles-a.png",
       "imagewidth": 64,
       "imageheight": 32,
@@ -105,6 +109,7 @@
       "tilecount": 8,
       "spacing": 0,
       "margin": 0,
+      "tileoffset": { "x": 2, "y": -3 },
       "properties": [
         { "name": "author", "type": "string", "value": "exo" }
       ],

@@ -176,6 +176,12 @@ export interface ObjectLayerOptions {
   readonly offsetX?: number;
   /** Layer pixel offset Y. Default `0`. */
   readonly offsetY?: number;
+  /**
+   * Draw order for the objects (Tiled `draworder`): `'topdown'` (sorted by `y`)
+   * or `'index'` (source order). Informational; objects are stored as given.
+   * Default `'topdown'`.
+   */
+  readonly drawOrder?: 'topdown' | 'index';
   /** The objects in this layer. */
   readonly objects?: readonly TileMapObject[];
   /** Layer-level properties (copied and frozen). */
@@ -223,6 +229,8 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
   public readonly offsetX: number;
   /** Layer pixel offset Y. */
   public readonly offsetY: number;
+  /** Draw order for the objects (Tiled `draworder`). Informational. */
+  public readonly drawOrder: 'topdown' | 'index';
   /** Immutable layer-level properties. */
   public readonly properties: TileProperties;
   /** The objects in this layer (insertion order). */
@@ -236,6 +244,7 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
     this.opacity = options.opacity ?? 1;
     this.offsetX = options.offsetX ?? 0;
     this.offsetY = options.offsetY ?? 0;
+    this.drawOrder = options.drawOrder ?? 'topdown';
     this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
     this.objects = options.objects ? Object.freeze([...options.objects]) : Object.freeze([]);
   }

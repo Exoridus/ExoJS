@@ -170,6 +170,9 @@ export class TiledMap {
         columns: tiledTs.columns,
         spacing: tiledTs.spacing,
         margin: tiledTs.margin,
+        class: tiledTs.class,
+        offsetX: tiledTs.tileOffset.x,
+        offsetY: tiledTs.tileOffset.y,
       });
       // Carry per-tile metadata (properties + animation frames) into the runtime
       // tileset. Without this, Tiled tile animations and per-tile properties are
@@ -204,6 +207,8 @@ export class TiledMap {
             offsetY: layer.offsetY,
             parallaxX: layer.parallaxX,
             parallaxY: layer.parallaxY,
+            class: layer.class,
+            tintColor: parseTiledColor(layer.tintColor),
           });
           if (layer.data) {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime);
@@ -226,6 +231,9 @@ export class TiledMap {
       tilesets: runtimeTilesets,
       layers: runtimeLayers,
       objectLayers: runtimeObjectLayers,
+      class: this.class,
+      backgroundColor: parseTiledColor(this.backgroundColor),
+      renderOrder: this.renderOrder ?? 'right-down',
     });
   }
 
@@ -307,6 +315,7 @@ function convertObjectLayer(
     opacity: layer.opacity,
     offsetX: layer.offsetX,
     offsetY: layer.offsetY,
+    drawOrder: layer.drawOrder,
     objects,
     properties: convertProperties(layer.properties),
   });
@@ -359,6 +368,25 @@ function convertObject(
 }
 
 const toPoints = (points: ReadonlyArray<{ x: number; y: number }>): ObjectPoint[] => points.map(p => ({ x: p.x, y: p.y }));
+
+/**
+ * Parse a Tiled colour string (`#RRGGBB` or `#AARRGGBB`) into a `0xRRGGBB`
+ * integer, dropping any alpha. Returns `null` for an absent or malformed value.
+ */
+function parseTiledColor(value: string | undefined): number | null {
+  if (value === undefined || value === '') return null;
+  const hex = value.startsWith('#') ? value.slice(1) : value;
+  let rrggbb: string;
+  if (hex.length === 8) {
+    rrggbb = hex.slice(2); // drop leading alpha
+  } else if (hex.length === 6) {
+    rrggbb = hex;
+  } else {
+    return null;
+  }
+  const parsed = Number.parseInt(rrggbb, 16);
+  return Number.isNaN(parsed) ? null : parsed;
+}
 
 /**
  * Build runtime {@link TileDefinition}s from a Tiled tileset's per-tile data,

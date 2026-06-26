@@ -24,6 +24,12 @@ export interface TileSetOptions {
   readonly spacing?: number;
   /** Pixel margin around the atlas. Defaults to 0. */
   readonly margin?: number;
+  /** Tileset class/type string (Tiled `class`). Defaults to `''`. */
+  readonly class?: string;
+  /** Visual drawing offset in pixels applied to every tile of this set. Defaults to 0. */
+  readonly offsetX?: number;
+  /** Visual drawing offset in pixels applied to every tile of this set. Defaults to 0. */
+  readonly offsetY?: number;
 }
 
 /**
@@ -61,6 +67,13 @@ export class TileSet {
   public readonly spacing: number;
   /** Pixel margin around the atlas. */
   public readonly margin: number;
+
+  /** Tileset class/type string (Tiled `class`; may be empty). */
+  public readonly class: string;
+  /** Visual drawing offset X in pixels, applied to every tile of this set. */
+  public readonly offsetX: number;
+  /** Visual drawing offset Y in pixels, applied to every tile of this set. */
+  public readonly offsetY: number;
 
   private readonly _definitions: ReadonlyMap<number, TileDefinition>;
 
@@ -119,6 +132,9 @@ export class TileSet {
     this.rows = rows;
     this.spacing = spacing;
     this.margin = margin;
+    this.class = options.class ?? '';
+    this.offsetX = options.offsetX ?? 0;
+    this.offsetY = options.offsetY ?? 0;
 
     this._definitions = new Map();
 

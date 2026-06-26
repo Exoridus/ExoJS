@@ -205,6 +205,31 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
     expect(tile!.localTileId).toBe(0);
   });
 
+  it('carries map/layer/tileset metadata (class, tint, offset, background, renderorder, draworder)', async () => {
+    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const runtime = map.toTileMap();
+
+    // Map level.
+    expect(runtime.class).toBe('level');
+    expect(runtime.backgroundColor).toBe(0x223344);
+    expect(runtime.renderOrder).toBe('right-down');
+
+    // Tileset level (class + visual tile offset).
+    const tsA = runtime.getTileset('tiles-a')!;
+    expect(tsA.class).toBe('terrainSet');
+    expect(tsA.offsetX).toBe(2);
+    expect(tsA.offsetY).toBe(-3);
+
+    // Tile layer level (class + tint colour parsed to 0xRRGGBB).
+    const ground = runtime.getLayerByName('Ground')!;
+    expect(ground.class).toBe('terrainLayer');
+    expect(ground.tintColor).toBe(0xff8800);
+
+    // Object layer draw order.
+    const spawns = runtime.getObjectLayer('Spawns')!;
+    expect(spawns.drawOrder).toBe('index');
+  });
+
   it('carries per-tile properties and animation frames into the runtime tileset', async () => {
     const map = await loadTiledMap('orthogonal-rich.tmj', context);
     const runtime = map.toTileMap();
