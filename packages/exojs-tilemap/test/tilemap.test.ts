@@ -896,6 +896,39 @@ describe('TileLayer', () => {
     try { layer.setTileAt(0, 0, { tileset: ts2, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY }); } catch { /* expected */ }
     expect(layer.revision).toBe(rev);
   });
+
+  // ── Parallax ──────────────────────────────────────────────────────────
+
+  it('parallaxX and parallaxY default to 1.0', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.parallaxX).toBe(1);
+    expect(layer.parallaxY).toBe(1);
+  });
+
+  it('parallaxX and parallaxY can be set via options', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      parallaxX: 0.5,
+      parallaxY: 0.25,
+    });
+    expect(layer.parallaxX).toBe(0.5);
+    expect(layer.parallaxY).toBe(0.25);
+  });
+
+  it('parallaxX = 0.0 is valid (stationary layer)', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      parallaxX: 0,
+      parallaxY: 0,
+    });
+    expect(layer.parallaxX).toBe(0);
+    expect(layer.parallaxY).toBe(0);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════

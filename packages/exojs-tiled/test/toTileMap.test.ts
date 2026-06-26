@@ -340,3 +340,61 @@ describe('TiledMap.toTileMap() — object layers', () => {
     expect(layer?.query({ kind: 'tile' })).toHaveLength(1);
   });
 });
+
+// ── Parallax forwarding ──────────────────────────────────────────────────────
+
+describe('TiledMap.toTileMap() — parallax forwarding', () => {
+  const baseTileset = {
+    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
+    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+  };
+
+  it('forwards parallaxX and parallaxY from Tiled layer data to runtime TileLayer', async () => {
+    const { context } = makeContext({
+      'parallax.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          {
+            id: 1, name: 'Background', type: 'tilelayer',
+            visible: true, opacity: 1, x: 0, y: 0,
+            width: 2, height: 1, data: [1, 1],
+            parallaxx: 0.5, parallaxy: 0.25,
+          },
+        ],
+        tilesets: [baseTileset],
+      },
+    });
+    const tiled = await loadTiledMap('parallax.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    const layer = runtime.getLayerByName('Background')!;
+    expect(layer).toBeDefined();
+    expect(layer.parallaxX).toBe(0.5);
+    expect(layer.parallaxY).toBe(0.25);
+  });
+
+  it('defaults parallaxX and parallaxY to 1.0 when absent from Tiled data', async () => {
+    const { context } = makeContext({
+      'no-parallax.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          {
+            id: 1, name: 'Ground', type: 'tilelayer',
+            visible: true, opacity: 1, x: 0, y: 0,
+            width: 2, height: 1, data: [1, 1],
+          },
+        ],
+        tilesets: [baseTileset],
+      },
+    });
+    const tiled = await loadTiledMap('no-parallax.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    const layer = runtime.getLayerByName('Ground')!;
+    expect(layer).toBeDefined();
+    expect(layer.parallaxX).toBe(1);
+    expect(layer.parallaxY).toBe(1);
+  });
+});

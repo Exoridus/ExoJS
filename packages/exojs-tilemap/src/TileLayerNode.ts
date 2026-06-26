@@ -46,12 +46,16 @@ export class TileLayerNode extends Container {
   private readonly _chunkNodes: TileChunkNode[] = [];
   private _syncedOpacity = -1;
   private _pixelSnapMode: PixelSnapMode = 'none';
+  private readonly _baseOffsetX: number;
+  private readonly _baseOffsetY: number;
 
   public constructor(layer: TileLayer, options?: TileLayerNodeOptions) {
     super();
 
     this._layer = layer;
     this._cullChunks = options?.cullable ?? true;
+    this._baseOffsetX = layer.offsetX;
+    this._baseOffsetY = layer.offsetY;
 
     this.setPosition(layer.offsetX, layer.offsetY);
     this._buildChunkNodes();
@@ -137,7 +141,23 @@ export class TileLayerNode extends Container {
 
     this._syncOpacity();
 
-    super._collectContent(builder);
+    const layer = this._layer;
+
+    if (layer.parallaxX !== 1 || layer.parallaxY !== 1) {
+      const camCenter = builder.view.center;
+      const prevX = this.x;
+      const prevY = this.y;
+
+      this.x = this._baseOffsetX + camCenter.x * (1 - layer.parallaxX);
+      this.y = this._baseOffsetY + camCenter.y * (1 - layer.parallaxY);
+
+      super._collectContent(builder);
+
+      this.x = prevX;
+      this.y = prevY;
+    } else {
+      super._collectContent(builder);
+    }
   }
 
   public override destroy(): void {
