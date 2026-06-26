@@ -85,6 +85,15 @@ export interface RenderBackend {
    */
   composeWithAlphaMask(content: RenderTexture, mask: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this;
 
+  /**
+   * Composite `source` over the active render target under an advanced
+   * (backdrop-aware) blend mode. Captures the target's `[x, y, width, height]`
+   * region, runs the W3C blend formula in a shader, and draws the result back
+   * with normal premultiplied source-over. Used internally by the render-effect
+   * executor for modes where {@link isAdvancedBlendMode} is `true`.
+   */
+  composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this;
+
   draw(drawable: Drawable): this;
 
   /**

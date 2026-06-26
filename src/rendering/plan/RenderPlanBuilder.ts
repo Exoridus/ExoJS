@@ -3,6 +3,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
+import { isAdvancedBlendMode } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { type DrawCommand, RenderEntryKind } from './RenderCommand';
@@ -130,7 +131,7 @@ export class RenderPlanBuilder {
     if (node._renderPlanHasBarrierEffects()) {
       const effect = this._createEffectDescriptor(node);
       const hasAlphaMask = effect.maskSource !== null && !(effect.maskSource instanceof Rectangle);
-      const needsBounds = effect.cacheAsBitmap || effect.filters.length > 0 || hasAlphaMask;
+      const needsBounds = effect.cacheAsBitmap || effect.filters.length > 0 || hasAlphaMask || (effect.needsBackdropBlend ?? false);
       let left = 0;
       let top = 0;
       let width = 0;
@@ -401,13 +402,16 @@ export class RenderPlanBuilder {
       }
     }
 
+    const blendMode = node._renderPlanGetBlendMode();
+
     return {
       filters: node._renderPlanGetFilters(),
       clip,
       clipShape,
       maskSource: mask,
       cacheAsBitmap: node.cacheAsBitmap,
-      blendMode: node._renderPlanGetBlendMode(),
+      blendMode,
+      needsBackdropBlend: isAdvancedBlendMode(blendMode),
     };
   }
 }

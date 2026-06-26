@@ -29,7 +29,7 @@ export { RenderPipeline } from './RenderPipeline';
 export type { RenderStats } from './RenderStats';
 export { createRenderStats, resetRenderStats } from './RenderStats';
 export { RenderTarget } from './RenderTarget';
-export { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, ShaderPrimitives, WrapModes } from './types';
+export { BlendModes, BufferTypes, BufferUsage, isAdvancedBlendMode, RenderingPrimitives, ScaleModes, ShaderPrimitives, WrapModes } from './types';
 export type { ViewFollowOptions, ViewFollowTarget, ViewShakeOptions } from './View';
 export { View, ViewFlags } from './View';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';

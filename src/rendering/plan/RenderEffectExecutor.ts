@@ -15,7 +15,7 @@ export class RenderEffectExecutor {
     const needsBitmapCache = effect.cacheAsBitmap;
     const { left, top, width, height } = barrier;
 
-    if (!hasFilters && !needsBitmapCache) {
+    if (!hasFilters && !needsBitmapCache && !effect.needsBackdropBlend) {
       this._withClip(node, backend, barrier, () => {
         if (barrier.childPlan !== null) {
           playScope(barrier.childPlan);
@@ -89,7 +89,11 @@ export class RenderEffectExecutor {
       }
 
       this._withClip(node, backend, barrier, () => {
-        node._renderPlanDrawTexture(backend, finalTexture, left, top, width, height, effect.blendMode);
+        if (effect.needsBackdropBlend) {
+          backend.composeWithBackdropBlend(finalTexture, left, top, width, height, effect.blendMode);
+        } else {
+          node._renderPlanDrawTexture(backend, finalTexture, left, top, width, height, effect.blendMode);
+        }
       });
     } finally {
       if (pooledTexture !== null) {

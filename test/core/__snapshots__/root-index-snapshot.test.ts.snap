@@ -199,6 +199,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "defineAssetManifest",
   "getAudioContext",
   "getOfflineAudioContext",
+  "isAdvancedBlendMode",
   "isAudioContextReady",
   "maxPointers",
   "onAudioContextReady",

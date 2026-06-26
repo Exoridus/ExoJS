@@ -22,8 +22,20 @@ const BLEND_MODES: Array<{ mode: BlendModes; name: string }> = [
     { mode: BlendModes.Subtract, name: 'Subtract' },
     { mode: BlendModes.Multiply, name: 'Multiply' },
     { mode: BlendModes.Screen, name: 'Screen' },
+    // Advanced (backdrop-aware) modes — correct coverage, work with alpha.
     { mode: BlendModes.Darken, name: 'Darken' },
     { mode: BlendModes.Lighten, name: 'Lighten' },
+    { mode: BlendModes.Overlay, name: 'Overlay' },
+    { mode: BlendModes.ColorDodge, name: 'Color Dodge' },
+    { mode: BlendModes.ColorBurn, name: 'Color Burn' },
+    { mode: BlendModes.HardLight, name: 'Hard Light' },
+    { mode: BlendModes.SoftLight, name: 'Soft Light' },
+    { mode: BlendModes.Difference, name: 'Difference' },
+    { mode: BlendModes.Exclusion, name: 'Exclusion' },
+    { mode: BlendModes.Hue, name: 'Hue' },
+    { mode: BlendModes.Saturation, name: 'Saturation' },
+    { mode: BlendModes.Color, name: 'Color' },
+    { mode: BlendModes.Luminosity, name: 'Luminosity' },
 ];
 
 class BlendmodesScene extends Scene {

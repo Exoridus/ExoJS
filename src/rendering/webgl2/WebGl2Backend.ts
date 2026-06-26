@@ -27,6 +27,7 @@ import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
+import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
@@ -153,6 +154,8 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGl2MaskCompositor = new WebGl2MaskCompositor();
   private _maskCompositorConnected = false;
+  private readonly _backdropBlendCompositor: WebGl2BackdropBlendCompositor = new WebGl2BackdropBlendCompositor();
+  private _backdropBlendCompositorConnected = false;
   private readonly _stencilClipper: WebGl2StencilClipper = new WebGl2StencilClipper();
   private readonly _stencilStates: Map<RenderTarget, StencilTargetState> = new Map<RenderTarget, StencilTargetState>();
   private _stencilClipperConnected = false;
@@ -647,6 +650,44 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
+    if (width <= 0 || height <= 0) {
+      return this;
+    }
+
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+
+    if (!this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.connect(this);
+      this._backdropBlendCompositorConnected = true;
+    }
+
+    this._backdropBlendCompositor.compose(this, source, x, y, width, height, mode);
+
+    return this;
+  }
+
+  /**
+   * Return the GL framebuffer for `target`, preparing the render-target state so
+   * the texture is attached. Used internally by {@link WebGl2BackdropBlendCompositor}
+   * for framebuffer blits. Null for the root (default) framebuffer.
+   * @internal
+   */
+  public _renderTargetFramebuffer(target: RenderTarget): WebGLFramebuffer | null {
+    return this._prepareRenderTarget(target).framebuffer;
+  }
+
+  /**
+   * Re-bind the currently active render target as the GL DRAW framebuffer and
+   * restore the viewport. Called by {@link WebGl2BackdropBlendCompositor} after
+   * it unbinds the framebuffer for a blit operation.
+   * @internal
+   */
+  public _rebindActiveTarget(): void {
+    this._bindRenderTarget(this._renderTarget);
+  }
+
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
       // In-bounds: `index` ranges over `0..length-1`.
@@ -796,17 +837,6 @@ export class WebGl2Backend implements RenderBackend {
           gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
           break;
-        case BlendModes.Darken:
-          // MIN/MAX ignore blendFunc factors, so this cannot account for source
-          // coverage — transparent (premultiplied rgb=0) texels darken to black.
-          // Reliable only for opaque sources. See {@link BlendModes.Darken}.
-          gl.blendEquation(gl.MIN);
-          gl.blendFunc(gl.ONE, gl.ONE);
-          break;
-        case BlendModes.Lighten:
-          gl.blendEquation(gl.MAX);
-          gl.blendFunc(gl.ONE, gl.ONE);
-          break;
         default:
           gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -893,6 +923,11 @@ export class WebGl2Backend implements RenderBackend {
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
+    }
+
+    if (this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.disconnect();
+      this._backdropBlendCompositorConnected = false;
     }
 
     if (this._stencilClipperConnected) {

@@ -29,6 +29,7 @@ import type { BlendModes } from '#rendering/types';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
+import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
@@ -103,6 +104,8 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGpuMaskCompositor = new WebGpuMaskCompositor();
   private _maskCompositorConnected = false;
+  private readonly _backdropBlendCompositor: WebGpuBackdropBlendCompositor = new WebGpuBackdropBlendCompositor();
+  private _backdropBlendCompositorConnected = false;
   private _mipmapShaderModule: GPUShaderModule | null = null;
   private _mipmapBindGroupLayout: GPUBindGroupLayout | null = null;
   private _mipmapPipelineLayout: GPUPipelineLayout | null = null;
@@ -458,6 +461,48 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
+  public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
+    if (width <= 0 || height <= 0) {
+      return this;
+    }
+
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+
+    if (!this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.connect(this.device);
+      this._backdropBlendCompositorConnected = true;
+    }
+
+    this._backdropBlendCompositor.compose(this, source, x, y, width, height, mode);
+
+    return this;
+  }
+
+  /**
+   * Return the GPU texture backing `target`. For the root canvas target this is
+   * `context.getCurrentTexture()` (requires `COPY_SRC` usage configured on the
+   * canvas context). For a {@link RenderTexture} target it is the managed GPU
+   * texture. Used internally by {@link WebGpuBackdropBlendCompositor} for
+   * `copyTextureToTexture` backdrop capture.
+   * @internal
+   */
+  public _renderTargetTexture(target: RenderTarget): GPUTexture {
+    if (target === this._rootRenderTarget) {
+      return this.context.getCurrentTexture();
+    }
+
+    if (target instanceof RenderTexture) {
+      return this._getTextureState(target).texture;
+    }
+
+    throw new Error('WebGpuBackend._renderTargetTexture: unsupported render target type.');
+  }
+
   public popScissorRect(): this {
     if (this._clipBoundsStack.length === 0) {
       return this;
@@ -610,6 +655,11 @@ export class WebGpuBackend implements RenderBackend {
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
+    }
+
+    if (this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.disconnect();
+      this._backdropBlendCompositorConnected = false;
     }
 
     this._transformStorage?.destroy();
@@ -862,6 +912,9 @@ export class WebGpuBackend implements RenderBackend {
         device,
         format,
         alphaMode: 'opaque',
+        // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture
+        // the root-canvas backdrop via copyTextureToTexture.
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
       });
     } catch (error) {
       throw this._createInitializationError('Failed to configure the WebGPU canvas context.', error);
@@ -996,6 +1049,11 @@ export class WebGpuBackend implements RenderBackend {
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
+    }
+
+    if (this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.disconnect();
+      this._backdropBlendCompositorConnected = false;
     }
 
     // Mipmap pipeline cache is keyed to the dead device — drop it.
@@ -1325,7 +1383,9 @@ export class WebGpuBackend implements RenderBackend {
     const mipmapUsage = this._getMipLevelCount(texture) > 1 ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
 
     if (texture instanceof RenderTexture) {
-      return GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | mipmapUsage;
+      // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture the
+      // backdrop from an offscreen RenderTexture target via copyTextureToTexture.
+      return GPUTextureUsage.COPY_SRC | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | mipmapUsage;
     }
 
     return GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING | mipmapUsage;
