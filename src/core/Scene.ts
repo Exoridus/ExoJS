@@ -8,9 +8,9 @@ import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
 import { DisposalScope } from './DisposalScope';
-import { Signal } from './Signal';
 import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
+import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 import type { Destroyable } from './types';

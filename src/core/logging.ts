@@ -1,5 +1,3 @@
-declare const __DEV__: boolean;
-
 export enum LogSeverity {
   Debug = 0,
   Info = 1,
@@ -7,17 +5,7 @@ export enum LogSeverity {
   Error = 3,
 }
 
-export type LogChannel =
-  | 'core'
-  | 'rendering'
-  | 'audio'
-  | 'input'
-  | 'assets'
-  | 'physics'
-  | 'ui'
-  | 'animation'
-  | 'scene'
-  | (string & {});
+export type LogChannel = 'core' | 'rendering' | 'audio' | 'input' | 'assets' | 'physics' | 'ui' | 'animation' | 'scene' | (string & {});
 
 export interface LogEntry {
   readonly severity: LogSeverity;
@@ -33,12 +21,7 @@ export class Logger {
   private readonly _handlers: LogHandler[] = [];
   private readonly _warnedKeys = new Set<string>();
 
-  public log(
-    severity: LogSeverity,
-    channel: LogChannel,
-    message: string,
-    options?: { data?: Record<string, unknown>; error?: Error },
-  ): void {
+  public log(severity: LogSeverity, channel: LogChannel, message: string, options?: { data?: Record<string, unknown>; error?: Error }): void {
     if (!__DEV__ && severity < LogSeverity.Error) return;
     const entry: LogEntry = {
       severity,
@@ -91,14 +74,9 @@ export class Logger {
 export const logger = new Logger();
 
 if (__DEV__) {
-  logger.addHandler((entry) => {
+  logger.addHandler(entry => {
     const prefix = `[ExoJS:${entry.channel}]`;
-    const method =
-      entry.severity >= LogSeverity.Error
-        ? 'error'
-        : entry.severity >= LogSeverity.Warning
-          ? 'warn'
-          : 'log';
+    const method = entry.severity >= LogSeverity.Error ? 'error' : entry.severity >= LogSeverity.Warning ? 'warn' : 'log';
     if (entry.error) {
       console[method](prefix, entry.message, entry.error);
     } else if (entry.data) {

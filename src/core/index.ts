@@ -17,6 +17,8 @@ export { Capabilities } from './capabilities';
 export { Clock } from './Clock';
 export { Color } from './Color';
 export { DisposalScope } from './DisposalScope';
+export type { LogChannel, LogEntry } from './logging';
+export { Logger, logger, LogSeverity } from './logging';
 export { Perf } from './Perf';
 export { Scene } from './Scene';
 export type { FadeSceneTransition, SceneTransition, SetSceneOptions } from './SceneManager';
@@ -28,8 +30,6 @@ export type { SceneNodeConstructor } from './serialization/SerializationRegistry
 export { registerSerializer, SerializationRegistry } from './serialization/SerializationRegistry';
 export type { AssetRef, SerializedNode, SerializedScene } from './serialization/types';
 export { SERIALIZATION_VERSION } from './serialization/types';
-export { Logger, LogSeverity, logger } from './logging';
-export type { LogChannel, LogEntry } from './logging';
 export { Signal } from './Signal';
 export type { System } from './System';
 export { SystemRegistry } from './SystemRegistry';

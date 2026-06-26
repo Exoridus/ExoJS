@@ -59,10 +59,7 @@ export class ScrollContainer extends Widget {
       return;
     }
 
-    this.scrollBy(
-      this._direction !== 'vertical' ? delta.x : 0,
-      this._direction !== 'horizontal' ? delta.y : 0,
-    );
+    this.scrollBy(this._direction !== 'vertical' ? delta.x : 0, this._direction !== 'horizontal' ? delta.y : 0);
   };
 
   public constructor(options: ScrollContainerOptions) {
