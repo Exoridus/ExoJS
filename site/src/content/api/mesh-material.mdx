@@ -5,11 +5,11 @@ symbol: "MeshMaterial"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 12
+memberCount: 13
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/material/MeshMaterial.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/MeshMaterial.ts#L14"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/MeshMaterial.ts#L18"
 ---
 ## Import
 
@@ -32,6 +32,8 @@ Renderer wiring is added in a later phase.
 - `destroy(): void`
 - `setTexture(name: string, texture: Texture | RenderTexture): this`
 - `setUniform(name: string, value: UniformValue): this`
+- `from(source: ShaderSource, options?: Omit<MaterialOptions, "shader">): MeshMaterial`
+- `from(glslVertex: string, glslFragment: string, options?: object): MeshMaterial`
 
 ## Properties
 
@@ -46,4 +48,4 @@ Renderer wiring is added in a later phase.
 
 ## Source
 
-[src/rendering/material/MeshMaterial.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/MeshMaterial.ts#L14)
+[src/rendering/material/MeshMaterial.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/MeshMaterial.ts#L18)

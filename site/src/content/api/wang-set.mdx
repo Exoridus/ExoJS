@@ -1,0 +1,56 @@
+---
+title: "WangSet"
+description: "Describes a Wang autotile set: a mapping from a neighbor bitmask to a local tile ID within a specific tileset. Blob bitmask bit layout (powers of 2): - Bit 0 (1): Top-left - Bit 1 (2): Top - Bit 2 (4): Top-right - Bit 3 (8): Left - Bit 4 (16): Right - Bit 5 (32): Bottom-left - Bit 6 (64): Bottom - Bit 7 (128): Bottom-right Diagonal (corner) bits are only set when both adjacent cardinal directions are also set — reducing 256 raw combinations to 47 meaningful blob states. Edge bitmask bit layout: - Bit 0 (1): Top - Bit 1 (2): Right - Bit 2 (4): Bottom - Bit 3 (8): Left"
+symbol: "WangSet"
+kind: "class"
+subsystem: "tilemap"
+importPath: "@codexo/exojs-tilemap"
+memberCount: 5
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tilemap/src/WangSet.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/WangSet.ts#L44"
+---
+## Import
+
+`import { WangSet } from '@codexo/exojs-tilemap'`
+
+Describes a Wang autotile set: a mapping from a neighbor bitmask to a
+local tile ID within a specific tileset.
+
+Blob bitmask bit layout (powers of 2):
+- Bit 0 (1):   Top-left
+- Bit 1 (2):   Top
+- Bit 2 (4):   Top-right
+- Bit 3 (8):   Left
+- Bit 4 (16):  Right
+- Bit 5 (32):  Bottom-left
+- Bit 6 (64):  Bottom
+- Bit 7 (128): Bottom-right
+
+Diagonal (corner) bits are only set when both adjacent cardinal directions
+are also set — reducing 256 raw combinations to 47 meaningful blob states.
+
+Edge bitmask bit layout:
+- Bit 0 (1): Top
+- Bit 1 (2): Right
+- Bit 2 (4): Bottom
+- Bit 3 (8): Left
+
+## Constructors
+
+- `new(options: WangSetOptions): WangSet`
+
+## Methods
+
+- `getTileId(mask: number): number | undefined`
+
+## Properties
+
+- `tilesetIndex: number`
+- `type: "blob" | "edge"`
+- `blobMap: ReadonlyMap<number, number>`
+
+## Source
+
+[packages/exojs-tilemap/src/WangSet.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/WangSet.ts#L44)
