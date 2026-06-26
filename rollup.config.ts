@@ -23,11 +23,7 @@ const sourceConditions = ['@codexo/source', 'browser', 'module', 'import', 'defa
 
 // Full-bundle source conditions: includes per-package source conditions for the
 // extension packages that use # subpath imports internally (e.g. exojs-particles).
-const fullSourceConditions = [
-  '@codexo/source',
-  '@codexo/exojs-particles-source',
-  'browser', 'module', 'import', 'default',
-];
+const fullSourceConditions = ['@codexo/source', '@codexo/exojs-particles-source', 'browser', 'module', 'import', 'default'];
 
 // Resolves @codexo/exojs-<name> → packages/exojs-<name>/src/index.ts so the
 // full IIFE bundle can be built entirely from TypeScript source without requiring
