@@ -56,6 +56,12 @@
           "id": 2, "name": "chest", "type": "prop",
           "x": 32, "y": 0, "width": 16, "height": 16,
           "rotation": 0, "visible": true, "gid": 2
+        },
+        {
+          "id": 3, "name": "sign", "type": "",
+          "x": 0, "y": 0, "width": 64, "height": 16,
+          "rotation": 0, "visible": true,
+          "text": { "text": "Hello", "color": "#ff0000", "pixelsize": 12, "bold": true, "wrap": true }
         }
       ]
     },
@@ -127,6 +133,31 @@
             { "tileid": 1, "duration": 120 },
             { "tileid": 2, "duration": 120 }
           ]
+        },
+        {
+          "id": 3,
+          "objectgroup": {
+            "id": 10,
+            "name": "collision",
+            "type": "objectgroup",
+            "visible": true,
+            "opacity": 1,
+            "x": 0,
+            "y": 0,
+            "objects": [
+              {
+                "id": 1,
+                "name": "solid",
+                "type": "",
+                "x": 2,
+                "y": 2,
+                "width": 12,
+                "height": 12,
+                "rotation": 0,
+                "visible": true
+              }
+            ]
+          }
         }
       ]
     },

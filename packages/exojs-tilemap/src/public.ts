@@ -3,6 +3,9 @@
 
 export { tilemapExtension } from './tilemapExtension';
 export type { Extension } from '@codexo/exojs/extensions';
+// Image layers: data-only background/foreground images from Tiled image layers.
+export type { ImageLayerOptions } from './ImageLayer';
+export { ImageLayer } from './ImageLayer';
 // Object layers: data-only spawn points / triggers / collision regions.
 export type {
   EllipseObject,
@@ -14,6 +17,8 @@ export type {
   PolygonObject,
   PolylineObject,
   RectangleObject,
+  TextObject,
+  TextStyle,
   TileMapObject,
   TileMapObjectKind,
   TileObject,

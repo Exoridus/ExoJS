@@ -27,6 +27,9 @@ import type {
   TiledTileLayerData,
   TiledTilesetData,
   TiledTilesetRefData,
+  TiledWangColorData,
+  TiledWangSetData,
+  TiledWangTileData,
 } from './data';
 
 /**
@@ -494,6 +497,48 @@ export function validateTiledTileData(raw: unknown, source: string, path: string
   };
 }
 
+// ── Wangsets ─────────────────────────────────────────────────────────────────
+
+function validateTiledWangColorData(raw: unknown, source: string, path: string): TiledWangColorData {
+  const obj = expectObject(raw, source, path);
+  return {
+    name: expectString(obj.name, source, joinPath(path, 'name')),
+    color: expectString(obj.color, source, joinPath(path, 'color')),
+    tile: expectInteger(obj.tile, source, joinPath(path, 'tile')),
+    probability: expectNumber(obj.probability, source, joinPath(path, 'probability')),
+  };
+}
+
+function validateTiledWangTileData(raw: unknown, source: string, path: string): TiledWangTileData {
+  const obj = expectObject(raw, source, path);
+  const tileid = expectNonNegativeInteger(obj.tileid, source, joinPath(path, 'tileid'));
+  const wangid = mapArray(obj.wangid, source, joinPath(path, 'wangid'), (item, itemPath) =>
+    expectNonNegativeInteger(item, source, itemPath),
+  );
+  return { tileid, wangid };
+}
+
+function validateTiledWangSetData(raw: unknown, source: string, path: string): TiledWangSetData {
+  const obj = expectObject(raw, source, path);
+  return {
+    name: expectString(obj.name, source, joinPath(path, 'name')),
+    // type is accepted as any string — unknown values are treated as-is per spec
+    type: expectString(obj.type, source, joinPath(path, 'type')),
+    tile: expectInteger(obj.tile, source, joinPath(path, 'tile')),
+    colors: mapArray(obj.colors, source, joinPath(path, 'colors'), (item, itemPath) =>
+      validateTiledWangColorData(item, source, itemPath),
+    ),
+    wangtiles: mapArray(obj.wangtiles, source, joinPath(path, 'wangtiles'), (item, itemPath) =>
+      validateTiledWangTileData(item, source, itemPath),
+    ),
+    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
+  };
+}
+
+function validateTiledWangSets(value: unknown, source: string, path: string): readonly TiledWangSetData[] | undefined {
+  return optionalMapArray(value, source, path, (item, itemPath) => validateTiledWangSetData(item, source, itemPath));
+}
+
 // ── Tilesets ─────────────────────────────────────────────────────────────────
 
 function validateTiledVersion(value: unknown, source: string, path: string): string | number {
@@ -520,6 +565,7 @@ export function validateTiledTilesetData(obj: Record<string, unknown>, source: s
     tileoffset: obj.tileoffset === undefined ? undefined : validateTiledPointData(obj.tileoffset, source, joinPath(path, 'tileoffset')),
     objectalignment: optionalString(obj, 'objectalignment', source, path),
     tiles: optionalMapArray(obj.tiles, source, joinPath(path, 'tiles'), (item, itemPath) => validateTiledTileData(item, source, itemPath)),
+    wangsets: validateTiledWangSets(obj.wangsets, source, joinPath(path, 'wangsets')),
     properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
     tiledversion: optionalString(obj, 'tiledversion', source, path),
     version: obj.version === undefined ? undefined : validateTiledVersion(obj.version, source, joinPath(path, 'version')),

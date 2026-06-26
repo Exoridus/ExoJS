@@ -1,6 +1,6 @@
 import { type AssetLoaderContext,Texture } from '@codexo/exojs';
 
-import type { TiledTilesetData, TiledTilesetRefData } from './data';
+import type { TiledLayerData, TiledTilesetData, TiledTilesetRefData } from './data';
 import { decodeTiledLayerData } from './decodeLayerData';
 import { TiledMap } from './TiledMap';
 import { TiledTileset, type TiledTilesetResources } from './TiledTileset';
@@ -66,6 +66,35 @@ async function loadTiledTileset(ref: TiledTilesetRefData, mapSource: string, con
 }
 
 /**
+ * Recursively walks the layer tree and loads the image for every
+ * `imagelayer` encountered. Returns a `Map` keyed by layer `id` so that
+ * {@link TiledMap.toTileMap} can attach the pre-loaded {@link Texture} to each
+ * runtime image layer without performing additional I/O.
+ */
+async function loadImageLayerTextures(
+  layers: readonly TiledLayerData[],
+  mapSource: string,
+  context: AssetLoaderContext,
+): Promise<Map<number, Texture>> {
+  const result = new Map<number, Texture>();
+
+  for (const layer of layers) {
+    if (layer.type === 'imagelayer' && layer.image) {
+      const imageUrl = resolveTiledUrl(layer.image, mapSource);
+      const texture: Texture = await context.loader.load(Texture, imageUrl);
+      result.set(layer.id, texture);
+    } else if (layer.type === 'group') {
+      const nested = await loadImageLayerTextures(layer.layers, mapSource, context);
+      for (const [id, tex] of nested) {
+        result.set(id, tex);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Loads and resolves a Tiled map: fetches and validates the `.tmj`, resolves
  * each tileset (external `.tsj` or embedded) and its image(s), and returns
  * the assembled, GID-validated {@link TiledMap}.
@@ -77,7 +106,10 @@ export async function loadTiledMap(source: string, context: AssetLoaderContext):
   // validation, so the rest of the pipeline stays CSV-shaped and synchronous.
   await decodeTiledLayerData(raw, source);
   const data = validateTiledMapData(raw, source);
-  const tilesets = await Promise.all(data.tilesets.map(ref => loadTiledTileset(ref, source, context)));
+  const [tilesets, imageTextures] = await Promise.all([
+    Promise.all(data.tilesets.map(ref => loadTiledTileset(ref, source, context))),
+    loadImageLayerTextures(data.layers, source, context),
+  ]);
 
-  return new TiledMap(source, data, tilesets);
+  return new TiledMap(source, data, tilesets, imageTextures);
 }

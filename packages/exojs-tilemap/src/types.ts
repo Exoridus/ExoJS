@@ -1,3 +1,4 @@
+import type { TileMapObject } from './ObjectLayer';
 import type { TileSet } from './TileSet';
 
 // ── Properties ────────────────────────────────────────────────────────────
@@ -206,6 +207,12 @@ export interface TileDefinition {
    * frame[0] is the tile's resting/base frame.
    */
   readonly animation?: readonly TileAnimationFrame[];
+  /**
+   * Per-tile collision shapes sourced from the Tiled `objectgroup` on the tile.
+   * Shapes are in tile-local pixel space (origin = top-left of the tile cell).
+   * Only present when the source map defines collision geometry for this tile.
+   */
+  readonly collision?: readonly TileMapObject[];
 }
 
 // ── Chunk coordinate helpers ──────────────────────────────────────────────

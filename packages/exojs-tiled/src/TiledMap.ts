@@ -1,17 +1,18 @@
-import { TextureRegion } from '@codexo/exojs';
-import type { ObjectPoint, ResolvedTile, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
-import { ObjectLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { type Texture, TextureRegion } from '@codexo/exojs';
+import type { ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
+import { ImageLayer, ObjectLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
 
-import type { TiledMapData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
+import type { TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
 import {
   maskTiledGid,
   TILED_FLIPPED_DIAGONALLY_FLAG,
   TILED_FLIPPED_HORIZONTALLY_FLAG,
   TILED_FLIPPED_VERTICALLY_FLAG,
 } from './gid';
-import { createTiledLayer, TiledGroupLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
+import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
 import type { TiledTileset } from './TiledTileset';
+import { resolveTiledUrl } from './url';
 import { TiledFormatError } from './validate';
 
 /**
@@ -51,7 +52,14 @@ export class TiledMap {
   public readonly tilesets: readonly TiledTileset[];
   public readonly properties: readonly TiledPropertyData[];
 
-  public constructor(source: string, data: TiledMapData, tilesets: readonly TiledTileset[]) {
+  private readonly _imageTextures: ReadonlyMap<number, Texture>;
+
+  public constructor(
+    source: string,
+    data: TiledMapData,
+    tilesets: readonly TiledTileset[],
+    imageTextures: ReadonlyMap<number, Texture> = new Map(),
+  ) {
     this.source = source;
     this.data = data;
     this.orientation = data.orientation;
@@ -64,6 +72,7 @@ export class TiledMap {
     this.infinite = data.infinite;
     this.backgroundColor = data.backgroundcolor;
     this.properties = data.properties ?? [];
+    this._imageTextures = imageTextures;
     this.layers = data.layers.map(createTiledLayer);
     this.tilesets = sortAndValidateTilesetRanges(tilesets, source);
 
@@ -106,9 +115,9 @@ export class TiledMap {
    * Only finite orthogonal maps with atlas tilesets are supported. A
    * non-orthogonal or infinite map, or a collection-of-images tileset, throws
    * {@link TiledFormatError} rather than silently producing wrong (misplaced)
-   * or empty geometry. Tile layers become renderable `TileLayer`s and object
-   * groups become data-only `ObjectLayer`s; group layer children are flattened
-   * in document order. Image layers are not yet converted.
+   * or empty geometry. Tile layers become renderable `TileLayer`s, object
+   * groups become data-only `ObjectLayer`s, and image layers become data-only
+   * `ImageLayer`s; group layer children are flattened in document order.
    *
    * The returned `TileMap` does **not** own the tileset textures — they remain
    * in the Loader cache. Destroying the returned map does not unload textures.
@@ -185,9 +194,10 @@ export class TiledMap {
       indexToRuntime.push(rts);
     }
 
-    // Collect and convert tile + object layers, flattening group layers.
+    // Collect and convert tile + object + image layers, flattening group layers.
     const runtimeLayers: TileLayer[] = [];
     const runtimeObjectLayers: ObjectLayer[] = [];
+    const runtimeImageLayers: ImageLayer[] = [];
     const convertLayers = (layers: readonly TiledLayer[]): void => {
       for (const layer of layers) {
         if (layer instanceof TiledGroupLayer) {
@@ -216,8 +226,24 @@ export class TiledMap {
           runtimeLayers.push(rLayer);
         } else if (layer instanceof TiledObjectLayer) {
           runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime));
+        } else if (layer instanceof TiledImageLayer) {
+          runtimeImageLayers.push(new ImageLayer({
+            id: layer.id,
+            name: layer.name,
+            class: layer.class,
+            image: resolveTiledUrl(layer.image, this.source),
+            texture: this._imageTextures.get(layer.id) ?? null,
+            visible: layer.visible,
+            opacity: layer.opacity,
+            offsetX: layer.offsetX,
+            offsetY: layer.offsetY,
+            parallaxX: layer.parallaxX,
+            parallaxY: layer.parallaxY,
+            tintColor: parseTiledColor(layer.tintColor),
+            repeatX: layer.repeatX,
+            repeatY: layer.repeatY,
+          }));
         }
-        // ImageLayer: not yet converted.
       }
     };
     convertLayers(this.layers);
@@ -231,6 +257,7 @@ export class TiledMap {
       tilesets: runtimeTilesets,
       layers: runtimeLayers,
       objectLayers: runtimeObjectLayers,
+      imageLayers: runtimeImageLayers,
       class: this.class,
       backgroundColor: parseTiledColor(this.backgroundColor),
       renderOrder: this.renderOrder ?? 'right-down',
@@ -322,18 +349,14 @@ function convertObjectLayer(
 }
 
 /**
- * Convert one `TiledObject` to a `TileMapObject`. Text objects (and tile
- * objects whose tileset was skipped) are dropped — returns `null`.
+ * Convert one `TiledObject` to a `TileMapObject`. Tile objects whose tileset
+ * was skipped are dropped — returns `null`.
  */
 function convertObject(
   object: TiledObject,
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
 ): TileMapObject | null {
-  if (object.text) {
-    return null; // text objects are not represented in the data-only model
-  }
-
   const base = {
     id: object.id,
     name: object.name,
@@ -346,6 +369,25 @@ function convertObject(
     visible: object.visible,
     properties: convertProperties(object.properties),
   };
+
+  if (object.text) {
+    const t = object.text;
+    const color = t.color !== undefined ? parseTiledColor(t.color) : undefined;
+    const textStyle: TextStyle = {
+      text: t.text,
+      ...(color !== undefined && { color }),
+      ...(t.fontfamily !== undefined && { fontFamily: t.fontfamily }),
+      ...(t.pixelsize !== undefined && { pixelSize: t.pixelsize }),
+      ...(t.bold !== undefined && { bold: t.bold }),
+      ...(t.italic !== undefined && { italic: t.italic }),
+      ...(t.underline !== undefined && { underline: t.underline }),
+      ...(t.strikeout !== undefined && { strikeout: t.strikeout }),
+      ...(t.wrap !== undefined && { wrap: t.wrap }),
+      ...(t.halign !== undefined && { halign: t.halign }),
+      ...(t.valign !== undefined && { valign: t.valign }),
+    };
+    return { ...base, kind: 'text', text: textStyle };
+  }
 
   if (object.gid !== undefined) {
     const tile = resolveGid(object.gid, tiledTilesets, indexToRuntime);
@@ -390,9 +432,10 @@ function parseTiledColor(value: string | undefined): number | null {
 
 /**
  * Build runtime {@link TileDefinition}s from a Tiled tileset's per-tile data,
- * carrying over per-tile properties and animation frames. Tiles whose `id` is
- * out of range, and animation frames referencing out-of-range local ids, are
- * skipped so the runtime tileset never receives malformed definitions.
+ * carrying over per-tile properties, animation frames, and collision shapes
+ * (the tile's `objectgroup`). Tiles whose `id` is out of range, and animation
+ * frames referencing out-of-range local ids, are skipped so the runtime tileset
+ * never receives malformed definitions.
  */
 function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] {
   const defs: TileDefinition[] = [];
@@ -410,15 +453,54 @@ function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number
       if (frames.length > 0) animation = frames;
     }
 
-    if (!hasProps && animation === undefined) continue;
+    let collision: readonly TileMapObject[] | undefined;
+    if (tile.objectgroup && tile.objectgroup.objects.length > 0) {
+      const shapes = tile.objectgroup.objects
+        .map(obj => convertCollisionObject(obj))
+        .filter((obj): obj is TileMapObject => obj !== null);
+      if (shapes.length > 0) collision = shapes;
+    }
+
+    if (!hasProps && animation === undefined && collision === undefined) continue;
 
     defs.push({
       localTileId: tile.id,
       ...(hasProps && { properties }),
       ...(animation !== undefined && { animation }),
+      ...(collision !== undefined && { collision }),
     });
   }
   return defs;
+}
+
+/**
+ * Convert a raw `TiledObjectData` to a runtime `TileMapObject` for use as a
+ * per-tile collision shape. Text objects and tile-object (gid) references are
+ * dropped — returns `null`. Does not perform GID resolution; collision shapes
+ * in tile objectgroups are almost exclusively plain geometry.
+ */
+function convertCollisionObject(obj: TiledObjectData): TileMapObject | null {
+  if (obj.text) return null; // text not representable as a collision shape
+  if (obj.gid !== undefined) return null; // tile objects require GID resolution not available here
+
+  const base = {
+    id: obj.id,
+    name: obj.name,
+    type: obj.type,
+    x: obj.x,
+    y: obj.y,
+    width: obj.width,
+    height: obj.height,
+    rotation: obj.rotation,
+    visible: obj.visible,
+    properties: convertProperties(obj.properties ?? []),
+  };
+
+  if (obj.point === true) return { ...base, kind: 'point' };
+  if (obj.ellipse === true) return { ...base, kind: 'ellipse' };
+  if (obj.polygon) return { ...base, kind: 'polygon', points: toPoints(obj.polygon) };
+  if (obj.polyline) return { ...base, kind: 'polyline', points: toPoints(obj.polyline) };
+  return { ...base, kind: 'rectangle' };
 }
 
 /**

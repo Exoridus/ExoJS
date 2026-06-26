@@ -160,10 +160,14 @@ export class TileSet {
     const animation = definition.animation
       ? Object.freeze(definition.animation.map(frame => Object.freeze({ ...frame })))
       : undefined;
+    const collision = definition.collision
+      ? Object.freeze([...definition.collision])
+      : undefined;
     (this._definitions as Map<number, TileDefinition>).set(localTileId, {
       localTileId,
       ...(props !== undefined && { properties: props }),
       ...(animation !== undefined && { animation }),
+      ...(collision !== undefined && { collision }),
     });
   }
 
@@ -182,10 +186,14 @@ export class TileSet {
       const animation = def.animation
         ? Object.freeze(def.animation.map(frame => Object.freeze({ ...frame })))
         : undefined;
+      const collision = def.collision
+        ? Object.freeze([...def.collision])
+        : undefined;
       map.set(def.localTileId, {
         localTileId: def.localTileId,
         ...(props !== undefined && { properties: props }),
         ...(animation !== undefined && { animation }),
+        ...(collision !== undefined && { collision }),
       });
     }
   }
