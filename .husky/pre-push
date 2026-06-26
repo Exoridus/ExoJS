@@ -16,21 +16,22 @@
 # Refs being pushed are read from stdin in the format:
 #   <local_ref> <local_sha> <remote_ref> <remote_sha>
 is_tag_push=0
+is_branch_push=0
 null_sha="0000000000000000000000000000000000000000"
 
 while read local_ref local_sha remote_ref remote_sha; do
+    # Deletions carry the null SHA — nothing to verify when removing a ref.
+    [ "$local_sha" = "$null_sha" ] && continue
     case "$remote_ref" in
-        refs/tags/*)
-            # Deletions (local_sha == null) must not trigger verify:release.
-            [ "$local_sha" != "$null_sha" ] && is_tag_push=1
-            ;;
+        refs/tags/*) is_tag_push=1 ;;
+        *)           is_branch_push=1 ;;
     esac
 done
 
 if [ "$is_tag_push" = "1" ]; then
     echo "[pre-push] tag push detected — running full release verification"
     npm run verify:release || exit 1
-else
+elif [ "$is_branch_push" = "1" ]; then
     echo "[pre-push] running verify:quick (static CI-parity gates)"
     npm run verify:quick || exit 1
 fi
