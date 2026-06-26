@@ -5,26 +5,24 @@ import { type Ref, useEffect, useRef, useState } from 'react';
  * Options for {@link useExoApplication} / {@link import('./ExoCanvas').ExoCanvas}.
  *
  * Same as {@link ApplicationOptions} but the `canvas.element` and `canvas.mount`
- * fields are managed for you (the hook creates and mounts the canvas), so they
- * are omitted. You may still pass `canvas.width`/`height`/`sizingMode`/etc.
+ * fields are managed for you (the Application binds to the canvas the hook
+ * references), so they are omitted. You may still pass
+ * `canvas.width`/`height`/`sizingMode`/etc.
  */
 export type ExoApplicationOptions = Omit<ApplicationOptions, 'canvas'> & {
   readonly canvas?: Omit<CanvasApplicationOptions, 'element' | 'mount'>;
 };
 
-/**
- * Return value of {@link useExoApplication}, parameterised by the container
- * element type `E` (default `HTMLDivElement`).
- */
-export interface UseExoApplicationResult<E extends HTMLElement = HTMLDivElement> {
+/** Return value of {@link useExoApplication}. */
+export interface UseExoApplicationResult {
   /** The Application instance, or `null` until it has been created. */
   readonly app: Application | null;
   /**
-   * Attach this to the container element the canvas should mount into. Typed as
-   * `Ref` (not `RefObject`) so the same code type-checks against both
+   * Attach this to the `<canvas>` element the Application should bind to. Typed
+   * as `Ref` (not `RefObject`) so the same code type-checks against both
    * `@types/react` 18 and 19, whose `useRef`/`RefObject` nullability differ.
    */
-  readonly containerRef: Ref<E>;
+  readonly canvasRef: Ref<HTMLCanvasElement>;
 }
 
 /** Stable string key for the colour so the sync effect can depend on its value. */
@@ -33,11 +31,17 @@ function colorKey(color: Color | undefined): string | undefined {
 }
 
 /**
- * Creates and owns an ExoJS {@link Application}, mounting a `<canvas>` into the
- * element referenced by the returned `containerRef`. This is the lower-level
- * primitive that {@link import('./ExoCanvas').ExoCanvas} is built on — reach for
- * it when you need to render your own container or read the app outside the
- * usual `<ExoCanvas>` tree.
+ * Creates and owns an ExoJS {@link Application}, binding it to a `<canvas>` you
+ * render yourself and attach the returned `canvasRef` to. The hook renders no
+ * DOM of its own — you keep full control over the canvas element, its container,
+ * and its styling.
+ *
+ * ```tsx
+ * function Game() {
+ *   const { app, canvasRef } = useExoApplication({ canvas: { width: 800, height: 600 } });
+ *   return <canvas ref={canvasRef} className="game" />;
+ * }
+ * ```
  *
  * **Reactivity model.** The Application is recreated only when an *identity*
  * option changes — currently the render `backend` (you cannot hot-swap WebGL2 ↔
@@ -51,19 +55,18 @@ function colorKey(color: Color | undefined): string | undefined {
  * Options without a live setter (e.g. `canvas.pixelRatio`, `seed`, `extensions`)
  * are captured at creation; change the `backend` or remount to apply them.
  *
- * The container element type defaults to `HTMLDivElement` (what {@link
- * import('./ExoCanvas').ExoCanvas} renders); parameterise it — e.g.
- * `useExoApplication<HTMLElement>()` — to mount into a `<section>`, `<main>`,
- * or any other element.
+ * Styling note: with the default `'fixed'` sizing mode the engine never touches
+ * the canvas CSS, so you may style it freely. The `'fit'`/`'shrink'`/`'letterbox'`
+ * modes manage `canvas.style` themselves — don't fight them with a `style` prop.
  *
- * @param options - Application options (canvas element/mount are managed).
+ * @param options - Application options (the canvas element is the one you render).
  * @param onReady - Called once each time an Application is created.
  */
-export function useExoApplication<E extends HTMLElement = HTMLDivElement>(
+export function useExoApplication(
   options?: ExoApplicationOptions,
   onReady?: (app: Application) => void,
-): UseExoApplicationResult<E> {
-  const containerRef = useRef<E>(null);
+): UseExoApplicationResult {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [app, setApp] = useState<Application | null>(null);
 
   // Latest onReady without retriggering the lifecycle effect. Updated in an
@@ -78,14 +81,14 @@ export function useExoApplication<E extends HTMLElement = HTMLDivElement>(
 
   // ── Lifecycle: create on mount / recreate on backend change ───────────────
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
+    const canvas = canvasRef.current;
+    if (!canvas) {
       return;
     }
 
-    const canvas = document.createElement('canvas');
-    container.appendChild(canvas);
-
+    // Bind to the React-rendered canvas. The engine never removes a canvas it
+    // did not create (Application.destroy leaves it in the DOM), so React stays
+    // the sole owner of the element's lifecycle.
     const application = new Application({
       ...options,
       canvas: { ...options?.canvas, element: canvas },
@@ -96,7 +99,6 @@ export function useExoApplication<E extends HTMLElement = HTMLDivElement>(
 
     return () => {
       application.destroy();
-      canvas.remove();
       setApp(null);
     };
     // Recreate only when the backend identity changes; live options are synced
@@ -132,5 +134,5 @@ export function useExoApplication<E extends HTMLElement = HTMLDivElement>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app, clearKey]);
 
-  return { app, containerRef };
+  return { app, canvasRef };
 }
