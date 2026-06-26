@@ -1,61 +1,65 @@
 import type { Application } from '@codexo/exojs';
-import { type CanvasHTMLAttributes, type ReactElement } from 'react';
+import { type CanvasHTMLAttributes, type CSSProperties, type HTMLAttributes, type ReactElement } from 'react';
 
 import { ExoContext } from './ExoContext';
 import { type ExoApplicationOptions, useExoApplication } from './useExoApplication';
 
-export interface ExoCanvasProps extends Omit<CanvasHTMLAttributes<HTMLCanvasElement>, 'width' | 'height'> {
+/** Default canvas style: block layout avoids the inline-element baseline gap. */
+const defaultCanvasStyle: CSSProperties = { display: 'block' };
+
+export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
   /**
-   * Options forwarded to the ExoJS {@link Application}. The canvas element is the
-   * one this component renders. Pass `canvas.width`/`height`/`sizingMode`/etc.;
-   * most options are captured at creation, but `canvas.width`/`height`,
-   * `canvas.sizingMode` and `clearColor` are applied live (see
-   * {@link useExoApplication}).
+   * Options forwarded to the ExoJS {@link Application}. Pass
+   * `canvas.width`/`height`/`sizingMode`/etc.; most options are captured at
+   * creation, but `canvas.width`/`height`, `canvas.sizingMode` and `clearColor`
+   * are applied live (see {@link useExoApplication}).
    */
   options?: ExoApplicationOptions;
   /**
-   * Called once each time the {@link Application} is (re)created. Note the
-   * backend (WebGL2 / WebGPU) is not yet initialized at this point — backend
-   * init happens when the first {@link import('./useScene').useScene} child
-   * calls `app.start()`.
+   * Called once each time the {@link Application} is (re)created. The backend
+   * (WebGL2 / WebGPU) is not yet initialized at this point — that happens when
+   * the first {@link import('./useScene').useScene} child calls `app.start()`.
    */
   onReady?: (app: Application) => void;
+  /**
+   * Props forwarded to the inner `<canvas>` (e.g. its own `style`/`className`).
+   * `ref`, `width` and `height` are managed by the engine and cannot be set.
+   */
+  canvasProps?: Omit<CanvasHTMLAttributes<HTMLCanvasElement>, 'ref' | 'width' | 'height'>;
 }
 
 /**
- * Renders a single `<canvas>` bound to an ExoJS {@link Application} and provides
- * it to descendant hooks via React context. **It renders no wrapper element** —
- * all canvas attributes (`style`, `className`, `id`, event handlers, …) are
- * forwarded to the canvas, so you keep full control over the element and its
- * container. Place it inside whatever container you like.
+ * Batteries-included canvas host. Renders a **positioned wrapper `<div>`**
+ * containing a React-managed `<canvas>` bound to an ExoJS {@link Application},
+ * and provides the app to descendant hooks via context. Because the wrapper is
+ * `position: relative`, absolutely-positioned `children` (HUD overlays,
+ * {@link import('./Scenes').Scenes}) sit over the canvas out of the box.
  *
- * `children` (HUD overlays, {@link import('./Scenes').Scenes}) render as
- * siblings of the canvas under the context provider — wrap them and the
- * `<ExoCanvas>` in your own positioned container to overlay them.
+ * Layout props (`style`, `className`, …) apply to the **wrapper**; size it to
+ * size the canvas in `'fill'`/`'letterbox'` modes. Use {@link canvasProps} to
+ * style the canvas itself. For full control with no wrapper element, use the
+ * headless {@link useExoApplication} hook directly.
  *
  * @example
  * ```tsx
- * function App() {
- *   return (
- *     <div style={{ position: 'relative', width: 800, height: 600 }}>
- *       <ExoCanvas
- *         options={{ canvas: { width: 800, height: 600 } }}
- *         style={{ display: 'block' }}
- *       >
- *         <Hud /> // absolutely-positioned overlay you style yourself
- *       </ExoCanvas>
- *     </div>
- *   );
- * }
+ * <ExoCanvas options={{ canvas: { width: 800, height: 600 } }} style={{ width: 800, height: 600 }}>
+ *   <Hud /> // absolutely-positioned overlay; works because the wrapper is relative
+ * </ExoCanvas>
  * ```
  */
-export function ExoCanvas({ options, onReady, children, ...canvasProps }: ExoCanvasProps): ReactElement {
+export function ExoCanvas({ options, onReady, canvasProps, children, style, ...divProps }: ExoCanvasProps): ReactElement {
   const { app, canvasRef } = useExoApplication(options, onReady);
+
+  const { style: canvasStyle, ...restCanvasProps } = canvasProps ?? {};
+  const wrapperStyle: CSSProperties = { position: 'relative', ...style };
+  const mergedCanvasStyle: CSSProperties = { ...defaultCanvasStyle, ...canvasStyle };
 
   return (
     <ExoContext.Provider value={app}>
-      <canvas ref={canvasRef} {...canvasProps} />
-      {app !== null && children}
+      <div style={wrapperStyle} {...divProps}>
+        <canvas ref={canvasRef} style={mergedCanvasStyle} {...restCanvasProps} />
+        {app !== null && children}
+      </div>
     </ExoContext.Provider>
   );
 }
