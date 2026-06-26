@@ -3,7 +3,7 @@ import { TILE_TRANSFORM_IDENTITY, unpackTile } from './types';
 import type { WangSet } from './WangSet';
 
 /**
- * Options for {@link autoTile}.
+ * Options for {@link autoTile} and {@link refreshCell}.
  */
 export interface AutoTileOptions {
   /**
@@ -11,9 +11,13 @@ export interface AutoTileOptions {
    * as part of the Wang group. The function receives the cell's `localTileId`,
    * `tilesetIndex`, and tile coordinates `(x, y)`.
    *
-   * If omitted, every non-empty cell is eligible for autotiling, and a
-   * neighbor is considered "in group" when its `tilesetIndex` and
-   * `localTileId` match those of the cell being evaluated.
+   * If omitted, group membership defaults to {@link WangSet.isMember} on the
+   * cell's `localTileId` (and a matching `tilesetIndex`). That default is
+   * *variant-stable* — every autotiled variant counts as a member — which is
+   * what makes {@link refreshCell} correct. If you supply a `matchFn` for use
+   * with `refreshCell`, it MUST likewise be variant-stable (independent of the
+   * currently-rendered variant), e.g. keyed on a separate logical-terrain grid
+   * or a tile property.
    */
   matchFn?: (localTileId: number, tilesetIndex: number, x: number, y: number) => boolean;
   /**
@@ -77,6 +81,45 @@ function computeBlobMask(
   return mask;
 }
 
+/** Compute the mask for a cell given the Wang mode and a membership predicate. */
+function computeMask(
+  wangSet: WangSet,
+  tx: number,
+  ty: number,
+  inGroup: (nx: number, ny: number) => boolean,
+): number {
+  return wangSet.type === 'edge'
+    ? computeEdgeMask(tx, ty, inGroup)
+    : computeBlobMask(tx, ty, inGroup);
+}
+
+/**
+ * Apply the variant computed for cell `(tx, ty)` to `layer`, preserving the
+ * cell's current orientation transform. No-op if the mask has no mapping or
+ * the target tileset is missing.
+ */
+function applyVariant(
+  layer: TileLayer,
+  wangSet: WangSet,
+  tx: number,
+  ty: number,
+  inGroup: (nx: number, ny: number) => boolean,
+): void {
+  const newLocalTileId = wangSet.getTileId(computeMask(wangSet, tx, ty, inGroup));
+  if (newLocalTileId === undefined) return;
+
+  const tileset = layer.tilesets[wangSet.tilesetIndex];
+  if (!tileset) return;
+
+  // Preserve the existing orientation transform if the cell already holds one.
+  const existing = layer.getTileAt(tx, ty);
+  layer.setTileAt(tx, ty, {
+    localTileId: newLocalTileId,
+    tileset,
+    transform: existing ? existing.transform : TILE_TRANSFORM_IDENTITY,
+  });
+}
+
 // ── Public API ────────────────────────────────────────────────────────────
 
 /**
@@ -89,6 +132,13 @@ function computeBlobMask(
  *
  * The function performs two passes (snapshot then write) so neighbor tests
  * always reflect the pre-call state regardless of processing order.
+ *
+ * **Group membership.** With no `matchFn`, a cell belongs to the group when its
+ * `tilesetIndex` matches {@link WangSet.tilesetIndex} and its `localTileId` is a
+ * {@link WangSet.isMember member} of the set. Membership covers every variant
+ * the set can produce, so re-running `autoTile` (or {@link refreshCell}) on
+ * already-autotiled data is stable. Paint with a tile ID that is a member (a
+ * blobMap value, or one listed in {@link WangSetOptions.members}).
  *
  * **Blob mode bitmask (bit positions):**
  * ```
@@ -128,15 +178,15 @@ export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileO
     }
   }
 
-  // ── Neighbor membership test ──────────────────────────────────────────
+  // ── Membership test (reads the snapshot) ─────────────────────────────
 
-  function isInGroup(nx: number, ny: number, ctsi: number, ctid: number): boolean {
+  const isInGroup = (nx: number, ny: number): boolean => {
     if (nx < 0 || nx >= w || ny < 0 || ny >= h) return wrapBorder;
     const cell = snapshot.get(ny * w + nx);
     if (!cell) return false;
     if (matchFn) return matchFn(cell.localTileId, cell.tilesetIndex, nx, ny);
-    return cell.tilesetIndex === ctsi && cell.localTileId === ctid;
-  }
+    return cell.tilesetIndex === wangSet.tilesetIndex && wangSet.isMember(cell.localTileId);
+  };
 
   // ── Pass 2: compute masks and write ──────────────────────────────────
 
@@ -145,27 +195,71 @@ export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileO
       const cellInfo = snapshot.get(ty * w + tx);
       if (!cellInfo) continue;
 
-      const { tilesetIndex: ctsi, localTileId: ctid } = cellInfo;
+      // Skip cells that are not part of the group.
+      const isMember = matchFn
+        ? matchFn(cellInfo.localTileId, cellInfo.tilesetIndex, tx, ty)
+        : cellInfo.tilesetIndex === wangSet.tilesetIndex && wangSet.isMember(cellInfo.localTileId);
+      if (!isMember) continue;
 
-      // Skip cells excluded by matchFn (when provided).
-      if (matchFn && !matchFn(ctid, ctsi, tx, ty)) continue;
+      applyVariant(layer, wangSet, tx, ty, isInGroup);
+    }
+  }
+}
 
-      const inGroup = (nx: number, ny: number): boolean => isInGroup(nx, ny, ctsi, ctid);
-      const mask = wangSet.type === 'edge'
-        ? computeEdgeMask(tx, ty, inGroup)
-        : computeBlobMask(tx, ty, inGroup);
+/**
+ * Incrementally re-autotile a single cell and its eight neighbours after an
+ * edit, instead of re-running {@link autoTile} over the whole layer.
+ *
+ * A cell's blob/edge mask depends only on its immediate neighbours, so painting
+ * or erasing cell `(x, y)` can change the variant of that cell and of the (up
+ * to) eight cells that have it as a neighbour — but nothing further out. This
+ * recomputes exactly that 3×3 neighbourhood, touching only the 1–4 chunks it
+ * spans (and rebuilding geometry only for chunks whose tiles actually change).
+ * For a paint operation this is O(1) work versus `autoTile`'s O(width·height).
+ *
+ * Membership is read live from the layer, so the membership test MUST be
+ * variant-stable: the default ({@link WangSet.isMember}) is, and any custom
+ * `matchFn` you pass must be too (see {@link AutoTileOptions.matchFn}).
+ *
+ * Typical editor use: write the painted tile with `layer.setTileAt(...)` using
+ * a member tile ID, then call `refreshCell(layer, x, y, wangSet)`.
+ *
+ * @param layer   The layer to update in place.
+ * @param x       Tile X of the edited cell.
+ * @param y       Tile Y of the edited cell.
+ * @param wangSet The Wang set to resolve variants from.
+ * @param options Membership / border options (shared with {@link autoTile}).
+ */
+export function refreshCell(
+  layer: TileLayer,
+  x: number,
+  y: number,
+  wangSet: WangSet,
+  options?: AutoTileOptions,
+): void {
+  const matchFn = options?.matchFn;
+  const wrapBorder = options?.wrapBorder ?? true;
+  const w = layer.width;
+  const h = layer.height;
 
-      const newLocalTileId = wangSet.getTileId(mask);
-      if (newLocalTileId === undefined) continue;
+  // Live membership test (reads the current layer; variant-stable by default).
+  const isInGroup = (nx: number, ny: number): boolean => {
+    if (nx < 0 || nx >= w || ny < 0 || ny >= h) return wrapBorder;
+    const tile = layer.getTileAt(nx, ny);
+    if (!tile) return false;
+    const tsi = layer.tilesets.indexOf(tile.tileset);
+    if (matchFn) return matchFn(tile.localTileId, tsi, nx, ny);
+    return tsi === wangSet.tilesetIndex && wangSet.isMember(tile.localTileId);
+  };
 
-      const tileset = layer.tilesets[wangSet.tilesetIndex];
-      if (!tileset) continue;
-
-      layer.setTileAt(tx, ty, {
-        localTileId: newLocalTileId,
-        tileset,
-        transform: TILE_TRANSFORM_IDENTITY,
-      });
+  // Recompute the edited cell and its eight neighbours.
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const tx = x + dx;
+      const ty = y + dy;
+      if (!layer.inBounds(tx, ty)) continue;
+      if (!isInGroup(tx, ty)) continue;
+      applyVariant(layer, wangSet, tx, ty, isInGroup);
     }
   }
 }

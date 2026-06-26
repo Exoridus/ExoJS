@@ -174,11 +174,25 @@ export interface ResolvedTile {
   readonly transform: TileTransform;
 }
 
+// ── Tile animation ────────────────────────────────────────────────────────
+
+/**
+ * One frame of a tile animation: which local tile to show, and for how long.
+ * Mirrors Tiled's per-tile animation frame model.
+ * @advanced
+ */
+export interface TileAnimationFrame {
+  /** Local tile ID shown during this frame (within the tile's own tileset). */
+  readonly localTileId: number;
+  /** Frame duration in milliseconds. */
+  readonly duration: number;
+}
+
 // ── TileDefinition ────────────────────────────────────────────────────────
 
 /**
  * Optional per-tile metadata in a {@link TileSet}. Sparse — only defined
- * tiles carry a definition. May carry animation data in future slices.
+ * tiles carry a definition.
  * @advanced
  */
 export interface TileDefinition {
@@ -186,6 +200,12 @@ export interface TileDefinition {
   readonly localTileId: number;
   /** Tile properties (copied and frozen by the tileset). */
   readonly properties?: TileProperties;
+  /**
+   * Animation frame sequence for this tile, if animated. The frames are
+   * driven at runtime by a {@link import('./TileAnimator').TileAnimator};
+   * frame[0] is the tile's resting/base frame.
+   */
+  readonly animation?: readonly TileAnimationFrame[];
 }
 
 // ── Chunk coordinate helpers ──────────────────────────────────────────────

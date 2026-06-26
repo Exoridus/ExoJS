@@ -205,6 +205,21 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
     expect(tile!.localTileId).toBe(0);
   });
 
+  it('carries per-tile properties and animation frames into the runtime tileset', async () => {
+    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const runtime = map.toTileMap();
+    const tsA = runtime.getTileset('tiles-a')!;
+
+    // Per-tile property carried (previously dropped at conversion).
+    expect(tsA.getTileDefinition(0)?.properties?.solid).toBe(true);
+
+    // Per-tile animation carried (previously dropped at conversion).
+    const anim = tsA.getTileDefinition(1)?.animation;
+    expect(anim).toHaveLength(2);
+    expect(anim?.[0]).toEqual({ localTileId: 1, duration: 120 });
+    expect(anim?.[1]).toEqual({ localTileId: 2, duration: 120 });
+  });
+
   it('is deterministic across repeated calls and does not take texture ownership', async () => {
     const map = await loadTiledMap('orthogonal-rich.tmj', context);
     const first = map.toTileMap();

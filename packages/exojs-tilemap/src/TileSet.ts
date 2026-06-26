@@ -141,9 +141,13 @@ export class TileSet {
     const props = definition.properties
       ? Object.freeze({ ...definition.properties })
       : undefined;
+    const animation = definition.animation
+      ? Object.freeze(definition.animation.map(frame => Object.freeze({ ...frame })))
+      : undefined;
     (this._definitions as Map<number, TileDefinition>).set(localTileId, {
       localTileId,
       ...(props !== undefined && { properties: props }),
+      ...(animation !== undefined && { animation }),
     });
   }
 
@@ -159,7 +163,14 @@ export class TileSet {
       const props = def.properties
         ? Object.freeze({ ...def.properties })
         : undefined;
-      map.set(def.localTileId, { localTileId: def.localTileId, ...(props !== undefined && { properties: props }) });
+      const animation = def.animation
+        ? Object.freeze(def.animation.map(frame => Object.freeze({ ...frame })))
+        : undefined;
+      map.set(def.localTileId, {
+        localTileId: def.localTileId,
+        ...(props !== undefined && { properties: props }),
+        ...(animation !== undefined && { animation }),
+      });
     }
   }
 

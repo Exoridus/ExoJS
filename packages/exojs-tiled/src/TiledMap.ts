@@ -1,8 +1,8 @@
 import { TextureRegion } from '@codexo/exojs';
-import type { ObjectPoint, ResolvedTile, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
+import type { ObjectPoint, ResolvedTile, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
 import { ObjectLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
 
-import type { TiledMapData, TiledOrientation, TiledPropertyData, TiledRenderOrder } from './data';
+import type { TiledMapData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
 import {
   maskTiledGid,
   TILED_FLIPPED_DIAGONALLY_FLAG,
@@ -171,6 +171,13 @@ export class TiledMap {
         spacing: tiledTs.spacing,
         margin: tiledTs.margin,
       });
+      // Carry per-tile metadata (properties + animation frames) into the runtime
+      // tileset. Without this, Tiled tile animations and per-tile properties are
+      // lost at conversion. Out-of-range entries are skipped defensively.
+      const defs = buildTileDefinitions(tiledTs.tiles, tiledTs.tileCount);
+      if (defs.length > 0) {
+        rts._setDefinitions(defs);
+      }
       runtimeTilesets.push(rts);
       indexToRuntime.push(rts);
     }
@@ -352,6 +359,39 @@ function convertObject(
 }
 
 const toPoints = (points: ReadonlyArray<{ x: number; y: number }>): ObjectPoint[] => points.map(p => ({ x: p.x, y: p.y }));
+
+/**
+ * Build runtime {@link TileDefinition}s from a Tiled tileset's per-tile data,
+ * carrying over per-tile properties and animation frames. Tiles whose `id` is
+ * out of range, and animation frames referencing out-of-range local ids, are
+ * skipped so the runtime tileset never receives malformed definitions.
+ */
+function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] {
+  const defs: TileDefinition[] = [];
+  for (const tile of tiles) {
+    if (tile.id < 0 || tile.id >= tileCount) continue;
+
+    const properties = tile.properties ? convertProperties(tile.properties) : undefined;
+    const hasProps = properties !== undefined && Object.keys(properties).length > 0;
+
+    let animation: readonly TileAnimationFrame[] | undefined;
+    if (tile.animation && tile.animation.length > 0) {
+      const frames = tile.animation
+        .filter(frame => frame.tileid >= 0 && frame.tileid < tileCount)
+        .map(frame => ({ localTileId: frame.tileid, duration: frame.duration }));
+      if (frames.length > 0) animation = frames;
+    }
+
+    if (!hasProps && animation === undefined) continue;
+
+    defs.push({
+      localTileId: tile.id,
+      ...(hasProps && { properties }),
+      ...(animation !== undefined && { animation }),
+    });
+  }
+  return defs;
+}
 
 /**
  * Project Tiled custom properties to the generic flat property bag. Class /

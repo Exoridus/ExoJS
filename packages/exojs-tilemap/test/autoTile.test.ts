@@ -2,7 +2,7 @@ import { TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
-import { autoTile } from '../src/autoTile';
+import { autoTile, refreshCell } from '../src/autoTile';
 import { TileLayer } from '../src/TileLayer';
 import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
@@ -272,5 +272,96 @@ describe('autoTile — edge mode (4-neighbor)', () => {
 
     // (0,0): right=(1,0) empty, bottom=(0,1) empty → mask 0.
     expect(layer.getTileAt(0, 0)?.localTileId).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Test 4: WangSet membership (variant-stable)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('WangSet — membership', () => {
+  it('every blobMap value is a member; extra members are additive', () => {
+    const wangSet = new WangSet({
+      blobMap: new Map([
+        [0, 10],
+        [255, 11],
+      ]),
+      members: [99],
+      tilesetIndex: 0,
+    });
+
+    // blobMap values are members…
+    expect(wangSet.isMember(10)).toBe(true);
+    expect(wangSet.isMember(11)).toBe(true);
+    // …explicit members too…
+    expect(wangSet.isMember(99)).toBe(true);
+    // …and unrelated ids are not.
+    expect(wangSet.isMember(0)).toBe(false);
+    expect(wangSet.members.has(10)).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Test 5: refreshCell — incremental autotiling around an edit
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('refreshCell — incremental update', () => {
+  it('produces the same result as a full autoTile for a localised edit', () => {
+    const ts = makeTileset256();
+    const full = makeLayer(ts, 5, 5);
+    const incr = makeLayer(ts, 5, 5);
+
+    // Identity members so every variant 0..255 is recognised as group member.
+    const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 0, type: 'blob' });
+
+    // Both layers: fill a 3×3 block of water at the centre, leave the rim empty.
+    for (const layer of [full, incr]) {
+      for (let ty = 1; ty <= 3; ty++) {
+        for (let tx = 1; tx <= 3; tx++) {
+          setTile(layer, ts, tx, ty, 0);
+        }
+      }
+    }
+
+    // Full path: autotile the whole block.
+    autoTile(full, wangSet, { wrapBorder: false });
+
+    // Incremental path: autotile once to establish variants, then "paint" a new
+    // water cell at (2,4) and refresh only its neighbourhood.
+    autoTile(incr, wangSet, { wrapBorder: false });
+    setTile(incr, ts, 2, 4, 0); // paint with a member id
+    refreshCell(incr, 2, 4, wangSet, { wrapBorder: false });
+
+    // Now apply the same paint to the full layer and re-run a complete autoTile;
+    // the incremental result must match the full recompute everywhere.
+    setTile(full, ts, 2, 4, 0);
+    autoTile(full, wangSet, { wrapBorder: false });
+
+    for (let ty = 0; ty < 5; ty++) {
+      for (let tx = 0; tx < 5; tx++) {
+        expect(incr.getTileAt(tx, ty)?.localTileId).toBe(full.getTileAt(tx, ty)?.localTileId);
+      }
+    }
+  });
+
+  it('only touches the 3×3 neighbourhood (does not bump the whole layer)', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 5, 5);
+    const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 0, type: 'blob' });
+
+    // A lone cell far from the edit must be untouched by refreshCell.
+    setTile(layer, ts, 0, 0, 0);
+    autoTile(layer, wangSet, { wrapBorder: false });
+    const farBefore = layer.getTileAt(0, 0)?.localTileId;
+    const revBefore = layer.revision;
+
+    // Paint + refresh in the opposite corner.
+    setTile(layer, ts, 4, 4, 0);
+    refreshCell(layer, 4, 4, wangSet, { wrapBorder: false });
+
+    // The far cell is unchanged, and revision advanced by only a small amount
+    // (the refreshed cell, not a whole-layer rewrite).
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(farBefore);
+    expect(layer.revision).toBeGreaterThan(revBefore);
   });
 });

@@ -16,6 +16,18 @@ export interface WangSetOptions {
   blobMap: ReadonlyMap<number, number> | Record<number, number>;
   /** Whether this is a blob (8-neighbor, default) or edge (4-neighbor) Wang set. */
   type?: 'blob' | 'edge';
+  /**
+   * Extra local tile IDs that count as belonging to this Wang group, beyond
+   * the variant IDs already present as {@link blobMap} *values*.
+   *
+   * Membership is what {@link autoTile} / `refreshCell` use to decide whether a
+   * neighbouring cell is "part of the terrain". Because every value in
+   * `blobMap` is itself a member, group membership stays stable no matter which
+   * variant a cell currently shows — that is what makes incremental
+   * `refreshCell` correct. Add the *base* tile ID you paint with here if it is
+   * not already one of the blobMap variants.
+   */
+  members?: Iterable<number>;
 }
 
 /**
@@ -49,6 +61,7 @@ export class WangSet {
   public readonly type: 'blob' | 'edge';
 
   private readonly _map: ReadonlyMap<number, number>;
+  private readonly _members: ReadonlySet<number>;
 
   public constructor(options: WangSetOptions) {
     this.tilesetIndex = options.tilesetIndex;
@@ -63,6 +76,15 @@ export class WangSet {
       }
       this._map = map;
     }
+
+    // Members default to every variant tile ID the set can produce, so that any
+    // autotiled variant is recognised as part of the group (variant-stable
+    // membership). Explicit `members` (e.g. the base paint ID) are added on top.
+    const members = new Set<number>(this._map.values());
+    if (options.members) {
+      for (const id of options.members) members.add(id);
+    }
+    this._members = members;
   }
 
   /**
@@ -73,8 +95,23 @@ export class WangSet {
     return this._map.get(mask);
   }
 
+  /**
+   * Whether a local tile ID belongs to this Wang group. True for every variant
+   * the set produces plus any explicit {@link WangSetOptions.members}. Used as
+   * the default, variant-stable neighbour-membership test by {@link autoTile}
+   * and `refreshCell`.
+   */
+  public isMember(localTileId: number): boolean {
+    return this._members.has(localTileId);
+  }
+
   /** Read-only view of the full bitmask → tile-ID mapping. */
   public get blobMap(): ReadonlyMap<number, number> {
     return this._map;
+  }
+
+  /** Read-only view of the local tile IDs that count as group members. */
+  public get members(): ReadonlySet<number> {
+    return this._members;
   }
 }

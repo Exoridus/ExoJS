@@ -49,6 +49,7 @@ export type {
   ChunkCoord,
   PackedTile,
   ResolvedTile,
+  TileAnimationFrame,
   TileDefinition,
   TileProperties,
   TilePropertyValue,
@@ -59,8 +60,10 @@ export {
   tileToChunkCoord,
   tileToLocalInChunk,
 } from './types';
+// Per-tile animation driver (RPG-Maker-style): advances only animated cells.
+export { TileAnimator } from './TileAnimator';
 // Wang autotiling: automatic tile selection based on neighbor bitmasks.
 export type { AutoTileOptions } from './autoTile';
-export { autoTile } from './autoTile';
+export { autoTile, refreshCell } from './autoTile';
 export type { WangSetOptions } from './WangSet';
 export { WangSet } from './WangSet';
