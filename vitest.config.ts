@@ -21,6 +21,7 @@ const aliasConfig = [
   // recipe (examples/shared/physics-tilemap.ts) can be unit-tested in-repo.
   { find: '@codexo/exojs-tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-tiled', replacement: fileURLToPath(new URL('./packages/exojs-tiled/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs-ldtk', replacement: fileURLToPath(new URL('./packages/exojs-ldtk/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
 ] as const;
 
@@ -99,6 +100,11 @@ export default defineConfig({
         name: 'exojs-tiled',
         alias: aliasConfig,
         include: ['packages/exojs-tiled/test/**/*.test.ts'],
+      }),
+      createJsdomTestProject({
+        name: 'exojs-ldtk',
+        alias: aliasConfig,
+        include: ['packages/exojs-ldtk/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-physics',

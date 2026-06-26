@@ -156,6 +156,19 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
 
+  packages/exojs-ldtk:
+    dependencies:
+      '@codexo/exojs-tilemap':
+        specifier: workspace:*
+        version: link:../exojs-tilemap
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+      '@codexo/exojs-config':
+        specifier: workspace:*
+        version: link:../exojs-config
+
   packages/exojs-particles:
     devDependencies:
       '@codexo/exojs':
