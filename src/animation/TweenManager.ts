@@ -2,12 +2,21 @@ import type { System } from '#core/System';
 import type { Time } from '#core/Time';
 
 import { Tween } from './Tween';
+import { TweenSequencer } from './TweenSequencer';
+
+/** Any object that can be driven each frame by a delta in seconds. @internal */
+interface Ticker {
+  update(deltaSeconds: number): void;
+}
 
 /**
  * Owns and advances a collection of {@link Tween} instances, driving them
  * once per frame from {@link Application.update}. Created tweens are tracked
  * automatically; manually constructed tweens can be opted in via
  * {@link TweenManager.add}.
+ *
+ * Custom updatables (such as {@link TweenSequencer}) can be registered via
+ * {@link TweenManager.addTicker} so they share the same frame tick.
  *
  * Update iteration uses a snapshot so callbacks may freely add or remove
  * tweens during the same frame without corrupting the loop. Completed and
@@ -18,6 +27,7 @@ export class TweenManager implements System {
   /** App-systems tick band — tweens after audio. @internal */
   public readonly order = 400;
   private _tweens: Tween[] = [];
+  private _tickers: Ticker[] = [];
   private _destroyed = false;
 
   /**
@@ -66,6 +76,25 @@ export class TweenManager implements System {
   }
 
   /**
+   * Create a new {@link TweenSequencer} bound to this manager and return it.
+   * The sequencer registers itself automatically when {@link TweenSequencer.start}
+   * is called, so no manual wiring is needed.
+   *
+   * @example
+   * ```ts
+   * scene.tweens.createSequencer()
+   *   .then(fadeIn)
+   *   .wait(0.5)
+   *   .then([moveLeft, scaleUp])
+   *   .onComplete(() => console.log('done'))
+   *   .start();
+   * ```
+   */
+  public createSequencer(): TweenSequencer {
+    return new TweenSequencer(this);
+  }
+
+  /**
    * Explicitly add a stand-alone Tween (created via `new Tween(target)`)
    * to this manager so it participates in the update loop.
    */
@@ -91,9 +120,38 @@ export class TweenManager implements System {
   }
 
   /**
-   * Advance all active tweens by the frame `delta` (read as seconds). Ticked
-   * once per frame via {@link Application.systems}. Uses a snapshot of the list
-   * so that callbacks that add or remove tweens do not corrupt mid-iteration.
+   * Register a custom updatable so it is driven each frame alongside tweens.
+   * Idempotent — registering the same ticker twice is a no-op.
+   *
+   * Used internally by {@link TweenSequencer}.
+   */
+  public addTicker(ticker: Ticker): this {
+    if (!this._tickers.includes(ticker)) {
+      this._tickers.push(ticker);
+    }
+
+    return this;
+  }
+
+  /**
+   * Remove a previously registered ticker. Called automatically by
+   * {@link TweenSequencer} when it completes or is stopped.
+   */
+  public removeTicker(ticker: Ticker): this {
+    const index = this._tickers.indexOf(ticker);
+
+    if (index !== -1) {
+      this._tickers.splice(index, 1);
+    }
+
+    return this;
+  }
+
+  /**
+   * Advance all active tweens by the frame `delta` (read as seconds), then
+   * advance all registered tickers. Ticked once per frame via
+   * {@link Application.systems}. Uses snapshots so callbacks that add or
+   * remove tweens/tickers do not corrupt mid-iteration.
    */
   public update(delta: Time): void {
     if (this._destroyed) return;
@@ -103,19 +161,26 @@ export class TweenManager implements System {
     for (const tween of snapshot) {
       tween.update(delta.seconds);
     }
+
+    const tickerSnapshot = [...this._tickers];
+
+    for (const ticker of tickerSnapshot) {
+      ticker.update(delta.seconds);
+    }
   }
 
   /**
-   * Remove all tweens immediately. No callbacks (onComplete etc.) fire.
+   * Remove all tweens and tickers immediately. No callbacks fire.
    * The tweens' states are left as-is; they are simply evicted from the list.
    */
   public clear(): this {
     this._tweens = [];
+    this._tickers = [];
 
     return this;
   }
 
-  /** Tear down the manager. Clears tweens and makes subsequent updates no-ops. */
+  /** Tear down the manager. Clears tweens and tickers and makes subsequent updates no-ops. */
   public destroy(): void {
     this.clear();
     this._destroyed = true;
