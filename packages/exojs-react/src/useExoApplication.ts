@@ -12,8 +12,11 @@ export type ExoApplicationOptions = Omit<ApplicationOptions, 'canvas'> & {
   readonly canvas?: Omit<CanvasApplicationOptions, 'element' | 'mount'>;
 };
 
-/** Return value of {@link useExoApplication}. */
-export interface UseExoApplicationResult {
+/**
+ * Return value of {@link useExoApplication}, parameterised by the container
+ * element type `E` (default `HTMLDivElement`).
+ */
+export interface UseExoApplicationResult<E extends HTMLElement = HTMLDivElement> {
   /** The Application instance, or `null` until it has been created. */
   readonly app: Application | null;
   /**
@@ -21,7 +24,7 @@ export interface UseExoApplicationResult {
    * `Ref` (not `RefObject`) so the same code type-checks against both
    * `@types/react` 18 and 19, whose `useRef`/`RefObject` nullability differ.
    */
-  readonly containerRef: Ref<HTMLDivElement>;
+  readonly containerRef: Ref<E>;
 }
 
 /** Stable string key for the colour so the sync effect can depend on its value. */
@@ -48,14 +51,19 @@ function colorKey(color: Color | undefined): string | undefined {
  * Options without a live setter (e.g. `canvas.pixelRatio`, `seed`, `extensions`)
  * are captured at creation; change the `backend` or remount to apply them.
  *
+ * The container element type defaults to `HTMLDivElement` (what {@link
+ * import('./ExoCanvas').ExoCanvas} renders); parameterise it — e.g.
+ * `useExoApplication<HTMLElement>()` — to mount into a `<section>`, `<main>`,
+ * or any other element.
+ *
  * @param options - Application options (canvas element/mount are managed).
  * @param onReady - Called once each time an Application is created.
  */
-export function useExoApplication(
+export function useExoApplication<E extends HTMLElement = HTMLDivElement>(
   options?: ExoApplicationOptions,
   onReady?: (app: Application) => void,
-): UseExoApplicationResult {
-  const containerRef = useRef<HTMLDivElement>(null);
+): UseExoApplicationResult<E> {
+  const containerRef = useRef<E>(null);
   const [app, setApp] = useState<Application | null>(null);
 
   // Latest onReady without retriggering the lifecycle effect. Updated in an
