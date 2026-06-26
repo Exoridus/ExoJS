@@ -270,6 +270,7 @@ export class Application {
   private _cursor = 'default';
   private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
   private _resizeObserver: ResizeObserver | null = null;
+  private _sizingMode: CanvasSizingMode = 'fixed';
   private readonly _audio: AudioManager = new AudioManager();
 
   public constructor(appSettings: ApplicationOptions = {}) {
@@ -298,7 +299,8 @@ export class Application {
     }
 
     this._mountCanvas(canvasOptions.mount);
-    this._applySizingMode(canvasOptions.sizingMode ?? 'fixed');
+    this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
+    this._applySizingMode(this._sizingMode);
 
     this.options = {
       clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
@@ -449,6 +451,39 @@ export class Application {
 
   public set cursor(cursor: string) {
     this.setCursor(cursor);
+  }
+
+  /**
+   * The active {@link CanvasSizingMode}. Assigning a new mode re-applies the
+   * sizing strategy live: the previous mode's {@link ResizeObserver} (if any)
+   * is disconnected and the new mode's CSS / observer is installed. Assigning
+   * the current value is a no-op.
+   */
+  public get sizingMode(): CanvasSizingMode {
+    return this._sizingMode;
+  }
+
+  public set sizingMode(mode: CanvasSizingMode) {
+    if (mode === this._sizingMode) {
+      return;
+    }
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
+    this._sizingMode = mode;
+    this._applySizingMode(mode);
+  }
+
+  /**
+   * The colour the canvas is cleared to each frame, as a live {@link Color}.
+   * Assigning copies into the backend's clear colour (effective next frame);
+   * you may also mutate it in place via `app.clearColor.set(...)`.
+   */
+  public get clearColor(): Color {
+    return this._backend.clearColor;
+  }
+
+  public set clearColor(color: Color) {
+    this._backend.clearColor.copy(color);
   }
 
   public get audio(): AudioManager {

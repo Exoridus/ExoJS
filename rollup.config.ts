@@ -182,6 +182,9 @@ const iifeFull: RollupOptions = {
     typescript({
       compilerOptions: { incremental: false },
       outputToFilesystem: false,
+      // The full bundle pulls extension-package source (resolved via
+      // extensionSourcePlugin); the TS transform must cover them, not just src/.
+      include: ['src/**/*.ts', 'packages/*/src/**/*.ts', 'scripts/exo-full.entry.ts'],
     }),
   ],
 };
@@ -203,11 +206,20 @@ const iifeFullMin: RollupOptions = {
     typescript({
       compilerOptions: { incremental: false },
       outputToFilesystem: false,
+      include: ['src/**/*.ts', 'packages/*/src/**/*.ts', 'scripts/exo-full.entry.ts'],
     }),
     terser({ compress: { pure_funcs: ['assert', 'assertDefined', 'invariant', 'warnOnce'] } }),
   ],
 };
 
-const productionOnlyConfigs = buildMode === 'production' ? [iifeMin, iifeFullMin] : [];
+const productionOnlyConfigs = buildMode === 'production' ? [iifeMin] : [];
 
-export default [bundled, debugBundled, modules, iife, iifeFull, ...productionOnlyConfigs];
+// The all-in-one full bundle (core + every extension package) is opt-in via
+// EXOJS_FULL_BUNDLE=1. It bundles extension-package SOURCE, which
+// @rollup/plugin-typescript cannot transform across the multiple rootDirs
+// (src/ + packages/*/src) in one pass — building it needs an esbuild/swc
+// transpile step (or a build-from-dist approach) that is not yet wired up.
+// Keeping it out of the default build keeps `pnpm build` / release green.
+const fullBundleConfigs = process.env.EXOJS_FULL_BUNDLE === '1' ? (buildMode === 'production' ? [iifeFull, iifeFullMin] : [iifeFull]) : [];
+
+export default [bundled, debugBundled, modules, iife, ...productionOnlyConfigs, ...fullBundleConfigs];

@@ -35,6 +35,12 @@ export interface RenderBackend {
   readonly view: View;
   readonly renderTarget: RenderTarget;
   readonly stats: RenderStats;
+  /**
+   * The colour the canvas root target is cleared to each frame. Mutable in
+   * place (`backend.clearColor.copy(...)`) — the new value takes effect on the
+   * next frame. Both backends initialise it from `app.options.clearColor`.
+   */
+  readonly clearColor: Color;
 
   initialize(): Promise<this>;
   resetStats(): this;

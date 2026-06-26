@@ -24,20 +24,26 @@ const corePaths = {
 };
 
 /**
- * @param {{ root: string, sourceCondition: string | null, inputs?: string[] }} opts
+ * @param {{ root: string, sourceCondition: string | null, inputs?: string[], external?: string[] }} opts
+ *   `external` lists additional bare package names (e.g. `'react'`) to mark
+ *   external alongside the always-external `@codexo/exojs*` core. Subpaths
+ *   (e.g. `react/jsx-runtime`) are matched too.
  * @returns {import('rollup').RollupOptions}
  */
 export function createExtensionConfig(opts) {
-  const { root, sourceCondition, inputs = ['src/index.ts', 'src/register.ts'] } = opts;
+  const { root, sourceCondition, inputs = ['src/index.ts', 'src/register.ts'], external = [] } = opts;
 
   const defines = createBuildDefinesFromRepo({
     mode: process.env.EXOJS_ENV === 'development' ? 'development' : 'production',
     packageDir: root,
   });
 
+  const isExternal = id =>
+    id.startsWith('@codexo/exojs') || external.some(name => id === name || id.startsWith(`${name}/`));
+
   return {
     input: inputs,
-    external: id => id.startsWith('@codexo/exojs'),
+    external: isExternal,
     output: {
       dir: 'dist/esm',
       format: 'es',

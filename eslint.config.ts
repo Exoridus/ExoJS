@@ -554,7 +554,7 @@ export default defineConfig([
   // Site React components. Astro files are type-checked by `astro check`; this
   // block covers the TypeScript/TSX islands that ship browser interactivity.
   {
-    files: ['site/src/**/*.{ts,tsx}'],
+    files: ['site/src/**/*.{ts,tsx}', 'packages/exojs-react/src/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -652,6 +652,30 @@ export default defineConfig([
       'prefer-object-spread': 'error',
       'prefer-template': 'error',
       radix: 'error',
+    },
+  },
+
+  // The React integration package holds an imperative ExoJS `Application` handle
+  // in `useState` and mutates it by design (resize / clearColor / sizingMode),
+  // which the immutability rule cannot model. `@eslint-react/exhaustive-deps`
+  // duplicates `react-hooks/exhaustive-deps`; keep the latter as the single
+  // source so the in-code disables apply once.
+  {
+    files: ['packages/exojs-react/src/**/*.{ts,tsx}'],
+    rules: {
+      'react-hooks/immutability': 'off',
+      '@eslint-react/exhaustive-deps': 'off',
+      // Creating the imperative Application/Scene in an effect and exposing it
+      // as state is the defining pattern of this bridge, not a bug.
+      'react-hooks/set-state-in-effect': 'off',
+      '@eslint-react/set-state-in-effect': 'off',
+      // Targets React 18; `<Context.Provider>` / `useContext` are correct there
+      // (the `use()` and bare-`<Context>` forms are React 19+).
+      '@eslint-react/no-context-provider': 'off',
+      '@eslint-react/no-use-context': 'off',
+      // Reading declarative `<Scene>` config via Children.forEach is the
+      // intended pattern (mirrors react-three-fiber / react-router).
+      '@eslint-react/no-children-for-each': 'off',
     },
   },
 

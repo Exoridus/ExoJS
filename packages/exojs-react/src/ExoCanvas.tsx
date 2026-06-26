@@ -1,23 +1,22 @@
-import { type CSSProperties, type HTMLAttributes, type ReactElement, useEffect, useRef, useState } from 'react';
-
-import { Application, type ApplicationOptions } from '@codexo/exojs';
+import type { Application } from '@codexo/exojs';
+import { type CSSProperties, type HTMLAttributes, type ReactElement } from 'react';
 
 import { ExoContext } from './ExoContext';
+import { type ExoApplicationOptions, useExoApplication } from './useExoApplication';
 
 export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
   /**
-   * Options forwarded to the {@link Application} constructor, excluding
-   * `canvas` (which is managed by this component). Use the wrapping `<div>`
-   * props (e.g. `style`, `className`) to control layout; use
-   * `options.canvas.sizingMode` alternatives via CSS on the container.
+   * Options forwarded to the ExoJS {@link Application}. The canvas element and
+   * its mount point are managed by this component; you may still pass
+   * `canvas.width`/`height`/`sizingMode`/etc. Most options are captured at
+   * creation, but `canvas.width`/`height`, `canvas.sizingMode` and `clearColor`
+   * are applied live when they change (see {@link useExoApplication}).
    */
-  options?: Omit<ApplicationOptions, 'canvas'>;
+  options?: ExoApplicationOptions;
   /**
-   * Called once after the {@link Application} instance is created and made
-   * available in the React tree. Note that the backend (WebGL2 / WebGPU) is
-   * not yet initialized at this point — backend initialization happens when
-   * the first {@link useScene} child calls `app.start()`. Subscribe to
-   * `app.onFrame` or check `app.status` to detect when the engine is running.
+   * Called once each time the {@link Application} is (re)created. Note the
+   * backend (WebGL2 / WebGPU) is not yet initialized at this point — backend
+   * init happens when the first {@link useScene} child calls `app.start()`.
    */
   onReady?: (app: Application) => void;
 }
@@ -25,16 +24,17 @@ export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
 /**
  * Mounts a `<canvas>` inside a container `<div>`, creates an ExoJS
  * {@link Application}, and provides it to all descendant hooks via React
- * context. Children are rendered only after the Application is ready.
+ * context. Children render only after the Application exists.
  *
- * The Application is destroyed (and the canvas removed) when this component
- * unmounts. Scene lifecycle is managed separately by {@link useScene}.
+ * A thin wrapper over {@link useExoApplication} — use that hook directly if you
+ * need to own the container element yourself. The Application is destroyed (and
+ * the canvas removed) on unmount; scene lifecycle is managed by {@link useScene}.
  *
  * @example
  * ```tsx
  * function App() {
  *   return (
- *     <ExoCanvas style={{ width: 800, height: 600 }} onReady={(app) => console.log(app)}>
+ *     <ExoCanvas options={{ canvas: { width: 800, height: 600 } }}>
  *       <GameScene />
  *     </ExoCanvas>
  *   );
@@ -42,34 +42,7 @@ export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
  * ```
  */
 export function ExoCanvas({ options, onReady, children, style, ...divProps }: ExoCanvasProps): ReactElement {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [app, setApp] = useState<Application | null>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-
-    if (!container) {
-      return;
-    }
-
-    const canvas = document.createElement('canvas');
-    container.appendChild(canvas);
-
-    const application = new Application({ canvas: { element: canvas }, ...options });
-
-    setApp(application);
-    onReady?.(application);
-
-    return () => {
-      application.destroy();
-      canvas.remove();
-      setApp(null);
-    };
-    // options and onReady are intentionally captured only at mount time.
-    // Changing them after mount has no effect — destroy and remount ExoCanvas
-    // to apply new options.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { app, containerRef } = useExoApplication(options, onReady);
 
   const containerStyle: CSSProperties = { position: 'relative', ...style };
 

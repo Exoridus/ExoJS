@@ -9,9 +9,6 @@ module.exports = [
     limit: '250 KB',
     gzip: true,
   },
-  {
-    path: 'dist/exo.full.iife.min.js',
-    limit: '2 MB',
-    gzip: true,
-  },
+  // The full bundle (dist/exo.full.iife.min.js) is opt-in (EXOJS_FULL_BUNDLE=1)
+  // and not produced by the default build, so it is not size-gated here.
 ];

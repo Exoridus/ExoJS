@@ -8,19 +8,21 @@
     "directory": "packages/exojs-react"
   },
   "type": "module",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/esm/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     },
     "./package.json": "./package.json"
   },
-  "files": ["src/", "README.md", "LICENSE"],
+  "files": ["dist/esm/", "README.md", "LICENSE"],
   "scripts": {
+    "build": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production",
+    "build:dev": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\""
   },
