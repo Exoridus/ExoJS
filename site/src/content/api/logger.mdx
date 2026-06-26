@@ -1,0 +1,34 @@
+---
+title: "Logger"
+description: ""
+symbol: "Logger"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 8
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Source"]
+sourcePath: "src/core/logging.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts#L20"
+---
+## Import
+
+`import { Logger } from '@codexo/exojs'`
+
+## Constructors
+
+- `new(): Logger`
+
+## Methods
+
+- `addHandler(handler: LogHandler): object`
+- `debug(channel: LogChannel, message: string, data?: Record<string, unknown>): void`
+- `error(channel: LogChannel, message: string, error?: Error): void`
+- `info(channel: LogChannel, message: string, data?: Record<string, unknown>): void`
+- `log(severity: LogSeverity, channel: LogChannel, message: string, options?: object): void`
+- `warn(channel: LogChannel, message: string, data?: Record<string, unknown>): void`
+- `warnOnce(key: string, channel: LogChannel, message: string): void`
+
+## Source
+
+[src/core/logging.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts#L20)
