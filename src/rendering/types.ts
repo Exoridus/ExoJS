@@ -1,6 +1,11 @@
 /**
  * Compositing blend modes applied when drawing a {@link Drawable} over the current render target.
- * Values map to backend-specific blend-equation presets.
+ *
+ * Modes 0–4 are implemented as fixed-function GPU blend equations (no texture
+ * capture required). Modes 5–17 use a backdrop-aware compositor: the content is
+ * first rendered off-screen, then composited over the captured backdrop via a
+ * W3C-compliant blend shader. Use {@link isAdvancedBlendMode} to test whether a
+ * mode requires the compositor path.
  */
 export enum BlendModes {
   Normal = 0,
@@ -8,20 +13,40 @@ export enum BlendModes {
   Subtract = 2,
   Multiply = 3,
   Screen = 4,
-  /**
-   * `min(src, dst)` per channel.
-   *
-   * KNOWN LIMITATION: implemented with the fixed-function `MIN` blend equation,
-   * which ignores the blend factors and therefore cannot account for source
-   * coverage. With premultiplied-alpha drawables, transparent texels (rgb = 0)
-   * resolve to `min(0, dst) = 0`, so transparent regions of a sprite turn black
-   * instead of showing the background. Reliable only for fully opaque sources;
-   * a coverage-correct version needs a shader-side blend. Tracked for a future
-   * render pass. {@link Lighten} is unaffected (`max(0, dst) = dst`).
-   */
+  /** `min(src, dst)` per channel — coverage-correct via backdrop-aware shader. */
   Darken = 5,
+  /** `max(src, dst)` per channel — coverage-correct via backdrop-aware shader. */
   Lighten = 6,
+  /** Overlay: darkens or lightens depending on backdrop luminosity. */
+  Overlay = 7,
+  /** Color Dodge: brightens the backdrop to reflect the source. */
+  ColorDodge = 8,
+  /** Color Burn: darkens the backdrop to reflect the source. */
+  ColorBurn = 9,
+  /** Hard Light: strong Overlay with source and backdrop roles swapped. */
+  HardLight = 10,
+  /** Soft Light: softer Overlay effect. */
+  SoftLight = 11,
+  /** Difference: absolute value of channel difference. */
+  Difference = 12,
+  /** Exclusion: lower-contrast alternative to Difference. */
+  Exclusion = 13,
+  /** Hue: source hue with backdrop saturation and luminosity. */
+  Hue = 14,
+  /** Saturation: source saturation with backdrop hue and luminosity. */
+  Saturation = 15,
+  /** Color: source hue+saturation with backdrop luminosity. */
+  Color = 16,
+  /** Luminosity: source luminosity with backdrop hue+saturation. */
+  Luminosity = 17,
 }
+
+/**
+ * Returns `true` for blend modes that require the backdrop-aware compositor
+ * (shader-side blend + GPU texture copy). Modes 0–4 use fixed-function blending
+ * and return `false`. Modes 5–17 return `true`.
+ */
+export const isAdvancedBlendMode = (mode: BlendModes): boolean => mode >= BlendModes.Darken;
 
 /**
  * Texture magnification and minification filter modes.
