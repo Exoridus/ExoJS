@@ -1,6 +1,7 @@
 import { type AssetLoaderContext,Texture } from '@codexo/exojs';
 
 import type { TiledTilesetData, TiledTilesetRefData } from './data';
+import { decodeTiledLayerData } from './decodeLayerData';
 import { TiledMap } from './TiledMap';
 import { TiledTileset, type TiledTilesetResources } from './TiledTileset';
 import { resolveTiledUrl } from './url';
@@ -72,6 +73,9 @@ async function loadTiledTileset(ref: TiledTilesetRefData, mapSource: string, con
  */
 export async function loadTiledMap(source: string, context: AssetLoaderContext): Promise<TiledMap> {
   const raw = await context.fetchJson(source);
+  // Decode any base64/gzip/zlib tile-layer data into plain GID arrays before
+  // validation, so the rest of the pipeline stays CSV-shaped and synchronous.
+  await decodeTiledLayerData(raw, source);
   const data = validateTiledMapData(raw, source);
   const tilesets = await Promise.all(data.tilesets.map(ref => loadTiledTileset(ref, source, context)));
 

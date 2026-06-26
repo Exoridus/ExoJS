@@ -15,6 +15,8 @@ export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
 export { Capabilities } from './capabilities';
 export { Clock } from './Clock';
+export type { DecompressFormat } from './Codec';
+export { Codec } from './Codec';
 export { Color } from './Color';
 export { DisposalScope } from './DisposalScope';
 export type { LogChannel, LogEntry } from './logging';

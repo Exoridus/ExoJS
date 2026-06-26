@@ -348,6 +348,10 @@ function validateTiledChunkData(raw: unknown, source: string, path: string): Til
 }
 
 function validateTiledTileLayerData(obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledTileLayerData {
+  // Validation runs AFTER the async decode pass (`decodeLayerData.ts`), which
+  // turns base64/gzip/zlib `data` into a plain GID array and strips these
+  // markers. Reaching here with them still set means the data was not decoded
+  // (e.g. validate was called directly) — reject rather than mis-parse.
   if (obj.compression !== undefined) {
     throw new TiledFormatError(source, joinPath(path, 'compression'), `compressed tile layer data is not supported (compression: ${JSON.stringify(obj.compression)})`);
   }
