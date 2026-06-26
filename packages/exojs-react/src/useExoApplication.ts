@@ -1,5 +1,5 @@
 import { Application, type ApplicationOptions, type CanvasApplicationOptions, type Color } from '@codexo/exojs';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type Ref, useEffect, useRef, useState } from 'react';
 
 /**
  * Options for {@link useExoApplication} / {@link import('./ExoCanvas').ExoCanvas}.
@@ -16,8 +16,12 @@ export type ExoApplicationOptions = Omit<ApplicationOptions, 'canvas'> & {
 export interface UseExoApplicationResult {
   /** The Application instance, or `null` until it has been created. */
   readonly app: Application | null;
-  /** Attach this to the container element the canvas should mount into. */
-  readonly containerRef: RefObject<HTMLDivElement>;
+  /**
+   * Attach this to the container element the canvas should mount into. Typed as
+   * `Ref` (not `RefObject`) so the same code type-checks against both
+   * `@types/react` 18 and 19, whose `useRef`/`RefObject` nullability differ.
+   */
+  readonly containerRef: Ref<HTMLDivElement>;
 }
 
 /** Stable string key for the colour so the sync effect can depend on its value. */
