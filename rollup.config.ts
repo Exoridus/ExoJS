@@ -63,7 +63,7 @@ const iife: RollupOptions = {
   output: {
     file: 'dist/exo.iife.js',
     format: 'iife',
-    name: 'ExoJS',
+    name: 'Exo',
     sourcemap: true,
   },
   plugins: [
@@ -83,7 +83,7 @@ const iifeMin: RollupOptions = {
   output: {
     file: 'dist/exo.iife.min.js',
     format: 'iife',
-    name: 'ExoJS',
+    name: 'Exo',
     sourcemap: true,
   },
   plugins: [
