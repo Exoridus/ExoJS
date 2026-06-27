@@ -1,0 +1,42 @@
+---
+title: "BoxShape"
+description: "Axis-aligned box of `width × height` centred on the collider's local origin — a convenience over PolygonShape. The result is a regular polygon, so it participates in the polygon narrow phase like any other convex shape."
+symbol: "BoxShape"
+kind: "class"
+subsystem: "physics"
+importPath: "@codexo/exojs-physics"
+memberCount: 12
+tier: "stable"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "packages/exojs-physics/src/shapes/BoxShape.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/BoxShape.ts#L8"
+---
+## Import
+
+`import { BoxShape } from '@codexo/exojs-physics'`
+
+Axis-aligned box of `width × height` centred on the collider's local origin —
+a convenience over PolygonShape. The result is a regular polygon, so
+it participates in the polygon narrow phase like any other convex shape.
+
+## Constructors
+
+- `new(width: number, height: number): BoxShape`
+
+## Properties
+
+- `area: number`
+- `boundingRadius: number`
+- `centroidX: number`
+- `centroidY: number`
+- `count: number`
+- `height: number`
+- `normals: readonly number[]`
+- `type: "polygon"`
+- `unitInertia: number`
+- `vertices: readonly number[]`
+- `width: number`
+
+## Source
+
+[packages/exojs-physics/src/shapes/BoxShape.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/BoxShape.ts#L8)
