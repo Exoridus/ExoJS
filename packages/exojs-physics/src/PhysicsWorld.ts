@@ -8,6 +8,7 @@ import { BindingRegistry } from './binding/BindingRegistry';
 import type { BindingOptions, PhysicsBinding } from './binding/PhysicsBinding';
 import { Collider } from './Collider';
 import type { CollisionEvent, SensorEvent } from './events';
+import type { Joint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
@@ -149,6 +150,7 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
   private readonly _bodies: PhysicsBody[] = [];
   private readonly _colliders: Collider[] = [];
+  private readonly _joints: Joint[] = [];
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
@@ -270,6 +272,44 @@ export class PhysicsWorld implements BodyOwner {
     this._defer(() => this._removeCollider(collider));
   }
 
+  /** Live joints (read-only view). */
+  public get joints(): readonly Joint[] {
+    return this._joints;
+  }
+
+  /**
+   * Add a constraint joint. Construct it first (`new DistanceJoint({ … })`),
+   * then add it. Wakes both bodies; safe inside a callback (registration is
+   * deferred). Returns the joint.
+   */
+  public addJoint<T extends Joint>(joint: T): T {
+    this._assertAlive();
+    joint.bodyA.wake();
+    joint.bodyB.wake();
+
+    this._defer(() => {
+      if (!this._joints.includes(joint)) {
+        this._joints.push(joint);
+      }
+    });
+
+    return joint;
+  }
+
+  /** Remove a joint, waking both bodies so they respond to the lost constraint. Deferred when called inside a callback. */
+  public removeJoint(joint: Joint): void {
+    joint.bodyA.wake();
+    joint.bodyB.wake();
+
+    this._defer(() => {
+      const index = this._joints.indexOf(joint);
+
+      if (index !== -1) {
+        this._joints.splice(index, 1);
+      }
+    });
+  }
+
   // ── stepping ───────────────────────────────────────────────────────────
 
   /**
@@ -291,6 +331,7 @@ export class PhysicsWorld implements BodyOwner {
       const gravityY = this.gravity.y;
       const contactHertz = this.contactHertz;
       const dampingRatio = this.dampingRatio;
+      const hasJoints = this._joints.length > 0;
 
       for (let step = 0; step < steps; step++) {
         // Detection runs once per fixed step (collider geometry is already current
@@ -307,6 +348,10 @@ export class PhysicsWorld implements BodyOwner {
 
         this._backend.prepareSolve(h, contactHertz, dampingRatio);
 
+        if (hasJoints) {
+          this._prepareJoints(h);
+        }
+
         for (let subStep = 0; subStep < subStepCount; subStep++) {
           // Integrate gravity/forces over the sub-step (forces persist across
           // sub-steps; cleared once per frame by `_finalizePosition`).
@@ -321,15 +366,28 @@ export class PhysicsWorld implements BodyOwner {
           // load, which is what keeps tall stacks from pumping energy.
           this._backend.warmStart();
 
+          if (hasJoints) {
+            this._warmStartJoints();
+          }
+
           // Main soft-bias velocity solve, integrate positions (accumulating
-          // per-body delta), then the bias-free relax pass.
+          // per-body delta), then the bias-free relax pass. Joints solve right
+          // after the contacts in each pass (contacts are the stiffer constraint).
           this._backend.solveVelocities(true);
+
+          if (hasJoints) {
+            this._solveJoints(true);
+          }
 
           for (const body of this._bodies) {
             body._integratePosition(h);
           }
 
           this._backend.solveVelocities(false);
+
+          if (hasJoints) {
+            this._solveJoints(false);
+          }
         }
 
         // Separate restitution pass, then write the accumulated delta into each
@@ -406,6 +464,7 @@ export class PhysicsWorld implements BodyOwner {
 
     this._bodies.length = 0;
     this._colliders.length = 0;
+    this._joints.length = 0;
     this._commands.length = 0;
     this._bindings.clear();
     this._backend.destroy();
@@ -503,6 +562,16 @@ export class PhysicsWorld implements BodyOwner {
       }
     }
 
+    // Joints couple their two bodies into the same island (sleep/wake together).
+    for (const joint of this._joints) {
+      const bodyA = joint.bodyA;
+      const bodyB = joint.bodyB;
+
+      if (joint.enabled && bodyA.type === 'dynamic' && bodyB.type === 'dynamic') {
+        this._union(bodyA._islandIndex, bodyB._islandIndex);
+      }
+    }
+
     // Per-island minimum sleep time over its dynamic members.
     for (let i = 0; i < count; i++) {
       const body = bodies[i]!;
@@ -552,6 +621,27 @@ export class PhysicsWorld implements BodyOwner {
     }
 
     return index;
+  }
+
+  /** Build each joint's per-frame constraint data (once per fixed step). */
+  private _prepareJoints(h: number): void {
+    for (const joint of this._joints) {
+      joint._prepare(h);
+    }
+  }
+
+  /** Re-apply each joint's accumulated impulse (each sub-step). */
+  private _warmStartJoints(): void {
+    for (const joint of this._joints) {
+      joint._warmStart();
+    }
+  }
+
+  /** One joint velocity pass (each sub-step, after the contacts). */
+  private _solveJoints(useBias: boolean): void {
+    for (const joint of this._joints) {
+      joint._solve(useBias);
+    }
   }
 
   /** Run `command` now, or queue it when inside an event dispatch (deferred to end of step). */

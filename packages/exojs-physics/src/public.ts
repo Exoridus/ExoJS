@@ -9,6 +9,8 @@ export { PhysicsBinding } from './binding/PhysicsBinding';
 export type { ColliderOptions } from './Collider';
 export { Collider } from './Collider';
 export type { CollisionEvent, ContactPoint, SensorEvent } from './events';
+export { DistanceJoint, type DistanceJointOptions } from './joints/DistanceJoint';
+export { Joint } from './joints/Joint';
 export type { BodyOptions } from './PhysicsBody';
 export { PhysicsBody } from './PhysicsBody';
 export { type PhysicsBuildInfo,physicsBuildInfo } from './physicsBuildInfo';
