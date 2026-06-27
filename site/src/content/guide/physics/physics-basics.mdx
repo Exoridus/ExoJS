@@ -1,0 +1,257 @@
+---
+title: 'Physics basics'
+description: 'Add 2D rigid-body physics with the @codexo/exojs-physics library: build a PhysicsWorld, drop bodies onto colliders, and step it from Scene.fixedUpdate.'
+---
+
+# Physics basics
+
+`@codexo/exojs-physics` is the official 2D rigid-body engine for ExoJS — a native,
+warm-started **TGS-Soft** solver (the Box2D-v3 "soft step") with shapes, colliders,
+bodies, contacts, sensors, queries, joints, sleeping and continuous collision. It
+turns a static scene graph into one where boxes fall, stack, bounce and collide.
+
+> **Note:** physics ships as a separate package. Install `@codexo/exojs-physics`
+> alongside `@codexo/exojs`:
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-physics
+> ```
+
+## A library, not an extension
+
+Unlike [Tiled](/ExoJS/en/guide/assets/tiled-maps/) or
+[Particles](/ExoJS/en/guide/effects/particles/), physics is **not** an
+`Application` extension. It contributes no renderer and no asset type, so there is
+**no `/register` entry and no `extensions: [...]` activation**. `@codexo/exojs` is a
+peer dependency; you construct a [`PhysicsWorld`](/ExoJS/en/api/physics-world/)
+directly and step it yourself:
+
+```ts
+import { PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+```
+
+The world holds **no module-level state**, so any number of worlds run in complete
+isolation — one per scene, or several side by side. Gravity is in px/s² with **+Y
+pointing down** (the ExoJS screen convention), so "down" is a positive `y`.
+
+## Bodies and colliders
+
+A [`PhysicsBody`](/ExoJS/en/api/physics-body/) is a transform plus a mass model; a
+[`Collider`](/ExoJS/en/api/collider/) is the geometry attached to it. A body owns one
+or more colliders, and its mass, centre of mass and rotational inertia are computed
+from their shape and density. Every body has a **type**:
+
+- `'static'` — never moves (floors, walls). Infinite mass.
+- `'dynamic'` — integrates under gravity, forces and contacts. This is the default.
+- `'kinematic'` — moves only by the velocity you set; immovable under contacts (moving platforms).
+
+Construct a body freely, then hand it to `world.add(...)`. Colliders can be passed
+as plain option objects in `colliders: [...]` — you don't have to build a `Collider`
+instance yourself:
+
+```ts
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+
+// A static floor: an immovable body with a single box collider.
+world.add(
+  new PhysicsBody({
+    type: 'static',
+    position: { x: 0, y: 400 },
+    colliders: [{ shape: new BoxShape(800, 40) }],
+  }),
+);
+
+// A dynamic crate that falls onto the floor.
+const crate = world.add(
+  new PhysicsBody({
+    type: 'dynamic',
+    position: { x: 0, y: 0 },
+    colliders: [{ shape: new BoxShape(32, 32), density: 1, friction: 0.5, restitution: 0.1 }],
+  }),
+);
+```
+
+`world.add(...)` returns the body, so you can keep a reference (`crate` above) to read
+its position or drive it later. Collider material is set per collider:
+
+- `density` (default `1`) — mass per px²; feeds the body's mass model.
+- `friction` (default `0.2`) — Coulomb friction coefficient.
+- `restitution` (default `0`) — bounciness in `[0, 1]`.
+
+The two built-in shapes are [`BoxShape(width, height)`](/ExoJS/en/api/box-shape/) and
+[`CircleShape(radius)`](/ExoJS/en/api/circle-shape/) (there is also a general
+`PolygonShape` for convex outlines):
+
+```ts
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+
+const ball = world.add(
+  new PhysicsBody({
+    type: 'dynamic',
+    position: { x: 0, y: -200 },
+    colliders: [{ shape: new CircleShape(12), density: 1, restitution: 0.6 }],
+  }),
+);
+```
+
+## Stepping the world
+
+Physics is **caller-driven**: nothing moves until you call `world.step(seconds)`. The
+world accumulates elapsed time into a fixed timestep (default `1 / 60 s`) and runs as
+many fixed sub-steps as needed, so the simulation is **frame-rate independent** and
+**deterministic** — the same inputs replay identically.
+
+That makes [`Scene.fixedUpdate`](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) the
+right hook to step it. `fixedUpdate(delta)` runs zero or more times per frame with a
+constant `delta` — exactly what a stable simulation wants. Leave camera, UI and purely
+visual work in `update`; put `world.step(...)` in `fixedUpdate`:
+
+```ts
+import { Scene, type Time } from '@codexo/exojs';
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+class GameScene extends Scene {
+  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+
+  public override init(): void {
+    this.world.add(
+      new PhysicsBody({
+        type: 'static',
+        position: { x: 0, y: 400 },
+        colliders: [{ shape: new BoxShape(800, 40) }],
+      }),
+    );
+  }
+
+  public override fixedUpdate(delta: Time): void {
+    this.world.step(delta.seconds);
+  }
+}
+```
+
+The fixed-step size is the application's `fixedTimeStep` (seconds, default `1 / 60`):
+
+```ts
+import { Application } from '@codexo/exojs';
+
+const app = new Application({ fixedTimeStep: 1 / 60 });
+```
+
+> Stepping inside `update` works too — pass `delta.seconds` the same way — but
+> `fixedUpdate` is preferred because its constant delta keeps the simulation
+> deterministic regardless of display refresh rate.
+
+## Binding bodies to sprites
+
+A body is pure simulation — it has no visual. To draw it, link it to a `Drawable`
+(such as a `Sprite`) with a [`PhysicsBinding`](/ExoJS/en/api/physics-binding/). After
+each `step`, the binding writes the body's **position and rotation** onto the node
+(the body's angle is radians; the node's rotation is set in degrees for you):
+
+```ts
+import { Sprite } from '@codexo/exojs';
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const sprite = new Sprite(null);
+
+const body = world.add(
+  new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(12) }] }),
+);
+
+world.bind(body, sprite); // sprite now tracks the body every step
+```
+
+`world.attach(node, def)` is the one-call shortcut for the common case — it creates a
+body with a single collider, adds it and binds it in one go:
+
+```ts
+import { Sprite } from '@codexo/exojs';
+import { CircleShape, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const sprite = new Sprite(null);
+
+world.attach(sprite, { type: 'dynamic', position: { x: 0, y: 0 }, shape: new CircleShape(12), restitution: 0.5 });
+```
+
+If you'd rather position things yourself, skip the binding and read the body's
+transform after each step — `body.x`, `body.y` (world position) and `body.angle`
+(radians):
+
+```ts no-check
+sprite.setPosition(body.x, body.y);
+sprite.setRotation(MathUtils.radiansToDegrees(body.angle));
+```
+
+## Worked example: a ball drops onto a floor
+
+Putting it together — a static floor, a dynamic ball bound to a sprite, stepped from
+`fixedUpdate`:
+
+```ts
+import { Loader, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+class DropScene extends Scene {
+  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+  private ball!: Sprite;
+
+  public override async load(loader: Loader): Promise<void> {
+    await loader.load(Texture, { ball: 'image/ball.png' });
+  }
+
+  public override init(loader: Loader): void {
+    // Static floor — an immovable body, no sprite needed.
+    this.world.add(
+      new PhysicsBody({
+        type: 'static',
+        position: { x: 0, y: 360 },
+        colliders: [{ shape: new BoxShape(800, 40) }],
+      }),
+    );
+
+    // Dynamic ball: a sprite plus a body + circle collider, linked by `attach`.
+    this.ball = new Sprite(loader.get(Texture, 'ball'));
+    this.addChild(this.ball);
+
+    this.world.attach(this.ball, {
+      type: 'dynamic',
+      position: { x: 0, y: -200 },
+      shape: new CircleShape(12),
+      restitution: 0.5,
+    });
+  }
+
+  public override fixedUpdate(delta: Time): void {
+    this.world.step(delta.seconds);
+  }
+
+  public override draw(context: RenderingContext): void {
+    context.backend.clear();
+    context.render(this.root);
+  }
+}
+```
+
+The ball falls under gravity, hits the floor, bounces a few times (restitution `0.5`)
+and settles. Because the body is bound to the sprite, the sprite follows automatically —
+you never touch its position in `update`.
+
+## Where to go next
+
+- **Joints, sleeping & CCD:** the next chapter,
+  [Joints, sleeping & CCD](/ExoJS/en/guide/physics/joints-and-dynamics/), connects bodies
+  with hinges, ropes, motors and springs, explains how resting bodies sleep to save CPU,
+  and shows how to stop fast projectiles from tunnelling.
+- **API reference:** [`PhysicsWorld`](/ExoJS/en/api/physics-world/),
+  [`PhysicsBody`](/ExoJS/en/api/physics-body/), [`Collider`](/ExoJS/en/api/collider/),
+  [`BoxShape`](/ExoJS/en/api/box-shape/), [`CircleShape`](/ExoJS/en/api/circle-shape/) and
+  [`PhysicsBinding`](/ExoJS/en/api/physics-binding/).
+- **The frame loop:** [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
+  covers `fixedUpdate`, `update` and `draw` and the order they run in.

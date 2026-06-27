@@ -1,0 +1,249 @@
+---
+title: 'React integration'
+description: 'Mount an ExoJS Application inside a React tree and drive scenes declaratively with the @codexo/exojs-react bindings.'
+---
+
+# React integration
+
+The official `@codexo/exojs-react` package lets you host an ExoJS
+[`Application`](/ExoJS/en/api/application/) inside a React component tree: it owns the
+canvas, manages the app lifecycle for you, switches [`Scene`](/ExoJS/en/api/scene/)s
+declaratively, and lets React HUD overlays read the running app through context.
+
+It is a plain **React binding**, not an engine extension — there is no `/register` entry and
+nothing to wire into `ApplicationOptions`. You use it from `.tsx` files alongside the rest of
+your React UI.
+
+> **Note:** This package sits next to the core engine and needs React as a peer. Install all
+> three:
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-react react
+> ```
+> `@codexo/exojs` and `react` (>= 18) are peer dependencies; `react-dom` is the usual host
+> renderer. The package ships pre-built ESM with type declarations and type-checks against both
+> `@types/react` 18 and 19.
+
+## Two layers
+
+The package is intentionally split into two layers — pick the one that matches how much DOM
+control you want:
+
+- **`useExoApplication` — headless.** A hook that creates and owns the `Application` and binds
+  it to a `<canvas>` **you** render. It produces no DOM of its own, so you keep full control over
+  the canvas element, its container, and its styling.
+- **`<ExoCanvas>` — batteries-included.** A component that renders a positioned wrapper `<div>`
+  plus a React-managed `<canvas>`, and provides the app to descendants via context. HUD overlays
+  and the declarative scene API work out of the box.
+
+`<ExoCanvas>` is built on top of `useExoApplication`; everything below the scene API applies to
+both.
+
+## The headless hook
+
+`useExoApplication(options?, onReady?)` returns the app and a ref to attach to your own canvas:
+
+```tsx no-check
+import { useExoApplication } from '@codexo/exojs-react';
+
+function Game() {
+  const { app, canvasRef } = useExoApplication({ canvas: { width: 800, height: 600 } });
+  // `app` is null until the canvas is mounted; render it however you like.
+  return <canvas ref={canvasRef} className="game-surface" />;
+}
+```
+
+The hook returns `{ app, canvasRef }`: `app` is the `Application` (or `null` until the canvas
+mounts and the app is created), and `canvasRef` is a stable ref you attach to the `<canvas>` the
+app should bind to. The optional `onReady` callback fires once each time an app is created.
+
+### Lifecycle and reactivity
+
+`options` is an `ExoApplicationOptions` — the same shape as `ApplicationOptions`, but the
+`canvas.element` / `canvas.mount` fields are managed for you (the hook binds the app to the
+canvas it references). You still pass `canvas.width`, `canvas.height`, `canvas.sizingMode`,
+`clearColor`, `backend`, and so on.
+
+The hook treats most options as captured-at-creation, but live-syncs a few without tearing the
+app down:
+
+- The app is **recreated** only when the render `backend` changes — WebGL2 ↔ WebGPU cannot be
+  hot-swapped, so this is the one identity option.
+- `canvas.width` / `canvas.height` are applied **live** via `app.resize(...)`.
+- `canvas.sizingMode` is applied **live** via the `app.sizingMode` setter.
+- `clearColor` is applied **live** via the `app.clearColor` setter (keyed on its channel values,
+  so a fresh `Color` with identical channels does not re-assign).
+- Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are captured at
+  creation. Change the `backend` or remount to apply them.
+
+On unmount the hook calls `app.destroy()`. The engine never removes a canvas it did not create,
+so React stays the sole owner of the `<canvas>` element.
+
+> **Note:** With the default `'fixed'` sizing mode the engine never touches the canvas CSS, so
+> you may style it freely. The `'fill'`, `'fit'`, `'shrink'`, and `'letterbox'` modes manage
+> `canvas.style` themselves — size the container and let them observe it, rather than fighting
+> them with an inline `style`.
+
+## The batteries-included canvas
+
+`<ExoCanvas>` renders a `position: relative` wrapper `<div>` containing the canvas, and provides
+the app via context so descendants (HUD, the scene API) can reach it. Because the wrapper is
+positioned, absolutely-positioned children sit over the canvas with no extra setup.
+
+```tsx no-check
+import { ExoCanvas } from '@codexo/exojs-react';
+
+function Game() {
+  return (
+    <ExoCanvas
+      options={{ canvas: { width: 1280, height: 720 } }}
+      style={{ width: 1280, height: 720 }}
+    >
+      <div style={{ position: 'absolute', top: 8, left: 8 }}>HUD overlay</div>
+    </ExoCanvas>
+  );
+}
+```
+
+Props:
+
+- `options` — the `ExoApplicationOptions` forwarded to the app (same reactivity as above).
+- `onReady` — called once each time the app is (re)created.
+- Layout props (`style`, `className`, and any other `<div>` attributes) apply to the **wrapper**.
+  Size the wrapper to drive the `'fill'` / `'letterbox'` sizing modes.
+- `canvasProps` — forwarded to the inner `<canvas>` (its own `style`/`className`); `ref`,
+  `width`, and `height` are managed by the engine and cannot be set here.
+- `children` — rendered as an overlay once the app exists, with the app available via context.
+
+For full control with no wrapper element, drop down to `useExoApplication`.
+
+## Declarative scenes
+
+`<Scenes>` switches the one active scene by name. Declare each scene with `<Scene>` and select
+the active one through the `active` prop. The first activation calls `app.start(scene)` (which
+initializes the backend and starts the frame loop); later switches call
+`app.scene.setScene(scene, …)` with the optional `transition`.
+
+The scene classes you reference are ordinary ExoJS scenes — the React layer only decides which
+one is active:
+
+```ts
+import { Scene } from '@codexo/exojs';
+
+export class TitleScene extends Scene {}
+export class GameScene extends Scene {}
+```
+
+```tsx no-check
+import { ExoCanvas, Scenes, Scene } from '@codexo/exojs-react';
+import { TitleScene, GameScene } from './scenes';
+
+function Game({ screen }: { screen: 'title' | 'game' }) {
+  return (
+    <ExoCanvas options={{ canvas: { width: 1280, height: 720 } }} style={{ width: 1280, height: 720 }}>
+      <Scenes active={screen} transition={{ type: 'fade', duration: 300 }}>
+        <Scene name="title" component={TitleScene} />
+        <Scene name="game" component={GameScene}>
+          <Hud />
+        </Scene>
+      </Scenes>
+    </ExoCanvas>
+  );
+}
+```
+
+Each `<Scene>` takes a unique `name`, the scene `component` class to instantiate, and optional
+`children` that render as the active scene's overlay. The `transition` (a core `SceneTransition`,
+e.g. a fade whose `duration` is in milliseconds) only applies to switches, not the first start.
+If `active` matches no `<Scene>`, the active scene is cleared.
+
+`useActiveScene()` reads the live scene instance from the nearest `<Scenes>`, so an overlay can
+react to scene state:
+
+```tsx no-check
+import { useActiveScene } from '@codexo/exojs-react';
+import type { GameScene } from './scenes';
+
+function Hud() {
+  const scene = useActiveScene<GameScene>();
+  if (scene === null) return null;
+  return <div style={{ position: 'absolute', top: 8, left: 8 }}>Score: {scene.score}</div>;
+}
+```
+
+For the simplest case — a single scene with no switching — use `useScene(SceneClass, deps?)`
+instead. It instantiates and activates one scene, returning the instance once it is live (or
+`null` while loading), and clears it on unmount or when `deps` change.
+
+## Reaching the app from descendants
+
+Any component rendered inside `<ExoCanvas>` can read the running app:
+
+- `useExoApp()` returns the `Application` and **throws** an actionable error if there is no
+  `<ExoCanvas>` ancestor — use it in components that require the app.
+- `useExoContext()` returns `Application | null` (no throw) for optional access.
+- `ExoContext` is the underlying context object, exported for advanced use (testing, custom
+  providers).
+
+```tsx no-check
+import { useExoApp } from '@codexo/exojs-react';
+
+function FrameCounter() {
+  const app = useExoApp(); // throws if rendered outside <ExoCanvas>
+  return <span>Frame: {app.frameCount}</span>;
+}
+```
+
+## End-to-end
+
+A small app that hosts the canvas, switches between two scenes with a fade, and overlays React
+HUD on the active scene:
+
+```tsx no-check
+import { useState } from 'react';
+import { ExoCanvas, Scenes, Scene, useActiveScene } from '@codexo/exojs-react';
+import { TitleScene, GameScene } from './scenes';
+
+function Hud() {
+  const scene = useActiveScene();
+  return (
+    <div style={{ position: 'absolute', top: 8, left: 8, color: 'white' }}>
+      {scene?.constructor.name}
+    </div>
+  );
+}
+
+export function App() {
+  const [screen, setScreen] = useState<'title' | 'game'>('title');
+
+  return (
+    <ExoCanvas
+      options={{ canvas: { width: 1280, height: 720 } }}
+      style={{ width: 1280, height: 720 }}
+    >
+      <Scenes active={screen} transition={{ type: 'fade', duration: 300 }}>
+        <Scene name="title" component={TitleScene}>
+          <button style={{ position: 'absolute', inset: 0 }} onClick={() => setScreen('game')}>
+            Start
+          </button>
+        </Scene>
+        <Scene name="game" component={GameScene}>
+          <Hud />
+        </Scene>
+      </Scenes>
+    </ExoCanvas>
+  );
+}
+```
+
+React owns the screen state and the HUD; ExoJS owns the canvas, the renderer, and the per-frame
+loop. The two stay cleanly separated.
+
+## Where to look next
+
+- **Package README:** [`@codexo/exojs-react`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-react/README.md)
+  — install, the export table, and the reactivity model.
+- **Scenes & lifecycle:** the [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
+  chapter explains `app.start`, `app.scene.setScene`, transitions, and the hooks the React layer
+  drives for you.
+- **API reference:** the [`Application`](/ExoJS/en/api/application/) and
+  [`Scene`](/ExoJS/en/api/scene/) pages document the underlying engine surface the bindings wrap.

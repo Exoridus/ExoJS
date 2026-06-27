@@ -257,6 +257,28 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 prerequisites: ['assets/loading-and-resources'],
                 apiLinks: ['loader'],
             },
+            {
+                slug: 'aseprite',
+                level: 'intermediate',
+                learningGoals: [
+                    'activate the Aseprite extension explicitly or via /register',
+                    'load an Aseprite JSON sheet as an AsepriteSheet',
+                    'play tag animations with createAnimatedSprite',
+                ],
+                prerequisites: ['assets/loading-and-resources'],
+                apiLinks: ['aseprite-sheet', 'animated-sprite', 'loader'],
+            },
+            {
+                slug: 'ldtk',
+                level: 'intermediate',
+                learningGoals: [
+                    'activate the LDtk extension explicitly or via /register',
+                    'load a .ldtk world and render each level as a TileMap',
+                    'understand tileset texture ownership and absolute-URL resolution',
+                ],
+                prerequisites: ['assets/loading-and-resources'],
+                apiLinks: ['ldtk-map', 'tile-map', 'tile-map-node', 'loader'],
+            },
         ],
     },
     {
@@ -537,6 +559,35 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
     },
     {
+        slug: 'physics',
+        title: 'Physics',
+        description: 'Add 2D rigid-body physics with the @codexo/exojs-physics library: worlds, bodies, colliders, joints, sleeping, and continuous collision.',
+        chapters: [
+            {
+                slug: 'physics-basics',
+                level: 'intermediate',
+                learningGoals: [
+                    'build a PhysicsWorld and add static and dynamic bodies',
+                    'step the simulation from Scene.fixedUpdate',
+                    'bind bodies to sprites so visuals follow the simulation',
+                ],
+                prerequisites: ['runtime/scenes-and-lifecycle'],
+                apiLinks: ['physics-world', 'physics-body', 'collider', 'box-shape', 'circle-shape', 'physics-binding'],
+            },
+            {
+                slug: 'joints-and-dynamics',
+                level: 'advanced',
+                learningGoals: [
+                    'connect bodies with distance, revolute, weld, prismatic, wheel, and mouse joints',
+                    'let resting bodies sleep to save CPU',
+                    'stop fast projectiles tunnelling with continuous collision',
+                ],
+                prerequisites: ['physics/physics-basics'],
+                apiLinks: ['joint', 'distance-joint', 'revolute-joint', 'weld-joint', 'prismatic-joint', 'wheel-joint', 'mouse-joint', 'physics-world'],
+            },
+        ],
+    },
+    {
         slug: 'recipes',
         title: 'Recipes',
         description: 'Practical scene patterns you can adapt directly, ending with a complete small game.',
@@ -646,6 +697,24 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 slug: 'custom-renderers',
                 level: 'advanced',
                 examples: ['custom-renderers/custom-render-pass', 'custom-renderers/custom-triangle-renderer'],
+            },
+        ],
+    },
+    {
+        slug: 'integrations',
+        title: 'Integrations',
+        description: 'Embed ExoJS in other ecosystems — starting with hosting an Application inside a React component tree.',
+        chapters: [
+            {
+                slug: 'react',
+                level: 'intermediate',
+                learningGoals: [
+                    'mount an ExoJS Application in a React tree with useExoApplication or ExoCanvas',
+                    'switch scenes declaratively with <Scenes>',
+                    'read the running app and active scene from React overlays',
+                ],
+                prerequisites: ['runtime/scenes-and-lifecycle'],
+                apiLinks: ['application', 'scene'],
             },
         ],
     },

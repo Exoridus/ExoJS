@@ -1,0 +1,170 @@
+---
+title: 'Aseprite sprite sheets'
+description: 'Load Aseprite JSON sprite sheet exports as AsepriteSheet assets through the official @codexo/exojs-aseprite extension.'
+---
+
+# Aseprite sprite sheets
+
+[Aseprite](https://www.aseprite.org/) is a popular pixel-art and animation editor. The official
+`@codexo/exojs-aseprite` extension adds an `asepriteSheet` asset type that loads Aseprite's JSON
+sheet export through the normal [`Loader`](/ExoJS/en/api/loader/) pipeline — fetching the JSON,
+resolving and loading the packed image as a `Texture`, and returning an
+[`AsepriteSheet`](/ExoJS/en/api/aseprite-sheet/) with a frame `Spritesheet` and one playable clip
+per Aseprite tag.
+
+> **Note:** `AsepriteSheet` ships as an official ExoJS extension package, separate from the core.
+> Install `@codexo/exojs-aseprite` alongside `@codexo/exojs`:
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-aseprite
+> ```
+
+Export your sprite from Aseprite as a JSON sheet (**File → Export Sprite Sheet**, with *Output → JSON
+Data* enabled). Either *Array* or *Hash* frame layout works, and tags become animation clips.
+
+Like all extensions, the core ships nothing Aseprite-specific — an `Application` only understands
+the `asepriteSheet` type once you activate the extension. There are two ways to do that.
+
+## Activation
+
+### Explicit (recommended)
+
+Pass `asepriteExtension` to `ApplicationOptions.extensions`. This is explicit, tree-shakeable, and
+order-independent — the extension is bound to exactly this `Application`:
+
+```js
+import { Application } from '@codexo/exojs';
+import { asepriteExtension } from '@codexo/exojs-aseprite';
+
+const app = new Application({ extensions: [asepriteExtension] });
+```
+
+The package root (`@codexo/exojs-aseprite`) is side-effect-free: importing it registers nothing
+globally. You decide which `Application` gets the extension.
+
+### `/register` convenience
+
+For an app that always wants Aseprite support, import the `/register` entry once at startup. It
+registers `asepriteExtension` in the global `ExtensionRegistry` and re-exports the same public API:
+
+```js
+import '@codexo/exojs-aseprite/register';
+import { Application } from '@codexo/exojs';
+
+const app = new Application(); // picks up asepriteExtension automatically
+```
+
+The `/register` import must run **before** you construct the `Application` whose extensions are
+read from the global registry. The explicit `extensions: [...]` form works regardless of import
+order.
+
+### Core-only
+
+An `Application` constructed with an explicit empty list takes **no** extensions — not even
+globally registered ones — and will not recognise the `asepriteSheet` type:
+
+```js
+import { Application } from '@codexo/exojs';
+
+const app = new Application({ extensions: [] }); // core only; no AsepriteSheet
+```
+
+This is the same add-only model the [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) and
+[Particles](/ExoJS/en/guide/effects/particles/) extensions use.
+
+## Loading a sheet
+
+Once the extension is active, load the JSON export by the `AsepriteSheet` type token or by the
+`'asepriteSheet'` config-map type name:
+
+```ts no-check
+import { AsepriteSheet } from '@codexo/exojs-aseprite';
+
+// By type token (most explicit)
+const sheet = await loader.load(AsepriteSheet, 'sprites/hero.json');
+
+// By config-map type name — the public `'asepriteSheet'` lookup
+const fromConfig = await loader.load({
+    hero: { type: 'asepriteSheet', source: 'sprites/hero.json' },
+});
+```
+
+Unlike the Tiled adapter, the Aseprite binding does **not** claim a file extension — a bare
+`loader.load('sprites/hero.json')` will not route here. Always name the `AsepriteSheet` token or the
+`'asepriteSheet'` type. The handler fetches the JSON, validates it (throwing `AsepriteFormatError`
+on a malformed document), resolves `meta.image` relative to the JSON source, sub-loads it as a
+`Texture` through the same loader, and returns a fully-parsed `AsepriteSheet`.
+
+## Playing tag animations
+
+`AsepriteSheet.createAnimatedSprite()` returns an
+[`AnimatedSprite`](/ExoJS/en/api/animated-sprite/) with every Aseprite tag pre-defined as a named,
+playable clip. Call `play(tag)` with a tag name to start it:
+
+```js
+async load(loader) {
+    this.sheet = await loader.load(AsepriteSheet, 'sprites/hero.json');
+}
+
+init() {
+    this.player = this.sheet.createAnimatedSprite();
+    this.player.play('walk');
+    this.root.addChild(this.player);
+}
+
+update(delta) {
+    this.player.update(delta); // advance the active clip
+}
+```
+
+Like any `AnimatedSprite`, you must call `player.update(delta)` each frame to advance playback — see
+the [Animation](/ExoJS/en/guide/rendering/animation/) guide for the full clip/playback API.
+
+The parsed clips are also exposed directly on `sheet.clips` — a read-only `Map` keyed by tag name —
+so you can inspect what was imported or build a sprite by hand:
+
+```js no-check
+sheet.clips.size;          // number of tags
+sheet.clips.has('walk');   // true when the 'walk' tag exists
+sheet.clips.keys();        // iterate tag names
+
+sheet.spritesheet;         // the underlying Spritesheet (frames keyed by index string)
+```
+
+## Frame timing (fps)
+
+Each clip's `fps` is derived from the per-frame `duration` values Aseprite exports (milliseconds per
+frame), averaged across the tag's `from`→`to` range:
+
+- A tag whose frames are all 100 ms produces **10 fps**; mixed durations are averaged (100/200/300 ms
+  → 200 ms → **5 fps**).
+- When every frame duration in the tag is zero, the clip falls back to **12 fps**.
+
+Every clip is created with `loop: true`. Aseprite's ping-pong directions are recorded as looping but
+are **not** expanded into a reversed segment — a ping-pong tag plays only its declared `from`→`to`
+range. Frame indices in a tag that fall outside the frame array are skipped, and a tag whose entire
+range is out of bounds produces no clip.
+
+## Not yet supported
+
+- **Slices** — slice data (`AsepriteSlice` / `AsepriteSliceKey`) is parsed into the raw document
+  types but is **not** yet surfaced as a runtime API; there is no slice accessor on `AsepriteSheet`.
+- **Layers / nested tags** — Aseprite layer metadata is preserved in the parsed data but is not
+  interpreted into clips.
+
+## Texture ownership
+
+The packed image an `AsepriteSheet` uses is loaded through the `Loader` and owned by the **loader
+cache**. `AsepriteSheet.destroy()` releases the underlying `Spritesheet` frames; release the shared
+texture through the loader's own unload path when nothing else needs it.
+
+## Where to look next
+
+- **Package README:** [`@codexo/exojs-aseprite`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/README.md)
+  — install, entry points, and the supported-format matrix.
+- **API reference:** [`AsepriteSheet`](/ExoJS/en/api/aseprite-sheet/) documents `clips`,
+  `spritesheet`, and `createAnimatedSprite()`; [`AnimatedSprite`](/ExoJS/en/api/animated-sprite/)
+  documents clip definition and playback; [`Loader`](/ExoJS/en/api/loader/) documents `load(...)`
+  and the `'asepriteSheet'` config-map type name.
+- **Guides:** [Sprites](/ExoJS/en/guide/rendering/sprites/) and
+  [Loading & resources](/ExoJS/en/guide/assets/loading-and-resources/) cover the rendering and asset
+  model the sheet plugs into.
