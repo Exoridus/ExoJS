@@ -17,6 +17,9 @@ import type { AnyShape } from './shapes/AnyShape';
 import { TimeStepper } from './TimeStepper';
 import type { BodyType, CollisionFilter, VectorLike } from './types';
 
+/** Gap left between a clamped bullet and the surface it hit (so it does not re-hit from inside). */
+const ccdSkin = 0.05;
+
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
   /** Gravity in px/s² (+Y down). Integrated each sub-step. Default `(0, 0)`. */
@@ -158,6 +161,10 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
   private readonly _islandMinSleep: number[] = [];
+  /** Pooled ray-hit buffer + origin/direction for the CCD swept test. */
+  private readonly _ccdHits: RayHit[] = [];
+  private readonly _ccdOrigin = { x: 0, y: 0 };
+  private readonly _ccdDir = { x: 0, y: 0 };
 
   private _nextBodyId = 1;
   private _nextColliderId = 1;
@@ -332,6 +339,7 @@ export class PhysicsWorld implements BodyOwner {
       const contactHertz = this.contactHertz;
       const dampingRatio = this.dampingRatio;
       const hasJoints = this._joints.length > 0;
+      const hasBullets = this._hasBullets();
 
       for (let step = 0; step < steps; step++) {
         // Detection runs once per fixed step (collider geometry is already current
@@ -350,6 +358,10 @@ export class PhysicsWorld implements BodyOwner {
 
         if (hasJoints) {
           this._prepareJoints(h);
+        }
+
+        if (hasBullets) {
+          this._recordBulletPositions();
         }
 
         for (let subStep = 0; subStep < subStepCount; subStep++) {
@@ -396,6 +408,10 @@ export class PhysicsWorld implements BodyOwner {
 
         for (const body of this._bodies) {
           body._finalizePosition();
+        }
+
+        if (hasBullets) {
+          this._advanceBullets();
         }
       }
 
@@ -641,6 +657,93 @@ export class PhysicsWorld implements BodyOwner {
   private _solveJoints(useBias: boolean): void {
     for (const joint of this._joints) {
       joint._solve(useBias);
+    }
+  }
+
+  /** Whether any dynamic body is flagged for continuous collision (bullet mode). */
+  private _hasBullets(): boolean {
+    for (const body of this._bodies) {
+      if (body.isBullet && body.type === 'dynamic') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** Snapshot each bullet's centre of mass at the start of the fixed step (the swept-test origin). */
+  private _recordBulletPositions(): void {
+    for (const body of this._bodies) {
+      if (body.isBullet && body.type === 'dynamic') {
+        body._ccdPrevX = body.worldCenterOfMassX;
+        body._ccdPrevY = body.worldCenterOfMassY;
+      }
+    }
+  }
+
+  /**
+   * Sweep each bullet's centre of mass along this fixed step's motion against the
+   * static colliders; if it would cross one, clamp the body just short of the
+   * surface and strip the into-surface velocity so it cannot tunnel. v1 sweeps
+   * the centre point (good for small/point-like projectiles) against static
+   * geometry only — a full swept-shape TOI and bullet-vs-dynamic are backlog.
+   */
+  private _advanceBullets(): void {
+    for (const body of this._bodies) {
+      if (!body.isBullet || body.type !== 'dynamic' || body.isSleeping) {
+        continue;
+      }
+
+      const newX = body.worldCenterOfMassX;
+      const newY = body.worldCenterOfMassY;
+      let dirX = newX - body._ccdPrevX;
+      let dirY = newY - body._ccdPrevY;
+      const distance = Math.hypot(dirX, dirY);
+
+      if (distance < 1e-6) {
+        continue;
+      }
+
+      dirX /= distance;
+      dirY /= distance;
+
+      this._ccdOrigin.x = body._ccdPrevX;
+      this._ccdOrigin.y = body._ccdPrevY;
+      this._ccdDir.x = dirX;
+      this._ccdDir.y = dirY;
+
+      const hits = this._query.rayCastAll(this._ccdOrigin, this._ccdDir, undefined, this._ccdHits, distance);
+      let blocked: RayHit | null = null;
+
+      for (const hit of hits) {
+        // Skip the bullet's own colliders; v1 sweeps against static geometry only.
+        // Hits are distance-sorted, so the first match is the nearest surface.
+        if (hit.body !== body && hit.body.type === 'static') {
+          blocked = hit;
+          break;
+        }
+      }
+
+      if (blocked === null) {
+        continue;
+      }
+
+      // Clamp the CoM just short of the surface (a pure translation — the rotation
+      // is already applied), then strip the velocity heading into the surface.
+      const clampDistance = Math.max(0, blocked.distance - ccdSkin);
+      const deltaX = body._ccdPrevX + dirX * clampDistance - newX;
+      const deltaY = body._ccdPrevY + dirY * clampDistance - newY;
+
+      this._ccdOrigin.x = body.x + deltaX;
+      this._ccdOrigin.y = body.y + deltaY;
+      body.setTransform(this._ccdOrigin, body.angle);
+
+      const into = body.linearVelocityX * dirX + body.linearVelocityY * dirY;
+
+      if (into > 0) {
+        body.linearVelocityX -= into * dirX;
+        body.linearVelocityY -= into * dirY;
+      }
     }
   }
 

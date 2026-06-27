@@ -21,6 +21,8 @@ export interface BodyOptions {
   gravityScale?: number;
   /** When `true`, the body never rotates under contacts (infinite rotational inertia). Default `false`. */
   fixedRotation?: boolean;
+  /** When `true`, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. Default `false`. */
+  isBullet?: boolean;
   /** Colliders to attach up-front. Each may be a {@link Collider} instance or its {@link ColliderOptions}. */
   colliders?: Array<Collider | ColliderOptions>;
 }
@@ -54,6 +56,8 @@ export class PhysicsBody {
   public gravityScale: number;
   /** When `true`, rotational inertia is treated as infinite. */
   public fixedRotation: boolean;
+  /** When `true`, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. */
+  public isBullet: boolean;
 
   /** Total mass (0 for static/kinematic). */
   public mass = 0;
@@ -93,6 +97,10 @@ export class PhysicsBody {
   public _sleepTime = 0;
   /** @internal — dense union-find index assigned by the world's island pass each step. */
   public _islandIndex = 0;
+  /** @internal — world-space centre of mass at the start of the current fixed step (CCD swept-test origin). */
+  public _ccdPrevX = 0;
+  /** @internal — see {@link _ccdPrevX}. */
+  public _ccdPrevY = 0;
 
   private _sleeping = false;
 
@@ -113,6 +121,7 @@ export class PhysicsBody {
     this.angularDamping = options.angularDamping ?? 0;
     this.gravityScale = options.gravityScale ?? 1;
     this.fixedRotation = options.fixedRotation ?? false;
+    this.isBullet = options.isBullet ?? false;
 
     // Build up-front colliders now (no id/world registration until the body
     // joins a world via `world.add()`). They sit in `_colliders` unsynchronised;
