@@ -15,9 +15,10 @@ import { Interval } from '#math/Interval';
 import type { Line } from '#math/Line';
 import { Matrix } from '#math/Matrix';
 import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
+import { Polygon } from '#math/Polygon';
 import { Rectangle } from '#math/Rectangle';
 import { degreesToRadians, trimRotation } from '#math/utils';
-import type { Vector } from '#math/Vector';
+import { Vector } from '#math/Vector';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
@@ -55,6 +56,9 @@ enum SceneNodeVectorChannel {
   Origin,
   Anchor,
 }
+
+/** Shared scratch for the four oriented corners — written then copied into a node's polygon (single-threaded). */
+const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()];
 
 /**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
@@ -110,6 +114,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _zIndex = 0;
   private _cullable = true;
   private _cullArea: Rectangle | null = null;
+  /** Lazily-built oriented bounding box (the local bounds under the global transform) for rotated-node SAT. */
+  private _orientedBounds: Polygon | null = null;
 
   /**
    * Optional human-readable identity for this node. Defaults to `null`.
@@ -413,11 +419,29 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public getNormals(): Vector[] {
-    return this.getBounds().getNormals();
+    return this.isAlignedBox ? this.getBounds().getNormals() : this._orientedBoundsPolygon().getNormals();
   }
 
   public project(axis: Vector, result: Interval = new Interval()): Interval {
-    return this.getBounds().project(axis, result);
+    return this.isAlignedBox ? this.getBounds().project(axis, result) : this._orientedBoundsPolygon().project(axis, result);
+  }
+
+  /**
+   * The node's oriented bounding box: the four local-bounds corners under the
+   * global transform, as a {@link Polygon}. Used by the SAT collision path so a
+   * rotated node tests its true oriented axes instead of the loose AABB. Built
+   * lazily and refreshed in place; only ever reached for non-axis-aligned nodes.
+   */
+  private _orientedBoundsPolygon(): Polygon {
+    const bounds = this.getLocalBounds();
+    const matrix = this.getGlobalTransform();
+
+    orientedCorners[0]!.set(bounds.left, bounds.top).transform(matrix);
+    orientedCorners[1]!.set(bounds.right, bounds.top).transform(matrix);
+    orientedCorners[2]!.set(bounds.right, bounds.bottom).transform(matrix);
+    orientedCorners[3]!.set(bounds.left, bounds.bottom).transform(matrix);
+
+    return (this._orientedBounds ??= new Polygon()).setPoints(orientedCorners);
   }
 
   public intersectsWith(target: Collidable): boolean {
@@ -521,6 +545,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this._localBounds.destroy();
     this._bounds.destroy();
     this._anchor.destroy();
+    this._orientedBounds?.destroy();
   }
 
   /**
