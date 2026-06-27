@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { SceneNode } from '#core/SceneNode';
 import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
 
 /**
  * Oriented bounding-box (OBB) collision axes for rotated nodes. A rotated node's
@@ -39,5 +41,26 @@ describe('SceneNode oriented bounds (rotated SAT)', () => {
 
     expect(node.getBounds().intersectsWith(target)).toBe(true); // genuinely inside the loose AABB
     expect(node.intersectsWith(target)).toBe(false); // but the oriented box rejects it
+  });
+
+  it('uses oriented axes when the rotation is inherited from a rotated parent', () => {
+    // The child has no rotation of its own — its world box is rotated only because
+    // the parent is. isAlignedBox (a node-local check) is therefore true, yet the
+    // collision must still test the oriented world box.
+    const parent = new Container();
+    parent.setPosition(100, 100);
+    parent.setRotation(45);
+
+    const child = new Drawable();
+    child.getLocalBounds().set(-40, -40, 80, 80); // centred on the parent's pivot
+    parent.addChild(child);
+    child.updateParentTransform();
+
+    expect(child.isAlignedBox).toBe(true); // the child's own rotation is zero
+
+    const target = new Rectangle(148, 148, 6, 6); // in the world AABB corner, outside the diamond
+
+    expect(child.getBounds().intersectsWith(target)).toBe(true); // genuinely inside the loose world AABB
+    expect(child.intersectsWith(target)).toBe(false); // but the inherited-oriented box rejects it
   });
 });
