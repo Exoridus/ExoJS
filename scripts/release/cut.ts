@@ -29,18 +29,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-const LOCKSTEP_DIRS: Array<{ name: string; dir: string }> = [
-  { name: '@codexo/exojs', dir: '.' },
-  { name: '@codexo/exojs-particles', dir: 'packages/exojs-particles' },
-  { name: '@codexo/exojs-tilemap', dir: 'packages/exojs-tilemap' },
-  { name: '@codexo/exojs-tiled', dir: 'packages/exojs-tiled' },
-  { name: '@codexo/exojs-physics', dir: 'packages/exojs-physics' },
-  { name: '@codexo/exojs-audio-fx', dir: 'packages/exojs-audio-fx' },
-];
+const LOCKSTEP_DIRS: Array<{ name: string; dir: string }> = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir }));
 
-const EXTENSION_NAMES = new Set(['@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled', '@codexo/exojs-physics', '@codexo/exojs-audio-fx']);
+const EXTENSION_NAMES = new Set(LOCKSTEP_PACKAGES.filter(p => p.isExtension).map(p => p.name));
 
 const log = (msg: string): void => process.stdout.write(`${msg}\n`);
 const die = (msg: string): never => {

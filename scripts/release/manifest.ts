@@ -11,17 +11,12 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 
-/** Lockstep publish order — Core first (peer of the extensions), then the extensions. */
-export const PUBLISH_ORDER = [
-  '@codexo/exojs',
-  '@codexo/exojs-particles',
-  '@codexo/exojs-tilemap',
-  '@codexo/exojs-tiled',
-  '@codexo/exojs-physics',
-  '@codexo/exojs-audio-fx',
-] as const;
+import { LOCKSTEP_PACKAGES, type OfficialPackageName } from './lockstep-packages.ts';
 
-export type OfficialPackageName = (typeof PUBLISH_ORDER)[number];
+/** Lockstep publish order — Core first (peer of the extensions), then the extensions. */
+export const PUBLISH_ORDER: readonly OfficialPackageName[] = LOCKSTEP_PACKAGES.map(p => p.name);
+
+export type { OfficialPackageName };
 
 export interface TarballRecord {
   name: OfficialPackageName;
