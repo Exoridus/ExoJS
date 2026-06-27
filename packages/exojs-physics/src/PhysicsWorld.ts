@@ -37,6 +37,14 @@ export interface PhysicsWorldOptions {
   dampingRatio?: number;
   /** Interpolate bound nodes between fixed steps (reserved; no effect yet). Default `true`. */
   interpolation?: boolean;
+  /** Put resting bodies to sleep so they skip integration and solving. Default `true`. */
+  enableSleeping?: boolean;
+  /** Linear speed at or below which a body is a sleep candidate, px/s. Default `5`. */
+  sleepLinearVelocity?: number;
+  /** Angular speed at or below which a body is a sleep candidate, rad/s. Default `0.06`. */
+  sleepAngularVelocity?: number;
+  /** Seconds a body must stay below the sleep thresholds before it sleeps. Default `0.5`. */
+  timeToSleep?: number;
 }
 
 /**
@@ -129,6 +137,14 @@ export class PhysicsWorld implements BodyOwner {
   public readonly contactHertz: number;
   /** Soft-contact damping ratio. */
   public readonly dampingRatio: number;
+  /** Whether resting bodies are put to sleep. */
+  public readonly enableSleeping: boolean;
+  /** Linear sleep threshold (px/s). */
+  public readonly sleepLinearVelocity: number;
+  /** Angular sleep threshold (rad/s). */
+  public readonly sleepAngularVelocity: number;
+  /** Seconds below the thresholds before a body sleeps. */
+  public readonly timeToSleep: number;
 
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
   private readonly _bodies: PhysicsBody[] = [];
@@ -136,6 +152,10 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
+  /** Pooled union-find parent array for the per-step island pass (reused; sized to the body count). */
+  private readonly _islandParent: number[] = [];
+  /** Pooled per-island minimum sleep time, indexed by union-find root. */
+  private readonly _islandMinSleep: number[] = [];
 
   private _nextBodyId = 1;
   private _nextColliderId = 1;
@@ -159,6 +179,10 @@ export class PhysicsWorld implements BodyOwner {
     this.subStepCount = subStepCount;
     this.contactHertz = options.contactHertz ?? 30;
     this.dampingRatio = options.dampingRatio ?? 10;
+    this.enableSleeping = options.enableSleeping ?? true;
+    this.sleepLinearVelocity = options.sleepLinearVelocity ?? 5;
+    this.sleepAngularVelocity = options.sleepAngularVelocity ?? 0.06;
+    this.timeToSleep = options.timeToSleep ?? 0.5;
     this._query = new QueryEngine(this._colliders);
   }
 
@@ -273,6 +297,14 @@ export class PhysicsWorld implements BodyOwner {
         // from the previous frame's finalize / attach / setTransform). TGS-Soft
         // reuses the manifolds across the sub-steps below.
         this._backend.detect(this._colliders);
+
+        // Sleep decision runs after detection (islands need the current contact
+        // set) and before the solver (so sleeping contacts are skipped, and a
+        // sleeping island touched by an awake body is woken first).
+        if (this.enableSleeping) {
+          this._updateSleeping(this.timeStepper.fixedDelta);
+        }
+
         this._backend.prepareSolve(h, contactHertz, dampingRatio);
 
         for (let subStep = 0; subStep < subStepCount; subStep++) {
@@ -426,6 +458,100 @@ export class PhysicsWorld implements BodyOwner {
     }
 
     this._dispatching = false;
+  }
+
+  /**
+   * Accumulate per-body sleep timers and put/keep islands of resting bodies
+   * asleep so a stack sleeps and wakes as one unit. An island is a connected
+   * component of dynamic bodies joined by touching solid contacts (static and
+   * kinematic bodies are boundaries, not nodes); it sleeps once every member has
+   * stayed below the sleep thresholds for `timeToSleep`, and wakes the instant
+   * any member does (e.g. an awake body merges into it via a new contact).
+   * Deterministic: union-find roots break ties by lower index and the contact
+   * set is id-sorted.
+   */
+  private _updateSleeping(dt: number): void {
+    const bodies = this._bodies;
+    const count = bodies.length;
+    const parent = this._islandParent;
+    const minSleep = this._islandMinSleep;
+
+    // Assign dense indices, reset the union-find, and accumulate sleep timers for
+    // awake dynamic bodies (a sleeping body's timer stays frozen ≥ timeToSleep).
+    for (let i = 0; i < count; i++) {
+      const body = bodies[i]!;
+
+      body._islandIndex = i;
+      parent[i] = i;
+      minSleep[i] = Infinity;
+
+      if (body.type === 'dynamic' && !body.isSleeping) {
+        body._accumulateSleepTime(dt, this.sleepLinearVelocity, this.sleepAngularVelocity);
+      }
+    }
+
+    parent.length = count;
+    minSleep.length = count;
+
+    // Union dynamic↔dynamic solid contacts into islands.
+    for (const contact of this._backend.contactGraph.solidContacts) {
+      const bodyA = contact.a.body;
+      const bodyB = contact.b.body;
+
+      if (bodyA.type === 'dynamic' && bodyB.type === 'dynamic') {
+        this._union(bodyA._islandIndex, bodyB._islandIndex);
+      }
+    }
+
+    // Per-island minimum sleep time over its dynamic members.
+    for (let i = 0; i < count; i++) {
+      const body = bodies[i]!;
+
+      if (body.type === 'dynamic') {
+        const root = this._find(i);
+
+        if (body._sleepTime < minSleep[root]!) {
+          minSleep[root] = body._sleepTime;
+        }
+      }
+    }
+
+    // Sleep an island iff every member has rested for `timeToSleep`; otherwise
+    // wake it (which also wakes any member dragged awake by a fresh contact).
+    const timeToSleep = this.timeToSleep;
+
+    for (let i = 0; i < count; i++) {
+      const body = bodies[i]!;
+
+      if (body.type === 'dynamic') {
+        body._setSleeping(minSleep[this._find(i)]! >= timeToSleep);
+      }
+    }
+  }
+
+  /** Union-find union by lower index (deterministic roots). */
+  private _union(a: number, b: number): void {
+    const rootA = this._find(a);
+    const rootB = this._find(b);
+
+    if (rootA < rootB) {
+      this._islandParent[rootB] = rootA;
+    } else if (rootB < rootA) {
+      this._islandParent[rootA] = rootB;
+    }
+  }
+
+  /** Union-find find with path halving. */
+  private _find(index: number): number {
+    const parent = this._islandParent;
+
+    while (parent[index]! !== index) {
+      const grandparent = parent[parent[index]!]!;
+      parent[index] = grandparent;
+      index = grandparent;
+    }
+
+    return index;
   }
 
   /** Run `command` now, or queue it when inside an event dispatch (deferred to end of step). */
