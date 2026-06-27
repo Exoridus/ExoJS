@@ -1,0 +1,41 @@
+---
+title: "MouseJoint"
+description: "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce — solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body."
+symbol: "MouseJoint"
+kind: "class"
+subsystem: "physics"
+importPath: "@codexo/exojs-physics"
+memberCount: 8
+tier: "stable"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "packages/exojs-physics/src/joints/MouseJoint.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts#L31"
+---
+## Import
+
+`import { MouseJoint } from '@codexo/exojs-physics'`
+
+Softly pulls a single body's grab point toward a movable **target** point
+(typically the mouse cursor). The grab point is fixed on the body at creation;
+update target each frame to drag. A soft constraint bounded by
+maxForce — solved in the sub-step loop, warm-started. Internally the
+"other" body is a private static ground sentinel, so this is a single-body
+constraint that touches only the dragged body.
+
+## Constructors
+
+- `new(options: MouseJointOptions): MouseJoint`
+
+## Properties
+
+- `bodyA: PhysicsBody`
+- `bodyB: PhysicsBody`
+- `dampingRatio: number`
+- `enabled: boolean`
+- `hertz: number`
+- `maxForce: number`
+- `target: VectorLike`
+
+## Source
+
+[packages/exojs-physics/src/joints/MouseJoint.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts#L31)

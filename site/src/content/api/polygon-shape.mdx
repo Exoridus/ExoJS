@@ -1,0 +1,44 @@
+---
+title: "PolygonShape"
+description: "A convex polygon defined by ≥3 local-space vertices. Input vertices may be given in either winding; they are canonicalised to counter-clockwise and the outward edge normals are precomputed. Construction throws on any non-convex, degenerate, or under-specified input — there is no silent repair. Vertices and normals are exposed as flat `[x0, y0, x1, y1, …]` arrays to keep the narrow phase allocation-free; both are frozen."
+symbol: "PolygonShape"
+kind: "class"
+subsystem: "physics"
+importPath: "@codexo/exojs-physics"
+memberCount: 10
+tier: "stable"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "packages/exojs-physics/src/shapes/PolygonShape.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/PolygonShape.ts#L16"
+---
+## Import
+
+`import { PolygonShape } from '@codexo/exojs-physics'`
+
+A convex polygon defined by ≥3 local-space vertices. Input vertices may be
+given in either winding; they are canonicalised to counter-clockwise and the
+outward edge normals are precomputed. Construction throws on any non-convex,
+degenerate, or under-specified input — there is no silent repair.
+
+Vertices and normals are exposed as flat `[x0, y0, x1, y1, …]` arrays to keep
+the narrow phase allocation-free; both are frozen.
+
+## Constructors
+
+- `new(vertices: readonly VectorLike[]): PolygonShape`
+
+## Properties
+
+- `area: number`
+- `boundingRadius: number`
+- `centroidX: number`
+- `centroidY: number`
+- `count: number`
+- `normals: readonly number[]`
+- `type: "polygon"`
+- `unitInertia: number`
+- `vertices: readonly number[]`
+
+## Source
+
+[packages/exojs-physics/src/shapes/PolygonShape.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/PolygonShape.ts#L16)

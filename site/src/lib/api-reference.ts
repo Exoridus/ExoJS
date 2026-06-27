@@ -2,7 +2,7 @@ import type { CollectionEntry } from 'astro:content';
 
 export type ApiEntry = CollectionEntry<'api'>;
 
-export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled'] as const;
+export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
 
 export type ApiSubsystem = (typeof API_SUBSYSTEM_ORDER)[number];
 
@@ -50,6 +50,18 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     tiled: {
         label: 'Tiled (official extension)',
         description: 'The @codexo/exojs-tiled package: load Tiled (.tmj) tilemaps through the loader.',
+    },
+    physics: {
+        label: 'Physics (official extension)',
+        description: 'The @codexo/exojs-physics package: rigid bodies, colliders, joints, sleeping, CCD, queries, and the TGS-Soft solver.',
+    },
+    aseprite: {
+        label: 'Aseprite (official extension)',
+        description: 'The @codexo/exojs-aseprite package: load Aseprite sprite sheets and their frame/tag animation data.',
+    },
+    ldtk: {
+        label: 'LDtk (official extension)',
+        description: 'The @codexo/exojs-ldtk package: load LDtk levels and layers through the loader.',
     },
 };
 

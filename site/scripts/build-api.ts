@@ -10,11 +10,40 @@ const repoRoot = path.resolve(siteRoot, '..');
 const outputDir = path.resolve(siteRoot, 'src', 'content', 'api');
 const toPosix = (value: string): string => value.replaceAll('\\', '/');
 
-type Subsystem = 'animation' | 'audio' | 'core' | 'debug' | 'input' | 'math' | 'particles' | 'rendering' | 'resources' | 'tiled' | 'tilemap';
+type Subsystem =
+    | 'animation'
+    | 'aseprite'
+    | 'audio'
+    | 'core'
+    | 'debug'
+    | 'input'
+    | 'ldtk'
+    | 'math'
+    | 'particles'
+    | 'physics'
+    | 'rendering'
+    | 'resources'
+    | 'tiled'
+    | 'tilemap';
 type ApiKind = 'class' | 'enum';
 type ApiTier = 'stable' | 'advanced';
 
-const SUBSYSTEMS: ReadonlyArray<Subsystem> = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources', 'tiled', 'tilemap'];
+const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
+    'animation',
+    'aseprite',
+    'audio',
+    'core',
+    'debug',
+    'input',
+    'ldtk',
+    'math',
+    'particles',
+    'physics',
+    'rendering',
+    'resources',
+    'tiled',
+    'tilemap',
+];
 
 /**
  * Official extension packages documented as their own API surfaces, alongside
@@ -59,6 +88,27 @@ const EXTENSION_PACKAGES: ReadonlyArray<ExtensionPackage> = [
         entryPoint: 'packages/exojs-tiled/src/index.ts',
         tsconfig: 'packages/exojs-tiled/tsconfig.json',
         sourceMarker: 'packages/exojs-tiled/src/',
+    },
+    {
+        importPath: '@codexo/exojs-physics',
+        subsystem: 'physics',
+        entryPoint: 'packages/exojs-physics/src/index.ts',
+        tsconfig: 'packages/exojs-physics/tsconfig.json',
+        sourceMarker: 'packages/exojs-physics/src/',
+    },
+    {
+        importPath: '@codexo/exojs-aseprite',
+        subsystem: 'aseprite',
+        entryPoint: 'packages/exojs-aseprite/src/index.ts',
+        tsconfig: 'packages/exojs-aseprite/tsconfig.json',
+        sourceMarker: 'packages/exojs-aseprite/src/',
+    },
+    {
+        importPath: '@codexo/exojs-ldtk',
+        subsystem: 'ldtk',
+        entryPoint: 'packages/exojs-ldtk/src/index.ts',
+        tsconfig: 'packages/exojs-ldtk/tsconfig.json',
+        sourceMarker: 'packages/exojs-ldtk/src/',
     },
 ];
 
@@ -328,6 +378,12 @@ const convertEntryPoints = async (entryPoints: ReadonlyArray<string>, tsconfig: 
     const app = await Application.bootstrapWithPlugins({
         entryPoints: entryPoints.map(entry => toPosix(path.resolve(repoRoot, entry))),
         tsconfig: toPosix(path.resolve(repoRoot, tsconfig)),
+        // Pin the source-path base to the repo root so every package reports
+        // repo-relative file names (packages/<pkg>/src/…). Without this TypeDoc
+        // infers a per-package base for packages that pull in no core *source*
+        // files (e.g. physics), yielding package-relative paths that miss the
+        // sourceMarker filter and break source links.
+        basePath: toPosix(repoRoot),
         excludeInternal: true,
         modifierTags: MODIFIER_TAGS,
     });
