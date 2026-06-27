@@ -11,6 +11,7 @@ export { Collider } from './Collider';
 export type { CollisionEvent, ContactPoint, SensorEvent } from './events';
 export { DistanceJoint, type DistanceJointOptions } from './joints/DistanceJoint';
 export { Joint } from './joints/Joint';
+export { MouseJoint, type MouseJointOptions } from './joints/MouseJoint';
 export { PrismaticJoint, type PrismaticJointOptions } from './joints/PrismaticJoint';
 export { RevoluteJoint, type RevoluteJointOptions } from './joints/RevoluteJoint';
 export { WeldJoint, type WeldJointOptions } from './joints/WeldJoint';

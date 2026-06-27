@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { BoxShape, CircleShape, DistanceJoint, PhysicsBody, PhysicsWorld, PrismaticJoint, RevoluteJoint, WeldJoint, WheelJoint } from '../src/index';
+import { BoxShape, CircleShape, DistanceJoint, MouseJoint, PhysicsBody, PhysicsWorld, PrismaticJoint, RevoluteJoint, WeldJoint, WheelJoint } from '../src/index';
 
 /**
  * Joints (spec `02-joints.md`). Soft constraints solved in the sub-step loop
@@ -289,5 +289,36 @@ describe('SG-J — joints', () => {
 
     expect(Math.abs(wheel.x)).toBeLessThan(2); // lateral locked — did not slide sideways
     expect(Math.abs(wheel.angularVelocity)).toBeGreaterThan(5); // rotation is free — still spinning
+  });
+
+  it('SG-J17: a mouse joint drags a body to its target and tracks it when moved', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    // Grab the body at its centre and pull it toward (50, 0).
+    const joint = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 }));
+    joint.target = { x: 50, y: 0 };
+
+    advance(world, 1);
+    expect(body.x).toBeGreaterThan(40); // converged near the target
+
+    // Move the target — the body follows.
+    joint.target = { x: 50, y: 60 };
+    advance(world, 1);
+    expect(body.y).toBeGreaterThan(45);
+  });
+
+  it('SG-J18: maxForce caps how hard a mouse joint can pull', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const heavy = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), density: 100 }] }));
+
+    // A tiny force against a far target: it creeps but cannot snap across.
+    const joint = world.addJoint(new MouseJoint({ body: heavy, target: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1, maxForce: 50 }));
+    joint.target = { x: 1000, y: 0 };
+
+    advance(world, 1);
+
+    expect(heavy.x).toBeGreaterThan(0); // it did move toward the target
+    expect(heavy.x).toBeLessThan(200); // but maxForce kept it from reaching the far target
   });
 });
