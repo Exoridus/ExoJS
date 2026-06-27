@@ -1,13 +1,16 @@
 /**
- * Verifies that all six official ExoJS packages share the same version.
+ * Verifies that all official ExoJS lockstep packages share the same version.
  *
- * The lockstep version contract: @codexo/exojs, @codexo/exojs-particles,
- * @codexo/exojs-tilemap, @codexo/exojs-tiled, @codexo/exojs-physics, and
- * @codexo/exojs-audio-fx must all be on the same X.Y.Z version per release.
+ * The lockstep version contract: every package in `LOCKSTEP_PACKAGES`
+ * (`scripts/release/lockstep-packages.ts`) — Core plus each opt-in extension —
+ * must be on the same X.Y.Z version per release, and each extension's
+ * `peerDependencies["@codexo/exojs"]` must be `<major>.<minor>.x`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { EXTENSION_PACKAGES } from './release/lockstep-packages.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -27,13 +30,7 @@ function readPackage(relPath: string): PackageInfo {
 }
 
 const corePkg = readPackage('package.json');
-const extensionPkgs = [
-  readPackage('packages/exojs-particles/package.json'),
-  readPackage('packages/exojs-tilemap/package.json'),
-  readPackage('packages/exojs-tiled/package.json'),
-  readPackage('packages/exojs-physics/package.json'),
-  readPackage('packages/exojs-audio-fx/package.json'),
-];
+const extensionPkgs = EXTENSION_PACKAGES.map(p => readPackage(`${p.dir}/package.json`));
 const packages = [corePkg, ...extensionPkgs];
 
 const versions = [...new Set(packages.map(p => p.version))];
@@ -43,7 +40,9 @@ if (versions.length !== 1) {
   for (const p of packages) {
     process.stderr.write(`  ${p.name}: ${p.version}\n`);
   }
-  process.stderr.write('\nAll six packages must be on the same version before release.\n' + 'Update all six package.json files to the same version.\n');
+  process.stderr.write(
+    `\nAll ${packages.length} packages must be on the same version before release.\n` + 'Update every package.json file to the same version.\n',
+  );
   process.exit(1);
 }
 

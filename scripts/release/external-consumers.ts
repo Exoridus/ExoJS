@@ -22,6 +22,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const tscBin = resolve(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
 
@@ -54,6 +56,8 @@ import { TiledMap, tiledExtension } from '@codexo/exojs-tiled';
 import { PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { AudioAnalyser, BeatDetector, ReverbEffect } from '@codexo/exojs-audio-fx';
+import { AsepriteSheet, asepriteExtension } from '@codexo/exojs-aseprite';
+import { LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
 
 export class DemoScene extends Scene {}
 
@@ -67,6 +71,10 @@ export function bootstrap(): { app: Application; system: typeof ParticleSystem; 
     void AudioAnalyser;
     void BeatDetector;
     void ReverbEffect;
+    void AsepriteSheet;
+    void asepriteExtension;
+    void LdtkMap;
+    void ldtkExtension;
     return { app, system: ParticleSystem, tiles: TileMap, map: TiledMap };
 }
 `;
@@ -96,6 +104,8 @@ import * as tiled from '@codexo/exojs-tiled';
 import * as physics from '@codexo/exojs-physics';
 import * as physicsDebug from '@codexo/exojs-physics/debug';
 import * as audioFx from '@codexo/exojs-audio-fx';
+import * as aseprite from '@codexo/exojs-aseprite';
+import * as ldtk from '@codexo/exojs-ldtk';
 
 const checks = [
   ['@codexo/exojs Application', typeof exo.Application === 'function'],
@@ -112,6 +122,11 @@ const checks = [
   ['@codexo/exojs-audio-fx AudioAnalyser', typeof audioFx.AudioAnalyser === 'function'],
   ['@codexo/exojs-audio-fx BeatDetector', typeof audioFx.BeatDetector === 'function'],
   ['@codexo/exojs-audio-fx ReverbEffect', typeof audioFx.ReverbEffect === 'function'],
+  ['@codexo/exojs-aseprite AsepriteSheet', typeof aseprite.AsepriteSheet === 'function'],
+  ['@codexo/exojs-aseprite asepriteExtension', aseprite.asepriteExtension != null],
+  ['@codexo/exojs-ldtk LdtkMap', typeof ldtk.LdtkMap === 'function'],
+  ['@codexo/exojs-ldtk ldtkExtension', ldtk.ldtkExtension != null],
+  ['facade ldtk TileMap identity (ldtk === tilemap)', ldtk.TileMap === tilemap.TileMap],
 ];
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 if (failed.length > 0) {
@@ -177,14 +192,10 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
 // CLI: pack the official packages into a temp dir and run the checks.
 if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === resolve(process.argv[1] ?? '')) {
   const staging = mkdtempSync(join(tmpdir(), 'exo-cons-pack-'));
-  const dirs = [
-    repoRoot,
-    resolve(repoRoot, 'packages/exojs-particles'),
-    resolve(repoRoot, 'packages/exojs-tilemap'),
-    resolve(repoRoot, 'packages/exojs-tiled'),
-    resolve(repoRoot, 'packages/exojs-physics'),
-    resolve(repoRoot, 'packages/exojs-audio-fx'),
-  ];
+  // Offline-smoke subset (excludes @codexo/exojs-react — its react peers are not
+  // resolvable offline). Derived from the single source of truth.
+  const smokePackages = LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke);
+  const dirs = smokePackages.map(p => (p.dir === '.' ? repoRoot : resolve(repoRoot, p.dir)));
   const version = (JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { version: string }).version;
 
   for (const dir of dirs) {
@@ -194,14 +205,7 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
       process.exit(1);
     }
   }
-  const tarballs = [
-    'codexo-exojs',
-    'codexo-exojs-particles',
-    'codexo-exojs-tilemap',
-    'codexo-exojs-tiled',
-    'codexo-exojs-physics',
-    'codexo-exojs-audio-fx',
-  ].map(n => join(staging, `${n}-${version}.tgz`));
+  const tarballs = smokePackages.map(p => join(staging, `${p.name.replace('@', '').replace('/', '-')}-${version}.tgz`));
 
   process.stdout.write('\n=== verify:external-consumers ===\n');
   const result = verifyExternalConsumers(tarballs);
