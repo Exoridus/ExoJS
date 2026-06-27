@@ -19,6 +19,8 @@ import type { BodyType, CollisionFilter, VectorLike } from './types';
 
 /** Gap left between a clamped bullet and the surface it hit (so it does not re-hit from inside). */
 const ccdSkin = 0.05;
+/** Impact speed (px/s) below which a bullet's CCD response does not bounce (mirrors the contact solver). */
+const ccdRestitutionThreshold = 1;
 
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
@@ -682,11 +684,12 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /**
-   * Sweep each bullet's centre of mass along this fixed step's motion against the
-   * static colliders; if it would cross one, clamp the body just short of the
-   * surface and strip the into-surface velocity so it cannot tunnel. v1 sweeps
-   * the centre point (good for small/point-like projectiles) against static
-   * geometry only — a full swept-shape TOI and bullet-vs-dynamic are backlog.
+   * Sweep each bullet's centre of mass along this fixed step's motion against every
+   * other body's colliders; if it would cross one, clamp the body just short of the
+   * surface and resolve the impact about the surface normal (a slide for a non-bouncy
+   * body, an elastic reflection as restitution → 1) so it cannot tunnel. Sweeps the
+   * centre point — good for small/point-like projectiles; a full swept-shape TOI for
+   * large fast bodies is backlog (raise sub-steps or thicken geometry meanwhile).
    */
   private _advanceBullets(): void {
     for (const body of this._bodies) {
@@ -716,9 +719,9 @@ export class PhysicsWorld implements BodyOwner {
       let blocked: RayHit | null = null;
 
       for (const hit of hits) {
-        // Skip the bullet's own colliders; v1 sweeps against static geometry only.
-        // Hits are distance-sorted, so the first match is the nearest surface.
-        if (hit.body !== body && hit.body.type === 'static') {
+        // Sweep against every other body (static, kinematic, dynamic); sensors never
+        // block. Hits are distance-sorted, so the first match is the nearest surface.
+        if (hit.body !== body && !hit.collider.isSensor) {
           blocked = hit;
           break;
         }
@@ -729,7 +732,7 @@ export class PhysicsWorld implements BodyOwner {
       }
 
       // Clamp the CoM just short of the surface (a pure translation — the rotation
-      // is already applied), then strip the velocity heading into the surface.
+      // is already applied), then resolve the impact about the surface normal.
       const clampDistance = Math.max(0, blocked.distance - ccdSkin);
       const deltaX = body._ccdPrevX + dirX * clampDistance - newX;
       const deltaY = body._ccdPrevY + dirY * clampDistance - newY;
@@ -738,13 +741,34 @@ export class PhysicsWorld implements BodyOwner {
       this._ccdOrigin.y = body.y + deltaY;
       body.setTransform(this._ccdOrigin, body.angle);
 
-      const into = body.linearVelocityX * dirX + body.linearVelocityY * dirY;
+      // Reflect about the true surface normal: a slide for a non-bouncy body
+      // (restitution 0), an elastic bounce as restitution → 1. The body's own
+      // restitution combines (max) with the surface's, matching the contact solver.
+      const nx = blocked.normal.x;
+      const ny = blocked.normal.y;
+      const vn = body.linearVelocityX * nx + body.linearVelocityY * ny;
 
-      if (into > 0) {
-        body.linearVelocityX -= into * dirX;
-        body.linearVelocityY -= into * dirY;
+      if (vn < 0) {
+        const restitution = vn < -ccdRestitutionThreshold ? Math.max(this._bulletRestitution(body), blocked.collider.restitution) : 0;
+        const impulse = -(1 + restitution) * vn;
+
+        body.linearVelocityX += impulse * nx;
+        body.linearVelocityY += impulse * ny;
       }
     }
+  }
+
+  /** The highest restitution among a body's colliders (its CCD bounce factor). */
+  private _bulletRestitution(body: PhysicsBody): number {
+    let restitution = 0;
+
+    for (const collider of body.colliders) {
+      if (collider.restitution > restitution) {
+        restitution = collider.restitution;
+      }
+    }
+
+    return restitution;
   }
 
   /** Run `command` now, or queue it when inside an event dispatch (deferred to end of step). */
