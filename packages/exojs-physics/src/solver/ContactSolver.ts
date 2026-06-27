@@ -133,6 +133,15 @@ export class ContactSolver {
 
       const bodyA = contact.a.body;
       const bodyB = contact.b.body;
+
+      // Skip contacts where either body is asleep: a sleeping island's solid
+      // contacts are all sleeping↔sleeping or sleeping↔static (both at rest), so
+      // there is nothing to solve. A sleeping body touched by an awake one is
+      // woken (island merge) before this runs, so it is never skipped wrongly.
+      if (bodyA.isSleeping || bodyB.isSleeping) {
+        continue;
+      }
+
       const constraint = this._acquire();
       const nx = manifold.normalX;
       const ny = manifold.normalY;
