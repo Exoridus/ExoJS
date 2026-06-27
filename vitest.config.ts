@@ -123,6 +123,21 @@ export default defineConfig({
         include: ['packages/exojs-audio-fx/test/**/*.test.ts'],
       }),
 
+      // ── exojs-react — jsdom + React Testing Library (esbuild JSX) ────────
+      // The shared jsdom factory is reused unchanged; the only addition is the
+      // esbuild automatic JSX runtime so `.tsx` test files need no React import.
+      // It is set at the project level (like rendering-perf's `plugins`) so the
+      // other jsdom projects keep esbuild's defaults byte-for-byte.
+      {
+        ...createJsdomTestProject({
+          name: 'exojs-react',
+          alias: aliasConfig,
+          include: ['packages/exojs-react/test/**/*.{test.ts,test.tsx}'],
+          setupFiles: ['./packages/exojs-react/test/setup.ts'],
+        }),
+        esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
+      },
+
       // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for
       // deterministic, GPU-free structural metrics. Uses the real-shader loader

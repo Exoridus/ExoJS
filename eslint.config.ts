@@ -492,11 +492,11 @@ export default defineConfig([
   // policy. Excludes create-exo-app (standalone scaffolding CLI, no ESLint
   // integration).
   {
-    files: ['packages/exojs-*/test/**/*.ts'],
+    files: ['packages/exojs-*/test/**/*.{ts,tsx}'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['packages/exojs-*/test/**/*.ts'],
+    files: ['packages/exojs-*/test/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -1091,7 +1091,7 @@ export default defineConfig([
   // structural test config above; covers both root and package test suites.
   {
     ...vitest.configs.recommended,
-    files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.ts'],
+    files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}'],
     rules: {
       ...vitest.configs.recommended.rules,
       // Primary value: block an accidentally committed `.only`.
