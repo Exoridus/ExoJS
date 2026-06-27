@@ -92,7 +92,7 @@ const tick = (manager: SceneManager, milliseconds = 16): void => {
   manager.update(new Time(milliseconds));
 };
 
-type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'draw' | 'unload'>>;
+type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate' | 'draw' | 'unload'>>;
 
 const makeScene = (hooks: SceneHooks = {}): Scene => Object.assign(new Scene(), hooks);
 
@@ -202,6 +202,21 @@ describe('SceneManager', () => {
     expect(manager.currentScene).toBe(second);
     expect(firstUnload).toHaveBeenCalledTimes(1);
     expect(secondInit).toHaveBeenCalledTimes(1);
+  });
+
+  test('fixedUpdate dispatches to the active scene unless it is paused', async () => {
+    const manager = new SceneManager(createApplicationStub());
+    const fixedUpdate = vi.fn();
+    const scene = makeScene({ fixedUpdate });
+
+    await manager.setScene(scene);
+
+    manager.fixedUpdate(new Time(16));
+    expect(fixedUpdate).toHaveBeenCalledTimes(1);
+
+    scene.paused = true;
+    manager.fixedUpdate(new Time(16));
+    expect(fixedUpdate).toHaveBeenCalledTimes(1); // paused → skipped
   });
 
   test('setScene to the already-active scene is a no-op', async () => {
