@@ -79,6 +79,7 @@
     "verify:release-matrix": "tsx ./scripts/verify-release-matrix.ts",
     "verify:create-exo-app": "tsx ./scripts/verify-create-exo-app.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
+    "create:package": "tsx scripts/create-package.ts",
     "verify:release": "pnpm verify:lockstep && pnpm typecheck && pnpm typecheck:guides && pnpm typecheck:examples && pnpm lint:strict && pnpm format:check && pnpm test && pnpm verify:package && pnpm verify:create-exo-app && pnpm site:build",
     "verify:quick": "pnpm typecheck && pnpm typecheck:guides && pnpm typecheck:examples && pnpm typecheck:packages && pnpm lint:all && pnpm format:check && pnpm docs:api:check",
     "verify:ci": "pnpm verify:quick && pnpm test",
