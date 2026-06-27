@@ -25,6 +25,8 @@ export interface PhysicsDebugDrawOptions {
   drawCenters?: boolean;
   /** Broad-phase candidate links between AABB-overlapping colliders. Default `false`. */
   drawBroadphase?: boolean;
+  /** Tint sleeping bodies distinctly (applies to the shape outline). Default `false`. */
+  drawSleeping?: boolean;
 }
 
 const segments = 24;
@@ -38,6 +40,7 @@ const colorContact = new Color(1, 0.2, 0.2, 1);
 const colorNormal = new Color(1, 0.6, 0.1, 1);
 const colorCenter = new Color(1, 1, 1, 0.9);
 const colorBroadphase = new Color(0.2, 0.8, 0.8, 0.5);
+const colorSleeping = new Color(0.45, 0.45, 0.5, 0.7);
 
 /**
  * `DebugLayer` that visualises a {@link PhysicsWorld} — shapes, AABBs, contacts,
@@ -67,6 +70,7 @@ export class PhysicsDebugDraw extends DebugLayer {
       drawNormals: options.drawNormals ?? false,
       drawCenters: options.drawCenters ?? false,
       drawBroadphase: options.drawBroadphase ?? false,
+      drawSleeping: options.drawSleeping ?? false,
     };
   }
 
@@ -125,8 +129,20 @@ export class PhysicsDebugDraw extends DebugLayer {
 
   // ── helpers ────────────────────────────────────────────────────────────
 
+  private _outlineColor(collider: Collider): Color {
+    if (collider.isSensor) {
+      return colorSensor;
+    }
+
+    if (this.options.drawSleeping && collider.body.isSleeping) {
+      return colorSleeping;
+    }
+
+    return colorForType(collider.body.type);
+  }
+
   private _strokeShape(gfx: Graphics, collider: Collider): void {
-    gfx.lineColor = collider.isSensor ? colorSensor : colorForType(collider.body.type);
+    gfx.lineColor = this._outlineColor(collider);
 
     if (collider.shape.type === 'circle') {
       const c = collider.worldCenter;
