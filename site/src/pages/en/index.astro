@@ -123,6 +123,16 @@ const examples = [
     <div class="home">
         <section class="hero">
             <div class="hero-inner">
+                <img
+                    class="hero-companion"
+                    src={`${import.meta.env.BASE_URL}brand/companion-hero.webp`}
+                    alt=""
+                    aria-hidden="true"
+                    width="208"
+                    height="208"
+                    loading="eager"
+                    decoding="async"
+                />
                 <div>
                     <span class="hero-eyebrow">
                         <span class="pip"><span class="dot"></span>v{appInfo.version}</span>
@@ -292,12 +302,43 @@ const examples = [
     }
 
     .hero-inner {
+        position: relative;
         max-width: 1180px;
         margin: 0 auto;
         display: grid;
         grid-template-columns: 1fr 1.1fr;
         gap: var(--s-10);
         align-items: center;
+    }
+
+    /* Companion mascot — a corner greeter waving in from the top-right, riding
+       the accent glow. Decorative (aria-hidden); the headline carries meaning. */
+    .hero-companion {
+        position: absolute;
+        top: -78px;
+        right: 8px;
+        z-index: 2;
+        width: clamp(140px, 15vw, 206px);
+        height: auto;
+        pointer-events: none;
+        filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.42));
+        animation: companion-float 4.6s ease-in-out infinite;
+    }
+
+    @keyframes companion-float {
+        0%,
+        100% {
+            transform: translateY(0) rotate(-0.6deg);
+        }
+        50% {
+            transform: translateY(-10px) rotate(0.6deg);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .hero-companion {
+            animation: none;
+        }
     }
 
     .hero-eyebrow {
@@ -865,6 +906,12 @@ const examples = [
     @media (max-width: 1000px) {
         .hero-inner {
             grid-template-columns: 1fr;
+        }
+
+        /* The corner greeter relies on the two-column layout + corner glow;
+           once the hero stacks it would collide with the headline, so retire it. */
+        .hero-companion {
+            display: none;
         }
     }
 
