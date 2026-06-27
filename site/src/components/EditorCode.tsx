@@ -349,7 +349,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
                         height="100%"
                         language={language}
                         loading={null}
-                        onChange={value => setEditorValue(value ?? '')}
+                        onChange={(value: string | undefined) => setEditorValue(value ?? '')}
                         onMount={onMount}
                         options={{
                             automaticLayout: true,
