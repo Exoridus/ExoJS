@@ -1,64 +1,96 @@
 ---
 /**
- * Callout — a labelled aside for notes, tips, warnings, and platform hints.
+ * Callout — a labelled aside for the eight Guide Companion states.
+ *
+ * Each state pairs the painterly companion sprite (a trailing-edge badge) with a
+ * state-coloured glyph + label. The glyph and label carry the meaning, so the
+ * callout reads for colour-blind readers and in high-contrast modes; the sprite
+ * and its state-coloured screen-glow are enrichment.
  *
  * Usage in MDX:
  *   import Callout from '../../../components/Callout.astro';
  *
- *   <Callout type="tip">
- *   Start each frame with `context.backend.clear()`.
+ *   <Callout type="hint">
+ *   Pulling in several assets? `loadMany()` batches the requests for you.
  *   </Callout>
  *
- *   <Callout type="common-mistake" title="Forgetting the anchor">
+ *   <Callout type="pitfall" title="A sprite that won't center">
  *   A sprite's default anchor is the top-left corner, not its center.
  *   </Callout>
  *
- * The type is conveyed by a text label and a glyph, never colour alone, so the
- * meaning survives for colour-blind readers and in high-contrast modes.
+ * Colour exclusivity: amber=warning, mint=success, gray=invalid, red=broken;
+ * info/hint/pitfall/debug share the companion cyan and are told apart by glyph.
  */
 
-type CalloutType = 'note' | 'tip' | 'important' | 'common-mistake' | 'webgpu' | 'browser';
+type CalloutType = 'info' | 'hint' | 'warning' | 'pitfall' | 'success' | 'debug' | 'invalid' | 'broken';
 
 interface Props {
     type?: CalloutType;
-    /** Optional heading. Falls back to the type's default label. */
+    /** Optional heading. Falls back to the state's default label. */
     title?: string;
 }
 
 const META: Record<CalloutType, { label: string; glyph: string }> = {
-    'note': { label: 'Note', glyph: 'i' },
-    'tip': { label: 'Tip', glyph: '+' },
-    'important': { label: 'Important', glyph: '!' },
-    'common-mistake': { label: 'Common mistake', glyph: '×' },
-    'webgpu': { label: 'WebGPU', glyph: '◆' },
-    'browser': { label: 'Browser behavior', glyph: '◐' },
+    info: { label: 'Good to know', glyph: 'i' },
+    hint: { label: 'Tip', glyph: '✦' },
+    warning: { label: 'Heads up', glyph: '!' },
+    pitfall: { label: 'Common pitfall', glyph: '?' },
+    success: { label: "You're set", glyph: '✓' },
+    debug: { label: 'Debug tip', glyph: '[]' },
+    invalid: { label: 'Not supported', glyph: 'Ø' },
+    broken: { label: 'Runtime error', glyph: '✕' },
 };
 
-const { type = 'note', title } = Astro.props;
+const { type = 'info', title } = Astro.props;
 const meta = META[type];
 const heading = title ?? meta.label;
+const base = import.meta.env.BASE_URL;
 ---
 
 <aside class="callout" data-callout={type} role="note">
-    <p class="callout__head">
-        <span class="callout__glyph" aria-hidden="true">{meta.glyph}</span>
-        <span class="callout__label">{heading}</span>
-    </p>
-    <div class="callout__body">
-        <slot />
+    <div class="callout__main">
+        <p class="callout__head">
+            <span class="callout__glyph" aria-hidden="true">{meta.glyph}</span>
+            <span class="callout__label">{heading}</span>
+        </p>
+        <div class="callout__body">
+            <slot />
+        </div>
     </div>
+    <img
+        class="callout__companion"
+        src={`${base}brand/companion/${type}.webp`}
+        alt=""
+        aria-hidden="true"
+        width="64"
+        height="64"
+        loading="lazy"
+        decoding="async"
+    />
 </aside>
 
 <style>
     .callout {
-        --callout-accent: var(--fg-muted);
-        --callout-bg: color-mix(in oklab, var(--bg-elevated), transparent 0%);
+        /* Default state = info (companion cyan). Each state below overrides the
+           accent; the soft background is always a faint tint of that accent.
+           State colours are fixed (not derived from --accent) so they stay
+           stable across the user-selectable accent themes. */
+        --callout-accent: oklch(80% 0.1 195);
+        --callout-bg: color-mix(in oklab, var(--callout-accent), transparent 92%);
+        display: flex;
+        align-items: center;
+        gap: var(--s-4);
         margin: var(--s-5) 0;
         padding: var(--s-3) var(--s-4);
         border: 1px solid var(--line-soft);
         border-left: 3px solid var(--callout-accent);
         border-radius: var(--r-3);
         background: var(--callout-bg);
+    }
+
+    .callout__main {
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     .callout__head {
@@ -76,8 +108,10 @@ const heading = title ?? meta.label;
     .callout__glyph {
         display: inline-grid;
         place-items: center;
-        width: 18px;
+        flex: 0 0 auto;
+        min-width: 18px;
         height: 18px;
+        padding: 0 4px;
         border-radius: var(--r-pill);
         border: 1px solid var(--callout-accent);
         font-size: 11px;
@@ -97,33 +131,49 @@ const heading = title ?? meta.label;
         margin-bottom: 0;
     }
 
-    .callout[data-callout='note'] {
-        --callout-accent: var(--color-text-muted);
-        --callout-bg: color-mix(in oklab, var(--color-text-muted), transparent 94%);
+    /* Trailing-edge companion badge. The sprite is delivered transparent, so it
+       sits on both themes with no card behind it; a state-coloured glow stands
+       in for the screen-glow that carries meaning at small sizes. */
+    .callout__companion {
+        flex: 0 0 auto;
+        align-self: center;
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 12px color-mix(in oklab, var(--callout-accent), transparent 52%));
     }
 
-    .callout[data-callout='tip'] {
-        --callout-accent: var(--accent);
-        --callout-bg: var(--accent-soft);
+    .callout[data-callout='info'],
+    .callout[data-callout='hint'],
+    .callout[data-callout='pitfall'],
+    .callout[data-callout='debug'] {
+        --callout-accent: oklch(80% 0.1 195); /* companion cyan #52D9D4 */
     }
 
-    .callout[data-callout='important'] {
-        --callout-accent: oklch(80% 0.13 85);
-        --callout-bg: color-mix(in oklab, oklch(80% 0.13 85), transparent 90%);
+    .callout[data-callout='warning'] {
+        --callout-accent: oklch(78% 0.14 75); /* amber #F2A93B */
     }
 
-    .callout[data-callout='common-mistake'] {
-        --callout-accent: oklch(72% 0.16 25);
-        --callout-bg: color-mix(in oklab, oklch(72% 0.16 25), transparent 90%);
+    .callout[data-callout='success'] {
+        --callout-accent: oklch(78% 0.12 162); /* mint-green #62D29A */
     }
 
-    .callout[data-callout='webgpu'] {
-        --callout-accent: oklch(72% 0.15 290);
-        --callout-bg: color-mix(in oklab, oklch(72% 0.15 290), transparent 90%);
+    .callout[data-callout='invalid'] {
+        --callout-accent: oklch(70% 0.01 195); /* neutral gray #9AA1A1 */
     }
 
-    .callout[data-callout='browser'] {
-        --callout-accent: oklch(74% 0.12 230);
-        --callout-bg: color-mix(in oklab, oklch(74% 0.12 230), transparent 90%);
+    .callout[data-callout='broken'] {
+        --callout-accent: oklch(62% 0.2 27); /* red #E0463B */
+    }
+
+    @media (max-width: 560px) {
+        .callout {
+            gap: var(--s-3);
+        }
+
+        .callout__companion {
+            width: 48px;
+            height: 48px;
+        }
     }
 </style>
