@@ -15,6 +15,18 @@ export interface RevoluteJointOptions {
   hertz?: number;
   /** Soft-spring damping ratio (used when `hertz > 0`). Default `1`. */
   dampingRatio?: number;
+  /** Enable the angular motor (drives `ωB − ωA` toward {@link motorSpeed}). Default `false`. */
+  enableMotor?: boolean;
+  /** Target relative angular velocity in rad/s when the motor is enabled. Default `0`. */
+  motorSpeed?: number;
+  /** Maximum motor torque — clamps the per-step motor impulse. Default `0`. */
+  maxMotorTorque?: number;
+  /** Enable the angle limit (keeps the relative angle in `[lowerAngle, upperAngle]`). Default `false`. */
+  enableLimit?: boolean;
+  /** Lower relative-angle limit in radians (relative to the angle at creation). Default `0`. */
+  lowerAngle?: number;
+  /** Upper relative-angle limit in radians. Default `0`. */
+  upperAngle?: number;
 }
 
 /** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
@@ -30,6 +42,18 @@ export class RevoluteJoint extends Joint {
   public hertz: number;
   /** Soft-spring damping ratio. */
   public dampingRatio: number;
+  /** When `true`, the motor drives `ωB − ωA` toward {@link motorSpeed}. */
+  public enableMotor: boolean;
+  /** Target relative angular velocity (rad/s) for the motor. */
+  public motorSpeed: number;
+  /** Maximum motor torque. */
+  public maxMotorTorque: number;
+  /** When `true`, the relative angle is constrained to `[lowerAngle, upperAngle]`. */
+  public enableLimit: boolean;
+  /** Lower relative-angle limit (radians, relative to the creation angle). */
+  public lowerAngle: number;
+  /** Upper relative-angle limit (radians). */
+  public upperAngle: number;
 
   private readonly _localAnchorAx: number;
   private readonly _localAnchorAy: number;
@@ -50,6 +74,13 @@ export class RevoluteJoint extends Joint {
   private _impulseScale = 0;
   private _impulseX = 0;
   private _impulseY = 0;
+  private readonly _referenceAngle: number;
+  private _axialMass = 0;
+  private _h = 0;
+  private _invH = 0;
+  private _motorImpulse = 0;
+  private _lowerImpulse = 0;
+  private _upperImpulse = 0;
 
   public constructor(options: RevoluteJointOptions) {
     super(options.bodyA, options.bodyB);
@@ -63,6 +94,13 @@ export class RevoluteJoint extends Joint {
 
     this.hertz = options.hertz ?? 0;
     this.dampingRatio = options.dampingRatio ?? 1;
+    this.enableMotor = options.enableMotor ?? false;
+    this.motorSpeed = options.motorSpeed ?? 0;
+    this.maxMotorTorque = options.maxMotorTorque ?? 0;
+    this.enableLimit = options.enableLimit ?? false;
+    this.lowerAngle = options.lowerAngle ?? 0;
+    this.upperAngle = options.upperAngle ?? 0;
+    this._referenceAngle = options.bodyB.angle - options.bodyA.angle;
   }
 
   public override _prepare(h: number): void {
@@ -107,6 +145,20 @@ export class RevoluteJoint extends Joint {
     this._invK12 = -invDet * k12;
     this._invK22 = invDet * k11;
 
+    // Angular (motor/limit) effective mass + sub-step rate.
+    this._axialMass = iA + iB > 0 ? 1 / (iA + iB) : 0;
+    this._h = h;
+    this._invH = 1 / h;
+
+    if (!this.enableMotor) {
+      this._motorImpulse = 0;
+    }
+
+    if (!this.enableLimit) {
+      this._lowerImpulse = 0;
+      this._upperImpulse = 0;
+    }
+
     if (this.hertz > 0) {
       const omega = 2 * Math.PI * this.hertz;
       const a1 = 2 * this.dampingRatio + h * omega;
@@ -124,9 +176,16 @@ export class RevoluteJoint extends Joint {
   }
 
   public override _warmStart(): void {
-    if (this._active) {
-      this._applyImpulse(this._impulseX, this._impulseY);
+    if (!this._active) {
+      return;
     }
+
+    // Angular warm-start: motor + limits (lower pushes +, upper pushes −).
+    const axial = this._motorImpulse + this._lowerImpulse - this._upperImpulse;
+    this.bodyA.angularVelocity -= this.bodyA.invInertia * axial;
+    this.bodyB.angularVelocity += this.bodyB.invInertia * axial;
+
+    this._applyImpulse(this._impulseX, this._impulseY);
   }
 
   public override _solve(useBias: boolean): void {
@@ -136,6 +195,60 @@ export class RevoluteJoint extends Joint {
 
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
+    const iA = bodyA.invInertia;
+    const iB = bodyB.invInertia;
+
+    // Angular motor: drive ωB − ωA toward motorSpeed, clamped to ±maxMotorTorque·h.
+    if (this.enableMotor) {
+      const cdot = bodyB.angularVelocity - bodyA.angularVelocity - this.motorSpeed;
+      const max = this.maxMotorTorque * this._h;
+      const old = this._motorImpulse;
+
+      this._motorImpulse = Math.min(max, Math.max(-max, old - this._axialMass * cdot));
+
+      const applied = this._motorImpulse - old;
+      bodyA.angularVelocity -= iA * applied;
+      bodyB.angularVelocity += iB * applied;
+    }
+
+    // Angle limits: one-sided constraints keeping the relative angle in [lower, upper].
+    if (this.enableLimit) {
+      const angle = bodyB.angle + bodyB._deltaAngle - (bodyA.angle + bodyA._deltaAngle) - this._referenceAngle;
+
+      // Lower limit (angle ≥ lowerAngle): a positive impulse increases the angle.
+      const cLower = angle - this.lowerAngle;
+      let biasLower = 0;
+
+      if (cLower > 0) {
+        biasLower = cLower * this._invH; // speculative: allow approach, engage at the surface
+      } else if (useBias) {
+        biasLower = 0.2 * this._invH * cLower; // Baumgarte push-back when violated
+      }
+
+      const oldLower = this._lowerImpulse;
+      this._lowerImpulse = Math.max(0, oldLower - this._axialMass * (bodyB.angularVelocity - bodyA.angularVelocity + biasLower));
+
+      const appliedLower = this._lowerImpulse - oldLower;
+      bodyA.angularVelocity -= iA * appliedLower;
+      bodyB.angularVelocity += iB * appliedLower;
+
+      // Upper limit (angle ≤ upperAngle): a positive impulse decreases the angle.
+      const cUpper = this.upperAngle - angle;
+      let biasUpper = 0;
+
+      if (cUpper > 0) {
+        biasUpper = cUpper * this._invH;
+      } else if (useBias) {
+        biasUpper = 0.2 * this._invH * cUpper;
+      }
+
+      const oldUpper = this._upperImpulse;
+      this._upperImpulse = Math.max(0, oldUpper - this._axialMass * (bodyA.angularVelocity - bodyB.angularVelocity + biasUpper));
+
+      const appliedUpper = this._upperImpulse - oldUpper;
+      bodyA.angularVelocity += iA * appliedUpper;
+      bodyB.angularVelocity -= iB * appliedUpper;
+    }
 
     // Relative velocity of the anchors.
     const cdotX = bodyB.linearVelocityX - bodyB.angularVelocity * this._rBy - (bodyA.linearVelocityX - bodyA.angularVelocity * this._rAy);

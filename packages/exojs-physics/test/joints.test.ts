@@ -182,4 +182,49 @@ describe('SG-J — joints', () => {
     expect(Math.abs(Math.hypot(b.x - a.x, b.y - a.y) - distance0)).toBeLessThan(2);
     expect(Math.abs(b.angle - a.angle - relativeAngle0)).toBeLessThan(0.05);
   });
+
+  it('SG-J10: a distance joint with maxLength acts as a rope — slack allowed, clamped at max', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // Bob starts above the rope's full length → slack → falls freely until taut.
+    const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 50 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, maxLength: 100 }));
+
+    // While within maxLength the rope is slack → the bob falls freely (not held at 50).
+    advance(world, 0.05);
+    expect(Math.hypot(bob.x, bob.y)).toBeGreaterThan(50);
+
+    advance(world, 2);
+    const distance = Math.hypot(bob.x, bob.y);
+    expect(distance).toBeLessThan(101); // never stretches past the rope length
+    expect(distance).toBeGreaterThan(95); // hangs taut at ~max
+  });
+
+  it('SG-J11: a motorized revolute joint reaches and holds its target speed', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(40, 40) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: wheel, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }));
+
+    advance(world, 1);
+
+    expect(wheel.angularVelocity).toBeCloseTo(5, 0); // driven to the target rad/s and held
+  });
+
+  it('SG-J12: a revolute joint angle limit caps the swing', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // A bar pinned at its left end; gravity swings it until the limit blocks it.
+    const bar = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, colliders: [{ shape: new BoxShape(100, 10) }] }));
+    const limit = Math.PI / 4;
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bar, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -limit, upperAngle: limit }));
+
+    advance(world, 3);
+
+    expect(Math.abs(bar.angle)).toBeLessThan(limit + 0.05); // never past the limit
+    expect(Math.abs(bar.angle)).toBeGreaterThan(limit - 0.15); // swung to and rests at the limit
+  });
 });

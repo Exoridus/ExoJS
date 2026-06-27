@@ -19,6 +19,15 @@ export interface DistanceJointOptions {
   hertz?: number;
   /** Soft-spring damping ratio (used when `hertz > 0`). Default `1`. */
   dampingRatio?: number;
+  /**
+   * Minimum allowed distance. Specifying `minLength` and/or `maxLength` turns the
+   * joint into a **rope/limit** (distance kept within `[minLength, maxLength]`,
+   * slack between, rigid limits). Otherwise the joint is a rigid/soft **equality**
+   * at `length`. Defaults to `0` in limit mode.
+   */
+  minLength?: number;
+  /** Maximum allowed distance (the rope length). See {@link minLength}. Defaults to `Infinity` in limit mode. */
+  maxLength?: number;
 }
 
 /** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
@@ -37,7 +46,14 @@ export class DistanceJoint extends Joint {
   public hertz: number;
   /** Soft-spring damping ratio. */
   public dampingRatio: number;
+  /** Minimum allowed distance (rope/limit mode). */
+  public minLength: number;
+  /** Maximum allowed distance (rope/limit mode). */
+  public maxLength: number;
 
+  private readonly _limited: boolean;
+  private _minImpulse = -Infinity;
+  private _maxImpulse = Infinity;
   private readonly _localAnchorAx: number;
   private readonly _localAnchorAy: number;
   private readonly _localAnchorBx: number;
@@ -74,6 +90,9 @@ export class DistanceJoint extends Joint {
     this.length = options.length ?? Math.hypot(bx - ax, by - ay);
     this.hertz = options.hertz ?? 0;
     this.dampingRatio = options.dampingRatio ?? 1;
+    this._limited = options.minLength !== undefined || options.maxLength !== undefined;
+    this.minLength = options.minLength ?? (this._limited ? 0 : this.length);
+    this.maxLength = options.maxLength ?? (this._limited ? Infinity : this.length);
   }
 
   public override _prepare(h: number): void {
@@ -112,14 +131,36 @@ export class DistanceJoint extends Joint {
 
     this._nx = dx;
     this._ny = dy;
-    this._separation = len - this.length;
 
     const crA = this._rAx * dy - this._rAy * dx;
     const crB = this._rBx * dy - this._rBy * dx;
     const k = bodyA.invMass + bodyB.invMass + bodyA.invInertia * crA * crA + bodyB.invInertia * crB * crB;
     this._effMass = k > 0 ? 1 / k : 0;
 
-    if (this.hertz > 0) {
+    if (this._limited) {
+      // Rope/limit: solve only the violated bound; slack between min and max.
+      if (len > this.maxLength) {
+        this._separation = len - this.maxLength;
+        this._minImpulse = -Infinity; // pull together only (tension)
+        this._maxImpulse = 0;
+      } else if (len < this.minLength) {
+        this._separation = len - this.minLength;
+        this._minImpulse = 0; // push apart only (compression)
+        this._maxImpulse = Infinity;
+      } else {
+        this._active = false; // slack — nothing to solve this frame
+        this._impulse = 0;
+
+        return;
+      }
+    } else {
+      this._separation = len - this.length;
+      this._minImpulse = -Infinity;
+      this._maxImpulse = Infinity;
+    }
+
+    // Soft spring only for the equality joint; rope limits are rigid.
+    if (this.hertz > 0 && !this._limited) {
       // Box2D-v3 soft factors from a damped spring at the sub-step `h`.
       const omega = 2 * Math.PI * this.hertz;
       const a1 = 2 * this.dampingRatio + h * omega;
@@ -159,10 +200,13 @@ export class DistanceJoint extends Joint {
     const cdot = (vbx - vax) * this._nx + (vby - vay) * this._ny;
 
     const bias = useBias ? this._biasRate * this._separation : 0;
-    const impulse = -this._effMass * this._massScale * (cdot + bias) - this._impulseScale * this._impulse;
+    const raw = -this._effMass * this._massScale * (cdot + bias) - this._impulseScale * this._impulse;
+    // Clamp the accumulated impulse to the limit's sign range (±Infinity = equality, no clamp).
+    const clamped = Math.min(this._maxImpulse, Math.max(this._minImpulse, this._impulse + raw));
+    const applied = clamped - this._impulse;
 
-    this._impulse += impulse;
-    this._applyAxisImpulse(impulse);
+    this._impulse = clamped;
+    this._applyAxisImpulse(applied);
   }
 
   private _applyAxisImpulse(impulse: number): void {
