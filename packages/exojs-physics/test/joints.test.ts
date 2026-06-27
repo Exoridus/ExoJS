@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '../src/index';
+import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld, RevoluteJoint, WeldJoint } from '../src/index';
 
 /**
  * Joints (spec `02-joints.md`). Soft constraints solved in the sub-step loop
@@ -105,5 +105,81 @@ describe('SG-J — joints', () => {
     advance(world, 1);
 
     expect(bob.y).toBeGreaterThan(250); // now falls freely under gravity
+  });
+
+  it('SG-J6: a revolute joint pins the bob to the pivot as it swings', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // Bob hangs down-right of the pivot at the world origin; it swings under gravity.
+    const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 70, y: 70 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bob, anchor: { x: 0, y: 0 } }));
+
+    const radius = Math.hypot(70, 70);
+    let minX = bob.x;
+
+    for (let frame = 0; frame < 240; frame++) {
+      world.step(FRAME);
+      // The pinned point holds: the bob's centre stays at a fixed radius from the pivot.
+      expect(Math.abs(Math.hypot(bob.x, bob.y) - radius)).toBeLessThan(1.5);
+      minX = Math.min(minX, bob.x);
+    }
+
+    expect(minX).toBeLessThan(-30); // it swung through the bottom to the far side
+  });
+
+  it('SG-J7: a two-link revolute chain keeps its shared hinge coincident', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const link1 = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, colliders: [{ shape: new BoxShape(100, 8) }] }));
+    const link2 = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 150, y: 0 }, colliders: [{ shape: new BoxShape(100, 8) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: link1, anchor: { x: 0, y: 0 } })); // link1 left ↔ origin
+    world.addJoint(new RevoluteJoint({ bodyA: link1, bodyB: link2, anchor: { x: 100, y: 0 } })); // link2 left ↔ link1 right
+
+    advance(world, 4);
+
+    // link1's right end and link2's left end (the shared hinge) stay coincident.
+    const r1x = link1.x + Math.cos(link1.angle) * 50;
+    const r1y = link1.y + Math.sin(link1.angle) * 50;
+    const l2x = link2.x - Math.cos(link2.angle) * 50;
+    const l2y = link2.y - Math.sin(link2.angle) * 50;
+
+    expect(Math.hypot(r1x - l2x, r1y - l2y)).toBeLessThan(2);
+    expect(Number.isFinite(link2.y)).toBe(true);
+  });
+
+  it('SG-J8: a weld joint holds a body rigidly to a static anchor (position + angle)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 30 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(new WeldJoint({ bodyA: anchor, bodyB: box }));
+
+    advance(world, 3);
+
+    // Welded to an immovable anchor → it holds both position and angle against gravity.
+    expect(box.x).toBeCloseTo(50, 0);
+    expect(box.y).toBeCloseTo(30, 0);
+    expect(Math.abs(box.angle)).toBeLessThan(0.02);
+  });
+
+  it('SG-J9: two welded dynamic bodies keep their relative pose while swinging', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 60, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 100, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: a, anchor: { x: 0, y: 0 } })); // a swings about the origin
+    world.addJoint(new WeldJoint({ bodyA: a, bodyB: b })); // b welded rigidly to a
+
+    const distance0 = Math.hypot(b.x - a.x, b.y - a.y);
+    const relativeAngle0 = b.angle - a.angle;
+
+    advance(world, 3);
+
+    // The weld keeps b rigid to a: same separation and same relative orientation.
+    expect(Math.abs(Math.hypot(b.x - a.x, b.y - a.y) - distance0)).toBeLessThan(2);
+    expect(Math.abs(b.angle - a.angle - relativeAngle0)).toBeLessThan(0.05);
   });
 });

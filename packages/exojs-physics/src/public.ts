@@ -11,6 +11,8 @@ export { Collider } from './Collider';
 export type { CollisionEvent, ContactPoint, SensorEvent } from './events';
 export { DistanceJoint, type DistanceJointOptions } from './joints/DistanceJoint';
 export { Joint } from './joints/Joint';
+export { RevoluteJoint, type RevoluteJointOptions } from './joints/RevoluteJoint';
+export { WeldJoint, type WeldJointOptions } from './joints/WeldJoint';
 export type { BodyOptions } from './PhysicsBody';
 export { PhysicsBody } from './PhysicsBody';
 export { type PhysicsBuildInfo,physicsBuildInfo } from './physicsBuildInfo';
