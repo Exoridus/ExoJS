@@ -364,4 +364,59 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
       expect(app.backend.resetStats).not.toHaveBeenCalled();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Fixed timestep — accumulator-driven fixedUpdate / onFixedFrame / frameAlpha
+  // -------------------------------------------------------------------------
+
+  describe('Fixed timestep', () => {
+    const STEP_MS = 1000 / 60;
+
+    test('runs one fixed step per single-step frame', () => {
+      const fixedSpy = vi.spyOn(app.scene, 'fixedUpdate');
+
+      mockFrameElapsed(app, STEP_MS);
+      app.update();
+
+      expect(fixedSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('runs multiple fixed steps for a multi-step frame', () => {
+      const fixedSpy = vi.spyOn(app.scene, 'fixedUpdate');
+
+      mockFrameElapsed(app, STEP_MS * 3);
+      app.update();
+
+      expect(fixedSpy).toHaveBeenCalledTimes(3);
+    });
+
+    test('dispatches onFixedFrame once per fixed step', () => {
+      let count = 0;
+      app.onFixedFrame.add(() => {
+        count++;
+      });
+
+      mockFrameElapsed(app, STEP_MS * 2);
+      app.update();
+
+      expect(count).toBe(2);
+    });
+
+    test('frameAlpha reports the leftover sub-step fraction', () => {
+      mockFrameElapsed(app, STEP_MS * 1.5);
+      app.update();
+
+      expect(app.frameAlpha).toBeCloseTo(0.5, 4);
+    });
+
+    test('caps fixed steps per frame (spiral-of-death guard)', () => {
+      const fixedSpy = vi.spyOn(app.scene, 'fixedUpdate');
+
+      // The frame delta is clamped to 100 ms first → 6 steps wanted, capped at 5.
+      mockFrameElapsed(app, 1000);
+      app.update();
+
+      expect(fixedSpy).toHaveBeenCalledTimes(5);
+    });
+  });
 });

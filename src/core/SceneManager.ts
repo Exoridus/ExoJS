@@ -186,6 +186,22 @@ export class SceneManager {
     return this;
   }
 
+  /**
+   * Drive one fixed-timestep step on the active scene (unless paused). Called
+   * zero or more times per frame by the {@link Application} loop, ahead of
+   * {@link SceneManager.update}. No drawing or transition advance happens here —
+   * those are per-frame, not per fixed step.
+   */
+  public fixedUpdate(delta: Time): this {
+    const scene = this._activeScene;
+
+    if (scene !== null && !scene.paused) {
+      scene.fixedUpdate(delta);
+    }
+
+    return this;
+  }
+
   public destroy(): void {
     if (this._transition) {
       const transition = this._transition;

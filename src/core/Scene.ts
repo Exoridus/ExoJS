@@ -340,6 +340,18 @@ export class Scene {
   }
 
   /**
+   * Fixed-timestep logic hook. Called zero or more times per frame with a
+   * constant `delta` ({@link Application.fixedTimeStep}) before {@link Scene.update},
+   * so physics and deterministic gameplay advance at a frame-rate-independent
+   * rate. Put `physicsWorld.step(delta)` and movement here; leave camera, UI and
+   * purely visual work in {@link Scene.update}. Default is a no-op. Override in
+   * subclass.
+   */
+  public fixedUpdate(_delta: Time): void {
+    // override in subclass
+  }
+
+  /**
    * Explicit per-frame rendering entry point. Override to choose
    * what gets rendered.
    *

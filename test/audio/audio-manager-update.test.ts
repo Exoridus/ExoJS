@@ -129,6 +129,7 @@ describe('AudioManager.update()', () => {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
       restart: vi.fn(),
     };
+    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };
