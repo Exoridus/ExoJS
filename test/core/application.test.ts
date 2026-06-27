@@ -214,6 +214,7 @@ describe('Application', () => {
     rawApp['scene'] = sceneManager;
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
+    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };
@@ -507,6 +508,7 @@ describe('Application', () => {
     rawApp['scene'] = sceneManager;
     rawApp['_activeClock'] = activeClock;
     rawApp['_frameClock'] = frameClock;
+    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
 
     app.stop();
     await Promise.resolve();
