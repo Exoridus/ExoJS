@@ -194,28 +194,43 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         }
         if (map.size === 0) return;
 
+        const headings = [...map.keys()];
+        if (headings.length === 0) return;
+
         const setActive = (link) => {
-            links.forEach(node => node.setAttribute('data-active', 'false'));
-            link.setAttribute('data-active', 'true');
+            links.forEach(node => node.setAttribute('data-active', String(node === link)));
         };
 
-        const observer = new IntersectionObserver(
-            entries => {
-                const visible = entries
-                    .filter(entry => entry.isIntersecting)
-                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-                const top = visible[0];
-                if (!top) return;
-                const link = map.get(top.target);
-                if (link) setActive(link);
-            },
-            { rootMargin: '-20% 0px -65% 0px', threshold: [0, 1] },
-        );
+        // Active = the last heading whose top has crossed a line ~28% down the
+        // viewport. A rootMargin "band" can't do this: headings near the page
+        // bottom never scroll high enough to enter the band, so the final
+        // section(s) would never activate. At the very bottom we force the last
+        // heading, since it can sit below the line with nothing left to scroll.
+        const LINE = 0.28;
+        const update = () => {
+            const line = window.innerHeight * LINE;
+            let active = headings[0];
+            for (const heading of headings) {
+                if (heading.getBoundingClientRect().top <= line) active = heading;
+                else break;
+            }
+            const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+            if (atBottom) active = headings[headings.length - 1];
+            setActive(map.get(active));
+        };
 
-        for (const heading of map.keys()) observer.observe(heading);
-
-        const firstLink = links[0];
-        if (firstLink instanceof HTMLAnchorElement) setActive(firstLink);
+        let ticking = false;
+        const onScroll = () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                ticking = false;
+                update();
+            });
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll, { passive: true });
+        update();
     })();
 </script>
 
