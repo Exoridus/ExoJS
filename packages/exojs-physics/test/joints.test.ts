@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld, RevoluteJoint, WeldJoint } from '../src/index';
+import { BoxShape, CircleShape, DistanceJoint, PhysicsBody, PhysicsWorld, PrismaticJoint, RevoluteJoint, WeldJoint, WheelJoint } from '../src/index';
 
 /**
  * Joints (spec `02-joints.md`). Soft constraints solved in the sub-step loop
@@ -226,5 +226,68 @@ describe('SG-J — joints', () => {
 
     expect(Math.abs(bar.angle)).toBeLessThan(limit + 0.05); // never past the limit
     expect(Math.abs(bar.angle)).toBeGreaterThan(limit - 0.15); // swung to and rests at the limit
+  });
+
+  it('SG-J13: a prismatic joint constrains a body to its axis (no perpendicular drift, no rotation)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // Horizontal slide axis (1,0); gravity is perpendicular → must not move the body.
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } }));
+
+    advance(world, 2);
+
+    expect(Math.abs(slider.y)).toBeLessThan(1); // perpendicular locked — gravity can't pull it off the axis
+    expect(Math.abs(slider.angle)).toBeLessThan(0.02); // rotation locked
+  });
+
+  it('SG-J14: a prismatic limit caps travel along the axis', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // Vertical slide axis (0,1) = gravity → the body slides down but the limit caps it at 100.
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(
+      new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 0, y: 1 }, enableLimit: true, lowerTranslation: 0, upperTranslation: 100 }),
+    );
+
+    advance(world, 3);
+
+    expect(slider.y).toBeGreaterThan(95); // slid down the axis to the limit
+    expect(slider.y).toBeLessThan(101); // capped at upperTranslation
+    expect(Math.abs(slider.x)).toBeLessThan(1); // perpendicular locked
+  });
+
+  it('SG-J15: a prismatic motor drives the body along its axis', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(
+      new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 }, enableMotor: true, motorSpeed: 100, maxMotorForce: 1e8 }),
+    );
+
+    advance(world, 0.5);
+
+    expect(slider.x).toBeGreaterThan(20); // motor drove it along +x
+    expect(Math.abs(slider.y)).toBeLessThan(1); // stayed on the axis
+  });
+
+  it('SG-J16: a wheel joint locks lateral motion but lets the wheel spin', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
+
+    // Suspension axis vertical (0,1): the wheel may travel along it (sprung) + spin, but not slide sideways.
+    world.addJoint(new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, hertz: 5, dampingRatio: 1 }));
+
+    wheel.angularVelocity = 10; // give it spin
+    wheel.applyImpulse(5000, 0); // shove it sideways (perpendicular to the axis)
+
+    advance(world, 1);
+
+    expect(Math.abs(wheel.x)).toBeLessThan(2); // lateral locked — did not slide sideways
+    expect(Math.abs(wheel.angularVelocity)).toBeGreaterThan(5); // rotation is free — still spinning
   });
 });
