@@ -27,6 +27,8 @@ export interface PhysicsDebugDrawOptions {
   drawBroadphase?: boolean;
   /** Tint sleeping bodies distinctly (applies to the shape outline). Default `false`. */
   drawSleeping?: boolean;
+  /** Lines connecting the bodies of each joint. Default `false`. */
+  drawJoints?: boolean;
 }
 
 const segments = 24;
@@ -41,6 +43,7 @@ const colorNormal = new Color(1, 0.6, 0.1, 1);
 const colorCenter = new Color(1, 1, 1, 0.9);
 const colorBroadphase = new Color(0.2, 0.8, 0.8, 0.5);
 const colorSleeping = new Color(0.45, 0.45, 0.5, 0.7);
+const colorJoint = new Color(0.9, 0.5, 1, 0.8);
 
 /**
  * `DebugLayer` that visualises a {@link PhysicsWorld} — shapes, AABBs, contacts,
@@ -71,6 +74,7 @@ export class PhysicsDebugDraw extends DebugLayer {
       drawCenters: options.drawCenters ?? false,
       drawBroadphase: options.drawBroadphase ?? false,
       drawSleeping: options.drawSleeping ?? false,
+      drawJoints: options.drawJoints ?? false,
     };
   }
 
@@ -117,7 +121,20 @@ export class PhysicsDebugDraw extends DebugLayer {
       this._renderContacts(gfx);
     }
 
+    if (options.drawJoints) {
+      this._renderJoints(gfx);
+    }
+
     gfx.render(backend);
+  }
+
+  private _renderJoints(gfx: Graphics): void {
+    gfx.lineColor = colorJoint;
+
+    for (const joint of this._world.joints) {
+      gfx.moveTo(joint.bodyA.x, joint.bodyA.y);
+      gfx.lineTo(joint.bodyB.x, joint.bodyB.y);
+    }
   }
 
   public override destroy(): void {
