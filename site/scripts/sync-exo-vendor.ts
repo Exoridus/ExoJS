@@ -249,6 +249,49 @@ const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: stri
     };
 };
 
+// Monaco (the in-browser TypeScript worker) cannot resolve Node `#`-subpath
+// imports — those rely on the package.json `imports` map, which the browser TS
+// worker does not apply. The shipped npm types are fine (Node/tsc resolve `#`
+// natively), but in the playground every `#`-imported symbol reads as
+// "has no exported member" (e.g. `Application`). Per the root `imports` map,
+// `#<path>` resolves to `dist/esm/<path>` — i.e. `<path>` within this copied
+// esm tree — so rewrite each `#<path>` to a path relative to its declaration
+// file. Then assert none survived: a stray one silently breaks the playground.
+const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string>): number => {
+    const importRe = /(\bfrom\s*|\bimport\s*\(\s*)(['"])#([^'"]+)\2/g;
+    let rewritten = 0;
+
+    for (const rel of dtsRelFiles) {
+        const abs = path.resolve(esmDir, rel);
+        const fromDir = path.posix.dirname(rel);
+        const original = fs.readFileSync(abs, 'utf8');
+        const updated = original.replace(importRe, (_match, prefix: string, quote: string, target: string) => {
+            let relPath = path.posix.relative(fromDir, target);
+            if (!relPath.startsWith('.')) relPath = `./${relPath}`;
+            return `${prefix}${quote}${relPath}${quote}`;
+        });
+
+        if (updated !== original) {
+            fs.writeFileSync(abs, updated, 'utf8');
+            rewritten += 1;
+        }
+    }
+
+    // Only flag `#` in import position — not GLSL `"#version …"` strings, hex
+    // colours like `'#6495ed'`, or `//# sourceMappingURL` comments.
+    const leakRe = /(?:\bfrom\s*|\bimport\s*\(\s*)['"]#[^'"]+['"]/;
+    const leaked = dtsRelFiles.filter(rel => leakRe.test(fs.readFileSync(path.resolve(esmDir, rel), 'utf8')));
+
+    if (leaked.length > 0) {
+        throw new Error(
+            `[vendor:sync] ${leaked.length} declaration file(s) still contain unresolved '#' subpath imports after rewrite ` +
+                `(Monaco cannot resolve them — the playground would report missing exports): ${leaked.slice(0, 5).join(', ')}${leaked.length > 5 ? ', …' : ''}`
+        );
+    }
+
+    return rewritten;
+};
+
 // Copy the ESM runtime tree and normalize declarations into a layout Monaco
 // can resolve. Two declaration paths are supported, in order of preference:
 //
@@ -280,6 +323,8 @@ const syncTypings = (): void => {
     }
 
     const { allFiles, dtsFiles } = copyEsmTree(sourceEsmDir, destEsmDir);
+    const rewritten = rewriteSubpathImports(destEsmDir, dtsFiles);
+    console.log(`[vendor:sync] rewrote '#'-subpath imports to relative paths in ${rewritten} declaration file(s) (Monaco cannot resolve '#').`);
 
     if (fs.existsSync(sourceFlatDts)) {
         fs.copyFileSync(sourceFlatDts, destFlatDts);
