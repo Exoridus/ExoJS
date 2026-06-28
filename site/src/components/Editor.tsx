@@ -207,7 +207,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
                     onOpenTab={() => previewRef.current?.openPreviewInTab()}
                     onToggleExpand={() => setPreviewExpanded(value => !value)}
                 />
-                <div className={css(styles, 'preview-surface')}>
+                <div className={css(styles, 'preview-surface')} data-preview-surface>
                     <div className={css(styles, 'preview-component')}>
                         <EditorPreview
                             ref={previewRef}
