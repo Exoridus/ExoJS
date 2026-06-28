@@ -1,0 +1,429 @@
+---
+// Animated example thumbnails for the landing page. Each `anim` variant is a
+// lightweight, GPU-friendly CSS loop (transform/opacity only) that evokes what
+// the linked demo does — particles rising, an FFT equalizer, an easing curve,
+// etc. — instead of a dead placeholder. The stage uses --bg-code (always dark,
+// both themes) so the motifs read like a tiny running canvas everywhere.
+// All motion is gated behind prefers-reduced-motion.
+type Anim = 'particles' | 'chroma' | 'fft' | 'frames' | 'easing' | 'camera';
+
+interface Props {
+    anim: Anim;
+    title: string;
+    tone?: number;
+}
+
+const { anim, title, tone = 0 } = Astro.props;
+const FFT_BARS = 9;
+const SPARKS = 11;
+const FRAMES = 4;
+---
+
+<div class="thumb" data-anim={anim} data-tone={tone}>
+    <div class="stage" aria-hidden="true">
+        {
+            anim === 'particles' && (
+                <div class="particles">
+                    {Array.from({ length: SPARKS }).map((_, i) => (
+                        <span class="spark" style={`--i:${i}`} />
+                    ))}
+                </div>
+            )
+        }
+        {anim === 'chroma' && <div class="chroma">EXO</div>}
+        {
+            anim === 'fft' && (
+                <div class="fft">
+                    {Array.from({ length: FFT_BARS }).map((_, i) => (
+                        <span class="bar" style={`--i:${i}`} />
+                    ))}
+                </div>
+            )
+        }
+        {
+            anim === 'frames' && (
+                <div class="frames">
+                    {Array.from({ length: FRAMES }).map(() => (
+                        <span class="frame" />
+                    ))}
+                    <span class="runner" />
+                </div>
+            )
+        }
+        {
+            anim === 'easing' && (
+                <div class="easing">
+                    <svg width="140" height="80" viewBox="0 0 140 80" fill="none">
+                        <line x1="14" y1="64" x2="126" y2="64" class="axis" />
+                        <path d="M14,64 C58,64 62,16 126,16" class="curve" />
+                    </svg>
+                    <span class="ease-dot" />
+                </div>
+            )
+        }
+        {
+            anim === 'camera' && (
+                <div class="camera">
+                    <div class="cam-world" />
+                    <div class="cam-frame">
+                        <span class="corner tl" />
+                        <span class="corner tr" />
+                        <span class="corner bl" />
+                        <span class="corner br" />
+                    </div>
+                </div>
+            )
+        }
+    </div>
+    <span class="label">{title}</span>
+</div>
+
+<style>
+    .thumb {
+        position: relative;
+        aspect-ratio: 16 / 10;
+        background: var(--bg-code);
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        isolation: isolate;
+    }
+
+    /* Subtle grid backdrop shared by every variant — reads as a canvas. */
+    .thumb::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(var(--grid-line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+        background-size: 28px 28px;
+        opacity: 0.45;
+        z-index: 0;
+    }
+
+    .stage {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        z-index: 1;
+    }
+
+    .label {
+        position: relative;
+        z-index: 2;
+        align-self: end;
+        justify-self: start;
+        margin: 0 0 10px 12px;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        color: oklch(86% 0.01 245);
+        padding: 3px 9px;
+        border-radius: var(--r-pill);
+        border: 1px solid oklch(40% 0.015 245);
+        background: oklch(16% 0.012 245 / 0.78);
+        backdrop-filter: blur(2px);
+    }
+
+    /* ---- particles: warm sparks rising from an ember base ---- */
+    .particles {
+        position: absolute;
+        inset: 0;
+    }
+    .particles::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: 12%;
+        width: 64%;
+        height: 38%;
+        transform: translateX(-50%);
+        background: radial-gradient(ellipse at center bottom, oklch(72% 0.18 55 / 0.35), transparent 70%);
+        animation: ember 2.8s ease-in-out infinite;
+    }
+    .spark {
+        position: absolute;
+        left: calc(50% + (var(--i) - 5) * 6%);
+        bottom: 16%;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: radial-gradient(circle, oklch(95% 0.13 90), oklch(78% 0.2 50));
+        opacity: 0;
+        will-change: transform, opacity;
+        animation: spark-rise 2.6s ease-out infinite;
+        animation-delay: calc(var(--i) * -0.24s);
+    }
+    @keyframes spark-rise {
+        0% {
+            transform: translateY(0) scale(0.5);
+            opacity: 0;
+        }
+        12% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-96px) translateX(calc((var(--i) - 5) * 4px)) scale(0.85);
+            opacity: 0;
+        }
+    }
+    @keyframes ember {
+        0%,
+        100% {
+            opacity: 0.55;
+        }
+        50% {
+            opacity: 0.9;
+        }
+    }
+
+    /* ---- chroma: RGB-split wordmark drifting apart ---- */
+    .chroma {
+        font-family: var(--f-mono);
+        font-weight: 700;
+        font-size: 2.1rem;
+        letter-spacing: 0.12em;
+        color: oklch(92% 0.02 245);
+        will-change: text-shadow;
+        animation: chroma-shift 2.8s ease-in-out infinite;
+    }
+    @keyframes chroma-shift {
+        0%,
+        100% {
+            text-shadow:
+                -2px 0 oklch(70% 0.2 25 / 0.85),
+                2px 0 oklch(75% 0.16 215 / 0.85);
+        }
+        50% {
+            text-shadow:
+                -6px 0 oklch(70% 0.2 25 / 0.95),
+                6px 0 oklch(75% 0.16 215 / 0.95);
+        }
+    }
+
+    /* ---- fft: equalizer bars ---- */
+    .fft {
+        display: flex;
+        align-items: flex-end;
+        gap: 5px;
+        height: 48%;
+    }
+    .bar {
+        width: 7px;
+        height: 100%;
+        border-radius: 2px 2px 0 0;
+        background: linear-gradient(to top, var(--accent), oklch(92% 0.13 142));
+        transform-origin: bottom;
+        transform: scaleY(0.18);
+        will-change: transform;
+        animation: fft-bounce calc(0.8s + (var(--i) * 0.05s)) ease-in-out infinite;
+        animation-delay: calc(var(--i) * -0.13s);
+    }
+    @keyframes fft-bounce {
+        0%,
+        100% {
+            transform: scaleY(0.18);
+        }
+        50% {
+            transform: scaleY(1);
+        }
+    }
+
+    /* ---- frames: a playhead stepping across sprite frames ---- */
+    .frames {
+        position: relative;
+        display: flex;
+        gap: 8px;
+    }
+    .frame {
+        width: 24px;
+        height: 30px;
+        border-radius: 5px;
+        border: 1px solid var(--line-soft);
+        background: var(--bg-elevated);
+        opacity: 0.5;
+    }
+    .runner {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 24px;
+        height: 30px;
+        border-radius: 5px;
+        border: 1.5px solid var(--accent);
+        background: var(--accent-soft);
+        box-shadow: 0 0 12px var(--accent-soft);
+        will-change: transform;
+        animation: frame-step 1.8s steps(4) infinite;
+    }
+    @keyframes frame-step {
+        to {
+            transform: translateX(128px);
+        }
+    }
+
+    /* ---- easing: a dot tracing an ease curve ---- */
+    .easing {
+        position: relative;
+        width: 140px;
+        height: 80px;
+    }
+    .easing svg {
+        position: absolute;
+        inset: 0;
+        overflow: visible;
+    }
+    .easing .axis {
+        stroke: var(--line);
+        stroke-width: 1.5;
+        stroke-dasharray: 3 4;
+    }
+    .easing .curve {
+        stroke: var(--accent);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-dasharray: 200;
+        stroke-dashoffset: 200;
+        animation: curve-draw 2.6s ease-in-out infinite;
+    }
+    .ease-dot {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 12px var(--accent);
+        offset-path: path('M14,64 C58,64 62,16 126,16');
+        offset-distance: 0%;
+        will-change: offset-distance;
+        animation: ease-run 2.6s ease-in-out infinite;
+    }
+    @keyframes ease-run {
+        0% {
+            offset-distance: 0%;
+        }
+        55%,
+        100% {
+            offset-distance: 100%;
+        }
+    }
+    @keyframes curve-draw {
+        0% {
+            stroke-dashoffset: 200;
+        }
+        55%,
+        100% {
+            stroke-dashoffset: 0;
+        }
+    }
+
+    /* ---- camera: a viewfinder panning over a drifting world ---- */
+    .camera {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+    }
+    .cam-world {
+        position: absolute;
+        inset: -30%;
+        background-image:
+            radial-gradient(circle at 30% 40%, var(--accent-soft), transparent 22%),
+            radial-gradient(circle at 70% 65%, oklch(70% 0.16 215 / 0.22), transparent 20%),
+            linear-gradient(var(--grid-line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+        background-size:
+            100% 100%,
+            100% 100%,
+            22px 22px,
+            22px 22px;
+        will-change: transform;
+        animation: cam-pan 7s ease-in-out infinite;
+    }
+    .cam-frame {
+        position: absolute;
+        top: 32%;
+        left: 34%;
+        width: 32%;
+        height: 36%;
+        will-change: transform;
+        animation: cam-zoom 7s ease-in-out infinite;
+    }
+    .corner {
+        position: absolute;
+        width: 9px;
+        height: 9px;
+        border: 2px solid var(--accent);
+    }
+    .corner.tl {
+        top: 0;
+        left: 0;
+        border-right: 0;
+        border-bottom: 0;
+    }
+    .corner.tr {
+        top: 0;
+        right: 0;
+        border-left: 0;
+        border-bottom: 0;
+    }
+    .corner.bl {
+        bottom: 0;
+        left: 0;
+        border-right: 0;
+        border-top: 0;
+    }
+    .corner.br {
+        bottom: 0;
+        right: 0;
+        border-left: 0;
+        border-top: 0;
+    }
+    @keyframes cam-pan {
+        0%,
+        100% {
+            transform: translate(0, 0);
+        }
+        50% {
+            transform: translate(6%, -5%);
+        }
+    }
+    @keyframes cam-zoom {
+        0%,
+        100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.18);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .spark,
+        .particles::after,
+        .chroma,
+        .bar,
+        .runner,
+        .ease-dot,
+        .curve,
+        .cam-world,
+        .cam-frame {
+            animation: none;
+        }
+        /* Settle into a readable static state. */
+        .bar {
+            transform: scaleY(0.6);
+        }
+        .ease-dot {
+            offset-distance: 62%;
+        }
+        .curve {
+            stroke-dashoffset: 0;
+        }
+        .spark {
+            opacity: 0.5;
+        }
+    }
+</style>
