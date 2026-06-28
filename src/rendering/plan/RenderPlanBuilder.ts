@@ -93,7 +93,11 @@ export class RenderPlanBuilder {
     this._barrierEntryPoolCursor = 0;
     this._scopeStack.length = 0;
     this._hasPending = false;
-    this._nodeIndex = 0;
+    // Base this plan's node indices after whatever earlier render() calls already
+    // wrote into the frame-scoped transform buffer, so every draw across all
+    // render() calls in the frame references a distinct slot and can batch.
+    const frameBase = (backend as { transformBufferCount?: number }).transformBufferCount ?? 0;
+    this._nodeIndex = frameBase;
 
     const rootScope = this._acquireGroupScope(false);
 
@@ -110,7 +114,7 @@ export class RenderPlanBuilder {
       });
     }
 
-    this._plan.nodeCount = this._nodeIndex;
+    this._plan.nodeCount = this._nodeIndex - frameBase;
 
     return this._plan;
   }

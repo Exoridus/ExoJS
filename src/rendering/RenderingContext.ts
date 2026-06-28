@@ -261,11 +261,10 @@ export class RenderingContext implements System {
     const view = options.view ?? this._camera;
     const mesh = (this._immediateMesh ??= new ImmediateMesh());
 
-    // Set the view first: this flushes whatever renderer a prior render() /
-    // drawGeometry left pending, so the shared transform buffer is free for this
-    // draw's synthetic slot and the pooled mesh is safe to reconfigure. The
-    // immediate flush below then keeps a later drawGeometry from observing this
-    // pooled mesh through a still-deferred draw.
+    // Set the view first: setView now only flushes when the view actually changes
+    // (not unconditionally). Correctness here rests on (a) the trailing flush()
+    // below — so a later drawGeometry cannot observe this pooled mesh through a
+    // still-deferred draw — and (b) any renderer switch flushing its pending batch.
     this._backend.setView(view);
     mesh.configure(geometry, transform, material, options.tint ?? null);
     this._backend.draw(mesh);
@@ -302,9 +301,11 @@ export class RenderingContext implements System {
     const view = options.view ?? this._camera;
     const mesh = (this._batchMesh ??= new ImmediateMesh());
 
-    // Set the view first (flushing any renderer left pending), configure the
-    // pooled geometry/look source, then submit a single instanced draw over the
-    // batch's per-instance transforms/tints and flush it immediately.
+    // Set the view first (setView only flushes when the view actually changes;
+    // correctness rests on the trailing flush() below and on any renderer switch
+    // flushing its pending batch), configure the pooled geometry/look source,
+    // then submit a single instanced draw over the batch's per-instance
+    // transforms/tints and flush it immediately.
     this._backend.setView(view);
     mesh.configureBatchSource(batch.geometry, batch.material);
     this._backend.drawInstanced(mesh, batch._instanceTransforms, batch._instanceTints, batch.count);

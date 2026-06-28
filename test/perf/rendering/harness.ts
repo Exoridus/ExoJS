@@ -7,6 +7,7 @@
  *
  * @internal Test/perf-only.
  */
+import { playRenderTree } from '#rendering/plan/playRenderTree';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -157,6 +158,52 @@ export const measureSteadyFrame = (harness: WebGl2Harness, root: RenderNode, war
 
   for (let i = 0; i <= warmupFrames; i++) {
     metrics = measureFrame(harness, root, beforeFrame);
+  }
+
+  return metrics!;
+};
+
+/**
+ * Render each node via its own setView + playRenderTree (exactly what
+ * RenderingContext.render does per call), then flush once — i.e. the
+ * "one context.render() per drawable in a loop" pattern. Returns the metrics of
+ * the final warmed frame.
+ */
+export const measureCrossCallFrame = (harness: WebGl2Harness, nodes: readonly RenderNode[], warmupFrames = 2): FrameMetrics => {
+  const { backend, recorder } = harness;
+  let metrics: FrameMetrics | null = null;
+
+  for (let i = 0; i <= warmupFrames; i++) {
+    backend.resetStats();
+    recorder.reset();
+    backend.clear();
+
+    const view = backend.view;
+    for (const node of nodes) {
+      backend.setView(view);
+      playRenderTree(node, backend);
+    }
+    backend.flush();
+
+    const stats = backend.stats;
+    metrics = {
+      drawCalls: stats.drawCalls,
+      batches: stats.batches,
+      instances: recorder.instances,
+      visibleNodes: stats.submittedNodes,
+      culledNodes: stats.culledNodes,
+      renderPasses: stats.renderPasses,
+      textureBinds: recorder.textureBinds,
+      samplerBinds: recorder.samplerBinds,
+      programChanges: recorder.programChanges,
+      blendChanges: recorder.blendChanges,
+      bufferUploads: recorder.bufferUploads,
+      bufferReallocations: recorder.bufferReallocations,
+      uploadedBufferBytes: recorder.bufferUploadBytes,
+      transformRows: recorder.transformRows,
+      transformUploads: recorder.transformUploads,
+      transformUploadBytes: recorder.transformUploadBytes,
+    };
   }
 
   return metrics!;

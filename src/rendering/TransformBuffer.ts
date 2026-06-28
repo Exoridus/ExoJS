@@ -38,6 +38,12 @@ export class TransformBuffer {
   private _skippedWriteCount = 0;
   private _uploadCount = 0;
   private _uploadedRecordCount = 0;
+  // Dirty row range [_dirtyMin, _dirtyMax] written since the last upload — the
+  // exact rows a delta upload must push. Empty when `_dirtyMax < _dirtyMin`.
+  // Tracked by slot (not a high-water mark) so a reused slot (nested-plan
+  // rewind, filter composite) is correctly re-uploaded.
+  private _dirtyMin = 0;
+  private _dirtyMax = -1;
 
   public get count(): number {
     return this._count;
@@ -94,6 +100,11 @@ export class TransformBuffer {
     return this._version;
   }
 
+  /** Running content hash of the rows written since begin(). @internal */
+  public get frameHash(): number {
+    return this._frameHash;
+  }
+
   public begin(expectedCount = 0): this {
     if (expectedCount > 0) {
       this._ensureCapacity(expectedCount);
@@ -105,6 +116,8 @@ export class TransformBuffer {
     this._skippedWriteCount = 0;
     this._uploadCount = 0;
     this._uploadedRecordCount = 0;
+    this._dirtyMin = 0;
+    this._dirtyMax = -1;
 
     return this;
   }
@@ -115,6 +128,47 @@ export class TransformBuffer {
     this.write(slot, transform, tint);
 
     return slot;
+  }
+
+  /**
+   * Rewind the write cursor to `count`, freeing the rows above it for reuse, and
+   * (optionally) restore the running content hash to its pre-rewind value so the
+   * freed rows' writes don't linger in the hash and trigger spurious re-uploads.
+   * Used by nested draw plans (filters / cacheAsBitmap) to isolate their slots.
+   * @internal
+   */
+  public rewindTo(count: number, frameHash?: number): this {
+    if (count >= 0 && count < this._count) {
+      this._count = count;
+
+      if (frameHash !== undefined) {
+        this._frameHash = frameHash >>> 0;
+      }
+    }
+
+    return this;
+  }
+
+  /**
+   * Consume the dirty row range written since the last upload, clamped to
+   * `[0, maxCount)`, and clear it. Returns the contiguous `[firstRow, firstRow +
+   * rowCount)` a delta upload should push (`rowCount === 0` when nothing is
+   * dirty). The backend calls this at its upload boundary.
+   * @internal
+   */
+  public consumeDirtyRange(maxCount: number): { firstRow: number; rowCount: number } {
+    if (this._dirtyMax < this._dirtyMin) {
+      return { firstRow: 0, rowCount: 0 };
+    }
+
+    const firstRow = Math.max(0, this._dirtyMin);
+    const lastRow = Math.min(this._dirtyMax, maxCount - 1);
+    const rowCount = lastRow >= firstRow ? lastRow - firstRow + 1 : 0;
+
+    this._dirtyMin = 0;
+    this._dirtyMax = -1;
+
+    return { firstRow, rowCount };
   }
 
   public write(slot: number, transform: Matrix, tint: Color): this {
@@ -142,6 +196,16 @@ export class TransformBuffer {
 
     if (slot >= this._count) {
       this._count = slot + 1;
+    }
+
+    // Track the exact written-slot range so a delta upload pushes precisely the
+    // changed rows — including a slot reused below the high-water mark.
+    if (this._dirtyMax < this._dirtyMin) {
+      this._dirtyMin = slot;
+      this._dirtyMax = slot;
+    } else {
+      if (slot < this._dirtyMin) this._dirtyMin = slot;
+      if (slot > this._dirtyMax) this._dirtyMax = slot;
     }
 
     this._frameHash = this._mix(this._frameHash, slot);

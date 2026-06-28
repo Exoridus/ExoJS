@@ -1,5 +1,5 @@
 // Auto-generated from performance-overlay.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 const app = new Application({
     canvas: {
@@ -17,14 +17,21 @@ const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
 class PerformanceOverlayScene extends Scene {
     sprites;
+    layer;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
+        // All sprites share one texture, so adding them to a single container and
+        // rendering it once lets the renderer batch them into a single draw call.
+        // Rendering each sprite with its own `context.render(sprite)` call would
+        // instead emit one draw call per sprite and tank the frame rate.
+        this.layer = new Container();
         this.sprites = Array.from({ length: 1600 }, () => {
             const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.25);
             sprite.setPosition(Math.random() * width, Math.random() * height);
+            this.layer.addChild(sprite);
             return {
                 sprite,
                 vx: (Math.random() - 0.5) * 120,
@@ -47,8 +54,7 @@ class PerformanceOverlayScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        for (const { sprite } of this.sprites)
-            context.render(sprite);
+        context.render(this.layer);
     }
 }
 app.start(new PerformanceOverlayScene());
