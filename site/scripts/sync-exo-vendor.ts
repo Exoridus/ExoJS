@@ -108,20 +108,20 @@ interface MonacoRegistry {
     subpathShims: ReadonlyArray<MonacoShimEntry>;
 }
 
-const buildMonacoRegistry = (version: string): MonacoRegistry => {
-    const sourcePackageJsonPath = path.resolve(packageRoot, 'package.json');
+const buildMonacoRegistry = (packageName: string, pkgRootDir: string, version: string): MonacoRegistry => {
+    const sourcePackageJsonPath = path.resolve(pkgRootDir, 'package.json');
     const sourcePackageJson = JSON.parse(fs.readFileSync(sourcePackageJsonPath, 'utf8')) as {
         exports?: Record<string, Record<string, string | undefined> | string>;
     };
 
     const packageJson = JSON.stringify({
-        name: '@codexo/exojs',
+        name: packageName,
         version,
         types: './dist/esm/index.d.ts',
     });
 
     const subpathShims: MonacoShimEntry[] = [];
-    const pkgVirtualRoot = '/node_modules/@codexo/exojs';
+    const pkgVirtualRoot = `/node_modules/${packageName}`;
 
     for (const [subpathKey, conditions] of Object.entries(sourcePackageJson.exports ?? {})) {
         if (subpathKey === '.' || subpathKey === './package.json') continue;
@@ -379,12 +379,18 @@ const syncVendor = (): void => {
 
     fs.writeFileSync(path.resolve(flatTargetDir, 'module-shims.d.ts'), moduleShims, 'utf8');
 
-    const registry = buildMonacoRegistry(versionId);
+    const registry = buildMonacoRegistry('@codexo/exojs', packageRoot, versionId);
     fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), JSON.stringify(registry, null, 2) + '\n', 'utf8');
 
     console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
 
-    // Sync extension packages (ESM trees only — no declaration patching needed).
+    // Sync extension packages. Each gets the same Monaco-resolvable treatment as
+    // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
+    // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
+    // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
+    // `/register`, `/debug`). Without this the playground's TypeScript worker
+    // can't resolve `@codexo/exojs-particles` & co. and every extension example
+    // shows a ts2307 "Cannot find module" error.
     const extensionPackages = ['exojs-particles', 'exojs-audio-fx', 'exojs-tilemap', 'exojs-tiled', 'exojs-physics'] as const;
     for (const pkgName of extensionPackages) {
         let pkgRoot: string | null = null;
@@ -400,8 +406,9 @@ const syncVendor = (): void => {
             console.warn(`[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist} — skipping.`);
             continue;
         }
-        const destDir = path.resolve(projectRoot, 'public', 'vendor', pkgName, 'esm');
-        fs.rmSync(path.dirname(destDir), { recursive: true, force: true });
+        const vendorDir = path.resolve(projectRoot, 'public', 'vendor', pkgName);
+        const destDir = path.resolve(vendorDir, 'esm');
+        fs.rmSync(vendorDir, { recursive: true, force: true });
         fs.mkdirSync(destDir, { recursive: true });
         const files = collectFiles(pkgDist);
         for (const rel of files) {
@@ -410,7 +417,16 @@ const syncVendor = (): void => {
             fs.mkdirSync(path.dirname(dst), { recursive: true });
             fs.copyFileSync(src, dst);
         }
-        console.log(`[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files) -> vendor/${pkgName}/esm/`);
+
+        const dtsFiles = collectDeclarationFiles(pkgDist);
+        const rewritten = rewriteSubpathImports(destDir, dtsFiles);
+        fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
+        const extRegistry = buildMonacoRegistry(`@codexo/${pkgName}`, pkgRoot, versionId);
+        fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), JSON.stringify(extRegistry, null, 2) + '\n', 'utf8');
+
+        console.log(
+            `[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files, ${dtsFiles.length} declarations, ${rewritten} '#'-rewritten) -> vendor/${pkgName}/`
+        );
     }
 };
 
