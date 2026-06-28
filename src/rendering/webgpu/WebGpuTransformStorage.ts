@@ -99,11 +99,25 @@ export class WebGpuTransformStorage {
     }
 
     if (snapshot.changed || snapshot.hash !== this._storageHash || snapshot.count !== this._storageCount) {
-      const bytes = snapshot.count * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
+      // Upload only the rows actually written since the last upload (delta), so
+      // barrier-heavy frames don't re-upload the whole growing buffer. A reused
+      // slot below the high-water mark is in the dirty range, so it re-uploads.
+      const { firstRow, rowCount } = this._buffer.consumeDirtyRange(snapshot.count);
 
-      device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, bytes);
-      this._buffer.recordUpload(snapshot.count);
-      this._accountant?.recordBufferUpload(bytes);
+      if (rowCount > 0) {
+        const slotBytes = slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
+
+        device.queue.writeBuffer(
+          this._storageBuffer!,
+          firstRow * slotBytes,
+          this._buffer.data.buffer,
+          this._buffer.data.byteOffset + firstRow * slotBytes,
+          rowCount * slotBytes,
+        );
+        this._buffer.recordUpload(rowCount);
+        this._accountant?.recordBufferUpload(rowCount * slotBytes);
+      }
+
       this._storageHash = snapshot.hash;
       this._storageCount = snapshot.count;
     }
