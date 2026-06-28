@@ -336,7 +336,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       c.nodeDataCapacity = cap;
     }
 
-    gl.activeTexture(gl.TEXTURE1);
+    // Route the unit switch through the backend so its texture-unit cache stays
+    // in sync. A raw gl.activeTexture here would leave the cache reading unit 0,
+    // and the atlas bindTexture(_, 0) in _drawBatches would then skip its own
+    // switch and bind the atlas to unit 1 — leaving the SDF sampler (unit 0)
+    // empty and the text invisible whenever it is the first draw of a frame.
+    this.getBackend().setActiveTextureUnit(1);
     gl.bindTexture(gl.TEXTURE_2D, c.nodeDataTexture);
     gl.texSubImage2D(
       gl.TEXTURE_2D,
