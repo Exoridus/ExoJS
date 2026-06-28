@@ -8,8 +8,9 @@
 // Field coverage targets the orthogonal-map feature set described in the
 // v0.13 Tiled phase-2 spec (tile/object/image/group layers, embedded and
 // external tilesets, custom properties, tile animations). Hex/isometric-only
-// fields (grid, hexsidelength, staggeraxis/-index, wangsets, terrains,
-// transformations, parallax origin) are intentionally not modelled.
+// fields (grid, hexsidelength, staggeraxis/-index, transformations, parallax
+// origin) are intentionally not modelled. Wangsets (terrain/auto-tile
+// definitions) are modelled via {@link TiledWangSetData}.
 
 /** A 2D point as written by Tiled (used for tile offsets and object shapes). */
 export interface TiledPointData {
@@ -78,6 +79,52 @@ export interface TiledTileData {
   readonly imageheight?: number | undefined;
 }
 
+// ── Wangsets (terrains / auto-tile definitions) ───────────────────────────────
+
+/**
+ * One color (terrain) entry within a wangset's `colors` array.
+ *
+ * `tile` is the representative tile local id for this color (–1 if unset).
+ * `probability` is the relative spawn weight used by Tiled's random fill.
+ */
+export interface TiledWangColorData {
+  readonly name: string;
+  readonly color: string;
+  readonly tile: number;
+  readonly probability: number;
+}
+
+/**
+ * One wang-tile entry within a wangset's `wangtiles` array.
+ *
+ * `tileid` is the local tile id within the owning tileset.
+ *
+ * `wangid` is an 8-element array of color indices (1-based; 0 = unset) whose
+ * positions correspond to (in order): top, top-right, right, bottom-right,
+ * bottom, bottom-left, left, top-left.
+ */
+export interface TiledWangTileData {
+  readonly tileid: number;
+  readonly wangid: readonly number[];
+}
+
+/**
+ * A wangset entry within a tileset's `wangsets` array.
+ *
+ * `type` is `'corner'`, `'edge'`, or `'mixed'` (Tiled 1.5+). Older files may
+ * omit it or use other strings — treat unknown values as-is.
+ *
+ * `tile` is the representative tile local id for this wangset (–1 if unset).
+ */
+export interface TiledWangSetData {
+  readonly name: string;
+  readonly type: string;
+  readonly tile: number;
+  readonly colors: readonly TiledWangColorData[];
+  readonly wangtiles: readonly TiledWangTileData[];
+  readonly properties?: readonly TiledPropertyData[] | undefined;
+}
+
 // ── Tileset ──────────────────────────────────────────────────────────────────
 
 /**
@@ -100,6 +147,7 @@ export interface TiledTilesetData {
   readonly tileoffset?: TiledPointData | undefined;
   readonly objectalignment?: string | undefined;
   readonly tiles?: readonly TiledTileData[] | undefined;
+  readonly wangsets?: readonly TiledWangSetData[] | undefined;
   readonly properties?: readonly TiledPropertyData[] | undefined;
   readonly tiledversion?: string | undefined;
   readonly version?: string | number | undefined;

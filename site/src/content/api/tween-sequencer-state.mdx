@@ -1,0 +1,33 @@
+---
+title: "TweenSequencerState"
+description: "Lifecycle states of a TweenSequencer. Mirrors TweenState semantics: starts `Idle`, becomes `Active` on TweenSequencer.start, and ends in `Complete` (all stages exhausted) or `Stopped` (cancelled via TweenSequencer.stop). `Paused` is reachable from `Active` only."
+symbol: "TweenSequencerState"
+kind: "enum"
+subsystem: "animation"
+importPath: "@codexo/exojs"
+memberCount: 5
+tier: "stable"
+sections: ["Import", "Members", "Source"]
+sourcePath: "src/animation/TweenSequencer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSequencer.ts#L23"
+---
+## Import
+
+`import { TweenSequencerState } from '@codexo/exojs'`
+
+Lifecycle states of a TweenSequencer. Mirrors TweenState
+semantics: starts `Idle`, becomes `Active` on TweenSequencer.start,
+and ends in `Complete` (all stages exhausted) or `Stopped` (cancelled via
+TweenSequencer.stop). `Paused` is reachable from `Active` only.
+
+## Members
+
+- `Active`
+- `Complete`
+- `Idle`
+- `Paused`
+- `Stopped`
+
+## Source
+
+[src/animation/TweenSequencer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSequencer.ts#L23)

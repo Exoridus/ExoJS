@@ -1,88 +1,142 @@
 ---
 /**
- * Callout — a labelled aside for notes, tips, warnings, and platform hints.
+ * Callout — a labelled aside for the eight Guide Companion states.
+ *
+ * Each state pairs the painterly companion sprite (a trailing-edge badge, sliced
+ * and chroma-keyed from the 8-state sheet) with a state-coloured icon chip +
+ * label. The icon and label carry the meaning, so the callout reads for
+ * colour-blind readers and in high-contrast modes; the sprite and its
+ * state-coloured screen-glow are enrichment.
  *
  * Usage in MDX:
  *   import Callout from '../../../components/Callout.astro';
  *
- *   <Callout type="tip">
- *   Start each frame with `context.backend.clear()`.
+ *   <Callout type="hint">
+ *   Pulling in several assets? `loadMany()` batches the requests for you.
  *   </Callout>
  *
- *   <Callout type="common-mistake" title="Forgetting the anchor">
+ *   <Callout type="pitfall" title="A sprite that won't center">
  *   A sprite's default anchor is the top-left corner, not its center.
  *   </Callout>
  *
- * The type is conveyed by a text label and a glyph, never colour alone, so the
- * meaning survives for colour-blind readers and in high-contrast modes.
+ * Colour exclusivity: amber=warning, mint=success, gray=invalid, red=broken;
+ * info/hint/pitfall/debug share the companion cyan and are told apart by icon.
  */
 
-type CalloutType = 'note' | 'tip' | 'important' | 'common-mistake' | 'webgpu' | 'browser';
+type CalloutType = 'info' | 'hint' | 'warning' | 'pitfall' | 'success' | 'debug' | 'invalid' | 'broken';
 
 interface Props {
     type?: CalloutType;
-    /** Optional heading. Falls back to the type's default label. */
+    /** Optional heading. Falls back to the state's default label. */
     title?: string;
 }
 
-const META: Record<CalloutType, { label: string; glyph: string }> = {
-    'note': { label: 'Note', glyph: 'i' },
-    'tip': { label: 'Tip', glyph: '+' },
-    'important': { label: 'Important', glyph: '!' },
-    'common-mistake': { label: 'Common mistake', glyph: '×' },
-    'webgpu': { label: 'WebGPU', glyph: '◆' },
-    'browser': { label: 'Browser behavior', glyph: '◐' },
+const LABELS: Record<CalloutType, string> = {
+    info: 'Good to know',
+    hint: 'Tip',
+    warning: 'Heads up',
+    pitfall: 'Common pitfall',
+    success: "You're set",
+    debug: 'Debug tip',
+    invalid: 'Not supported',
+    broken: 'Runtime error',
 };
 
-const { type = 'note', title } = Astro.props;
-const meta = META[type];
-const heading = title ?? meta.label;
+// Lucide-style line icons (24 viewBox, currentColor), one per state.
+const ICONS: Record<CalloutType, string> = {
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
+    hint: '<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.3 1 2.5h6c0-1.2.3-1.8 1-2.5A6 6 0 0 0 12 3Z"/>',
+    warning: '<path d="m10.3 4 -8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    pitfall: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    success: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+    debug: '<path d="m15 8 4 4-4 4"/><path d="m9 8-4 4 4 4"/>',
+    invalid: '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
+    broken: '<circle cx="12" cy="12" r="9"/><path d="m14.5 9.5-5 5"/><path d="m9.5 9.5 5 5"/>',
+};
+
+const { type = 'info', title } = Astro.props;
+const heading = title ?? LABELS[type];
+const base = import.meta.env.BASE_URL;
 ---
 
 <aside class="callout" data-callout={type} role="note">
-    <p class="callout__head">
-        <span class="callout__glyph" aria-hidden="true">{meta.glyph}</span>
-        <span class="callout__label">{heading}</span>
-    </p>
-    <div class="callout__body">
-        <slot />
+    <div class="callout__main">
+        <p class="callout__head">
+            <span class="callout__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={ICONS[type]}></svg>
+            </span>
+            <span class="callout__label">{heading}</span>
+        </p>
+        <div class="callout__body">
+            <slot />
+        </div>
     </div>
+    <img
+        class="callout__companion"
+        src={`${base}brand/companion/${type}.webp`}
+        alt=""
+        aria-hidden="true"
+        width="168"
+        height="138"
+        loading="lazy"
+        decoding="async"
+    />
 </aside>
 
 <style>
     .callout {
-        --callout-accent: var(--fg-muted);
-        --callout-bg: color-mix(in oklab, var(--bg-elevated), transparent 0%);
+        /* Default state = info (companion cyan). Each state below overrides the
+           accent; the soft background is always a faint tint of that accent.
+           State colours are fixed (not derived from --accent) so they stay
+           stable across the user-selectable accent themes. */
+        --callout-accent: oklch(80% 0.1 195);
+        --callout-bg: color-mix(in oklab, var(--callout-accent), transparent 92%);
+        display: flex;
+        align-items: stretch;
+        gap: var(--s-3);
         margin: var(--s-5) 0;
         padding: var(--s-3) var(--s-4);
         border: 1px solid var(--line-soft);
         border-left: 3px solid var(--callout-accent);
         border-radius: var(--r-3);
         background: var(--callout-bg);
+        /* The companion is an upper-body crop seated on the bottom edge; clip
+           whatever extends past the rounded box so it reads as rising from it. */
+        overflow: hidden;
+    }
+
+    .callout__main {
+        flex: 1 1 auto;
+        min-width: 0;
+        align-self: center;
     }
 
     .callout__head {
         display: flex;
         align-items: center;
         gap: var(--s-2);
-        margin: 0 0 var(--s-1);
-        font-size: 12px;
+        margin: 0 0 var(--s-2);
+        font-size: 13px;
         font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+        letter-spacing: 0.02em;
         color: var(--callout-accent);
     }
 
-    .callout__glyph {
+    .callout__icon {
         display: inline-grid;
         place-items: center;
-        width: 18px;
-        height: 18px;
+        flex: 0 0 auto;
+        width: 26px;
+        height: 26px;
         border-radius: var(--r-pill);
-        border: 1px solid var(--callout-accent);
-        font-size: 11px;
-        line-height: 1;
-        font-family: var(--f-mono);
+        background: color-mix(in oklab, var(--callout-accent), transparent 84%);
+        color: var(--callout-accent);
+    }
+
+    .callout__icon svg {
+        width: 16px;
+        height: 16px;
+        display: block;
     }
 
     .callout__body :global(p) {
@@ -97,33 +151,58 @@ const heading = title ?? meta.label;
         margin-bottom: 0;
     }
 
-    .callout[data-callout='note'] {
-        --callout-accent: var(--color-text-muted);
-        --callout-bg: color-mix(in oklab, var(--color-text-muted), transparent 94%);
+    /* Trailing-edge companion badge. The sprite is delivered transparent, so it
+       sits on both themes with no card behind it; a state-coloured glow stands
+       in for the screen-glow that carries meaning at small sizes. */
+    .callout__companion {
+        flex: 0 0 auto;
+        align-self: flex-end;
+        width: 168px;
+        height: auto;
+        /* Reach the right + bottom edges; overflow:hidden crops the cut base so
+           the companion sits in the callout. scaleX flips it to face the text. */
+        margin: 0 calc(-1 * var(--s-4)) calc(-1 * var(--s-3));
+        object-fit: contain;
+        object-position: bottom;
+        /* Flip to face the text. pitfall/debug carry an asymmetric face glyph
+           (? and [ ]) that would mirror, so they keep their native orientation. */
+        transform: scaleX(-1);
+        filter: drop-shadow(0 0 16px color-mix(in oklab, var(--callout-accent), transparent 50%));
     }
 
-    .callout[data-callout='tip'] {
-        --callout-accent: var(--accent);
-        --callout-bg: var(--accent-soft);
+    .callout[data-callout='pitfall'] .callout__companion,
+    .callout[data-callout='debug'] .callout__companion {
+        transform: none;
+        /* native orientation seats props on the right, so nudge it to that edge */
+        margin-right: calc(-1 * var(--s-2));
     }
 
-    .callout[data-callout='important'] {
-        --callout-accent: oklch(80% 0.13 85);
-        --callout-bg: color-mix(in oklab, oklch(80% 0.13 85), transparent 90%);
+    .callout[data-callout='info'],
+    .callout[data-callout='hint'],
+    .callout[data-callout='pitfall'],
+    .callout[data-callout='debug'] {
+        --callout-accent: oklch(80% 0.1 195); /* companion cyan #52D9D4 */
     }
 
-    .callout[data-callout='common-mistake'] {
-        --callout-accent: oklch(72% 0.16 25);
-        --callout-bg: color-mix(in oklab, oklch(72% 0.16 25), transparent 90%);
+    .callout[data-callout='warning'] {
+        --callout-accent: oklch(78% 0.14 75); /* amber #F2A93B */
     }
 
-    .callout[data-callout='webgpu'] {
-        --callout-accent: oklch(72% 0.15 290);
-        --callout-bg: color-mix(in oklab, oklch(72% 0.15 290), transparent 90%);
+    .callout[data-callout='success'] {
+        --callout-accent: oklch(78% 0.12 162); /* mint-green #62D29A */
     }
 
-    .callout[data-callout='browser'] {
-        --callout-accent: oklch(74% 0.12 230);
-        --callout-bg: color-mix(in oklab, oklch(74% 0.12 230), transparent 90%);
+    .callout[data-callout='invalid'] {
+        --callout-accent: oklch(70% 0.01 195); /* neutral gray #9AA1A1 */
+    }
+
+    .callout[data-callout='broken'] {
+        --callout-accent: oklch(62% 0.2 27); /* red #E0463B */
+    }
+
+    @media (max-width: 560px) {
+        .callout__companion {
+            width: 116px;
+        }
     }
 </style>

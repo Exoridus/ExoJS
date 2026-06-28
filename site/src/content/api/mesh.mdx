@@ -5,7 +5,7 @@ symbol: "Mesh"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 90
+memberCount: 91
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/mesh/Mesh.ts"
@@ -102,6 +102,7 @@ after in-place mutation is the caller's responsibility (call
 - `cacheAsBitmap: boolean`
 - `colors: Uint32Array<ArrayBufferLike> | null`
 - `cullable: boolean`
+- `cullArea: Rectangle | null`
 - `filters: readonly Filter[]`
 - `geometry: Geometry | null`
 - `indexCount: number`

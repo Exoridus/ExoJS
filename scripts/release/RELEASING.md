@@ -1,9 +1,12 @@
 # Releasing ExoJS
 
-The coordinated release publishes the six lockstep packages — `@codexo/exojs`,
+The coordinated release publishes the lockstep packages — `@codexo/exojs`,
 `@codexo/exojs-particles`, `@codexo/exojs-tilemap`, `@codexo/exojs-tiled`,
-`@codexo/exojs-physics`, `@codexo/exojs-audio-fx` — at one shared version via the
-two-stage, build-once pipeline (`scripts/release/`).
+`@codexo/exojs-physics`, `@codexo/exojs-audio-fx`, `@codexo/exojs-aseprite`,
+`@codexo/exojs-ldtk`, `@codexo/exojs-react` — at one shared version via the
+two-stage, build-once pipeline (`scripts/release/`). The package set is defined
+once in `scripts/release/lockstep-packages.ts` (the single source of truth every
+release script derives from).
 
 ## Normal release
 
@@ -18,8 +21,8 @@ pushed (leaving an untagged version in the tree indefinitely).
    `CHANGELOG.md` with the curated release notes. Merge this as a regular PR (or
    commit directly). The date must be concrete — `release:notes` rejects placeholders.
 
-3. **Run `release:cut` locally.** This bumps all six `package.json` files and peer
-   ranges, runs the lockstep and release-matrix gates, commits, and creates the
+3. **Run `release:cut` locally.** This bumps every lockstep `package.json` file and
+   peer ranges, runs the lockstep and release-matrix gates, commits, and creates the
    annotated tag — all in one step:
 
    ```bash
@@ -43,17 +46,20 @@ pushed (leaving an untagged version in the tree indefinitely).
    ```
 
 6. **Watch the CI.** The `Release` workflow checks out the **tag commit**, runs the
-   full CI gate, builds once, packs/hashes/attw/consumer-tests the six tarballs,
-   and publishes them directly to the `latest` dist-tag via OIDC (Core →
-   Particles → Tilemap → Tiled → Physics → Audio-FX). A GitHub release with
-   the Full ZIP is created automatically.
+   full CI gate, builds once, packs/hashes/attw/consumer-tests the tarballs, and
+   publishes them directly to the `latest` dist-tag via OIDC in lockstep order
+   (Core first, then the extensions). Every tarball is `attw`-checked; the offline
+   consumer smoke covers all packages **except `@codexo/exojs-react`** (its
+   `react`/`react-dom` peers are not resolvable in the offline throwaway project —
+   it is still bumped and published). A GitHub release with the Full ZIP is created
+   automatically.
 
 7. **Confirm the release.** After CI completes, verify:
 
    ```bash
    npm view @codexo/exojs version           # should show x.y.z
    npm view @codexo/exojs-physics version   # should show x.y.z
-   # repeat for all six packages
+   # repeat for every lockstep package
    ```
 
 The workflow checks out the **tag commit**, so fixes to release _scripts_ must be
@@ -78,8 +84,15 @@ first time it reaches that package. Bootstrap it ahead of time instead:
 3. Ensure its `package.json` has a `repository` field with the monorepo
    `directory` subpath — `npm publish --provenance` refuses to build the SLSA
    attestation without it. `verify:release-matrix` enforces this.
-4. Add the new package to `LOCKSTEP_DIRS` in `scripts/release/cut.ts` and the
-   relevant lists in `manifest.ts` / `prepare.ts`.
+4. Add the new package as a **single entry** in
+   `scripts/release/lockstep-packages.ts` — the source of truth that `cut.ts`,
+   `manifest.ts`, `prepare.ts`, `run.ts`, the `verify-*` gates and the
+   external-consumer smoke all derive from. Then mirror it in the two places that
+   cannot import that TS module: add its directory to `RUNTIME_PACKAGES` in
+   `scripts/ci/select-lanes.mjs`, and add its `--filter` to the build/typecheck/pack
+   steps in `.github/workflows/_ci-checks.yml` and the build step in `release.yml`
+   (`verify:release-matrix` enforces the `release.yml` build lines, so a forgotten
+   one fails CI rather than silently skipping the package).
 
 From then on every publish (including the new package's first real release) flows
 through OIDC with provenance, with no manual step during the release itself.

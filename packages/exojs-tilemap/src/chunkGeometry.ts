@@ -153,9 +153,10 @@ export function buildChunkPages(
       const v1 = (sy + rect.height) / textureHeight;
 
       // Bottom-left aligned destination (Tiled orthogonal). Uniform tiles
-      // (rect.height === tileHeight) collapse to a plain cell rect.
-      const x0 = lx * tileWidth;
-      const y0 = ly * tileHeight + tileHeight - rect.height;
+      // (rect.height === tileHeight) collapse to a plain cell rect. The
+      // tileset's visual draw offset (Tiled `tileoffset`) shifts every tile.
+      const x0 = lx * tileWidth + tileset.offsetX;
+      const y0 = ly * tileHeight + tileHeight - rect.height + tileset.offsetY;
       const x1 = x0 + rect.width;
       const y1 = y0 + rect.height;
 

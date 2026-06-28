@@ -60,36 +60,12 @@ export function getWebGpuBlendState(blendMode: BlendModes): GPUBlendState {
           dstFactor: 'one-minus-src-alpha',
         },
       };
-    case BlendModes.Darken:
-      // `min`/`max` ignore the blend factors, so this cannot account for source
-      // coverage — transparent (premultiplied rgb=0) texels darken to black.
-      // Reliable only for opaque sources. See {@link BlendModes.Darken}.
-      return {
-        color: {
-          operation: 'min',
-          srcFactor: 'one',
-          dstFactor: 'one',
-        },
-        alpha: {
-          operation: 'min',
-          srcFactor: 'one',
-          dstFactor: 'one',
-        },
-      };
-    case BlendModes.Lighten:
-      return {
-        color: {
-          operation: 'max',
-          srcFactor: 'one',
-          dstFactor: 'one',
-        },
-        alpha: {
-          operation: 'max',
-          srcFactor: 'one',
-          dstFactor: 'one',
-        },
-      };
     default:
+      // Modes 5–17 (Darken, Lighten, Overlay, …, Luminosity) are compositor-handled
+      // (backdrop-aware shader path). Inside the barrier texture capture they render
+      // as Normal so the captured sprite is pristine premultiplied RGBA; the actual
+      // W3C blend happens in WebGpuBackdropBlendCompositor. All other unrecognised
+      // modes fall back to Normal (premultiplied source-over).
       return {
         color: {
           operation: 'add',

@@ -1,0 +1,53 @@
+{
+  "name": "@codexo/exojs-aseprite",
+  "version": "0.14.0",
+  "description": "Aseprite sprite sheet asset extension for ExoJS.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/exojs-aseprite"
+  },
+  "type": "module",
+  "sideEffects": [
+    "./dist/esm/register.js"
+  ],
+  "main": "./dist/esm/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    },
+    "./register": {
+      "types": "./dist/esm/register.d.ts",
+      "import": "./dist/esm/register.js",
+      "default": "./dist/esm/register.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/esm/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production",
+    "build:dev": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest run --root ../.. --project=exojs-aseprite"
+  },
+  "peerDependencies": {
+    "@codexo/exojs": "0.14.x"
+  },
+  "devDependencies": {
+    "@codexo/exojs": "workspace:*",
+    "@codexo/exojs-config": "workspace:*"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

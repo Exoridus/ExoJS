@@ -1,0 +1,263 @@
+---
+title: 'Joints, sleeping & CCD'
+description: 'Connect physics bodies with distance, revolute, weld, prismatic, wheel and mouse joints, let resting bodies sleep to save CPU, and stop fast projectiles tunnelling with continuous collision.'
+---
+
+# Joints, sleeping & CCD
+
+This chapter builds on [Physics basics](/ExoJS/en/guide/physics/physics-basics/) — a
+[`PhysicsWorld`](/ExoJS/en/api/physics-world/) stepped from `Scene.fixedUpdate`, with
+static and dynamic bodies. Here we connect those bodies with **joints**, let bodies at
+rest **sleep**, and stop fast bodies from **tunnelling** with continuous collision.
+
+## Joints
+
+A [`Joint`](/ExoJS/en/api/joint/) is a constraint between two bodies, solved alongside
+contacts in the sub-step loop. The pattern is always the same: construct the joint,
+then register it with `world.addJoint(...)`. Remove it with `world.removeJoint(joint)`,
+which wakes both bodies so they respond to the lost constraint.
+
+```ts no-check
+const joint = world.addJoint(new RevoluteJoint({ bodyA, bodyB, anchor }));
+// ...later...
+world.removeJoint(joint);
+```
+
+Many joints take a `hertz` (and `dampingRatio`) pair: leaving `hertz` at `0` makes the
+constraint **rigid**, while `hertz > 0` turns it into a **damped spring** at that
+frequency. Anchors are given in **world space at construction** and stored body-locally,
+so they travel with the bodies afterwards.
+
+### Distance joints
+
+A [`DistanceJoint`](/ExoJS/en/api/distance-joint/) holds two anchor points a fixed
+`length` apart — a rigid rod by default, or a spring with `hertz > 0`:
+
+```ts
+import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 150 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+// Rigid rod: holds the bob exactly 100px from the anchor.
+world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, length: 100 }));
+
+// Or a soft spring that sags and bobs under gravity:
+world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, length: 100, hertz: 2.5, dampingRatio: 1 }));
+```
+
+Specifying `minLength` and/or `maxLength` turns it into a **rope/limit**: the bodies move
+freely while the separation is within the band and the joint only engages (rigidly) at the
+bounds:
+
+```ts
+import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 50 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+// A rope: the bob falls freely until it reaches 100px, then the rope holds.
+world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, maxLength: 100 }));
+```
+
+### Revolute joints
+
+A [`RevoluteJoint`](/ExoJS/en/api/revolute-joint/) pins a shared `anchor` point on two
+bodies — a hinge they rotate freely about. Enable a **motor** to drive the relative
+angular velocity, or a **limit** to clamp the swing:
+
+```ts
+import { BoxShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+const arm = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 70, y: 0 }, colliders: [{ shape: new BoxShape(100, 10) }] }));
+
+// A free hinge at the origin — the arm swings under gravity.
+world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 } }));
+
+// A powered hinge — a motor driving it toward 5 rad/s, capped torque:
+world.addJoint(
+  new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }),
+);
+
+// A limited hinge — the relative angle is clamped to ±45°:
+world.addJoint(
+  new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -Math.PI / 4, upperAngle: Math.PI / 4 }),
+);
+```
+
+### Weld joints
+
+A [`WeldJoint`](/ExoJS/en/api/weld-joint/) rigidly locks the relative position **and**
+orientation of two bodies, so they move as one rigid body. Both locks default to rigid;
+set `linearHertz` / `angularHertz` for a springy weld:
+
+```ts
+import { BoxShape, PhysicsBody, PhysicsWorld, WeldJoint } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 24, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+world.addJoint(new WeldJoint({ bodyA: a, bodyB: b }));
+```
+
+### Prismatic joints
+
+A [`PrismaticJoint`](/ExoJS/en/api/prismatic-joint/) constrains a body to **slide along
+one axis** relative to another — perpendicular translation and rotation are locked. It
+takes an `axis` (normalised internally) and supports a linear motor (`maxMotorForce`) and
+translation limits:
+
+```ts
+import { BoxShape, PhysicsBody, PhysicsWorld, PrismaticJoint } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const rail = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+world.addJoint(
+  new PrismaticJoint({
+    bodyA: rail,
+    bodyB: slider,
+    anchor: { x: 0, y: 0 },
+    axis: { x: 1, y: 0 }, // slide horizontally
+    enableMotor: true,
+    motorSpeed: 100,
+    maxMotorForce: 1e8,
+    enableLimit: true,
+    lowerTranslation: 0,
+    upperTranslation: 200,
+  }),
+);
+```
+
+### Wheel joints
+
+A [`WheelJoint`](/ExoJS/en/api/wheel-joint/) is the vehicle primitive: the wheel is free to
+**spin**, sprung along a **suspension axis** (a soft spring via `hertz` / `dampingRatio`),
+and locked **laterally**. A rotation motor drives it:
+
+```ts
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, WheelJoint } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const chassis = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(120, 20) }] }));
+const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
+
+world.addJoint(
+  new WheelJoint({
+    bodyA: chassis,
+    bodyB: wheel,
+    anchor: { x: 0, y: 30 },
+    axis: { x: 0, y: 1 }, // suspension travels vertically
+    hertz: 5,
+    dampingRatio: 0.7,
+    enableMotor: true,
+    motorSpeed: 20,
+    maxMotorTorque: 1e6,
+  }),
+);
+```
+
+### Mouse joints
+
+A [`MouseJoint`](/ExoJS/en/api/mouse-joint/) softly pulls a single body's grab point toward
+a movable `target` — the cursor-drag primitive. It is a single-body constraint; reassign
+`target` each frame to drag, and bound the pull with `maxForce` (so heavy bodies lag):
+
+```ts
+import { BoxShape, MouseJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+const drag = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 }, hertz: 5, dampingRatio: 0.7, maxForce: 10000 }));
+drag.target = { x: 50, y: -30 }; // update from the pointer position each frame
+```
+
+Both jointed bodies share one **sleep island**, so a jointed pair sleeps and wakes
+together — which brings us to sleeping.
+
+## Sleeping
+
+A body that has stayed below the velocity thresholds long enough is put to **sleep**: it
+stops integrating and is skipped by the solver until something wakes it. In a scene with
+many resting bodies — a settled stack, scattered debris — this is a large CPU saving, and
+it removes the last traces of resting jitter.
+
+Sleeping is **island-aware**: connected bodies (touching contacts and joints form an
+island) sleep and wake as a unit, so a tower never half-sleeps. A body wakes the instant it
+is touched by an awake body, hit by an `applyImpulse`/`applyForce`, or moved with
+`setTransform`.
+
+It is on by default; tune it through `PhysicsWorld` options:
+
+```ts
+import { PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({
+  gravity: { x: 0, y: 1000 },
+  enableSleeping: true, // default; set false to never sleep
+  sleepLinearVelocity: 5, // px/s — at or below this a body is a sleep candidate
+  sleepAngularVelocity: 0.06, // rad/s
+  timeToSleep: 0.5, // seconds below the thresholds before sleeping
+});
+```
+
+Per body, opt a single body out with `allowSleep = false` (it, and its whole island, stay
+awake), read `isSleeping`, or force it awake with `wake()`:
+
+```ts no-check
+body.allowSleep = false; // this body — and its island — never sleeps
+const resting = body.isSleeping; // true once it has come to rest
+body.wake(); // force it awake (e.g. before applying a scripted impulse)
+```
+
+## Continuous collision (bullet mode)
+
+The solver runs detection **once per fixed step**, so a body that travels farther than an
+obstacle is thick in a single step can pass straight through it — tunnelling. For fast
+projectiles, flag the body as a **bullet** (`isBullet`) and it is swept along its motion
+each step against every other body; if the sweep would cross a surface, the body is clamped
+just short of it and its velocity is resolved about the surface normal:
+
+```ts
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+
+// A thin wall the projectile would otherwise skip over.
+world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 400) }] }));
+
+// A fast bullet — swept each step so it stops at the wall instead of tunnelling.
+const bullet = world.add(
+  new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new CircleShape(6) }] }),
+);
+bullet.linearVelocityX = 6000; // ~100px per fixed step — far more than the 4px wall is thick
+```
+
+`isBullet` is a plain flag you can toggle at runtime (`bullet.isBullet = true`). The impact
+response is a **velocity reflect** about the true surface normal: a non-bouncy body slides
+along the surface (keeping its tangential velocity), while a bouncy one (`restitution` near
+`1`) rebounds elastically. The swept test runs against static, kinematic **and** dynamic
+bodies; sensors never block.
+
+> **Documented limit.** CCD sweeps the body's **centre point**, which is ideal for small,
+> point-like projectiles (bullets, pellets). A **large** fast body can still clip a corner,
+> because only its centre is swept — for those, raise
+> [`subStepCount`](/ExoJS/en/api/physics-world/) (or the step rate) so each step covers less
+> distance, or thicken the geometry it must not pass. A full swept-shape time-of-impact for
+> large bodies is a future enhancement.
+
+## Where to go next
+
+- **API reference:** [`DistanceJoint`](/ExoJS/en/api/distance-joint/),
+  [`RevoluteJoint`](/ExoJS/en/api/revolute-joint/), [`WeldJoint`](/ExoJS/en/api/weld-joint/),
+  [`PrismaticJoint`](/ExoJS/en/api/prismatic-joint/), [`WheelJoint`](/ExoJS/en/api/wheel-joint/),
+  [`MouseJoint`](/ExoJS/en/api/mouse-joint/) and [`PhysicsWorld`](/ExoJS/en/api/physics-world/).
+- **Start here:** [Physics basics](/ExoJS/en/guide/physics/physics-basics/) covers worlds,
+  bodies, colliders, stepping and sprite binding.

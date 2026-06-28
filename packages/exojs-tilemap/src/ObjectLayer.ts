@@ -17,6 +17,7 @@ export const ObjectKind = {
   Polyline: 'polyline',
   Point: 'point',
   Tile: 'tile',
+  Text: 'text',
 } as const;
 
 /** Geometry discriminant for a {@link TileMapObject}. */
@@ -92,10 +93,42 @@ export interface TileObject<P extends TileProperties = TileProperties> extends T
   readonly tile: ResolvedTile;
 }
 
+/** Text styling options carried by a {@link TextObject}. */
+export interface TextStyle {
+  /** The text content. */
+  readonly text: string;
+  /** Text colour as 0xRRGGBB, or `null` if default. */
+  readonly color?: number | null;
+  /** Font family name. */
+  readonly fontFamily?: string;
+  /** Font size in pixels. */
+  readonly pixelSize?: number;
+  /** Bold text. */
+  readonly bold?: boolean;
+  /** Italic text. */
+  readonly italic?: boolean;
+  /** Underline text. */
+  readonly underline?: boolean;
+  /** Strikeout text. */
+  readonly strikeout?: boolean;
+  /** Wrap text within the object bounds. */
+  readonly wrap?: boolean;
+  /** Horizontal alignment. */
+  readonly halign?: 'left' | 'center' | 'right' | 'justify';
+  /** Vertical alignment. */
+  readonly valign?: 'top' | 'center' | 'bottom';
+}
+
+/** A text object carrying styled text content within `[x, y, width, height]`. */
+export interface TextObject<P extends TileProperties = TileProperties> extends TileMapObjectBase<P> {
+  readonly kind: typeof ObjectKind.Text;
+  readonly text: TextStyle;
+}
+
 /**
  * A format-independent map object. The geometry kind is the discriminant;
- * narrow on `kind` to read shape-specific fields. Text objects and templates
- * are intentionally not represented (data-only release).
+ * narrow on `kind` to read shape-specific fields. Template objects are not
+ * yet represented.
  *
  * The optional property-shape parameter `P` lets typed accessors
  * (see {@link ObjectLayer.byType}) narrow `properties` to a developer-declared
@@ -109,7 +142,8 @@ export type TileMapObject<P extends TileProperties = TileProperties> =
   | PointObject<P>
   | PolygonObject<P>
   | PolylineObject<P>
-  | TileObject<P>;
+  | TileObject<P>
+  | TextObject<P>;
 
 /**
  * A developer-declared mapping from object `type`/class strings to the property
@@ -176,6 +210,12 @@ export interface ObjectLayerOptions {
   readonly offsetX?: number;
   /** Layer pixel offset Y. Default `0`. */
   readonly offsetY?: number;
+  /**
+   * Draw order for the objects (Tiled `draworder`): `'topdown'` (sorted by `y`)
+   * or `'index'` (source order). Informational; objects are stored as given.
+   * Default `'topdown'`.
+   */
+  readonly drawOrder?: 'topdown' | 'index';
   /** The objects in this layer. */
   readonly objects?: readonly TileMapObject[];
   /** Layer-level properties (copied and frozen). */
@@ -223,6 +263,8 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
   public readonly offsetX: number;
   /** Layer pixel offset Y. */
   public readonly offsetY: number;
+  /** Draw order for the objects (Tiled `draworder`). Informational. */
+  public readonly drawOrder: 'topdown' | 'index';
   /** Immutable layer-level properties. */
   public readonly properties: TileProperties;
   /** The objects in this layer (insertion order). */
@@ -236,6 +278,7 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
     this.opacity = options.opacity ?? 1;
     this.offsetX = options.offsetX ?? 0;
     this.offsetY = options.offsetY ?? 0;
+    this.drawOrder = options.drawOrder ?? 'topdown';
     this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
     this.objects = options.objects ? Object.freeze([...options.objects]) : Object.freeze([]);
   }

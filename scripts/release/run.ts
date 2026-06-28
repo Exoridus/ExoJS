@@ -23,6 +23,7 @@ import { resolveRevision } from '../../packages/exojs-config/build-defines/index
 import { checkAllTarballTypes } from './attw.ts';
 import { createExecRunner } from './command-runner.ts';
 import { verifyExternalConsumers } from './external-consumers.ts';
+import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import { assembleFullReleaseTree, compressTree, treeBytes } from './full-zip.ts';
 import { type ReleaseManifest, serializeManifest, renderChecksums } from './manifest.ts';
 import { prepareRelease } from './prepare.ts';
@@ -45,14 +46,7 @@ const die = (message: string): never => {
 };
 
 const ensureBuilt = (): void => {
-  const dists = [
-    resolve(repoRoot, 'dist/esm'),
-    resolve(repoRoot, 'packages/exojs-particles/dist/esm'),
-    resolve(repoRoot, 'packages/exojs-tilemap/dist/esm'),
-    resolve(repoRoot, 'packages/exojs-tiled/dist/esm'),
-    resolve(repoRoot, 'packages/exojs-physics/dist/esm'),
-    resolve(repoRoot, 'packages/exojs-audio-fx/dist/esm'),
-  ];
+  const dists = LOCKSTEP_PACKAGES.map(p => resolve(repoRoot, p.dir === '.' ? 'dist/esm' : `${p.dir}/dist/esm`));
   const missing = dists.filter(d => !existsSync(d));
   if (missing.length > 0) {
     die(`Not built — missing ${missing.join(', ')}. Run "pnpm build" + extension builds, or pass --build.`);
@@ -61,16 +55,12 @@ const ensureBuilt = (): void => {
 
 const build = (): void => {
   log('\n→ Building core + extensions (build-once)…');
-  for (const [label, args, cwd] of [
-    ['core', ['build'], repoRoot],
-    ['particles', ['--filter', '@codexo/exojs-particles', 'build'], repoRoot],
-    ['tilemap', ['--filter', '@codexo/exojs-tilemap', 'build'], repoRoot],
-    ['tiled', ['--filter', '@codexo/exojs-tiled', 'build'], repoRoot],
-    ['physics', ['--filter', '@codexo/exojs-physics', 'build'], repoRoot],
-    ['audio-fx', ['--filter', '@codexo/exojs-audio-fx', 'build'], repoRoot],
-  ] as const) {
-    const r = runner.run({ command: 'pnpm', args: [...args], cwd });
-    if (r.code !== 0) die(`build failed for ${label}:\n${r.stderr || r.stdout}`);
+  // Core is `pnpm build`; each extension is `pnpm --filter <name> build`. pnpm
+  // resolves workspace-dependency order itself (e.g. tilemap before tiled/ldtk).
+  for (const pkg of LOCKSTEP_PACKAGES) {
+    const args = pkg.isExtension ? ['--filter', pkg.name, 'build'] : ['build'];
+    const r = runner.run({ command: 'pnpm', args, cwd: repoRoot });
+    if (r.code !== 0) die(`build failed for ${pkg.name}:\n${r.stderr || r.stdout}`);
   }
 };
 
@@ -126,7 +116,12 @@ const doPrepare = (): void => {
 
   if (!has('--skip-consumers')) {
     log('\n→ External consumers (Node ESM + TypeScript bundler resolution, offline, outside repo)…');
-    const consumers = verifyExternalConsumers(prepared.tarballs);
+    // Offline-smoke subset only: `@codexo/exojs-react` is excluded because its
+    // `react`/`react-dom` peers cannot be resolved in an offline throwaway
+    // project. attw still type-checks every packed tarball (react included).
+    const smokeNames = new Set(LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke).map(p => p.name));
+    const smokeTarballs = manifest.packages.filter(p => smokeNames.has(p.name)).map(p => resolve(stagingDir, p.file));
+    const consumers = verifyExternalConsumers(smokeTarballs);
     for (const c of consumers.checks) log(`  ${c.ok ? '✓' : '✗'} ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
     if (!consumers.ok) die('external consumer smoke failed.');
   }

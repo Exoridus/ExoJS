@@ -4,7 +4,10 @@ packages:
   - packages/exojs-particles
   - packages/exojs-tilemap
   - packages/exojs-tiled
+  - packages/exojs-aseprite
+  - packages/exojs-ldtk
   - packages/exojs-physics
+  - packages/exojs-react
   - packages/exojs-audio-fx
   - packages/create-exo-app
 

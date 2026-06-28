@@ -5,17 +5,17 @@
  * handles every official package, in the right order, with coherent versions,
  * via the two-stage build-once pipeline:
  *
- *  1. The five official packages (@codexo/exojs, -particles, -tilemap, -tiled, -physics)
- *     share one lockstep version.
+ *  1. Every lockstep package (`LOCKSTEP_PACKAGES`, Core + extensions) shares one
+ *     lockstep version.
  *  2. Each extension's peerDependencies["@codexo/exojs"] is "<major>.<minor>.x".
  *  3. create-exo-app is versioned independently (a different version line).
- *  4. release.yml builds all five packages in the PREPARE stage.
- *  5. PREPARE runs `release:prepare` (packs five tarballs + Full ZIP) and
+ *  4. release.yml builds every lockstep package in the PREPARE stage.
+ *  5. PREPARE runs `release:prepare` (packs the tarballs + Full ZIP) and
  *     uploads the artifacts.
  *  6. PUBLISH consumes those artifacts (`download-artifact` + `release:publish`)
  *     and never rebuilds.
- *  7. The publish order Core → Particles → Tilemap → Tiled → Physics is the canonical
- *     PUBLISH_ORDER, and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
+ *  7. PUBLISH_ORDER equals the canonical `LOCKSTEP_PACKAGES` order (Core first),
+ *     and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
  *
  * Read-only: safe to run in dry-run/CI. Exits non-zero on any inconsistency.
  *
@@ -25,6 +25,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { EXTENSION_PACKAGES, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
 import { PUBLISH_ORDER } from './release/manifest.ts';
 import { officialPackages } from './release/prepare.ts';
 
@@ -51,14 +52,12 @@ const problems: string[] = [];
 const ok: string[] = [];
 
 const core = readPkg('package.json');
-const particles = readPkg('packages/exojs-particles/package.json');
-const tilemap = readPkg('packages/exojs-tilemap/package.json');
-const tiled = readPkg('packages/exojs-tiled/package.json');
-const physics = readPkg('packages/exojs-physics/package.json');
-const audioFx = readPkg('packages/exojs-audio-fx/package.json');
 const createExoApp = readPkg('packages/create-exo-app/package.json');
 
-const official = [core, particles, tilemap, tiled, physics, audioFx];
+// Every lockstep package (Core first) + the extension subset, derived from the
+// single source of truth (scripts/release/lockstep-packages.ts).
+const official = LOCKSTEP_PACKAGES.map(p => readPkg(p.dir === '.' ? 'package.json' : `${p.dir}/package.json`));
+const extensions = EXTENSION_PACKAGES.map(p => readPkg(`${p.dir}/package.json`));
 
 // 1. Lockstep version.
 const versions = new Set(official.map(p => p.version));
@@ -73,7 +72,7 @@ const [major, minor] = version.split('.');
 const expectedPeer = `${major}.${minor}.x`;
 
 // 2. Extension peer ranges.
-for (const ext of [particles, tilemap, tiled, physics, audioFx]) {
+for (const ext of extensions) {
   if (ext.peer !== expectedPeer) {
     problems.push(`${ext.name}: peer "@codexo/exojs" is "${ext.peer ?? '(missing)'}", expected "${expectedPeer}"`);
   } else {
@@ -111,13 +110,14 @@ const requireInWorkflow = (needle: string, label: string): void => {
   }
 };
 
-// 4. PREPARE builds all four official packages exactly once (build-once).
-requireInWorkflow('pnpm build', 'prepare builds core');
-requireInWorkflow('pnpm --filter @codexo/exojs-particles build', 'prepare builds particles');
-requireInWorkflow('pnpm --filter @codexo/exojs-tilemap build', 'prepare builds tilemap');
-requireInWorkflow('pnpm --filter @codexo/exojs-tiled build', 'prepare builds tiled');
-requireInWorkflow('pnpm --filter @codexo/exojs-physics build', 'prepare builds physics');
-requireInWorkflow('pnpm --filter @codexo/exojs-audio-fx build', 'prepare builds audio-fx');
+// 4. PREPARE builds every lockstep package exactly once (build-once). Core is
+// `pnpm build`; each extension is `pnpm --filter <name> build`. Looping over the
+// SoT means a new package's build line is enforced in release.yml automatically.
+for (const pkg of LOCKSTEP_PACKAGES) {
+  const short = pkg.name.replace('@codexo/exojs-', '').replace('@codexo/exojs', 'core');
+  const needle = pkg.isExtension ? `pnpm --filter ${pkg.name} build` : 'pnpm build';
+  requireInWorkflow(needle, `prepare builds ${short}`);
+}
 
 // 5. PREPARE packs/hashes/zips and uploads the artifacts.
 requireInWorkflow('pnpm release:prepare', 'prepare packs tarballs + Full ZIP (release:prepare)');
@@ -145,17 +145,12 @@ if (/run:\s*pnpm build\b/.test(publishSection)) {
   ok.push('publish job does not rebuild the runtime packages');
 }
 
-// 7. Canonical publish order Core → Particles → Tilemap → Tiled (enforced in code).
-if (
-  PUBLISH_ORDER[0] === '@codexo/exojs' &&
-  PUBLISH_ORDER[1] === '@codexo/exojs-particles' &&
-  PUBLISH_ORDER[2] === '@codexo/exojs-tilemap' &&
-  PUBLISH_ORDER[3] === '@codexo/exojs-tiled' &&
-  PUBLISH_ORDER[4] === '@codexo/exojs-physics'
-) {
-  ok.push('PUBLISH_ORDER is Core → Particles → Tilemap → Tiled → Physics');
+// 7. Canonical publish order = the LOCKSTEP_PACKAGES order (Core first), enforced in code.
+const expectedOrder = LOCKSTEP_PACKAGES.map(p => p.name);
+if (PUBLISH_ORDER.length === expectedOrder.length && PUBLISH_ORDER.every((name, i) => name === expectedOrder[i])) {
+  ok.push(`PUBLISH_ORDER matches LOCKSTEP_PACKAGES order (${expectedOrder.join(' → ')})`);
 } else {
-  problems.push(`PUBLISH_ORDER must be Core → Particles → Tilemap → Tiled → Physics, got ${PUBLISH_ORDER.join(' → ')}`);
+  problems.push(`PUBLISH_ORDER must equal LOCKSTEP_PACKAGES order ${expectedOrder.join(' → ')}, got ${PUBLISH_ORDER.join(' → ')}`);
 }
 
 // 7b. What `release:prepare` actually packs (officialPackages) must cover the

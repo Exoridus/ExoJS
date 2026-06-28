@@ -5,7 +5,7 @@ symbol: "Loader"
 kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
-memberCount: 29
+memberCount: 33
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/resources/Loader.ts"
@@ -89,7 +89,11 @@ subsequent `load` or get calls without re-fetching.
 
 - `onBundleProgress: Signal<[name, loaded, total]>`
 - `onError: Signal<[type, alias, error]>`
+- `onLoadComplete: Signal<[]>`
 - `onLoaded: Signal<[type, alias, resource]>`
+- `onLoadError: Signal<[key, error]>`
+- `onLoadProgress: Signal<[loaded, total, key]>`
+- `onLoadStart: Signal<[key, url]>`
 - `onProgress: Signal<[loaded, total]>`
 
 ## Source

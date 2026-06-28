@@ -87,7 +87,7 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
         const recalculateZoom = (): void => {
             const { width, height } = currentCanvasRef.current;
             if (!width) return;
-            const zoom = Math.min(1, window.innerWidth / width);
+            const zoom = measureFillZoom(rootRef.current, width, height);
             currentCanvasRef.current = { width, height, zoom };
             rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
             onCanvasSize?.({ width, height, zoom });
@@ -133,7 +133,7 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
 
     const applyCanvasSize = (width: number, height: number): void => {
         if (!width || !height) return;
-        const zoom = Math.min(1, window.innerWidth / width);
+        const zoom = measureFillZoom(rootRef.current, width, height);
         currentCanvasRef.current = { width, height, zoom };
         rootRef.current?.style.setProperty('--canvas-w', `${width}px`);
         rootRef.current?.style.setProperty('--canvas-h', `${height}px`);
@@ -155,15 +155,21 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
     const watchForCanvas = (iframeBody: HTMLBodyElement): void => {
         disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
 
+        // NB: a plain truthy check, NOT `instanceof HTMLCanvasElement`. The
+        // canvas lives in the iframe's realm, so it is an instance of the
+        // iframe's `HTMLCanvasElement`, not this document's — a cross-realm
+        // `instanceof` is always false and silently broke canvas-size detection
+        // (the whole --canvas-w/h/zoom sizing never ran). `querySelector('canvas')`
+        // is already typed `HTMLCanvasElement | null`, so a null check narrows fine.
         const existing = iframeBody.querySelector('canvas');
-        if (existing instanceof HTMLCanvasElement) {
+        if (existing) {
             observeCanvas(existing);
             return;
         }
 
         canvasMutationObserverRef.current = new MutationObserver(() => {
             const canvas = iframeBody.querySelector('canvas');
-            if (!(canvas instanceof HTMLCanvasElement)) return;
+            if (!canvas) return;
             canvasMutationObserverRef.current?.disconnect();
             canvasMutationObserverRef.current = null;
             observeCanvas(canvas);
@@ -218,6 +224,24 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
         </div>
     );
 });
+
+// Scale the canvas to fill the available preview-panel width rather than
+// sitting at native size with empty gutters. The iframe itself is a fixed
+// 1280x720 stage that uniformly transform-scales its content (see
+// public/preview.html), so scaling the outer container up is crop-free and
+// keeps DOM overlays aligned — unlike engine-level `fill`, which would resize
+// the backing store and crop fixed coordinates. We measure the surrounding
+// `.preview-surface` (a layout-driven width, not the shrink-to-fit wrapper)
+// and allow upscaling past 1, capping height at ~72vh so a small native canvas
+// never overflows the viewport.
+function measureFillZoom(root: HTMLElement | null, width: number, height: number): number {
+    if (!width || !height) return 1;
+    const surface = root?.closest<HTMLElement>('[data-preview-surface]');
+    const availableWidth = surface?.clientWidth ?? window.innerWidth;
+    const widthZoom = availableWidth / width;
+    const heightZoom = (window.innerHeight * 0.72) / height;
+    return Math.max(0.1, Math.min(widthZoom, heightZoom));
+}
 
 function buildPreviewUrl(options: { noCache: number; sourceKey?: string }, selectedVersionId: string): string {
     const params: UrlParams = { 'no-cache': options.noCache };

@@ -3,6 +3,9 @@
 
 export { tilemapExtension } from './tilemapExtension';
 export type { Extension } from '@codexo/exojs/extensions';
+// Image layers: data-only background/foreground images from Tiled image layers.
+export type { ImageLayerOptions } from './ImageLayer';
+export { ImageLayer } from './ImageLayer';
 // Object layers: data-only spawn points / triggers / collision regions.
 export type {
   EllipseObject,
@@ -14,6 +17,8 @@ export type {
   PolygonObject,
   PolylineObject,
   RectangleObject,
+  TextObject,
+  TextStyle,
   TileMapObject,
   TileMapObjectKind,
   TileObject,
@@ -49,6 +54,7 @@ export type {
   ChunkCoord,
   PackedTile,
   ResolvedTile,
+  TileAnimationFrame,
   TileDefinition,
   TileProperties,
   TilePropertyValue,
@@ -59,3 +65,10 @@ export {
   tileToChunkCoord,
   tileToLocalInChunk,
 } from './types';
+// Per-tile animation driver (RPG-Maker-style): advances only animated cells.
+export { TileAnimator } from './TileAnimator';
+// Wang autotiling: automatic tile selection based on neighbor bitmasks.
+export type { AutoTileOptions } from './autoTile';
+export { autoTile, refreshCell } from './autoTile';
+export type { WangSetOptions } from './WangSet';
+export { WangSet } from './WangSet';

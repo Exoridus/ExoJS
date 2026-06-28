@@ -5,11 +5,11 @@ symbol: "Application"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 42
+memberCount: 48
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/core/Application.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L217"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L227"
 ---
 ## Import
 
@@ -71,13 +71,17 @@ background-active simulations.
 - `backend: RenderBackend`
 - `canvasFocused: boolean`
 - `capabilities: Capabilities`
+- `clearColor: Color`
 - `cursor: string`
 - `documentVisible: boolean`
+- `fixedTimeStep: number`
+- `frameAlpha: number`
 - `frameCount: number`
 - `frameTime: Time`
 - `height: number`
 - `pixelRatio: number`
 - `rendering: RenderingContext`
+- `sizingMode: CanvasSizingMode`
 - `startupTime: Time`
 - `status: ApplicationStatus`
 - `width: number`
@@ -87,10 +91,12 @@ background-active simulations.
 - `onBackendLost: Signal<[]>`
 - `onBackendRestored: Signal<[]>`
 - `onCanvasFocusChange: Signal<[focused]>`
+- `onError: Signal<[error]>`
+- `onFixedFrame: Signal<[Time]>`
 - `onFrame: Signal<[Time]>`
 - `onResize: Signal<[number, number, Application]>`
 - `onVisibilityChange: Signal<[visible]>`
 
 ## Source
 
-[src/core/Application.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L217)
+[src/core/Application.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L227)

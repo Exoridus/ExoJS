@@ -5,11 +5,11 @@ symbol: "SpriteMaterial"
 kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
-memberCount: 12
+memberCount: 13
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/material/SpriteMaterial.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts#L13"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts#L17"
 ---
 ## Import
 
@@ -31,6 +31,8 @@ uniforms, and additional texture bindings.
 - `destroy(): void`
 - `setTexture(name: string, texture: Texture | RenderTexture): this`
 - `setUniform(name: string, value: UniformValue): this`
+- `from(source: ShaderSource, options?: Omit<MaterialOptions, "shader">): SpriteMaterial`
+- `from(glslVertex: string, glslFragment: string, options?: object): SpriteMaterial`
 
 ## Properties
 
@@ -45,4 +47,4 @@ uniforms, and additional texture bindings.
 
 ## Source
 
-[src/rendering/material/SpriteMaterial.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts#L13)
+[src/rendering/material/SpriteMaterial.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts#L17)

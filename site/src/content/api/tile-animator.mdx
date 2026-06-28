@@ -1,0 +1,57 @@
+---
+title: "TileAnimator"
+description: "Drives per-tile animations on one or more TileLayers, RPG-Maker style. On construction it scans the given layer(s) once and registers every cell whose tile carries an `animation` (see import('./types').TileDefinition). Each update advances a shared clock and rewrites **only** the registered animated cells, and **only** when a cell crosses a frame boundary — static tiles are never touched. Because a tile rewrite goes through `layer.setTileAt`, only the chunks that actually contain animated cells rebuild their geometry, and only on the (infrequent) frames where a boundary is crossed. The large static body of the map never rebuilds. Tick it from your update loop, like `TweenSequencer`: ```ts const animator = new TileAnimator(map.layers); scene.systems.add({ update: (t) => animator.update(t.deltaSeconds) }); ``` The animator references — but never owns — the layers and their tilesets; destroy only drops its own cell registry."
+symbol: "TileAnimator"
+kind: "class"
+subsystem: "tilemap"
+importPath: "@codexo/exojs-tilemap"
+memberCount: 7
+tier: "advanced"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-tilemap/src/TileAnimator.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileAnimator.ts#L44"
+---
+## Import
+
+`import { TileAnimator } from '@codexo/exojs-tilemap'`
+
+Drives per-tile animations on one or more TileLayers, RPG-Maker style.
+
+On construction it scans the given layer(s) once and registers every cell
+whose tile carries an `animation` (see import('./types').TileDefinition).
+Each update advances a shared clock and rewrites **only** the
+registered animated cells, and **only** when a cell crosses a frame boundary —
+static tiles are never touched. Because a tile rewrite goes through
+`layer.setTileAt`, only the chunks that actually contain animated cells rebuild
+their geometry, and only on the (infrequent) frames where a boundary is
+crossed. The large static body of the map never rebuilds.
+
+Tick it from your update loop, like `TweenSequencer`:
+
+```ts
+const animator = new TileAnimator(map.layers);
+scene.systems.add(\{ update: (t) => animator.update(t.deltaSeconds) \});
+```
+
+The animator references — but never owns — the layers and their tilesets;
+destroy only drops its own cell registry.
+
+## Constructors
+
+- `new(layers: TileLayer | readonly TileLayer[]): TileAnimator`
+
+## Methods
+
+- `destroy(): void`
+- `rescan(): void`
+- `reset(): void`
+- `update(deltaSeconds: number): void`
+
+## Properties
+
+- `animatedCellCount: number`
+- `elapsedMs: number`
+
+## Source
+
+[packages/exojs-tilemap/src/TileAnimator.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileAnimator.ts#L44)

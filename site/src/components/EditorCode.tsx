@@ -349,7 +349,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
                         height="100%"
                         language={language}
                         loading={null}
-                        onChange={value => setEditorValue(value ?? '')}
+                        onChange={(value: string | undefined) => setEditorValue(value ?? '')}
                         onMount={onMount}
                         options={{
                             automaticLayout: true,
@@ -485,9 +485,30 @@ function getTypingsForVersion(versionId: string): Promise<ReadonlyArray<ExtraLib
     return pending;
 }
 
+// Extension packages whose declarations the editor registers alongside core, so
+// examples that import `@codexo/exojs-particles` & co. type-check instead of
+// reporting ts2307 "Cannot find module". These always load from the current
+// vendored copy (extension typings are not vendored per historical version).
+const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }> = [
+    { baseUrl: 'vendor/exojs-particles/', packageName: '@codexo/exojs-particles' },
+    { baseUrl: 'vendor/exojs-audio-fx/', packageName: '@codexo/exojs-audio-fx' },
+    { baseUrl: 'vendor/exojs-tilemap/', packageName: '@codexo/exojs-tilemap' },
+    { baseUrl: 'vendor/exojs-tiled/', packageName: '@codexo/exojs-tiled' },
+    { baseUrl: 'vendor/exojs-physics/', packageName: '@codexo/exojs-physics' },
+];
+
 async function loadTypingsForVersion(versionId: string): Promise<ReadonlyArray<ExtraLib>> {
-    const [shared, exojs] = await Promise.all([loadSharedTypings(), loadVersionedExoJsTypings(versionId)]);
-    return [...shared, ...exojs];
+    const [shared, exojs, extensions] = await Promise.all([
+        loadSharedTypings(),
+        loadVersionedExoJsTypings(versionId),
+        loadExtensionTypings(),
+    ]);
+    return [...shared, ...exojs, ...extensions];
+}
+
+async function loadExtensionTypings(): Promise<ReadonlyArray<ExtraLib>> {
+    const perPackage = await Promise.all(EXTENSION_PACKAGES.map(pkg => loadPackageTypingsFromBase(pkg.baseUrl, pkg.packageName)));
+    return perPackage.flat();
 }
 
 async function loadSharedTypings(): Promise<ReadonlyArray<ExtraLib>> {
@@ -501,16 +522,16 @@ async function loadSharedTypings(): Promise<ReadonlyArray<ExtraLib>> {
 
 async function loadVersionedExoJsTypings(versionId: string): Promise<ReadonlyArray<ExtraLib>> {
     if (versionId === CURRENT_VERSION_ID) {
-        return loadExoJsTypingsFromBase('vendor/exojs/');
+        return loadPackageTypingsFromBase('vendor/exojs/', '@codexo/exojs');
     }
 
-    const fromVersioned = await loadExoJsTypingsFromBase(`vendor/exojs/${versionId}/`);
+    const fromVersioned = await loadPackageTypingsFromBase(`vendor/exojs/${versionId}/`, '@codexo/exojs');
     if (fromVersioned.length > 0) return fromVersioned;
     console.warn(`[EditorCode] Versioned typings missing for @codexo/exojs@${versionId}; falling back to flat vendor path.`);
-    return loadExoJsTypingsFromBase('vendor/exojs/');
+    return loadPackageTypingsFromBase('vendor/exojs/', '@codexo/exojs');
 }
 
-async function loadExoJsTypingsFromBase(baseUrl: string): Promise<ReadonlyArray<ExtraLib>> {
+async function loadPackageTypingsFromBase(baseUrl: string, packageName: string): Promise<ReadonlyArray<ExtraLib>> {
     const libs: ExtraLib[] = [];
 
     try {
@@ -520,7 +541,7 @@ async function loadExoJsTypingsFromBase(baseUrl: string): Promise<ReadonlyArray<
             if (typeof registry.packageJson === 'string') {
                 libs.push({
                     content: registry.packageJson,
-                    filePath: 'file:///node_modules/@codexo/exojs/package.json',
+                    filePath: `file:///node_modules/${packageName}/package.json`,
                 });
             }
             const shims = registry.subpathShims;
@@ -544,7 +565,7 @@ async function loadExoJsTypingsFromBase(baseUrl: string): Promise<ReadonlyArray<
                     const content = await fetchTextFile(buildPublicUrl(`${baseUrl}esm/${relativePath}`));
                     return {
                         content,
-                        filePath: `file:///node_modules/@codexo/exojs/dist/esm/${relativePath}`,
+                        filePath: `file:///node_modules/${packageName}/dist/esm/${relativePath}`,
                     } satisfies ExtraLib;
                 } catch {
                     return null;
@@ -560,7 +581,7 @@ async function loadExoJsTypingsFromBase(baseUrl: string): Promise<ReadonlyArray<
     try {
         libs.push({
             content: await fetchTextFile(buildPublicUrl(`${baseUrl}module-shims.d.ts`)),
-            filePath: 'file:///node_modules/@codexo/exojs/dist/module-shims.d.ts',
+            filePath: `file:///node_modules/${packageName}/dist/module-shims.d.ts`,
         });
     } catch {
         // Missing shims; editor still works without package-aware imports.
@@ -569,7 +590,7 @@ async function loadExoJsTypingsFromBase(baseUrl: string): Promise<ReadonlyArray<
     try {
         libs.push({
             content: await fetchTextFile(buildPublicUrl(`${baseUrl}exo.d.ts`)),
-            filePath: 'file:///node_modules/@codexo/exojs/dist/exo.d.ts',
+            filePath: `file:///node_modules/${packageName}/dist/exo.d.ts`,
         });
     } catch {
         // No usable declarations.

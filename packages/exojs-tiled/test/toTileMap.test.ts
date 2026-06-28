@@ -130,10 +130,11 @@ describe('TiledMap source model — orthogonal-rich.tmj', () => {
   it('parses object-layer objects including a tile-object gid', async () => {
     const map = await loadTiledMap('orthogonal-rich.tmj', context);
     const objects = (map.layers[1] as TiledObjectLayer).objects;
-    expect(objects).toHaveLength(2);
+    expect(objects).toHaveLength(3);
     expect(objects[0].name).toBe('hero');
     expect(objects[0].point).toBe(true);
     expect(objects[1].gid).toBe(2);
+    expect(objects[2].text?.text).toBe('Hello');
   });
 
   it('preserves a group layer with a nested tile layer', async () => {
@@ -163,10 +164,10 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
     expect(context.fetchJson).not.toHaveBeenCalled();
   });
 
-  it('converts only tile layers (object/image omitted, group flattened)', async () => {
+  it('runtime.layers contains only tile layers (Spawns → objectLayers, Background → imageLayers, group flattened)', async () => {
     const map = await loadTiledMap('orthogonal-rich.tmj', context);
     const runtime = map.toTileMap();
-    // Ground + DecorTiles (flattened out of the group); Spawns/Background dropped.
+    // Ground + DecorTiles (flattened out of the group); object/image layers are separate.
     expect(runtime.layers.map(l => l.name)).toEqual(['Ground', 'DecorTiles']);
   });
 
@@ -203,6 +204,52 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
     expect(tile).not.toBeNull();
     expect(tile!.tileset.name).toBe('tiles-b');
     expect(tile!.localTileId).toBe(0);
+  });
+
+  it('carries map/layer/tileset metadata (class, tint, offset, background, renderorder, draworder)', async () => {
+    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const runtime = map.toTileMap();
+
+    // Map level.
+    expect(runtime.class).toBe('level');
+    expect(runtime.backgroundColor).toBe(0x223344);
+    expect(runtime.renderOrder).toBe('right-down');
+
+    // Tileset level (class + visual tile offset).
+    const tsA = runtime.getTileset('tiles-a')!;
+    expect(tsA.class).toBe('terrainSet');
+    expect(tsA.offsetX).toBe(2);
+    expect(tsA.offsetY).toBe(-3);
+
+    // Tile layer level (class + tint colour parsed to 0xRRGGBB).
+    const ground = runtime.getLayerByName('Ground')!;
+    expect(ground.class).toBe('terrainLayer');
+    expect(ground.tintColor).toBe(0xff8800);
+
+    // Object layer draw order.
+    const spawns = runtime.getObjectLayer('Spawns')!;
+    expect(spawns.drawOrder).toBe('index');
+  });
+
+  it('carries per-tile properties and animation frames into the runtime tileset', async () => {
+    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const runtime = map.toTileMap();
+    const tsA = runtime.getTileset('tiles-a')!;
+
+    // Per-tile property carried (previously dropped at conversion).
+    expect(tsA.getTileDefinition(0)?.properties?.solid).toBe(true);
+
+    // Per-tile animation carried (previously dropped at conversion).
+    const anim = tsA.getTileDefinition(1)?.animation;
+    expect(anim).toHaveLength(2);
+    expect(anim?.[0]).toEqual({ localTileId: 1, duration: 120 });
+    expect(anim?.[1]).toEqual({ localTileId: 2, duration: 120 });
+
+    // Per-tile collision shapes carried from the tile's objectgroup.
+    const collision = tsA.getTileDefinition(3)?.collision;
+    expect(collision).toHaveLength(1);
+    expect(collision?.[0].kind).toBe('rectangle');
+    expect(collision?.[0]).toMatchObject({ x: 2, y: 2, width: 12, height: 12 });
   });
 
   it('is deterministic across repeated calls and does not take texture ownership', async () => {
@@ -313,7 +360,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
     expect(runtime.objectLayers).toHaveLength(1);
     const layer = runtime.getObjectLayer('Spawns');
     expect(layer).toBeDefined();
-    expect(layer?.objects).toHaveLength(2);
+    expect(layer?.objects).toHaveLength(3);
   });
 
   it('maps a point object and a gid object to the right kinds with resolved tiles', async () => {
@@ -338,5 +385,97 @@ describe('TiledMap.toTileMap() — object layers', () => {
 
     expect(layer?.query({ type: 'spawn' })).toHaveLength(1);
     expect(layer?.query({ kind: 'tile' })).toHaveLength(1);
+  });
+
+  it('converts a text object to kind "text" with mapped TextStyle fields', async () => {
+    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const layer = runtime.getObjectLayer('Spawns');
+
+    const sign = layer?.getObjectByName('sign');
+    expect(sign?.kind).toBe('text');
+    if (sign?.kind === 'text') {
+      expect(sign.text.text).toBe('Hello');
+      expect(sign.text.color).toBe(0xff0000);
+      expect(sign.text.bold).toBe(true);
+      expect(sign.text.pixelSize).toBe(12);
+      expect(sign.text.wrap).toBe(true);
+    }
+  });
+});
+
+describe('TiledMap.toTileMap() — image layers', () => {
+  const { context } = makeContext(richFixtures);
+
+  it('converts an imagelayer into a data-only ImageLayer with texture pre-loaded', async () => {
+    const tiled = await loadTiledMap('orthogonal-rich.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    expect(runtime.imageLayers).toHaveLength(1);
+
+    const layer = runtime.getImageLayer('Background');
+    expect(layer).toBeDefined();
+    expect(layer?.image).toContain('bg.png');
+    expect(layer?.opacity).toBe(1);
+    expect(layer?.repeatX).toBe(true);
+    expect(layer?.repeatY).toBe(false);
+    expect(layer?.texture).not.toBeNull();
+  });
+});
+
+// ── Parallax forwarding ──────────────────────────────────────────────────────
+
+describe('TiledMap.toTileMap() — parallax forwarding', () => {
+  const baseTileset = {
+    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
+    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+  };
+
+  it('forwards parallaxX and parallaxY from Tiled layer data to runtime TileLayer', async () => {
+    const { context } = makeContext({
+      'parallax.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          {
+            id: 1, name: 'Background', type: 'tilelayer',
+            visible: true, opacity: 1, x: 0, y: 0,
+            width: 2, height: 1, data: [1, 1],
+            parallaxx: 0.5, parallaxy: 0.25,
+          },
+        ],
+        tilesets: [baseTileset],
+      },
+    });
+    const tiled = await loadTiledMap('parallax.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    const layer = runtime.getLayerByName('Background')!;
+    expect(layer).toBeDefined();
+    expect(layer.parallaxX).toBe(0.5);
+    expect(layer.parallaxY).toBe(0.25);
+  });
+
+  it('defaults parallaxX and parallaxY to 1.0 when absent from Tiled data', async () => {
+    const { context } = makeContext({
+      'no-parallax.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          {
+            id: 1, name: 'Ground', type: 'tilelayer',
+            visible: true, opacity: 1, x: 0, y: 0,
+            width: 2, height: 1, data: [1, 1],
+          },
+        ],
+        tilesets: [baseTileset],
+      },
+    });
+    const tiled = await loadTiledMap('no-parallax.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    const layer = runtime.getLayerByName('Ground')!;
+    expect(layer).toBeDefined();
+    expect(layer.parallaxX).toBe(1);
+    expect(layer.parallaxY).toBe(1);
   });
 });

@@ -26,37 +26,16 @@
     text-decoration: none;
 }
 
-.brand-mark {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-control);
-    display: grid;
-    place-items: center;
-    background: var(--color-accent);
-    color: var(--color-accent-contrast);
-    font-weight: 700;
-    font-size: 17px;
-    position: relative;
-    overflow: hidden;
-}
-
-.brand-mark::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(var(--color-accent-contrast) 1px, transparent 1px),
-        linear-gradient(90deg, var(--color-accent-contrast) 1px, transparent 1px);
-    background-size: 7px 7px;
-    opacity: 0.18;
-}
-
-.brand-mark span {
-    position: relative;
-}
-
 .brand-name {
+    display: inline-flex;
+    align-items: center;
     color: var(--color-text);
+}
+
+.brand-name svg {
+    display: block;
+    width: auto;
+    height: 24px;
 }
 
 .nav {
@@ -208,10 +187,8 @@
         gap: var(--s-2);
     }
 
-    .brand-mark {
-        width: 26px;
-        height: 26px;
-        font-size: 16px;
+    .brand-name svg {
+        height: 21px;
     }
 
     .nav {

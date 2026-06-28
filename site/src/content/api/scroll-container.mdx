@@ -1,0 +1,148 @@
+---
+title: "ScrollContainer"
+description: "Clipped container that scrolls its content via the mouse wheel. Add child nodes to ScrollContainer.content rather than to the `ScrollContainer` itself. The content container is offset as the user scrolls, while the outer widget is clipped to its declared `width` × `height`. Mouse-wheel events from the global InputManager are consumed only when the pointer is within the widget's bounds. The container subscribes to the app's `onMouseWheel` signal when it enters the scene tree, and unsubscribes on detach."
+symbol: "ScrollContainer"
+kind: "class"
+subsystem: "core"
+importPath: "@codexo/exojs"
+memberCount: 105
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
+sourcePath: "src/ui/ScrollContainer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts#L41"
+---
+## Import
+
+`import { ScrollContainer } from '@codexo/exojs'`
+
+Clipped container that scrolls its content via the mouse wheel.
+
+Add child nodes to ScrollContainer.content rather than to the
+`ScrollContainer` itself. The content container is offset as the user scrolls,
+while the outer widget is clipped to its declared `width` × `height`.
+
+Mouse-wheel events from the global InputManager are consumed only
+when the pointer is within the widget's bounds. The container subscribes to
+the app's `onMouseWheel` signal when it enters the scene tree, and
+unsubscribes on detach.
+
+## Constructors
+
+- `new(options: ScrollContainerOptions): ScrollContainer`
+
+## Methods
+
+- `_applyAnchor(containerWidth: number, containerHeight: number): void`
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `_onEnabledChanged(_enabled: boolean): void`
+- `_relayout(): void`
+- `addChild(children: RenderNode[]): this`
+- `addChildAt(child: RenderNode, index: number): this`
+- `addFilter(filter: Filter): this`
+- `anchorIn(root: UIRoot, anchor: WidgetAnchor, offsetX: number, offsetY: number): this`
+- `blur(): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `focus(): this`
+- `getBounds(): Rectangle`
+- `getChildAt(index: number): RenderNode`
+- `getChildIndex(child: RenderNode): number`
+- `getGlobalTransform(): Matrix`
+- `getLocalBounds(): Rectangle`
+- `getNormals(): Vector[]`
+- `getTransform(): Matrix`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View): boolean`
+- `move(x: number, y: number): this`
+- `project(axis: Vector, result: Interval): Interval`
+- `removeChild(child: RenderNode): this`
+- `removeChildAt(index: number): this`
+- `removeChildren(begin: number, end: number): this`
+- `removeFilter(filter: Filter): this`
+- `render(backend: RenderBackend): this`
+- `rotate(degrees: number): this`
+- `scrollBy(dx: number, dy: number): void`
+- `scrollTo(x: number, y: number): void`
+- `setAnchor(x: number, y: number): this`
+- `setChildIndex(child: RenderNode, index: number): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `setSize(width: number, height: number): this`
+- `setSkew(x: number, y: number): this`
+- `swapChildren(firstChild: RenderNode, secondChild: RenderNode): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `clip: boolean`
+- `clipShape: Rectangle | Geometry | null`
+- `collisionType: CollisionType`
+- `content: Container`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `focusable: boolean`
+- `name: string | null`
+- `preserveDrawOrder: boolean`
+- `tabIndex: number`
+- `anchor: ObservableVector`
+- `bottom: number`
+- `cacheAsBitmap: boolean`
+- `children: RenderNode[]`
+- `cullable: boolean`
+- `cullArea: Rectangle | null`
+- `enabled: boolean`
+- `filters: readonly Filter[]`
+- `height: number`
+- `interactive: boolean`
+- `isAlignedBox: boolean`
+- `left: number`
+- `mask: MaskSource`
+- `origin: ObservableVector`
+- `parent: Container | null`
+- `position: ObservableVector`
+- `right: number`
+- `rotation: number`
+- `scale: ObservableVector`
+- `scrollX: number`
+- `scrollY: number`
+- `skewX: number`
+- `skewY: number`
+- `top: number`
+- `uiHeight: number`
+- `uiWidth: number`
+- `visible: boolean`
+- `width: number`
+- `x: number`
+- `y: number`
+- `zIndex: number`
+
+## Events
+
+- `onBlur: Signal<[RenderNode]>`
+- `onDrag: Signal<[InteractionEvent]>`
+- `onDragEnd: Signal<[InteractionEvent]>`
+- `onDragStart: Signal<[InteractionEvent]>`
+- `onFocus: Signal<[RenderNode]>`
+- `onKeyDown: Signal<[KeyEvent]>`
+- `onKeyUp: Signal<[KeyEvent]>`
+- `onPointerDown: Signal<[InteractionEvent]>`
+- `onPointerMove: Signal<[InteractionEvent]>`
+- `onPointerOut: Signal<[InteractionEvent]>`
+- `onPointerOver: Signal<[InteractionEvent]>`
+- `onPointerTap: Signal<[InteractionEvent]>`
+- `onPointerUp: Signal<[InteractionEvent]>`
+
+## Source
+
+[src/ui/ScrollContainer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts#L41)

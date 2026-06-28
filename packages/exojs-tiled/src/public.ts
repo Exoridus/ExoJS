@@ -40,6 +40,7 @@ export type {
   TilePropertyValue,
   TileSetOptions,
   TileTransform,
+  WangSetOptions,
 } from '@codexo/exojs-tilemap';
 export {
   ObjectLayer,
@@ -52,6 +53,7 @@ export {
   TileMapNode,
   TileMapView,
   TileSet,
+  WangSet,
 } from '@codexo/exojs-tilemap';
 
 // ── Raw Tiled JSON (TMJ/TSJ) types ──────────────────────────────────────────
@@ -78,6 +80,9 @@ export type {
   TiledTileLayerData,
   TiledTilesetData,
   TiledTilesetRefData,
+  TiledWangColorData,
+  TiledWangSetData,
+  TiledWangTileData,
 } from './data';
 
 // ── Parsed source model ─────────────────────────────────────────────────────
@@ -94,6 +99,9 @@ export { TiledMap } from './TiledMap';
 export { TiledObject } from './TiledObject';
 export type { TiledTilesetResources } from './TiledTileset';
 export { TiledTileset } from './TiledTileset';
+
+// ── Wangset conversion ────────────────────────────────────────────────────────
+export { tiledWangSetToWangSet } from './wangSets';
 
 // ── Validation ───────────────────────────────────────────────────────────────
 export { TiledFormatError } from './validate';

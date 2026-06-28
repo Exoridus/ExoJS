@@ -1,0 +1,169 @@
+---
+title: 'LDtk levels'
+description: 'Load LDtk (.ldtk) level files and convert each level to a renderable TileMap through the official @codexo/exojs-ldtk extension.'
+---
+
+# LDtk levels
+
+[LDtk](https://ldtk.io/) is a modern, open-source level editor. The official `@codexo/exojs-ldtk`
+extension adds an `ldtkMap` asset type that loads an LDtk project (`.ldtk`) through the normal
+[`Loader`](/ExoJS/en/api/loader/) pipeline — fetching the JSON, loading every referenced tileset
+image, and converting **each LDtk level** into a runtime [`TileMap`](/ExoJS/en/api/tile-map/) you
+can drop straight into the scene graph.
+
+> **Note:** `LdtkMap` ships as an official ExoJS extension package, separate from the core. It is
+> built on `@codexo/exojs-tilemap` (a regular dependency, installed transitively — you do not need
+> to add it yourself). Install `@codexo/exojs-ldtk` alongside `@codexo/exojs`:
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-ldtk
+> ```
+
+Because each LDtk level becomes a generic `TileMap`, you render LDtk worlds with the same tilemap
+node used everywhere else in the engine — there is no LDtk-specific renderer.
+
+Like all extensions, the core ships nothing LDtk-specific — an `Application` only understands
+`.ldtk` files once you activate the extension. There are two ways to do that.
+
+## Activation
+
+### Explicit (recommended)
+
+Pass `ldtkExtension` to `ApplicationOptions.extensions`. This is explicit, tree-shakeable, and
+order-independent — the extension is bound to exactly this `Application`:
+
+```js
+import { Application } from '@codexo/exojs';
+import { ldtkExtension } from '@codexo/exojs-ldtk';
+
+const app = new Application({ extensions: [ldtkExtension] });
+```
+
+`ldtkExtension` depends on `tilemapExtension`, so activating it enables **both** loading and tilemap
+rendering — the tile-chunk renderer bindings are materialised automatically. The package root
+(`@codexo/exojs-ldtk`) is side-effect-free: importing it registers nothing globally.
+
+### `/register` convenience
+
+For an app that always wants LDtk support, import the `/register` entry once at startup. It
+registers `ldtkExtension` (and its `tilemapExtension` dependency) in the global `ExtensionRegistry`
+and re-exports the same public API:
+
+```js
+import '@codexo/exojs-ldtk/register';
+import { Application } from '@codexo/exojs';
+
+const app = new Application(); // picks up ldtkExtension automatically
+```
+
+The `/register` import must run **before** you construct the `Application` whose extensions are read
+from the global registry. The explicit `extensions: [...]` form works regardless of import order.
+
+### Core-only
+
+An `Application` constructed with an explicit empty list takes **no** extensions — not even
+globally registered ones — and will not recognise `.ldtk` files:
+
+```js
+import { Application } from '@codexo/exojs';
+
+const app = new Application({ extensions: [] }); // core only; no LdtkMap
+```
+
+This is the same add-only model the [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) extension uses.
+
+## Loading a world
+
+Once the extension is active, load a `.ldtk` file by type token, by path (the `.ldtk` extension is
+registered), or by the `'ldtkMap'` config-map type name:
+
+```ts no-check
+import { LdtkMap } from '@codexo/exojs-ldtk';
+
+// By type token (most explicit)
+const world = await loader.load(LdtkMap, 'https://example.com/levels/world.ldtk');
+
+// By path — the `.ldtk` extension is registered, so the type is inferred
+const sameWorld = await loader.load('https://example.com/levels/world.ldtk');
+
+// By config-map type name — the public `'ldtkMap'` lookup
+const fromConfig = await loader.load({
+    world: { type: 'ldtkMap', source: 'https://example.com/levels/world.ldtk' },
+});
+```
+
+> **Note:** the LDtk loader resolves tileset image paths against the map's own URL with the `URL`
+> constructor, which requires that URL to be **absolute (origin-qualified)**. Load `.ldtk` files by
+> an absolute `https://…` URL, or set `loader.basePath` to an absolute origin so relative map paths
+> resolve to absolute URLs. A bare relative or root-relative path will fail tileset resolution.
+
+## The LdtkMap result
+
+A loaded `LdtkMap` exposes one runtime `TileMap` per LDtk level, plus the raw parsed document:
+
+```js no-check
+world.levels;                      // readonly TileMap[] — one per level, in document order
+world.getLevelByName('Level_0');   // TileMap | undefined — lookup by LDtk identifier
+world.data;                        // the raw parsed LdtkData document
+```
+
+Each level's `TileMap` carries the LDtk tile layers (as `TileLayer`s) and entity layers (as data-only
+`ObjectLayer`s, with each entity's position, size, and scalar fields preserved as object
+properties). World-space placement is stored in `TileMap.properties` (`worldX` / `worldY`).
+
+## Rendering a level
+
+Wrap a level's `TileMap` in a `TileMapNode` and add it to the scene. `TileMapNode` is the generic
+tilemap node from `@codexo/exojs-tilemap` (the package LDtk builds on):
+
+```ts no-check
+import { TileMapNode } from '@codexo/exojs-tilemap';
+
+const level = world.getLevelByName('Level_0') ?? world.levels[0];
+scene.root.addChild(new TileMapNode(level));
+```
+
+To stream a multi-level world, add a node per level — each level is its own `TileMap`:
+
+```js no-check
+for (const level of world.levels) {
+    scene.root.addChild(new TileMapNode(level));
+}
+```
+
+`TileMapNode` handles per-chunk culling and renders the level's layers in document order. For
+interleaving actors between tile layers, use `TileMap.createView()` to obtain independently
+placeable layer nodes — see the [`TileMapView`](/ExoJS/en/api/tile-map-view/) API.
+
+## Converting manually (advanced)
+
+The loader does the fetch-and-convert for you, but the conversion step is also available directly.
+`ldtkToTileMap` turns a raw `LdtkData` document into an `LdtkMap` of runtime `TileMap`s — useful for
+custom pipelines or for converting data you already hold in memory:
+
+```ts no-check
+import { ldtkToTileMap } from '@codexo/exojs-ldtk';
+
+const converted = ldtkToTileMap(world.data, { source: 'https://example.com/levels/world.ldtk' });
+```
+
+Without an `options.tilesets` map, tile layers are created with correct dimensions but no tile data —
+the asset-loading path supplies the runtime tilesets for you. Tile flip flags are exposed as the
+constants `ldtkFlipNone`, `ldtkFlipX`, `ldtkFlipY`, and `ldtkFlipXy` for reading raw `LdtkTileData`.
+
+## Texture ownership
+
+Tileset textures are loaded through the `Loader` and owned by the **loader cache** — not by the
+`LdtkMap`. `LdtkMap.destroy()` destroys the owned runtime `TileMap`s but deliberately does **not**
+unload tileset textures (they may be shared) or remove any scene nodes — the application owns those.
+
+## Where to look next
+
+- **Package README:** [`@codexo/exojs-ldtk`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/README.md)
+  — install, entry points, and the supported-feature matrix.
+- **API reference:** [`LdtkMap`](/ExoJS/en/api/ldtk-map/) documents `levels`, `getLevelByName`, and
+  `data`; [`TileMap`](/ExoJS/en/api/tile-map/) and [`TileMapNode`](/ExoJS/en/api/tile-map-node/)
+  document the runtime tilemap and its renderer.
+- **Sibling extension:** the [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) chapter covers the
+  same explicit-vs-`/register` activation for the other map-editor adapter.
+- **Loading model:** [Loading & resources](/ExoJS/en/guide/assets/loading-and-resources/) covers the
+  asset pipeline the loader plugs into.

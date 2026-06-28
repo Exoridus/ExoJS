@@ -35,6 +35,12 @@ export interface RenderBackend {
   readonly view: View;
   readonly renderTarget: RenderTarget;
   readonly stats: RenderStats;
+  /**
+   * The colour the canvas root target is cleared to each frame. Mutable in
+   * place (`backend.clearColor.copy(...)`) — the new value takes effect on the
+   * next frame. Both backends initialise it from `app.options.clearColor`.
+   */
+  readonly clearColor: Color;
 
   initialize(): Promise<this>;
   resetStats(): this;
@@ -84,6 +90,15 @@ export interface RenderBackend {
    * non-Rectangle `MaskSource` paths on `RenderNode.mask`.
    */
   composeWithAlphaMask(content: RenderTexture, mask: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this;
+
+  /**
+   * Composite `source` over the active render target under an advanced
+   * (backdrop-aware) blend mode. Captures the target's `[x, y, width, height]`
+   * region, runs the W3C blend formula in a shader, and draws the result back
+   * with normal premultiplied source-over. Used internally by the render-effect
+   * executor for modes where {@link isAdvancedBlendMode} is `true`.
+   */
+  composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this;
 
   draw(drawable: Drawable): this;
 

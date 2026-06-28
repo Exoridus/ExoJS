@@ -1,0 +1,42 @@
+---
+title: "AsepriteSheet"
+description: "Parsed representation of an Aseprite JSON sprite sheet export. `AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, …). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered."
+symbol: "AsepriteSheet"
+kind: "class"
+subsystem: "aseprite"
+importPath: "@codexo/exojs-aseprite"
+memberCount: 5
+tier: "stable"
+sections: ["Import", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-aseprite/src/AsepriteSheet.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteSheet.ts#L56"
+---
+## Import
+
+`import { AsepriteSheet } from '@codexo/exojs-aseprite'`
+
+Parsed representation of an Aseprite JSON sprite sheet export.
+
+`AsepriteSheet.parse(data, texture)` converts the raw JSON document into:
+- A Spritesheet whose frames correspond to the Aseprite frame array
+  (keyed by zero-based index string: `"0"`, `"1"`, …).
+- A `clips` map of AnimatedSpriteClipDefinition entries built from
+  `meta.frameTags`, one per named tag.
+
+Call createAnimatedSprite to obtain a ready-to-use
+AnimatedSprite with all clips pre-registered.
+
+## Methods
+
+- `createAnimatedSprite(): AnimatedSprite`
+- `destroy(): void`
+- `parse(data: AsepriteData, texture: Texture): AsepriteSheet`
+
+## Properties
+
+- `clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>`
+- `spritesheet: Spritesheet`
+
+## Source
+
+[packages/exojs-aseprite/src/AsepriteSheet.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteSheet.ts#L56)

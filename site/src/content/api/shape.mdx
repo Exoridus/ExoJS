@@ -1,0 +1,43 @@
+---
+title: "Shape"
+description: "Immutable local-space collision geometry. A `Shape` carries no transform — a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen. `unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid."
+symbol: "Shape"
+kind: "class"
+subsystem: "physics"
+importPath: "@codexo/exojs-physics"
+memberCount: 7
+tier: "stable"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "packages/exojs-physics/src/shapes/Shape.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/Shape.ts#L15"
+---
+## Import
+
+`import { Shape } from '@codexo/exojs-physics'`
+
+Immutable local-space collision geometry. A `Shape` carries no transform — a
+Collider positions it in a body. Shapes also expose the area-based
+mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive
+mass and rotational inertia from a density; these are computed once at
+construction and frozen.
+
+`unitInertia` is the second moment of area about the shape's own centroid
+(∫ r² dA). Multiplying by density yields the rotational inertia contribution
+of the shape about its centroid.
+
+## Constructors
+
+- `new(): Shape`
+
+## Properties
+
+- `area: number`
+- `boundingRadius: number`
+- `centroidX: number`
+- `centroidY: number`
+- `type: ShapeType`
+- `unitInertia: number`
+
+## Source
+
+[packages/exojs-physics/src/shapes/Shape.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/Shape.ts#L15)

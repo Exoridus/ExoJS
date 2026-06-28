@@ -10,6 +10,7 @@ import type { Application } from './Application';
 import { DisposalScope } from './DisposalScope';
 import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
+import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 import type { Destroyable } from './types';
@@ -115,6 +116,11 @@ export class Scene {
    * (show a panel on `scene.ui`, then set `scene.paused = true`).
    */
   public paused = false;
+
+  /** Dispatched after the scene finishes loading (after load() and init() complete). */
+  public readonly onLoad = new Signal();
+  /** Dispatched when the scene is about to be unloaded. */
+  public readonly onUnload = new Signal();
 
   private _inputs: SceneInputs | null = null;
   private _tweens: SceneTweens | null = null;
@@ -334,6 +340,18 @@ export class Scene {
   }
 
   /**
+   * Fixed-timestep logic hook. Called zero or more times per frame with a
+   * constant `delta` ({@link Application.fixedTimeStep}) before {@link Scene.update},
+   * so physics and deterministic gameplay advance at a frame-rate-independent
+   * rate. Put `physicsWorld.step(delta)` and movement here; leave camera, UI and
+   * purely visual work in {@link Scene.update}. Default is a no-op. Override in
+   * subclass.
+   */
+  public fixedUpdate(_delta: Time): void {
+    // override in subclass
+  }
+
+  /**
    * Explicit per-frame rendering entry point. Override to choose
    * what gets rendered.
    *
@@ -368,6 +386,8 @@ export class Scene {
     this._inputs = null;
     this._tweens = null;
     this._systems = null;
+    this.onLoad.destroy();
+    this.onUnload.destroy();
     this._root.destroy();
     this._app = null;
   }

@@ -14,6 +14,7 @@ export class WebGpuTransformStorage {
   private _storageCapacity = 0;
   private _storageHash = 0;
   private _storageCount = -1;
+  private _needsFullUpload = false;
   private _accountant: GpuResourceAccountant | null = null;
   /** GPU bytes currently booked for the storage buffer with the resource accountant. */
   private _accountedBytes = 0;
@@ -27,7 +28,8 @@ export class WebGpuTransformStorage {
     return this._buffer;
   }
 
-  public begin(nodeCount: number): void {
+  /** Reset the underlying frame-scoped buffer. Used directly by tests. @internal */
+  public begin(nodeCount = 0): void {
     this._buffer.begin(nodeCount);
   }
 
@@ -98,12 +100,40 @@ export class WebGpuTransformStorage {
       this._growBuffer(device, requiredBytes);
     }
 
+    // A skipped flush (all three guards false) leaves the dirty range uncleared
+    // until the next begin(). Safe: every write() mixes its slot into _frameHash,
+    // so a non-empty dirty range always coincides with snapshot.changed = true —
+    // the upload branch is always taken before any dirty rows could be stale.
     if (snapshot.changed || snapshot.hash !== this._storageHash || snapshot.count !== this._storageCount) {
-      const bytes = snapshot.count * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
+      // Always consume the dirty range first to clear it — regardless of whether
+      // the full-upload path (post-grow) or the delta path runs below. Both paths
+      // are inside this if-branch; the skip case (snapshot unchanged) never reaches
+      // here, so the dirty range is only consumed when an upload is actually issued.
+      const { firstRow, rowCount } = this._buffer.consumeDirtyRange(snapshot.count);
 
-      device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, bytes);
-      this._buffer.recordUpload(snapshot.count);
-      this._accountant?.recordBufferUpload(bytes);
+      const slotBytes = slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
+
+      if (this._needsFullUpload) {
+        // Post-grow: the new GPUBuffer is empty; upload the full [0, snapshot.count)
+        // range so rows already consumed by earlier flushes this frame are present.
+        device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, snapshot.count * slotBytes);
+        this._buffer.recordUpload(snapshot.count);
+        this._accountant?.recordBufferUpload(snapshot.count * slotBytes);
+        this._needsFullUpload = false;
+      } else if (rowCount > 0) {
+        // Normal delta path: upload only the rows written since the last upload.
+        // A reused slot below the high-water mark is in the dirty range, so it re-uploads.
+        device.queue.writeBuffer(
+          this._storageBuffer!,
+          firstRow * slotBytes,
+          this._buffer.data.buffer,
+          this._buffer.data.byteOffset + firstRow * slotBytes,
+          rowCount * slotBytes,
+        );
+        this._buffer.recordUpload(rowCount);
+        this._accountant?.recordBufferUpload(rowCount * slotBytes);
+      }
+
       this._storageHash = snapshot.hash;
       this._storageCount = snapshot.count;
     }
@@ -142,6 +172,7 @@ export class WebGpuTransformStorage {
     this._storageCapacity = nextCapacity;
     this._storageHash = 0;
     this._storageCount = -1;
+    this._needsFullUpload = true;
     // Re-book the storage footprint (free the prior buffer's bytes, allocate the new).
     this._accountedBytes = this._accountant?.reallocate(this._accountedBytes, nextCapacity) ?? this._accountedBytes;
   }

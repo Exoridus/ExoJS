@@ -25,6 +25,10 @@ export interface PhysicsDebugDrawOptions {
   drawCenters?: boolean;
   /** Broad-phase candidate links between AABB-overlapping colliders. Default `false`. */
   drawBroadphase?: boolean;
+  /** Tint sleeping bodies distinctly (applies to the shape outline). Default `false`. */
+  drawSleeping?: boolean;
+  /** Lines connecting the bodies of each joint. Default `false`. */
+  drawJoints?: boolean;
 }
 
 const segments = 24;
@@ -38,6 +42,8 @@ const colorContact = new Color(1, 0.2, 0.2, 1);
 const colorNormal = new Color(1, 0.6, 0.1, 1);
 const colorCenter = new Color(1, 1, 1, 0.9);
 const colorBroadphase = new Color(0.2, 0.8, 0.8, 0.5);
+const colorSleeping = new Color(0.45, 0.45, 0.5, 0.7);
+const colorJoint = new Color(0.9, 0.5, 1, 0.8);
 
 /**
  * `DebugLayer` that visualises a {@link PhysicsWorld} — shapes, AABBs, contacts,
@@ -67,6 +73,8 @@ export class PhysicsDebugDraw extends DebugLayer {
       drawNormals: options.drawNormals ?? false,
       drawCenters: options.drawCenters ?? false,
       drawBroadphase: options.drawBroadphase ?? false,
+      drawSleeping: options.drawSleeping ?? false,
+      drawJoints: options.drawJoints ?? false,
     };
   }
 
@@ -113,7 +121,20 @@ export class PhysicsDebugDraw extends DebugLayer {
       this._renderContacts(gfx);
     }
 
+    if (options.drawJoints) {
+      this._renderJoints(gfx);
+    }
+
     gfx.render(backend);
+  }
+
+  private _renderJoints(gfx: Graphics): void {
+    gfx.lineColor = colorJoint;
+
+    for (const joint of this._world.joints) {
+      gfx.moveTo(joint.bodyA.x, joint.bodyA.y);
+      gfx.lineTo(joint.bodyB.x, joint.bodyB.y);
+    }
   }
 
   public override destroy(): void {
@@ -125,8 +146,20 @@ export class PhysicsDebugDraw extends DebugLayer {
 
   // ── helpers ────────────────────────────────────────────────────────────
 
+  private _outlineColor(collider: Collider): Color {
+    if (collider.isSensor) {
+      return colorSensor;
+    }
+
+    if (this.options.drawSleeping && collider.body.isSleeping) {
+      return colorSleeping;
+    }
+
+    return colorForType(collider.body.type);
+  }
+
   private _strokeShape(gfx: Graphics, collider: Collider): void {
-    gfx.lineColor = collider.isSensor ? colorSensor : colorForType(collider.body.type);
+    gfx.lineColor = this._outlineColor(collider);
 
     if (collider.shape.type === 'circle') {
       const c = collider.worldCenter;

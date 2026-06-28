@@ -1,0 +1,46 @@
+---
+title: "LdtkMap"
+description: "A parsed LDtk world document: holds the raw JSON data and the converted runtime TileMap for each level. `LdtkMap` is the parsed source model. Each LDtk level is independently convertible to a format-independent `TileMap`; access them via levels (by document order) or by name via getLevelByName. Construction is cheap — the runtime `TileMap[]` is supplied externally (built by import('./ldtkToTileMap').ldtkToTileMap). The map does **not** own tileset textures; those remain in the Loader cache."
+symbol: "LdtkMap"
+kind: "class"
+subsystem: "ldtk"
+importPath: "@codexo/exojs-ldtk"
+memberCount: 6
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-ldtk/src/LdtkMap.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkMap.ts#L17"
+---
+## Import
+
+`import { LdtkMap } from '@codexo/exojs-ldtk'`
+
+A parsed LDtk world document: holds the raw JSON data and the converted
+runtime TileMap for each level.
+
+`LdtkMap` is the parsed source model. Each LDtk level is independently
+convertible to a format-independent `TileMap`; access them via
+levels (by document order) or by name via getLevelByName.
+
+Construction is cheap — the runtime `TileMap[]` is supplied externally
+(built by import('./ldtkToTileMap').ldtkToTileMap). The map does
+**not** own tileset textures; those remain in the Loader cache.
+
+## Constructors
+
+- `new(source: string, data: LdtkData, levels: readonly TileMap[]): LdtkMap`
+
+## Methods
+
+- `destroy(): void`
+- `getLevelByName(identifier: string): TileMap | undefined`
+
+## Properties
+
+- `data: LdtkData`
+- `levels: readonly TileMap[]`
+- `source: string`
+
+## Source
+
+[packages/exojs-ldtk/src/LdtkMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkMap.ts#L17)

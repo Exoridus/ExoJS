@@ -15,9 +15,10 @@ import { Interval } from '#math/Interval';
 import type { Line } from '#math/Line';
 import { Matrix } from '#math/Matrix';
 import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
+import { Polygon } from '#math/Polygon';
 import { Rectangle } from '#math/Rectangle';
 import { degreesToRadians, trimRotation } from '#math/utils';
-import type { Vector } from '#math/Vector';
+import { Vector } from '#math/Vector';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
@@ -56,6 +57,9 @@ enum SceneNodeVectorChannel {
   Anchor,
 }
 
+/** Shared scratch for the four oriented corners — written then copied into a node's polygon (single-threaded). */
+const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()];
+
 /**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
  * rotation, scale, skew, origin, and a 2-component {@link Vector} `anchor`
@@ -69,10 +73,10 @@ enum SceneNodeVectorChannel {
  * for this node and every {@link Container} ancestor up the parent chain.
  * The caches rebuild lazily on the next read.
  *
- * The fast-path `isAlignedBox` getter reports `true` when the rotation is a
- * multiple of 90° and both skew components are zero; in that case the
- * (cheaper) AABB-based collision test is used instead of the rotated/skewed
- * quad SAT path.
+ * Collision and hit-testing take the cheaper AABB path when the node's *world*
+ * box is axis-aligned (its own and any inherited rotation compose to a multiple
+ * of 90° with no skew) and the oriented-quad SAT path otherwise. The public
+ * `isAlignedBox` getter reports that predicate for this node's own rotation only.
  *
  * `_invalidate*` methods are exported as `public` for friend-class access
  * from {@link Container} and {@link InteractionManager}; treat them as
@@ -109,6 +113,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _parentNode: Container | null = null;
   private _zIndex = 0;
   private _cullable = true;
+  private _cullArea: Rectangle | null = null;
+  /** Lazily-built oriented bounding box (the local bounds under the global transform) for rotated-node SAT. */
+  private _orientedBounds: Polygon | null = null;
 
   /**
    * Optional human-readable identity for this node. Defaults to `null`.
@@ -208,12 +215,29 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
+  /**
+   * When `false`, this node is never culled by the viewport check and is
+   * always considered in-view. Defaults to `true`.
+   */
   public get cullable(): boolean {
     return this._cullable;
   }
 
   public set cullable(cullable: boolean) {
     this._cullable = cullable;
+  }
+
+  /**
+   * Custom rectangle used for viewport cull intersection test.
+   * When set, replaces the default node bounds in cull checks.
+   * Set to `null` to restore default bounds-based culling.
+   */
+  public get cullArea(): Rectangle | null {
+    return this._cullArea;
+  }
+
+  public set cullArea(rect: Rectangle | null) {
+    this._cullArea = rect;
   }
 
   /**
@@ -395,15 +419,48 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public getNormals(): Vector[] {
-    return this.getBounds().getNormals();
+    return this._isWorldAligned() ? this.getBounds().getNormals() : this._orientedBoundsPolygon().getNormals();
   }
 
   public project(axis: Vector, result: Interval = new Interval()): Interval {
-    return this.getBounds().project(axis, result);
+    return this._isWorldAligned() ? this.getBounds().project(axis, result) : this._orientedBoundsPolygon().project(axis, result);
+  }
+
+  /**
+   * The node's oriented bounding box: the four local-bounds corners under the
+   * global transform, as a {@link Polygon}. Used by the SAT collision path so a
+   * rotated node tests its true oriented axes instead of the loose AABB. Built
+   * lazily and refreshed in place; only ever reached for non-axis-aligned nodes.
+   */
+  private _orientedBoundsPolygon(): Polygon {
+    const bounds = this.getLocalBounds();
+    const matrix = this.getGlobalTransform();
+
+    orientedCorners[0]!.set(bounds.left, bounds.top).transform(matrix);
+    orientedCorners[1]!.set(bounds.right, bounds.top).transform(matrix);
+    orientedCorners[2]!.set(bounds.right, bounds.bottom).transform(matrix);
+    orientedCorners[3]!.set(bounds.left, bounds.bottom).transform(matrix);
+
+    return (this._orientedBounds ??= new Polygon()).setPoints(orientedCorners);
+  }
+
+  /**
+   * Whether the node's *world* box is axis-aligned — its own and every inherited
+   * rotation/skew compose to a transform that maps axes to axes (a multiple of
+   * 90°, no shear). When true the AABB equals the oriented box, so the cheaper
+   * AABB collision/hit-test path is exact; otherwise the oriented-quad SAT path
+   * is used. Unlike {@link isAlignedBox} (this node's own rotation only), this
+   * accounts for a rotated ancestor.
+   */
+  private _isWorldAligned(): boolean {
+    const matrix = this.getGlobalTransform();
+    const epsilon = 1e-9;
+
+    return (Math.abs(matrix.b) < epsilon && Math.abs(matrix.c) < epsilon) || (Math.abs(matrix.a) < epsilon && Math.abs(matrix.d) < epsilon);
   }
 
   public intersectsWith(target: Collidable): boolean {
-    if (this.isAlignedBox) {
+    if (this._isWorldAligned()) {
       return this.getBounds().intersectsWith(target);
     }
 
@@ -428,7 +485,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public collidesWith(target: Collidable): CollisionResponse | null {
-    if (this.isAlignedBox) {
+    if (this._isWorldAligned()) {
       return this.getBounds().collidesWith(target);
     }
 
@@ -449,7 +506,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   /**
    * Hit-test the world-space point `(x, y)` against this node.
    *
-   * For axis-aligned nodes ({@link isAlignedBox} — rotation a multiple of 90°
+   * For world-axis-aligned nodes (own and inherited rotation a multiple of 90°
    * and no skew) the AABB equals the oriented box, so the cheap
    * {@link getBounds} test is exact. For rotated or skewed nodes the point is
    * mapped back into local space with the inverse of the global transform and
@@ -460,7 +517,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * empty AABB corners of a rotated node.
    */
   public contains(x: number, y: number): boolean {
-    if (this.isAlignedBox) {
+    if (this._isWorldAligned()) {
       return this.getBounds().contains(x, y);
     }
 
@@ -487,7 +544,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
       return true;
     }
 
-    return view.getBounds().intersectsWith(this.getBounds());
+    const bounds = this._cullArea ?? this.getBounds();
+
+    return view.getBounds().intersectsWith(bounds);
   }
 
   public destroy(): void {
@@ -501,6 +560,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this._localBounds.destroy();
     this._bounds.destroy();
     this._anchor.destroy();
+    this._orientedBounds?.destroy();
   }
 
   /**

@@ -1,6 +1,6 @@
 import type { Texture } from '@codexo/exojs';
 
-import type { TiledPointData, TiledPropertyData, TiledTileData, TiledTilesetData } from './data';
+import type { TiledPointData, TiledPropertyData, TiledTileData, TiledTilesetData, TiledWangSetData } from './data';
 
 /**
  * Loader-resolved resources for a {@link TiledTileset}: the absolute image
@@ -49,6 +49,8 @@ export class TiledTileset {
   public readonly tileOffset: TiledPointData;
   public readonly objectAlignment?: string | undefined;
   public readonly tiles: readonly TiledTileData[];
+  /** Wang sets (terrain/auto-tile definitions) declared on this tileset. Empty when none are defined. */
+  public readonly wangSets: readonly TiledWangSetData[];
   /** Textures loaded for collection-of-images tiles, keyed by local tile id. Loader-owned. */
   public readonly tileTextures: ReadonlyMap<number, Texture>;
   public readonly properties: readonly TiledPropertyData[];
@@ -71,6 +73,7 @@ export class TiledTileset {
     this.tileOffset = data.tileoffset ?? { x: 0, y: 0 };
     this.objectAlignment = data.objectalignment;
     this.tiles = data.tiles ?? [];
+    this.wangSets = data.wangsets ?? [];
     this.tileTextures = resources.tileTextures ?? new Map();
     this.properties = data.properties ?? [];
   }

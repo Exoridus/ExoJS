@@ -1790,10 +1790,15 @@ describe('WebGpuBackend', () => {
       manager.flush();
       manager.destroy();
 
-      // The sprite's world transform now lives in the shared transform storage
-      // buffer (uploaded as the last writeBuffer of the sprite flush), not inline
-      // in the instance buffer. Slot 0 = (a, b, c, d, tx, ty, 0, 0, tint…); an
+      // The sprite's world transform lives in the shared transform storage buffer
+      // (the last writeBuffer of the sprite flush carries the whole buffer's
+      // ArrayBuffer), not inline in the instance buffer. The buffer is frame-scoped
+      // (cross-call batching): the graphics rendered into the RenderTexture is the
+      // first shared-buffer write (slot 0), so the sprite is the second and lands
+      // in slot 1. Each slot is 12 floats (a, b, c, d, tx, ty, 0, 0, tint…); an
       // unrotated sprite at (24, 18) has b == 0 and carries that translation.
+      const slotFloats = 12;
+      const spriteBase = 1 * slotFloats; // slot 1
       const transformWrite = environment.queue.writeBuffer.mock.calls[environment.queue.writeBuffer.mock.calls.length - 1];
       const data = new Float32Array(transformWrite[2] as ArrayBuffer);
 
@@ -1801,9 +1806,9 @@ describe('WebGpuBackend', () => {
       expect(environment.pass.drawIndexed).toHaveBeenCalled();
       expect(environment.queue.submit.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(environment.textures.length).toBeGreaterThan(0);
-      expect(data[1]).toBe(0);
-      expect(data[4]).toBe(24);
-      expect(data[5]).toBe(18);
+      expect(data[spriteBase + 1]).toBe(0);
+      expect(data[spriteBase + 4]).toBe(24);
+      expect(data[spriteBase + 5]).toBe(18);
     } finally {
       environment.restore();
     }

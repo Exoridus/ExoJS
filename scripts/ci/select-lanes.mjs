@@ -52,9 +52,22 @@ import { pathToFileURL } from 'node:url';
  * NOT listed: `create-exo-app` (a standalone scaffolding CLI with no engine /
  * browser impact) and `site` (the examples app — covered by the `site` area).
  *
- * Adding a new runtime extension package == add its directory name here.
+ * Adding a new runtime extension package == add its directory name here. Keep in
+ * sync with `LOCKSTEP_PACKAGES` in scripts/release/lockstep-packages.ts (this
+ * file is dependency-free ESM and runs before any install, so it cannot import
+ * that TS module).
  */
-const RUNTIME_PACKAGES = ['exojs-config', 'exojs-particles', 'exojs-tilemap', 'exojs-tiled', 'exojs-physics', 'exojs-audio-fx'];
+const RUNTIME_PACKAGES = [
+  'exojs-config',
+  'exojs-particles',
+  'exojs-tilemap',
+  'exojs-tiled',
+  'exojs-physics',
+  'exojs-audio-fx',
+  'exojs-aseprite',
+  'exojs-ldtk',
+  'exojs-react',
+];
 
 /**
  * Documentation-only files inside a package. A change limited to these must NOT

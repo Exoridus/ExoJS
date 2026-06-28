@@ -1,6 +1,7 @@
 ---
 import AppShell from '../../layouts/AppShell.astro';
 import { Code } from 'astro:components';
+import ExampleThumb from '../../components/ExampleThumb.astro';
 import { GuideExamplePreview } from '../../components/GuideExamplePreview';
 import { appInfo } from '../../lib/app-info';
 import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
@@ -19,48 +20,38 @@ const heroExample = getExamplesForChapter('particles').find(entry => entry.slug 
 const heroExampleTitle = heroExample?.title ?? 'Bonfire';
 const heroExampleSource = getExampleExecutionSource('particles', 'bonfire');
 
-const heroSnippet = `import {
-  Application, Keyboard, Scene,
-  Sprite, Texture,
-} from '@codexo/exojs';
+const heroSnippet = `import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
 
-class PlayerScene extends Scene {
-  private hero!: Sprite;
+class HeroScene extends Scene {
+  private ship!: Sprite;
 
   async load(loader) {
-    await loader.load(Texture, { hero: 'images/hero.png' });
+    this.ship = new Sprite(await loader.load(Texture, 'ship.png'));
   }
 
-  init(loader) {
-    const { width, height } = this.app!.canvas;
+  init() {
+    const { width, height } = this.app.canvas;
+    this.ship.setAnchor(0.5).setPosition(width / 2, height / 2);
 
-    this.hero = new Sprite(loader.get(Texture, 'hero'));
-    this.hero.setAnchor(0.5);
-    this.hero.setPosition(width / 2, height / 2);
-
-    this.inputs.onActive(Keyboard.Left, () =>
-      this.hero.move(-3, 0),
-    );
-    this.inputs.onActive(Keyboard.Right, () =>
-      this.hero.move(3, 0),
-    );
+    // Pulse and spin — two tweens running in parallel.
+    this.app.tweens.create(this.ship.scale)
+      .to({ x: 1.4, y: 1.4 }, 0.9).yoyo(true).repeat(-1).start();
+    this.app.tweens.create(this.ship)
+      .to({ rotation: Math.PI }, 1.8).yoyo(true).repeat(-1).start();
   }
 
   draw(context) {
     context.backend.clear();
-    context.render(this.hero);
+    context.render(this.ship);
   }
 }
 
 const app = new Application({
-  canvas: {
-    width: 960,
-    height: 540,
-    pixelRatio: window.devicePixelRatio,
-  },
+  canvas: { width: 960, height: 540 },
+  clearColor: Color.black,
 });
 
-await app.start(new PlayerScene());`;
+app.start(new HeroScene());`;
 
 const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
 
@@ -79,42 +70,48 @@ const examples = [
         description: 'Per-frame particle emitter with falloff and color ramp.',
         chapter: 'Particles',
         tags: ['particles', 'color'],
-        href: `${import.meta.env.BASE_URL}en/guide/effects/particles/#bonfire`,
+        anim: 'particles' as const,
+        href: `${import.meta.env.BASE_URL}en/playground/?example=particles/bonfire`,
     },
     {
         title: 'Chromatic Aberration',
         description: 'Stack two filters on a layer for analog feel.',
         chapter: 'Filters',
         tags: ['filter', 'blend'],
-        href: `${import.meta.env.BASE_URL}en/guide/effects/filters/#chromatic-aberration`,
+        anim: 'chroma' as const,
+        href: `${import.meta.env.BASE_URL}en/playground/?example=filters/chromatic-aberration`,
     },
     {
         title: 'Beat Sync Pulse',
         description: 'Drive scene scale from FFT bands.',
         chapter: 'Audio FX',
         tags: ['audio', 'fft'],
-        href: `${import.meta.env.BASE_URL}en/guide/audio/beat-detection/#beat-sync-pulse`,
+        anim: 'fft' as const,
+        href: `${import.meta.env.BASE_URL}en/playground/?example=beat-detection/beat-sync-pulse`,
     },
     {
         title: 'Sprite Sheet',
         description: 'Animate from a strip with frame timing.',
         chapter: 'Sprites & Textures',
         tags: ['sprite', 'anim'],
-        href: `${import.meta.env.BASE_URL}en/guide/rendering/sprites/#spritesheet-frames`,
+        anim: 'frames' as const,
+        href: `${import.meta.env.BASE_URL}en/playground/?example=sprites-textures/spritesheet-frames`,
     },
     {
         title: 'Easing Curves',
         description: 'Tween any numeric property with built-in easings.',
         chapter: 'Tweens & Animation',
         tags: ['tween', 'easing'],
-        href: `${import.meta.env.BASE_URL}en/guide/rendering/animation/#easing-curves`,
+        anim: 'easing' as const,
+        href: `${import.meta.env.BASE_URL}en/playground/?example=tweens-animation/easing-curves`,
     },
     {
         title: 'Camera And View',
         description: 'Pan and zoom with View; world vs screen coords.',
         chapter: 'Application & Scenes',
         tags: ['scene', 'view'],
-        href: `${import.meta.env.BASE_URL}en/guide/runtime/coordinates-and-views/#camera-and-view`,
+        anim: 'camera' as const,
+        href: `${import.meta.env.BASE_URL}en/playground/?example=application-scenes/camera-and-view`,
     },
 ];
 ---
@@ -123,7 +120,7 @@ const examples = [
     <div class="home">
         <section class="hero">
             <div class="hero-inner">
-                <div>
+                <div class="hero-copy">
                     <span class="hero-eyebrow">
                         <span class="pip"><span class="dot"></span>v{appInfo.version}</span>
                         <span>{releaseStage} / TypeScript / {appInfo.license}</span>
@@ -143,7 +140,7 @@ const examples = [
                     <div class="head">
                         <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
                         <span class="file">game.ts</span>
-                        <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">input</span></span>
+                        <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">tweens</span></span>
                     </div>
                     <Code code={heroSnippet} lang="ts" themes={{ light: 'github-light', dark: 'one-dark-pro' }} />
                 </div>
@@ -151,6 +148,16 @@ const examples = [
         </section>
 
         <section class="live-hero" aria-label="Live example">
+            <img
+                class="hero-companion"
+                src={`${import.meta.env.BASE_URL}brand/companion-hero.webp`}
+                alt=""
+                aria-hidden="true"
+                width="208"
+                height="208"
+                loading="lazy"
+                decoding="async"
+            />
             <div class="live-hero-head">
                 <span class="live-tag"><span class="live-dot"></span>Live — rendering in your browser</span>
                 <h2>{heroExampleTitle}</h2>
@@ -206,9 +213,7 @@ const examples = [
             <div class="examples">
                 {examples.map((example, index) => (
                     <a class="ex-card" href={example.href}>
-                        <div class="ex-thumb" data-tone={index % 6}>
-                            <span class="ex-thumb__label">{example.title}</span>
-                        </div>
+                        <ExampleThumb anim={example.anim} title={example.title} tone={index % 6} />
                         <div class="ex-meta">
                             <div class="row">
                                 {example.tags.map(tag => (
@@ -277,6 +282,14 @@ const examples = [
         mask-image: radial-gradient(120% 80% at 70% 0%, #000 35%, transparent 75%);
         pointer-events: none;
         z-index: -1;
+        animation: hero-grid-drift 26s linear infinite;
+    }
+
+    /* Slowly drift the grid by exactly one cell so the loop is seamless. */
+    @keyframes hero-grid-drift {
+        to {
+            background-position: 63px 63px;
+        }
     }
 
     .hero::after {
@@ -289,15 +302,68 @@ const examples = [
         background: radial-gradient(closest-side, var(--accent-soft), transparent 70%);
         pointer-events: none;
         z-index: -1;
+        animation: hero-glow-breathe 9s ease-in-out infinite;
+    }
+
+    @keyframes hero-glow-breathe {
+        0%,
+        100% {
+            opacity: 0.8;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.09);
+        }
     }
 
     .hero-inner {
+        position: relative;
         max-width: 1180px;
         margin: 0 auto;
         display: grid;
         grid-template-columns: 1fr 1.1fr;
         gap: var(--s-10);
         align-items: center;
+    }
+
+    .hero-copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Companion mascot — a waving greeter presenting the live example, perched in
+       the top-right of the live-hero section. Decorative (aria-hidden). */
+    .hero-companion {
+        position: absolute;
+        top: -58px;
+        right: var(--s-4);
+        z-index: 3;
+        width: clamp(120px, 13vw, 172px);
+        height: auto;
+        pointer-events: none;
+        filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.4));
+        animation: companion-float 4.6s ease-in-out infinite;
+    }
+
+    @keyframes companion-float {
+        0%,
+        100% {
+            transform: translateY(0) rotate(-0.6deg);
+        }
+        50% {
+            transform: translateY(-10px) rotate(0.6deg);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .hero-companion,
+        .hero::before,
+        .hero::after,
+        .cap-icon {
+            animation: none;
+        }
     }
 
     .hero-eyebrow {
@@ -520,6 +586,7 @@ const examples = [
     }
 
     .live-hero {
+        position: relative;
         max-width: 1180px;
         margin: var(--s-10) auto 0;
         padding: 0 var(--s-7);
@@ -607,6 +674,28 @@ const examples = [
         font-size: 13px;
         font-family: var(--f-mono);
         font-weight: 700;
+        animation: cap-pulse 4.8s ease-in-out infinite;
+    }
+
+    /* Staggered glow travelling across the four feature icons. */
+    .cap:nth-child(2) .cap-icon {
+        animation-delay: 1.2s;
+    }
+    .cap:nth-child(3) .cap-icon {
+        animation-delay: 2.4s;
+    }
+    .cap:nth-child(4) .cap-icon {
+        animation-delay: 3.6s;
+    }
+
+    @keyframes cap-pulse {
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 transparent;
+        }
+        50% {
+            box-shadow: 0 0 16px 1px var(--accent-soft);
+        }
     }
 
     .cap h4 {
@@ -678,48 +767,6 @@ const examples = [
     .ex-card:hover {
         border-color: var(--line);
         transform: translateY(-2px);
-    }
-
-    .ex-thumb {
-        aspect-ratio: 16/10;
-        background: var(--bg-code);
-        position: relative;
-        overflow: hidden;
-        display: grid;
-        place-items: center;
-    }
-
-    .ex-thumb::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background-image:
-            linear-gradient(var(--grid-line) 1px, transparent 1px),
-            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-        background-size: 28px 28px;
-        opacity: 0.55;
-    }
-
-    .ex-thumb::after {
-        content: '';
-        position: absolute;
-        width: 64%;
-        height: 64%;
-        border-radius: 16px;
-        background: radial-gradient(circle at 30% 30%, color-mix(in oklab, var(--accent), transparent 35%), transparent 70%);
-        opacity: 0.35;
-    }
-
-    .ex-thumb__label {
-        position: relative;
-        z-index: 1;
-        font-family: var(--f-mono);
-        font-size: 12px;
-        color: oklch(86% 0.01 245);
-        padding: 4px 10px;
-        border-radius: var(--r-pill);
-        border: 1px solid oklch(40% 0.015 245);
-        background: oklch(16% 0.012 245 / 0.75);
     }
 
     .ex-meta {
@@ -885,6 +932,13 @@ const examples = [
     @media (max-width: 760px) {
         .hero {
             padding: var(--s-8) var(--s-4) var(--s-7);
+        }
+
+        /* Shrink the live-hero greeter so it never crowds the heading on phones. */
+        .hero-companion {
+            width: 92px;
+            top: -32px;
+            right: var(--s-3);
         }
 
         .hero-inner {

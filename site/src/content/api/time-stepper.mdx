@@ -1,0 +1,49 @@
+---
+title: "TimeStepper"
+description: "Fixed-timestep accumulator (package-owned; no engine clock dependency). Each frame, advance adds the variable frame delta to an internal accumulator and reports how many whole fixed sub-steps to run (`floor(accumulator / fixedDelta)`), clamped to maxSubSteps. When the clamp trips, the backlog beyond the clamp is discarded so a slow frame cannot cascade into an unbounded catch-up (the \"spiral of death\"). alpha is the leftover fraction of a step `[0, 1)`, for interpolating bound transforms between sub-steps. The stepper holds no mutable module-level state — two stepper instances are fully independent (world isolation, gate I-1)."
+symbol: "TimeStepper"
+kind: "class"
+subsystem: "physics"
+importPath: "@codexo/exojs-physics"
+memberCount: 7
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-physics/src/TimeStepper.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/TimeStepper.ts#L23"
+---
+## Import
+
+`import { TimeStepper } from '@codexo/exojs-physics'`
+
+Fixed-timestep accumulator (package-owned; no engine clock dependency). Each
+frame, advance adds the variable frame delta to an internal
+accumulator and reports how many whole fixed sub-steps to run
+(`floor(accumulator / fixedDelta)`), clamped to maxSubSteps. When the
+clamp trips, the backlog beyond the clamp is discarded so a slow frame cannot
+cascade into an unbounded catch-up (the "spiral of death").
+
+alpha is the leftover fraction of a step `[0, 1)`, for interpolating
+bound transforms between sub-steps.
+
+The stepper holds no mutable module-level state — two stepper instances are
+fully independent (world isolation, gate I-1).
+
+## Constructors
+
+- `new(options: TimeStepperOptions): TimeStepper`
+
+## Methods
+
+- `advance(frameDeltaSeconds: number): number`
+- `reset(): void`
+
+## Properties
+
+- `fixedDelta: number`
+- `maxSubSteps: number`
+- `accumulator: number`
+- `alpha: number`
+
+## Source
+
+[packages/exojs-physics/src/TimeStepper.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/TimeStepper.ts#L23)

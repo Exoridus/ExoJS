@@ -13,6 +13,7 @@ import { readFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
 import type { CommandRunner } from './command-runner.ts';
+import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import {
   PUBLISH_ORDER,
   type OfficialPackageName,
@@ -42,15 +43,9 @@ const readVersion = (packageJsonPath: string): { name: string; version: string }
   return { name: pkg.name, version: pkg.version };
 };
 
-/** Resolves the six official packages in canonical publish order (PUBLISH_ORDER). */
-export const officialPackages = (rootDir: string): OfficialPackage[] => [
-  { name: '@codexo/exojs', dir: rootDir },
-  { name: '@codexo/exojs-particles', dir: resolve(rootDir, 'packages/exojs-particles') },
-  { name: '@codexo/exojs-tilemap', dir: resolve(rootDir, 'packages/exojs-tilemap') },
-  { name: '@codexo/exojs-tiled', dir: resolve(rootDir, 'packages/exojs-tiled') },
-  { name: '@codexo/exojs-physics', dir: resolve(rootDir, 'packages/exojs-physics') },
-  { name: '@codexo/exojs-audio-fx', dir: resolve(rootDir, 'packages/exojs-audio-fx') },
-];
+/** Resolves the lockstep official packages in canonical publish order (PUBLISH_ORDER). */
+export const officialPackages = (rootDir: string): OfficialPackage[] =>
+  LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir === '.' ? rootDir : resolve(rootDir, p.dir) }));
 
 /**
  * Asserts all official packages share one lockstep version and returns it.

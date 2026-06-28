@@ -1,0 +1,764 @@
+import { type Texture, TextureRegion } from '@codexo/exojs';
+import { TileSet } from '@codexo/exojs-tilemap';
+import { describe, expect, it } from 'vitest';
+
+import type {
+  LdtkData,
+  LdtkEntityInstance,
+  LdtkLayerInstance,
+  LdtkLevel,
+} from '../src/LdtkData';
+import { ldtkFlipNone, ldtkFlipX, ldtkFlipXy, ldtkFlipY } from '../src/LdtkData';
+import { ldtkToTileMap } from '../src/ldtkToTileMap';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fakeTexture(): Texture {
+  return {
+    width: 512,
+    height: 512,
+    uid: 0,
+    label: 'test',
+    destroy: () => {},
+    destroyed: false,
+  } as unknown as Texture;
+}
+
+function makeTileset(name = 'Atlas', tileCount = 4): TileSet {
+  return new TileSet({
+    name,
+    texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
+    tileWidth: 16,
+    tileHeight: 16,
+    tileCount,
+  });
+}
+
+/** Build a single-level document containing exactly one layer instance. */
+function docWithLayer(layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}): LdtkData {
+  return {
+    jsonVersion: '1.5.3',
+    defaultGridSize: 16,
+    defs: { tilesets: [], layers: [] },
+    levels: [
+      {
+        identifier: 'L',
+        uid: 1,
+        iid: 'iid-1',
+        worldX: 0,
+        worldY: 0,
+        pxWid: 64,
+        pxHei: 16,
+        layerInstances: [layer],
+        ...level,
+      },
+    ],
+  };
+}
+
+// ── Flip-bit constants ──────────────────────────────────────────────────────────
+
+describe('LDtk flip-bit constants', () => {
+  it('have the LDtk-documented values', () => {
+    expect(ldtkFlipNone).toBe(0);
+    expect(ldtkFlipX).toBe(1);
+    expect(ldtkFlipY).toBe(2);
+    expect(ldtkFlipXy).toBe(3);
+  });
+
+  it('compose as an X|Y bitmask', () => {
+    expect(ldtkFlipX | ldtkFlipY).toBe(ldtkFlipXy);
+    expect(ldtkFlipXy & ldtkFlipX).not.toBe(0);
+    expect(ldtkFlipXy & ldtkFlipY).not.toBe(0);
+    expect(ldtkFlipNone & ldtkFlipX).toBe(0);
+    expect(ldtkFlipNone & ldtkFlipY).toBe(0);
+  });
+});
+
+// ── Tile population + flip decoding (Tiles layer, WITH a tileset) ───────────────
+
+describe('ldtkToTileMap — tile population with a tileset', () => {
+  const tileset = makeTileset('Atlas', 4);
+
+  const data = docWithLayer({
+    __identifier: 'Tiles',
+    __type: 'Tiles',
+    __cWid: 4,
+    __cHei: 1,
+    __gridSize: 16,
+    layerDefUid: 101,
+    levelId: 1,
+    visible: true,
+    iid: 'tiles-1',
+    __tilesetDefUid: 1,
+    gridTiles: [
+      { px: [0, 0], src: [16, 0], f: 0, t: 1 }, // tx0, no flip
+      { px: [16, 0], src: [16, 0], f: 1, t: 1 }, // tx1, flipX
+      { px: [32, 0], src: [16, 0], f: 2, t: 1 }, // tx2, flipY
+      { px: [48, 0], src: [16, 0], f: 3, t: 1 }, // tx3, flipX + flipY
+    ],
+    autoLayerTiles: [],
+  });
+
+  function convert() {
+    return ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) });
+  }
+
+  it('places one tile per gridTiles entry', () => {
+    const layer = convert().levels[0]!.layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(4);
+  });
+
+  it('decodes flip bits onto each tile transform', () => {
+    const layer = convert().levels[0]!.layers[0]!;
+
+    const none = layer.getTileAt(0, 0);
+    expect(none).not.toBeNull();
+    expect(none!.transform.flipX).toBe(false);
+    expect(none!.transform.flipY).toBe(false);
+
+    const flipX = layer.getTileAt(1, 0);
+    expect(flipX!.transform.flipX).toBe(true);
+    expect(flipX!.transform.flipY).toBe(false);
+
+    const flipY = layer.getTileAt(2, 0);
+    expect(flipY!.transform.flipX).toBe(false);
+    expect(flipY!.transform.flipY).toBe(true);
+
+    const flipXy = layer.getTileAt(3, 0);
+    expect(flipXy!.transform.flipX).toBe(true);
+    expect(flipXy!.transform.flipY).toBe(true);
+  });
+
+  it('never sets the diagonal transform (LDtk has no anti-diagonal flip)', () => {
+    const layer = convert().levels[0]!.layers[0]!;
+    for (let tx = 0; tx < 4; tx++) {
+      expect(layer.getTileAt(tx, 0)!.transform.diagonal).toBe(false);
+    }
+  });
+
+  it('maps the LDtk tile index `t` to the resolved localTileId and tileset', () => {
+    const tile = convert().levels[0]!.layers[0]!.getTileAt(0, 0)!;
+    expect(tile.localTileId).toBe(1);
+    expect(tile.tileset).toBe(tileset);
+  });
+});
+
+describe('ldtkToTileMap — tile population edge cases', () => {
+  const tileset = makeTileset('Atlas', 4);
+
+  it('skips tiles whose local index is out of the tileset range', () => {
+    const data = docWithLayer({
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: true,
+      iid: 'tiles-1',
+      __tilesetDefUid: 1,
+      gridTiles: [
+        { px: [0, 0], src: [0, 0], f: 0, t: 0 }, // valid
+        { px: [16, 0], src: [0, 0], f: 0, t: 99 }, // t >= tileCount → skipped
+        { px: [32, 0], src: [0, 0], f: 0, t: -1 }, // t < 0 → skipped
+      ],
+      autoLayerTiles: [],
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(1);
+    expect(layer.getTileAt(1, 0)).toBeNull();
+    expect(layer.getTileAt(2, 0)).toBeNull();
+  });
+
+  it('skips tiles that fall outside the layer grid', () => {
+    const data = docWithLayer({
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 2,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: true,
+      iid: 'tiles-1',
+      __tilesetDefUid: 1,
+      gridTiles: [
+        { px: [0, 0], src: [0, 0], f: 0, t: 0 }, // tx0, in bounds
+        { px: [48, 0], src: [0, 0], f: 0, t: 0 }, // tx3, out of bounds (width 2)
+      ],
+      autoLayerTiles: [],
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(1);
+    expect(layer.getTileAt(0, 0)).not.toBeNull();
+  });
+
+  it('places no tiles when the layer references a tileset uid not in the map', () => {
+    const data = docWithLayer({
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: true,
+      iid: 'tiles-1',
+      __tilesetDefUid: 999, // no entry in tilesets map
+      gridTiles: [{ px: [0, 0], src: [0, 0], f: 0, t: 0 }],
+      autoLayerTiles: [],
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(0);
+  });
+});
+
+// ── AutoLayer + IntGrid render-tile sourcing ────────────────────────────────────
+
+describe('ldtkToTileMap — AutoLayer', () => {
+  const tileset = makeTileset('Atlas', 4);
+
+  it('renders from autoLayerTiles (not gridTiles) into a TileLayer', () => {
+    const data = docWithLayer({
+      __identifier: 'Walls',
+      __type: 'AutoLayer',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 110,
+      levelId: 1,
+      visible: true,
+      iid: 'auto-1',
+      __tilesetDefUid: 1,
+      autoLayerTiles: [{ px: [16, 0], src: [0, 0], f: 1, t: 2 }],
+    });
+
+    const map = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!;
+    expect(map.layers).toHaveLength(1);
+    expect(map.objectLayers).toHaveLength(0);
+    const tile = map.layers[0]!.getTileAt(1, 0)!;
+    expect(tile.localTileId).toBe(2);
+    expect(tile.transform.flipX).toBe(true);
+  });
+});
+
+describe('ldtkToTileMap — IntGrid', () => {
+  const tileset = makeTileset('Atlas', 4);
+
+  it('renders auto-tiles when an IntGrid layer carries autoLayerTiles + a tileset', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      __tilesetDefUid: 1,
+      intGridCsv: [1, 0, 0, 0],
+      autoLayerTiles: [{ px: [0, 0], src: [0, 0], f: 0, t: 3 }],
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(1);
+    expect(layer.getTileAt(0, 0)!.localTileId).toBe(3);
+  });
+
+  it('produces a data-only (empty) TileLayer when IntGrid has no auto-tiles', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      __tilesetDefUid: 1,
+      intGridCsv: [1, 2, 3, 4],
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(0);
+    expect(layer.width).toBe(4);
+  });
+});
+
+// ── Grid-size derivation ────────────────────────────────────────────────────────
+
+describe('ldtkToTileMap — level tile size derivation', () => {
+  const tileset = makeTileset('Atlas', 4);
+
+  it('derives the map tile size from the first non-Entities layer', () => {
+    const data = docWithLayer(
+      {
+        __identifier: 'Tiles',
+        __type: 'Tiles',
+        __cWid: 2,
+        __cHei: 1,
+        __gridSize: 32, // differs from defaultGridSize (16)
+        layerDefUid: 101,
+        levelId: 1,
+        visible: true,
+        iid: 'tiles-1',
+        __tilesetDefUid: 1,
+        gridTiles: [],
+        autoLayerTiles: [],
+      },
+      { pxWid: 64, pxHei: 32 },
+    );
+
+    const map = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!;
+    expect(map.tileWidth).toBe(32);
+    expect(map.tileHeight).toBe(32);
+    // 64 × 32 px at 32 px/tile → 2 × 1 tiles
+    expect(map.width).toBe(2);
+    expect(map.height).toBe(1);
+  });
+
+  it('skips Entities layers and falls back to data.defaultGridSize', () => {
+    const data = docWithLayer(
+      {
+        __identifier: 'Entities',
+        __type: 'Entities',
+        __cWid: 4,
+        __cHei: 4,
+        __gridSize: 16, // ignored: Entities layers do not contribute grid size
+        layerDefUid: 130,
+        levelId: 1,
+        visible: true,
+        iid: 'ent-1',
+        entityInstances: [],
+      },
+      { pxWid: 64, pxHei: 64 },
+    );
+    // Override defaultGridSize to prove the fallback is used (the lone Entities
+    // layer must NOT contribute its own __gridSize).
+    const tuned: LdtkData = { ...data, defaultGridSize: 8 };
+
+    const map = ldtkToTileMap(tuned).levels[0]!;
+    expect(map.tileWidth).toBe(8);
+    expect(map.width).toBe(8); // 64 / 8
+  });
+
+  it('falls back to 16 when defaultGridSize is absent', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.tileWidth).toBe(16);
+    expect(map.width).toBe(2);
+  });
+
+  it('clamps degenerate level dimensions to a minimum of 1 tile', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'Tiny',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 0,
+          pxHei: 8, // ceil(8/16) = 1
+          layerInstances: [],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.width).toBe(1);
+    expect(map.height).toBe(1);
+  });
+});
+
+// ── Level metadata / properties ─────────────────────────────────────────────────
+
+describe('ldtkToTileMap — level properties', () => {
+  it('stores the LDtk uid and iid alongside world coordinates', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 42,
+          iid: 'level-iid-42',
+          worldX: 100,
+          worldY: 200,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.properties['ldtkUid']).toBe(42);
+    expect(map.properties['ldtkIid']).toBe('level-iid-42');
+    expect(map.properties['worldX']).toBe(100);
+    expect(map.properties['worldY']).toBe(200);
+  });
+
+  it('tolerates a level with null layerInstances (unloaded external level)', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'External',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 48,
+          pxHei: 16,
+          layerInstances: null,
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.layers).toHaveLength(0);
+    expect(map.objectLayers).toHaveLength(0);
+    expect(map.width).toBe(3); // 48 / 16, default grid
+  });
+});
+
+// ── TileLayer metadata passthrough ──────────────────────────────────────────────
+
+describe('ldtkToTileMap — TileLayer metadata', () => {
+  it('forwards id, grid size, visibility, opacity and offsets to the TileLayer', () => {
+    const data = docWithLayer({
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: false,
+      opacity: 0.25,
+      pxOffsetX: 7,
+      pxOffsetY: 9,
+      iid: 'tiles-1',
+      gridTiles: [],
+      autoLayerTiles: [],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(layer.id).toBe(101);
+    expect(layer.name).toBe('Tiles');
+    expect(layer.tileWidth).toBe(16);
+    expect(layer.tileHeight).toBe(16);
+    expect(layer.visible).toBe(false);
+    expect(layer.opacity).toBe(0.25);
+    expect(layer.offsetX).toBe(7);
+    expect(layer.offsetY).toBe(9);
+  });
+});
+
+// ── Entity → ObjectLayer conversion ─────────────────────────────────────────────
+
+describe('ldtkToTileMap — entity field projection', () => {
+  it('keeps scalar fields and drops complex (array/object/null) field values', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'NPC',
+          __type: 'NPC',
+          px: [0, 0],
+          width: 16,
+          height: 16,
+          iid: 'npc-1',
+          defUid: 300,
+          fieldInstances: [
+            { __identifier: 'hp', __type: 'Int', __value: 10 },
+            { __identifier: 'label', __type: 'String', __value: 'Bob' },
+            { __identifier: 'hostile', __type: 'Bool', __value: true },
+            { __identifier: 'path', __type: 'Array<Point>', __value: [{ cx: 1, cy: 2 }] },
+            { __identifier: 'meta', __type: 'Object', __value: { k: 1 } },
+            { __identifier: 'nothing', __type: 'String', __value: null },
+          ],
+        },
+      ],
+    });
+
+    const props = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!.properties;
+    expect(props['hp']).toBe(10);
+    expect(props['label']).toBe('Bob');
+    expect(props['hostile']).toBe(true);
+    expect(props['path']).toBeUndefined();
+    expect(props['meta']).toBeUndefined();
+    expect(props['nothing']).toBeUndefined();
+  });
+
+  it('freezes the projected properties bag', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'NPC',
+          __type: 'NPC',
+          px: [0, 0],
+          width: 16,
+          height: 16,
+          iid: 'npc-1',
+          defUid: 300,
+          fieldInstances: [{ __identifier: 'hp', __type: 'Int', __value: 10 }],
+        },
+      ],
+    });
+
+    const props = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!.properties;
+    expect(Object.isFrozen(props)).toBe(true);
+  });
+
+  it('emits a frozen empty bag for entities without fields', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Marker',
+          __type: 'Marker',
+          px: [0, 0],
+          width: 0,
+          height: 0,
+          iid: 'm-1',
+          defUid: 301,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const props = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!.properties;
+    expect(props).toEqual({});
+    expect(Object.isFrozen(props)).toBe(true);
+  });
+
+  it('maps the entity __identifier to both name and type, with rectangle geometry', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Door',
+          __type: 'Door',
+          px: [3, 5],
+          width: 16,
+          height: 16,
+          iid: 'door-1',
+          defUid: 302,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const object = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!;
+    expect(object.name).toBe('Door');
+    expect(object.type).toBe('Door');
+    expect(object.kind).toBe('rectangle');
+    expect(object.rotation).toBe(0);
+    expect(object.visible).toBe(true);
+  });
+});
+
+describe('ldtkToTileMap — ObjectLayer metadata', () => {
+  it('forwards id, visibility, opacity and offsets to the ObjectLayer', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: false,
+      opacity: 0.5,
+      pxOffsetX: 4,
+      pxOffsetY: 6,
+      iid: 'ent-1',
+      entityInstances: [],
+    });
+
+    const objectLayer = ldtkToTileMap(data).levels[0]!.objectLayers[0]!;
+    expect(objectLayer.id).toBe(130);
+    expect(objectLayer.name).toBe('Entities');
+    expect(objectLayer.visible).toBe(false);
+    expect(objectLayer.opacity).toBe(0.5);
+    expect(objectLayer.offsetX).toBe(4);
+    expect(objectLayer.offsetY).toBe(6);
+  });
+});
+
+describe('ldtkToTileMap — entity id assignment across layers and levels', () => {
+  it('accumulates ids across multiple entity layers within one level', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 64,
+          pxHei: 16,
+          layerInstances: [
+            {
+              __identifier: 'EntitiesA',
+              __type: 'Entities',
+              __cWid: 4,
+              __cHei: 1,
+              __gridSize: 16,
+              layerDefUid: 130,
+              levelId: 1,
+              visible: true,
+              iid: 'ent-a',
+              entityInstances: [
+                makeEntity('A0'),
+                makeEntity('A1'),
+              ],
+            },
+            {
+              __identifier: 'EntitiesB',
+              __type: 'Entities',
+              __cWid: 4,
+              __cHei: 1,
+              __gridSize: 16,
+              layerDefUid: 131,
+              levelId: 1,
+              visible: true,
+              iid: 'ent-b',
+              entityInstances: [makeEntity('B0')],
+            },
+          ],
+        },
+      ],
+    };
+
+    const layers = ldtkToTileMap(data).levels[0]!.objectLayers;
+    expect(layers[0]!.objects.map(o => o.id)).toEqual([0, 1]);
+    expect(layers[1]!.objects.map(o => o.id)).toEqual([2]);
+  });
+
+  it('offsets ids by levelIndex * 1_000_000 so they stay globally unique', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [makeEntityLevel('L0', 1), makeEntityLevel('L1', 2)],
+    };
+
+    const result = ldtkToTileMap(data);
+    expect(result.levels[0]!.objectLayers[0]!.objects[0]!.id).toBe(0);
+    expect(result.levels[1]!.objectLayers[0]!.objects[0]!.id).toBe(1_000_000);
+  });
+});
+
+// ── Local builders for the multi-level id fixtures ──────────────────────────────
+
+function makeEntity(identifier: string): LdtkEntityInstance {
+  return {
+    __identifier: identifier,
+    __type: identifier,
+    px: [0, 0],
+    width: 16,
+    height: 16,
+    iid: `iid-${identifier}`,
+    defUid: 0,
+    fieldInstances: [],
+  };
+}
+
+function makeEntityLevel(identifier: string, uid: number): LdtkLevel {
+  return {
+    identifier,
+    uid,
+    iid: `iid-${uid}`,
+    worldX: 0,
+    worldY: 0,
+    pxWid: 64,
+    pxHei: 16,
+    layerInstances: [
+      {
+        __identifier: 'Entities',
+        __type: 'Entities',
+        __cWid: 4,
+        __cHei: 1,
+        __gridSize: 16,
+        layerDefUid: 130,
+        levelId: uid,
+        visible: true,
+        iid: `ent-${uid}`,
+        entityInstances: [makeEntity('E')],
+      },
+    ],
+  };
+}

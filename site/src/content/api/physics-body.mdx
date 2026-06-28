@@ -1,0 +1,76 @@
+---
+title: "PhysicsBody"
+description: "A rigid body: a world transform plus mass properties aggregated from its colliders. Dynamic bodies integrate under gravity, accumulated forces/torque and contact impulses each fixed sub-step; static bodies never move; kinematic bodies move by their velocity only and stay immovable under contacts. Drive a body with applyForce, applyTorque and applyImpulse, or set linearVelocityX/linearVelocityY/angularVelocity directly; reposition it (teleport, no velocity) with setTransform."
+symbol: "PhysicsBody"
+kind: "class"
+subsystem: "physics"
+importPath: "@codexo/exojs-physics"
+memberCount: 39
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-physics/src/PhysicsBody.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsBody.ts#L48"
+---
+## Import
+
+`import { PhysicsBody } from '@codexo/exojs-physics'`
+
+A rigid body: a world transform plus mass properties aggregated from its
+colliders. Dynamic bodies integrate under gravity, accumulated forces/torque
+and contact impulses each fixed sub-step; static bodies never move; kinematic
+bodies move by their velocity only and stay immovable under contacts. Drive a
+body with applyForce, applyTorque and applyImpulse, or
+set linearVelocityX/linearVelocityY/angularVelocity
+directly; reposition it (teleport, no velocity) with setTransform.
+
+## Constructors
+
+- `new(options: BodyOptions): PhysicsBody`
+
+## Methods
+
+- `_markDestroyed(): void`
+- `_removeCollider(collider: Collider): void`
+- `addCollider(collider: Collider | ColliderOptions): Collider`
+- `applyForce(forceX: number, forceY: number): this`
+- `applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this`
+- `applyTorque(torque: number): this`
+- `setTransform(position: VectorLike, angle: number): this`
+- `synchronizeColliders(): void`
+- `wake(): this`
+
+## Properties
+
+- `allowSleep: boolean`
+- `angularDamping: number`
+- `angularVelocity: number`
+- `fixedRotation: boolean`
+- `gravityScale: number`
+- `inertia: number`
+- `invInertia: number`
+- `invMass: number`
+- `isBullet: boolean`
+- `linearDamping: number`
+- `linearVelocityX: number`
+- `linearVelocityY: number`
+- `mass: number`
+- `type: BodyType`
+- `angle: number`
+- `attached: boolean`
+- `centerOfMassX: number`
+- `centerOfMassY: number`
+- `colliders: readonly Collider[]`
+- `destroyed: boolean`
+- `id: number`
+- `isMassReady: boolean`
+- `isSleeping: boolean`
+- `position: Vector`
+- `transform: Readonly<Transform>`
+- `worldCenterOfMassX: number`
+- `worldCenterOfMassY: number`
+- `x: number`
+- `y: number`
+
+## Source
+
+[packages/exojs-physics/src/PhysicsBody.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsBody.ts#L48)

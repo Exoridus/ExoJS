@@ -1,0 +1,12 @@
+{
+  "extends": "@codexo/exojs-config/typescript/extension.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "customConditions": ["@codexo/source"],
+    "paths": {
+      "@codexo/exojs": ["../../src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "../../src/typings.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}

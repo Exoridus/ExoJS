@@ -108,7 +108,7 @@ jobs:
       # Root `pnpm typecheck` only covers src/**; the extension packages own a
       # separate tsconfig each, so typecheck them explicitly.
       - name: Typecheck extension packages
-        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" typecheck
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" typecheck
 
   lint:
     name: Lint
@@ -368,11 +368,14 @@ jobs:
       - name: Build core
         run: pnpm build
 
+      - name: Check bundle sizes
+        run: pnpm size
+
       # The extension packages each have their own rollup build; pnpm runs them
       # in workspace-dependency order (tilemap before tiled). A broken package
       # build is now caught here instead of only at release time.
       - name: Build extension packages
-        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" build
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
 
       - name: Verify core package exports
         run: pnpm verify:exports
@@ -392,7 +395,7 @@ jobs:
       # Pack each extension package (dry run) so a broken `files`/`exports` set in
       # a package manifest is caught here, not at release time.
       - name: Extension package dry runs
-        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" pack --dry-run
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" pack --dry-run
 
       # publint validates the published package.json itself (exports map, files,
       # types resolution, module/main coherence) — the layer attw does NOT cover

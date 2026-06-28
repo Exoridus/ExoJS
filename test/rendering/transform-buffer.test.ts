@@ -168,4 +168,91 @@ describe('TransformBuffer', () => {
 
     parent.destroy();
   });
+
+  test('consumeDirtyRange returns empty sentinel on a fresh buffer after begin()', () => {
+    const buffer = new TransformBuffer();
+
+    buffer.begin();
+    const result = buffer.consumeDirtyRange(10);
+
+    expect(result.rowCount).toBe(0);
+    expect(result.firstRow).toBe(0);
+  });
+
+  test('consumeDirtyRange covers all written slots and clears itself on second call', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+    buffer.write(0, identity, Color.white);
+    buffer.write(1, identity, Color.white);
+    buffer.write(2, identity, Color.white);
+
+    const first = buffer.consumeDirtyRange(3);
+
+    expect(first).toEqual({ firstRow: 0, rowCount: 3 });
+
+    const second = buffer.consumeDirtyRange(3);
+
+    expect(second.rowCount).toBe(0);
+  });
+
+  test('consumeDirtyRange tracks reuse below the high-water mark', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+    buffer.write(0, identity, Color.white);
+    buffer.write(1, identity, Color.white);
+    buffer.write(2, identity, Color.white);
+    buffer.consumeDirtyRange(3); // clear after first writes
+
+    buffer.write(1, identity, Color.white); // reuse slot 1 below high-water mark
+
+    const result = buffer.consumeDirtyRange(3);
+
+    expect(result).toEqual({ firstRow: 1, rowCount: 1 });
+  });
+
+  test('consumeDirtyRange clamps to maxCount — a write above the limit is excluded', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+    buffer.write(5, identity, Color.white); // slot 5 is above maxCount = 3
+
+    const result = buffer.consumeDirtyRange(3);
+
+    expect(result.rowCount).toBe(0);
+  });
+
+  test('rewindTo restores the write cursor and optionally the frame hash', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+    buffer.write(0, identity, Color.white);
+    const savedHash = buffer.frameHash;
+
+    buffer.write(1, identity, Color.white);
+    buffer.rewindTo(1, savedHash);
+
+    expect(buffer.count).toBe(1);
+    expect(buffer.frameHash).toBe(savedHash);
+  });
+
+  test('begin() resets the dirty range so consumeDirtyRange returns empty', () => {
+    const buffer = new TransformBuffer();
+    const identity = new Matrix();
+
+    buffer.begin();
+    buffer.write(0, identity, Color.white);
+    buffer.write(1, identity, Color.white);
+
+    buffer.begin(); // should reset dirty range
+
+    const result = buffer.consumeDirtyRange(10);
+
+    expect(result.rowCount).toBe(0);
+  });
 });

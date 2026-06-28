@@ -5,15 +5,16 @@ import { fileURLToPath } from 'node:url';
 
 import { verifyConfigPackage, verifyRuntimePackage } from '@codexo/exojs-config/package-policy';
 
+import { LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const targets = [
-  { dir: root, name: '@codexo/exojs', isExtension: false },
-  { dir: resolve(root, 'packages/exojs-particles'), name: '@codexo/exojs-particles', isExtension: true },
-  { dir: resolve(root, 'packages/exojs-tiled'), name: '@codexo/exojs-tiled', isExtension: true },
-  { dir: resolve(root, 'packages/exojs-physics'), name: '@codexo/exojs-physics', isExtension: true, hasRegister: false },
-  { dir: resolve(root, 'packages/exojs-audio-fx'), name: '@codexo/exojs-audio-fx', isExtension: true, hasRegister: false },
-];
+const targets = LOCKSTEP_PACKAGES.map(p => ({
+  dir: p.dir === '.' ? root : resolve(root, p.dir),
+  name: p.name,
+  isExtension: p.isExtension,
+  hasRegister: p.hasRegister,
+}));
 
 let failed = 0;
 

@@ -2,6 +2,8 @@ import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { defineCollection } from 'astro:content';
 
+import { API_SUBSYSTEM_ORDER } from './lib/api-reference';
+
 // Guide ordering, grouping, and learning metadata live in
 // src/lib/guide-structure.ts (the single source of truth, reconciled with these
 // files by test/site/guide-structure.test.ts). Frontmatter only carries the
@@ -21,7 +23,10 @@ const api = defineCollection({
         description: z.string().default(''),
         symbol: z.string(),
         kind: z.enum(['class', 'enum', 'interface', 'type']),
-        subsystem: z.enum(['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources', 'tiled', 'tilemap']),
+        // Single source of truth: api-reference.ts owns the subsystem list (order
+        // + labels). Deriving the validation enum from it keeps the two in sync,
+        // so adding a package's subsystem there can't silently break the build.
+        subsystem: z.enum(API_SUBSYSTEM_ORDER),
         importPath: z.string(),
         memberCount: z.number().int().min(0).default(0),
         sections: z.array(z.string()).default([]),

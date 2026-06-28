@@ -27,6 +27,13 @@ export interface EffectDescriptor {
   readonly maskSource: MaskSource;
   readonly cacheAsBitmap: boolean;
   readonly blendMode: BlendModes;
+  /**
+   * When `true`, the node uses a backdrop-aware blend mode (modes 5–17). The
+   * render-effect executor renders the content off-screen and composites it back
+   * via {@link RenderBackend.composeWithBackdropBlend} instead of the regular
+   * draw-texture path.
+   */
+  readonly needsBackdropBlend?: boolean;
 }
 
 /**

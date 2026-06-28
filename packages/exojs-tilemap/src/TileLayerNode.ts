@@ -45,13 +45,18 @@ export class TileLayerNode extends Container {
   private readonly _cullChunks: boolean;
   private readonly _chunkNodes: TileChunkNode[] = [];
   private _syncedOpacity = -1;
+  private _syncedTint: number | null | undefined = undefined;
   private _pixelSnapMode: PixelSnapMode = 'none';
+  private readonly _baseOffsetX: number;
+  private readonly _baseOffsetY: number;
 
   public constructor(layer: TileLayer, options?: TileLayerNodeOptions) {
     super();
 
     this._layer = layer;
     this._cullChunks = options?.cullable ?? true;
+    this._baseOffsetX = layer.offsetX;
+    this._baseOffsetY = layer.offsetY;
 
     this.setPosition(layer.offsetX, layer.offsetY);
     this._buildChunkNodes();
@@ -111,6 +116,7 @@ export class TileLayerNode extends Container {
     }
 
     this._syncedOpacity = -1;
+    this._syncedTint = undefined;
     this._buildChunkNodes();
 
     return this;
@@ -135,9 +141,25 @@ export class TileLayerNode extends Container {
       return;
     }
 
-    this._syncOpacity();
+    this._syncTint();
 
-    super._collectContent(builder);
+    const layer = this._layer;
+
+    if (layer.parallaxX !== 1 || layer.parallaxY !== 1) {
+      const camCenter = builder.view.center;
+      const prevX = this.x;
+      const prevY = this.y;
+
+      this.x = this._baseOffsetX + camCenter.x * (1 - layer.parallaxX);
+      this.y = this._baseOffsetY + camCenter.y * (1 - layer.parallaxY);
+
+      super._collectContent(builder);
+
+      this.x = prevX;
+      this.y = prevY;
+    } else {
+      super._collectContent(builder);
+    }
   }
 
   public override destroy(): void {
@@ -179,21 +201,31 @@ export class TileLayerNode extends Container {
       this.addChild(node);
     }
 
-    this._syncOpacity();
+    this._syncTint();
   }
 
-  /** Propagate the layer's live opacity onto the chunk tints if it changed. */
-  private _syncOpacity(): void {
+  /**
+   * Propagate the layer's live opacity and tint colour onto the chunk render
+   * tints if either changed. Opacity drives the tint alpha; `tintColor`
+   * (`0xRRGGBB`) multiplies the RGB (white = no tint).
+   */
+  private _syncTint(): void {
     const opacity = this._layer.opacity;
+    const tintColor = this._layer.tintColor;
 
-    if (opacity === this._syncedOpacity) {
+    if (opacity === this._syncedOpacity && tintColor === this._syncedTint) {
       return;
     }
 
+    const r = tintColor === null ? 255 : (tintColor >> 16) & 0xff;
+    const g = tintColor === null ? 255 : (tintColor >> 8) & 0xff;
+    const b = tintColor === null ? 255 : tintColor & 0xff;
+
     for (const child of this._chunkNodes) {
-      child.tint.a = opacity;
+      child.tint.set(r, g, b, opacity);
     }
 
     this._syncedOpacity = opacity;
+    this._syncedTint = tintColor;
   }
 }

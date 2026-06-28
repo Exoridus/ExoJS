@@ -43,6 +43,23 @@ export interface TileLayerOptions {
   readonly offsetX?: number;
   /** Layer pixel offset Y. Default 0. */
   readonly offsetY?: number;
+  /**
+   * Parallax scroll factor on the X axis. `1.0` = full camera speed (normal),
+   * `0.5` = half speed (farther away), `0.0` = stationary. Default 1.
+   */
+  readonly parallaxX?: number;
+  /**
+   * Parallax scroll factor on the Y axis. `1.0` = full camera speed (normal),
+   * `0.5` = half speed (farther away), `0.0` = stationary. Default 1.
+   */
+  readonly parallaxY?: number;
+  /** Layer class/type string (Tiled `class`). Defaults to `''`. */
+  readonly class?: string;
+  /**
+   * Multiplicative layer tint as a `0xRRGGBB` integer, or `null` for none
+   * (Tiled `tintcolor`). Applied to every chunk's render tint. Default `null`.
+   */
+  readonly tintColor?: number | null;
   /** Layer properties (copied and frozen). */
   readonly properties?: TileProperties;
 }
@@ -101,6 +118,21 @@ export class TileLayer {
   public offsetX: number;
   /** Vertical pixel offset (mutable). */
   public offsetY: number;
+  /**
+   * Parallax scroll factor on the X axis.
+   * `1.0` = full camera speed, `0.5` = half speed, `0.0` = stationary.
+   */
+  public readonly parallaxX: number;
+  /**
+   * Parallax scroll factor on the Y axis.
+   * `1.0` = full camera speed, `0.5` = half speed, `0.0` = stationary.
+   */
+  public readonly parallaxY: number;
+
+  /** Layer class/type string (Tiled `class`; may be empty). */
+  public readonly class: string;
+  /** Multiplicative layer tint as `0xRRGGBB`, or `null` for no tint. */
+  public readonly tintColor: number | null;
 
   /** Immutable layer properties. */
   public readonly properties: TileProperties;
@@ -124,6 +156,7 @@ export class TileLayer {
   /**
    * @throws When dimensions, chunk size, or other options are invalid.
    */
+  // eslint-disable-next-line complexity -- straight-line option validation + defaulting
   public constructor(options: TileLayerOptions) {
     validateNonNegativeInteger(options.id, 'layer.id');
     if (!options.name || typeof options.name !== 'string') {
@@ -154,6 +187,12 @@ export class TileLayer {
       throw new Error('TileLayer offset must be finite numbers.');
     }
 
+    const parallaxX = options.parallaxX ?? 1;
+    const parallaxY = options.parallaxY ?? 1;
+    if (!Number.isFinite(parallaxX) || !Number.isFinite(parallaxY)) {
+      throw new Error('TileLayer parallax must be finite numbers.');
+    }
+
     this.id = options.id;
     this.name = options.name;
     this.width = options.width;
@@ -167,6 +206,10 @@ export class TileLayer {
     this.opacity = opacity;
     this.offsetX = offsetX;
     this.offsetY = offsetY;
+    this.parallaxX = parallaxX;
+    this.parallaxY = parallaxY;
+    this.class = options.class ?? '';
+    this.tintColor = options.tintColor ?? null;
     this.properties = options.properties
       ? Object.freeze({ ...options.properties })
       : Object.freeze({});

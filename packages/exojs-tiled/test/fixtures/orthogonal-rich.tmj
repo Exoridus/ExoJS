@@ -9,6 +9,7 @@
   "tilewidth": 16,
   "tileheight": 16,
   "infinite": false,
+  "class": "level",
   "backgroundcolor": "#223344",
   "properties": [
     { "name": "mood", "type": "string", "value": "calm" }
@@ -18,6 +19,8 @@
       "id": 1,
       "name": "Ground",
       "type": "tilelayer",
+      "class": "terrainLayer",
+      "tintcolor": "#ff8800",
       "visible": true,
       "opacity": 0.5,
       "x": 0,
@@ -42,7 +45,7 @@
       "opacity": 1,
       "x": 0,
       "y": 0,
-      "draworder": "topdown",
+      "draworder": "index",
       "objects": [
         {
           "id": 1, "name": "hero", "type": "spawn",
@@ -53,6 +56,12 @@
           "id": 2, "name": "chest", "type": "prop",
           "x": 32, "y": 0, "width": 16, "height": 16,
           "rotation": 0, "visible": true, "gid": 2
+        },
+        {
+          "id": 3, "name": "sign", "type": "",
+          "x": 0, "y": 0, "width": 64, "height": 16,
+          "rotation": 0, "visible": true,
+          "text": { "text": "Hello", "color": "#ff0000", "pixelsize": 12, "bold": true, "wrap": true }
         }
       ]
     },
@@ -96,6 +105,7 @@
     {
       "firstgid": 1,
       "name": "tiles-a",
+      "class": "terrainSet",
       "image": "tiles-a.png",
       "imagewidth": 64,
       "imageheight": 32,
@@ -105,6 +115,7 @@
       "tilecount": 8,
       "spacing": 0,
       "margin": 0,
+      "tileoffset": { "x": 2, "y": -3 },
       "properties": [
         { "name": "author", "type": "string", "value": "exo" }
       ],
@@ -115,6 +126,38 @@
           "properties": [
             { "name": "solid", "type": "bool", "value": true }
           ]
+        },
+        {
+          "id": 1,
+          "animation": [
+            { "tileid": 1, "duration": 120 },
+            { "tileid": 2, "duration": 120 }
+          ]
+        },
+        {
+          "id": 3,
+          "objectgroup": {
+            "id": 10,
+            "name": "collision",
+            "type": "objectgroup",
+            "visible": true,
+            "opacity": 1,
+            "x": 0,
+            "y": 0,
+            "objects": [
+              {
+                "id": 1,
+                "name": "solid",
+                "type": "",
+                "x": 2,
+                "y": 2,
+                "width": 12,
+                "height": 12,
+                "rotation": 0,
+                "visible": true
+              }
+            ]
+          }
         }
       ]
     },

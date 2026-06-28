@@ -81,15 +81,13 @@ kbd {
     line-height: 1.68;
 }
 
+// Code blocks always sit on the dark `--color-code-bg` surface (dark in both
+// themes, see the background rule above), so the syntax colours must always be
+// the dark-theme set — `--shiki-light` is the light-on-light variant and would
+// render dark text on the dark panel (unreadable in the light site theme).
+// Dual-theme `<Code>`/markdown output still defines `--shiki-dark`; we just pin
+// to it regardless of the site's data-theme.
 :where(pre.astro-code, pre.astro-code span) {
-    color: var(--shiki-dark) !important;
-}
-
-html[data-theme='light'] :where(pre.astro-code, pre.astro-code span) {
-    color: var(--shiki-light) !important;
-}
-
-html[data-theme='dark'] :where(pre.astro-code, pre.astro-code span) {
     color: var(--shiki-dark) !important;
 }
 

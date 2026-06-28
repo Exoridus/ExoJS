@@ -1,0 +1,36 @@
+---
+title: "Joint"
+description: "Base class for a two-body constraint solved alongside contacts in the sub-step loop. Concrete joints (distance, revolute, weld) implement the three solver hooks; the world owns the joint list and drives them, and joins the two bodies into one sleep island so a jointed pair sleeps and wakes together."
+symbol: "Joint"
+kind: "class"
+subsystem: "physics"
+importPath: "@codexo/exojs-physics"
+memberCount: 4
+tier: "stable"
+sections: ["Import", "Constructors", "Properties", "Source"]
+sourcePath: "packages/exojs-physics/src/joints/Joint.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/Joint.ts#L10"
+---
+## Import
+
+`import { Joint } from '@codexo/exojs-physics'`
+
+Base class for a two-body constraint solved alongside contacts in the
+sub-step loop. Concrete joints (distance, revolute, weld) implement the
+three solver hooks; the world owns the joint list and drives them, and joins
+the two bodies into one sleep island so a jointed pair sleeps and wakes
+together.
+
+## Constructors
+
+- `new(bodyA: PhysicsBody, bodyB: PhysicsBody): Joint`
+
+## Properties
+
+- `bodyA: PhysicsBody`
+- `bodyB: PhysicsBody`
+- `enabled: boolean`
+
+## Source
+
+[packages/exojs-physics/src/joints/Joint.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/Joint.ts#L10)

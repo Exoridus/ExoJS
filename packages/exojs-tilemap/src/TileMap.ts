@@ -1,3 +1,4 @@
+import { type ImageLayer } from './ImageLayer';
 import type { ObjectLayer, ObjectSchema } from './ObjectLayer';
 import { type TileLayer } from './TileLayer';
 import type { TileMapViewOptions } from './TileMapView';
@@ -27,10 +28,22 @@ export interface TileMapOptions {
   readonly layers?: readonly TileLayer[];
   /** Object layers (data-only; spawn points, triggers, collision regions). */
   readonly objectLayers?: readonly ObjectLayer[];
+  /** Image layers (data-only; background/foreground images from Tiled image layers). */
+  readonly imageLayers?: readonly ImageLayer[];
   /** Chunk width for layers (default 32). */
   readonly chunkWidth?: number;
   /** Chunk height for layers (default 32). */
   readonly chunkHeight?: number;
+  /** Map class/type string (Tiled `class`). Defaults to `''`. */
+  readonly class?: string;
+  /**
+   * Map background colour as a `0xRRGGBB` integer, or `null` (Tiled
+   * `backgroundcolor`). Informational — the renderer does not auto-clear to it.
+   * Default `null`.
+   */
+  readonly backgroundColor?: number | null;
+  /** Tile draw order (Tiled `renderorder`), informational. Default `'right-down'`. */
+  readonly renderOrder?: string;
   /** Map-level properties (copied and frozen). */
   readonly properties?: TileProperties;
 }
@@ -73,6 +86,13 @@ export class TileMap {
   /** Default chunk height for layers. */
   public readonly chunkHeight: number;
 
+  /** Map class/type string (Tiled `class`; may be empty). */
+  public readonly class: string;
+  /** Map background colour as `0xRRGGBB`, or `null`. Informational. */
+  public readonly backgroundColor: number | null;
+  /** Tile draw order (Tiled `renderorder`). Informational. */
+  public readonly renderOrder: string;
+
   /** Map-level properties (immutable). */
   public readonly properties: TileProperties;
 
@@ -80,6 +100,7 @@ export class TileMap {
   private readonly _layers: TileLayer[] = [];
   private readonly _layerById = new Map<number, TileLayer>();
   private readonly _objectLayers: ObjectLayer[] = [];
+  private readonly _imageLayers: ImageLayer[] = [];
 
   private _revision = 0;
   private _destroyed = false;
@@ -105,6 +126,9 @@ export class TileMap {
     this.tileHeight = options.tileHeight;
     this.chunkWidth = chunkWidth;
     this.chunkHeight = chunkHeight;
+    this.class = options.class ?? '';
+    this.backgroundColor = options.backgroundColor ?? null;
+    this.renderOrder = options.renderOrder ?? 'right-down';
 
     this._tilesets = options.tilesets ? [...options.tilesets] : [];
     this.properties = options.properties
@@ -119,6 +143,10 @@ export class TileMap {
 
     if (options.objectLayers) {
       this._objectLayers.push(...options.objectLayers);
+    }
+
+    if (options.imageLayers) {
+      this._imageLayers.push(...options.imageLayers);
     }
   }
 
@@ -243,6 +271,20 @@ export class TileMap {
     return this._objectLayers.find(layer => layer.name === name) as ObjectLayer<S> | undefined;
   }
 
+  // ── Image layers (data-only) ──────────────────────────────────────────
+
+  /** Immutable snapshot of image layers (insertion order). */
+  public get imageLayers(): readonly ImageLayer[] {
+    return this._imageLayers;
+  }
+
+  /**
+   * Get an image layer by name (first match in insertion order), or undefined.
+   */
+  public getImageLayer(name: string): ImageLayer | undefined {
+    return this._imageLayers.find(layer => layer.name === name);
+  }
+
   // ── Scene composition ─────────────────────────────────────────────────
 
   /**
@@ -360,6 +402,7 @@ export class TileMap {
     this._layers.length = 0;
     this._layerById.clear();
     this._objectLayers.length = 0;
+    this._imageLayers.length = 0;
     this._tilesets.length = 0;
   }
 }

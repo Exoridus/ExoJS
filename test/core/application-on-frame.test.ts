@@ -176,6 +176,7 @@ describe('Application.onFrame', () => {
     rawApp['scene'] = sceneManager;
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = { elapsedTime: { milliseconds: 16, seconds: 0.016 }, restart: vi.fn() };
+    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = onFrame;

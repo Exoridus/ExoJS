@@ -194,28 +194,53 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         }
         if (map.size === 0) return;
 
+        const headings = [...map.keys()];
+        if (headings.length === 0) return;
+
         const setActive = (link) => {
-            links.forEach(node => node.setAttribute('data-active', 'false'));
-            link.setAttribute('data-active', 'true');
+            links.forEach(node => node.setAttribute('data-active', String(node === link)));
         };
 
-        const observer = new IntersectionObserver(
-            entries => {
-                const visible = entries
-                    .filter(entry => entry.isIntersecting)
-                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-                const top = visible[0];
-                if (!top) return;
-                const link = map.get(top.target);
-                if (link) setActive(link);
-            },
-            { rootMargin: '-20% 0px -65% 0px', threshold: [0, 1] },
-        );
+        // Active = the last heading whose top has crossed a line ~28% down the
+        // viewport. A rootMargin "band" can't do this: headings near the page
+        // bottom never scroll high enough to enter the band, so the final
+        // section(s) would never activate. At the very bottom we force the last
+        // heading, since it can sit below the line with nothing left to scroll.
+        const LINE = 0.28;
+        const update = () => {
+            const line = window.innerHeight * LINE;
+            let active = headings[0];
+            for (const heading of headings) {
+                if (heading.getBoundingClientRect().top <= line) active = heading;
+                else break;
+            }
+            const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+            if (atBottom) active = headings[headings.length - 1];
+            setActive(map.get(active));
+        };
 
-        for (const heading of map.keys()) observer.observe(heading);
+        let ticking = false;
+        const onScroll = () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                ticking = false;
+                update();
+            });
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll, { passive: true });
 
-        const firstLink = links[0];
-        if (firstLink instanceof HTMLAnchorElement) setActive(firstLink);
+        // Clicking a link jumps to its heading. Activate it immediately so the
+        // rail reflects the click right away — independent of where the scroll
+        // settles (a jumped-to heading lands at the very top, which the scroll
+        // heuristic alone may attribute to the next section).
+        for (const [target, link] of map) {
+            link.addEventListener('click', () => setActive(link));
+            void target;
+        }
+
+        update();
     })();
 </script>
 
@@ -265,7 +290,12 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         display: none;
     }
 
-    .chapter-prose :global(h2) {
+    /* Typographic rules are scoped to .chapter-content (the rendered MDX body),
+       not .chapter-prose (the whole article). The article also wraps layout
+       chrome — GuideMeta, Related API, the pager — which carry their own styles;
+       scoping to the body keeps the prose h2 (#-prefix, 56px lead), list, and
+       link styles from bleeding into those boxes. */
+    .chapter-content :global(h2) {
         font-size: 22px;
         font-weight: 600;
         letter-spacing: -0.01em;
@@ -275,7 +305,7 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         position: relative;
     }
 
-    .chapter-prose :global(h2)::before {
+    .chapter-content :global(h2)::before {
         content: '#';
         font-family: var(--f-mono);
         color: var(--fg-faint);
@@ -284,40 +314,40 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         margin-right: 8px;
     }
 
-    .chapter-prose :global(h3) {
+    .chapter-content :global(h3) {
         font-size: 16px;
         font-weight: 600;
         margin: var(--s-7) 0 var(--s-3);
     }
 
-    .chapter-prose :global(p) {
+    .chapter-content :global(p) {
         margin: var(--s-3) 0;
         line-height: 1.65;
         color: var(--fg);
         text-wrap: pretty;
     }
 
-    .chapter-prose :global(li) {
+    .chapter-content :global(li) {
         margin: 4px 0;
         line-height: 1.65;
     }
 
-    .chapter-prose :global(ul, ol) {
+    .chapter-content :global(ul, ol) {
         margin: var(--s-3) 0;
         padding-left: var(--s-5);
         line-height: 1.65;
     }
 
-    .chapter-prose :global(p.muted) {
+    .chapter-content :global(p.muted) {
         color: var(--fg-muted);
     }
 
-    .chapter-prose :global(pre.astro-code) {
+    .chapter-content :global(pre.astro-code) {
         margin: var(--s-4) 0;
         border-color: var(--line-soft);
     }
 
-    .chapter-prose :global(hr) {
+    .chapter-content :global(hr) {
         border: none;
         border-top: 1px solid var(--line-soft);
         margin: var(--s-9) 0;
@@ -325,16 +355,16 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
 
     /* Underline prose links only — component links (TryIt, NextStep, pager,
        example/source embeds) keep their own styling. */
-    .chapter-prose :global(p a),
-    .chapter-prose :global(li a) {
+    .chapter-content :global(p a),
+    .chapter-content :global(li a) {
         color: var(--fg);
         text-decoration: underline;
         text-decoration-color: color-mix(in oklab, var(--accent), transparent 55%);
         text-underline-offset: 0.2em;
     }
 
-    .chapter-prose :global(p a:hover),
-    .chapter-prose :global(li a:hover) {
+    .chapter-content :global(p a:hover),
+    .chapter-content :global(li a:hover) {
         color: var(--accent);
         text-decoration-color: var(--accent);
     }

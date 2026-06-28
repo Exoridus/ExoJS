@@ -108,20 +108,20 @@ interface MonacoRegistry {
     subpathShims: ReadonlyArray<MonacoShimEntry>;
 }
 
-const buildMonacoRegistry = (version: string): MonacoRegistry => {
-    const sourcePackageJsonPath = path.resolve(packageRoot, 'package.json');
+const buildMonacoRegistry = (packageName: string, pkgRootDir: string, version: string): MonacoRegistry => {
+    const sourcePackageJsonPath = path.resolve(pkgRootDir, 'package.json');
     const sourcePackageJson = JSON.parse(fs.readFileSync(sourcePackageJsonPath, 'utf8')) as {
         exports?: Record<string, Record<string, string | undefined> | string>;
     };
 
     const packageJson = JSON.stringify({
-        name: '@codexo/exojs',
+        name: packageName,
         version,
         types: './dist/esm/index.d.ts',
     });
 
     const subpathShims: MonacoShimEntry[] = [];
-    const pkgVirtualRoot = '/node_modules/@codexo/exojs';
+    const pkgVirtualRoot = `/node_modules/${packageName}`;
 
     for (const [subpathKey, conditions] of Object.entries(sourcePackageJson.exports ?? {})) {
         if (subpathKey === '.' || subpathKey === './package.json') continue;
@@ -249,6 +249,49 @@ const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: stri
     };
 };
 
+// Monaco (the in-browser TypeScript worker) cannot resolve Node `#`-subpath
+// imports — those rely on the package.json `imports` map, which the browser TS
+// worker does not apply. The shipped npm types are fine (Node/tsc resolve `#`
+// natively), but in the playground every `#`-imported symbol reads as
+// "has no exported member" (e.g. `Application`). Per the root `imports` map,
+// `#<path>` resolves to `dist/esm/<path>` — i.e. `<path>` within this copied
+// esm tree — so rewrite each `#<path>` to a path relative to its declaration
+// file. Then assert none survived: a stray one silently breaks the playground.
+const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string>): number => {
+    const importRe = /(\bfrom\s*|\bimport\s*\(\s*)(['"])#([^'"]+)\2/g;
+    let rewritten = 0;
+
+    for (const rel of dtsRelFiles) {
+        const abs = path.resolve(esmDir, rel);
+        const fromDir = path.posix.dirname(rel);
+        const original = fs.readFileSync(abs, 'utf8');
+        const updated = original.replace(importRe, (_match, prefix: string, quote: string, target: string) => {
+            let relPath = path.posix.relative(fromDir, target);
+            if (!relPath.startsWith('.')) relPath = `./${relPath}`;
+            return `${prefix}${quote}${relPath}${quote}`;
+        });
+
+        if (updated !== original) {
+            fs.writeFileSync(abs, updated, 'utf8');
+            rewritten += 1;
+        }
+    }
+
+    // Only flag `#` in import position — not GLSL `"#version …"` strings, hex
+    // colours like `'#6495ed'`, or `//# sourceMappingURL` comments.
+    const leakRe = /(?:\bfrom\s*|\bimport\s*\(\s*)['"]#[^'"]+['"]/;
+    const leaked = dtsRelFiles.filter(rel => leakRe.test(fs.readFileSync(path.resolve(esmDir, rel), 'utf8')));
+
+    if (leaked.length > 0) {
+        throw new Error(
+            `[vendor:sync] ${leaked.length} declaration file(s) still contain unresolved '#' subpath imports after rewrite ` +
+                `(Monaco cannot resolve them — the playground would report missing exports): ${leaked.slice(0, 5).join(', ')}${leaked.length > 5 ? ', …' : ''}`
+        );
+    }
+
+    return rewritten;
+};
+
 // Copy the ESM runtime tree and normalize declarations into a layout Monaco
 // can resolve. Two declaration paths are supported, in order of preference:
 //
@@ -280,6 +323,8 @@ const syncTypings = (): void => {
     }
 
     const { allFiles, dtsFiles } = copyEsmTree(sourceEsmDir, destEsmDir);
+    const rewritten = rewriteSubpathImports(destEsmDir, dtsFiles);
+    console.log(`[vendor:sync] rewrote '#'-subpath imports to relative paths in ${rewritten} declaration file(s) (Monaco cannot resolve '#').`);
 
     if (fs.existsSync(sourceFlatDts)) {
         fs.copyFileSync(sourceFlatDts, destFlatDts);
@@ -334,12 +379,18 @@ const syncVendor = (): void => {
 
     fs.writeFileSync(path.resolve(flatTargetDir, 'module-shims.d.ts'), moduleShims, 'utf8');
 
-    const registry = buildMonacoRegistry(versionId);
+    const registry = buildMonacoRegistry('@codexo/exojs', packageRoot, versionId);
     fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), JSON.stringify(registry, null, 2) + '\n', 'utf8');
 
     console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
 
-    // Sync extension packages (ESM trees only — no declaration patching needed).
+    // Sync extension packages. Each gets the same Monaco-resolvable treatment as
+    // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
+    // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
+    // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
+    // `/register`, `/debug`). Without this the playground's TypeScript worker
+    // can't resolve `@codexo/exojs-particles` & co. and every extension example
+    // shows a ts2307 "Cannot find module" error.
     const extensionPackages = ['exojs-particles', 'exojs-audio-fx', 'exojs-tilemap', 'exojs-tiled', 'exojs-physics'] as const;
     for (const pkgName of extensionPackages) {
         let pkgRoot: string | null = null;
@@ -355,8 +406,9 @@ const syncVendor = (): void => {
             console.warn(`[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist} — skipping.`);
             continue;
         }
-        const destDir = path.resolve(projectRoot, 'public', 'vendor', pkgName, 'esm');
-        fs.rmSync(path.dirname(destDir), { recursive: true, force: true });
+        const vendorDir = path.resolve(projectRoot, 'public', 'vendor', pkgName);
+        const destDir = path.resolve(vendorDir, 'esm');
+        fs.rmSync(vendorDir, { recursive: true, force: true });
         fs.mkdirSync(destDir, { recursive: true });
         const files = collectFiles(pkgDist);
         for (const rel of files) {
@@ -365,7 +417,16 @@ const syncVendor = (): void => {
             fs.mkdirSync(path.dirname(dst), { recursive: true });
             fs.copyFileSync(src, dst);
         }
-        console.log(`[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files) -> vendor/${pkgName}/esm/`);
+
+        const dtsFiles = collectDeclarationFiles(pkgDist);
+        const rewritten = rewriteSubpathImports(destDir, dtsFiles);
+        fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
+        const extRegistry = buildMonacoRegistry(`@codexo/${pkgName}`, pkgRoot, versionId);
+        fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), JSON.stringify(extRegistry, null, 2) + '\n', 'utf8');
+
+        console.log(
+            `[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files, ${dtsFiles.length} declarations, ${rewritten} '#'-rewritten) -> vendor/${pkgName}/`
+        );
     }
 };
 

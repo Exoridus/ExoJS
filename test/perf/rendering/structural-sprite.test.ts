@@ -14,7 +14,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import type { BlendModes } from '#rendering/types';
 
 import { buildSpriteScene, makeTextures } from './fixtures';
-import { createWebGl2Harness, measureSteadyFrame, type WebGl2Harness } from './harness';
+import { createWebGl2Harness, measureCrossCallFrame, measureSteadyFrame, type WebGl2Harness } from './harness';
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
   const harness = createWebGl2Harness();
@@ -138,6 +138,25 @@ describe('structural — Sprite', () => {
     });
   });
 
+  it('1000 per-call renders / 1 texture → one draw (cross-call batching)', () => {
+    withHarness(harness => {
+      const [texture] = makeTextures(1);
+      const sprites = Array.from({ length: 1000 }, (_, i) => {
+        const sprite = new Sprite(texture);
+        sprite.setPosition(i % 100, Math.floor(i / 100));
+        return sprite;
+      });
+
+      const m = measureCrossCallFrame(harness, sprites, 2);
+
+      expect(m.drawCalls).toBe(1);
+      expect(m.instances).toBe(1000);
+      expect(m.visibleNodes).toBe(1000);
+
+      for (const sprite of sprites) sprite.destroy();
+    });
+  });
+
   it('static transforms skip re-upload; moving transforms re-upload all rows', () => {
     withHarness(harness => {
       const staticScene = buildSpriteScene({ count: 500, textures: makeTextures(1) });
@@ -162,6 +181,28 @@ describe('structural — Sprite', () => {
       expect(moving.transformRows).toBe(500);
 
       root.destroy();
+    });
+  });
+
+  it('per-call renders match a Container render (same draws, instances, transform rows)', () => {
+    withHarness(harness => {
+      const [texture] = makeTextures(1);
+
+      const loose = Array.from({ length: 500 }, (_, i) => {
+        const sprite = new Sprite(texture);
+        sprite.setPosition((i * 7) % 640, (i * 13) % 480);
+        return sprite;
+      });
+      const crossCall = measureCrossCallFrame(harness, loose, 2);
+      for (const sprite of loose) sprite.destroy();
+
+      const { root } = buildSpriteScene({ count: 500, textures: makeTextures(1) });
+      const container = measureSteadyFrame(harness, root, 2);
+      root.destroy();
+
+      expect(crossCall.drawCalls).toBe(container.drawCalls);
+      expect(crossCall.instances).toBe(container.instances);
+      expect(crossCall.transformRows).toBe(container.transformRows);
     });
   });
 });

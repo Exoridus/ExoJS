@@ -108,6 +108,41 @@ describe('TileLayerNode', () => {
     expect(node.y).toBe(-32);
   });
 
+  it('parallax layer: initial position is the base offset (not parallax-shifted)', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
+      tilesets: [tileset], offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5,
+    });
+    const node = new TileLayerNode(layer);
+
+    // Construction must NOT apply a parallax shift — the shift is render-time only.
+    expect(node.x).toBe(10);
+    expect(node.y).toBe(20);
+  });
+
+  it('parallax layer: position is restored to base offset after _collectContent', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
+      tilesets: [tileset], offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5,
+    });
+    const node = new TileLayerNode(layer);
+
+    // Simulate the render-plan builder with a view whose center is at (100, 200).
+    const mockBuilder = {
+      view: { center: { x: 100, y: 200 } },
+    };
+
+    // Invoke the protected _collectContent via cast; it must not throw and
+    // must restore the position even though children don't exist (empty layer).
+    (node as unknown as { _collectContent(b: unknown): void })._collectContent(mockBuilder);
+
+    // After the call the node position must be restored to the base offset.
+    expect(node.x).toBe(10);
+    expect(node.y).toBe(20);
+  });
+
   it('reports local bounds as the layer pixel rect (even when empty)', () => {
     const tileset = makeTileset();
     const layer = makeLayer(tileset, { width: 5, height: 3 });

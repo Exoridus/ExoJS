@@ -43,11 +43,20 @@ export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
     return (
         <div className={css(styles, 'root')} data-app-header>
             <header className={css(styles, 'header')} role="banner">
-                <a className={css(styles, 'brand')} href={homeHref}>
-                    <span className={css(styles, 'brand-mark')}>
-                        <span>e</span>
+                <a className={css(styles, 'brand')} href={homeHref} aria-label="exo.js home">
+                    <span className={css(styles, 'brand-name')}>
+                        <svg viewBox="0 -15 283.4 108" aria-hidden="true">
+                            <path
+                                fill="currentColor"
+                                d="M11.1 38.1q0-7.6 3.15-13.5t8.8-9.15T35.9 12.2q7.1 0 12.5 3.1t8.4 8.8 3 13.2v4.5H22.4q.3 5.7 4.25 9.4t9.85 3.7q5.1 0 8.15-2.3t4.85-6.1l9.1 4.9q-3 5.4-8.15 9.2T36.3 64.4q-7.4 0-13.15-3.35t-8.9-9.3T11.1 38.1m37.5-4.8q-.5-5.3-3.9-8.45t-8.9-3.15q-5.6 0-9.1 3.15t-4.2 8.45zm13.3-19.6h12.9l12.7 17.7h1l12.7-17.7h12.9L96.2 38.1 114.4 63h-13.1L88.5 44.8h-1L74.7 63H61.6l18.2-24.9zm54.7 24.6q0-7.8 3.3-13.7t9.15-9.1 13.25-3.2 13.2 3.2 9.1 9.1 3.3 13.7q0 7.9-3.3 13.8t-9.1 9.1-13.2 3.2-13.25-3.2-9.15-9.15-3.3-13.75m11 0q0 7.6 4.05 12.05t10.65 4.45q6.5 0 10.55-4.45t4.05-12.05-4.05-12-10.55-4.4q-6.6 0-10.65 4.45T127.6 38.3"
+                            />
+                            <circle cx="188.75" cy="51.76" r="10.25" fill="var(--accent)" />
+                            <path
+                                fill="var(--accent)"
+                                d="M225.09 72.8q0 4.6-2.75 7.4t-7.25 2.8h-12.7v-9h8.9q2.8 0 2.8-3V13.7h11zM211.49-1q0-3.5 2.3-5.7t5.8-2.2 5.8 2.2 2.3 5.7q0 3.4-2.3 5.6t-5.8 2.2-5.8-2.2-2.3-5.6m22.1 28.2q0-7 5.2-10.95t14-3.95q8.2 0 13.5 3.65t7 10.05l-10 3q-1.7-8.3-10.5-8.3-4 0-6.3 1.55t-2.3 4.25 2.15 4.15 6.55 2.25l3.4.6q9.4 1.7 14.15 4.85t4.75 10.15q0 7.5-5.5 11.7t-14.9 4.2q-9.7 0-15.8-4.3t-7.4-12.4l10.2-2.5q1.8 10.7 13 10.7 4.6 0 7.2-1.85t2.6-4.75q0-2.7-2.35-4.2t-7.45-2.4l-3.4-.6q-8.4-1.5-13.1-4.9t-4.7-10"
+                            />
+                        </svg>
                     </span>
-                    <span className={css(styles, 'brand-name')}>ExoJS</span>
                 </a>
                 <nav className={css(styles, 'nav')} aria-label="Primary">
                     <a href={guideHref} data-active={currentPath.startsWith(guideHref) ? 'true' : 'false'}>

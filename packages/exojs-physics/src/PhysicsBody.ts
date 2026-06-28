@@ -21,6 +21,8 @@ export interface BodyOptions {
   gravityScale?: number;
   /** When `true`, the body never rotates under contacts (infinite rotational inertia). Default `false`. */
   fixedRotation?: boolean;
+  /** When `true`, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. Default `false`. */
+  isBullet?: boolean;
   /** Colliders to attach up-front. Each may be a {@link Collider} instance or its {@link ColliderOptions}. */
   colliders?: Array<Collider | ColliderOptions>;
 }
@@ -54,6 +56,8 @@ export class PhysicsBody {
   public gravityScale: number;
   /** When `true`, rotational inertia is treated as infinite. */
   public fixedRotation: boolean;
+  /** When `true`, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. */
+  public isBullet: boolean;
 
   /** Total mass (0 for static/kinematic). */
   public mass = 0;
@@ -71,6 +75,9 @@ export class PhysicsBody {
   /** Angular velocity in rad/s. */
   public angularVelocity = 0;
 
+  /** When `false`, this body is never put to sleep. Default `true`. */
+  public allowSleep = true;
+
   /** @internal — Delta position X accumulated across the frame's sub-steps by the TGS integrator; written into the transform once per frame by {@link _finalizePosition}. */
   public _deltaPosX = 0;
   /** @internal — Delta position Y accumulated across the frame's sub-steps by the TGS integrator. */
@@ -85,6 +92,17 @@ export class PhysicsBody {
   private _forceX = 0;
   private _forceY = 0;
   private _torque = 0;
+
+  /** @internal — seconds the body has stayed below the sleep thresholds (frozen while asleep). Read by the world's island pass. */
+  public _sleepTime = 0;
+  /** @internal — dense union-find index assigned by the world's island pass each step. */
+  public _islandIndex = 0;
+  /** @internal — world-space centre of mass at the start of the current fixed step (CCD swept-test origin). */
+  public _ccdPrevX = 0;
+  /** @internal — see {@link _ccdPrevX}. */
+  public _ccdPrevY = 0;
+
+  private _sleeping = false;
 
   private _id = -1;
   private _owner: BodyOwner | null = null;
@@ -103,6 +121,7 @@ export class PhysicsBody {
     this.angularDamping = options.angularDamping ?? 0;
     this.gravityScale = options.gravityScale ?? 1;
     this.fixedRotation = options.fixedRotation ?? false;
+    this.isBullet = options.isBullet ?? false;
 
     // Build up-front colliders now (no id/world registration until the body
     // joins a world via `world.add()`). They sit in `_colliders` unsynchronised;
@@ -178,6 +197,11 @@ export class PhysicsBody {
     return this._destroyed;
   }
 
+  /** `true` when the body is asleep — skipped by the integrator and solver until woken. */
+  public get isSleeping(): boolean {
+    return this._sleeping;
+  }
+
   /**
    * Attach a collider to this body. Accepts a {@link Collider} instance or its
    * {@link ColliderOptions} (a convenience that constructs the collider for you).
@@ -219,6 +243,8 @@ export class PhysicsBody {
       throw new Error('PhysicsBody: cannot move a destroyed body.');
     }
 
+    this.wake();
+
     setTransform(this._transform, position.x, position.y, angle);
 
     for (const collider of this._colliders) {
@@ -250,6 +276,7 @@ export class PhysicsBody {
    * sub-step and then cleared. No-op on static/kinematic bodies. Returns `this`.
    */
   public applyForce(forceX: number, forceY: number): this {
+    this.wake();
     this._forceX += forceX;
     this._forceY += forceY;
 
@@ -261,6 +288,7 @@ export class PhysicsBody {
    * on static/kinematic bodies (and fixed-rotation bodies). Returns `this`.
    */
   public applyTorque(torque: number): this {
+    this.wake();
     this._torque += torque;
 
     return this;
@@ -276,6 +304,7 @@ export class PhysicsBody {
       return this;
     }
 
+    this.wake();
     this.linearVelocityX += impulseX * this.invMass;
     this.linearVelocityY += impulseY * this.invMass;
 
@@ -299,7 +328,7 @@ export class PhysicsBody {
    * every sub-step and cleared once per frame by {@link _finalizePosition}.
    */
   public _integrateVelocity(h: number, gravityX: number, gravityY: number): void {
-    if (this.invMass === 0) {
+    if (this.invMass === 0 || this._sleeping) {
       return;
     }
 
@@ -322,7 +351,7 @@ export class PhysicsBody {
    * re-syncing collider geometry per sub-step. Static bodies never move.
    */
   public _integratePosition(h: number): void {
-    if (this.type === 'static') {
+    if (this.type === 'static' || this._sleeping) {
       return;
     }
 
@@ -338,6 +367,49 @@ export class PhysicsBody {
       this._deltaCos = Math.cos(this._deltaAngle);
       this._deltaSin = Math.sin(this._deltaAngle);
     }
+  }
+
+  /**
+   * @internal — advance the sleep timer over one fixed step `dt`. A body below
+   * both velocity thresholds accumulates time; a too-fast body, or one that opts
+   * out via {@link allowSleep}, resets it. The sleep/wake decision is made per
+   * island by the world (so a stack sleeps as a unit) from {@link _sleepTime}.
+   */
+  public _accumulateSleepTime(dt: number, linearThreshold: number, angularThreshold: number): void {
+    const tooFast =
+      this.linearVelocityX * this.linearVelocityX + this.linearVelocityY * this.linearVelocityY > linearThreshold * linearThreshold ||
+      Math.abs(this.angularVelocity) > angularThreshold;
+
+    this._sleepTime = !this.allowSleep || tooFast ? 0 : this._sleepTime + dt;
+  }
+
+  /** @internal — set the sleep state. Sleeping zeroes the velocity; waking resets the sleep timer. */
+  public _setSleeping(sleeping: boolean): void {
+    if (this._sleeping === sleeping) {
+      return;
+    }
+
+    this._sleeping = sleeping;
+
+    if (sleeping) {
+      this.linearVelocityX = 0;
+      this.linearVelocityY = 0;
+      this.angularVelocity = 0;
+    } else {
+      this._sleepTime = 0;
+    }
+  }
+
+  /**
+   * Wake the body if it is asleep, resetting its sleep timer. The rest of its
+   * island wakes with it on the next step (a contact to an awake body keeps the
+   * whole island awake). Returns `this`.
+   */
+  public wake(): this {
+    this._setSleeping(false);
+    this._sleepTime = 0;
+
+    return this;
   }
 
   /**

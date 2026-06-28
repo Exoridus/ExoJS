@@ -13,7 +13,7 @@ import type { Texture } from '#rendering/texture/Texture';
 
 import { BackendTargetPass } from './BackendTargetPass';
 import type { RenderBackend } from './RenderBackend';
-import { BlendModes } from './types';
+import { BlendModes, isAdvancedBlendMode } from './types';
 import { View } from './View';
 
 interface DestroyableFilter {
@@ -419,7 +419,7 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanHasBarrierEffects(): boolean {
-    return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap || this.clip;
+    return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap || this.clip || isAdvancedBlendMode(this._renderPlanGetBlendMode());
   }
 
   /** @internal */

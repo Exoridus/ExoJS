@@ -5,7 +5,7 @@ symbol: "SceneManager"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 9
+memberCount: 10
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/core/SceneManager.ts"
@@ -32,6 +32,7 @@ while it keeps rendering).
 ## Methods
 
 - `destroy(): void`
+- `fixedUpdate(delta: Time): this`
 - `setScene(scene: Scene | null, options: SetSceneOptions): Promise<SceneManager>`
 - `update(delta: Time): this`
 

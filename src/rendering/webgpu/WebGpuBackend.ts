@@ -29,6 +29,7 @@ import type { BlendModes } from '#rendering/types';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
+import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
@@ -103,6 +104,8 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGpuMaskCompositor = new WebGpuMaskCompositor();
   private _maskCompositorConnected = false;
+  private readonly _backdropBlendCompositor: WebGpuBackdropBlendCompositor = new WebGpuBackdropBlendCompositor();
+  private _backdropBlendCompositorConnected = false;
   private _mipmapShaderModule: GPUShaderModule | null = null;
   private _mipmapBindGroupLayout: GPUBindGroupLayout | null = null;
   private _mipmapPipelineLayout: GPUPipelineLayout | null = null;
@@ -124,6 +127,8 @@ export class WebGpuBackend implements RenderBackend {
   private _activeDrawCommand: DrawCommand | null = null;
   private _passCoordinatorInstance: WebGpuPassCoordinator | null = null;
   private _drawPlanDepth = 0;
+  private readonly _planBaseStack: number[] = [];
+  private readonly _planHashStack: number[] = [];
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -240,22 +245,37 @@ export class WebGpuBackend implements RenderBackend {
 
   public resetStats(): this {
     resetRenderStats(this._stats);
+    // The transform buffer is frame-scoped: reset it once per frame here (was
+    // previously reset per render() call in _beginDrawPlan).
+    this._getTransformStorage().buffer.begin();
 
     return this;
+  }
+
+  /** Frame-global slot base the plan builder indexes from. @internal */
+  public get transformBufferCount(): number {
+    return this._getTransformStorage().buffer.count;
   }
 
   /** @internal */
   public _beginDrawPlan(nodeCount: number): void {
     const storage = this._getTransformStorage();
 
-    storage.begin(nodeCount);
+    // Do NOT reset the transform buffer here — it is frame-scoped (reset in
+    // resetStats). The builder already based this plan's node indices at the
+    // current buffer count, so writes land in fresh frame-global slots and
+    // batches survive across render() calls. Remember this plan's base so a
+    // nested plan can free its rows on end.
+    this._planBaseStack.push(storage.buffer.count);
+    this._planHashStack.push(storage.buffer.frameHash);
 
     // Pre-allocate the GPU storage buffer for the full plan before any group
-    // flush runs. Without this, a later flush with a higher maxNodeIndex would
-    // destroy and replace the buffer mid-frame while earlier command buffers
-    // may still reference the old allocation.
-    if (nodeCount > 0 && this._device !== null && !this._deviceLost) {
-      storage.reserve(this._device, nodeCount, this._accountant);
+    // flush runs. Base the reservation on the frame-global count + this plan's
+    // nodes so the buffer grows to cover both pre-existing frame rows and new rows.
+    const reserveCount = storage.buffer.count + nodeCount;
+
+    if (reserveCount > 0 && this._device !== null && !this._deviceLost) {
+      storage.reserve(this._device, reserveCount, this._accountant);
     }
 
     this._activeDrawCommand = null;
@@ -308,8 +328,20 @@ export class WebGpuBackend implements RenderBackend {
   public _endDrawPlan(): void {
     this._activeDrawCommand = null;
 
+    const planBase = this._planBaseStack.pop() ?? 0;
+    const planHash = this._planHashStack.pop() ?? 0;
+
     if (this._drawPlanDepth > 0) {
       this._drawPlanDepth--;
+    }
+
+    // A nested plan (filter / cacheAsBitmap) just ended: flush its draws, then
+    // free its transform rows so the frame-scoped buffer only grows with
+    // top-level render() calls. Top-level plans (depth back to 0) keep their rows
+    // so cross-call batching survives to the frame-end flush.
+    if (this._drawPlanDepth > 0) {
+      this._flushActiveRenderer();
+      this._getTransformStorage().buffer.rewindTo(planBase, planHash);
     }
 
     // Only assert balance at the outermost plan: a nested render() (e.g.
@@ -458,6 +490,48 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
+  public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
+    if (width <= 0 || height <= 0) {
+      return this;
+    }
+
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+
+    if (!this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.connect(this.device);
+      this._backdropBlendCompositorConnected = true;
+    }
+
+    this._backdropBlendCompositor.compose(this, source, x, y, width, height, mode);
+
+    return this;
+  }
+
+  /**
+   * Return the GPU texture backing `target`. For the root canvas target this is
+   * `context.getCurrentTexture()` (requires `COPY_SRC` usage configured on the
+   * canvas context). For a {@link RenderTexture} target it is the managed GPU
+   * texture. Used internally by {@link WebGpuBackdropBlendCompositor} for
+   * `copyTextureToTexture` backdrop capture.
+   * @internal
+   */
+  public _renderTargetTexture(target: RenderTarget): GPUTexture {
+    if (target === this._rootRenderTarget) {
+      return this.context.getCurrentTexture();
+    }
+
+    if (target instanceof RenderTexture) {
+      return this._getTextureState(target).texture;
+    }
+
+    throw new Error('WebGpuBackend._renderTargetTexture: unsupported render target type.');
+  }
+
   public popScissorRect(): this {
     if (this._clipBoundsStack.length === 0) {
       return this;
@@ -549,7 +623,12 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public setView(view: View | null): this {
-    this._flushActiveRenderer();
+    // Only flush the open batch when the view actually changes. The unconditional
+    // flush forced one draw call per render() call (each render() re-applies the
+    // same camera view), defeating cross-call batching.
+    if (this._renderTarget.view !== view) {
+      this._flushActiveRenderer();
+    }
     this._renderTarget.setView(view);
 
     return this;
@@ -610,6 +689,11 @@ export class WebGpuBackend implements RenderBackend {
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
+    }
+
+    if (this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.disconnect();
+      this._backdropBlendCompositorConnected = false;
     }
 
     this._transformStorage?.destroy();
@@ -862,6 +946,9 @@ export class WebGpuBackend implements RenderBackend {
         device,
         format,
         alphaMode: 'opaque',
+        // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture
+        // the root-canvas backdrop via copyTextureToTexture.
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
       });
     } catch (error) {
       throw this._createInitializationError('Failed to configure the WebGPU canvas context.', error);
@@ -996,6 +1083,11 @@ export class WebGpuBackend implements RenderBackend {
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
+    }
+
+    if (this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.disconnect();
+      this._backdropBlendCompositorConnected = false;
     }
 
     // Mipmap pipeline cache is keyed to the dead device — drop it.
@@ -1325,7 +1417,9 @@ export class WebGpuBackend implements RenderBackend {
     const mipmapUsage = this._getMipLevelCount(texture) > 1 ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
 
     if (texture instanceof RenderTexture) {
-      return GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | mipmapUsage;
+      // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture the
+      // backdrop from an offscreen RenderTexture target via copyTextureToTexture.
+      return GPUTextureUsage.COPY_SRC | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | mipmapUsage;
     }
 
     return GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING | mipmapUsage;

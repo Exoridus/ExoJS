@@ -8,6 +8,7 @@ import { BindingRegistry } from './binding/BindingRegistry';
 import type { BindingOptions, PhysicsBinding } from './binding/PhysicsBinding';
 import { Collider } from './Collider';
 import type { CollisionEvent, SensorEvent } from './events';
+import type { Joint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
@@ -15,6 +16,11 @@ import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
 import { TimeStepper } from './TimeStepper';
 import type { BodyType, CollisionFilter, VectorLike } from './types';
+
+/** Gap left between a clamped bullet and the surface it hit (so it does not re-hit from inside). */
+const ccdSkin = 0.05;
+/** Impact speed (px/s) below which a bullet's CCD response does not bounce (mirrors the contact solver). */
+const ccdRestitutionThreshold = 1;
 
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
@@ -37,6 +43,14 @@ export interface PhysicsWorldOptions {
   dampingRatio?: number;
   /** Interpolate bound nodes between fixed steps (reserved; no effect yet). Default `true`. */
   interpolation?: boolean;
+  /** Put resting bodies to sleep so they skip integration and solving. Default `true`. */
+  enableSleeping?: boolean;
+  /** Linear speed at or below which a body is a sleep candidate, px/s. Default `5`. */
+  sleepLinearVelocity?: number;
+  /** Angular speed at or below which a body is a sleep candidate, rad/s. Default `0.06`. */
+  sleepAngularVelocity?: number;
+  /** Seconds a body must stay below the sleep thresholds before it sleeps. Default `0.5`. */
+  timeToSleep?: number;
 }
 
 /**
@@ -129,13 +143,30 @@ export class PhysicsWorld implements BodyOwner {
   public readonly contactHertz: number;
   /** Soft-contact damping ratio. */
   public readonly dampingRatio: number;
+  /** Whether resting bodies are put to sleep. */
+  public readonly enableSleeping: boolean;
+  /** Linear sleep threshold (px/s). */
+  public readonly sleepLinearVelocity: number;
+  /** Angular sleep threshold (rad/s). */
+  public readonly sleepAngularVelocity: number;
+  /** Seconds below the thresholds before a body sleeps. */
+  public readonly timeToSleep: number;
 
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
   private readonly _bodies: PhysicsBody[] = [];
   private readonly _colliders: Collider[] = [];
+  private readonly _joints: Joint[] = [];
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
+  /** Pooled union-find parent array for the per-step island pass (reused; sized to the body count). */
+  private readonly _islandParent: number[] = [];
+  /** Pooled per-island minimum sleep time, indexed by union-find root. */
+  private readonly _islandMinSleep: number[] = [];
+  /** Pooled ray-hit buffer + origin/direction for the CCD swept test. */
+  private readonly _ccdHits: RayHit[] = [];
+  private readonly _ccdOrigin = { x: 0, y: 0 };
+  private readonly _ccdDir = { x: 0, y: 0 };
 
   private _nextBodyId = 1;
   private _nextColliderId = 1;
@@ -159,6 +190,10 @@ export class PhysicsWorld implements BodyOwner {
     this.subStepCount = subStepCount;
     this.contactHertz = options.contactHertz ?? 30;
     this.dampingRatio = options.dampingRatio ?? 10;
+    this.enableSleeping = options.enableSleeping ?? true;
+    this.sleepLinearVelocity = options.sleepLinearVelocity ?? 5;
+    this.sleepAngularVelocity = options.sleepAngularVelocity ?? 0.06;
+    this.timeToSleep = options.timeToSleep ?? 0.5;
     this._query = new QueryEngine(this._colliders);
   }
 
@@ -246,6 +281,44 @@ export class PhysicsWorld implements BodyOwner {
     this._defer(() => this._removeCollider(collider));
   }
 
+  /** Live joints (read-only view). */
+  public get joints(): readonly Joint[] {
+    return this._joints;
+  }
+
+  /**
+   * Add a constraint joint. Construct it first (`new DistanceJoint({ … })`),
+   * then add it. Wakes both bodies; safe inside a callback (registration is
+   * deferred). Returns the joint.
+   */
+  public addJoint<T extends Joint>(joint: T): T {
+    this._assertAlive();
+    joint.bodyA.wake();
+    joint.bodyB.wake();
+
+    this._defer(() => {
+      if (!this._joints.includes(joint)) {
+        this._joints.push(joint);
+      }
+    });
+
+    return joint;
+  }
+
+  /** Remove a joint, waking both bodies so they respond to the lost constraint. Deferred when called inside a callback. */
+  public removeJoint(joint: Joint): void {
+    joint.bodyA.wake();
+    joint.bodyB.wake();
+
+    this._defer(() => {
+      const index = this._joints.indexOf(joint);
+
+      if (index !== -1) {
+        this._joints.splice(index, 1);
+      }
+    });
+  }
+
   // ── stepping ───────────────────────────────────────────────────────────
 
   /**
@@ -267,13 +340,31 @@ export class PhysicsWorld implements BodyOwner {
       const gravityY = this.gravity.y;
       const contactHertz = this.contactHertz;
       const dampingRatio = this.dampingRatio;
+      const hasJoints = this._joints.length > 0;
+      const hasBullets = this._hasBullets();
 
       for (let step = 0; step < steps; step++) {
         // Detection runs once per fixed step (collider geometry is already current
         // from the previous frame's finalize / attach / setTransform). TGS-Soft
         // reuses the manifolds across the sub-steps below.
         this._backend.detect(this._colliders);
+
+        // Sleep decision runs after detection (islands need the current contact
+        // set) and before the solver (so sleeping contacts are skipped, and a
+        // sleeping island touched by an awake body is woken first).
+        if (this.enableSleeping) {
+          this._updateSleeping(this.timeStepper.fixedDelta);
+        }
+
         this._backend.prepareSolve(h, contactHertz, dampingRatio);
+
+        if (hasJoints) {
+          this._prepareJoints(h);
+        }
+
+        if (hasBullets) {
+          this._recordBulletPositions();
+        }
 
         for (let subStep = 0; subStep < subStepCount; subStep++) {
           // Integrate gravity/forces over the sub-step (forces persist across
@@ -289,15 +380,28 @@ export class PhysicsWorld implements BodyOwner {
           // load, which is what keeps tall stacks from pumping energy.
           this._backend.warmStart();
 
+          if (hasJoints) {
+            this._warmStartJoints();
+          }
+
           // Main soft-bias velocity solve, integrate positions (accumulating
-          // per-body delta), then the bias-free relax pass.
+          // per-body delta), then the bias-free relax pass. Joints solve right
+          // after the contacts in each pass (contacts are the stiffer constraint).
           this._backend.solveVelocities(true);
+
+          if (hasJoints) {
+            this._solveJoints(true);
+          }
 
           for (const body of this._bodies) {
             body._integratePosition(h);
           }
 
           this._backend.solveVelocities(false);
+
+          if (hasJoints) {
+            this._solveJoints(false);
+          }
         }
 
         // Separate restitution pass, then write the accumulated delta into each
@@ -306,6 +410,10 @@ export class PhysicsWorld implements BodyOwner {
 
         for (const body of this._bodies) {
           body._finalizePosition();
+        }
+
+        if (hasBullets) {
+          this._advanceBullets();
         }
       }
 
@@ -374,6 +482,7 @@ export class PhysicsWorld implements BodyOwner {
 
     this._bodies.length = 0;
     this._colliders.length = 0;
+    this._joints.length = 0;
     this._commands.length = 0;
     this._bindings.clear();
     this._backend.destroy();
@@ -426,6 +535,240 @@ export class PhysicsWorld implements BodyOwner {
     }
 
     this._dispatching = false;
+  }
+
+  /**
+   * Accumulate per-body sleep timers and put/keep islands of resting bodies
+   * asleep so a stack sleeps and wakes as one unit. An island is a connected
+   * component of dynamic bodies joined by touching solid contacts (static and
+   * kinematic bodies are boundaries, not nodes); it sleeps once every member has
+   * stayed below the sleep thresholds for `timeToSleep`, and wakes the instant
+   * any member does (e.g. an awake body merges into it via a new contact).
+   * Deterministic: union-find roots break ties by lower index and the contact
+   * set is id-sorted.
+   */
+  private _updateSleeping(dt: number): void {
+    const bodies = this._bodies;
+    const count = bodies.length;
+    const parent = this._islandParent;
+    const minSleep = this._islandMinSleep;
+
+    // Assign dense indices, reset the union-find, and accumulate sleep timers for
+    // awake dynamic bodies (a sleeping body's timer stays frozen ≥ timeToSleep).
+    for (let i = 0; i < count; i++) {
+      const body = bodies[i]!;
+
+      body._islandIndex = i;
+      parent[i] = i;
+      minSleep[i] = Infinity;
+
+      if (body.type === 'dynamic' && !body.isSleeping) {
+        body._accumulateSleepTime(dt, this.sleepLinearVelocity, this.sleepAngularVelocity);
+      }
+    }
+
+    parent.length = count;
+    minSleep.length = count;
+
+    // Union dynamic↔dynamic solid contacts into islands.
+    for (const contact of this._backend.contactGraph.solidContacts) {
+      const bodyA = contact.a.body;
+      const bodyB = contact.b.body;
+
+      if (bodyA.type === 'dynamic' && bodyB.type === 'dynamic') {
+        this._union(bodyA._islandIndex, bodyB._islandIndex);
+      }
+    }
+
+    // Joints couple their two bodies into the same island (sleep/wake together).
+    for (const joint of this._joints) {
+      const bodyA = joint.bodyA;
+      const bodyB = joint.bodyB;
+
+      if (joint.enabled && bodyA.type === 'dynamic' && bodyB.type === 'dynamic') {
+        this._union(bodyA._islandIndex, bodyB._islandIndex);
+      }
+    }
+
+    // Per-island minimum sleep time over its dynamic members.
+    for (let i = 0; i < count; i++) {
+      const body = bodies[i]!;
+
+      if (body.type === 'dynamic') {
+        const root = this._find(i);
+
+        if (body._sleepTime < minSleep[root]!) {
+          minSleep[root] = body._sleepTime;
+        }
+      }
+    }
+
+    // Sleep an island iff every member has rested for `timeToSleep`; otherwise
+    // wake it (which also wakes any member dragged awake by a fresh contact).
+    const timeToSleep = this.timeToSleep;
+
+    for (let i = 0; i < count; i++) {
+      const body = bodies[i]!;
+
+      if (body.type === 'dynamic') {
+        body._setSleeping(minSleep[this._find(i)]! >= timeToSleep);
+      }
+    }
+  }
+
+  /** Union-find union by lower index (deterministic roots). */
+  private _union(a: number, b: number): void {
+    const rootA = this._find(a);
+    const rootB = this._find(b);
+
+    if (rootA < rootB) {
+      this._islandParent[rootB] = rootA;
+    } else if (rootB < rootA) {
+      this._islandParent[rootA] = rootB;
+    }
+  }
+
+  /** Union-find find with path halving. */
+  private _find(index: number): number {
+    const parent = this._islandParent;
+
+    while (parent[index]! !== index) {
+      const grandparent = parent[parent[index]!]!;
+      parent[index] = grandparent;
+      index = grandparent;
+    }
+
+    return index;
+  }
+
+  /** Build each joint's per-frame constraint data (once per fixed step). */
+  private _prepareJoints(h: number): void {
+    for (const joint of this._joints) {
+      joint._prepare(h);
+    }
+  }
+
+  /** Re-apply each joint's accumulated impulse (each sub-step). */
+  private _warmStartJoints(): void {
+    for (const joint of this._joints) {
+      joint._warmStart();
+    }
+  }
+
+  /** One joint velocity pass (each sub-step, after the contacts). */
+  private _solveJoints(useBias: boolean): void {
+    for (const joint of this._joints) {
+      joint._solve(useBias);
+    }
+  }
+
+  /** Whether any dynamic body is flagged for continuous collision (bullet mode). */
+  private _hasBullets(): boolean {
+    for (const body of this._bodies) {
+      if (body.isBullet && body.type === 'dynamic') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** Snapshot each bullet's centre of mass at the start of the fixed step (the swept-test origin). */
+  private _recordBulletPositions(): void {
+    for (const body of this._bodies) {
+      if (body.isBullet && body.type === 'dynamic') {
+        body._ccdPrevX = body.worldCenterOfMassX;
+        body._ccdPrevY = body.worldCenterOfMassY;
+      }
+    }
+  }
+
+  /**
+   * Sweep each bullet's centre of mass along this fixed step's motion against every
+   * other body's colliders; if it would cross one, clamp the body just short of the
+   * surface and resolve the impact about the surface normal (a slide for a non-bouncy
+   * body, an elastic reflection as restitution → 1) so it cannot tunnel. Sweeps the
+   * centre point — good for small/point-like projectiles; a full swept-shape TOI for
+   * large fast bodies is backlog (raise sub-steps or thicken geometry meanwhile).
+   */
+  private _advanceBullets(): void {
+    for (const body of this._bodies) {
+      if (!body.isBullet || body.type !== 'dynamic' || body.isSleeping) {
+        continue;
+      }
+
+      const newX = body.worldCenterOfMassX;
+      const newY = body.worldCenterOfMassY;
+      let dirX = newX - body._ccdPrevX;
+      let dirY = newY - body._ccdPrevY;
+      const distance = Math.hypot(dirX, dirY);
+
+      if (distance < 1e-6) {
+        continue;
+      }
+
+      dirX /= distance;
+      dirY /= distance;
+
+      this._ccdOrigin.x = body._ccdPrevX;
+      this._ccdOrigin.y = body._ccdPrevY;
+      this._ccdDir.x = dirX;
+      this._ccdDir.y = dirY;
+
+      const hits = this._query.rayCastAll(this._ccdOrigin, this._ccdDir, undefined, this._ccdHits, distance);
+      let blocked: RayHit | null = null;
+
+      for (const hit of hits) {
+        // Sweep against every other body (static, kinematic, dynamic); sensors never
+        // block. Hits are distance-sorted, so the first match is the nearest surface.
+        if (hit.body !== body && !hit.collider.isSensor) {
+          blocked = hit;
+          break;
+        }
+      }
+
+      if (blocked === null) {
+        continue;
+      }
+
+      // Clamp the CoM just short of the surface (a pure translation — the rotation
+      // is already applied), then resolve the impact about the surface normal.
+      const clampDistance = Math.max(0, blocked.distance - ccdSkin);
+      const deltaX = body._ccdPrevX + dirX * clampDistance - newX;
+      const deltaY = body._ccdPrevY + dirY * clampDistance - newY;
+
+      this._ccdOrigin.x = body.x + deltaX;
+      this._ccdOrigin.y = body.y + deltaY;
+      body.setTransform(this._ccdOrigin, body.angle);
+
+      // Reflect about the true surface normal: a slide for a non-bouncy body
+      // (restitution 0), an elastic bounce as restitution → 1. The body's own
+      // restitution combines (max) with the surface's, matching the contact solver.
+      const nx = blocked.normal.x;
+      const ny = blocked.normal.y;
+      const vn = body.linearVelocityX * nx + body.linearVelocityY * ny;
+
+      if (vn < 0) {
+        const restitution = vn < -ccdRestitutionThreshold ? Math.max(this._bulletRestitution(body), blocked.collider.restitution) : 0;
+        const impulse = -(1 + restitution) * vn;
+
+        body.linearVelocityX += impulse * nx;
+        body.linearVelocityY += impulse * ny;
+      }
+    }
+  }
+
+  /** The highest restitution among a body's colliders (its CCD bounce factor). */
+  private _bulletRestitution(body: PhysicsBody): number {
+    let restitution = 0;
+
+    for (const collider of body.colliders) {
+      if (collider.restitution > restitution) {
+        restitution = collider.restitution;
+      }
+    }
+
+    return restitution;
   }
 
   /** Run `command` now, or queue it when inside an event dispatch (deferred to end of step). */

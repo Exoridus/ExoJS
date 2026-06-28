@@ -21,6 +21,8 @@ const aliasConfig = [
   // recipe (examples/shared/physics-tilemap.ts) can be unit-tested in-repo.
   { find: '@codexo/exojs-tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-tiled', replacement: fileURLToPath(new URL('./packages/exojs-tiled/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs-aseprite', replacement: fileURLToPath(new URL('./packages/exojs-aseprite/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs-ldtk', replacement: fileURLToPath(new URL('./packages/exojs-ldtk/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
 ] as const;
 
@@ -101,6 +103,16 @@ export default defineConfig({
         include: ['packages/exojs-tiled/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
+        name: 'exojs-aseprite',
+        alias: aliasConfig,
+        include: ['packages/exojs-aseprite/test/**/*.test.ts'],
+      }),
+      createJsdomTestProject({
+        name: 'exojs-ldtk',
+        alias: aliasConfig,
+        include: ['packages/exojs-ldtk/test/**/*.test.ts'],
+      }),
+      createJsdomTestProject({
         name: 'exojs-physics',
         alias: aliasConfig,
         include: ['packages/exojs-physics/test/**/*.test.ts'],
@@ -110,6 +122,21 @@ export default defineConfig({
         alias: aliasConfig,
         include: ['packages/exojs-audio-fx/test/**/*.test.ts'],
       }),
+
+      // ── exojs-react — jsdom + React Testing Library (esbuild JSX) ────────
+      // The shared jsdom factory is reused unchanged; the only addition is the
+      // esbuild automatic JSX runtime so `.tsx` test files need no React import.
+      // It is set at the project level (like rendering-perf's `plugins`) so the
+      // other jsdom projects keep esbuild's defaults byte-for-byte.
+      {
+        ...createJsdomTestProject({
+          name: 'exojs-react',
+          alias: aliasConfig,
+          include: ['packages/exojs-react/test/**/*.{test.ts,test.tsx}'],
+          setupFiles: ['./packages/exojs-react/test/setup.ts'],
+        }),
+        esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
+      },
 
       // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for

@@ -27,6 +27,7 @@ import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
+import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
@@ -153,6 +154,8 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGl2MaskCompositor = new WebGl2MaskCompositor();
   private _maskCompositorConnected = false;
+  private readonly _backdropBlendCompositor: WebGl2BackdropBlendCompositor = new WebGl2BackdropBlendCompositor();
+  private _backdropBlendCompositorConnected = false;
   private readonly _stencilClipper: WebGl2StencilClipper = new WebGl2StencilClipper();
   private readonly _stencilStates: Map<RenderTarget, StencilTargetState> = new Map<RenderTarget, StencilTargetState>();
   private _stencilClipperConnected = false;
@@ -178,6 +181,8 @@ export class WebGl2Backend implements RenderBackend {
   private _transformTextureCount = -1;
   private _activeDrawCommand: DrawCommand | null = null;
   private _drawPlanDepth = 0;
+  private readonly _planBaseStack: number[] = [];
+  private readonly _planHashStack: number[] = [];
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -276,13 +281,27 @@ export class WebGl2Backend implements RenderBackend {
 
   public resetStats(): this {
     resetRenderStats(this._stats);
+    // The transform buffer is frame-scoped: reset it once per frame here (was
+    // previously reset per render() call in _beginDrawPlan).
+    this._transformBuffer.begin();
 
     return this;
   }
 
+  /** Frame-global slot base the plan builder indexes from. @internal */
+  public get transformBufferCount(): number {
+    return this._transformBuffer.count;
+  }
+
   /** @internal */
-  public _beginDrawPlan(nodeCount: number): void {
-    this._transformBuffer.begin(nodeCount);
+  public _beginDrawPlan(_nodeCount: number): void {
+    // Do NOT reset the transform buffer here — it is frame-scoped (reset in
+    // resetStats). The builder already based this plan's node indices at the
+    // current buffer count, so writes land in fresh frame-global slots and
+    // batches survive across render() calls. Remember this plan's base so a
+    // nested plan can free its rows on end.
+    this._planBaseStack.push(this._transformBuffer.count);
+    this._planHashStack.push(this._transformBuffer.frameHash);
     this._activeDrawCommand = null;
     this._drawPlanDepth++;
   }
@@ -392,13 +411,23 @@ export class WebGl2Backend implements RenderBackend {
   public _endDrawPlan(): void {
     this._activeDrawCommand = null;
 
+    const planBase = this._planBaseStack.pop() ?? 0;
+    const planHash = this._planHashStack.pop() ?? 0;
+
     if (this._drawPlanDepth > 0) {
       this._drawPlanDepth--;
     }
 
-    // Only assert balance at the outermost plan: cacheAsBitmap draws a cache
-    // sprite via a nested render(), whose inner _endDrawPlan sees the still-open
-    // outer clips — those are not leaks.
+    // A nested plan (filter / cacheAsBitmap) just ended: flush its draws, then
+    // free its transform rows so the frame-scoped buffer only grows with
+    // top-level render() calls. Top-level plans (depth back to 0) keep their rows
+    // so cross-call batching survives to the frame-end flush.
+    if (this._drawPlanDepth > 0) {
+      this._flushActiveRenderer();
+      this._transformBuffer.rewindTo(planBase, planHash);
+    }
+
+    // Only assert balance at the outermost plan.
     if (this._drawPlanDepth === 0) {
       this._assertBalancedStencil();
     }
@@ -647,6 +676,44 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
+    if (width <= 0 || height <= 0) {
+      return this;
+    }
+
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
+
+    if (!this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.connect(this);
+      this._backdropBlendCompositorConnected = true;
+    }
+
+    this._backdropBlendCompositor.compose(this, source, x, y, width, height, mode);
+
+    return this;
+  }
+
+  /**
+   * Return the GL framebuffer for `target`, preparing the render-target state so
+   * the texture is attached. Used internally by {@link WebGl2BackdropBlendCompositor}
+   * for framebuffer blits. Null for the root (default) framebuffer.
+   * @internal
+   */
+  public _renderTargetFramebuffer(target: RenderTarget): WebGLFramebuffer | null {
+    return this._prepareRenderTarget(target).framebuffer;
+  }
+
+  /**
+   * Re-bind the currently active render target as the GL DRAW framebuffer and
+   * restore the viewport. Called by {@link WebGl2BackdropBlendCompositor} after
+   * it unbinds the framebuffer for a blit operation.
+   * @internal
+   */
+  public _rebindActiveTarget(): void {
+    this._bindRenderTarget(this._renderTarget);
+  }
+
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
       // In-bounds: `index` ranges over `0..length-1`.
@@ -674,7 +741,12 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public setView(view: View | null): this {
-    this._flushActiveRenderer();
+    // Only flush the open batch when the view actually changes. The unconditional
+    // flush forced one draw call per render() call (each render() re-applies the
+    // same camera view), defeating cross-call batching.
+    if (this._renderTarget.view !== view) {
+      this._flushActiveRenderer();
+    }
     this._renderTarget.setView(view);
     this._bindRenderTarget(this._renderTarget);
 
@@ -763,11 +835,23 @@ export class WebGl2Backend implements RenderBackend {
       throw new Error('Transform texture must be initialized before binding.');
     }
 
+    // A skipped flush (all three guards false) leaves the dirty range uncleared
+    // until the next begin(). Safe: every write() mixes its slot into _frameHash,
+    // so a non-empty dirty range always coincides with snapshot.changed = true —
+    // the upload branch is always taken before any dirty rows could be stale.
     if (snapshot.changed || snapshot.count !== this._transformTextureCount || snapshot.hash !== this._transformTextureHash) {
-      nextTransformTexture.commitRect(0, 0, 3, snapshot.count);
-      this._transformBuffer.recordUpload(snapshot.count);
-      this._transformTextureHash = snapshot.hash;
+      // Upload only the rows actually written since the last upload (delta), so
+      // barrier-heavy frames don't re-upload the whole growing buffer. A reused
+      // slot below the high-water mark is in the dirty range, so it re-uploads.
+      const { firstRow, rowCount } = this._transformBuffer.consumeDirtyRange(snapshot.count);
+
+      if (rowCount > 0) {
+        nextTransformTexture.commitRect(0, firstRow, 3, rowCount);
+        this._transformBuffer.recordUpload(rowCount);
+      }
+
       this._transformTextureCount = snapshot.count;
+      this._transformTextureHash = snapshot.hash;
     }
 
     return this.bindTexture(nextTransformTexture, unit);
@@ -795,17 +879,6 @@ export class WebGl2Backend implements RenderBackend {
         case BlendModes.Screen:
           gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
-          break;
-        case BlendModes.Darken:
-          // MIN/MAX ignore blendFunc factors, so this cannot account for source
-          // coverage — transparent (premultiplied rgb=0) texels darken to black.
-          // Reliable only for opaque sources. See {@link BlendModes.Darken}.
-          gl.blendEquation(gl.MIN);
-          gl.blendFunc(gl.ONE, gl.ONE);
-          break;
-        case BlendModes.Lighten:
-          gl.blendEquation(gl.MAX);
-          gl.blendFunc(gl.ONE, gl.ONE);
           break;
         default:
           gl.blendEquation(gl.FUNC_ADD);
@@ -893,6 +966,11 @@ export class WebGl2Backend implements RenderBackend {
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
+    }
+
+    if (this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.disconnect();
+      this._backdropBlendCompositorConnected = false;
     }
 
     if (this._stencilClipperConnected) {

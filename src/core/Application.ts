@@ -25,6 +25,7 @@ import { Loader, type LoaderOptions } from '#resources/Loader';
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
+import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
@@ -112,6 +113,11 @@ export interface ApplicationOptions {
   /** Seed for the per-Application {@link Application.random} RNG. Omit for a non-deterministic seed. */
   seed?: number;
   /**
+   * Fixed-timestep size in **seconds** for {@link Scene.fixedUpdate} / {@link Application.onFixedFrame}.
+   * Default `1 / 60`. Must be positive.
+   */
+  fixedTimeStep?: number;
+  /**
    * Extension selection.
    * `undefined` → Core + globally registered extensions.
    * `[]`         → Core only.
@@ -137,6 +143,10 @@ export interface AutoBackendConfig {
 export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig;
 
 const maxDeltaMs = 100;
+/** Default fixed-timestep size in milliseconds (60 Hz). */
+const defaultFixedStepMs = 1000 / 60;
+/** Max fixed steps run in one frame — the spiral-of-death guard. */
+const maxFixedSteps = 5;
 
 const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
 
@@ -242,16 +252,23 @@ export class Application {
   public readonly serializers = new SerializationRegistry(defaultSerializationRegistry);
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
+  /** Dispatched once per fixed-timestep step (zero or more times per frame), ahead of {@link onFrame}. */
+  public readonly onFixedFrame = new Signal<[Time]>();
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   public readonly onVisibilityChange = new Signal<[visible: boolean]>();
   public readonly onBackendLost = new Signal();
   public readonly onBackendRestored = new Signal();
+  /** Dispatched when an unhandled error occurs in scene lifecycle. */
+  public readonly onError = new Signal<[error: Error]>();
   public pauseOnHidden = false;
 
   private readonly _updateHandler: () => void;
   private readonly _startupClock: Clock = new Clock();
   private readonly _activeClock: Clock = new Clock();
   private readonly _frameClock: Clock = new Clock();
+  private readonly _fixed: FixedTimestep;
+  private readonly _fixedTime: Time;
+  private _frameAlpha = 0;
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
@@ -268,6 +285,7 @@ export class Application {
   private _cursor = 'default';
   private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
   private _resizeObserver: ResizeObserver | null = null;
+  private _sizingMode: CanvasSizingMode = 'fixed';
   private readonly _audio: AudioManager = new AudioManager();
 
   public constructor(appSettings: ApplicationOptions = {}) {
@@ -296,7 +314,8 @@ export class Application {
     }
 
     this._mountCanvas(canvasOptions.mount);
-    this._applySizingMode(canvasOptions.sizingMode ?? 'fixed');
+    this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
+    this._applySizingMode(this._sizingMode);
 
     this.options = {
       clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
@@ -355,6 +374,11 @@ export class Application {
     this.random = new Random(this.options.seed);
     this._updateHandler = this.update.bind(this);
 
+    const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
+
+    this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
+    this._fixedTime = new Time(fixedStepMs);
+
     // Register the core managers as ordered app systems (reserved order bands);
     // they tick from one loop, ahead of any user systems (order 600+).
     this.systems.add(this.input);
@@ -397,6 +421,21 @@ export class Application {
 
   public get frameCount(): number {
     return this._frameCount;
+  }
+
+  /**
+   * Interpolation factor `[0, 1)` — the leftover sub-step fraction after this
+   * frame's fixed steps. Lerp rendered state between its previous and current
+   * fixed-step values by this to smooth motion when the fixed rate is below the
+   * frame rate.
+   */
+  public get frameAlpha(): number {
+    return this._frameAlpha;
+  }
+
+  /** Fixed-timestep size in seconds (see {@link ApplicationOptions.fixedTimeStep}). */
+  public get fixedTimeStep(): number {
+    return this._fixed.stepMs / 1000;
   }
 
   /**
@@ -447,6 +486,39 @@ export class Application {
 
   public set cursor(cursor: string) {
     this.setCursor(cursor);
+  }
+
+  /**
+   * The active {@link CanvasSizingMode}. Assigning a new mode re-applies the
+   * sizing strategy live: the previous mode's {@link ResizeObserver} (if any)
+   * is disconnected and the new mode's CSS / observer is installed. Assigning
+   * the current value is a no-op.
+   */
+  public get sizingMode(): CanvasSizingMode {
+    return this._sizingMode;
+  }
+
+  public set sizingMode(mode: CanvasSizingMode) {
+    if (mode === this._sizingMode) {
+      return;
+    }
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
+    this._sizingMode = mode;
+    this._applySizingMode(mode);
+  }
+
+  /**
+   * The colour the canvas is cleared to each frame, as a live {@link Color}.
+   * Assigning copies into the backend's clear colour (effective next frame);
+   * you may also mutate it in place via `app.clearColor.set(...)`.
+   */
+  public get clearColor(): Color {
+    return this._backend.clearColor;
+  }
+
+  public set clearColor(color: Color) {
+    this._backend.clearColor.copy(color);
   }
 
   public get audio(): AudioManager {
@@ -529,6 +601,7 @@ export class Application {
         await this.scene.setScene(scene);
         this._frameRequest = requestAnimationFrame(this._updateHandler);
         this._frameClock.restart();
+        this._fixed.reset();
         this._activeClock.start();
         this._status = ApplicationStatus.Running;
       } catch (error) {
@@ -568,6 +641,7 @@ export class Application {
     if (this._status === ApplicationStatus.Running) {
       if (this.pauseOnHidden && !this._documentVisible) {
         this._frameClock.restart();
+        this._fixed.reset();
         this._frameRequest = requestAnimationFrame(this._updateHandler);
 
         return this;
@@ -582,6 +656,17 @@ export class Application {
       this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
       this.systems._tick(frameDelta);
+
+      // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
+      // so they see this frame's input and before the variable update/draw.
+      const fixedSteps = this._fixed.advance(clampedDeltaMs);
+
+      for (let step = 0; step < fixedSteps; step++) {
+        this.scene.fixedUpdate(this._fixedTime);
+        this.onFixedFrame.dispatch(this._fixedTime);
+      }
+
+      this._frameAlpha = this._fixed.alpha;
 
       this.scene.update(frameDelta);
       this.onFrame.dispatch(frameDelta);
@@ -606,6 +691,7 @@ export class Application {
       cancelAnimationFrame(this._frameRequest);
       void this.scene.setScene(null).catch((error: unknown) => {
         console.error('Application.stop() failed to unload the active scene.', error);
+        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       });
       this._activeClock.stop();
       this._frameClock.stop();
@@ -795,10 +881,12 @@ export class Application {
     this._frameClock.destroy();
     this.onResize.destroy();
     this.onFrame.destroy();
+    this.onFixedFrame.destroy();
     this.onCanvasFocusChange.destroy();
     this.onVisibilityChange.destroy();
     this.onBackendLost.destroy();
     this.onBackendRestored.destroy();
+    this.onError.destroy();
   }
 
   private _onDocumentVisibilityChange(): void {
