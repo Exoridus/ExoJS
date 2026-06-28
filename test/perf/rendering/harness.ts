@@ -7,9 +7,9 @@
  *
  * @internal Test/perf-only.
  */
+import { playRenderTree } from '#rendering/plan/playRenderTree';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
-import { playRenderTree } from '#rendering/plan/playRenderTree';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from '../../rendering/browser/_coreRenderers';
