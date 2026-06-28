@@ -5,6 +5,8 @@
     "paths": {
       "@codexo/exojs": ["../../src/index.ts"],
       "@codexo/exojs/extensions": ["../../src/extensions/index.ts"],
+      "@codexo/exojs/renderer-sdk": ["../../src/renderer-sdk.ts"],
+      "@codexo/exojs/debug": ["../../src/debug/index.ts"],
       "@codexo/exojs-tilemap": ["../exojs-tilemap/src/index.ts"]
     }
   },
