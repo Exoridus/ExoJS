@@ -14,7 +14,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import type { BlendModes } from '#rendering/types';
 
 import { buildSpriteScene, makeTextures } from './fixtures';
-import { createWebGl2Harness, measureSteadyFrame, type WebGl2Harness } from './harness';
+import { createWebGl2Harness, measureCrossCallFrame, measureSteadyFrame, type WebGl2Harness } from './harness';
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
   const harness = createWebGl2Harness();
@@ -135,6 +135,25 @@ describe('structural — Sprite', () => {
       expect(m.instances).toBe(50);
 
       root.destroy();
+    });
+  });
+
+  it('1000 per-call renders / 1 texture → one draw (cross-call batching)', () => {
+    withHarness(harness => {
+      const [texture] = makeTextures(1);
+      const sprites = Array.from({ length: 1000 }, (_, i) => {
+        const sprite = new Sprite(texture);
+        sprite.setPosition(i % 100, Math.floor(i / 100));
+        return sprite;
+      });
+
+      const m = measureCrossCallFrame(harness, sprites, 2);
+
+      expect(m.drawCalls).toBe(1);
+      expect(m.instances).toBe(1000);
+      expect(m.visibleNodes).toBe(1000);
+
+      for (const sprite of sprites) sprite.destroy();
     });
   });
 
