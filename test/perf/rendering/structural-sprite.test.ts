@@ -183,4 +183,26 @@ describe('structural — Sprite', () => {
       root.destroy();
     });
   });
+
+  it('per-call renders match a Container render (same draws, instances, transform rows)', () => {
+    withHarness(harness => {
+      const [texture] = makeTextures(1);
+
+      const loose = Array.from({ length: 500 }, (_, i) => {
+        const sprite = new Sprite(texture);
+        sprite.setPosition((i * 7) % 640, (i * 13) % 480);
+        return sprite;
+      });
+      const crossCall = measureCrossCallFrame(harness, loose, 2);
+      for (const sprite of loose) sprite.destroy();
+
+      const { root } = buildSpriteScene({ count: 500, textures: makeTextures(1) });
+      const container = measureSteadyFrame(harness, root, 2);
+      root.destroy();
+
+      expect(crossCall.drawCalls).toBe(container.drawCalls);
+      expect(crossCall.instances).toBe(container.instances);
+      expect(crossCall.transformRows).toBe(container.transformRows);
+    });
+  });
 });
