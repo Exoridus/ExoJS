@@ -384,6 +384,10 @@ describe('ParticleSystem render-inject backend detection', () => {
     const env = makeMockDevice();
     const fakeBackend = Object.create(WebGpuBackend.prototype) as object;
     Object.defineProperty(fakeBackend, 'device', { value: env.device, configurable: true });
+    // Frame-scoped batching uses these instance stacks in _beginDrawPlan/_endDrawPlan;
+    // Object.create bypasses the constructor that initializes them, so seed them here.
+    Object.defineProperty(fakeBackend, '_planBaseStack', { value: [], configurable: true });
+    Object.defineProperty(fakeBackend, '_planHashStack', { value: [], configurable: true });
 
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
     system.addUpdateModule(new ApplyForce(0, 0));
