@@ -230,6 +230,16 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         };
         window.addEventListener('scroll', onScroll, { passive: true });
         window.addEventListener('resize', onScroll, { passive: true });
+
+        // Clicking a link jumps to its heading. Activate it immediately so the
+        // rail reflects the click right away — independent of where the scroll
+        // settles (a jumped-to heading lands at the very top, which the scroll
+        // heuristic alone may attribute to the next section).
+        for (const [target, link] of map) {
+            link.addEventListener('click', () => setActive(link));
+            void target;
+        }
+
         update();
     })();
 </script>
