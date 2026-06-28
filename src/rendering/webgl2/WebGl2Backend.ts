@@ -183,6 +183,8 @@ export class WebGl2Backend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
+  /** Rows of the transform texture already uploaded this frame (delta-upload guard). */
+  private _uploadedRows = 0;
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -284,6 +286,7 @@ export class WebGl2Backend implements RenderBackend {
     // The transform buffer is frame-scoped: reset it once per frame here (was
     // previously reset per render() call in _beginDrawPlan).
     this._transformBuffer.begin();
+    this._uploadedRows = 0;
 
     return this;
   }
@@ -425,6 +428,10 @@ export class WebGl2Backend implements RenderBackend {
     if (this._drawPlanDepth > 0) {
       this._flushActiveRenderer();
       this._transformBuffer.rewindTo(planBase, planHash);
+
+      if (planBase < this._uploadedRows) {
+        this._uploadedRows = planBase;
+      }
     }
 
     // Only assert balance at the outermost plan.
@@ -826,6 +833,7 @@ export class WebGl2Backend implements RenderBackend {
       });
       this._transformTextureHash = 0;
       this._transformTextureCount = -1;
+      this._uploadedRows = 0;
     }
 
     const snapshot = this._transformBuffer.commitSnapshot(requiredCount);
@@ -836,10 +844,17 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     if (snapshot.changed || snapshot.count !== this._transformTextureCount || snapshot.hash !== this._transformTextureHash) {
-      nextTransformTexture.commitRect(0, 0, 3, snapshot.count);
-      this._transformBuffer.recordUpload(snapshot.count);
-      this._transformTextureHash = snapshot.hash;
+      const firstRow = Math.min(this._uploadedRows, snapshot.count);
+      const rowCount = snapshot.count - firstRow;
+
+      if (rowCount > 0) {
+        nextTransformTexture.commitRect(0, firstRow, 3, rowCount);
+        this._transformBuffer.recordUpload(rowCount);
+      }
+
+      this._uploadedRows = snapshot.count;
       this._transformTextureCount = snapshot.count;
+      this._transformTextureHash = snapshot.hash;
     }
 
     return this.bindTexture(nextTransformTexture, unit);
