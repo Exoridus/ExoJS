@@ -94,6 +94,11 @@ export class TransformBuffer {
     return this._version;
   }
 
+  /** Running content hash of the rows written since begin(). @internal */
+  public get frameHash(): number {
+    return this._frameHash;
+  }
+
   public begin(expectedCount = 0): this {
     if (expectedCount > 0) {
       this._ensureCapacity(expectedCount);
@@ -115,6 +120,25 @@ export class TransformBuffer {
     this.write(slot, transform, tint);
 
     return slot;
+  }
+
+  /**
+   * Rewind the write cursor to `count`, freeing the rows above it for reuse, and
+   * (optionally) restore the running content hash to its pre-rewind value so the
+   * freed rows' writes don't linger in the hash and trigger spurious re-uploads.
+   * Used by nested draw plans (filters / cacheAsBitmap) to isolate their slots.
+   * @internal
+   */
+  public rewindTo(count: number, frameHash?: number): this {
+    if (count >= 0 && count < this._count) {
+      this._count = count;
+
+      if (frameHash !== undefined) {
+        this._frameHash = frameHash >>> 0;
+      }
+    }
+
+    return this;
   }
 
   public write(slot: number, transform: Matrix, tint: Color): this {

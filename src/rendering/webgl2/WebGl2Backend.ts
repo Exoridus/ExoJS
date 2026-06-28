@@ -181,6 +181,8 @@ export class WebGl2Backend implements RenderBackend {
   private _transformTextureCount = -1;
   private _activeDrawCommand: DrawCommand | null = null;
   private _drawPlanDepth = 0;
+  private readonly _planBaseStack: number[] = [];
+  private readonly _planHashStack: number[] = [];
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -279,13 +281,27 @@ export class WebGl2Backend implements RenderBackend {
 
   public resetStats(): this {
     resetRenderStats(this._stats);
+    // The transform buffer is frame-scoped: reset it once per frame here (was
+    // previously reset per render() call in _beginDrawPlan).
+    this._transformBuffer.begin();
 
     return this;
   }
 
+  /** Frame-global slot base the plan builder indexes from. @internal */
+  public get transformBufferCount(): number {
+    return this._transformBuffer.count;
+  }
+
   /** @internal */
-  public _beginDrawPlan(nodeCount: number): void {
-    this._transformBuffer.begin(nodeCount);
+  public _beginDrawPlan(_nodeCount: number): void {
+    // Do NOT reset the transform buffer here — it is frame-scoped (reset in
+    // resetStats). The builder already based this plan's node indices at the
+    // current buffer count, so writes land in fresh frame-global slots and
+    // batches survive across render() calls. Remember this plan's base so a
+    // nested plan can free its rows on end.
+    this._planBaseStack.push(this._transformBuffer.count);
+    this._planHashStack.push(this._transformBuffer.frameHash);
     this._activeDrawCommand = null;
     this._drawPlanDepth++;
   }
@@ -395,13 +411,23 @@ export class WebGl2Backend implements RenderBackend {
   public _endDrawPlan(): void {
     this._activeDrawCommand = null;
 
+    const planBase = this._planBaseStack.pop() ?? 0;
+    const planHash = this._planHashStack.pop() ?? 0;
+
     if (this._drawPlanDepth > 0) {
       this._drawPlanDepth--;
     }
 
-    // Only assert balance at the outermost plan: cacheAsBitmap draws a cache
-    // sprite via a nested render(), whose inner _endDrawPlan sees the still-open
-    // outer clips — those are not leaks.
+    // A nested plan (filter / cacheAsBitmap) just ended: flush its draws, then
+    // free its transform rows so the frame-scoped buffer only grows with
+    // top-level render() calls. Top-level plans (depth back to 0) keep their rows
+    // so cross-call batching survives to the frame-end flush.
+    if (this._drawPlanDepth > 0) {
+      this._flushActiveRenderer();
+      this._transformBuffer.rewindTo(planBase, planHash);
+    }
+
+    // Only assert balance at the outermost plan.
     if (this._drawPlanDepth === 0) {
       this._assertBalancedStencil();
     }
@@ -715,7 +741,12 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public setView(view: View | null): this {
-    this._flushActiveRenderer();
+    // Only flush the open batch when the view actually changes. The unconditional
+    // flush forced one draw call per render() call (each render() re-applies the
+    // same camera view), defeating cross-call batching.
+    if (this._renderTarget.view !== view) {
+      this._flushActiveRenderer();
+    }
     this._renderTarget.setView(view);
     this._bindRenderTarget(this._renderTarget);
 
