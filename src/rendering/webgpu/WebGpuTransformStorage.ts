@@ -28,6 +28,11 @@ export class WebGpuTransformStorage {
     return this._buffer;
   }
 
+  /** Reset the underlying frame-scoped buffer. Used directly by tests. @internal */
+  public begin(nodeCount = 0): void {
+    this._buffer.begin(nodeCount);
+  }
+
   public writeCommand(command: DrawCommand, transform?: Matrix): void {
     const drawable = command.drawable;
 
