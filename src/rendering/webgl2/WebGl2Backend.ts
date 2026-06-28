@@ -835,6 +835,10 @@ export class WebGl2Backend implements RenderBackend {
       throw new Error('Transform texture must be initialized before binding.');
     }
 
+    // A skipped flush (all three guards false) leaves the dirty range uncleared
+    // until the next begin(). Safe: every write() mixes its slot into _frameHash,
+    // so a non-empty dirty range always coincides with snapshot.changed = true —
+    // the upload branch is always taken before any dirty rows could be stale.
     if (snapshot.changed || snapshot.count !== this._transformTextureCount || snapshot.hash !== this._transformTextureHash) {
       // Upload only the rows actually written since the last upload (delta), so
       // barrier-heavy frames don't re-upload the whole growing buffer. A reused

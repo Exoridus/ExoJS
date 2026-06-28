@@ -100,9 +100,15 @@ export class WebGpuTransformStorage {
       this._growBuffer(device, requiredBytes);
     }
 
+    // A skipped flush (all three guards false) leaves the dirty range uncleared
+    // until the next begin(). Safe: every write() mixes its slot into _frameHash,
+    // so a non-empty dirty range always coincides with snapshot.changed = true —
+    // the upload branch is always taken before any dirty rows could be stale.
     if (snapshot.changed || snapshot.hash !== this._storageHash || snapshot.count !== this._storageCount) {
-      // Always consume the dirty range first to clear it, regardless of which upload
-      // path runs — a stale dirty range must never leak into the next flush.
+      // Always consume the dirty range first to clear it — regardless of whether
+      // the full-upload path (post-grow) or the delta path runs below. Both paths
+      // are inside this if-branch; the skip case (snapshot unchanged) never reaches
+      // here, so the dirty range is only consumed when an upload is actually issued.
       const { firstRow, rowCount } = this._buffer.consumeDirtyRange(snapshot.count);
 
       const slotBytes = slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
