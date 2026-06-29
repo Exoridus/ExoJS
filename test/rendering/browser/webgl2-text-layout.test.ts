@@ -162,21 +162,25 @@ void main() {
   outColor = texture(u_texture, v_uv) * v_color;
 }`,
 
-  // Minimal text vertex path: project the laid-out local glyph position. The
+  // Minimal text vertex path: project the (already world-space) glyph position. The
   // assertions read geometry, not pixels, so the exact transform is immaterial;
-  // `a_nodeIndex` is referenced so it is not optimised out (the renderer wires it
-  // as a vertex attribute on connect and would fail to find the location).
+  // `a_nodeIndex` and `a_gradUV` are referenced so they are not optimised out (the
+  // renderer wires them as vertex attributes on connect and would fail to find the
+  // location). Mirrors the real text.vert attribute interface (no vertex texelFetch).
   textVertexSource: `#version 300 es
 precision highp float;
 layout(location = 0) in vec2 a_position;
 layout(location = 1) in vec2 a_texcoord;
 layout(location = 2) in float a_nodeIndex;
+layout(location = 3) in vec2 a_gradUV;
 uniform mat3 u_projection;
 out vec2 v_texcoord;
+out vec2 v_gradUV;
 void main(void) {
   vec2 local = a_position + vec2(a_nodeIndex * 0.0);
   gl_Position = vec4((u_projection * vec3(local, 1.0)).xy, 0.0, 1.0);
   v_texcoord = a_texcoord;
+  v_gradUV = a_gradUV;
 }`,
 
   // SDF coverage → premultiplied white. Background stays at the black clear color.
