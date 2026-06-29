@@ -591,18 +591,21 @@ class AssetBrowserScene extends Scene {
         for (let i = 0; i < CATEGORIES_ROW1.length; i++) {
             const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
             const t = this.catBtnTexts[i];
+            t.text = CATEGORIES_ROW1[i].label;
             t.setPosition(bx + (CAT_BTN_W - 22) / 2, CAT_BTN_Y1 + 12);
             context.render(t);
         }
         for (let i = 0; i < CATEGORIES_ROW2.length; i++) {
             const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
             const t = this.catBtnTexts[CATEGORIES_ROW1.length + i];
+            t.text = CATEGORIES_ROW2[i].label;
             t.setPosition(bx + (CAT_BTN_W - 22) / 2, CAT_BTN_Y2 + 12);
             context.render(t);
         }
         for (let i = 0; i < BG_OPTIONS.length; i++) {
             const bx = BG_BTN_X0 + i * (BG_BTN_SIZE + 5);
             const t = this.bgBtnTexts[i];
+            t.text = BG_OPTIONS[i].label;
             t.style.fillColor = i === 1 ? C.white : C.dim;
             t.setPosition(bx + 7, BG_BTN_Y + 7);
             context.render(t);
