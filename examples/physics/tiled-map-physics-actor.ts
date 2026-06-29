@@ -2,9 +2,8 @@ import { Application, Color, Json, Scene, Sprite, Spritesheet, type SpritesheetD
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, type RectangleObject, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { buildCollidersFromObjectLayer } from '@examples/physics-tilemap';
 import { mountControls } from '@examples/runtime';
-
-import { buildCollidersFromObjectLayer } from '../shared/physics-tilemap.js';
 
 // Combined Tiled + physics demo.
 //

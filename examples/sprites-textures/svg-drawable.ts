@@ -18,7 +18,10 @@ class SvgDrawableScene extends Scene {
     private sprite!: Sprite;
 
     override async load(loader): Promise<void> {
-        await loader.load(SvgAsset, { mark: 'svg/rune-mark.svg' });
+        // rune-mark.svg carries only a viewBox (no width/height), so it would
+        // rasterise to a 0x0 image. Request an explicit pixel size — the SVG is
+        // vector, so it stays crisp scaled up to 256x256.
+        await loader.load(SvgAsset, { mark: 'svg/rune-mark.svg' }, { width: 256, height: 256 });
     }
 
     override init(loader): void {
