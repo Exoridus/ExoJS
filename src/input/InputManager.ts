@@ -687,6 +687,10 @@ export class InputManager implements System {
 
         this.gamepadsByBrowserIndex.set(browserIndex, pad);
         this.onGamepadConnected.dispatch(pad);
+      } else {
+        // The browser hands back a fresh snapshot object each poll; re-point the
+        // slot at it so button/axis state doesn't freeze at connect-time values.
+        existing._refreshBrowserGamepad(browserGamepad);
       }
     }
 
