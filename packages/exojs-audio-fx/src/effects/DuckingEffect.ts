@@ -6,8 +6,12 @@ class DuckingProcessor extends AudioWorkletProcessor {
         return [
             { name: 'threshold', defaultValue: -20, minValue: -100, maxValue: 0, automationRate: 'k-rate' },
             { name: 'ratio', defaultValue: 4, minValue: 1, maxValue: 20, automationRate: 'k-rate' },
-            { name: 'attack', defaultValue: 0.03, minValue: 0.001, maxValue: 1, automationRate: 'k-rate' },
-            { name: 'release', defaultValue: 0.3, minValue: 0.001, maxValue: 5, automationRate: 'k-rate' },
+            // attack/release are one-pole smoothing coefficients (1 - exp(-1/tau)),
+            // not times — their value lives in [0, 1]. A 0.001 floor clipped the
+            // small coefficients of typical attack/release times (e.g. 30 ms at
+            // 48 kHz ≈ 0.0007), so the browser clamped them and logged a warning.
+            { name: 'attack', defaultValue: 0.03, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+            { name: 'release', defaultValue: 0.3, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
         ];
     }
 
