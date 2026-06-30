@@ -1,11 +1,32 @@
 {
-  "generatedAt": "2026-06-30T19:36:10.510Z",
+  "generatedAt": "2026-06-30T19:42:04.714Z",
   "description": "Stage-1 BeatDetector baseline. Phase 1 = RECORD ONLY; thresholds become hard assertions in Stage 2.",
   "stage2TargetList": [
+    {
+      "label": "clicktrack_300bpm",
+      "failures": [
+        "never-locked",
+        "low-recall:15%"
+      ]
+    },
     {
       "label": "breakDrop_128bpm",
       "failures": [
         "fp-rate-high:40.0/min"
+      ]
+    },
+    {
+      "label": "djMix_180bpm",
+      "failures": [
+        "never-locked",
+        "low-recall:32%"
+      ]
+    },
+    {
+      "label": "djMixDrift_180bpm_d5",
+      "failures": [
+        "low-recall:33%",
+        "ramp-lag:bpm-err=54.0"
       ]
     }
   ],
@@ -245,6 +266,35 @@
       "formatted": "--- clicktrack_250bpm ---\n  Duration       : 15.0s\n  True BPM (mid) : 250.0\n  BPM error      : mean=5.63 max=5.68 signed=3.18 (1.27%) [n=253]\n  Beat offset    : mean=48.7ms p90=106.7ms median=37.3ms [41 matched]\n  Beats          : emitted=43 GT=62 matched=41 FP=2 (8.0/min) miss=21 recall=66.1%\n  Lock time      : 1.54s\n  Confidence     : correct=0.506 wrong=0.000 r=0.000 [n=253]\n  Octave error   : none\n  Detection rate : 90.0% of state messages have tempo > 0\n  Result         : PASS"
     },
     {
+      "label": "clicktrack_300bpm",
+      "bpmTrue": 300,
+      "bpmErrorMeanAbs": 199.553571428572,
+      "bpmErrorMaxAbs": 199.55357142857144,
+      "bpmErrorSignedPct": -66.51785714285734,
+      "beatOffsetMeanMs": 5.090909090908652,
+      "beatOffsetP90Ms": 8.000000000000007,
+      "beatOffsetMedianMs": 2.666666666666373,
+      "matchedCount": 11,
+      "emittedCount": 11,
+      "gtCount": 75,
+      "fpCount": 0,
+      "fpRatePerMin": 0,
+      "missCount": 64,
+      "recall": 0.14666666666666667,
+      "lockTimeSec": null,
+      "confidenceWhenCorrect": 0,
+      "confidenceWhenWrong": 0.5826972663809055,
+      "confidenceCorrelation": 0,
+      "octaveHalf": false,
+      "octaveDouble": false,
+      "detectionRate": 0.900355871886121,
+      "failures": [
+        "never-locked",
+        "low-recall:15%"
+      ],
+      "formatted": "--- clicktrack_300bpm ---\n  Duration       : 15.0s\n  True BPM (mid) : 300.0\n  BPM error      : mean=199.55 max=199.55 signed=-199.55 (-66.52%) [n=253]\n  Beat offset    : mean=5.1ms p90=8.0ms median=2.7ms [11 matched]\n  Beats          : emitted=11 GT=75 matched=11 FP=0 (0.0/min) miss=64 recall=14.7%\n  Lock time      : NEVER\n  Confidence     : correct=0.000 wrong=0.583 r=0.000 [n=253]\n  Octave error   : none\n  Detection rate : 90.0% of state messages have tempo > 0\n  Result         : FAIL (BPM error > 5% (mean=199.6 BPM); low recall 14.7% (< 50%); never locked to correct tempo)"
+    },
+    {
       "label": "halfTime_64bpm",
       "bpmTrue": 64,
       "bpmErrorMeanAbs": 0.07954545454545325,
@@ -401,6 +451,116 @@
       "detectionRate": 0.900355871886121,
       "failures": [],
       "formatted": "--- grooveOffset_120bpm_10ms ---\n  Duration       : 15.0s\n  True BPM (mid) : 120.0\n  BPM error      : mean=0.32 max=0.32 signed=-0.32 (-0.27%) [n=253]\n  Beat offset    : mean=6.1ms p90=16.5ms median=3.5ms [15 matched]\n  Beats          : emitted=16 GT=30 matched=15 FP=1 (4.0/min) miss=15 recall=50.0%\n  Lock time      : 1.54s\n  Confidence     : correct=0.381 wrong=0.000 r=0.000 [n=253]\n  Octave error   : none\n  Detection rate : 90.0% of state messages have tempo > 0\n  Result         : PASS"
+    },
+    {
+      "label": "djMix_180bpm",
+      "bpmTrue": 180,
+      "bpmErrorMeanAbs": 60.3191489361705,
+      "bpmErrorMaxAbs": 60.31914893617021,
+      "bpmErrorSignedPct": -33.5106382978725,
+      "beatOffsetMeanMs": 111.90804597701097,
+      "beatOffsetP90Ms": 162.66666666666475,
+      "beatOffsetMedianMs": 154.66666666666384,
+      "matchedCount": 29,
+      "emittedCount": 30,
+      "gtCount": 90,
+      "fpCount": 1,
+      "fpRatePerMin": 2,
+      "missCount": 61,
+      "recall": 0.32222222222222224,
+      "lockTimeSec": null,
+      "confidenceWhenCorrect": 0,
+      "confidenceWhenWrong": 0.5218372444624826,
+      "confidenceCorrelation": 0,
+      "octaveHalf": false,
+      "octaveDouble": false,
+      "detectionRate": 0.9501779359430605,
+      "failures": [
+        "never-locked",
+        "low-recall:32%"
+      ],
+      "formatted": "--- djMix_180bpm ---\n  Duration       : 30.0s\n  True BPM (mid) : 180.0\n  BPM error      : mean=60.32 max=60.32 signed=-60.32 (-33.51%) [n=534]\n  Beat offset    : mean=111.9ms p90=162.7ms median=154.7ms [29 matched]\n  Beats          : emitted=30 GT=90 matched=29 FP=1 (2.0/min) miss=61 recall=32.2%\n  Lock time      : NEVER\n  Confidence     : correct=0.000 wrong=0.522 r=0.000 [n=534]\n  Octave error   : none\n  Detection rate : 95.0% of state messages have tempo > 0\n  Result         : FAIL (BPM error > 5% (mean=60.3 BPM); low recall 32.2% (< 50%); never locked to correct tempo)"
+    },
+    {
+      "label": "tempoDrift_150_to_128bpm",
+      "bpmTrue": 128,
+      "bpmErrorMeanAbs": 5.276162683237424,
+      "bpmErrorMaxAbs": 10.772626900584783,
+      "bpmErrorSignedPct": 0.9393691523401155,
+      "beatOffsetMeanMs": 109.71092187564886,
+      "beatOffsetP90Ms": 178.6152047613552,
+      "beatOffsetMedianMs": 119.71250172763037,
+      "matchedCount": 56,
+      "emittedCount": 59,
+      "gtCount": 70,
+      "fpCount": 3,
+      "fpRatePerMin": 6,
+      "missCount": 14,
+      "recall": 0.8,
+      "lockTimeSec": 1.544,
+      "confidenceWhenCorrect": 0.4254150936236255,
+      "confidenceWhenWrong": 0.4681408948684562,
+      "confidenceCorrelation": -0.1896183069279276,
+      "octaveHalf": false,
+      "octaveDouble": false,
+      "detectionRate": 0.9501779359430605,
+      "failures": [],
+      "formatted": "--- tempoDrift_150_to_128bpm ---\n  Duration       : 30.0s\n  True BPM (mid) : 128.0\n  BPM error      : mean=5.28 max=10.77 signed=1.20 (0.94%) [n=534]\n  Beat offset    : mean=109.7ms p90=178.6ms median=119.7ms [56 matched]\n  Beats          : emitted=59 GT=70 matched=56 FP=3 (6.0/min) miss=14 recall=80.0%\n  Lock time      : 1.54s\n  Confidence     : correct=0.425 wrong=0.468 r=-0.190 [n=534]\n  Octave error   : none\n  Detection rate : 95.0% of state messages have tempo > 0\n  Result         : PASS"
+    },
+    {
+      "label": "djMixDrift_180bpm_d5",
+      "bpmTrue": 180,
+      "bpmErrorMeanAbs": 53.96914798220107,
+      "bpmErrorMaxAbs": 65.31063551736231,
+      "bpmErrorSignedPct": -29.78871701779342,
+      "beatOffsetMeanMs": 101.32384461440869,
+      "beatOffsetP90Ms": 161.74682322627731,
+      "beatOffsetMedianMs": 145.833616469222,
+      "matchedCount": 30,
+      "emittedCount": 33,
+      "gtCount": 90,
+      "fpCount": 3,
+      "fpRatePerMin": 6,
+      "missCount": 60,
+      "recall": 0.3333333333333333,
+      "lockTimeSec": 1.544,
+      "confidenceWhenCorrect": 0.13998688769902862,
+      "confidenceWhenWrong": 0.5618359213425826,
+      "confidenceCorrelation": -0.6839184557522069,
+      "octaveHalf": false,
+      "octaveDouble": false,
+      "detectionRate": 0.9501779359430605,
+      "failures": [
+        "low-recall:33%",
+        "ramp-lag:bpm-err=54.0"
+      ],
+      "formatted": "--- djMixDrift_180bpm_d5 ---\n  Duration       : 30.0s\n  True BPM (mid) : 180.0\n  BPM error      : mean=53.97 max=65.31 signed=-53.62 (-29.79%) [n=534]\n  Beat offset    : mean=101.3ms p90=161.7ms median=145.8ms [30 matched]\n  Beats          : emitted=33 GT=90 matched=30 FP=3 (6.0/min) miss=60 recall=33.3%\n  Lock time      : 1.54s\n  Confidence     : correct=0.140 wrong=0.562 r=-0.684 [n=534]\n  Octave error   : none\n  Detection rate : 95.0% of state messages have tempo > 0\n  Result         : FAIL (BPM error > 5% (mean=54.0 BPM); low recall 33.3% (< 50%))"
+    },
+    {
+      "label": "softOnset_90bpm",
+      "bpmTrue": 90,
+      "bpmErrorMeanAbs": 0.7258064516128968,
+      "bpmErrorMaxAbs": 0.7258064516128968,
+      "bpmErrorSignedPct": 0.8064516129032187,
+      "beatOffsetMeanMs": 45.33333333333317,
+      "beatOffsetP90Ms": 85.33333333333282,
+      "beatOffsetMedianMs": 48.00000000000004,
+      "matchedCount": 18,
+      "emittedCount": 19,
+      "gtCount": 22,
+      "fpCount": 1,
+      "fpRatePerMin": 4,
+      "missCount": 4,
+      "recall": 0.8181818181818182,
+      "lockTimeSec": 1.544,
+      "confidenceWhenCorrect": 0.3688419612992482,
+      "confidenceWhenWrong": 0,
+      "confidenceCorrelation": 0,
+      "octaveHalf": false,
+      "octaveDouble": false,
+      "detectionRate": 0.900355871886121,
+      "failures": [],
+      "formatted": "--- softOnset_90bpm ---\n  Duration       : 15.0s\n  True BPM (mid) : 90.0\n  BPM error      : mean=0.73 max=0.73 signed=0.73 (0.81%) [n=253]\n  Beat offset    : mean=45.3ms p90=85.3ms median=48.0ms [18 matched]\n  Beats          : emitted=19 GT=22 matched=18 FP=1 (4.0/min) miss=4 recall=81.8%\n  Lock time      : 1.54s\n  Confidence     : correct=0.369 wrong=0.000 r=0.000 [n=253]\n  Octave error   : none\n  Detection rate : 90.0% of state messages have tempo > 0\n  Result         : PASS"
     }
   ]
 }
