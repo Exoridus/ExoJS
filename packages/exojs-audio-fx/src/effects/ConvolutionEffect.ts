@@ -62,8 +62,8 @@ interface ConvolutionEffectSetup {
  *
  * @example
  * ```ts
- * const ir = await audioManager.load('hall.wav');
- * const reverb = new ConvolutionEffect({ impulse: ir, wet: 0.6 });
+ * await loader.load(Sound, { hall: 'hall.wav' });
+ * const reverb = new ConvolutionEffect({ impulse: loader.get(Sound, 'hall'), wet: 0.6 });
  * bus.addEffect(reverb);
  * ```
  */
