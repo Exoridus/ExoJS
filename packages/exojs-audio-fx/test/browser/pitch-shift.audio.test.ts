@@ -103,13 +103,11 @@ describe('PitchShift worklet — real Web Audio', () => {
       candidates.push({ delay: d, level: rms(tail(combine(d), 0.5)) });
     }
     const best = candidates.reduce((a, b) => (b.level > a.level ? b : a));
-    console.log(`PitchShift dry-latency sweep: best=${best.delay} samples (L=${L}), level=${best.level.toFixed(4)}`);
+    void best; // sweep validated L=1280; result unused at runtime
 
     const fromS = 0.5; // skip warmup
     const levelComp = rms(tail(combine(L), fromS));
     const levelNoComp = rms(tail(combine(0), fromS));
-
-    console.log(`levelComp=${levelComp.toFixed(4)}, levelNoComp=${levelNoComp.toFixed(4)}, ratio=${(levelComp / levelNoComp).toFixed(3)}`);
 
     // The compensated mix must be clearly louder at 440 Hz than the naive mix,
     // and close to the dry tone's own level (0.5 amplitude → rms ≈ 0.5/√2 ≈ 0.354,

@@ -280,4 +280,23 @@ describe('WorkletEffect', () => {
     expect(filter['_dryDelay']).toBeNull();
     filter.destroy();
   });
+
+  it('_sampleRate uses the real context rate (not the 48000 fallback) when _dryLatencySeconds is read in _setup', () => {
+    // The mock AudioContext has sampleRate=44100 (not 48000). A subclass that
+    // derives _dryLatencySeconds from this._sampleRate must see 44100, so the
+    // resulting delayTime reflects 1000/44100, NOT the wrong 1000/48000.
+    class SampleRateFilter extends TestWorkletEffect {
+      protected override get _dryLatencySeconds(): number {
+        return 1000 / this._sampleRate;
+      }
+    }
+    const filter = new SampleRateFilter();
+    const expected = 1000 / 44100; // ~0.022676
+    const wrong = 1000 / 48000;    // ~0.020833
+    expect(filter['_dryDelay']).not.toBeNull();
+    // Must be close to the 44100-based value, not the 48000 fallback.
+    expect(filter['_dryDelay']!.delayTime.value).toBeCloseTo(expected, 5);
+    expect(filter['_dryDelay']!.delayTime.value).not.toBeCloseTo(wrong, 5);
+    filter.destroy();
+  });
 });

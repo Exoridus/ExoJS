@@ -146,13 +146,18 @@ export abstract class WorkletEffect extends AudioEffect {
     const dryGain = audioContext.createGain();
     const wetGain = audioContext.createGain();
 
+    // Assign the gain references immediately so _sampleRate (which reads
+    // this._outputGain.context.sampleRate) is populated before subclasses
+    // compute _dryLatencySeconds below.
+    this._inputGain = inputGain;
+    this._outputGain = outputGain;
+
     // Dry path: input → [dryDelay] → dryGain → output. The delay aligns dry with
     // the worklet's latency so intermediate wet values stay phase-coherent.
     const dryLatency = this._dryLatencySeconds;
     let dryDelay: DelayNode | null = null;
     if (dryLatency > 0) {
       dryDelay = audioContext.createDelay(Math.max(1, dryLatency * 2));
-      dryDelay.delayTime.value = dryLatency;
       dryDelay.delayTime.setValueAtTime(dryLatency, audioContext.currentTime);
       inputGain.connect(dryDelay);
       dryDelay.connect(dryGain);
@@ -167,8 +172,6 @@ export abstract class WorkletEffect extends AudioEffect {
     wetGain.gain.setValueAtTime(0, audioContext.currentTime);
     wetGain.connect(outputGain);
 
-    this._inputGain = inputGain;
-    this._outputGain = outputGain;
     this._dryGain = dryGain;
     this._wetGain = wetGain;
     this._dryDelay = dryDelay;

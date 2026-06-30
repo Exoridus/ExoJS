@@ -293,15 +293,20 @@ class MockAudioContext {
   }
 
   public createDelay(_maxDelayTime?: number): DelayNode {
+    const delayTime = {
+      value: 0,
+      // Syncs .value so tests can read the scheduled value without a direct
+      // .value assignment in production code (the real AudioParam does this too).
+      setValueAtTime(v: number) {
+        this.value = v;
+      },
+      setTargetAtTime: () => undefined,
+    };
     return {
       connect: () => undefined,
       disconnect: () => undefined,
       context: this,
-      delayTime: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
-        value: 0,
-      },
+      delayTime,
     } as unknown as DelayNode;
   }
 
