@@ -33,17 +33,17 @@ interface PingPongDelayEffectSetup {
 /**
  * Stereo ping-pong delay effect using two cross-fed {@link DelayNode}s that
  * bounce the signal alternately between left and right channels. The input
- * feeds both a left delay and a right delay; each delay's output cross-feeds
- * into the opposite channel's delay at the configured `feedback` level,
- * producing the characteristic L↔R slapback cascade. Each tap is routed
- * through a {@link StereoPannerNode} panned hard left or right, maintaining
- * hard-left / hard-right stereo separation throughout the feedback tail.
+ * feeds only the left delay; cross-feedback (L→R and R→L) then causes the
+ * signal to alternate channels on every tap, producing the characteristic L↔R
+ * slapback cascade. Each tap is routed through a {@link StereoPannerNode}
+ * panned hard left or right, maintaining hard-left / hard-right stereo
+ * separation throughout the feedback tail.
  *
  * Node graph:
  * ```
  * input(GainNode) → dryGain ────────────────────────────────── output(GainNode)
  * input           → delayL → feedbackGainA → delayR                   ↑
- * input           → delayR → feedbackGainB → delayL                   │
+ *                   delayR → feedbackGainB → delayL                   │
  * delayL          → pannerL (pan = -1, hard left)  → wetGain ─────────┘
  * delayR          → pannerR (pan = +1, hard right) → wetGain
  * ```
@@ -195,9 +195,11 @@ export class PingPongDelayEffect extends AudioEffect {
     inputGain.connect(dryGain);
     dryGain.connect(outputGain);
 
-    // Wet path: input feeds both delays
+    // Wet path: input feeds only the left delay.
+    // Feeding both delays symmetrically would produce identical L/R evolution
+    // (no ping-pong). The cross-feedback edges below route each tap into the
+    // opposite channel's delay, creating the alternating L↔R slapback.
     inputGain.connect(delayL);
-    inputGain.connect(delayR);
 
     // Cross-feedback: L → R and R → L
     delayL.connect(feedbackGainA);

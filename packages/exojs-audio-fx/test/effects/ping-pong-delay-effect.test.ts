@@ -191,12 +191,13 @@ describe('PingPongDelayEffect', () => {
       pannerSpy.mockRestore();
     });
 
-    it('connects wet input: input → delayL and input → delayR', () => {
+    it('feeds input only into delayL (asymmetric seeding for true ping-pong)', () => {
       const ctx = getAudioContext();
       const { inputGain, delayL, delayR, gainSpy, delaySpy, pannerSpy } = wireAll(ctx);
       const effect = new PingPongDelayEffect();
+      // Input must seed only the left delay — symmetric seeding collapses L/R to identical mono
       expect(inputGain.connect).toHaveBeenCalledWith(delayL);
-      expect(inputGain.connect).toHaveBeenCalledWith(delayR);
+      expect(inputGain.connect).not.toHaveBeenCalledWith(delayR);
       effect.destroy();
       gainSpy.mockRestore();
       delaySpy.mockRestore();
