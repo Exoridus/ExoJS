@@ -185,6 +185,42 @@ describe('ReverbEffect', () => {
     });
   });
 
+  describe('dry/wet balance', () => {
+    // _setupNodes createGain order: inputGain, outputGain, dryGain, wetGain.
+    const wireGains = (ctx: AudioContext) => {
+      const convolver = makeConvolverNode();
+      convolver.context = ctx;
+      const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
+      let i = 0;
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
+      const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
+      return { gains, dryGain: gains[2], wetGain: gains[3], gainSpy, convolverSpy };
+    };
+
+    it('sets complementary dry/wet gains on construction (dry = 1 - wet)', () => {
+      const ctx = getAudioContext();
+      const { dryGain, wetGain, gainSpy, convolverSpy } = wireGains(ctx);
+      const filter = new ReverbEffect({ wet: 0.75 });
+      expect(wetGain.gain.setValueAtTime).toHaveBeenCalledWith(0.75, expect.anything());
+      expect(dryGain.gain.setValueAtTime).toHaveBeenCalledWith(0.25, expect.anything());
+      filter.destroy();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it('wet setter ramps complementary dry/wet gains', () => {
+      const ctx = getAudioContext();
+      const { dryGain, wetGain, gainSpy, convolverSpy } = wireGains(ctx);
+      const filter = new ReverbEffect();
+      filter.wet = 0.8;
+      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.anything(), expect.anything());
+      expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.2), expect.anything(), expect.anything());
+      filter.destroy();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+  });
+
   describe('destroy', () => {
     it('disconnects all internal nodes', () => {
       const ctx = getAudioContext();

@@ -113,6 +113,21 @@ describe('DelayEffect', () => {
       expect(filter.outputNode).toBe(outputGain);
       filter.destroy();
     });
+
+    it('sets complementary dry/wet gains on construction (dry = 1 - wet)', () => {
+      const filter = new DelayEffect({ wet: 0.75 });
+      expect(wetGain.gain.setValueAtTime).toHaveBeenCalledWith(0.75, expect.anything());
+      expect(dryGain.gain.setValueAtTime).toHaveBeenCalledWith(0.25, expect.anything());
+      filter.destroy();
+    });
+
+    it('wet setter ramps complementary dry/wet gains', () => {
+      const filter = new DelayEffect();
+      filter.wet = 0.8;
+      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.anything(), expect.anything());
+      expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.2), expect.anything(), expect.anything());
+      filter.destroy();
+    });
   });
 
   describe('feedback setter', () => {

@@ -8,22 +8,26 @@ export interface PitchShiftEffectOptions {
   /** Dry/wet mix, 0..1. Default 1.0 (full wet). */
   wet?: number;
   /**
-   * Internal grain size in samples. Default 1024 (~21ms at 48kHz).
-   * Larger = more delay but cleaner pitch shifting.
+   * Internal SOLA frame size in samples. Default 1024 (~21ms at 48kHz).
+   * Larger = more latency but better low-frequency alignment; smaller = lower
+   * latency but coarser correlation. The correlation search radius scales with it.
    */
   grainSize?: number;
 }
 
 /**
- * Real-time pitch shifter via granular synthesis (WorkletEffect).
+ * Real-time pitch shifter (WorkletEffect) using SOLA — synchronized
+ * overlap-add. Each synthesis grain is realigned by waveform cross-correlation,
+ * so grain restarts stay phase coherent and the output pitch tracks the `pitch`
+ * ratio exactly across the whole 0.25x–4.0x range (a naive granular delay drifts
+ * the pitch instead).
  *
- * Quality: good for ±1 octave (pitch 0.5x-2.0x). Beyond that, audible
- * artifacts (graininess, phase issues). For high-quality pitch shift,
- * a phase-vocoder approach is required and not available in V1.
+ * Quality: clean, in-tune shifting for tonal material. As with any time-domain
+ * method, sharp transients can smear or double slightly; for those a phase
+ * vocoder would do better at the cost of much more CPU and latency.
  *
- * Latency: ~half-grain-size = ~10ms at default 1024-sample grains
- * (at 48kHz sample rate). Not suitable for live monitoring; fine for
- * games / playback.
+ * Latency: ~one frame + search ≈ 30ms at the default 1024-sample grain
+ * (at 48kHz). Not suitable for live monitoring; fine for games / playback.
  *
  * Use cases:
  *   - Sound variation: random ±200 cent pitch on each footstep / bullet

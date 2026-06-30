@@ -153,6 +153,34 @@ describe('GranularEffect', () => {
       expect(capturedOptions?.processorOptions?.bufferSeconds).toBe(2);
       filter.destroy();
     });
+
+    it('normalizeGain defaults to false and is forwarded', async () => {
+      let capturedOptions: AudioWorkletNodeOptions | undefined;
+      const OrigAWN = globalThis.AudioWorkletNode;
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+        capturedOptions = options;
+        return new OrigAWN(c, name, options);
+      });
+
+      const filter = new GranularEffect();
+      await filter.ready;
+      expect(capturedOptions?.processorOptions?.normalizeGain).toBe(false);
+      filter.destroy();
+    });
+
+    it('normalizeGain=true is forwarded to AudioWorkletNode', async () => {
+      let capturedOptions: AudioWorkletNodeOptions | undefined;
+      const OrigAWN = globalThis.AudioWorkletNode;
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+        capturedOptions = options;
+        return new OrigAWN(c, name, options);
+      });
+
+      const filter = new GranularEffect({ normalizeGain: true });
+      await filter.ready;
+      expect(capturedOptions?.processorOptions?.normalizeGain).toBe(true);
+      filter.destroy();
+    });
   });
 
   // -------------------------------------------------------------------------

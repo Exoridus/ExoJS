@@ -121,6 +121,9 @@ export default defineConfig({
         name: 'exojs-audio-fx',
         alias: aliasConfig,
         include: ['packages/exojs-audio-fx/test/**/*.test.ts'],
+        // The test/browser/** suite needs a real OfflineAudioContext + AudioWorklet
+        // and runs in the browser-audio-chromium project; exclude it from jsdom.
+        exclude: ['packages/exojs-audio-fx/test/browser/**'],
       }),
 
       // ── exojs-react — jsdom + React Testing Library (esbuild JSX) ────────
@@ -227,6 +230,28 @@ export default defineConfig({
             headless: false,
             provider: playwright(),
             instances: [{ browser: 'firefox', contextOptions: { colorScheme: 'dark' } }],
+          },
+        },
+      },
+
+      // ── browser-audio-chromium — real OfflineAudioContext + AudioWorklet ──
+      // Renders the audio-fx worklet effects through a real Web Audio engine in
+      // headless Chromium (the jsdom AudioContext mock cannot render). This is
+      // the acoustic-contract layer for our own DSP (PitchShift/Vocoder/Granular)
+      // — exactly where the shipped pitch/gain bugs lived. Path-gated in CI so it
+      // only runs when audio-fx changes.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-audio-chromium',
+          globals: true,
+          setupFiles: browserSetupFiles,
+          include: ['packages/exojs-audio-fx/test/browser/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: { channel: 'chromium' } }),
+            instances: [{ browser: 'chromium' }],
           },
         },
       },

@@ -22,6 +22,7 @@ class GranularProcessor extends AudioWorkletProcessor {
         this._writePos = 0;
         this._timeUntilNextGrainSamples = 0;
         this._grains = [];  // { startPos, ageSamples, lengthSamples, pitch }
+        this._normalizeGain = opts.normalizeGain ?? false;
     }
 
     process(inputs, outputs, parameters) {
@@ -38,6 +39,17 @@ class GranularProcessor extends AudioWorkletProcessor {
 
         const grainSizeSamples = Math.max(8, Math.floor(grainSize * sampleRate));
         const samplesPerGrain = sampleRate / Math.max(1, density);
+
+        // Optional level normalization. Output RMS scales as sqrt(3/8) (the Hann
+        // window RMS) times sqrt(density * grainSize) — overlapping uncorrelated
+        // grains add in power. Dividing by that factor holds the wet level near
+        // unity regardless of density/grainSize. Default off keeps the expressive
+        // density dynamics that make granular sound the way it does.
+        let normFactor = 1;
+        if (this._normalizeGain) {
+            const expectedGrains = density * grainSize; // simultaneous grains (dimensionless)
+            normFactor = 1 / (0.6123724356957945 * Math.sqrt(Math.max(1e-6, expectedGrains)));
+        }
 
         for (let i = 0; i < input.length; i++) {
             // Write input to circular buffer
@@ -77,7 +89,7 @@ class GranularProcessor extends AudioWorkletProcessor {
                 grain.ageSamples++;
             }
 
-            output[i] = (1 - wet) * input[i] + wet * grainSum;
+            output[i] = (1 - wet) * input[i] + wet * grainSum * normFactor;
         }
         return true;
     }

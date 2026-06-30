@@ -17,6 +17,13 @@ export interface GranularEffectOptions {
   wet?: number;
   /** Internal circular-buffer length in seconds. Compile-time, not runtime. Default 2. */
   bufferSeconds?: number;
+  /**
+   * Compensate the density/grainSize-dependent loudness so the wet level stays
+   * roughly constant (near unity) instead of rising with overlap. Compile-time,
+   * not runtime. Default `false`, which preserves granular's expressive level
+   * dynamics — enable it when you want a predictable, density-independent level.
+   */
+  normalizeGain?: boolean;
 }
 
 /**
@@ -40,6 +47,7 @@ export class GranularEffect extends WorkletEffect {
   private _pitchMax: number;
   private _wet: number;
   private readonly _bufferSeconds: number;
+  private readonly _normalizeGain: boolean;
 
   public constructor(options: GranularEffectOptions = {}) {
     super();
@@ -50,6 +58,7 @@ export class GranularEffect extends WorkletEffect {
     this._pitchMax = Math.max(0.25, Math.min(4, options.pitchMax ?? 1));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._bufferSeconds = options.bufferSeconds ?? 2;
+    this._normalizeGain = options.normalizeGain ?? false;
   }
 
   protected get _workletName(): string {
@@ -62,7 +71,7 @@ export class GranularEffect extends WorkletEffect {
     return {
       numberOfInputs: 1,
       numberOfOutputs: 1,
-      processorOptions: { bufferSeconds: this._bufferSeconds },
+      processorOptions: { bufferSeconds: this._bufferSeconds, normalizeGain: this._normalizeGain },
     };
   }
 
