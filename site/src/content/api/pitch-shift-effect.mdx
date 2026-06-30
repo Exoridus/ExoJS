@@ -1,6 +1,6 @@
 ---
 title: "PitchShiftEffect"
-description: "Real-time pitch shifter via granular synthesis (WorkletEffect). Quality: good for ±1 octave (pitch 0.5x-2.0x). Beyond that, audible artifacts (graininess, phase issues). For high-quality pitch shift, a phase-vocoder approach is required and not available in V1. Latency: ~half-grain-size = ~10ms at default 1024-sample grains (at 48kHz sample rate). Not suitable for live monitoring; fine for games / playback. Use cases: - Sound variation: random ±200 cent pitch on each footstep / bullet - Voice effects: chipmunk (1.5x) or demon (0.7x) for game NPCs - Detune layering: stack 0.99x and 1.01x for thick chorused sound"
+description: "Real-time pitch shifter (WorkletEffect) using SOLA — synchronized overlap-add. Each synthesis grain is realigned by waveform cross-correlation, so grain restarts stay phase coherent and the output pitch tracks the `pitch` ratio exactly across the whole 0.25x–4.0x range (a naive granular delay drifts the pitch instead). Quality: clean, in-tune shifting for tonal material. As with any time-domain method, sharp transients can smear or double slightly; for those a phase vocoder would do better at the cost of much more CPU and latency. Latency: ~one frame + search ≈ 30ms at the default 1024-sample grain (at 48kHz). Not suitable for live monitoring; fine for games / playback. Use cases: - Sound variation: random ±200 cent pitch on each footstep / bullet - Voice effects: chipmunk (1.5x) or demon (0.7x) for game NPCs - Detune layering: stack 0.99x and 1.01x for thick chorused sound"
 symbol: "PitchShiftEffect"
 kind: "class"
 subsystem: "audio"
@@ -9,21 +9,24 @@ memberCount: 8
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-audio-fx/src/effects/PitchShiftEffect.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PitchShiftEffect.ts#L33"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PitchShiftEffect.ts#L37"
 ---
 ## Import
 
 `import { PitchShiftEffect } from '@codexo/exojs-audio-fx'`
 
-Real-time pitch shifter via granular synthesis (WorkletEffect).
+Real-time pitch shifter (WorkletEffect) using SOLA — synchronized
+overlap-add. Each synthesis grain is realigned by waveform cross-correlation,
+so grain restarts stay phase coherent and the output pitch tracks the `pitch`
+ratio exactly across the whole 0.25x–4.0x range (a naive granular delay drifts
+the pitch instead).
 
-Quality: good for ±1 octave (pitch 0.5x-2.0x). Beyond that, audible
-artifacts (graininess, phase issues). For high-quality pitch shift,
-a phase-vocoder approach is required and not available in V1.
+Quality: clean, in-tune shifting for tonal material. As with any time-domain
+method, sharp transients can smear or double slightly; for those a phase
+vocoder would do better at the cost of much more CPU and latency.
 
-Latency: ~half-grain-size = ~10ms at default 1024-sample grains
-(at 48kHz sample rate). Not suitable for live monitoring; fine for
-games / playback.
+Latency: ~one frame + search ≈ 30ms at the default 1024-sample grain
+(at 48kHz). Not suitable for live monitoring; fine for games / playback.
 
 Use cases:
   - Sound variation: random ±200 cent pitch on each footstep / bullet
@@ -49,4 +52,4 @@ Use cases:
 
 ## Source
 
-[packages/exojs-audio-fx/src/effects/PitchShiftEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PitchShiftEffect.ts#L33)
+[packages/exojs-audio-fx/src/effects/PitchShiftEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PitchShiftEffect.ts#L37)
