@@ -9,7 +9,6 @@ class GranularProcessor extends AudioWorkletProcessor {
             { name: 'spread', defaultValue: 0.5, minValue: 0, maxValue: 1.0, automationRate: 'k-rate' },
             { name: 'pitchMin', defaultValue: 1.0, minValue: 0.25, maxValue: 4.0, automationRate: 'k-rate' },
             { name: 'pitchMax', defaultValue: 1.0, minValue: 0.25, maxValue: 4.0, automationRate: 'k-rate' },
-            { name: 'wet', defaultValue: 1.0, minValue: 0, maxValue: 1.0, automationRate: 'k-rate' },
         ];
     }
 
@@ -35,8 +34,6 @@ class GranularProcessor extends AudioWorkletProcessor {
         const spread = parameters.spread[0];
         const pitchMin = parameters.pitchMin[0];
         const pitchMax = parameters.pitchMax[0];
-        const wet = parameters.wet[0];
-
         const grainSizeSamples = Math.max(8, Math.floor(grainSize * sampleRate));
         const samplesPerGrain = sampleRate / Math.max(1, density);
 
@@ -89,7 +86,7 @@ class GranularProcessor extends AudioWorkletProcessor {
                 grain.ageSamples++;
             }
 
-            output[i] = (1 - wet) * input[i] + wet * grainSum * normFactor;
+            output[i] = grainSum * normFactor;
         }
         return true;
     }
