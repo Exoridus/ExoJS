@@ -1,0 +1,54 @@
+---
+title: "DistortionEffect"
+description: "Distortion effect built from native Web Audio nodes — no worklet required. The input signal is split into a dry path and a wet path. The wet path runs through a `WaveShaperNode` loaded with a tanh-based soft-clip curve, then through a `BiquadFilterNode` (lowpass) acting as a tone control, before being mixed back with the dry signal. The wave-shaper curve is rebuilt any time `drive` changes. Oversampling is delegated directly to `WaveShaperNode.oversample`. Node graph: ``` input(GainNode) ──── dryGain ─────────────────────────── output(GainNode) input ──── waveShaper ── toneFilter ── wetGain ── output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
+symbol: "DistortionEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 9
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/DistortionEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DistortionEffect.ts#L67"
+---
+## Import
+
+`import { DistortionEffect } from '@codexo/exojs-audio-fx'`
+
+Distortion effect built from native Web Audio nodes — no worklet required.
+
+The input signal is split into a dry path and a wet path. The wet path runs
+through a `WaveShaperNode` loaded with a tanh-based soft-clip curve, then
+through a `BiquadFilterNode` (lowpass) acting as a tone control, before
+being mixed back with the dry signal. The wave-shaper curve is rebuilt any
+time `drive` changes. Oversampling is delegated directly to
+`WaveShaperNode.oversample`.
+
+Node graph:
+```
+input(GainNode) ──── dryGain ─────────────────────────── output(GainNode)
+input           ──── waveShaper ── toneFilter ── wetGain ── output
+```
+Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.
+
+## Constructors
+
+- `new(options: DistortionEffectOptions): DistortionEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `drive: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `oversample: OverSampleType`
+- `ready: Promise<void>`
+- `tone: number`
+- `wet: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/DistortionEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DistortionEffect.ts#L67)
