@@ -35,7 +35,7 @@ import { WebGl2StencilClipper } from './WebGl2StencilClipper';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
 // Inline GL debug helpers — replaces the webgl-debug vendor lib.
-// Used only when renderingOptions.debug = true.
+// Used only in dev builds when renderingOptions.debug = true (see __DEV__ gates below).
 const glEnumToString = (gl: WebGL2RenderingContext, value: number): string => {
   const ctor = gl.constructor as unknown as Record<string, unknown>;
   for (const key of Object.getOwnPropertyNames(ctor)) {
@@ -56,10 +56,12 @@ const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingCont
       if (typeof value !== 'function') return value;
       const name = String(prop);
       return (...args: unknown[]) => {
-        console.log(`gl.${name}(${glArgsToString(target, args)})`);
-        for (const arg of args) {
-          if (arg === undefined) {
-            console.error(`undefined passed to gl.${name}(${glArgsToString(target, args)})`);
+        if (__DEV__) {
+          console.log(`gl.${name}(${glArgsToString(target, args)})`);
+          for (const arg of args) {
+            if (arg === undefined) {
+              console.error(`undefined passed to gl.${name}(${glArgsToString(target, args)})`);
+            }
           }
         }
         const result = Reflect.apply(value as (...a: unknown[]) => unknown, target, args);
@@ -200,7 +202,7 @@ export class WebGl2Backend implements RenderBackend {
       throw new Error('This browser or hardware does not support WebGL.');
     }
 
-    this._context = debug ? makeWebGl2DebugContext(gl) : gl;
+    this._context = __DEV__ && debug ? makeWebGl2DebugContext(gl) : gl;
     this._contextLost = this._context.isContextLost();
 
     if (this._contextLost) {
