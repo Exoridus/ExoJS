@@ -1,0 +1,61 @@
+---
+title: "PhaserEffect"
+description: "Phaser effect implemented with native Web Audio nodes (no worklet required). The wet signal passes through a cascade of allpass `BiquadFilterNode`s whose centre frequencies are swept synchronously by a sine LFO. The phase shift produced by each allpass stage creates sweeping notches when summed with the dry signal. An optional feedback path from the last stage back to the first adds resonance and sharpens the effect. Node graph: ``` inputGain ┬── dryGain ───────────────────────────────────────┐ │ ├── outputGain └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘ ▲ │ └──── feedbackGain ◄───┘ lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`."
+symbol: "PhaserEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 11
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/PhaserEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts#L78"
+---
+## Import
+
+`import { PhaserEffect } from '@codexo/exojs-audio-fx'`
+
+Phaser effect implemented with native Web Audio nodes (no worklet required).
+
+The wet signal passes through a cascade of allpass `BiquadFilterNode`s whose
+centre frequencies are swept synchronously by a sine LFO. The phase shift
+produced by each allpass stage creates sweeping notches when summed with the
+dry signal. An optional feedback path from the last stage back to the first
+adds resonance and sharpens the effect.
+
+Node graph:
+```
+inputGain ┬── dryGain ───────────────────────────────────────┐
+          │                                                   ├── outputGain
+          └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘
+                ▲                      │
+                └──── feedbackGain ◄───┘
+
+lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency
+```
+Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`;
+`feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`.
+
+## Constructors
+
+- `new(options: PhaserEffectOptions): PhaserEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `baseFrequency: number`
+- `depth: number`
+- `feedback: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `rateHz: number`
+- `ready: Promise<void>`
+- `stages: number`
+- `wet: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/PhaserEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts#L78)
