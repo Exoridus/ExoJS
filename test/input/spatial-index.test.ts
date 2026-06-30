@@ -97,7 +97,7 @@ const createApp = (): {
     // Default centered camera: design-space pointer coords pass through to
     // world space unchanged (identity screenToWorld).
     rendering: {
-      camera: {
+      view: {
         screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
       },
     },

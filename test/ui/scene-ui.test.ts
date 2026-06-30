@@ -62,7 +62,7 @@ const createUIApp = (): {
     focus: null as FocusManager | null,
     interaction: null as InteractionManager | null,
     rendering: {
-      camera: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x: x + CAMERA_OFFSET, y: y + CAMERA_OFFSET }) },
+      view: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x: x + CAMERA_OFFSET, y: y + CAMERA_OFFSET }) },
       screenView: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }) },
     },
     scene: {

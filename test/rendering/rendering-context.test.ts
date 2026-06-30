@@ -194,7 +194,7 @@ describe('RenderingContext', () => {
     const texture = createTexture();
     const sprite = new Sprite(texture);
 
-    const result = context.renderTo(sprite, { width: 128, height: 128, clearColor: Color.transparentBlack });
+    const result = context.capture(sprite, { width: 128, height: 128, clearColor: Color.transparentBlack });
 
     expect(result).toBeInstanceOf(RenderTexture);
     expect(result.width).toBe(128);
@@ -224,7 +224,7 @@ describe('RenderingContext', () => {
 
     container.addChild(red, green);
 
-    const result = context.renderTo(container, { width: 128, height: 128 });
+    const result = context.capture(container, { width: 128, height: 128 });
 
     expect(drawEvents).toHaveLength(2);
     expect(drawEvents[0]).toBe(red);
@@ -240,7 +240,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const sprite = new Sprite(createTexture());
 
-    const result = context.renderTo(sprite, { width: 64, height: 64 });
+    const result = context.capture(sprite, { width: 64, height: 64 });
 
     expect(clearCalls).toHaveLength(0);
 
@@ -252,7 +252,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const sprite = new Sprite(createTexture());
 
-    const result = context.renderTo(sprite, { width: 64, height: 64, clearColor: Color.red });
+    const result = context.capture(sprite, { width: 64, height: 64, clearColor: Color.red });
 
     expect(clearCalls).toHaveLength(1);
     expect(clearCalls[0].equals(Color.red)).toBe(true);
@@ -272,7 +272,7 @@ describe('RenderingContext', () => {
     });
 
     expect(() => {
-      context.renderTo(sprite, { width: 64, height: 64 });
+      context.capture(sprite, { width: 64, height: 64 });
     }).toThrow('forced render error');
 
     expect(backend.renderTarget).toBe(previousTarget);
@@ -284,7 +284,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const sprite = new Sprite(createTexture());
 
-    const result = context.renderTo(sprite, { width: 64, height: 64 });
+    const result = context.capture(sprite, { width: 64, height: 64 });
 
     expect(result.width).toBe(64);
     expect(result.height).toBe(64);
@@ -297,7 +297,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const container = new Container();
 
-    const result = context.renderTo(container, { width: 32, height: 32 });
+    const result = context.capture(container, { width: 32, height: 32 });
 
     expect(backend.renderTarget).toBe(root);
     expect(backend.view).toBe(root.view);

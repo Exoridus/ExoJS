@@ -13,7 +13,7 @@ import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderingContext, type RenderToOptions } from '#rendering/RenderingContext';
+import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -849,12 +849,13 @@ export class Application {
   }
 
   /**
-   * Renders `node` into an off-screen {@link RenderTexture} and returns it.
+   * Captures `node` into a freshly allocated off-screen {@link RenderTexture}
+   * and returns it.
    *
-   * Convenience wrapper that delegates to {@link RenderingContext.renderTo}.
+   * Convenience wrapper that delegates to {@link RenderingContext.capture}.
    */
-  public renderTo(node: RenderNode, options: RenderToOptions): RenderTexture {
-    return this._rendering.renderTo(node, options);
+  public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
+    return this._rendering.capture(node, options);
   }
 
   /**

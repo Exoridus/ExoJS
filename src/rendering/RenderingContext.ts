@@ -10,13 +10,15 @@ import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
+import type { DrawContext, RenderToOptions } from './DrawContext';
 import { type RenderBackend } from './RenderBackend';
 import { type RenderBatch } from './RenderBatch';
 import { type RenderNode } from './RenderNode';
 import { type RenderStats } from './RenderStats';
 import { View } from './View';
 
-export interface RenderToOptions {
+/** Options for {@link RenderingContext.capture} — allocates a new RenderTexture. */
+export interface CaptureOptions {
   width: number;
   height: number;
   clearColor?: Color;
@@ -56,11 +58,12 @@ export interface DrawBatchOptions {
  *
  * The conceptual model is "the context renders the node":
  *   context.render(node)            // into the active target (canvas by default)
- *   context.render(node, { view })  // override view (camera, screenView, etc.)
- *   context.renderTo(node, opts)    // into an off-screen RenderTexture
+ *   context.render(node, { view })  // override view (the world view, screenView, etc.)
+ *   context.renderTo(node, { target })       // into a caller-owned off-screen target (per-frame)
+ *   context.capture(node, { width, height }) // into a freshly allocated RenderTexture
  * @stable
  */
-export class RenderingContext implements System {
+export class RenderingContext implements System, DrawContext {
   /** App-systems tick band — rendering last (camera + render-plan prep). @internal */
   public readonly order = 500;
   private readonly _backend: RenderBackend;
@@ -173,7 +176,7 @@ export class RenderingContext implements System {
    * Saves and restores the active render target and view so the caller's
    * rendering state is undisturbed.
    */
-  public renderTo(node: RenderNode, options: RenderToOptions): RenderTexture {
+  public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
     const target = new RenderTexture(options.width, options.height);
     const view = new View(options.width / 2, options.height / 2, options.width, options.height);
     const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
@@ -214,6 +217,78 @@ export class RenderingContext implements System {
     }
 
     return target;
+  }
+
+  /**
+   * Clear the active render target to `color`. Routes through the pass
+   * coordinator so it respects the clear-vs-load policy and never leaks the
+   * clear onto another target. Falls back to a raw backend clear when no
+   * coordinator is present (test stubs).
+   */
+  public clear(color: Color): void {
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+
+    if (coordinator) {
+      coordinator.withChildPass(
+        {
+          target: coordinator.activeTarget,
+          view: coordinator.activeView,
+          load: 'clear',
+          clearColor: color,
+          stencil: StencilAttachmentMode.None,
+        },
+        () => undefined,
+      );
+
+      return;
+    }
+
+    this._backend.clear(color);
+  }
+
+  /**
+   * Render `node` into a caller-owned {@link RenderTexture} that is reused across
+   * frames — the per-frame, allocation-free counterpart to {@link capture}. The
+   * target and view are supplied by the caller; the view defaults to the
+   * target's own view. Save/restore is handled by the pass coordinator.
+   */
+  public renderTo(node: RenderNode, options: RenderToOptions): void {
+    const view = options.view ?? options.target.view;
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+
+    if (coordinator) {
+      coordinator.withChildPass(
+        {
+          target: options.target,
+          view,
+          load: options.clear !== undefined ? 'clear' : 'load',
+          clearColor: options.clear ?? null,
+          stencil: StencilAttachmentMode.None,
+        },
+        () => {
+          playRenderTree(node, this._backend);
+        },
+      );
+
+      return;
+    }
+
+    const previousTarget = this._backend.renderTarget;
+    const previousView = this._backend.view;
+
+    this._backend.setRenderTarget(options.target);
+    this._backend.setView(view);
+
+    if (options.clear !== undefined) {
+      this._backend.clear(options.clear);
+    }
+
+    try {
+      playRenderTree(node, this._backend);
+    } finally {
+      this._backend.setRenderTarget(previousTarget);
+      this._backend.setView(previousView);
+    }
   }
 
   /**

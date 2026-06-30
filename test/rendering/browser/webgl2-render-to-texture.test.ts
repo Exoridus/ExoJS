@@ -563,7 +563,7 @@ describe('RenderTo WebGL2 browser', () => {
     try {
       // Render the red sprite into an off-screen RenderTexture via the context
       // (RenderingContext.renderTo → coordinator child pass).
-      const captured = context.renderTo(source, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
+      const captured = context.capture(source, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
       const display = new Sprite(captured);
 
       display.setPosition(0, 0);
