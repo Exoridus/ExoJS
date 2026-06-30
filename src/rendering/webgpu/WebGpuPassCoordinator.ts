@@ -156,6 +156,8 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
     }
 
+    this._applyViewport(pass);
+
     if (stencilEnabled) {
       pass.setStencilReference(this._stencilRef);
     }
@@ -342,6 +344,29 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
   private _activeTargetDepth(): number {
     return this._stencilDepths.get(this._backend.renderTarget) ?? 0;
+  }
+
+  /**
+   * Apply the active view's normalized (0..1) viewport as the GPU viewport, so
+   * split-screen / pip / minimap views render into their framebuffer region.
+   * WebGPU's framebuffer origin is top-left (y-down), so `viewport.y` maps
+   * directly — no flip (unlike WebGL2's bottom-left `gl.viewport`). A full
+   * viewport is left at the pass default to avoid a redundant call.
+   */
+  private _applyViewport(pass: GPURenderPassEncoder): void {
+    const vp = this._backend.view.viewport;
+
+    if (vp.x === 0 && vp.y === 0 && vp.width === 1 && vp.height === 1) {
+      return;
+    }
+
+    const { width, height } = this._backend._getAttachmentPixelSize(this._backend.renderTarget);
+    const x = Math.floor(vp.x * width);
+    const y = Math.floor(vp.y * height);
+    const w = Math.max(1, Math.round(vp.width * width));
+    const h = Math.max(1, Math.round(vp.height * height));
+
+    pass.setViewport(x, y, w, h, 0, 1);
   }
 
   private _connectStencil(): void {
