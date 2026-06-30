@@ -36,15 +36,15 @@ Set the center to `(400, 300)` and the size to `(800, 600)`, and the canvas show
 
 ```js
 draw(context) {
-    context.camera.setCenter(400, 300);
-    context.camera.resize(800, 600);
+    context.view.setCenter(400, 300);
+    context.view.resize(800, 600);
 
     context.backend.clear();
     context.render(this.world);
 }
 ```
 
-You don't usually configure the view by hand — it tracks the canvas size automatically. Reach for `setCenter`, `move`, `setZoom`, and `setRotation` when you need camera behavior. Configure the camera through the `context` passed to `draw`, using `context.camera`.
+You don't usually configure the view by hand — it tracks the canvas size automatically. Reach for `setCenter`, `move`, `setZoom`, and `setRotation` when you need to script view behavior. Access the active view through the `context` passed to `draw`, using `context.view`.
 
 ## Following an object
 
@@ -52,14 +52,14 @@ The view supports following a target. The target can be any object with `x` and 
 
 ```js
 draw(context) {
-    context.camera.follow(this.player);
+    context.view.follow(this.player);
 
     context.backend.clear();
     context.render(this.world);
 }
 ```
 
-Following keeps the view centered on the target while the scene renders. Call `view.clearFollow()` to detach. If you want smoothing, keep a small camera target object and move it toward the player in `update`, then follow that target instead of the player directly.
+Following keeps the view centered on the target while the scene renders. Call `context.view.clearFollow()` to detach. If you want smoothing, keep a small camera target object and move it toward the player in `update`, then follow that target instead of the player directly.
 
 ## Zooming
 
@@ -75,7 +75,7 @@ init() {
 }
 
 draw(context) {
-    context.camera.setZoom(this.zoom);
+    context.view.setZoom(this.zoom);
 
     context.backend.clear();
     context.render(this.world);
@@ -99,17 +99,17 @@ The active view can be swapped on every frame. Used together with viewports, thi
 draw(context) {
     context.backend.clear();
 
-    context.camera.viewport = this.leftHalf;
-    context.camera.setCenter(this.player1.x, this.player1.y);
+    context.view.setViewport(0, 0, 0.5, 1);
+    context.view.setCenter(this.player1.x, this.player1.y);
     context.render(this.world);
 
-    context.camera.viewport = this.rightHalf;
-    context.camera.setCenter(this.player2.x, this.player2.y);
+    context.view.setViewport(0.5, 0, 0.5, 1);
+    context.view.setCenter(this.player2.x, this.player2.y);
     context.render(this.world);
 }
 ```
 
-The same scene graph rendered with two different views, into two halves of the canvas — one tree, two cameras. If you continue rendering HUD elements or additional scenes afterward, reset the viewport/view state before those passes so later rendering does not inherit the split-screen configuration.
+The same scene graph rendered with two different view configurations, into two halves of the canvas — one tree, two views. The viewport fractions are normalized (0–1 of canvas size), so `setViewport(0, 0, 0.5, 1)` covers the left half and `setViewport(0.5, 0, 0.5, 1)` covers the right. If you continue rendering HUD elements or additional scenes afterward, reset the viewport before those passes so later rendering does not inherit the split-screen configuration.
 
 ## Examples
 

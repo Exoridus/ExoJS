@@ -203,7 +203,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'application-scenes/picture-in-picture',
                     'application-scenes/world-vs-screen-coords',
                 ],
-                apiLinks: ['view', 'camera'],
+                apiLinks: ['view', 'pass-context'],
             },
             {
                 slug: 'ui-and-widgets',
