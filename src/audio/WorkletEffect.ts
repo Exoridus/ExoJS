@@ -52,6 +52,15 @@ export abstract class WorkletEffect extends AudioEffect {
     return 1;
   }
 
+  /**
+   * The audio context's sample rate in Hz, or 48000 if the context is not yet
+   * available. Used by subclasses to compute `_dryLatencySeconds` before the
+   * worklet loads.
+   */
+  protected get _sampleRate(): number {
+    return this._outputGain?.context.sampleRate ?? 48000;
+  }
+
   public constructor() {
     super();
     if (isAudioContextReady()) {
@@ -143,6 +152,7 @@ export abstract class WorkletEffect extends AudioEffect {
     let dryDelay: DelayNode | null = null;
     if (dryLatency > 0) {
       dryDelay = audioContext.createDelay(Math.max(1, dryLatency * 2));
+      dryDelay.delayTime.value = dryLatency;
       dryDelay.delayTime.setValueAtTime(dryLatency, audioContext.currentTime);
       inputGain.connect(dryDelay);
       dryDelay.connect(dryGain);

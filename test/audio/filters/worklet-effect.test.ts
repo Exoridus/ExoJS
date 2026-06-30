@@ -252,4 +252,32 @@ describe('WorkletEffect', () => {
     expect(wetGainNode!.gain.setTargetAtTime as unknown as MockInstance).toHaveBeenCalledWith(1, expect.anything(), expect.anything());
     filter.destroy();
   });
+
+  // ---------------------------------------------------------------------------
+  // Dry-latency compensation (Task 2)
+  // ---------------------------------------------------------------------------
+
+  it('inserts a dry-path DelayNode when _dryLatencySeconds > 0', () => {
+    const ctx = getAudioContext();
+    const delaySpy = vi.spyOn(ctx, 'createDelay');
+    class DelayedFilter extends TestWorkletEffect {
+      protected override get _dryLatencySeconds(): number {
+        return 0.02;
+      }
+    }
+    const filter = new DelayedFilter();
+    expect(delaySpy).toHaveBeenCalled();
+    expect(filter['_dryDelay']).not.toBeNull();
+    expect(filter['_dryDelay']!.delayTime.value).toBeCloseTo(0.02, 5);
+    filter.destroy();
+  });
+
+  it('does not create a DelayNode when _dryLatencySeconds is 0 (default)', () => {
+    const ctx = getAudioContext();
+    const delaySpy = vi.spyOn(ctx, 'createDelay');
+    const filter = new TestWorkletEffect();
+    expect(delaySpy).not.toHaveBeenCalled();
+    expect(filter['_dryDelay']).toBeNull();
+    filter.destroy();
+  });
 });

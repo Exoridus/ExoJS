@@ -53,6 +53,12 @@ export class PitchShiftEffect extends WorkletEffect {
     return pitchShiftWorkletSource;
   }
 
+  protected override get _dryLatencySeconds(): number {
+    // SOLA algorithmic latency ≈ one analysis frame + the correlation search
+    // radius (grainSize/4). Tuned against the wet=0.5 comb-filter test below.
+    return (this._grainSize + (this._grainSize >> 2)) / this._sampleRate;
+  }
+
   protected override get _workletOptions(): AudioWorkletNodeOptions {
     return {
       numberOfInputs: 1,
