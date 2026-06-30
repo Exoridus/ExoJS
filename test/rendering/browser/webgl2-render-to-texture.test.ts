@@ -698,9 +698,17 @@ describe('RenderTo WebGL2 browser', () => {
     const backend = await createBackend();
     const context = new RenderingContext(backend);
     const worldRt = new RenderTexture(64, 64);
-    const world = new Graphics();
-    world.fillColor = new Color(255, 0, 0);
-    world.drawRectangle(0, 0, canvasSize, canvasSize); // red world content (mesh) → into the RT
+    // RT content is GREEN; the canvas background is RED. The sampled pixel is red
+    // BEFORE the RT sprite draws, so a green readback proves the sprite actually
+    // painted the RT's sampled contents — an empty or invisible RT sprite leaves
+    // red. (The earlier shape drew the same colour to both, so it could not tell a
+    // working RT sprite from a transparent one.)
+    const rtContent = new Graphics();
+    rtContent.fillColor = new Color(0, 255, 0);
+    rtContent.drawRectangle(0, 0, canvasSize, canvasSize); // green content → into the RT
+    const canvasContent = new Graphics();
+    canvasContent.fillColor = new Color(255, 0, 0);
+    canvasContent.drawRectangle(0, 0, canvasSize, canvasSize); // red content → onto the canvas
     const worldView = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
     const rtSprite = new Sprite(worldRt);
@@ -715,18 +723,19 @@ describe('RenderTo WebGL2 browser', () => {
     overlay.addChild(rtSprite);
     overlay.addChild(frame);
 
-    // The exact mini-map pipeline: world→RT, world→canvas, overlay→canvas.
+    // The exact mini-map pipeline: green→RT, red→canvas, overlay→canvas.
     const pipeline = new RenderPipeline()
-      .addPass(new RenderNodePass(world, { target: worldRt, view: worldView, clear: Color.black }))
-      .addPass(new RenderNodePass(world, { clear: Color.black }))
+      .addPass(new RenderNodePass(rtContent, { target: worldRt, view: worldView, clear: Color.black }))
+      .addPass(new RenderNodePass(canvasContent, { clear: Color.black }))
       .addPass(new RenderNodePass(overlay));
 
     try {
       pipeline.execute(context);
       backend.flush();
 
-      // The centre (covered only by the RT sprite) must show the RT's red — not black.
-      expectPixelNear(readPixel(backend, canvasSize / 2, canvasSize / 2), [255, 0, 0, 255]);
+      // The centre is covered by the red canvas AND the RT sprite. It must show the
+      // RT's GREEN — proving the RT sprite painted its sampled contents.
+      expectPixelNear(readPixel(backend, canvasSize / 2, canvasSize / 2), [0, 255, 0, 255]);
     } finally {
       pipeline.destroy();
       worldRt.destroy();
