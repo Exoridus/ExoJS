@@ -1,6 +1,7 @@
 import { Color } from '#core/Color';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
+import { PassContext } from '#rendering/PassContext';
 import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
 import type { RenderPassDescriptor } from '#rendering/pass/RenderPassDescriptor';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -158,13 +159,15 @@ describe('RenderNodePass', () => {
 });
 
 describe('CallbackRenderPass', () => {
-  test('without a target, runs the callback with the context', () => {
+  test('without a target, runs the callback with a pass context for the active target', () => {
     const { context, cleared } = createContext();
     const callback = vi.fn();
 
     new CallbackRenderPass(callback).execute(context);
 
-    expect(callback).toHaveBeenCalledWith(context);
+    const pass = callback.mock.calls[0]?.[0] as PassContext;
+    expect(pass).toBeInstanceOf(PassContext);
+    expect(pass.backend).toBe(context.backend);
     expect(cleared).toHaveLength(0);
   });
 
@@ -194,7 +197,10 @@ describe('CallbackRenderPass', () => {
     expect(executed).toHaveLength(1);
     expect(descriptors[0].target).toBe(target);
     expect(descriptors[0].view).toBe(target.view);
-    expect(callback).toHaveBeenCalledWith(context);
+    const pass = callback.mock.calls[0]?.[0] as PassContext;
+    expect(pass).toBeInstanceOf(PassContext);
+    expect(pass.target).toBe(target);
+    expect(pass.view).toBe(target.view);
 
     target.destroy();
   });

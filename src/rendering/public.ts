@@ -18,6 +18,7 @@ export { RenderBackendType } from './RenderBackendType';
 export { RenderBatch } from './RenderBatch';
 export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
+export { PassContext } from './PassContext';
 export type { MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
 export type { RenderNodePassOptions } from './RenderNodePass';
