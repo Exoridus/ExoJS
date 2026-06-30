@@ -10,11 +10,16 @@ import {
   breakDrop,
   clicktrack,
   CLICKTRACK_BPMS,
+  DEFAULT_DURATION_SEC,
+  djMix,
+  djMixDrift,
   doubleTime,
   grooveOffset,
   halfTime,
   SAMPLE_RATE,
+  softOnset,
   swing,
+  tempoDrift,
   tempoRamp,
 } from './beat-fixtures';
 
@@ -274,5 +279,182 @@ describe('grooveOffset fixture', () => {
   it('bit-identical on re-generation', () => {
     const f2 = grooveOffset(120, 10, 15);
     expect(arraysEqual(f.samples, f2.samples)).toBe(true);
+  });
+});
+
+// ── djMix ─────────────────────────────────────────────────────────────────────
+
+describe('djMix fixture', () => {
+  const f = djMix(180, 30);
+  const ibi = 60 / 180;
+  const expectedCount = Math.floor(30 * 180 / 60);
+
+  it('bpm = 180', () => {
+    expect(f.bpm).toBe(180);
+  });
+
+  it('octavePartnerBpm = 90 (the sub-harmonic the buggy ACF locks to)', () => {
+    expect(f.octavePartnerBpm).toBe(90);
+  });
+
+  it('beat count = floor(30 * 180 / 60) ± 1', () => {
+    expect(f.beatTimesSec.length).toBeGreaterThanOrEqual(expectedCount - 1);
+    expect(f.beatTimesSec.length).toBeLessThanOrEqual(expectedCount + 1);
+  });
+
+  it('consecutive beat spacing within < 1 sample of 60/180', () => {
+    const times = f.beatTimesSec;
+    for (let i = 1; i < times.length; i++) {
+      const spacing = times[i] - times[i - 1];
+      expect(Math.abs(spacing - ibi)).toBeLessThan(ONE_SAMPLE_SEC);
+    }
+  });
+
+  it('peak amplitude <= 0.99', () => {
+    expect(peakAmplitude(f.samples)).toBeLessThanOrEqual(0.99 + 1e-6);
+  });
+
+  it('peak amplitude > 0 (not silence)', () => {
+    expect(peakAmplitude(f.samples)).toBeGreaterThan(0);
+  });
+
+  it('bit-identical on re-generation', () => {
+    const f2 = djMix(180, 30);
+    expect(arraysEqual(f.samples, f2.samples)).toBe(true);
+    expect(f.beatTimesSec).toEqual(f2.beatTimesSec);
+  });
+});
+
+// ── tempoDrift ────────────────────────────────────────────────────────────────
+
+describe('tempoDrift fixture', () => {
+  const f = tempoDrift(150, 128, 30);
+
+  it('bpm is a function', () => {
+    expect(typeof f.bpm).toBe('function');
+  });
+
+  it('bpm(0) == 150 (start of ramp)', () => {
+    expect((f.bpm as (t: number) => number)(0)).toBeCloseTo(150, 5);
+  });
+
+  it('bpm(15) == 128 (midpoint trough)', () => {
+    expect((f.bpm as (t: number) => number)(15)).toBeCloseTo(128, 5);
+  });
+
+  it('bpm(30) == 150 (return to start)', () => {
+    expect((f.bpm as (t: number) => number)(30)).toBeCloseTo(150, 5);
+  });
+
+  it('beat times are monotonically increasing', () => {
+    for (let i = 1; i < f.beatTimesSec.length; i++) {
+      expect(f.beatTimesSec[i]).toBeGreaterThan(f.beatTimesSec[i - 1]);
+    }
+  });
+
+  it('has reasonable beat count for a 30 s 128–150 BPM drift', () => {
+    // At pure 128 BPM for 30 s: 64 beats; at 150 BPM: 75. Average ~70 ± margin.
+    expect(f.beatTimesSec.length).toBeGreaterThan(58);
+    expect(f.beatTimesSec.length).toBeLessThan(82);
+  });
+
+  it('beat spacings stay within [60/150, 60/128] seconds', () => {
+    const minIbi = 60 / 150;
+    const maxIbi = 60 / 128;
+    for (let i = 1; i < f.beatTimesSec.length; i++) {
+      const spacing = f.beatTimesSec[i] - f.beatTimesSec[i - 1];
+      expect(spacing).toBeGreaterThanOrEqual(minIbi - ONE_SAMPLE_SEC);
+      expect(spacing).toBeLessThanOrEqual(maxIbi + ONE_SAMPLE_SEC);
+    }
+  });
+
+  it('peak amplitude <= 0.99', () => {
+    expect(peakAmplitude(f.samples)).toBeLessThanOrEqual(0.99 + 1e-6);
+  });
+
+  it('bit-identical on re-generation', () => {
+    const f2 = tempoDrift(150, 128, 30);
+    expect(arraysEqual(f.samples, f2.samples)).toBe(true);
+    expect(f.beatTimesSec).toEqual(f2.beatTimesSec);
+  });
+});
+
+// ── djMixDrift ────────────────────────────────────────────────────────────────
+
+describe('djMixDrift fixture', () => {
+  const f = djMixDrift(180, 5, 30);
+
+  it('bpm is a function', () => {
+    expect(typeof f.bpm).toBe('function');
+  });
+
+  it('bpm(0) == baseBpm (sin(0) = 0, no drift at t=0)', () => {
+    expect((f.bpm as (t: number) => number)(0)).toBeCloseTo(180, 5);
+  });
+
+  it('bpm stays within [baseBpm - driftBpm, baseBpm + driftBpm]', () => {
+    const bpmFn = f.bpm as (t: number) => number;
+    for (let t = 0; t <= 30; t += 0.5) {
+      expect(bpmFn(t)).toBeGreaterThanOrEqual(175 - 1e-9);
+      expect(bpmFn(t)).toBeLessThanOrEqual(185 + 1e-9);
+    }
+  });
+
+  it('beat times are monotonically increasing', () => {
+    for (let i = 1; i < f.beatTimesSec.length; i++) {
+      expect(f.beatTimesSec[i]).toBeGreaterThan(f.beatTimesSec[i - 1]);
+    }
+  });
+
+  it('peak amplitude <= 0.99', () => {
+    expect(peakAmplitude(f.samples)).toBeLessThanOrEqual(0.99 + 1e-6);
+  });
+
+  it('peak amplitude > 0 (not silence)', () => {
+    expect(peakAmplitude(f.samples)).toBeGreaterThan(0);
+  });
+
+  it('bit-identical on re-generation', () => {
+    const f2 = djMixDrift(180, 5, 30);
+    expect(arraysEqual(f.samples, f2.samples)).toBe(true);
+    expect(f.beatTimesSec).toEqual(f2.beatTimesSec);
+  });
+});
+
+// ── softOnset ─────────────────────────────────────────────────────────────────
+
+describe('softOnset fixture', () => {
+  const f = softOnset(90, DEFAULT_DURATION_SEC);
+  const ibi = 60 / 90;
+  const expectedCount = Math.floor(DEFAULT_DURATION_SEC * 90 / 60);
+
+  it('bpm = 90', () => {
+    expect(f.bpm).toBe(90);
+  });
+
+  it('beat count = floor(durationSec * 90 / 60)', () => {
+    expect(f.beatTimesSec.length).toBe(expectedCount);
+  });
+
+  it('consecutive beat spacing within < 1 sample of 60/90', () => {
+    const times = f.beatTimesSec;
+    for (let i = 1; i < times.length; i++) {
+      const spacing = times[i] - times[i - 1];
+      expect(Math.abs(spacing - ibi)).toBeLessThan(ONE_SAMPLE_SEC);
+    }
+  });
+
+  it('peak amplitude <= 0.99', () => {
+    expect(peakAmplitude(f.samples)).toBeLessThanOrEqual(0.99 + 1e-6);
+  });
+
+  it('peak amplitude > 0 (not silence)', () => {
+    expect(peakAmplitude(f.samples)).toBeGreaterThan(0);
+  });
+
+  it('bit-identical on re-generation', () => {
+    const f2 = softOnset(90, DEFAULT_DURATION_SEC);
+    expect(arraysEqual(f.samples, f2.samples)).toBe(true);
+    expect(f.beatTimesSec).toEqual(f2.beatTimesSec);
   });
 });

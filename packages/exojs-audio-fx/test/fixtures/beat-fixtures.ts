@@ -67,6 +67,44 @@ function makeImpulse(): Float32Array {
   return buf;
 }
 
+// ── Hat burst and soft-swell shapes ───────────────────────────────────────────
+
+const HAT_DURATION_SEC = 0.003; // 3 ms — shorter than click for hi-hat ticks
+const SWELL_DURATION_SEC = 0.3; // 300 ms slow-attack swell
+const SWELL_ATTACK_SEC = 0.08; // 80 ms linear ramp-up (no sharp transient at t=0)
+
+/** Very short (~3 ms) percussive burst for simulated hi-hat ticks. */
+function makeHatBurst(rand: () => number): Float32Array {
+  const len = Math.round(HAT_DURATION_SEC * SAMPLE_RATE);
+  const buf = new Float32Array(len);
+  const decayConst = 80; // faster 1/e decay (~1.7 ms)
+  for (let i = 0; i < len; i++) {
+    buf[i] = (rand() * 2 - 1) * Math.exp(-i / decayConst);
+  }
+  return buf;
+}
+
+/**
+ * Slow-attack band-limited swell (~300 ms):
+ * 80 ms linear ramp-up then 120 ms 1/e exponential decay.
+ * Amplitude at sample 0 is exactly 0 — there is no sharp transient at the onset.
+ */
+function makeSoftSwell(rand: () => number): Float32Array {
+  const swellLen = Math.round(SWELL_DURATION_SEC * SAMPLE_RATE);
+  const attackLen = Math.round(SWELL_ATTACK_SEC * SAMPLE_RATE);
+  const decayConst = 0.12 * SAMPLE_RATE; // 120 ms 1/e decay after the attack peak
+  const buf = new Float32Array(swellLen);
+  for (let i = 0; i < swellLen; i++) {
+    const noise = rand() * 2 - 1;
+    const env =
+      i < attackLen
+        ? i / attackLen
+        : Math.exp(-(i - attackLen) / decayConst);
+    buf[i] = noise * env;
+  }
+  return buf;
+}
+
 // ── Buffer assembly ────────────────────────────────────────────────────────────
 
 function peakNormalize(buf: Float32Array): Float32Array {
@@ -99,9 +137,59 @@ function buildBuffer(
   return peakNormalize(buf);
 }
 
+// ── Kit buffer builder ─────────────────────────────────────────────────────────
+
+/**
+ * Builds a 4-on-the-floor drum-kit pattern from a list of beat times:
+ *   - Kick on every beat
+ *   - Snare on beats 2 & 4 of each bar (beat index mod 4 ∈ {1, 3})
+ *   - Hi-hat halfway between each consecutive beat pair (8th notes)
+ * Returns a peak-normalised Float32Array.
+ */
+function buildKitBuffer(
+  beatTimesSec: number[],
+  kickShape: Float32Array,
+  snareShape: Float32Array,
+  hatShape: Float32Array,
+  durationSec: number,
+): Float32Array {
+  const totalSamples = Math.ceil(durationSec * SAMPLE_RATE);
+  const buf = new Float32Array(totalSamples);
+
+  const write = (timeSec: number, shape: Float32Array): void => {
+    const start = Math.round(timeSec * SAMPLE_RATE);
+    for (let i = 0; i < shape.length; i++) {
+      const idx = start + i;
+      if (idx < totalSamples) buf[idx] += shape[i];
+    }
+  };
+
+  for (let i = 0; i < beatTimesSec.length; i++) {
+    const beatTime = beatTimesSec[i];
+    const beatInBar = (i % 4) + 1; // 1-based position within a 4/4 bar
+
+    write(beatTime, kickShape);
+
+    if (beatInBar === 2 || beatInBar === 4) {
+      write(beatTime, snareShape);
+    }
+
+    // 8th-note hi-hat: midpoint to the next beat.
+    // For the final beat, estimate using the last known inter-beat interval.
+    const nextTime =
+      i + 1 < beatTimesSec.length
+        ? beatTimesSec[i + 1]
+        : beatTimesSec[i] + (i > 0 ? beatTimesSec[i] - beatTimesSec[i - 1] : 60 / 180);
+    const hatTime = (beatTime + nextTime) / 2;
+    if (hatTime < durationSec) write(hatTime, hatShape);
+  }
+
+  return peakNormalize(buf);
+}
+
 // ── Public generators ──────────────────────────────────────────────────────────
 
-const DEFAULT_DURATION_SEC = 15;
+export const DEFAULT_DURATION_SEC = 15;
 
 /**
  * Metronome clicktrack at a constant BPM.
@@ -284,16 +372,139 @@ export function grooveOffset(bpm = 120, jitterMs = 10, durationSec = DEFAULT_DUR
   };
 }
 
+/**
+ * Realistic drum-kit pattern at a constant `startBpm`.
+ * Kick on every beat (quarter notes), snare on beats 2 & 4, hi-hats on
+ * 8th notes — a standard 4/4 dance-floor pattern.
+ *
+ * **Canonical octave-half regression guard** when called with `startBpm=180`:
+ * a correct detector must lock to 180, NOT 90 (= startBpm / 2).
+ *
+ * `octavePartnerBpm` = startBpm / 2 (the sub-harmonic the buggy biased ACF
+ * would lock to instead of the true tempo).
+ */
+export function djMix(startBpm = 180, durationSec = 30): BeatFixture {
+  const ibi = 60 / startBpm;
+  const beatCount = Math.floor((durationSec * startBpm) / 60);
+  const beatTimesSec = Array.from({ length: beatCount }, (_, i) => i * ibi);
+
+  const kickShape = makeNoiseBurst(xorshift32(Math.round(startBpm * 997 + 7)));
+  const snareShape = makeNoiseBurst(xorshift32(Math.round(startBpm * 997 + 13)));
+  const hatShape = makeHatBurst(xorshift32(Math.round(startBpm * 997 + 31)));
+
+  return {
+    samples: buildKitBuffer(beatTimesSec, kickShape, snareShape, hatShape, durationSec),
+    beatTimesSec,
+    bpm: startBpm,
+    octavePartnerBpm: startBpm / 2,
+    label: `djMix_${startBpm}bpm`,
+  };
+}
+
+/**
+ * Triangle-ramp tempo drift: fromBpm → toBpm at the midpoint, then back to
+ * fromBpm at the end (V-shaped tempo curve over `durationSec`).
+ * Ground-truth beat times are integrated from the piecewise instantaneous tempo.
+ *
+ * Generalises `tempoRamp` to a full fall-and-rise cycle, exercising the T5
+ * dual-tempo-window tracker across both slope directions.
+ */
+export function tempoDrift(fromBpm = 150, toBpm = 128, durationSec = 30): BeatFixture {
+  const rand = xorshift32(0x44524946); // "DRIF"
+  const shape = makeNoiseBurst(rand);
+
+  const instBpm = (t: number): number => {
+    const x = Math.min(1, Math.max(0, t / durationSec));
+    // Triangle wave: x ∈ [0, 0.5] → [0, 1]; x ∈ [0.5, 1] → [1, 0]
+    const tri = x <= 0.5 ? x * 2 : (1 - x) * 2;
+    return fromBpm + (toBpm - fromBpm) * tri;
+  };
+
+  // Integrate instantaneous tempo to produce beat positions
+  const beatTimesSec: number[] = [];
+  let t = 0;
+  while (t < durationSec) {
+    beatTimesSec.push(t);
+    t += 60 / instBpm(t);
+  }
+
+  return {
+    samples: buildBuffer(beatTimesSec, shape, durationSec),
+    beatTimesSec,
+    bpm: instBpm,
+    label: `tempoDrift_${fromBpm}_to_${toBpm}bpm`,
+  };
+}
+
+/**
+ * DJ-mix kit pattern with a slow sinusoidal tempo drift of ±`driftBpm` around
+ * `baseBpm`. Combines the realistic 4/4 kit texture from `djMix` with gradual
+ * tempo variation to exercise the T5 dual-tempo-window tracker directly.
+ *
+ * Beat times are integrated from the instantaneous tempo; `bpm` is a function.
+ */
+export function djMixDrift(baseBpm = 180, driftBpm = 5, durationSec = 30): BeatFixture {
+  const driftPeriodSec = durationSec / 2; // 2 complete sinusoidal drift cycles
+  const instBpm = (t: number): number =>
+    baseBpm + driftBpm * Math.sin((2 * Math.PI * t) / driftPeriodSec);
+
+  // Integrate instantaneous tempo to produce beat positions
+  const beatTimesSec: number[] = [];
+  let t = 0;
+  while (t < durationSec) {
+    beatTimesSec.push(t);
+    t += 60 / instBpm(t);
+  }
+
+  const kickShape = makeNoiseBurst(xorshift32(Math.round(baseBpm * 997 + 43)));
+  const snareShape = makeNoiseBurst(xorshift32(Math.round(baseBpm * 997 + 79)));
+  const hatShape = makeHatBurst(xorshift32(Math.round(baseBpm * 997 + 127)));
+
+  return {
+    samples: buildKitBuffer(beatTimesSec, kickShape, snareShape, hatShape, durationSec),
+    beatTimesSec,
+    bpm: instBpm,
+    label: `djMixDrift_${baseBpm}bpm_d${driftBpm}`,
+  };
+}
+
+/**
+ * Soft-onset fixture: slow-attack amplitude swells at a steady tempo.
+ * Each swell begins with an 80 ms linear ramp-up (amplitude = 0 at t=0,
+ * rising to peak over 80 ms) followed by a ~120 ms exponential decay.
+ * There is no sharp transient — the spectral-flux novelty peak is broad
+ * and delayed relative to the notional onset time.
+ *
+ * Tests whether the detector can recall onsets when the novelty curve
+ * lacks a sharp spike, validating T3 onset normalisation.
+ *
+ * Ground truth = swell start times (the notional onset, before the peak).
+ */
+export function softOnset(bpm = 90, durationSec = DEFAULT_DURATION_SEC): BeatFixture {
+  const rand = xorshift32(0x534f4654); // "SOFT"
+  const shape = makeSoftSwell(rand);
+  const ibi = 60 / bpm;
+  const count = Math.floor((durationSec * bpm) / 60);
+  const beatTimesSec = Array.from({ length: count }, (_, i) => i * ibi);
+
+  return {
+    samples: buildBuffer(beatTimesSec, shape, durationSec),
+    beatTimesSec,
+    bpm,
+    label: `softOnset_${bpm}bpm`,
+  };
+}
+
 // ── Fixture catalogue ──────────────────────────────────────────────────────────
 
-export const CLICKTRACK_BPMS = [50, 60, 90, 120, 128, 140, 180, 220, 250] as const;
+export const CLICKTRACK_BPMS = [50, 60, 90, 120, 128, 140, 180, 220, 250, 300] as const;
 export type ClicktrackBpm = (typeof CLICKTRACK_BPMS)[number];
 
 export function allClicktracks(durationSec = DEFAULT_DURATION_SEC): BeatFixture[] {
   return CLICKTRACK_BPMS.map((bpm) => clicktrack(bpm, durationSec));
 }
 
-/** Complete fixture suite for the Stage-1 testbench. */
+/** Complete fixture suite for the Stage-1 + Stage-2 testbench. */
 export function allFixtures(durationSec = DEFAULT_DURATION_SEC): BeatFixture[] {
   return [
     ...allClicktracks(durationSec),
@@ -303,5 +514,10 @@ export function allFixtures(durationSec = DEFAULT_DURATION_SEC): BeatFixture[] {
     breakDrop(128, Math.max(durationSec, 24)),
     swing(120, 0.67, durationSec),
     grooveOffset(120, 10, durationSec),
+    // Stage-2 fixtures
+    djMix(180, Math.max(durationSec, 30)),
+    tempoDrift(150, 128, Math.max(durationSec, 30)),
+    djMixDrift(180, 5, Math.max(durationSec, 30)),
+    softOnset(90, durationSec),
   ];
 }
