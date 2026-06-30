@@ -2,6 +2,10 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
+import { Container } from '#rendering/Container';
+import { Graphics } from '#rendering/primitives/Graphics';
+import { RenderNodePass } from '#rendering/RenderNodePass';
+import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -686,6 +690,47 @@ describe('RenderTo WebGL2 browser', () => {
     } finally {
       greenTex.destroy();
       target.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a Sprite sampling a same-frame RenderTexture stays visible when a later draw follows (#1 order-independence)', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const worldRt = new RenderTexture(64, 64);
+    const world = new Graphics();
+    world.fillColor = new Color(255, 0, 0);
+    world.drawRectangle(0, 0, canvasSize, canvasSize); // red world content (mesh) → into the RT
+    const worldView = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
+
+    const rtSprite = new Sprite(worldRt);
+    rtSprite.setPosition(0, 0); // samples the world RT, full canvas
+    const frame = new Graphics();
+    frame.fillColor = new Color(0, 0, 255);
+    frame.drawRectangle(0, 0, 8, 8); // mesh frame in the corner
+
+    // overlay subtree: RT sprite FIRST, mesh frame AFTER → RT sampler is NOT the last
+    // draw (mini-map shape with the workaround inverted, so the bug — if present — bites).
+    const overlay = new Container();
+    overlay.addChild(rtSprite);
+    overlay.addChild(frame);
+
+    // The exact mini-map pipeline: world→RT, world→canvas, overlay→canvas.
+    const pipeline = new RenderPipeline()
+      .addPass(new RenderNodePass(world, { target: worldRt, view: worldView, clear: Color.black }))
+      .addPass(new RenderNodePass(world, { clear: Color.black }))
+      .addPass(new RenderNodePass(overlay));
+
+    try {
+      pipeline.execute(context);
+      backend.flush();
+
+      // The centre (covered only by the RT sprite) must show the RT's red — not black.
+      expectPixelNear(readPixel(backend, canvasSize / 2, canvasSize / 2), [255, 0, 0, 255]);
+    } finally {
+      pipeline.destroy();
+      worldRt.destroy();
+      worldView.destroy();
       backend.destroy();
     }
   });
