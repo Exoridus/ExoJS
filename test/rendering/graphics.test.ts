@@ -39,11 +39,41 @@ describe('Graphics', () => {
   });
 
   describe('fill and stroke styles', () => {
-    test('fillStyle defaults to the solid fill color slot', () => {
+    test('fillStyle defaults to the solid fill color slot, which is transparent', () => {
       const graphics = new Graphics();
 
       expect(graphics.fillStyle).toBeInstanceOf(Color);
       expect(graphics.fillStyle).toBe(graphics.fillColor);
+      expect(graphics.fillColor.a).toBe(0);
+    });
+
+    test('an unset fill paints no fill mesh — an outline-only shape stays see-through', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.lineColor = new Color(255, 255, 255);
+      graphics.drawRectangle(0, 0, 10, 10);
+
+      // Only the stroke mesh; no opaque fill bleeding underneath.
+      expect(graphics.children.length).toBe(1);
+    });
+
+    test('an explicit transparent fill also paints no fill mesh', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = Color.transparentBlack;
+      graphics.drawRectangle(0, 0, 10, 10);
+
+      expect(graphics.children.length).toBe(0);
+    });
+
+    test('an opaque fill paints exactly one fill mesh', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(10, 20, 30);
+      graphics.drawRectangle(0, 0, 10, 10);
+
+      expect(graphics.children.length).toBe(1);
     });
 
     test('strokeStyle defaults to the solid line color slot', () => {
