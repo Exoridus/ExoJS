@@ -4,7 +4,6 @@ const sampleRate = globalThis.sampleRate;
 class VocoderProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [
-            { name: 'wet', defaultValue: 1.0, minValue: 0, maxValue: 1.0, automationRate: 'k-rate' },
             { name: 'envelopeSmoothing', defaultValue: 0.005, minValue: 0.0001, maxValue: 0.1, automationRate: 'k-rate' },
         ];
     }
@@ -58,7 +57,6 @@ class VocoderProcessor extends AudioWorkletProcessor {
         const output = outputs[0]?.[0];
         if (!carrier || !output) return true;
 
-        const wet = parameters.wet[0];
         const envSmoothing = parameters.envelopeSmoothing[0];
         const bandCount = this._bands.length;
 
@@ -84,7 +82,7 @@ class VocoderProcessor extends AudioWorkletProcessor {
             // split across N bands, so the raw product (carBand × envelope) is
             // O(1/N) of the carrier amplitude. Scaling by N restores unity gain
             // for typical broadband carrier + voice modulator inputs.
-            output[i] = (1 - wet) * carrierSample + wet * bandSum * bandCount;
+            output[i] = bandSum * bandCount;
         }
         return true;
     }

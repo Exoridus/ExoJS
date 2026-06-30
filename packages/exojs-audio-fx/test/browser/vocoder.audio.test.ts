@@ -7,13 +7,12 @@
  */
 
 import { vocoderWorkletSource } from '../../src/worklets/vocoder.worklet';
-import { dominantFreq, rms, SAMPLE_RATE,tail } from './_audio-harness';
+import { rms, SAMPLE_RATE, tail } from './_audio-harness';
 
 interface VocoderRenderOptions {
   carrierType: OscillatorType;
   carrierFreq: number;
   modFreq: number;
-  wet: number;
   durationSeconds: number;
 }
 
@@ -30,7 +29,6 @@ async function renderVocoder(opts: VocoderRenderOptions): Promise<Float32Array> 
     numberOfOutputs: 1,
     processorOptions: { numBands: 16, minHz: 80, maxHz: 8000, bandQ: 4 },
   });
-  node.parameters.get('wet')!.value = opts.wet;
   node.parameters.get('envelopeSmoothing')!.value = 0.005;
 
   const carrier = ctx.createOscillator();
@@ -67,7 +65,6 @@ describe('Vocoder worklet — real Web Audio', () => {
       carrierType: 'sawtooth',
       carrierFreq: 110,
       modFreq: 700,
-      wet: 1.0,
       durationSeconds: 3,
     });
     // after 2 s the band envelopes have converged; -20 dBFS is the floor below
@@ -78,8 +75,8 @@ describe('Vocoder worklet — real Web Audio', () => {
   it('spectral envelope follows the modulator formant', async () => {
     // Sawtooth at 110 Hz has harmonics at 660 and 2200 Hz; a 660 Hz modulator
     // should boost the 660 Hz region relative to a 2200 Hz modulator.
-    const low = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 660, wet: 1, durationSeconds: 3 }), 2.0);
-    const high = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 2200, wet: 1, durationSeconds: 3 }), 2.0);
+    const low = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 660, durationSeconds: 3 }), 2.0);
+    const high = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 2200, durationSeconds: 3 }), 2.0);
 
     const lowRatio = magnitudeAt(low, 660) / (magnitudeAt(low, 2200) + 1e-9);
     const highRatio = magnitudeAt(high, 660) / (magnitudeAt(high, 2200) + 1e-9);
@@ -87,10 +84,4 @@ describe('Vocoder worklet — real Web Audio', () => {
     expect(lowRatio).toBeGreaterThan(highRatio);
   });
 
-  it('wet=0 passes the carrier through', async () => {
-    const out = await renderVocoder({ carrierType: 'sine', carrierFreq: 440, modFreq: 700, wet: 0, durationSeconds: 1 });
-    const meas = tail(out, 0.25);
-    expect(dominantFreq(meas)).toBeGreaterThan(440 * 0.97);
-    expect(dominantFreq(meas)).toBeLessThan(440 * 1.03);
-  });
 });

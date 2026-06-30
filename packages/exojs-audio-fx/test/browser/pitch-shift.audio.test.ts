@@ -81,7 +81,7 @@ describe('PitchShift worklet — real Web Audio', () => {
     };
 
     // Sweep a window around L to find the empirical best delay (tunes the constant).
-    const candidates: Array<{ delay: number; level: number }> = [];
+    const candidates: { delay: number; level: number }[] = [];
     for (let d = Math.max(0, L - 256); d <= L + 256; d += 32) {
       candidates.push({ delay: d, level: rms(tail(combine(d), 0.5)) });
     }
