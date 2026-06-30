@@ -1,6 +1,6 @@
 ---
 title: "BeatDetector"
-description: "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and parallel 3/4 and 4/4 posterior estimation) and the main thread (this class — receives beats, fires Signals, handles configuration and source routing). Accepts a wide range of BeatDetectorSources — a bus, an individual Voice, a raw MediaStream, or any AudioNode — and exposes a Signal for each notable event: - BeatDetector.onBeat — every detected beat - BeatDetector.onDownbeat — first beat of each bar - BeatDetector.onBarStart — bar boundary - BeatDetector.onTempoChange — when the tracked BPM changes - BeatDetector.onBeatPredicted — look-ahead schedule notice Detection is delayed by `settlingMs` (default 1500 ms) after a new source is attached; this prevents spurious beats during the algorithm's warm-up. Time-signature detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting `enableTimeSignatureDetection: false`."
+description: "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and parallel 3/4 and 4/4 posterior estimation) and the main thread (this class — receives beats, fires Signals, handles configuration and source routing). Accepts a wide range of BeatDetectorSources — a bus, an individual Voice, a raw MediaStream, or any AudioNode — and exposes a Signal for each notable event: - BeatDetector.onBeat — every detected beat - BeatDetector.onDownbeat — first beat of each bar - BeatDetector.onBarStart — bar boundary - BeatDetector.onTempoChange — when the tracked BPM changes - BeatDetector.onBeatPredicted — look-ahead schedule notice Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy — a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting `enableTimeSignatureDetection: false`."
 symbol: "BeatDetector"
 kind: "class"
 subsystem: "audio"
@@ -30,10 +30,13 @@ for each notable event:
 - BeatDetector.onTempoChange — when the tracked BPM changes
 - BeatDetector.onBeatPredicted — look-ahead schedule notice
 
-Detection is delayed by `settlingMs` (default 1500 ms) after a new
-source is attached; this prevents spurious beats during the algorithm's
-warm-up. Time-signature detection (3/4 vs 4/4) is on by default; lock
-to 4/4 by setting `enableTimeSignatureDetection: false`.
+Early beats arrive with low latency tagged `status: 'provisional'` (after a
+short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity,
+then promote to `status: 'locked'` once the tempo grid is trustworthy — a
+single BeatDetector.onBeat signal carries both via BeatInfo.status. Set
+`emitProvisionalBeats: false` to receive only locked beats. Time-signature
+detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting
+`enableTimeSignatureDetection: false`.
 
 ## Constructors
 

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */ // worklet body is a single template-literal string that cannot be import-split
 export const beatDetectorWorkletSource = `
 // ---- Hann window + FFT (radix-2 Cooley-Tukey) ----
 function applyHannWindow(real, imag) {
@@ -94,6 +95,139 @@ function computeMelBands(mag, bands, out) {
     }
 }
 
+// ---- Tempogram (single source of truth — transliterated from src/dsp/tempogram.ts) ----
+// Guarded by test/dsp/worklet-parity.test.ts: these MUST stay numerically identical to
+// computeAcf / scoreTempoHypotheses / computeTempoCandidates in src/dsp/tempogram.ts.
+var TEMPO_PRIOR_MU = 140;
+var TEMPO_PRIOR_SIGMA = Math.log(2) * 0.9;
+var COMB_W_FUNDAMENTAL = 1.0;
+var COMB_W_HALF = 0.5;
+var COMB_W_THIRD = 0.3;
+var COMB_PENALTY_DOUBLE = 1.0;
+var COMB_PENALTY_TRIPLE = 0.5;
+
+// ---- Utility ----
+// Sorts arr[0..n-1] in-place using insertion sort. Avoids creating a subarray view so
+// the hot path (_detectOnset, ~93 calls/s) produces zero per-call GC pressure.
+function partialSort(arr, n) {
+    for (var i = 1; i < n; i++) {
+        var v = arr[i], j = i - 1;
+        while (j >= 0 && arr[j] > v) { arr[j + 1] = arr[j]; j--; }
+        arr[j + 1] = v;
+    }
+}
+
+// ---- Onset peak-picker (T3): adaptive normalization + noise gate + refractory ----
+// The raw spectral flux is normalised against a running median/MAD baseline so that
+// soft onsets (low, broad novelty) and hard transients become comparable, then a
+// rising-edge picker (upward crossing of an adaptive threshold) with a noise-floor gate
+// and an IBI-derived refractory turns the novelty curve into a clean onset stream. This
+// stream (per-hop strength + sub-hop onset positions) is what the T4 PLL anchors to.
+var ONSET_NORM_WINDOW_SEC = 1.5; // running median/MAD window for novelty normalization
+var ONSET_MAD_SCALE = 1.4826; // MAD → σ consistency factor (Gaussian)
+var ONSET_THRESHOLD = 3.0; // normalized-novelty peak threshold (robust z-score)
+var ONSET_NOISE_FLOOR_FRAC = 0.1; // a peak must clear this fraction of the running flux peak
+var ONSET_ABS_FLOOR = 1e-4; // absolute novelty floor — kills divide-by-noise in silence
+var ONSET_PEAK_DECAY = 0.999; // per-hop decay of the running flux peak (noise-floor reference)
+var ONSET_MIN_REFRACTORY_SEC = 0.1; // minimum spacing between detected onsets (~100 ms)
+var ONSET_REFRACTORY_IBI_FRAC = 0.4; // once locked, refractory = max(min, frac × IBI)
+var ONSET_BEAT_COAST_IBI = 2.0; // suppress beat emission after this many IBIs without an onset
+var ONSET_RING_SIZE = 16; // recent onsets retained for T4's PLL nearestOnset()
+
+// ---- PLL beat-phase tracker (T4) ----
+// A bounded phase-locked loop replaces the old constant-IBI predictor + buggy snap. Each
+// predicted beat is corrected toward the nearest detected onset (sub-hop precise, from the
+// T3 onset ring): a proportional phase nudge plus a small period adjustment, BOTH clamped so
+// a single noisy onset can never yank the grid. Exactly one beat is emitted per predicted
+// beat (the old snap double-advanced and timestamped a beat an IBI ahead). The first beat is
+// bootstrapped to a real recent onset, never an arbitrary settling boundary. The gains are
+// INTERNAL constants (API decision: not public). Tempo selection (T1/T1b/T2) is untouched —
+// the PLL only refines phase/period locally around the ACF-chosen tempo.
+var PLL_PHASE_GAIN = 0.25; // fraction of phase error applied as a phase nudge per beat
+var PLL_TEMPO_GAIN = 0.03; // fraction of phase error folded into the period per beat
+var PLL_MAX_PHASE_FRAC = 0.08; // |phaseCorr| clamp, fraction of the IBI
+var PLL_MAX_TEMPO_FRAC = 0.02; // |ibiCorr| clamp, fraction of the IBI
+var PLL_ACCEPT_FRAC = 0.25; // an onset within ±this·IBI of the prediction is "the" beat onset
+var PLL_FREERUN_FRAC = 0.25; // free-run (grid) emit once the prediction is passed by this·IBI
+var PLL_RESYNC_FRAC = 0.25; // re-seed the PLL period from the ACF tempo if it drifts beyond this
+var PLL_BOOTSTRAP_MAX_AGE_IBI = 2.0; // bootstrap anchors to the newest onset within this many IBIs
+
+// ---- DJ-drift dual-window tracking (T5) ----
+// The tracked tempo normally follows the long STABLE window (octave-safe, steady). When the
+// short FAST window consistently reports a DIFFERENT, non-octave tempo over several ACF hops,
+// the grid follows it — a genuine DJ drift, not noise. A single noisy hop can never move the
+// grid (the persistence streak below), and octave-scale disagreements are left to the stable
+// hysteresis (they are metrical ambiguity, owned by the octave guards there).
+var DRIFT_MIN_FRAC = 0.012; // fast must differ from the grid by > this to count as drift (~1.2%)
+var DRIFT_MAX_FRAC = 0.20;  // beyond this it is a hard jump → owned by the stable hysteresis
+var DRIFT_AGREE_FRAC = 0.04; // consecutive fast estimates within this keep the confirmation streak
+var DRIFT_CONFIRM_HOPS = 3; // consecutive confirming ACF hops required before the grid follows
+
+// ---- Provisional vs locked beats (T7) ----
+// Beats are emitted as soon as the early ACF finds ANY in-range tempo (gated at _minEmitHops,
+// derived from minSettlingMs ≈ 400 ms instead of waiting the full slowest-tempo window), tagged
+// status:'provisional' — this drives the low-latency "blink" visual reactivity. A beat is only
+// PROMOTED to status:'locked' once the evidence matches what the detector used to wait for: the
+// full stable window has filled (fluxCount ≥ maxLag+1 — one period of the slowest tempo, exactly
+// the old emission gate → the AUTHORITATIVE lock) AND at least LOCK_PROMOTE_BEATS beats have since
+// been emitted on that validated grid AND confidence clears a floor. (Persistence is counted as
+// beats-after-authoritative-lock, not onset-MATCHED beats: on syncopated material the IBI-derived
+// refractory hides the on-grid onsets so the grid legitimately free-runs — the full-window lock +
+// confidence already establish trustworthiness.) The promotion latches (one provisional→locked
+// transition per stable segment) and also gates the state-message tempo report, so sync-critical
+// consumers and the public tempo/confidence getters only ever see post-lock (trustworthy) values
+// while the visual layer still reacts early. The gains are INTERNAL constants (API decision: not
+// public). When emitProvisionalBeats is false, provisional beats are suppressed (grid bookkeeping
+// still runs) and only locked beats are posted — the pre-T7 emission shape.
+var LOCK_PROMOTE_BEATS = 3; // beats emitted after the authoritative lock before promotion to locked
+var LOCK_PROMOTE_CONFIDENCE = 0.1; // confidence floor that must be cleared to promote to locked
+
+// Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
+function computeAcfInline(flux, n, minLag, maxLag, out) {
+    var lagCount = maxLag - minLag + 1;
+    var mean = 0;
+    for (var t = 0; t < n; t++) { mean += flux[t]; }
+    mean = n > 0 ? mean / n : 0;
+    var zeroLag = 0;
+    for (var z = 0; z < n; z++) { var cz = flux[z] - mean; zeroLag += cz * cz; }
+    zeroLag = n > 0 ? zeroLag / n : 1;
+    var norm = zeroLag > 0 ? zeroLag : 1;
+    for (var lagIndex = 0; lagIndex < lagCount; lagIndex++) {
+        var lag = minLag + lagIndex;
+        var sum = 0;
+        for (var t2 = lag; t2 < n; t2++) { sum += (flux[t2] - mean) * (flux[t2 - lag] - mean); }
+        out[lagIndex] = n > 0 ? sum / n / norm : 0;
+    }
+}
+
+// Linear-interpolated ACF sample; 0 outside range, negative correlation clamped to 0.
+function acfAtLagInline(acf, acfLen, minLag, lag) {
+    var maxIndex = acfLen - 1;
+    var f = lag - minLag;
+    if (f < 0 || f > maxIndex) { return 0; }
+    var i0 = Math.floor(f);
+    var i1 = i0 < maxIndex ? i0 + 1 : maxIndex;
+    var frac = f - i0;
+    var v = acf[i0] * (1 - frac) + acf[i1] * frac;
+    return v > 0 ? v : 0;
+}
+
+function tempoPriorInline(bpm, mu, sigma) {
+    var zp = Math.log(bpm / mu) / sigma;
+    return Math.exp(-0.5 * zp * zp);
+}
+
+// Sub-lag peak refinement: fit a parabola through (i-1, i, i+1) and return the vertex
+// offset in [-0.5, 0.5]. Gives sub-hop BPM resolution where the lag grid is coarse (the
+// 300 BPM top end sits at lag ~19 hops, ~5 ms/lag). Mirrors parabolicPeakOffset.
+function parabolicPeakOffsetInline(yPrev, yMid, yNext) {
+    var denom = yPrev - 2 * yMid + yNext;
+    if (denom >= 0) { return 0; }
+    var d = (0.5 * (yPrev - yNext)) / denom;
+    if (d < -0.5) { d = -0.5; } else if (d > 0.5) { d = 0.5; }
+    return d;
+}
+
 // ---- Processor ----
 class BeatDetectorProcessor extends AudioWorkletProcessor {
     constructor(options) {
@@ -103,10 +237,18 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._fftSize    = opts.fftSize    || 2048;
         this._hopSize    = opts.hopSize    || 512;
         this._minBpm     = opts.minBpm     || 50;
-        this._maxBpm     = opts.maxBpm     || 250;
+        this._maxBpm     = opts.maxBpm     || 300;
         this._melBands   = opts.melBands   || 24;
-        this._settlingMs = opts.settlingMs !== undefined ? opts.settlingMs : 1500;
-        this._tempoWindowSec = opts.tempoWindowSec || 6;
+        // T7 low-latency emission: minSettlingMs replaces the old settlingMs (1500). It sets the
+        // EARLIEST point a (provisional) beat may be emitted — the ACF starts hunting a tempo once
+        // the flux ring holds this many hops instead of waiting a full slowest-tempo period.
+        this._minSettlingMs = opts.minSettlingMs !== undefined ? opts.minSettlingMs : 400;
+        this._emitProvisionalBeats = opts.emitProvisionalBeats !== false; // default true
+        // T5 dual tempo windows. The short FAST window detects a genuine tempo change quickly;
+        // the long STABLE window holds the grid steady against noise/octave artefacts. A single
+        // flux ring is sized to the stable window and the fast window is its most-recent sub-span.
+        this._fastTempoWindowSec   = opts.fastTempoWindowSec   || 2.5;
+        this._stableTempoWindowSec = opts.stableTempoWindowSec || 8;
         this._enableTsDetection = opts.enableTimeSignatureDetection !== false;
 
         var numBins = this._fftSize >> 1;
@@ -120,10 +262,15 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
         this._melBandFilters = buildMelFilterbank(this._melBands, 80, 8000, this._fftSize, this._sampleRate);
         this._melOut         = new Float32Array(this._melBands);
-        var fluxWindowLen    = Math.ceil(this._tempoWindowSec * this._sampleRate / this._hopSize);
+        var fluxWindowLen    = Math.ceil(this._stableTempoWindowSec * this._sampleRate / this._hopSize);
         this._fluxWindow     = new Float32Array(fluxWindowLen);
+        this._linFlux        = new Float32Array(fluxWindowLen); // scratch: ring → linear (oldest first)
         this._fluxWritePos   = 0;
         this._fluxCount      = 0;
+        // Window spans in hops. The STABLE span is the whole ring; the FAST span is its most
+        // recent slice. Both still hold ≥ maxLag+1 hops so the slowest tempo stays resolvable.
+        this._stableWindowHops = fluxWindowLen;
+        this._fastWindowHops   = Math.min(fluxWindowLen, Math.ceil(this._fastTempoWindowSec * this._sampleRate / this._hopSize));
         var LAG_K = 3;
         this._prevMelFrames  = [];
         for (var i = 0; i < LAG_K; i++) {
@@ -134,18 +281,31 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         // Lag range in hops for BPM range
         this._minLag = Math.max(1, Math.round(60 / this._maxBpm * this._sampleRate / this._hopSize));
         this._maxLag = Math.round(60 / this._minBpm * this._sampleRate / this._hopSize);
+        // ACF is computed down to a shorter lag than the candidate band (see tempogram.ts
+        // acfExtendedMinLag): high-BPM fundamentals become interior peaks and the 2f/3f
+        // super-harmonic penalty can read energy above maxBpm.
+        this._acfMinLag = Math.max(1, Math.round(this._minLag / 3));
+        this._acf    = new Float32Array(this._maxLag - this._acfMinLag + 1); // scratch ACF buffer
 
         this._hopsSinceACF = 0;
-        var ACF_INTERVAL = 15;
-        this._acfInterval = ACF_INTERVAL;
+        // ACF cadence: hops between tempogram recomputations. Configurable via acfIntervalHops
+        // (default 15). Lower = faster reaction at more CPU; keep ≥ 1.
+        this._acfInterval = Math.max(1, Math.round(opts.acfIntervalHops !== undefined ? opts.acfIntervalHops : 15));
 
         // Tempo state
-        this._bestBpm    = 0;
-        this._bestScore  = 0;
-        this._candidates = [];
+        this._bestBpm        = 0;
+        this._bestScore      = 0;
+        this._candidates     = [];
+        this._firstLockSample = -1; // sample index of first lock (for hysteresis grace window)
+
+        // T5 drift-tracking state. The fast window must point at a different, non-octave tempo
+        // CONSISTENTLY (over several ACF hops) before the held grid follows it.
+        this._driftBpm  = 0; // tempo the fast window is currently pointing at (the streak target)
+        this._driftHops = 0; // consecutive ACF hops the fast window has confirmed that target
 
         // Phase state
         this._lastBeatSample = -1;
+        this._ibiSamples     = 0;  // PLL-tracked inter-beat interval (samples); seeded from ACF tempo
         this._ibiHistory     = new Float32Array(4); // last 4 inter-beat intervals
         this._ibiIdx         = 0;
 
@@ -168,16 +328,46 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._stateInterval = Math.max(1, STATE_INTERVAL_HOPS);
         this._hopsSinceState = 0;
 
-        // Settling
-        this._startSample   = currentFrame;
-        this._settledSamples = Math.round(this._settlingMs * 0.001 * this._sampleRate);
+        // T7 emission gate + provisional/locked state. _minEmitHops is the earliest hop at which
+        // the ACF may run (derived from minSettlingMs); _locked latches once the full-window
+        // evidence + beat persistence + confidence floor are met (see LOCK_PROMOTE_* and
+        // _emitBeat). _onGridStreak counts consecutive onset-matched beats toward promotion.
+        this._minEmitHops = Math.max(1, Math.round(this._minSettlingMs * 0.001 * this._sampleRate / this._hopSize));
+        // _authLocked flips true the first time the flux ring holds a full slowest-tempo period
+        // (fluxCount ≥ maxLag+1) — the AUTHORITATIVE lock, identical to the pre-T7 first lock.
+        // Before it, any ACF tempo is an early estimate that drives provisional beats only and is
+        // re-adopted every hop (never frozen). After it, the octave-aware hysteresis owns the grid.
+        this._authLocked         = false;
+        this._locked             = false;
+        this._beatsSinceAuthLock = 0; // beats emitted since the authoritative lock (promotion gate)
 
         // Lookahead
         this._lookahead = [];
 
         // RMS / onset state
         this._rms = 0;
-        this._onsetStrength = 0;
+        this._onsetStrength = 0; // per-hop normalised novelty (exposed to state + T4 PLL)
+
+        // ---- Onset peak-picker state (T3) ----
+        var onsetWinLen = Math.max(8, Math.round(ONSET_NORM_WINDOW_SEC * this._sampleRate / this._hopSize));
+        this._onsetWin   = new Float32Array(onsetWinLen); // ring of recent raw flux (normalization)
+        this._onsetWinPos = 0;
+        this._onsetWinCount = 0;
+        this._onsetSort  = new Float32Array(onsetWinLen); // scratch — sorted copy for median
+        this._onsetDev   = new Float32Array(onsetWinLen); // scratch — |x − median| for MAD
+        this._fluxPeak   = 0;     // decaying running flux maximum (noise-floor reference)
+        this._onsetPrev1 = 0;     // normalised novelty at the previous hop (rising-edge detect)
+        this._onsetHopCount  = 0;
+        this._onsetFiredThisHop = false; // a confirmed onset peak was registered this hop
+        // ---- Onset stream exposed for T4's PLL ----
+        // _lastOnsetSample / _lastOnsetStrength = most recent confirmed onset (sub-hop precise);
+        // the ring holds the last ONSET_RING_SIZE onsets so the PLL can pick nearestOnset().
+        this._lastOnsetSample   = -1;
+        this._lastOnsetStrength = 0;
+        this._onsetRingSamples   = new Float32Array(ONSET_RING_SIZE);
+        this._onsetRingStrengths = new Float32Array(ONSET_RING_SIZE);
+        this._onsetRingPos   = 0;
+        this._onsetRingCount = 0;
 
         // Band energy (for state messages)
         var LOW_BANDS  = Math.round(this._melBands * 0.25);
@@ -257,7 +447,6 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             var diff = this._melOut[b] - localMax;
             if (diff > 0) flux += diff;
         }
-        this._onsetStrength = flux;
 
         // Store current mel frame in circular buffer
         var prevFrame = this._prevMelFrames[this._prevMelFrameIdx];
@@ -271,16 +460,32 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._fluxWritePos = (this._fluxWritePos + 1) % this._fluxWindow.length;
         if (this._fluxCount < this._fluxWindow.length) this._fluxCount++;
 
-        // Tempogram: compute ACF periodically
+        // Adaptive onset normalization + peak-picking (T3). Runs every hop (independent
+        // of the ACF/tempo path, which still consumes the raw _fluxWindow above).
+        this._detectOnset(flux);
+
+        // Tempogram: compute ACF periodically. T7 lowers the warm-up gate from a full slowest-
+        // tempo period (_maxLag+1, ~1.2 s at minBpm) to _minEmitHops (~0.4 s) so a fast/core tempo
+        // can lock — and a provisional beat can fire — far earlier. The ACF over a short span only
+        // resolves tempos that already have ≳1 period of evidence in it, so slow tempos still wait
+        // (physically) for their period; promotion to 'locked' still requires the full window.
         this._hopsSinceACF++;
-        if (this._hopsSinceACF >= this._acfInterval && this._fluxCount >= this._maxLag + 1) {
+        var dueForAcf = this._hopsSinceACF >= this._acfInterval && this._fluxCount >= this._minEmitHops;
+        // Force the AUTHORITATIVE compute the instant the full window first fills (independent of
+        // the earlier provisional ACF cadence), so the authoritative lock + phase re-bootstrap land
+        // on exactly the evidence the pre-T7 detector used for its first lock. That makes every
+        // LOCKED beat identical to the pre-T7 output (same tempo, same grid phase).
+        var firstFullWindow = !this._authLocked && this._fluxCount >= this._maxLag + 1;
+        if (dueForAcf || firstFullWindow) {
             this._hopsSinceACF = 0;
             this._computeACFAndCandidates();
         }
 
-        // Phase tracker
-        var settled = (this._sampleCount - this._settledSamples) > 0;
-        if (this._bestBpm > 0 && settled) {
+        // Phase tracker — runs as soon as a tempo is locked. It is no longer gated on the
+        // full settling window: the PLL bootstraps its phase from a real onset, so beats are
+        // not lost to warm-up (the state-message tempo report still honours settling). Lock
+        // itself cannot occur before the flux window holds ≥ maxLag+1 hops (~1.2 s at minBpm).
+        if (this._bestBpm > 0) {
             this._tickPhase(flux);
         }
 
@@ -292,62 +497,152 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         }
     }
 
-    _computeACFAndCandidates() {
-        var n   = this._fluxCount;
+    // Score tempo candidates over the most-recent spanHops of the flux ring (capped at the
+    // available count). Mirrors src/dsp/tempogram.computeTempoCandidates over that span: ACF →
+    // positive peaks (parabola-refined interior, raw endpoints) → comb − super-harmonic penalty
+    // × tempo prior → top-3 sorted by score. The STABLE span (whole ring) is the parity-checked
+    // candidate set. Shares the _linFlux / _acf scratch buffers, so the caller must consume the
+    // returned array before the next call.
+    _scoreSpan(spanHops) {
         var buf = this._fluxWindow;
         var wp  = this._fluxWritePos;
         var len = buf.length;
+        var n   = spanHops < this._fluxCount ? spanHops : this._fluxCount;
+        var minLag  = this._acfMinLag;        // extended ACF base (see constructor)
+        var maxLag  = this._maxLag;
+        var numLags = maxLag - minLag + 1;
+        var loBpm   = this._minBpm * 0.95;    // CANDIDATE_EDGE_TOLERANCE = 0.05
+        var hiBpm   = this._maxBpm * 1.05;
 
-        // Compute ACF for lags in [minLag, maxLag]
-        var numLags = this._maxLag - this._minLag + 1;
-        var acf = new Float32Array(numLags);
-        for (var lagIdx = 0; lagIdx < numLags; lagIdx++) {
-            var lag = this._minLag + lagIdx;
-            var sum = 0, count = 0;
-            for (var t = lag; t < n; t++) {
-                var idxT   = (wp - 1 - (n - 1 - t) + len) % len;
-                var idxTL  = (wp - 1 - (n - 1 - (t - lag)) + len) % len;
-                sum += buf[idxT] * buf[idxTL];
-                count++;
-            }
-            acf[lagIdx] = count > 0 ? sum / count : 0;
+        // Linearise the most-recent n hops of the flux ring (oldest first) into a scratch array
+        // so the ACF operates on the same layout src/dsp/tempogram.computeAcf expects.
+        var lin = this._linFlux;
+        for (var t = 0; t < n; t++) {
+            lin[t] = buf[((wp - 1 - (n - 1 - t)) % len + len) % len];
         }
 
-        // Normalise
-        var norm = 0;
-        for (var i = 0; i < numLags; i++) { if (acf[i] > norm) norm = acf[i]; }
-        if (norm > 0) {
-            for (var i = 0; i < numLags; i++) acf[i] /= norm;
-        }
+        // ACF (mean-subtracted, biased, zero-lag normalised) — mirrors computeAcf.
+        var acf = this._acf;
+        computeAcfInline(lin, n, minLag, maxLag, acf);
 
-        // Find top peaks
+        // Raw positive peaks (interior + endpoints) — mirrors findTempoPeaks.
         var peaks = [];
-        for (var i = 1; i < numLags - 1; i++) {
+        var lastIdx = numLags - 1;
+        if (numLags > 1 && acf[0] > acf[1] && acf[0] > 0) {
+            peaks.push({ bpm: 60 * this._sampleRate / (minLag * this._hopSize), score: acf[0], lag: minLag });
+        }
+        for (var i = 1; i < lastIdx; i++) {
             if (acf[i] > acf[i-1] && acf[i] > acf[i+1] && acf[i] > 0) {
-                var lag2 = this._minLag + i;
-                var bpm = 60 * this._sampleRate / (lag2 * this._hopSize);
-                if (bpm >= this._minBpm && bpm <= this._maxBpm) {
-                    peaks.push({ bpm: bpm, score: acf[i], lag: lag2 });
-                }
+                var lagI = minLag + i + parabolicPeakOffsetInline(acf[i-1], acf[i], acf[i+1]);
+                peaks.push({ bpm: 60 * this._sampleRate / (lagI * this._hopSize), score: acf[i], lag: lagI });
             }
+        }
+        if (numLags > 1 && acf[lastIdx] > acf[lastIdx-1] && acf[lastIdx] > 0) {
+            var lagL = minLag + lastIdx;
+            peaks.push({ bpm: 60 * this._sampleRate / (lagL * this._hopSize), score: acf[lastIdx], lag: lagL });
         }
         peaks.sort(function(a, b) { return b.score - a.score; });
-        this._candidates = peaks.slice(0, 3);
 
+        // Filter to BPM range (with edge tolerance) — mirrors computeTempoCandidates filter.
+        var inRange = [];
+        for (var pf = 0; pf < peaks.length; pf++) {
+            if (peaks[pf].bpm >= loBpm && peaks[pf].bpm <= hiBpm) inRange.push(peaks[pf]);
+        }
+
+        // Comb (own sub-multiples) − super-harmonic penalty, × tempo prior.
+        // Mirrors scoreTempoHypotheses. The penalty is what defeats the octave-down bias.
+        // The penalty is SUBDIVISION-AWARE: a super-harmonic kf only demotes f when kf is
+        // itself a plausible beat (kf <= maxBpm). Energy above maxBpm is a subdivision (hats
+        // on 8ths over a 180 kick), not a competing fundamental, so it must not demote f.
+        var superHi = hiBpm; // maxBpm * 1.05 (CANDIDATE_EDGE_TOLERANCE)
+        var scored = [];
+        for (var q = 0; q < inRange.length; q++) {
+            var lag    = inRange[q].lag;
+            var aF     = acfAtLagInline(acf, numLags, minLag, lag);
+            var aHalf  = acfAtLagInline(acf, numLags, minLag, lag * 2);
+            var aThird = acfAtLagInline(acf, numLags, minLag, lag * 3);
+            var aDouble = acfAtLagInline(acf, numLags, minLag, lag / 2);
+            var aTriple = acfAtLagInline(acf, numLags, minLag, lag / 3);
+            var support = COMB_W_FUNDAMENTAL * aF + COMB_W_HALF * aHalf + COMB_W_THIRD * aThird;
+            var penDbl  = inRange[q].bpm * 2 <= superHi ? COMB_PENALTY_DOUBLE * aDouble : 0;
+            var penTrip = inRange[q].bpm * 3 <= superHi ? COMB_PENALTY_TRIPLE * aTriple : 0;
+            var comb = support - penDbl - penTrip;
+            if (comb < 0) comb = 0;
+            var w = tempoPriorInline(inRange[q].bpm, TEMPO_PRIOR_MU, TEMPO_PRIOR_SIGMA);
+            scored.push({ bpm: inRange[q].bpm, score: comb * w, lag: lag });
+        }
+        scored.sort(function(a, b) { return b.score - a.score; });
+
+        return scored.slice(0, 3);
+    }
+
+    _computeACFAndCandidates() {
+        // T5 dual ACF windows over the SAME flux ring. The long STABLE span holds the grid (and
+        // is the parity-checked candidate set the state message reports); the short FAST span
+        // detects a genuine tempo change quickly. Both feed the octave-aware hysteresis below.
+        var stable = this._scoreSpan(this._stableWindowHops);
+        var fast   = this._scoreSpan(this._fastWindowHops);
+
+        this._candidates = stable;
         if (this._candidates.length === 0) return;
 
         var top = this._candidates[0];
 
-        // Hysteresis
-        if (this._bestBpm <= 0) {
-            // First lock
+        // Octave-aware hysteresis with a short first-lock grace window.
+        if (!this._authLocked) {
+            // Pre-authoritative (provisional) phase: the flux ring does not yet hold a full
+            // slowest-tempo period, so this tempo is an EARLY, possibly under-resolved estimate
+            // used only to drive provisional beats. Re-adopt the current best estimate every hop —
+            // never freeze it (an under-resolved edge lock must not stick). The AUTHORITATIVE lock
+            // fires the instant the full window is available; that value is identical to the pre-T7
+            // first lock, so the locked grid + hysteresis (and every locked beat) are unchanged.
             this._bestBpm   = top.bpm;
             this._bestScore = top.score;
+            if (this._fluxCount >= this._maxLag + 1) {
+                this._authLocked = true;
+                this._firstLockSample = this._sampleCount;
+                this._beatsSinceAuthLock = 0;
+                // Re-anchor the beat phase + period to the full-window evidence, SILENTLY (no
+                // re-emit → no duplicate beat next to the last provisional one). A provisional beat
+                // may have anchored the grid on an early under-resolved tempo or, on syncopated
+                // material, an off-beat onset; snap _lastBeatSample to the same strongest recent
+                // onset the pre-T7 detector locked to here so locked beats sit on the trustworthy
+                // grid. If no provisional beat has run yet (_lastBeatSample < 0), leave it so
+                // _tickPhase bootstraps the first beat normally.
+                if (this._lastBeatSample >= 0) {
+                    var reIbi = 60 / this._bestBpm * this._sampleRate;
+                    var reAnchor = this._bootstrapOnset(PLL_BOOTSTRAP_MAX_AGE_IBI * reIbi);
+                    if (reAnchor >= 0) {
+                        this._lastBeatSample = reAnchor;
+                        this._ibiSamples = reIbi;
+                    }
+                }
+            }
         } else {
-            var isOctave = (Math.abs(top.bpm / this._bestBpm - 2) < 0.1) ||
-                           (Math.abs(top.bpm / this._bestBpm - 0.5) < 0.05);
-            var margin = isOctave ? 1.5 : 1.15;
-            if (top.score > this._bestScore * margin) {
+            // --- Stable-window hysteresis: holds the grid against noise + octave artefacts. ---
+            // Fresh score of the currently-tracked tempo from this frame.
+            var currentScore = 0;
+            for (var c = 0; c < this._candidates.length; c++) {
+                if (Math.abs(this._candidates[c].bpm / this._bestBpm - 1) < 0.03) {
+                    if (this._candidates[c].score > currentScore) currentScore = this._candidates[c].score;
+                }
+            }
+            if (currentScore <= 0) currentScore = this._bestScore * 0.9;
+
+            var inGrace = this._firstLockSample >= 0 &&
+                          (this._sampleCount - this._firstLockSample) < 2 * this._sampleRate;
+            var ratio = top.bpm / this._bestBpm;
+            // Metrically-related = same beat at another level (octaves + 3:2/2:3 dotted/triple).
+            // Switching across these needs the strong margin so subdivision artefacts (e.g. the
+            // 120 "dotted" grouping of a drifting 180 kit) cannot steal the lock. Independent
+            // reimplementation of isOctaveRelated (src/dsp/tempogram.ts) — constants must stay in sync.
+            var isOctave = Math.abs(ratio - 0.5) < 0.05 || Math.abs(ratio - 2) < 0.1 ||
+                           Math.abs(ratio - 3) < 0.15 || Math.abs(ratio - 1/3) < 0.05 ||
+                           Math.abs(ratio - 2/3) < 0.04 || Math.abs(ratio - 3/2) < 0.06;
+            var margin = inGrace ? 1.0 : (isOctave ? 1.5 : 1.15);
+            var diff = Math.abs(top.bpm - this._bestBpm) / this._bestBpm;
+
+            if (diff > 0.03 && top.score > currentScore * margin) {
                 var oldBpm = this._bestBpm;
                 this._bestBpm   = top.bpm;
                 this._bestScore = top.score;
@@ -356,83 +651,301 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
                     this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
                 }
             } else {
-                this._bestScore = this._bestScore * 0.99 + top.score * 0.01; // slowly decay
+                this._bestScore = currentScore;
             }
+
+            // --- Fast-window drift adaptation: follows a genuine, sustained DJ drift. ---
+            this._trackDrift(fast);
         }
 
         this._updateConfidence();
     }
 
-    _tickPhase(flux) {
-        if (this._lastBeatSample < 0) {
-            // Bootstrap: set first beat at current sample
-            this._lastBeatSample = this._sampleCount;
+    // T5 DJ-drift adaptation. The fast window leads a genuine tempo drift that the long stable
+    // window (and thus the held grid) lags. When the fast window points at a non-octave tempo a
+    // small-but-meaningful distance from the grid, and keeps pointing there for DRIFT_CONFIRM_HOPS
+    // consecutive ACF hops, the grid follows it. Octave-scale and hard-jump disagreements are
+    // left to the stable hysteresis above (it carries the octave guards); single noisy hops are
+    // filtered out by the persistence streak — so a static tempo is never made nervous.
+    _trackDrift(fast) {
+        if (fast.length === 0) { this._driftHops = 0; this._driftBpm = 0; return; }
+        var fastTop = fast[0];
+        var r = fastTop.bpm / this._bestBpm;
+        var diff = r > 1 ? r - 1 : 1 - r;
+
+        var octave = Math.abs(r - 0.5) < 0.05 || Math.abs(r - 2) < 0.1 ||
+                     Math.abs(r - 3) < 0.15 || Math.abs(r - 1/3) < 0.05 ||
+                     Math.abs(r - 2/3) < 0.04 || Math.abs(r - 3/2) < 0.06;
+
+        // Fast agrees with the grid, or disagrees at octave / hard-jump scale → not a drift.
+        if (octave || diff <= DRIFT_MIN_FRAC || diff > DRIFT_MAX_FRAC) {
+            this._driftHops = 0;
+            this._driftBpm = 0;
             return;
         }
 
-        var beatIntervalSamples = 60 / this._bestBpm * this._sampleRate;
-        var phase = (this._sampleCount - this._lastBeatSample) / beatIntervalSamples;
+        // Diverging within the drift band — accumulate a confirmation streak on a stable target.
+        if (this._driftBpm > 0 && Math.abs(fastTop.bpm / this._driftBpm - 1) < DRIFT_AGREE_FRAC) {
+            this._driftHops++;
+        } else {
+            this._driftHops = 1;
+        }
+        this._driftBpm = fastTop.bpm;
 
-        // Snap correction: if novelty peak is strong and phase is 0.7..1.3, snap
-        if (phase >= 0.7 && phase <= 1.3 && flux > 0) {
-            // Compute mean recent flux
-            var recentMean = 0;
-            var count = Math.min(this._fluxCount, 16);
-            var wp = this._fluxWritePos;
-            var len = this._fluxWindow.length;
-            for (var i = 0; i < count; i++) {
-                recentMean += this._fluxWindow[(wp - 1 - i + len) % len];
-            }
-            recentMean /= count || 1;
-            if (flux > 1.5 * recentMean && recentMean > 0) {
-                // Snap to this sample
-                this._lastBeatSample = this._sampleCount;
-                phase = 1.0;
+        if (this._driftHops >= DRIFT_CONFIRM_HOPS) {
+            var oldBpm = this._bestBpm;
+            this._bestBpm   = fastTop.bpm;
+            this._bestScore = fastTop.score;
+            this._driftHops = 0; // restart the streak; the next step must re-confirm
+            if (Math.abs(this._bestBpm - oldBpm) / oldBpm > 0.05) {
+                this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
             }
         }
+    }
 
-        if (phase >= 1.0) {
-            var beatTime = (this._lastBeatSample + beatIntervalSamples) / this._sampleRate;
-            this._lastBeatSample += beatIntervalSamples;
+    // Minimum spacing (samples) between two detected onsets. Once a tempo is locked the
+    // refractory tracks the beat (a fraction of the IBI); before lock it is a fixed floor.
+    _onsetRefractorySamples() {
+        var minR = ONSET_MIN_REFRACTORY_SEC * this._sampleRate;
+        if (this._bestBpm > 0) {
+            var r = ONSET_REFRACTORY_IBI_FRAC * (60 / this._bestBpm * this._sampleRate);
+            return r > minR ? r : minR;
+        }
+        return minR;
+    }
 
-            // Update IBI history
-            this._ibiHistory[this._ibiIdx] = beatIntervalSamples;
-            this._ibiIdx = (this._ibiIdx + 1) & 3;
+    // Adaptive onset detection (T3). Normalises the raw flux against a running median/MAD
+    // baseline (so soft and hard onsets are comparable), then picks onsets on the UPWARD
+    // crossing of an adaptive threshold (the onset attack), gated by a noise floor and an
+    // IBI-derived refractory. Updates the per-hop _onsetStrength and the detected-onset
+    // stream consumed by T4's PLL.
+    _detectOnset(flux) {
+        // Decaying running flux maximum — the reference level for the noise floor.
+        this._fluxPeak *= ONSET_PEAK_DECAY;
+        if (flux > this._fluxPeak) this._fluxPeak = flux;
 
-            this._beatsSinceStart++;
+        // Push raw flux into the normalization ring.
+        var W = this._onsetWin.length;
+        this._onsetWin[this._onsetWinPos] = flux;
+        this._onsetWinPos = (this._onsetWinPos + 1) % W;
+        if (this._onsetWinCount < W) this._onsetWinCount++;
+        var count = this._onsetWinCount;
 
-            // Update bar position
-            this._updateBarPosition(flux);
+        // Robust baseline: median of the window, then MAD = median(|x − median|).
+        var s = this._onsetSort;
+        for (var i = 0; i < count; i++) s[i] = this._onsetWin[i];
+        partialSort(s, count);
+        var median = s[count >> 1];
+        var d = this._onsetDev;
+        for (var j = 0; j < count; j++) { var dv = this._onsetWin[j] - median; d[j] = dv < 0 ? -dv : dv; }
+        partialSort(d, count);
+        var mad = d[count >> 1];
 
-            // Compute confidence
-            this._updateConfidence();
+        // Normalised novelty: deviation above baseline in robust-σ units, with the scale
+        // floored at a fraction of the running peak so a clean (MAD≈0) clicktrack still
+        // yields a finite, comparable onset strength instead of a divide-by-zero spike.
+        var floorScale = ONSET_NOISE_FLOOR_FRAC * this._fluxPeak;
+        var madScaled = ONSET_MAD_SCALE * mad;
+        var denom = madScaled > floorScale ? madScaled : floorScale;
+        if (denom < 1e-9) denom = 1e-9;
+        var norm = (flux - median) / denom;
+        if (norm < 0) norm = 0;
+        this._onsetStrength = norm;
 
-            // Lookahead
-            this._updateLookahead(beatTime);
+        // Rising-edge onset detection on the normalised novelty: fire on the UPWARD crossing
+        // of the adaptive threshold — the onset attack, exactly where the old crude heuristic
+        // fired, so the shipped beat-offset behaviour is preserved — gated by the noise floor
+        // and an IBI-derived refractory. Zero lookahead latency.
+        this._onsetFiredThisHop = false;
+        var noiseFloor = floorScale;
+        var refractory = this._onsetRefractorySamples();
+        var crossedUp = this._onsetHopCount >= 1 && this._onsetPrev1 <= ONSET_THRESHOLD && norm > ONSET_THRESHOLD;
+        var aboveFloor = flux > noiseFloor && flux > ONSET_ABS_FLOOR;
+        var pastRefractory = this._lastOnsetSample < 0 || (this._sampleCount - this._lastOnsetSample) >= refractory;
+        if (crossedUp && aboveFloor && pastRefractory) {
+            // Sub-hop onset position: linear-interpolate the threshold crossing between the
+            // previous hop and this one (stored for T4's PLL; the T3 grid snap uses the integer
+            // hop so the shipped beat-offset numbers are preserved).
+            var span = norm - this._onsetPrev1;
+            var frac = span > 1e-9 ? (ONSET_THRESHOLD - this._onsetPrev1) / span : 0;
+            if (frac < 0) frac = 0; else if (frac > 1) frac = 1;
+            var onsetSample = (this._sampleCount - this._hopSize) + frac * this._hopSize;
+            this._lastOnsetSample   = onsetSample;
+            this._lastOnsetStrength = norm;
+            this._onsetFiredThisHop = true;
+            this._onsetRingSamples[this._onsetRingPos]   = onsetSample;
+            this._onsetRingStrengths[this._onsetRingPos] = norm;
+            this._onsetRingPos = (this._onsetRingPos + 1) % this._onsetRingSamples.length;
+            if (this._onsetRingCount < this._onsetRingSamples.length) this._onsetRingCount++;
+        }
 
-            var isDownbeat = this._barPosition === 1;
-            var beatInfo = {
-                type: 'beat',
+        // Shift history for the next hop.
+        this._onsetPrev1 = norm;
+        this._onsetHopCount++;
+    }
+
+    // Onset CLOSEST to targetSample within ±windowSamples (sub-hop precise, from the T3 ring) —
+    // the PLL's nearestOnset(): the phase-error reference for the period/phase correction. Using
+    // the closest (not the loudest) onset keeps the loop locked to the phase it is tracking; a
+    // louder neighbour (e.g. a bright off-beat hat) must not be allowed to yank the grid.
+    // Returns the onset sample, or -1 if none.
+    _nearestOnset(targetSample, windowSamples) {
+        var best = -1;
+        var bestDist = windowSamples + 1;
+        var cnt = this._onsetRingCount;
+        for (var i = 0; i < cnt; i++) {
+            var s = this._onsetRingSamples[i];
+            if (s < 0) continue;
+            var d = s - targetSample;
+            if (d < 0) d = -d;
+            if (d <= windowSamples && d < bestDist) { bestDist = d; best = s; }
+        }
+        return best;
+    }
+
+    // Strongest onset no older than maxAgeSamples (ties → most recent) — the phase anchor for
+    // the first beat. Anchoring to the strongest recent transient, rather than merely the
+    // latest, biases the bootstrap toward a real beat onset. Always a real onset — never the old
+    // arbitrary settling boundary. Returns the anchor sample, or -1 if the ring is empty.
+    _bootstrapOnset(maxAgeSamples) {
+        var best = -1;
+        var bestStrength = -1;
+        var cnt = this._onsetRingCount;
+        for (var i = 0; i < cnt; i++) {
+            var s = this._onsetRingSamples[i];
+            if (s < 0 || (this._sampleCount - s) > maxAgeSamples) continue;
+            var st = this._onsetRingStrengths[i];
+            if (st > bestStrength || (st === bestStrength && s > best)) { bestStrength = st; best = s; }
+        }
+        return best;
+    }
+
+    // Emit exactly one beat at beatSample (samples). Centralises the bar/confidence/lookahead
+    // bookkeeping + the provisional→locked promotion + port messages so the PLL and the bootstrap
+    // share one emission path. The grid bookkeeping ALWAYS runs (so confidence/IBI history build
+    // and the bar grid stays consistent even while provisional beats are suppressed); only the port
+    // messages are gated.
+    _emitBeat(beatSample, flux) {
+        var beatTime = beatSample / this._sampleRate;
+
+        // Update IBI history with the current PLL period.
+        this._ibiHistory[this._ibiIdx] = this._ibiSamples;
+        this._ibiIdx = (this._ibiIdx + 1) & 3;
+
+        this._beatsSinceStart++;
+        this._updateBarPosition(flux);
+        this._updateConfidence();
+        this._updateLookahead(beatTime);
+
+        // Provisional→locked promotion (latched, one transition per stable segment). Locked needs
+        // the SAME evidence the old detector waited for before emitting at all — the full stable
+        // window (the AUTHORITATIVE lock) — PLUS LOCK_PROMOTE_BEATS beats sustained on that grid
+        // and a confidence floor, so a 'locked' beat is at least as trustworthy as a pre-T7 beat.
+        if (this._authLocked) { this._beatsSinceAuthLock++; }
+        if (!this._locked &&
+            this._authLocked &&
+            this._beatsSinceAuthLock >= LOCK_PROMOTE_BEATS &&
+            this._confidence >= LOCK_PROMOTE_CONFIDENCE) {
+            this._locked = true;
+        }
+        var status = this._locked ? 'locked' : 'provisional';
+
+        // Provisional gating: when emitProvisionalBeats is false, suppress the message until the
+        // beat is locked (grid bookkeeping above already ran). Locked beats always post.
+        if (!this._emitProvisionalBeats && !this._locked) return;
+
+        var isDownbeat = this._barPosition === 1;
+        this.port.postMessage({
+            type: 'beat',
+            audioTime: beatTime,
+            tempo: this._bestBpm,
+            confidence: this._confidence,
+            beatPhase: 0,
+            energy: flux,
+            isDownbeat: isDownbeat,
+            beatInBar: this._barPosition,
+            status: status,
+        });
+
+        if (isDownbeat) {
+            this.port.postMessage({
+                type: 'barStart',
                 audioTime: beatTime,
                 tempo: this._bestBpm,
                 confidence: this._confidence,
-                beatPhase: 0,
-                energy: flux,
-                isDownbeat: isDownbeat,
-                beatInBar: this._barPosition,
-            };
-            this.port.postMessage(beatInfo);
-
-            if (isDownbeat) {
-                this.port.postMessage({
-                    type: 'barStart',
-                    audioTime: beatTime,
-                    tempo: this._bestBpm,
-                    confidence: this._confidence,
-                    barNumber: this._barNumber,
-                });
-            }
+                barNumber: this._barNumber,
+            });
         }
+    }
+
+    // Bounded PLL beat-phase tracker (T4). Predicts the next beat at lastBeat + ibi, corrects
+    // phase + period toward the nearest onset (clamped), and emits exactly one beat per
+    // predicted beat. Free-runs on the grid when an onset is missing; coasts (advances the
+    // grid but stops emitting) during sustained silence so breaks don't spawn phantom beats.
+    _tickPhase(flux) {
+        var acfIbi = 60 / this._bestBpm * this._sampleRate;
+
+        // Bootstrap: anchor the first beat to a real recent onset (never an arbitrary
+        // boundary). Emit it — it is a genuine, just-detected transient — so the leading
+        // on-grid beat is not lost to warm-up. If no onset has arrived yet, wait.
+        if (this._lastBeatSample < 0) {
+            var anchor = this._bootstrapOnset(PLL_BOOTSTRAP_MAX_AGE_IBI * acfIbi);
+            if (anchor < 0) return;
+            this._ibiSamples = acfIbi;
+            this._lastBeatSample = anchor;
+            this._emitBeat(anchor, flux);
+            return;
+        }
+
+        // Keep the PLL period anchored to the ACF tempo: it may track drift within the bounded
+        // tempoGain, but a large gap (octave re-lock / tempoChange) re-seeds it so the loop
+        // never chases a stale interval. Tempo SELECTION is unchanged — this only refines the
+        // local period the phase tracker runs on.
+        if (this._ibiSamples <= 0) this._ibiSamples = acfIbi;
+        if (Math.abs(this._ibiSamples - acfIbi) > PLL_RESYNC_FRAC * acfIbi) {
+            this._ibiSamples = acfIbi;
+        }
+        var ibi = this._ibiSamples;
+
+        var predicted = this._lastBeatSample + ibi;
+        var acceptWin = PLL_ACCEPT_FRAC * ibi;
+
+        // Still early in the beat cycle — wait until we approach the prediction.
+        if (this._sampleCount < predicted - acceptWin) return;
+
+        var onset = this._nearestOnset(predicted, acceptWin);
+
+        var beatSample;
+        if (onset >= 0) {
+            // Bounded phase + period correction toward the matched onset.
+            var error = onset - predicted;
+            var maxPhase = PLL_MAX_PHASE_FRAC * ibi;
+            var phaseCorr = error * PLL_PHASE_GAIN;
+            if (phaseCorr > maxPhase) phaseCorr = maxPhase; else if (phaseCorr < -maxPhase) phaseCorr = -maxPhase;
+            var maxTempo = PLL_MAX_TEMPO_FRAC * ibi;
+            var ibiCorr = error * PLL_TEMPO_GAIN;
+            if (ibiCorr > maxTempo) ibiCorr = maxTempo; else if (ibiCorr < -maxTempo) ibiCorr = -maxTempo;
+            beatSample = predicted + phaseCorr;
+            this._ibiSamples = ibi + ibiCorr;
+        } else if (this._sampleCount >= predicted + PLL_FREERUN_FRAC * ibi) {
+            // Prediction passed with no matching onset → free-run on the grid (period held).
+            beatSample = predicted;
+        } else {
+            // Inside the accept window with no onset yet — give a late onset a chance next hop.
+            return;
+        }
+
+        // Advance the grid by exactly one beat.
+        this._lastBeatSample = beatSample;
+
+        // Coast gate (T3): after a sustained onset gap (break / silence) keep the grid
+        // advancing but STOP emitting — this is what holds the breakDrop false-positive rate
+        // down. Onset-rich material never trips it.
+        var coasting = this._lastOnsetSample >= 0 &&
+            (this._sampleCount - this._lastOnsetSample) > ONSET_BEAT_COAST_IBI * ibi;
+        if (coasting) return;
+
+        this._emitBeat(beatSample, flux);
     }
 
     _computeBeatLikelihood(flux) {
@@ -597,7 +1110,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
 
     _sendStateMessage() {
-        var settled = (this._sampleCount - this._settledSamples) > 0;
+        // T7: the state tempo report honours the LOCKED latch (not the old fixed settling window).
+        // Provisional early beats drive the visual layer, but tempo/confidence/tempoCandidates
+        // and the sync-critical fields stay zero until the detector has a trustworthy locked grid.
+        var settled = this._locked;
         var beatInterval = this._bestBpm > 0 ? 60 / this._bestBpm : 0;
         var currentTime = this._sampleCount / this._sampleRate;
         var lastBeatTime = this._lastBeatSample >= 0 ? this._lastBeatSample / this._sampleRate : 0;
