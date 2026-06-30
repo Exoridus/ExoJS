@@ -123,7 +123,6 @@ function runVocoder(
   proc: VocoderProcessorLike,
   carrier: Float32Array,
   modulator: Float32Array,
-  wet: number,
   envSmoothing: number,
 ): Float32Array {
   const n = carrier.length;
@@ -133,7 +132,7 @@ function runVocoder(
     const cB = carrier.subarray(off, off + len);
     const mB = modulator.subarray(off, off + len);
     const oB = new Float32Array(len);
-    proc.process([[cB], [mB]], [[oB]], { wet: [wet], envelopeSmoothing: [envSmoothing] });
+    proc.process([[cB], [mB]], [[oB]], { envelopeSmoothing: [envSmoothing] });
     out.set(oB, off);
   }
   return out;
@@ -154,11 +153,11 @@ describe('VocoderProcessor DSP', () => {
   });
 
   // ── 1. Silence without modulator ──────────────────────────────────────────
-  it('outputs silence (wet=1) when modulator is absent', () => {
+  it('outputs silence when modulator is absent', () => {
     const proc     = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
     const carrier  = makeSawtooth(110, 1.0, MEASURE);
     const silence  = new Float32Array(MEASURE); // no modulator
-    const out      = runVocoder(proc, carrier, silence, 1.0, 0.005);
+    const out      = runVocoder(proc, carrier, silence, 0.005);
     // All envelopes are zero → bandSum = 0 → output = 0
     expect(rms(out)).toBeLessThan(1e-6);
   });
@@ -171,7 +170,7 @@ describe('VocoderProcessor DSP', () => {
     const proc     = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
     const carrier  = makeSawtooth(110, 1.0, TOTAL);
     const modulator = makeVoiceLike(TOTAL);
-    const out      = runVocoder(proc, carrier, modulator, 1.0, 0.005);
+    const out      = runVocoder(proc, carrier, modulator, 0.005);
 
     const rmsCarrier = rms(carrier.subarray(WARMUP));
     const rmsOut     = rms(out.subarray(WARMUP));
@@ -206,8 +205,8 @@ describe('VocoderProcessor DSP', () => {
     const procLow  = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
     const procHigh = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
 
-    const outLow  = runVocoder(procLow,  carrier, modLow,  1.0, 0.005);
-    const outHigh = runVocoder(procHigh, carrier, modHigh, 1.0, 0.005);
+    const outLow  = runVocoder(procLow,  carrier, modLow,  0.005);
+    const outHigh = runVocoder(procHigh, carrier, modHigh, 0.005);
 
     const measLow  = outLow.subarray(WARMUP);
     const measHigh = outHigh.subarray(WARMUP);
@@ -223,21 +222,7 @@ describe('VocoderProcessor DSP', () => {
     expect(magHigh2200).toBeGreaterThan(magHigh660);
   });
 
-  // ── 4. wet=0 passes carrier unchanged ─────────────────────────────────────
-  it('wet=0 passes carrier through with unity gain', () => {
-    const proc     = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
-    const carrier  = makeSawtooth(110, 1.0, MEASURE);
-    const modulator = makeVoiceLike(MEASURE);
-    const out      = runVocoder(proc, carrier, modulator, 0.0, 0.005);
-
-    // With wet=0: output = (1-0)*carrier + 0*bandSum = carrier
-    // The RMS should match the carrier's RMS exactly.
-    const rmsCarrier = rms(carrier);
-    const rmsOut     = rms(out);
-    expect(rmsOut).toBeCloseTo(rmsCarrier, 4);
-  });
-
-  // ── 5. Sine at band center: output ≈ 2/π × carrier (envelope attenuates) ──
+  // ── 4. Sine at band center: output ≈ 2/π × carrier (envelope attenuates) ──
   // When carrier = modulator = sine at exactly one band's center frequency,
   // only that band contributes meaningfully. After warmup its envelope converges
   // to ≈ 2/π × amplitude. With the bandCount make-up gain the total output
@@ -249,7 +234,7 @@ describe('VocoderProcessor DSP', () => {
     const proc        = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
     const carrier     = makeSine(BAND_CENTER, 1.0, TOTAL);
     const modulator   = makeSine(BAND_CENTER, 1.0, TOTAL);
-    const out         = runVocoder(proc, carrier, modulator, 1.0, 0.005);
+    const out         = runVocoder(proc, carrier, modulator, 0.005);
 
     const rmsO = rms(out.subarray(WARMUP));
     // Must be meaningfully above silence (> 0.1 = -20 dBFS)
@@ -269,8 +254,8 @@ describe('VocoderProcessor DSP', () => {
     const proc8  = new Processor({ processorOptions: { numBands: 8,  minHz: 80, maxHz: 8000, bandQ: 4 } });
     const proc32 = new Processor({ processorOptions: { numBands: 32, minHz: 80, maxHz: 8000, bandQ: 4 } });
 
-    const out8  = runVocoder(proc8,  carrier.slice(), modulator.slice(), 1.0, 0.005);
-    const out32 = runVocoder(proc32, carrier.slice(), modulator.slice(), 1.0, 0.005);
+    const out8  = runVocoder(proc8,  carrier.slice(), modulator.slice(), 0.005);
+    const out32 = runVocoder(proc32, carrier.slice(), modulator.slice(), 0.005);
 
     const rms8  = rms(out8.subarray(WARMUP));
     const rms32 = rms(out32.subarray(WARMUP));

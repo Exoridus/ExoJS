@@ -80,7 +80,7 @@ describe('GranularProcessor normalizeGain DSP', () => {
     randomSpy.mockRestore();
   });
 
-  function rmsRatio(opts: { density: number; grainSize: number; normalizeGain?: boolean; wet?: number }): number {
+  function rmsRatio(opts: { density: number; grainSize: number; normalizeGain?: boolean }): number {
     const proc = new Processor({ processorOptions: { bufferSeconds: 2, normalizeGain: opts.normalizeGain ?? false } });
     const n = SAMPLE_RATE * 3;
     const input = makeSine(440, 0.5, n);
@@ -94,7 +94,6 @@ describe('GranularProcessor normalizeGain DSP', () => {
         spread: [0.5],
         pitchMin: [1],
         pitchMax: [1],
-        wet: [opts.wet ?? 1],
       });
       out.set(oB, off);
     }
@@ -120,23 +119,5 @@ describe('GranularProcessor normalizeGain DSP', () => {
     const r = rmsRatio({ density: 100, grainSize: 0.05, normalizeGain: true });
     expect(r).toBeGreaterThan(0.5);
     expect(r).toBeLessThan(2.0);
-  });
-
-  // ── Bypass holds regardless of normalizeGain ───────────────────────────────
-  it('wet=0 passes the input through unchanged', () => {
-    const proc = new Processor({ processorOptions: { bufferSeconds: 2, normalizeGain: true } });
-    const input = makeSine(440, 0.5, BLOCK * 8);
-    const out = new Float32Array(input.length);
-    for (let off = 0; off < input.length; off += BLOCK) {
-      const len = Math.min(BLOCK, input.length - off);
-      const oB = new Float32Array(len);
-      proc.process([[input.subarray(off, off + len)]], [[oB]], {
-        grainSize: [0.05], density: [100], spread: [0.5], pitchMin: [1], pitchMax: [1], wet: [0],
-      });
-      out.set(oB, off);
-    }
-    let maxDiff = 0;
-    for (let i = 0; i < input.length; i++) maxDiff = Math.max(maxDiff, Math.abs(input[i] - out[i]));
-    expect(maxDiff).toBeLessThan(1e-6);
   });
 });

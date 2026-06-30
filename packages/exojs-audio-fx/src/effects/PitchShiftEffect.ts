@@ -36,14 +36,13 @@ export interface PitchShiftEffectOptions {
  */
 export class PitchShiftEffect extends WorkletEffect {
   private _pitch: number;
-  private _wet: number;
   private readonly _grainSize: number;
 
   public constructor(options: PitchShiftEffectOptions = {}) {
     super();
     this._pitch = Math.max(0.25, Math.min(4, options.pitch ?? 1));
-    this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._grainSize = options.grainSize ?? 1024;
+    this.wet = options.wet ?? 1;
   }
 
   protected get _workletName(): string {
@@ -52,6 +51,12 @@ export class PitchShiftEffect extends WorkletEffect {
 
   protected get _workletSource(): string {
     return pitchShiftWorkletSource;
+  }
+
+  protected override get _dryLatencySeconds(): number {
+    // SOLA algorithmic latency ≈ one analysis frame + the correlation search
+    // radius (grainSize/4). Tuned against the wet=0.5 comb-filter test below.
+    return (this._grainSize + (this._grainSize >> 2)) / this._sampleRate;
   }
 
   protected override get _workletOptions(): AudioWorkletNodeOptions {
@@ -64,7 +69,6 @@ export class PitchShiftEffect extends WorkletEffect {
 
   protected override _onWorkletReady(): void {
     this._setAudioParam('pitch', this._pitch);
-    this._setAudioParam('wet', this._wet);
   }
 
   /** Pitch ratio relative to the original. 1.0 = no change, 0.5 = one octave down, 2.0 = one octave up. Range 0.25..4.0, default 1.0. */
@@ -74,14 +78,5 @@ export class PitchShiftEffect extends WorkletEffect {
   public set pitch(value: number) {
     this._pitch = Math.max(0.25, Math.min(4, value));
     this._setAudioParam('pitch', this._pitch);
-  }
-
-  /** Wet (pitch-shifted) mix level, 0..1. Default 1.0 (full wet). */
-  public get wet(): number {
-    return this._wet;
-  }
-  public set wet(value: number) {
-    this._wet = Math.max(0, Math.min(1, value));
-    this._setAudioParam('wet', this._wet);
   }
 }

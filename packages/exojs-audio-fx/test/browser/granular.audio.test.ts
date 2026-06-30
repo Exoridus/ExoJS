@@ -11,12 +11,12 @@ import { granularWorkletSource } from '../../src/worklets/granular.worklet';
 import { renderWorklet, rms, tail } from './_audio-harness';
 
 describe('Granular worklet — real Web Audio', () => {
-  async function granularRms(opts: { density: number; normalizeGain: boolean; wet?: number }): Promise<number> {
+  async function granularRms(opts: { density: number; normalizeGain: boolean }): Promise<number> {
     const out = await renderWorklet({
       source: granularWorkletSource,
       processorName: 'exojs-granular',
       processorOptions: { bufferSeconds: 2, normalizeGain: opts.normalizeGain },
-      params: { grainSize: 0.05, density: opts.density, spread: 0.5, pitchMin: 1, pitchMax: 1, wet: opts.wet ?? 1 },
+      params: { grainSize: 0.05, density: opts.density, spread: 0.5, pitchMin: 1, pitchMax: 1 },
       inputFreq: 440,
       durationSeconds: 2,
     });
@@ -31,12 +31,5 @@ describe('Granular worklet — real Web Audio', () => {
     const normalized = await granularRms({ density: 200, normalizeGain: true });
     const raw = await granularRms({ density: 200, normalizeGain: false });
     expect(normalized).toBeLessThan(raw);
-  });
-
-  it('wet=0 passes the input through (level preserved)', async () => {
-    const r = await granularRms({ density: 100, normalizeGain: false, wet: 0 });
-    // dry 440 Hz oscillator at unit amplitude -> RMS ≈ 1/sqrt(2)
-    expect(r).toBeGreaterThan(0.6);
-    expect(r).toBeLessThan(0.8);
   });
 });

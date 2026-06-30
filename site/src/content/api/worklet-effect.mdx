@@ -1,32 +1,30 @@
 ---
 title: "WorkletEffect"
-description: "Base class for filters implemented as AudioWorkletProcessors. Subclasses declare the worklet's name, source code, and node options; this class handles the async lifecycle. Stable input/output nodes (GainNodes) are created immediately on setup. While the worklet loads asynchronously, audio passes through directly (effectively bypassing the filter for ~10-50ms during initial load). Once the worklet loads, it's inserted into the chain and audio routes through it. Subclasses can override `_onWorkletReady` to perform additional wiring (e.g., sidechain inputs)."
+description: "Base class for filters implemented as AudioWorkletProcessors. Subclasses declare the worklet's name, source code, and node options; this class owns the async lifecycle AND the dry/wet gain staging. Stable input/output nodes are created immediately. The worklet emits a pure wet signal; the base mixes it against the dry signal via `_dryGain`/`_wetGain` (`dryGain = 1 - wet`, `wetGain = wet * _wetMakeupGain`). An optional `_dryDelay` time-aligns the dry path with the worklet's algorithmic latency. While the worklet loads, the wet path is silent and dry passes at unity, so the effect is a clean passthrough (no volume dip) until it is ready."
 symbol: "WorkletEffect"
 kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
-memberCount: 6
+memberCount: 7
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/WorkletEffect.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/WorkletEffect.ts#L20"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/WorkletEffect.ts#L18"
 ---
 ## Import
 
 `import { WorkletEffect } from '@codexo/exojs'`
 
 Base class for filters implemented as AudioWorkletProcessors. Subclasses
-declare the worklet's name, source code, and node options; this class
-handles the async lifecycle.
+declare the worklet's name, source code, and node options; this class owns
+the async lifecycle AND the dry/wet gain staging.
 
-Stable input/output nodes (GainNodes) are created immediately on setup.
-While the worklet loads asynchronously, audio passes through directly
-(effectively bypassing the filter for ~10-50ms during initial load).
-Once the worklet loads, it's inserted into the chain and audio routes
-through it.
-
-Subclasses can override `_onWorkletReady` to perform additional wiring
-(e.g., sidechain inputs).
+Stable input/output nodes are created immediately. The worklet emits a pure
+wet signal; the base mixes it against the dry signal via `_dryGain`/`_wetGain`
+(`dryGain = 1 - wet`, `wetGain = wet * _wetMakeupGain`). An optional
+`_dryDelay` time-aligns the dry path with the worklet's algorithmic latency.
+While the worklet loads, the wet path is silent and dry passes at unity, so
+the effect is a clean passthrough (no volume dip) until it is ready.
 
 ## Constructors
 
@@ -42,7 +40,8 @@ Subclasses can override `_onWorkletReady` to perform additional wiring
 - `inputNode: AudioNode`
 - `outputNode: AudioNode`
 - `ready: Promise<void>`
+- `wet: number`
 
 ## Source
 
-[src/audio/WorkletEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/WorkletEffect.ts#L20)
+[src/audio/WorkletEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/WorkletEffect.ts#L18)
