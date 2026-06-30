@@ -84,6 +84,89 @@ function makeHatBurst(rand: () => number): Float32Array {
   return buf;
 }
 
+// ── Spectral drum synth (spectrally-realistic kit shapes) ──────────────────────
+//
+// These three shapes replace the white-noise bursts used in djMix / djMixDrift.
+// The white-noise hat (3 ms, 80-sample decay) produced HIGHER spectral flux than
+// the white-noise kick (6 ms, 500-sample decay) because the tighter transient
+// caused a larger per-frame delta in every mel bin — even though both were
+// peak-normalised to roughly the same amplitude.  That made the off-beat 8th-note
+// position the dominant onset, bootstrapping the phase tracker half-a-beat off.
+//
+// The fix concentrates the kick's onset energy in the lowest mel bins (180→80 Hz
+// FM sweep, cosine start = peak at sample 0) while keeping the hat at 8 % of the
+// kick's peak amplitude.  The mel filterbank covers 80–8000 Hz: the kick occupies
+// mel bins 0–1 at high per-bin flux; the hat (first-difference HP noise in the
+// 4–8 kHz region) reaches only the top ~6 bins at much lower per-bin flux.
+
+/**
+ * Kick drum: cosine FM synthesis sweeping from 180 Hz down to 80 Hz over 30 ms,
+ * with a 130 ms amplitude decay.  Starts at maximum (cos(0) = 1) so the onset
+ * is a clean, high-energy transient.  All pitch content stays within the mel
+ * filterbank range (80–8000 Hz), concentrating the onset energy in the lowest
+ * 1–2 mel bins and dominating the spectral flux at every beat position.
+ *
+ * `_rand` is accepted for API consistency with the other shapes but is not used
+ * in the main synthesis (the kick is fully deterministic FM).
+ */
+function makeKickDrum(_rand: () => number): Float32Array {
+  const len = Math.round(0.18 * SAMPLE_RATE); // 180 ms total
+  const buf = new Float32Array(len);
+  const pitchDecay = 0.030 * SAMPLE_RATE; // 30 ms pitch drop (1/e time constant)
+  const ampDecay = 0.130 * SAMPLE_RATE; // 130 ms amplitude 1/e decay
+  let phase = 0;
+  for (let i = 0; i < len; i++) {
+    const freq = 80 + (180 - 80) * Math.exp(-i / pitchDecay); // 180 → 80 Hz
+    buf[i] = Math.cos(2 * Math.PI * phase) * Math.exp(-i / ampDecay);
+    phase += freq / SAMPLE_RATE;
+  }
+  return buf;
+}
+
+/**
+ * Snare drum: white-noise body (80 ms decay) blended with a 220 Hz body
+ * resonance (30 ms decay), at 50 % of kick peak amplitude.  Layers with the
+ * kick on beats 2 & 4 for a realistic acoustic texture without raising the
+ * combined onset above the kick's flux contribution.
+ */
+function makeSnareDrum(rand: () => number): Float32Array {
+  const len = Math.round(0.14 * SAMPLE_RATE); // 140 ms total
+  const buf = new Float32Array(len);
+  const noiseDecay = 0.080 * SAMPLE_RATE; // 80 ms noise (1/e)
+  const toneDecay = 0.030 * SAMPLE_RATE; // 30 ms tone (1/e)
+  let tonePhase = 0;
+  for (let i = 0; i < len; i++) {
+    const noise = rand() * 2 - 1;
+    const noiseAmp = 0.65 * Math.exp(-i / noiseDecay);
+    const toneAmp = 0.35 * Math.exp(-i / toneDecay);
+    buf[i] = (noise * noiseAmp + Math.cos(2 * Math.PI * tonePhase) * toneAmp) * 0.50;
+    tonePhase += 220 / SAMPLE_RATE; // 220 Hz snare body resonance
+  }
+  return buf;
+}
+
+/**
+ * Hi-hat: first-difference high-pass filtered noise (attenuates energy below
+ * ~Nyquist/2, emphasises the high-frequency region) with a 12 ms decay and
+ * intentionally low peak amplitude (×0.08 before mixing).  Within the mel
+ * filterbank (80–8000 Hz) the hat energy reaches only the top ~6 bins at
+ * per-bin flux well below the kick's concentrated low-bin onset — so the
+ * beat detector always bootstraps to the kick grid.
+ */
+function makeHiHatDrum(rand: () => number): Float32Array {
+  const len = Math.round(0.040 * SAMPLE_RATE); // 40 ms total
+  const buf = new Float32Array(len);
+  const decaySamples = 0.012 * SAMPLE_RATE; // 12 ms 1/e decay
+  let prevX = 0;
+  for (let i = 0; i < len; i++) {
+    const x = rand() * 2 - 1;
+    const hp = x - prevX; // first-difference: zero at DC, gain = 2 at Nyquist
+    prevX = x;
+    buf[i] = hp * Math.exp(-i / decaySamples) * 0.08; // 8 % of kick peak
+  }
+  return buf;
+}
+
 /**
  * Slow-attack band-limited swell (~300 ms):
  * 80 ms linear ramp-up then 120 ms 1/e exponential decay.
@@ -388,9 +471,9 @@ export function djMix(startBpm = 180, durationSec = 30): BeatFixture {
   const beatCount = Math.floor((durationSec * startBpm) / 60);
   const beatTimesSec = Array.from({ length: beatCount }, (_, i) => i * ibi);
 
-  const kickShape = makeNoiseBurst(xorshift32(Math.round(startBpm * 997 + 7)));
-  const snareShape = makeNoiseBurst(xorshift32(Math.round(startBpm * 997 + 13)));
-  const hatShape = makeHatBurst(xorshift32(Math.round(startBpm * 997 + 31)));
+  const kickShape = makeKickDrum(xorshift32(Math.round(startBpm * 997 + 7)));
+  const snareShape = makeSnareDrum(xorshift32(Math.round(startBpm * 997 + 13)));
+  const hatShape = makeHiHatDrum(xorshift32(Math.round(startBpm * 997 + 31)));
 
   return {
     samples: buildKitBuffer(beatTimesSec, kickShape, snareShape, hatShape, durationSec),
@@ -456,9 +539,9 @@ export function djMixDrift(baseBpm = 180, driftBpm = 5, durationSec = 30): BeatF
     t += 60 / instBpm(t);
   }
 
-  const kickShape = makeNoiseBurst(xorshift32(Math.round(baseBpm * 997 + 43)));
-  const snareShape = makeNoiseBurst(xorshift32(Math.round(baseBpm * 997 + 79)));
-  const hatShape = makeHatBurst(xorshift32(Math.round(baseBpm * 997 + 127)));
+  const kickShape = makeKickDrum(xorshift32(Math.round(baseBpm * 997 + 43)));
+  const snareShape = makeSnareDrum(xorshift32(Math.round(baseBpm * 997 + 79)));
+  const hatShape = makeHiHatDrum(xorshift32(Math.round(baseBpm * 997 + 127)));
 
   return {
     samples: buildKitBuffer(beatTimesSec, kickShape, snareShape, hatShape, durationSec),
