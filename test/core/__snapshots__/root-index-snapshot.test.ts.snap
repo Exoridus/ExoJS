@@ -109,6 +109,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "ObservableSize",
   "ObservableVector",
   "Panel",
+  "PassContext",
   "Perf",
   "PlayStationGamepadMapping",
   "Pointer",

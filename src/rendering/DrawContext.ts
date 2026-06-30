@@ -5,8 +5,8 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import type { RenderBackend } from './RenderBackend';
 import type { RenderBatch } from './RenderBatch';
-import type { RenderNode } from './RenderNode';
 import type { DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
+import type { RenderNode } from './RenderNode';
 import type { View } from './View';
 
 /**

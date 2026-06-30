@@ -5,9 +5,9 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { DrawContext, RenderToOptions } from './DrawContext';
 import type { RenderBackend } from './RenderBackend';
 import type { RenderBatch } from './RenderBatch';
+import type { DrawBatchOptions, DrawGeometryOptions, RenderingContext, RenderOptions } from './RenderingContext';
 import type { RenderNode } from './RenderNode';
 import type { RenderTarget } from './RenderTarget';
-import type { DrawBatchOptions, DrawGeometryOptions, RenderingContext, RenderOptions } from './RenderingContext';
 import type { View } from './View';
 
 /**

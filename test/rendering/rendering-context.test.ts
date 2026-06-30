@@ -373,6 +373,28 @@ describe('RenderingContext', () => {
     pip.destroy();
     context.destroy();
   });
+
+  test('update auto-advances a view rendered last frame, then stops once it is no longer rendered', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const pip = new View(0, 0, 100, 100);
+    const node = new Container();
+    const tick = { milliseconds: 16 } as Time;
+
+    pip.follow({ x: 40, y: 0 }, { lerp: 1 });
+    context.render(node, { view: pip }); // render-usage registers pip for the next update
+    context.update(tick); // advances views rendered since the last update → pip follows
+    expect(pip.center.x).toBe(40);
+
+    // Stop rendering pip: it is no longer auto-advanced.
+    pip.follow({ x: 80, y: 0 }, { lerp: 1 });
+    context.update(tick);
+    expect(pip.center.x).toBe(40);
+
+    pip.destroy();
+    node.destroy();
+    context.destroy();
+  });
 });
 
 // Standard interleaved mesh layout: position f32x2 @0, texcoord f32x2 @8,

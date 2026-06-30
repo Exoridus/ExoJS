@@ -73,8 +73,10 @@ export class RenderingContext implements System, DrawContext {
   private _immediateMesh: ImmediateMesh | null = null;
   /** Lazily-created pooled geometry/look source reused by every {@link drawBatch} call. */
   private _batchMesh: ImmediateMesh | null = null;
-  /** Custom views (besides the active {@link view}) advanced each frame; see {@link trackView}. */
+  /** Views explicitly pinned for per-frame update via {@link trackView} (escape hatch for views ticked but never rendered). */
   private readonly _trackedViews = new Set<View>();
+  /** Views rendered since the last {@link update} — auto-advanced then cleared each frame, so a custom view's follow/shake ticks with no manual bookkeeping. */
+  private readonly _renderedViews = new Set<View>();
 
   public constructor(backend: RenderBackend) {
     this._backend = backend;
@@ -142,17 +144,30 @@ export class RenderingContext implements System, DrawContext {
 
   /**
    * Advance follow, shake, and bounds-constraint animations on the active
-   * {@link view} and every {@link trackView}-ed custom view. Ticked once per
-   * frame via {@link Application.systems}.
+   * {@link view}, every view rendered last frame (automatic), and any
+   * {@link trackView}-ed view. Ticked once per frame via {@link Application.systems}.
    */
   public update(delta: Time): void {
-    this._view.update(delta.milliseconds);
+    const ms = delta.milliseconds;
 
+    this._view.update(ms);
+
+    // Auto-advance every view rendered last frame (so a custom view's follow/shake
+    // ticks with no manual bookkeeping) plus any explicitly tracked view; each view
+    // updates at most once per frame.
     for (const view of this._trackedViews) {
       if (view !== this._view) {
-        view.update(delta.milliseconds);
+        view.update(ms);
       }
     }
+    for (const view of this._renderedViews) {
+      if (view !== this._view && !this._trackedViews.has(view)) {
+        view.update(ms);
+      }
+    }
+
+    // Render-usage is per-frame: clear so a view that stops being rendered stops ticking.
+    this._renderedViews.clear();
   }
 
   /**
@@ -165,6 +180,7 @@ export class RenderingContext implements System, DrawContext {
     this._view.destroy();
     this._screenView.destroy();
     this._trackedViews.clear();
+    this._renderedViews.clear();
     this._immediateMesh?.destroy();
     this._immediateMesh = null;
     this._batchMesh?.destroy();
@@ -191,6 +207,7 @@ export class RenderingContext implements System, DrawContext {
   public render(node: RenderNode, options: RenderOptions = {}): void {
     const view = options.view ?? this._view;
 
+    this._renderedViews.add(view);
     this._backend.setView(view);
     playRenderTree(node, this._backend);
   }
@@ -265,7 +282,7 @@ export class RenderingContext implements System, DrawContext {
           clearColor: color,
           stencil: StencilAttachmentMode.None,
         },
-        () => undefined,
+        () => {},
       );
 
       return;
@@ -282,6 +299,8 @@ export class RenderingContext implements System, DrawContext {
    */
   public renderTo(node: RenderNode, options: RenderToOptions): void {
     const view = options.view ?? options.target.view;
+
+    this._renderedViews.add(view);
     const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
 
     if (coordinator) {
@@ -356,6 +375,8 @@ export class RenderingContext implements System, DrawContext {
     }
 
     const view = options.view ?? this._view;
+
+    this._renderedViews.add(view);
     const mesh = (this._immediateMesh ??= new ImmediateMesh());
 
     // Set the view first: setView now only flushes when the view actually changes
@@ -396,6 +417,8 @@ export class RenderingContext implements System, DrawContext {
     }
 
     const view = options.view ?? this._view;
+
+    this._renderedViews.add(view);
     const mesh = (this._batchMesh ??= new ImmediateMesh());
 
     // Set the view first (setView only flushes when the view actually changes;

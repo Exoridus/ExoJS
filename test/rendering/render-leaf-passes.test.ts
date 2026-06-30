@@ -1,9 +1,9 @@
 import { Color } from '#core/Color';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
-import { PassContext } from '#rendering/PassContext';
 import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
 import type { RenderPassDescriptor } from '#rendering/pass/RenderPassDescriptor';
+import { PassContext } from '#rendering/PassContext';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderingContext, RenderOptions } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
