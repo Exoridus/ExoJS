@@ -196,6 +196,65 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     expect(allMetrics.size).toBe(FIXTURES.length);
   });
 
+  // ── T1 acceptance gates (octave-half fix) ──
+  // These are HARD thresholds: the octave fix must hold or CI goes red.
+
+  const pct = (e: BaselineEntry) => e.bpmErrorMeanAbs / e.bpmTrue;
+
+  // The six tempos that USED to lock to a sub-harmonic (or never lock) must now lock to
+  // the true fundamental within 3%, with no octave error.
+  for (const label of [
+    'clicktrack_120bpm',
+    'clicktrack_128bpm',
+    'clicktrack_140bpm',
+    'clicktrack_180bpm',
+    'clicktrack_220bpm',
+    'clicktrack_250bpm',
+  ]) {
+    it(`T1: ${label} locks to fundamental ≤3%, no octave error`, () => {
+      const e = allMetrics.get(label)!;
+      expect(e.octaveHalf).toBe(false);
+      expect(e.octaveDouble).toBe(false);
+      expect(e.lockTimeSec).not.toBeNull();
+      expect(pct(e)).toBeLessThanOrEqual(0.03);
+    });
+  }
+
+  // Musical / drifting fixtures: no octave error, ≤5%.
+  for (const label of [
+    'doubleTime_128bpm',
+    'swing_120bpm_67pct',
+    'grooveOffset_120bpm_10ms',
+    'breakDrop_128bpm',
+    'tempoRamp_120_to_135bpm',
+  ]) {
+    it(`T1: ${label} no octave error, BPM error ≤5%`, () => {
+      const e = allMetrics.get(label)!;
+      expect(e.octaveHalf).toBe(false);
+      expect(e.octaveDouble).toBe(false);
+      expect(pct(e)).toBeLessThanOrEqual(0.05);
+    });
+  }
+
+  // The prior must NOT over-pull a legitimately slow tempo upward, and an edge tempo
+  // below the prior centre must still win on evidence.
+  it('T1: halfTime_64 stays correct ≤3% (prior does not pull it up)', () => {
+    const e = allMetrics.get('halfTime_64bpm')!;
+    expect(e.octaveDouble).toBe(false);
+    expect(pct(e)).toBeLessThanOrEqual(0.03);
+  });
+
+  it('T1: clicktrack_50 stays correct ≤3% (edge below prior centre)', () => {
+    expect(pct(allMetrics.get('clicktrack_50bpm')!)).toBeLessThanOrEqual(0.03);
+  });
+
+  // No regression on the tempos that already passed.
+  for (const label of ['clicktrack_60bpm', 'clicktrack_90bpm']) {
+    it(`T1: ${label} no regression ≤3%`, () => {
+      expect(pct(allMetrics.get(label)!)).toBeLessThanOrEqual(0.03);
+    });
+  }
+
   // ── Write committed baseline snapshot ──
 
   afterAll(() => {

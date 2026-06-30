@@ -3,40 +3,94 @@
  *
  * Given a novelty (onset-strength) curve sampled at rate `hopRate = sampleRate / hopSize`,
  * this module computes the autocorrelation function (ACF) over a sliding window and
- * selects tempo candidates from the resulting periodicity peaks.
+ * selects the musically-correct tempo from the resulting periodicity peaks.
  *
  * The same pipeline is transliterated verbatim into the beat-detector worklet source
  * string (worklets cannot import modules). `test/dsp/worklet-parity.test.ts` guards that
  * the worklet's tempo candidates equal `computeTempoCandidates(...)` here, so this file
  * is the canonical implementation and the worklet is a mechanical mirror of it.
+ *
+ * Octave disambiguation (the core fix)
+ * ------------------------------------
+ * The ACF of a periodic onset train peaks at the beat lag `p` AND at every sub-harmonic
+ * lag `2p, 3p, …` (every other beat also correlates). A naive "biggest peak" or additive
+ * harmonic-comb picker therefore drifts down to the lowest in-range sub-harmonic. Three
+ * mechanisms cooperate here to lock the true fundamental instead:
+ *
+ *   1. The novelty is mean-subtracted before correlation (removes the DC pedestal under
+ *      every lag) and the ACF uses the BIASED / zero-lag-normalised estimator (÷n, not
+ *      ÷(n−lag)) so long lags are gently tapered rather than inflated.  [computeAcf]
+ *   2. Each candidate `f` is scored by a periodicity comb over its own SUB-multiples
+ *      (`f`, `f/2`, `f/3` → lags `p, 2p, 3p`) MINUS a penalty for energy at its
+ *      SUPER-harmonics (`2f`, `3f` → lags `p/2, p/3`). A true fundamental has no
+ *      super-harmonic energy, so it keeps its full comb; a sub-harmonic candidate is
+ *      demoted because its super-harmonic (the real beat) is strong. This realises the
+ *      plan's stated goal — "metrical support reinforces the fundamental rather than a
+ *      lone sub-harmonic peak" — over the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
+ *   3. A soft log-Gaussian tempo prior centred on ~140 BPM breaks residual ties toward
+ *      the musical core (100–200 BPM) without hard-clamping the edges.  [tempoPrior]
  */
 
 export interface TempoCandidateResult {
   /** BPM value. */
   bpm: number;
-  /** Selection score (see `computeTempoCandidates`). */
+  /** Selection score (periodicity comb × tempo prior; not normalised to 0..1). */
   score: number;
   /** ACF lag in hops that produced this peak. */
   lag: number;
 }
 
-/** Options for tempo-candidate selection. */
+/** Tuning knobs for tempo-candidate scoring. Internal constants for now (see plan §4.5). */
 export interface TempoScoringOptions {
   /** Lowest BPM accepted as a candidate. */
   minBpm?: number;
   /** Highest BPM accepted as a candidate. */
   maxBpm?: number;
+  /** Log-Gaussian prior centre (geometric mean of the precise band). */
+  priorMu?: number;
+  /** Log-Gaussian prior width in natural-log units. */
+  priorSigma?: number;
   /** Number of candidates to return. */
   topK?: number;
+}
+
+/** Prior centre — geometric mean of the 100–200 BPM "precise" band. */
+export const defaultPriorMu = 140;
+/** Prior width: ≈ ±1 octave at ~0.6 weight. */
+export const defaultPriorSigma = Math.log(2) * 0.9;
+/**
+ * Relative tolerance on the candidate-acceptance BPM band. A tempo sitting exactly on
+ * the edge (e.g. 250) has an ACF lag (22.5) that straddles the boundary; without slack
+ * its peak can round just outside the band and be discarded.
+ */
+export const candidateEdgeTolerance = 0.05;
+
+/** Periodicity-comb weights for a candidate's own sub-multiples (f, f/2, f/3). */
+const combWeightFundamental = 1;
+const combWeightHalf = 0.5;
+const combWeightThird = 0.3;
+/** Super-harmonic penalty weights (2f, 3f) — strong evidence the candidate is a sub-harmonic. */
+const combPenaltyDouble = 1;
+const combPenaltyTriple = 0.5;
+
+/**
+ * The ACF is computed down to a shorter lag than the candidate band needs, so that
+ * (a) a high-BPM fundamental whose lag lands on `minLag` is an interior peak with its
+ * true height, and (b) the 2f/3f super-harmonic penalty can read energy ABOVE maxBpm
+ * (a sub-harmonic candidate's real beat). One third of `minLag` reaches the 3f lag of a
+ * candidate at maxBpm.
+ */
+export function acfExtendedMinLag(minLag: number): number {
+  return Math.max(1, Math.round(minLag / 3));
 }
 
 /**
  * Compute the normalised autocorrelation function over a novelty curve.
  *
- * The novelty is mean-subtracted (kills the DC pedestal that otherwise sits under every
- * lag), correlated with the BIASED estimator (`sum / n`, not `sum / (n − lag)`) so long
- * lags are tapered rather than inflated, and normalised by the zero-lag energy (variance)
- * so the output is in roughly [-1, 1] with the strongest true period near 1.
+ * The novelty is mean-subtracted (kills the DC pedestal under every lag), correlated with
+ * the BIASED estimator (`sum / n`, not `sum / (n − lag)`) so long lags are tapered rather
+ * than inflated, and normalised by the zero-lag energy (variance) so the output is in
+ * roughly [-1, 1] with the strongest true period near 1.
  *
  * @param flux       Recent novelty values (oldest first).
  * @param minLag     Minimum lag in hops (inclusive).
@@ -75,6 +129,22 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
   }
 
   return acf;
+}
+
+/**
+ * Sample the ACF at an arbitrary (possibly fractional) lag with linear interpolation.
+ * Returns 0 outside the computed lag range and clamps negative correlation to 0 so
+ * anti-correlated harmonics never contribute to (or subtract spuriously from) a comb.
+ */
+function acfAtLag(acf: Float32Array, minLag: number, lag: number): number {
+  const maxIndex = acf.length - 1;
+  const f = lag - minLag;
+  if (f < 0 || f > maxIndex) return 0;
+  const i0 = Math.floor(f);
+  const i1 = i0 < maxIndex ? i0 + 1 : maxIndex;
+  const frac = f - i0;
+  const v = acf[i0]! * (1 - frac) + acf[i1]! * frac;
+  return v > 0 ? v : 0;
 }
 
 /**
@@ -124,13 +194,61 @@ export function findTempoPeaks(
   return peaks.slice(0, topK);
 }
 
+/** Soft log-Gaussian tempo prior: 1 at `mu`, decaying symmetrically in log-BPM. */
+export function tempoPrior(bpm: number, mu = defaultPriorMu, sigma = defaultPriorSigma): number {
+  const z = Math.log(bpm / mu) / sigma;
+  return Math.exp(-0.5 * z * z);
+}
+
 /**
- * Full tempo-candidate pipeline: ACF → peaks → BPM-band filter.
+ * Re-score raw ACF peaks into musically-disambiguated tempo candidates.
+ *
+ * For each candidate fundamental `f` (lag `p`):
+ *   support  = 1.0·ACF(p) + 0.5·ACF(2p) + 0.3·ACF(3p)      // its own sub-multiples (f, f/2, f/3)
+ *   penalty  = 1.0·ACF(p/2) + 0.5·ACF(p/3)                  // super-harmonics (2f, 3f)
+ *   comb     = max(0, support − penalty)
+ *   score    = comb · prior(bpm)
+ *
+ * The penalty is what defeats the octave-down bias: a sub-harmonic candidate has a strong
+ * super-harmonic (the real beat), so it is demoted; the true fundamental has no
+ * super-harmonic energy and keeps its full comb. Returns candidates sorted by score.
+ */
+export function scoreTempoHypotheses(
+  peaks: TempoCandidateResult[],
+  acf: Float32Array,
+  minLag: number,
+  options: TempoScoringOptions = {},
+): TempoCandidateResult[] {
+  const mu = options.priorMu ?? defaultPriorMu;
+  const sigma = options.priorSigma ?? defaultPriorSigma;
+
+  const scored = peaks.map((p) => {
+    const lag = p.lag;
+    const aF = acfAtLag(acf, minLag, lag);
+    const aHalf = acfAtLag(acf, minLag, lag * 2); // f/2 (slower sub-harmonic)
+    const aThird = acfAtLag(acf, minLag, lag * 3); // f/3
+    const aDouble = acfAtLag(acf, minLag, lag / 2); // 2f (faster super-harmonic)
+    const aTriple = acfAtLag(acf, minLag, lag / 3); // 3f
+
+    const support = combWeightFundamental * aF + combWeightHalf * aHalf + combWeightThird * aThird;
+    const penalty = combPenaltyDouble * aDouble + combPenaltyTriple * aTriple;
+    let comb = support - penalty;
+    if (comb < 0) comb = 0;
+
+    return { bpm: p.bpm, score: comb * tempoPrior(p.bpm, mu, sigma), lag: p.lag };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored;
+}
+
+/**
+ * Full tempo-candidate pipeline: ACF → peaks → comb + super-harmonic penalty + prior.
  *
  * This is the single function the worklet mirrors and `worklet-parity.test.ts` checks.
  *
  * @param flux       Recent novelty values (oldest first).
- * @param minLag     Minimum lag in hops (inclusive).
+ * @param minLag     Minimum candidate lag in hops (inclusive); the ACF itself extends below it.
  * @param maxLag     Maximum lag in hops (inclusive).
  * @param hopSize    Audio samples per hop.
  * @param sampleRate Audio sample rate in Hz.
@@ -147,18 +265,34 @@ export function computeTempoCandidates(
   const maxBpm = options.maxBpm ?? 250;
   const topK = options.topK ?? 3;
 
-  const acf = computeAcf(flux, minLag, maxLag);
-  const peaks = findTempoPeaks(acf, minLag, hopSize, sampleRate, acf.length);
-  const inRange = peaks.filter((p) => p.bpm >= minBpm && p.bpm <= maxBpm);
-  return inRange.slice(0, topK);
+  const acfMinLag = acfExtendedMinLag(minLag);
+  const acf = computeAcf(flux, acfMinLag, maxLag);
+  const peaks = findTempoPeaks(acf, acfMinLag, hopSize, sampleRate, acf.length);
+  const loBpm = minBpm * (1 - candidateEdgeTolerance);
+  const hiBpm = maxBpm * (1 + candidateEdgeTolerance);
+  const inRange = peaks.filter((p) => p.bpm >= loBpm && p.bpm <= hiBpm);
+  const scored = scoreTempoHypotheses(inRange, acf, acfMinLag, options);
+  return scored.slice(0, topK);
+}
+
+/** True when `bpm` is a ½×, 2×, 3× or ⅓× octave relative of `reference`. */
+export function isOctaveRelated(bpm: number, reference: number): boolean {
+  if (reference <= 0) return false;
+  const r = bpm / reference;
+  return (
+    Math.abs(r - 0.5) < 0.05 ||
+    Math.abs(r - 2) < 0.1 ||
+    Math.abs(r - 3) < 0.15 ||
+    Math.abs(r - 1 / 3) < 0.05
+  );
 }
 
 /**
- * Apply hysteresis to tempo candidate selection.
+ * Apply octave-aware hysteresis to tempo candidate selection.
  *
  * Prevents rapid switching between tempo estimates:
  * - Only switches to a new best if its score is > currentBestScore * 1.15.
- * - Octave-related candidates (2× or ½×) require a score > 1.5× to switch.
+ * - Octave-related candidates (½×, 2×, 3×, ⅓×) require a score > 1.5× to switch.
  *
  * @param candidates   Candidates from `computeTempoCandidates` (sorted by score).
  * @param currentBpm   Currently tracked BPM.
@@ -177,9 +311,7 @@ export function applyTempoHysteresis(
   // First-time selection (no current BPM)
   if (currentBpm <= 0) return top.bpm;
 
-  const isOctaveRelated = Math.abs(top.bpm / currentBpm - 2) < 0.1 || Math.abs(top.bpm / currentBpm - 0.5) < 0.05;
-
-  const requiredMargin = isOctaveRelated ? 1.5 : 1.15;
+  const requiredMargin = isOctaveRelated(top.bpm, currentBpm) ? 1.5 : 1.15;
 
   if (top.score > currentScore * requiredMargin) {
     return top.bpm;

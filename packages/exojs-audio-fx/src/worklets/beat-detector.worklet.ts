@@ -95,8 +95,15 @@ function computeMelBands(mag, bands, out) {
 }
 
 // ---- Tempogram (single source of truth — transliterated from src/dsp/tempogram.ts) ----
-// Guarded by test/dsp/worklet-parity.test.ts: this MUST stay numerically identical to
-// computeAcf / computeTempoCandidates in src/dsp/tempogram.ts.
+// Guarded by test/dsp/worklet-parity.test.ts: these MUST stay numerically identical to
+// computeAcf / scoreTempoHypotheses / computeTempoCandidates in src/dsp/tempogram.ts.
+var TEMPO_PRIOR_MU = 140;
+var TEMPO_PRIOR_SIGMA = Math.log(2) * 0.9;
+var COMB_W_FUNDAMENTAL = 1.0;
+var COMB_W_HALF = 0.5;
+var COMB_W_THIRD = 0.3;
+var COMB_PENALTY_DOUBLE = 1.0;
+var COMB_PENALTY_TRIPLE = 0.5;
 
 // Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
 function computeAcfInline(flux, n, minLag, maxLag, out) {
@@ -114,6 +121,23 @@ function computeAcfInline(flux, n, minLag, maxLag, out) {
         for (var t2 = lag; t2 < n; t2++) { sum += (flux[t2] - mean) * (flux[t2 - lag] - mean); }
         out[lagIndex] = n > 0 ? sum / n / norm : 0;
     }
+}
+
+// Linear-interpolated ACF sample; 0 outside range, negative correlation clamped to 0.
+function acfAtLagInline(acf, acfLen, minLag, lag) {
+    var maxIndex = acfLen - 1;
+    var f = lag - minLag;
+    if (f < 0 || f > maxIndex) { return 0; }
+    var i0 = Math.floor(f);
+    var i1 = i0 < maxIndex ? i0 + 1 : maxIndex;
+    var frac = f - i0;
+    var v = acf[i0] * (1 - frac) + acf[i1] * frac;
+    return v > 0 ? v : 0;
+}
+
+function tempoPriorInline(bpm, mu, sigma) {
+    var zp = Math.log(bpm / mu) / sigma;
+    return Math.exp(-0.5 * zp * zp);
 }
 
 // ---- Processor ----
@@ -157,16 +181,21 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         // Lag range in hops for BPM range
         this._minLag = Math.max(1, Math.round(60 / this._maxBpm * this._sampleRate / this._hopSize));
         this._maxLag = Math.round(60 / this._minBpm * this._sampleRate / this._hopSize);
-        this._acf    = new Float32Array(this._maxLag - this._minLag + 1); // scratch ACF buffer
+        // ACF is computed down to a shorter lag than the candidate band (see tempogram.ts
+        // acfExtendedMinLag): high-BPM fundamentals become interior peaks and the 2f/3f
+        // super-harmonic penalty can read energy above maxBpm.
+        this._acfMinLag = Math.max(1, Math.round(this._minLag / 3));
+        this._acf    = new Float32Array(this._maxLag - this._acfMinLag + 1); // scratch ACF buffer
 
         this._hopsSinceACF = 0;
         var ACF_INTERVAL = 15;
         this._acfInterval = ACF_INTERVAL;
 
         // Tempo state
-        this._bestBpm    = 0;
-        this._bestScore  = 0;
-        this._candidates = [];
+        this._bestBpm        = 0;
+        this._bestScore      = 0;
+        this._candidates     = [];
+        this._firstLockSample = -1; // sample index of first lock (for hysteresis grace window)
 
         // Phase state
         this._lastBeatSample = -1;
@@ -321,9 +350,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         var buf = this._fluxWindow;
         var wp  = this._fluxWritePos;
         var len = buf.length;
-        var minLag  = this._minLag;
+        var minLag  = this._acfMinLag;        // extended ACF base (see constructor)
         var maxLag  = this._maxLag;
         var numLags = maxLag - minLag + 1;
+        var loBpm   = this._minBpm * 0.95;    // CANDIDATE_EDGE_TOLERANCE = 0.05
+        var hiBpm   = this._maxBpm * 1.05;
 
         // Linearise the flux ring buffer (oldest first) into a scratch array so the ACF
         // operates on the same layout src/dsp/tempogram.computeAcf expects.
@@ -354,27 +385,61 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         }
         peaks.sort(function(a, b) { return b.score - a.score; });
 
-        // Filter to BPM range — mirrors computeTempoCandidates filter.
+        // Filter to BPM range (with edge tolerance) — mirrors computeTempoCandidates filter.
         var inRange = [];
         for (var pf = 0; pf < peaks.length; pf++) {
-            if (peaks[pf].bpm >= this._minBpm && peaks[pf].bpm <= this._maxBpm) inRange.push(peaks[pf]);
+            if (peaks[pf].bpm >= loBpm && peaks[pf].bpm <= hiBpm) inRange.push(peaks[pf]);
         }
 
-        this._candidates = inRange.slice(0, 3);
+        // Comb (own sub-multiples) − super-harmonic penalty, × tempo prior.
+        // Mirrors scoreTempoHypotheses. The penalty is what defeats the octave-down bias.
+        var scored = [];
+        for (var q = 0; q < inRange.length; q++) {
+            var lag    = inRange[q].lag;
+            var aF     = acfAtLagInline(acf, numLags, minLag, lag);
+            var aHalf  = acfAtLagInline(acf, numLags, minLag, lag * 2);
+            var aThird = acfAtLagInline(acf, numLags, minLag, lag * 3);
+            var aDouble = acfAtLagInline(acf, numLags, minLag, lag / 2);
+            var aTriple = acfAtLagInline(acf, numLags, minLag, lag / 3);
+            var support = COMB_W_FUNDAMENTAL * aF + COMB_W_HALF * aHalf + COMB_W_THIRD * aThird;
+            var penalty = COMB_PENALTY_DOUBLE * aDouble + COMB_PENALTY_TRIPLE * aTriple;
+            var comb = support - penalty;
+            if (comb < 0) comb = 0;
+            var w = tempoPriorInline(inRange[q].bpm, TEMPO_PRIOR_MU, TEMPO_PRIOR_SIGMA);
+            scored.push({ bpm: inRange[q].bpm, score: comb * w, lag: lag });
+        }
+        scored.sort(function(a, b) { return b.score - a.score; });
+
+        this._candidates = scored.slice(0, 3);
         if (this._candidates.length === 0) return;
 
         var top = this._candidates[0];
 
-        // Hysteresis
+        // Octave-aware hysteresis with a short first-lock grace window.
         if (this._bestBpm <= 0) {
             // First lock
             this._bestBpm   = top.bpm;
             this._bestScore = top.score;
+            this._firstLockSample = this._sampleCount;
         } else {
-            var isOctave = (Math.abs(top.bpm / this._bestBpm - 2) < 0.1) ||
-                           (Math.abs(top.bpm / this._bestBpm - 0.5) < 0.05);
-            var margin = isOctave ? 1.5 : 1.15;
-            if (top.score > this._bestScore * margin) {
+            // Fresh score of the currently-tracked tempo from this frame.
+            var currentScore = 0;
+            for (var c = 0; c < this._candidates.length; c++) {
+                if (Math.abs(this._candidates[c].bpm / this._bestBpm - 1) < 0.03) {
+                    if (this._candidates[c].score > currentScore) currentScore = this._candidates[c].score;
+                }
+            }
+            if (currentScore <= 0) currentScore = this._bestScore * 0.9;
+
+            var inGrace = this._firstLockSample >= 0 &&
+                          (this._sampleCount - this._firstLockSample) < 2 * this._sampleRate;
+            var ratio = top.bpm / this._bestBpm;
+            var isOctave = Math.abs(ratio - 0.5) < 0.05 || Math.abs(ratio - 2) < 0.1 ||
+                           Math.abs(ratio - 3) < 0.15 || Math.abs(ratio - 1/3) < 0.05;
+            var margin = inGrace ? 1.0 : (isOctave ? 1.5 : 1.15);
+            var diff = Math.abs(top.bpm - this._bestBpm) / this._bestBpm;
+
+            if (diff > 0.03 && top.score > currentScore * margin) {
                 var oldBpm = this._bestBpm;
                 this._bestBpm   = top.bpm;
                 this._bestScore = top.score;
@@ -383,7 +448,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
                     this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
                 }
             } else {
-                this._bestScore = this._bestScore * 0.99 + top.score * 0.01; // slowly decay
+                this._bestScore = currentScore;
             }
         }
 
