@@ -179,4 +179,77 @@ describe('WorkletEffect', () => {
     filter1.destroy();
     filter2.destroy();
   });
+
+  // ---------------------------------------------------------------------------
+  // Dry/wet gain staging (Task 1)
+  // ---------------------------------------------------------------------------
+
+  it('creates dry and wet gains; wet path is silent before the worklet loads', () => {
+    const ctx = getAudioContext();
+    const originalCreateGain = ctx.createGain.bind(ctx);
+    let callCount = 0;
+    let dryGainNode: GainNode | null = null;
+    let wetGainNode: GainNode | null = null;
+
+    vi.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const node = originalCreateGain();
+      vi.spyOn(node.gain, 'setValueAtTime');
+      callCount++;
+      if (callCount === 3) dryGainNode = node;
+      if (callCount === 4) wetGainNode = node;
+      return node;
+    });
+
+    const filter = new TestWorkletEffect();
+    // input, output, dry, wet — at least 4 gains
+    expect(callCount).toBeGreaterThanOrEqual(4);
+    expect(filter['_dryGain']).not.toBeNull();
+    expect(filter['_wetGain']).not.toBeNull();
+    // dry initialized to 1, wet initialized to 0 (silent until worklet loads)
+    expect(dryGainNode!.gain.setValueAtTime as unknown as MockInstance).toHaveBeenCalledWith(1, expect.anything());
+    expect(wetGainNode!.gain.setValueAtTime as unknown as MockInstance).toHaveBeenCalledWith(0, expect.anything());
+    filter.destroy();
+  });
+
+  it('wet setter clamps to [0,1] and is reflected once the worklet is ready', async () => {
+    const filter = new TestWorkletEffect();
+    await filter.ready;
+
+    vi.spyOn(filter['_dryGain']!.gain, 'setTargetAtTime');
+    vi.spyOn(filter['_wetGain']!.gain, 'setTargetAtTime');
+
+    filter.wet = 0.25;
+    expect(filter.wet).toBe(0.25);
+    expect(filter['_dryGain']!.gain.setTargetAtTime).toHaveBeenCalledWith(0.75, expect.anything(), expect.anything());
+    expect(filter['_wetGain']!.gain.setTargetAtTime).toHaveBeenCalledWith(0.25, expect.anything(), expect.anything());
+    filter.wet = 5;
+    expect(filter.wet).toBe(1);
+    filter.wet = -1;
+    expect(filter.wet).toBe(0);
+    filter.destroy();
+  });
+
+  it('after the worklet loads, the configured wet mix is applied (default wet=1)', async () => {
+    const ctx = getAudioContext();
+    const originalCreateGain = ctx.createGain.bind(ctx);
+    let callCount = 0;
+    let dryGainNode: GainNode | null = null;
+    let wetGainNode: GainNode | null = null;
+
+    vi.spyOn(ctx, 'createGain').mockImplementation(() => {
+      const node = originalCreateGain();
+      vi.spyOn(node.gain, 'setTargetAtTime');
+      callCount++;
+      if (callCount === 3) dryGainNode = node;
+      if (callCount === 4) wetGainNode = node;
+      return node;
+    });
+
+    const filter = new TestWorkletEffect();
+    await filter.ready;
+    // Default wet=1: dryGain.setTargetAtTime(0, ...), wetGain.setTargetAtTime(1, ...)
+    expect(dryGainNode!.gain.setTargetAtTime as unknown as MockInstance).toHaveBeenCalledWith(0, expect.anything(), expect.anything());
+    expect(wetGainNode!.gain.setTargetAtTime as unknown as MockInstance).toHaveBeenCalledWith(1, expect.anything(), expect.anything());
+    filter.destroy();
+  });
 });

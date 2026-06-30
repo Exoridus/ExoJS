@@ -127,9 +127,9 @@ describe('PitchShiftEffect', () => {
       await filter.ready;
       const node = filter['_workletNode']!;
       const pitchParam = node.parameters.get('pitch') as unknown as { setTargetAtTime: MockInstance };
-      const wetParam = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
       expect(pitchParam.setTargetAtTime).toHaveBeenCalledWith(1.5, expect.anything(), expect.anything());
-      expect(wetParam.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.anything(), expect.anything());
+      // wet is now managed by the WorkletEffect base gain nodes, not the worklet param
+      expect(filter.wet).toBe(0.8);
       filter.destroy();
     });
 
@@ -175,15 +175,15 @@ describe('PitchShiftEffect', () => {
       filter.destroy();
     });
 
-    it('setting wet updates worklet param', async () => {
+    it('setting wet updates base gain nodes', async () => {
       const filter = new PitchShiftEffect();
       await filter.ready;
-      const node = filter['_workletNode']!;
-      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
-      param.setTargetAtTime.mockClear();
+      vi.spyOn(filter['_dryGain']!.gain, 'setTargetAtTime');
+      vi.spyOn(filter['_wetGain']!.gain, 'setTargetAtTime');
       filter.wet = 0.5;
       expect(filter.wet).toBe(0.5);
-      expect(param.setTargetAtTime).toHaveBeenCalledWith(0.5, expect.anything(), expect.anything());
+      expect(filter['_dryGain']!.gain.setTargetAtTime).toHaveBeenCalledWith(0.5, expect.anything(), expect.anything());
+      expect(filter['_wetGain']!.gain.setTargetAtTime).toHaveBeenCalledWith(0.5, expect.anything(), expect.anything());
       filter.destroy();
     });
   });

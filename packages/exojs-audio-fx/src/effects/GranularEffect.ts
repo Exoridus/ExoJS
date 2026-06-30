@@ -45,7 +45,6 @@ export class GranularEffect extends WorkletEffect {
   private _spread: number;
   private _pitchMin: number;
   private _pitchMax: number;
-  private _wet: number;
   private readonly _bufferSeconds: number;
   private readonly _normalizeGain: boolean;
 
@@ -56,9 +55,9 @@ export class GranularEffect extends WorkletEffect {
     this._spread = Math.max(0, Math.min(1, options.spread ?? 0.5));
     this._pitchMin = Math.max(0.25, Math.min(4, options.pitchMin ?? 1));
     this._pitchMax = Math.max(0.25, Math.min(4, options.pitchMax ?? 1));
-    this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._bufferSeconds = options.bufferSeconds ?? 2;
     this._normalizeGain = options.normalizeGain ?? false;
+    this.wet = options.wet ?? 1;
   }
 
   protected get _workletName(): string {
@@ -81,7 +80,6 @@ export class GranularEffect extends WorkletEffect {
     this._setAudioParam('spread', this._spread);
     this._setAudioParam('pitchMin', this._pitchMin);
     this._setAudioParam('pitchMax', this._pitchMax);
-    this._setAudioParam('wet', this._wet);
   }
 
   /** Duration of each grain in seconds. Range 0.005..0.5, default 0.05. */
@@ -127,14 +125,5 @@ export class GranularEffect extends WorkletEffect {
   public set pitchMax(value: number) {
     this._pitchMax = Math.max(0.25, Math.min(4, value));
     this._setAudioParam('pitchMax', this._pitchMax);
-  }
-
-  /** Wet (granular) mix level, 0..1. Default 1.0. */
-  public get wet(): number {
-    return this._wet;
-  }
-  public set wet(value: number) {
-    this._wet = Math.max(0, Math.min(1, value));
-    this._setAudioParam('wet', this._wet);
   }
 }

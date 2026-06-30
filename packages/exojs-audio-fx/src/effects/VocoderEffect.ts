@@ -38,7 +38,6 @@ export class VocoderEffect extends WorkletEffect {
   private readonly _minHz: number;
   private readonly _maxHz: number;
   private readonly _bandQ: number;
-  private _wet: number;
   private _envelopeSmoothing: number;
 
   public constructor(options: VocoderEffectOptions) {
@@ -51,8 +50,8 @@ export class VocoderEffect extends WorkletEffect {
     this._minHz = options.minHz ?? 80;
     this._maxHz = options.maxHz ?? 8000;
     this._bandQ = options.bandQ ?? 4;
-    this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, options.envelopeSmoothing ?? 0.005));
+    this.wet = options.wet ?? 1;
   }
 
   protected get _workletName(): string {
@@ -78,7 +77,6 @@ export class VocoderEffect extends WorkletEffect {
     // Guard against partially-constructed instances (constructor threw after super()).
     if (!this._modulator) return;
 
-    this._setAudioParam('wet', this._wet);
     this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);
 
     // Wire modulator bus output to input 1 of the worklet
@@ -94,15 +92,6 @@ export class VocoderEffect extends WorkletEffect {
         }
       });
     }
-  }
-
-  /** Wet (vocoded) mix level, 0..1. Default 1.0. */
-  public get wet(): number {
-    return this._wet;
-  }
-  public set wet(value: number) {
-    this._wet = Math.max(0, Math.min(1, value));
-    this._setAudioParam('wet', this._wet);
   }
 
   /** One-pole envelope follower coefficient. Smaller values produce slower, smoother envelope tracking. Range 0.0001..0.1, default 0.005. */

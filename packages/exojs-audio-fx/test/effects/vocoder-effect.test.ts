@@ -126,15 +126,15 @@ describe('VocoderEffect', () => {
       filter.destroy();
     });
 
-    it('after await filter.ready: wet and envelopeSmoothing params are set', async () => {
+    it('after await filter.ready: envelopeSmoothing worklet param and wet base gain are set', async () => {
       const modulator = makeModulatorBus();
       const filter = new VocoderEffect({ modulator, wet: 0.7, envelopeSmoothing: 0.01 });
       await filter.ready;
       const node = filter['_workletNode']!;
-      const wetParam = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
       const esParam = node.parameters.get('envelopeSmoothing') as unknown as { setTargetAtTime: MockInstance };
-      expect(wetParam.setTargetAtTime).toHaveBeenCalledWith(0.7, expect.anything(), expect.anything());
       expect(esParam.setTargetAtTime).toHaveBeenCalledWith(0.01, expect.anything(), expect.anything());
+      // wet is now managed by the WorkletEffect base gain nodes, not the worklet param
+      expect(filter.wet).toBe(0.7);
       filter.destroy();
     });
 
@@ -207,16 +207,16 @@ describe('VocoderEffect', () => {
   // 5. Runtime setters
   // -------------------------------------------------------------------------
   describe('setters after ready', () => {
-    it('setting wet updates worklet param', async () => {
+    it('setting wet updates base gain nodes', async () => {
       const modulator = makeModulatorBus();
       const filter = new VocoderEffect({ modulator });
       await filter.ready;
-      const node = filter['_workletNode']!;
-      const param = node.parameters.get('wet') as unknown as { setTargetAtTime: MockInstance };
-      param.setTargetAtTime.mockClear();
+      vi.spyOn(filter['_dryGain']!.gain, 'setTargetAtTime');
+      vi.spyOn(filter['_wetGain']!.gain, 'setTargetAtTime');
       filter.wet = 0.4;
       expect(filter.wet).toBe(0.4);
-      expect(param.setTargetAtTime).toHaveBeenCalledWith(0.4, expect.anything(), expect.anything());
+      expect(filter['_dryGain']!.gain.setTargetAtTime).toHaveBeenCalledWith(0.6, expect.anything(), expect.anything());
+      expect(filter['_wetGain']!.gain.setTargetAtTime).toHaveBeenCalledWith(0.4, expect.anything(), expect.anything());
       filter.destroy();
     });
 
