@@ -27,6 +27,15 @@
  *      demoted because its super-harmonic (the real beat) is strong. This realises the
  *      plan's stated goal — "metrical support reinforces the fundamental rather than a
  *      lone sub-harmonic peak" — over the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
+ *
+ *      The super-harmonic penalty is SUBDIVISION-AWARE: a candidate `kf` (k = 2, 3) only
+ *      demotes `f` when `kf` could itself be the beat, i.e. `kf` lies within the tempo
+ *      band `[minBpm, maxBpm]`. Energy at a super-harmonic ABOVE `maxBpm` is a subdivision
+ *      (e.g. hi-hats on 8th-notes riding over a 180 BPM kick → strong energy at 360 BPM),
+ *      NOT a competing fundamental, so it must NOT penalise the true beat. Without this
+ *      gate a realistic kit pattern whose fundamental carries subdivision energy is wrongly
+ *      demoted in favour of an unrelated in-band multiple (180 → 120). Pure clicktracks
+ *      are unaffected: they have no super-harmonic energy, so the gate changes nothing.
  *   3. A soft log-Gaussian tempo prior centred on ~140 BPM breaks residual ties toward
  *      the musical core (100–200 BPM) without hard-clamping the edges.  [tempoPrior]
  */
@@ -205,13 +214,19 @@ export function tempoPrior(bpm: number, mu = defaultPriorMu, sigma = defaultPrio
  *
  * For each candidate fundamental `f` (lag `p`):
  *   support  = 1.0·ACF(p) + 0.5·ACF(2p) + 0.3·ACF(3p)      // its own sub-multiples (f, f/2, f/3)
- *   penalty  = 1.0·ACF(p/2) + 0.5·ACF(p/3)                  // super-harmonics (2f, 3f)
+ *   penalty  = 1.0·ACF(p/2)[if 2f ≤ maxBpm] + 0.5·ACF(p/3)[if 3f ≤ maxBpm]   // super-harmonics
  *   comb     = max(0, support − penalty)
  *   score    = comb · prior(bpm)
  *
  * The penalty is what defeats the octave-down bias: a sub-harmonic candidate has a strong
  * super-harmonic (the real beat), so it is demoted; the true fundamental has no
- * super-harmonic energy and keeps its full comb. Returns candidates sorted by score.
+ * super-harmonic energy and keeps its full comb.
+ *
+ * The penalty is gated to be SUBDIVISION-AWARE (see module header §2): a super-harmonic
+ * `kf` only counts against `f` when `kf` is itself a plausible beat (`kf ≤ maxBpm`). Energy
+ * at a super-harmonic above the tempo band is a subdivision (e.g. hats on 8th-notes over a
+ * 180 BPM kick), not a competing fundamental, and must not demote the true beat. Returns
+ * candidates sorted by score.
  */
 export function scoreTempoHypotheses(
   peaks: TempoCandidateResult[],
@@ -221,6 +236,9 @@ export function scoreTempoHypotheses(
 ): TempoCandidateResult[] {
   const mu = options.priorMu ?? defaultPriorMu;
   const sigma = options.priorSigma ?? defaultPriorSigma;
+  const maxBpm = options.maxBpm ?? 250;
+  // Super-harmonics above this BPM are subdivisions, not competing beats: they do not penalise.
+  const superHarmonicMaxBpm = maxBpm * (1 + candidateEdgeTolerance);
 
   const scored = peaks.map((p) => {
     const lag = p.lag;
@@ -231,8 +249,9 @@ export function scoreTempoHypotheses(
     const aTriple = acfAtLag(acf, minLag, lag / 3); // 3f
 
     const support = combWeightFundamental * aF + combWeightHalf * aHalf + combWeightThird * aThird;
-    const penalty = combPenaltyDouble * aDouble + combPenaltyTriple * aTriple;
-    let comb = support - penalty;
+    const penaltyDouble = p.bpm * 2 <= superHarmonicMaxBpm ? combPenaltyDouble * aDouble : 0;
+    const penaltyTriple = p.bpm * 3 <= superHarmonicMaxBpm ? combPenaltyTriple * aTriple : 0;
+    let comb = support - penaltyDouble - penaltyTriple;
     if (comb < 0) comb = 0;
 
     return { bpm: p.bpm, score: comb * tempoPrior(p.bpm, mu, sigma), lag: p.lag };
@@ -275,7 +294,13 @@ export function computeTempoCandidates(
   return scored.slice(0, topK);
 }
 
-/** True when `bpm` is a ½×, 2×, 3× or ⅓× octave relative of `reference`. */
+/**
+ * True when `bpm` is a metrically-related multiple of `reference` — a ½×, 2×, 3× or ⅓×
+ * octave, OR a 3:2 / 2:3 (dotted ↔ triple) relative. Switching across any of these needs the
+ * stronger hysteresis margin: they are the same beat counted at a different metrical level
+ * (e.g. 180 BPM kick vs the 120 BPM "dotted" grouping its 8th-note subdivisions create), not
+ * a genuine tempo change.
+ */
 export function isOctaveRelated(bpm: number, reference: number): boolean {
   if (reference <= 0) return false;
   const r = bpm / reference;
@@ -283,7 +308,9 @@ export function isOctaveRelated(bpm: number, reference: number): boolean {
     Math.abs(r - 0.5) < 0.05 ||
     Math.abs(r - 2) < 0.1 ||
     Math.abs(r - 3) < 0.15 ||
-    Math.abs(r - 1 / 3) < 0.05
+    Math.abs(r - 1 / 3) < 0.05 ||
+    Math.abs(r - 2 / 3) < 0.04 ||
+    Math.abs(r - 3 / 2) < 0.06
   );
 }
 
@@ -292,7 +319,7 @@ export function isOctaveRelated(bpm: number, reference: number): boolean {
  *
  * Prevents rapid switching between tempo estimates:
  * - Only switches to a new best if its score is > currentBestScore * 1.15.
- * - Octave-related candidates (½×, 2×, 3×, ⅓×) require a score > 1.5× to switch.
+ * - Metrically-related candidates (½×, 2×, 3×, ⅓×, 3:2, 2:3) require a score > 1.5× to switch.
  *
  * @param candidates   Candidates from `computeTempoCandidates` (sorted by score).
  * @param currentBpm   Currently tracked BPM.

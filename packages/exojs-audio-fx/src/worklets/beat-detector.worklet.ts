@@ -393,6 +393,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
         // Comb (own sub-multiples) − super-harmonic penalty, × tempo prior.
         // Mirrors scoreTempoHypotheses. The penalty is what defeats the octave-down bias.
+        // The penalty is SUBDIVISION-AWARE: a super-harmonic kf only demotes f when kf is
+        // itself a plausible beat (kf <= maxBpm). Energy above maxBpm is a subdivision (hats
+        // on 8ths over a 180 kick), not a competing fundamental, so it must not demote f.
+        var superHi = hiBpm; // maxBpm * 1.05 (CANDIDATE_EDGE_TOLERANCE)
         var scored = [];
         for (var q = 0; q < inRange.length; q++) {
             var lag    = inRange[q].lag;
@@ -402,8 +406,9 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             var aDouble = acfAtLagInline(acf, numLags, minLag, lag / 2);
             var aTriple = acfAtLagInline(acf, numLags, minLag, lag / 3);
             var support = COMB_W_FUNDAMENTAL * aF + COMB_W_HALF * aHalf + COMB_W_THIRD * aThird;
-            var penalty = COMB_PENALTY_DOUBLE * aDouble + COMB_PENALTY_TRIPLE * aTriple;
-            var comb = support - penalty;
+            var penDbl  = inRange[q].bpm * 2 <= superHi ? COMB_PENALTY_DOUBLE * aDouble : 0;
+            var penTrip = inRange[q].bpm * 3 <= superHi ? COMB_PENALTY_TRIPLE * aTriple : 0;
+            var comb = support - penDbl - penTrip;
             if (comb < 0) comb = 0;
             var w = tempoPriorInline(inRange[q].bpm, TEMPO_PRIOR_MU, TEMPO_PRIOR_SIGMA);
             scored.push({ bpm: inRange[q].bpm, score: comb * w, lag: lag });
@@ -434,8 +439,13 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             var inGrace = this._firstLockSample >= 0 &&
                           (this._sampleCount - this._firstLockSample) < 2 * this._sampleRate;
             var ratio = top.bpm / this._bestBpm;
+            // Metrically-related = same beat at another level (octaves + 3:2/2:3 dotted/triple).
+            // Switching across these needs the strong margin so subdivision artefacts (e.g. the
+            // 120 "dotted" grouping of a drifting 180 kit) cannot steal the lock. Mirrors
+            // isOctaveRelated in src/dsp/tempogram.ts.
             var isOctave = Math.abs(ratio - 0.5) < 0.05 || Math.abs(ratio - 2) < 0.1 ||
-                           Math.abs(ratio - 3) < 0.15 || Math.abs(ratio - 1/3) < 0.05;
+                           Math.abs(ratio - 3) < 0.15 || Math.abs(ratio - 1/3) < 0.05 ||
+                           Math.abs(ratio - 2/3) < 0.04 || Math.abs(ratio - 3/2) < 0.06;
             var margin = inGrace ? 1.0 : (isOctave ? 1.5 : 1.15);
             var diff = Math.abs(top.bpm - this._bestBpm) / this._bestBpm;
 

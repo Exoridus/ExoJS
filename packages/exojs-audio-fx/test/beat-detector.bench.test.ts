@@ -255,6 +255,23 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     });
   }
 
+  // ── T1b acceptance gates (subdivision-aware octave fix) ──
+  // Realistic drum-kit patterns whose true fundamental carries subdivision energy (hats on
+  // 8th-notes) must lock to the fundamental, NOT to an unrelated in-band multiple. These are
+  // the core DJ-mix use case: a mix that STARTS at 180 must lock to 180 — not 120, not 90.
+  // pct ≤ 3% (= ±5.4 BPM around 180) excludes BOTH the octave partner 90 (50% off) AND the
+  // 120 sub-harmonic the un-gated comb used to pick (33% off).
+  for (const label of ['djMix_180bpm', 'djMixDrift_180bpm_d5']) {
+    it(`T1b: ${label} locks to 180 ≤3% (90 and 120 must not win)`, () => {
+      const e = allMetrics.get(label)!;
+      expect(e.bpmTrue).toBeCloseTo(180, 0); // sanity: true tempo is 180
+      expect(e.octaveHalf).toBe(false);
+      expect(e.octaveDouble).toBe(false);
+      expect(e.lockTimeSec).not.toBeNull();
+      expect(pct(e)).toBeLessThanOrEqual(0.03);
+    });
+  }
+
   // ── Write committed baseline snapshot ──
 
   afterAll(() => {
