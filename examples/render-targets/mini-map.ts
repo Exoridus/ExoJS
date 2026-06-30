@@ -72,6 +72,10 @@ class MiniMapScene extends Scene {
         this.time += delta.seconds;
 
         this.world.clear();
+        // Filled play-area: gives the minimap a recognizable region. Sub-pixel grid
+        // lines alone vanish when the world is shrunk into the 220×160 texture.
+        this.world.fillColor = new Color(50, 90, 160);
+        this.world.drawRectangle(marginX, marginY, width - 2 * marginX, height - 2 * marginY);
         this.world.lineWidth = 2;
         this.world.lineColor = new Color(60, 70, 90);
         for (let x = marginX; x <= width - marginX; x += 80) this.world.drawLine(x, marginY, x, height - marginY);
