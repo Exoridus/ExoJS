@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
 import { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -620,6 +621,70 @@ describe('RenderTo WebGL2 browser', () => {
       }
     } finally {
       redTexture.destroy();
+      target.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('RenderingContext.renderTo draws into a caller-owned RenderTexture (per-frame, no realloc)', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(canvasSize, canvasSize);
+    const { sprite, texture } = createFullScreenSprite('#00ff00');
+
+    try {
+      context.renderTo(sprite, { target, view: target.view, clear: Color.transparentBlack });
+      backend.flush();
+
+      for (const [x, y] of [
+        [8, 8],
+        [32, 32],
+        [56, 56],
+      ] as const) {
+        expectPixelNear(readPixelsFromTarget(backend, target, x, y), [0, 255, 0, 255]);
+      }
+    } finally {
+      texture.destroy();
+      target.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('PassContext (CallbackRenderPass target): clear + render act on the target, never leak to the canvas', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(canvasSize, canvasSize);
+    const { sprite: green, texture: greenTex } = createFullScreenSprite('#00ff00');
+    const samples = [
+      [4, 4],
+      [32, 32],
+      [60, 60],
+    ] as const;
+
+    try {
+      backend.clear(Color.black); // root canvas starts black
+
+      new CallbackRenderPass(
+        pass => {
+          pass.clear(Color.red); // clears the TARGET (red) — must NOT leak to the canvas
+          pass.render(green); // opaque green over the red clear, into the target
+        },
+        { target },
+      ).execute(context);
+
+      backend.flush();
+
+      // Canvas stays fully black: neither the clear nor the render leaked out of the pass.
+      for (const [x, y] of samples) {
+        expectPixelNear(readPixel(backend, x, y), [0, 0, 0, 255]);
+      }
+
+      // Target is fully green: pass.clear + pass.render landed in the pass target.
+      for (const [x, y] of samples) {
+        expectPixelNear(readPixelsFromTarget(backend, target, x, y), [0, 255, 0, 255]);
+      }
+    } finally {
+      greenTex.destroy();
       target.destroy();
       backend.destroy();
     }
