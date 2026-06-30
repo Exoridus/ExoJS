@@ -140,6 +140,17 @@ function tempoPriorInline(bpm, mu, sigma) {
     return Math.exp(-0.5 * zp * zp);
 }
 
+// Sub-lag peak refinement: fit a parabola through (i-1, i, i+1) and return the vertex
+// offset in [-0.5, 0.5]. Gives sub-hop BPM resolution where the lag grid is coarse (the
+// 300 BPM top end sits at lag ~19 hops, ~5 ms/lag). Mirrors parabolicPeakOffset.
+function parabolicPeakOffsetInline(yPrev, yMid, yNext) {
+    var denom = yPrev - 2 * yMid + yNext;
+    if (denom >= 0) { return 0; }
+    var d = (0.5 * (yPrev - yNext)) / denom;
+    if (d < -0.5) { d = -0.5; } else if (d > 0.5) { d = 0.5; }
+    return d;
+}
+
 // ---- Processor ----
 class BeatDetectorProcessor extends AudioWorkletProcessor {
     constructor(options) {
@@ -149,7 +160,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._fftSize    = opts.fftSize    || 2048;
         this._hopSize    = opts.hopSize    || 512;
         this._minBpm     = opts.minBpm     || 50;
-        this._maxBpm     = opts.maxBpm     || 250;
+        this._maxBpm     = opts.maxBpm     || 300;
         this._melBands   = opts.melBands   || 24;
         this._settlingMs = opts.settlingMs !== undefined ? opts.settlingMs : 1500;
         this._tempoWindowSec = opts.tempoWindowSec || 6;
@@ -375,7 +386,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         }
         for (var i = 1; i < lastIdx; i++) {
             if (acf[i] > acf[i-1] && acf[i] > acf[i+1] && acf[i] > 0) {
-                var lagI = minLag + i;
+                var lagI = minLag + i + parabolicPeakOffsetInline(acf[i-1], acf[i], acf[i+1]);
                 peaks.push({ bpm: 60 * this._sampleRate / (lagI * this._hopSize), score: acf[i], lag: lagI });
             }
         }

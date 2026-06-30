@@ -69,7 +69,7 @@ export const defaultPriorMu = 140;
 export const defaultPriorSigma = Math.log(2) * 0.9;
 /**
  * Relative tolerance on the candidate-acceptance BPM band. A tempo sitting exactly on
- * the edge (e.g. 250) has an ACF lag (22.5) that straddles the boundary; without slack
+ * the edge (e.g. 300) has an ACF lag (18.75) that straddles the boundary; without slack
  * its peak can round just outside the band and be discarded.
  */
 export const candidateEdgeTolerance = 0.05;
@@ -157,11 +157,32 @@ function acfAtLag(acf: Float32Array, minLag: number, lag: number): number {
 }
 
 /**
+ * Sub-lag peak refinement. Fit a parabola through the three samples around an interior
+ * local maximum (acf[i-1], acf[i], acf[i+1]) and return the vertex offset in [-0.5, 0.5].
+ *
+ * The lag grid is coarse at the top of the BPM band (a 300 BPM beat sits at lag ≈ 18.75
+ * hops, ~5 ms / lag), so rounding a peak to its nearest integer lag costs several BPM.
+ * Interpolating the vertex recovers sub-hop BPM resolution without shrinking the hop.
+ * Returns 0 when the three points are not strictly concave (cannot happen for a genuine
+ * strict local maximum, but guards floating-point edge cases).
+ */
+function parabolicPeakOffset(yPrev: number, yMid: number, yNext: number): number {
+  const denom = yPrev - 2 * yMid + yNext;
+  if (denom >= 0) return 0;
+  let d = (0.5 * (yPrev - yNext)) / denom;
+  if (d < -0.5) d = -0.5;
+  else if (d > 0.5) d = 0.5;
+  return d;
+}
+
+/**
  * Find all positive local-maxima peaks in the ACF and convert lags to BPM candidates.
  *
  * Includes the two array endpoints when they exceed their single in-range neighbour
- * (the true high-BPM period can land on minLag, which has no left neighbour). Sorted by
- * raw ACF score descending; pass `topK = acf.length` to retain every peak.
+ * (the true high-BPM period can land on minLag, which has no left neighbour). Interior
+ * maxima are refined to a fractional lag by {@link parabolicPeakOffset} for sub-hop BPM
+ * resolution; endpoints keep their integer lag (they lack a neighbour to interpolate
+ * against). Sorted by raw ACF score descending; pass `topK = acf.length` to retain every peak.
  *
  * @param acf        Normalised ACF from `computeAcf`.
  * @param minLag     The lag (in hops) corresponding to acf[0].
@@ -185,10 +206,10 @@ export function findTempoPeaks(
     peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[0]!, lag });
   }
 
-  // Interior local maxima.
+  // Interior local maxima — refined to a fractional lag for sub-hop BPM resolution.
   for (let i = 1; i < last; i++) {
     if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
-      const lag = minLag + i;
+      const lag = minLag + i + parabolicPeakOffset(acf[i - 1]!, acf[i]!, acf[i + 1]!);
       peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[i]!, lag });
     }
   }
@@ -236,7 +257,7 @@ export function scoreTempoHypotheses(
 ): TempoCandidateResult[] {
   const mu = options.priorMu ?? defaultPriorMu;
   const sigma = options.priorSigma ?? defaultPriorSigma;
-  const maxBpm = options.maxBpm ?? 250;
+  const maxBpm = options.maxBpm ?? 300;
   // Super-harmonics above this BPM are subdivisions, not competing beats: they do not penalise.
   const superHarmonicMaxBpm = maxBpm * (1 + candidateEdgeTolerance);
 
@@ -281,7 +302,7 @@ export function computeTempoCandidates(
   options: TempoScoringOptions = {},
 ): TempoCandidateResult[] {
   const minBpm = options.minBpm ?? 50;
-  const maxBpm = options.maxBpm ?? 250;
+  const maxBpm = options.maxBpm ?? 300;
   const topK = options.topK ?? 3;
 
   const acfMinLag = acfExtendedMinLag(minLag);

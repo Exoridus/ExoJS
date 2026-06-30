@@ -272,6 +272,26 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     });
   }
 
+  // ── T2 acceptance gates (BPM range 50–300) ──
+  // The default range is now 50–300 BPM. The top edge (300) was previously out of range and
+  // mis-locked to ~100; it must now lock to the fundamental within the edge tolerance (≤5%),
+  // using parabolic ACF-peak interpolation for sub-lag resolution at the coarse top end. The
+  // slow edge (50) must stay locked — the 6 s flux window holds ≫ 2 periods of its 1.2 s beat.
+  // The djMix subdivision guard is unchanged: hats at 360 BPM stay above 300, so they remain a
+  // subdivision (not a competing beat) and djMix-180 stays locked to 180 (T1b gates above).
+  it('T2: clicktrack_300 locks to fundamental ≤5%, no octave error', () => {
+    const e = allMetrics.get('clicktrack_300bpm')!;
+    expect(e.bpmTrue).toBeCloseTo(300, 0);
+    expect(e.octaveHalf).toBe(false);
+    expect(e.octaveDouble).toBe(false);
+    expect(e.lockTimeSec).not.toBeNull();
+    expect(pct(e)).toBeLessThanOrEqual(0.05);
+  });
+
+  it('T2: clicktrack_50 stays locked ≤3% at the slow edge', () => {
+    expect(pct(allMetrics.get('clicktrack_50bpm')!)).toBeLessThanOrEqual(0.03);
+  });
+
   // ── Write committed baseline snapshot ──
 
   afterAll(() => {

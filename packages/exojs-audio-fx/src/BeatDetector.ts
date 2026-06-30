@@ -11,7 +11,7 @@ export type BeatDetectorSource = AudioBus | Voice | MediaStream | AudioNode | nu
 export interface BeatDetectorOptions {
   /** Minimum detectable BPM. Default 50. */
   minBpm?: number;
-  /** Maximum detectable BPM. Default 250. */
+  /** Maximum detectable BPM. Default 300. */
   maxBpm?: number;
   /** FFT size for onset detection. Default 2048. */
   fftSize?: number;
@@ -178,7 +178,7 @@ export class BeatDetector {
   public constructor(options?: BeatDetectorOptions) {
     this._options = {
       minBpm: options?.minBpm ?? 50,
-      maxBpm: options?.maxBpm ?? 250,
+      maxBpm: options?.maxBpm ?? 300,
       fftSize: options?.fftSize ?? 2048,
       hopSize: options?.hopSize ?? 512,
       tempoWindowSec: options?.tempoWindowSec ?? 6,
