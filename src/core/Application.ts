@@ -27,6 +27,7 @@ import { Clock } from './Clock';
 import { Color } from './Color';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
+import { logger } from './logging';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
@@ -690,7 +691,7 @@ export class Application {
       this._status = ApplicationStatus.Halting;
       cancelAnimationFrame(this._frameRequest);
       void this.scene.setScene(null).catch((error: unknown) => {
-        console.error('Application.stop() failed to unload the active scene.', error);
+        logger.error('core', 'Application.stop() failed to unload the active scene.', error instanceof Error ? error : undefined);
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       });
       this._activeClock.stop();
