@@ -94,6 +94,28 @@ function computeMelBands(mag, bands, out) {
     }
 }
 
+// ---- Tempogram (single source of truth — transliterated from src/dsp/tempogram.ts) ----
+// Guarded by test/dsp/worklet-parity.test.ts: this MUST stay numerically identical to
+// computeAcf / computeTempoCandidates in src/dsp/tempogram.ts.
+
+// Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
+function computeAcfInline(flux, n, minLag, maxLag, out) {
+    var lagCount = maxLag - minLag + 1;
+    var mean = 0;
+    for (var t = 0; t < n; t++) { mean += flux[t]; }
+    mean = n > 0 ? mean / n : 0;
+    var zeroLag = 0;
+    for (var z = 0; z < n; z++) { var cz = flux[z] - mean; zeroLag += cz * cz; }
+    zeroLag = n > 0 ? zeroLag / n : 1;
+    var norm = zeroLag > 0 ? zeroLag : 1;
+    for (var lagIndex = 0; lagIndex < lagCount; lagIndex++) {
+        var lag = minLag + lagIndex;
+        var sum = 0;
+        for (var t2 = lag; t2 < n; t2++) { sum += (flux[t2] - mean) * (flux[t2 - lag] - mean); }
+        out[lagIndex] = n > 0 ? sum / n / norm : 0;
+    }
+}
+
 // ---- Processor ----
 class BeatDetectorProcessor extends AudioWorkletProcessor {
     constructor(options) {
@@ -122,6 +144,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._melOut         = new Float32Array(this._melBands);
         var fluxWindowLen    = Math.ceil(this._tempoWindowSec * this._sampleRate / this._hopSize);
         this._fluxWindow     = new Float32Array(fluxWindowLen);
+        this._linFlux        = new Float32Array(fluxWindowLen); // scratch: ring → linear (oldest first)
         this._fluxWritePos   = 0;
         this._fluxCount      = 0;
         var LAG_K = 3;
@@ -134,6 +157,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         // Lag range in hops for BPM range
         this._minLag = Math.max(1, Math.round(60 / this._maxBpm * this._sampleRate / this._hopSize));
         this._maxLag = Math.round(60 / this._minBpm * this._sampleRate / this._hopSize);
+        this._acf    = new Float32Array(this._maxLag - this._minLag + 1); // scratch ACF buffer
 
         this._hopsSinceACF = 0;
         var ACF_INTERVAL = 15;
@@ -297,43 +321,46 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         var buf = this._fluxWindow;
         var wp  = this._fluxWritePos;
         var len = buf.length;
+        var minLag  = this._minLag;
+        var maxLag  = this._maxLag;
+        var numLags = maxLag - minLag + 1;
 
-        // Compute ACF for lags in [minLag, maxLag]
-        var numLags = this._maxLag - this._minLag + 1;
-        var acf = new Float32Array(numLags);
-        for (var lagIdx = 0; lagIdx < numLags; lagIdx++) {
-            var lag = this._minLag + lagIdx;
-            var sum = 0, count = 0;
-            for (var t = lag; t < n; t++) {
-                var idxT   = (wp - 1 - (n - 1 - t) + len) % len;
-                var idxTL  = (wp - 1 - (n - 1 - (t - lag)) + len) % len;
-                sum += buf[idxT] * buf[idxTL];
-                count++;
-            }
-            acf[lagIdx] = count > 0 ? sum / count : 0;
+        // Linearise the flux ring buffer (oldest first) into a scratch array so the ACF
+        // operates on the same layout src/dsp/tempogram.computeAcf expects.
+        var lin = this._linFlux;
+        for (var t = 0; t < n; t++) {
+            lin[t] = buf[((wp - 1 - (n - 1 - t)) % len + len) % len];
         }
 
-        // Normalise
-        var norm = 0;
-        for (var i = 0; i < numLags; i++) { if (acf[i] > norm) norm = acf[i]; }
-        if (norm > 0) {
-            for (var i = 0; i < numLags; i++) acf[i] /= norm;
-        }
+        // ACF (mean-subtracted, biased, zero-lag normalised) — mirrors computeAcf.
+        var acf = this._acf;
+        computeAcfInline(lin, n, minLag, maxLag, acf);
 
-        // Find top peaks
+        // Raw positive peaks (interior + endpoints) — mirrors findTempoPeaks.
         var peaks = [];
-        for (var i = 1; i < numLags - 1; i++) {
+        var lastIdx = numLags - 1;
+        if (numLags > 1 && acf[0] > acf[1] && acf[0] > 0) {
+            peaks.push({ bpm: 60 * this._sampleRate / (minLag * this._hopSize), score: acf[0], lag: minLag });
+        }
+        for (var i = 1; i < lastIdx; i++) {
             if (acf[i] > acf[i-1] && acf[i] > acf[i+1] && acf[i] > 0) {
-                var lag2 = this._minLag + i;
-                var bpm = 60 * this._sampleRate / (lag2 * this._hopSize);
-                if (bpm >= this._minBpm && bpm <= this._maxBpm) {
-                    peaks.push({ bpm: bpm, score: acf[i], lag: lag2 });
-                }
+                var lagI = minLag + i;
+                peaks.push({ bpm: 60 * this._sampleRate / (lagI * this._hopSize), score: acf[i], lag: lagI });
             }
+        }
+        if (numLags > 1 && acf[lastIdx] > acf[lastIdx-1] && acf[lastIdx] > 0) {
+            var lagL = minLag + lastIdx;
+            peaks.push({ bpm: 60 * this._sampleRate / (lagL * this._hopSize), score: acf[lastIdx], lag: lagL });
         }
         peaks.sort(function(a, b) { return b.score - a.score; });
-        this._candidates = peaks.slice(0, 3);
 
+        // Filter to BPM range — mirrors computeTempoCandidates filter.
+        var inRange = [];
+        for (var pf = 0; pf < peaks.length; pf++) {
+            if (peaks[pf].bpm >= this._minBpm && peaks[pf].bpm <= this._maxBpm) inRange.push(peaks[pf]);
+        }
+
+        this._candidates = inRange.slice(0, 3);
         if (this._candidates.length === 0) return;
 
         var top = this._candidates[0];

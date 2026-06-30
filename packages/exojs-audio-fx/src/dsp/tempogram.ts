@@ -1,29 +1,46 @@
 /**
- * Autocorrelation-based tempogram.
+ * Autocorrelation-based tempogram (single source of truth).
  *
  * Given a novelty (onset-strength) curve sampled at rate `hopRate = sampleRate / hopSize`,
- * this module computes the autocorrelation function (ACF) over a sliding window
- * and returns the top tempo candidates.
+ * this module computes the autocorrelation function (ACF) over a sliding window and
+ * selects tempo candidates from the resulting periodicity peaks.
  *
- * These helpers are also inlined inside the beat-detector worklet source string
- * (worklets cannot import modules).
+ * The same pipeline is transliterated verbatim into the beat-detector worklet source
+ * string (worklets cannot import modules). `test/dsp/worklet-parity.test.ts` guards that
+ * the worklet's tempo candidates equal `computeTempoCandidates(...)` here, so this file
+ * is the canonical implementation and the worklet is a mechanical mirror of it.
  */
 
 export interface TempoCandidateResult {
   /** BPM value. */
   bpm: number;
-  /** Normalised peak score (0..1). */
+  /** Selection score (see `computeTempoCandidates`). */
   score: number;
   /** ACF lag in hops that produced this peak. */
   lag: number;
 }
 
+/** Options for tempo-candidate selection. */
+export interface TempoScoringOptions {
+  /** Lowest BPM accepted as a candidate. */
+  minBpm?: number;
+  /** Highest BPM accepted as a candidate. */
+  maxBpm?: number;
+  /** Number of candidates to return. */
+  topK?: number;
+}
+
 /**
  * Compute the normalised autocorrelation function over a novelty curve.
  *
- * @param flux       Recent novelty values (ring-buffer contents, oldest first).
- * @param minLag     Minimum lag in samples (inclusive).
- * @param maxLag     Maximum lag in samples (inclusive).
+ * The novelty is mean-subtracted (kills the DC pedestal that otherwise sits under every
+ * lag), correlated with the BIASED estimator (`sum / n`, not `sum / (n − lag)`) so long
+ * lags are tapered rather than inflated, and normalised by the zero-lag energy (variance)
+ * so the output is in roughly [-1, 1] with the strongest true period near 1.
+ *
+ * @param flux       Recent novelty values (oldest first).
+ * @param minLag     Minimum lag in hops (inclusive).
+ * @param maxLag     Maximum lag in hops (inclusive).
  * @returns          ACF array indexed by lag (index 0 = lag minLag).
  */
 export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): Float32Array {
@@ -31,72 +48,109 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
   const lagCount = maxLag - minLag + 1;
   const acf = new Float32Array(lagCount);
 
-  // Compute ACF[lag] = sum_t flux[t] * flux[t - lag]
+  // Window mean — subtracted before correlation to remove the DC pedestal.
+  let mean = 0;
+  for (let t = 0; t < n; t++) {
+    mean += flux[t]!;
+  }
+  mean = n > 0 ? mean / n : 0;
+
+  // Zero-lag energy (variance) of the centred signal — the normaliser.
+  let zeroLag = 0;
+  for (let t = 0; t < n; t++) {
+    const c = flux[t]! - mean;
+    zeroLag += c * c;
+  }
+  zeroLag = n > 0 ? zeroLag / n : 1;
+  const norm = zeroLag > 0 ? zeroLag : 1;
+
+  // Biased ACF of the centred signal: divide by n (not n − lag).
   for (let lagIndex = 0; lagIndex < lagCount; lagIndex++) {
     const lag = minLag + lagIndex;
     let sum = 0;
-    let count = 0;
     for (let t = lag; t < n; t++) {
-      sum += flux[t]! * flux[t - lag]!;
-      count++;
+      sum += (flux[t]! - mean) * (flux[t - lag]! - mean);
     }
-    acf[lagIndex] = count > 0 ? sum / count : 0;
-  }
-
-  // Normalise by the zero-lag ACF (energy) so output is in [-1, 1]
-  let zeroLag = 0;
-  for (let t = 0; t < n; t++) {
-    zeroLag += flux[t]! * flux[t]!;
-  }
-  zeroLag = n > 0 ? zeroLag / n : 1;
-
-  const norm = zeroLag > 0 ? zeroLag : 1;
-  for (let i = 0; i < lagCount; i++) {
-    acf[i]! /= norm;
+    acf[lagIndex] = n > 0 ? sum / n / norm : 0;
   }
 
   return acf;
 }
 
 /**
- * Find the top-K peaks in the ACF and convert lags to BPM candidates.
+ * Find all positive local-maxima peaks in the ACF and convert lags to BPM candidates.
  *
- * @param acf        Normalised ACF from `computeACF`.
+ * Includes the two array endpoints when they exceed their single in-range neighbour
+ * (the true high-BPM period can land on minLag, which has no left neighbour). Sorted by
+ * raw ACF score descending; pass `topK = acf.length` to retain every peak.
+ *
+ * @param acf        Normalised ACF from `computeAcf`.
  * @param minLag     The lag (in hops) corresponding to acf[0].
  * @param hopSize    Number of audio samples per hop.
  * @param sampleRate Audio sample rate in Hz.
  * @param topK       Number of peaks to return (default 3).
- * @returns          Up to `topK` tempo candidates sorted by score descending.
  */
-export function findTempoPeaks(acf: Float32Array, minLag: number, hopSize: number, sampleRate: number, topK = 3): TempoCandidateResult[] {
+export function findTempoPeaks(
+  acf: Float32Array,
+  minLag: number,
+  hopSize: number,
+  sampleRate: number,
+  topK = 3,
+): TempoCandidateResult[] {
   const peaks: TempoCandidateResult[] = [];
+  const last = acf.length - 1;
 
-  // Find local maxima (peaks) in the ACF
-  for (let i = 1; i < acf.length - 1; i++) {
-    if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
-      const lag = minLag + i;
-      const bpm = (60 * sampleRate) / (lag * hopSize);
-      peaks.push({ bpm, score: acf[i]!, lag });
-    }
-  }
-
-  // Also consider endpoints as peaks if they are maxima
-  if (acf.length > 0 && acf[0]! > (acf[1] ?? 0)) {
+  // Leading endpoint (lag === minLag): a peak if it beats its only neighbour.
+  if (acf.length > 1 && acf[0]! > acf[1]! && acf[0]! > 0) {
     const lag = minLag;
     peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[0]!, lag });
   }
-  if (acf.length > 1) {
-    const last = acf.length - 1;
-    if (acf[last]! > acf[last - 1]!) {
-      const lag = minLag + last;
-      peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[last]!, lag });
+
+  // Interior local maxima.
+  for (let i = 1; i < last; i++) {
+    if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
+      const lag = minLag + i;
+      peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[i]!, lag });
     }
   }
 
-  // Sort by score descending
-  peaks.sort((a, b) => b.score - a.score);
+  // Trailing endpoint (lag === maxLag).
+  if (acf.length > 1 && acf[last]! > acf[last - 1]! && acf[last]! > 0) {
+    const lag = minLag + last;
+    peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[last]!, lag });
+  }
 
+  peaks.sort((a, b) => b.score - a.score);
   return peaks.slice(0, topK);
+}
+
+/**
+ * Full tempo-candidate pipeline: ACF → peaks → BPM-band filter.
+ *
+ * This is the single function the worklet mirrors and `worklet-parity.test.ts` checks.
+ *
+ * @param flux       Recent novelty values (oldest first).
+ * @param minLag     Minimum lag in hops (inclusive).
+ * @param maxLag     Maximum lag in hops (inclusive).
+ * @param hopSize    Audio samples per hop.
+ * @param sampleRate Audio sample rate in Hz.
+ */
+export function computeTempoCandidates(
+  flux: Float32Array,
+  minLag: number,
+  maxLag: number,
+  hopSize: number,
+  sampleRate: number,
+  options: TempoScoringOptions = {},
+): TempoCandidateResult[] {
+  const minBpm = options.minBpm ?? 50;
+  const maxBpm = options.maxBpm ?? 250;
+  const topK = options.topK ?? 3;
+
+  const acf = computeAcf(flux, minLag, maxLag);
+  const peaks = findTempoPeaks(acf, minLag, hopSize, sampleRate, acf.length);
+  const inRange = peaks.filter((p) => p.bpm >= minBpm && p.bpm <= maxBpm);
+  return inRange.slice(0, topK);
 }
 
 /**
@@ -104,14 +158,18 @@ export function findTempoPeaks(acf: Float32Array, minLag: number, hopSize: numbe
  *
  * Prevents rapid switching between tempo estimates:
  * - Only switches to a new best if its score is > currentBestScore * 1.15.
- * - Octave-related candidates (2x or 0.5x) require a score > 1.5x to switch.
+ * - Octave-related candidates (2× or ½×) require a score > 1.5× to switch.
  *
- * @param candidates   Sorted candidates from `findTempoPeaks`.
+ * @param candidates   Candidates from `computeTempoCandidates` (sorted by score).
  * @param currentBpm   Currently tracked BPM.
  * @param currentScore Currently tracked best score.
  * @returns            The selected best BPM.
  */
-export function applyTempoHysteresis(candidates: TempoCandidateResult[], currentBpm: number, currentScore: number): number {
+export function applyTempoHysteresis(
+  candidates: TempoCandidateResult[],
+  currentBpm: number,
+  currentScore: number,
+): number {
   if (candidates.length === 0) return currentBpm;
 
   const top = candidates[0]!;

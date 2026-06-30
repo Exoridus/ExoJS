@@ -29,13 +29,14 @@ describe('computeACF', () => {
     expect(acf.length).toBe(20 - 5 + 1);
   });
 
-  it('all values in [0, 1] after normalisation', () => {
+  it('all values in [-1, 1] after mean-subtraction + zero-lag normalisation', () => {
+    // The novelty is centred before correlation, so off-period lags go negative.
     const flux = syntheticNovelty(120, 300);
     const minLag = Math.round(((60 / 250) * SAMPLE_RATE) / HOP_SIZE);
     const maxLag = Math.round(((60 / 50) * SAMPLE_RATE) / HOP_SIZE);
     const acf = computeAcf(flux, minLag, maxLag);
     for (const v of acf) {
-      expect(v).toBeGreaterThanOrEqual(-0.01);
+      expect(v).toBeGreaterThanOrEqual(-1.01);
       expect(v).toBeLessThanOrEqual(1.01);
     }
   });
