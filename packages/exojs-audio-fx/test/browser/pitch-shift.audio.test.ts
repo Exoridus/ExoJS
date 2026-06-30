@@ -86,7 +86,9 @@ describe('PitchShift worklet — real Web Audio', () => {
       candidates.push({ delay: d, level: rms(tail(combine(d), 0.5)) });
     }
     const best = candidates.reduce((a, b) => (b.level > a.level ? b : a));
-    void best; // sweep validated L=1280; result unused at runtime
+    // The empirical best delay must land within ±64 samples of the tuned constant.
+    expect(best.delay).toBeGreaterThanOrEqual(L - 64);
+    expect(best.delay).toBeLessThanOrEqual(L + 64);
 
     const fromS = 0.5; // skip warmup
     const levelComp = rms(tail(combine(L), fromS));

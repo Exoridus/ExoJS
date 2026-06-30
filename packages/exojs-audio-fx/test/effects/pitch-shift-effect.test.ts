@@ -122,13 +122,13 @@ describe('PitchShiftEffect', () => {
       filter.destroy();
     });
 
-    it('worklet parameters pitch and wet are set on ready', async () => {
+    it('pitch is set on ready; wet applies to the base mix', async () => {
       const filter = new PitchShiftEffect({ pitch: 1.5, wet: 0.8 });
       await filter.ready;
       const node = filter['_workletNode']!;
       const pitchParam = node.parameters.get('pitch') as unknown as { setTargetAtTime: MockInstance };
       expect(pitchParam.setTargetAtTime).toHaveBeenCalledWith(1.5, expect.anything(), expect.anything());
-      // wet is now managed by the WorkletEffect base gain nodes, not the worklet param
+      // wet is managed by the WorkletEffect base gain nodes, not a worklet param
       expect(filter.wet).toBe(0.8);
       filter.destroy();
     });
@@ -159,6 +159,29 @@ describe('PitchShiftEffect', () => {
       await filter.ready;
       expect(capturedOptions?.processorOptions?.grainSize).toBe(1024);
       filter.destroy();
+    });
+
+    it('_dryDelay is created after worklet-ready with the correct SOLA latency', async () => {
+      // Regression test for the field-order bug: _grainSize is assigned after
+      // super() in PitchShiftEffect, so _dryLatencySeconds must NOT be read
+      // synchronously in _setup() — it must be deferred to the worklet-ready
+      // callback (which is always async, guaranteeing the constructor finished).
+      //
+      // On the pre-fix code this test would FAIL because _dryDelay would be null:
+      // _dryLatencySeconds returned NaN (this._grainSize was undefined at _setup
+      // time), so the if (dryLatency > 0) branch was never taken.
+      const fx = new PitchShiftEffect(); // default grainSize = 1024
+      await fx.ready;
+
+      // The delay node must exist.
+      expect(fx['_dryDelay']).not.toBeNull();
+
+      // delayTime must match the SOLA latency formula: (grainSize + grainSize>>2) / sampleRate.
+      const sampleRate = fx['_dryDelay']!.context.sampleRate; // 44100 from mock
+      const expectedLatency = (1024 + (1024 >> 2)) / sampleRate; // 1280 / 44100
+      expect(fx['_dryDelay']!.delayTime.value).toBeCloseTo(expectedLatency, 5);
+
+      fx.destroy();
     });
   });
 

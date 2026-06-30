@@ -257,7 +257,7 @@ describe('WorkletEffect', () => {
   // Dry-latency compensation (Task 2)
   // ---------------------------------------------------------------------------
 
-  it('inserts a dry-path DelayNode when _dryLatencySeconds > 0', () => {
+  it('inserts a dry-path DelayNode when _dryLatencySeconds > 0', async () => {
     const ctx = getAudioContext();
     const delaySpy = vi.spyOn(ctx, 'createDelay');
     class DelayedFilter extends TestWorkletEffect {
@@ -266,31 +266,38 @@ describe('WorkletEffect', () => {
       }
     }
     const filter = new DelayedFilter();
+    // Delay is created in the worklet-ready callback, not synchronously.
+    expect(delaySpy).not.toHaveBeenCalled();
+    await filter.ready;
     expect(delaySpy).toHaveBeenCalled();
     expect(filter['_dryDelay']).not.toBeNull();
     expect(filter['_dryDelay']!.delayTime.value).toBeCloseTo(0.02, 5);
     filter.destroy();
   });
 
-  it('does not create a DelayNode when _dryLatencySeconds is 0 (default)', () => {
+  it('does not create a DelayNode when _dryLatencySeconds is 0 (default)', async () => {
     const ctx = getAudioContext();
     const delaySpy = vi.spyOn(ctx, 'createDelay');
     const filter = new TestWorkletEffect();
+    await filter.ready;
     expect(delaySpy).not.toHaveBeenCalled();
     expect(filter['_dryDelay']).toBeNull();
     filter.destroy();
   });
 
-  it('_sampleRate uses the real context rate (not the 48000 fallback) when _dryLatencySeconds is read in _setup', () => {
+  it('_sampleRate uses the real context rate (not the 48000 fallback) when _dryLatencySeconds is read at worklet-ready', async () => {
     // The mock AudioContext has sampleRate=44100 (not 48000). A subclass that
     // derives _dryLatencySeconds from this._sampleRate must see 44100, so the
     // resulting delayTime reflects 1000/44100, NOT the wrong 1000/48000.
+    // _dryLatencySeconds is now read in the worklet-ready callback (async),
+    // where _outputGain.context.sampleRate is already 44100.
     class SampleRateFilter extends TestWorkletEffect {
       protected override get _dryLatencySeconds(): number {
         return 1000 / this._sampleRate;
       }
     }
     const filter = new SampleRateFilter();
+    await filter.ready;
     const expected = 1000 / 44100; // ~0.022676
     const wrong = 1000 / 48000;    // ~0.020833
     expect(filter['_dryDelay']).not.toBeNull();

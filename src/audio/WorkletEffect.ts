@@ -54,8 +54,8 @@ export abstract class WorkletEffect extends AudioEffect {
 
   /**
    * The audio context's sample rate in Hz, or 48000 if the context is not yet
-   * available. Used by subclasses to compute `_dryLatencySeconds` before the
-   * worklet loads.
+   * available. Populated as soon as the audio context is ready (i.e. once
+   * `_setup` runs). Safe to read from `_dryLatencySeconds`.
    */
   protected get _sampleRate(): number {
     return this._outputGain?.context.sampleRate ?? 48000;
@@ -146,24 +146,18 @@ export abstract class WorkletEffect extends AudioEffect {
     const dryGain = audioContext.createGain();
     const wetGain = audioContext.createGain();
 
-    // Assign the gain references immediately so _sampleRate (which reads
-    // this._outputGain.context.sampleRate) is populated before subclasses
-    // compute _dryLatencySeconds below.
+    // Assign gain references immediately so inputNode/outputNode are accessible
+    // and _sampleRate (which reads this._outputGain.context.sampleRate) returns
+    // the real context rate for subclass use in _dryLatencySeconds.
     this._inputGain = inputGain;
     this._outputGain = outputGain;
 
-    // Dry path: input → [dryDelay] → dryGain → output. The delay aligns dry with
-    // the worklet's latency so intermediate wet values stay phase-coherent.
-    const dryLatency = this._dryLatencySeconds;
-    let dryDelay: DelayNode | null = null;
-    if (dryLatency > 0) {
-      dryDelay = audioContext.createDelay(Math.max(1, dryLatency * 2));
-      dryDelay.delayTime.setValueAtTime(dryLatency, audioContext.currentTime);
-      inputGain.connect(dryDelay);
-      dryDelay.connect(dryGain);
-    } else {
-      inputGain.connect(dryGain);
-    }
+    // Dry path: input → dryGain → output. A time-alignment DelayNode is
+    // inserted in the worklet-ready callback below once _dryLatencySeconds is
+    // safe to read. The addModule Promise always settles asynchronously, so the
+    // subclass constructor is fully done by then (post-super() fields such as
+    // PitchShiftEffect._grainSize are guaranteed initialized).
+    inputGain.connect(dryGain);
     dryGain.connect(outputGain);
 
     // Wet path output stage exists immediately but is silent until the worklet
@@ -174,10 +168,25 @@ export abstract class WorkletEffect extends AudioEffect {
 
     this._dryGain = dryGain;
     this._wetGain = wetGain;
-    this._dryDelay = dryDelay;
 
     this._ready = registerAudioWorkletProcessor(audioContext, this._workletName, this._workletSource).then(() => {
       if (!this._inputGain || !this._dryGain || !this._wetGain) return; // destroyed during load
+
+      // Read _dryLatencySeconds here, not in _setup(), because the addModule
+      // Promise always resolves asynchronously — by this point the subclass
+      // constructor has fully run and any post-super() fields are valid.
+      const dryLatency = this._dryLatencySeconds;
+      if (dryLatency > 0) {
+        const dryDelay = audioContext.createDelay(Math.max(1, dryLatency * 2));
+        dryDelay.delayTime.setValueAtTime(dryLatency, audioContext.currentTime);
+        this._dryDelay = dryDelay;
+        // Re-route dry path to insert the delay: inputGain → dryDelay → dryGain.
+        // Use the destination-argument form of disconnect so only this edge is
+        // moved; the inputGain → worklet connection (added below) is unaffected.
+        this._inputGain.disconnect(this._dryGain);
+        this._inputGain.connect(dryDelay);
+        dryDelay.connect(this._dryGain);
+      }
 
       const node = new AudioWorkletNode(audioContext, this._workletName, this._workletOptions);
       this._workletNode = node;
