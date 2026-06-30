@@ -238,6 +238,25 @@ export class View implements ObservableVectorOwner {
     return this;
   }
 
+  /**
+   * Set the normalized (0..1) viewport rectangle fluently.
+   * Mirrors the `set viewport` property setter without allocating a
+   * {@link Rectangle} — pass the four components directly.
+   *
+   * @param x      - Left edge as a fraction of the canvas width.
+   * @param y      - Top edge as a fraction of the canvas height.
+   * @param width  - Width as a fraction of the canvas width.
+   * @param height - Height as a fraction of the canvas height.
+   */
+  public setViewport(x: number, y: number, width: number, height: number): this {
+    if (this._viewport.x !== x || this._viewport.y !== y || this._viewport.width !== width || this._viewport.height !== height) {
+      this._viewport.set(x, y, width, height);
+      this._setDirty();
+    }
+
+    return this;
+  }
+
   public move(x: number, y: number): this {
     this.setCenter(this._center.x + x, this._center.y + y);
 

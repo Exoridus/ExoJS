@@ -92,6 +92,16 @@ describe('View.from', () => {
   });
 });
 
+describe('View.setViewport', () => {
+  test('setViewport sets a normalized viewport fluently and returns this', () => {
+    const view = new View(0, 0, 100, 100);
+    const ret = view.setViewport(0.5, 0, 0.5, 1);
+    expect(ret).toBe(view);
+    expect(view.viewport.equals(new Rectangle(0.5, 0, 0.5, 1))).toBe(true);
+    view.destroy();
+  });
+});
+
 describe('View — coordinate conversion', () => {
   // Centered camera over an 800×600 design space, matching the default camera.
   const centered = (): View => new View(400, 300, 800, 600);
