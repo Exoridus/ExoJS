@@ -299,7 +299,7 @@ describe('WorkletEffect', () => {
     const filter = new SampleRateFilter();
     await filter.ready;
     const expected = 1000 / 44100; // ~0.022676
-    const wrong = 1000 / 48000;    // ~0.020833
+    const wrong = 1000 / 48000; // ~0.020833
     expect(filter['_dryDelay']).not.toBeNull();
     // Must be close to the 44100-based value, not the 48000 fallback.
     expect(filter['_dryDelay']!.delayTime.value).toBeCloseTo(expected, 5);
