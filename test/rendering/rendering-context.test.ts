@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import type { Time } from '#core/Time';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
@@ -351,6 +352,26 @@ describe('RenderingContext', () => {
     expect(setViewSpy).toHaveBeenCalledTimes(2);
     expect(setViewSpy.mock.calls[0][0]).toBe(leftCam);
     expect(setViewSpy.mock.calls[1][0]).toBe(rightCam);
+  });
+
+  test('update advances tracked custom views; untrackView stops advancing them', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const pip = new View(0, 0, 100, 100);
+    const tick = { milliseconds: 16 } as Time;
+
+    pip.follow({ x: 40, y: 0 }, { lerp: 1 });
+    context.trackView(pip);
+    context.update(tick);
+    expect(pip.center.x).toBe(40); // tracked → followed to its target
+
+    context.untrackView(pip);
+    pip.follow({ x: 80, y: 0 }, { lerp: 1 });
+    context.update(tick);
+    expect(pip.center.x).toBe(40); // untracked → no longer advanced
+
+    pip.destroy();
+    context.destroy();
   });
 });
 

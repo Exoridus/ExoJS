@@ -73,6 +73,8 @@ export class RenderingContext implements System, DrawContext {
   private _immediateMesh: ImmediateMesh | null = null;
   /** Lazily-created pooled geometry/look source reused by every {@link drawBatch} call. */
   private _batchMesh: ImmediateMesh | null = null;
+  /** Custom views (besides the active {@link view}) advanced each frame; see {@link trackView}. */
+  private readonly _trackedViews = new Set<View>();
 
   public constructor(backend: RenderBackend) {
     this._backend = backend;
@@ -121,11 +123,36 @@ export class RenderingContext implements System, DrawContext {
   }
 
   /**
+   * Register a custom {@link View} (e.g. a picture-in-picture or minimap view)
+   * so {@link update} advances its `follow`/`shake`/bounds each frame, alongside
+   * the active {@link view}. The active view and {@link screenView} are managed
+   * automatically and need not be tracked.
+   *
+   * The view is caller-owned: call {@link untrackView} before discarding it,
+   * otherwise a `follow` target keeps it (and its target node) referenced.
+   */
+  public trackView(view: View): void {
+    this._trackedViews.add(view);
+  }
+
+  /** Stop advancing a previously {@link trackView}-ed view. No-op if absent. */
+  public untrackView(view: View): void {
+    this._trackedViews.delete(view);
+  }
+
+  /**
    * Advance follow, shake, and bounds-constraint animations on the active
-   * camera. Ticked once per frame via {@link Application.systems}.
+   * {@link view} and every {@link trackView}-ed custom view. Ticked once per
+   * frame via {@link Application.systems}.
    */
   public update(delta: Time): void {
     this._view.update(delta.milliseconds);
+
+    for (const view of this._trackedViews) {
+      if (view !== this._view) {
+        view.update(delta.milliseconds);
+      }
+    }
   }
 
   /**
@@ -137,6 +164,7 @@ export class RenderingContext implements System, DrawContext {
   public destroy(): void {
     this._view.destroy();
     this._screenView.destroy();
+    this._trackedViews.clear();
     this._immediateMesh?.destroy();
     this._immediateMesh = null;
     this._batchMesh?.destroy();
