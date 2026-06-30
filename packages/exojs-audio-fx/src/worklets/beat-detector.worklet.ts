@@ -105,6 +105,23 @@ var COMB_W_THIRD = 0.3;
 var COMB_PENALTY_DOUBLE = 1.0;
 var COMB_PENALTY_TRIPLE = 0.5;
 
+// ---- Onset peak-picker (T3): adaptive normalization + noise gate + refractory ----
+// The raw spectral flux is normalised against a running median/MAD baseline so that
+// soft onsets (low, broad novelty) and hard transients become comparable, then a
+// rising-edge picker (upward crossing of an adaptive threshold) with a noise-floor gate
+// and an IBI-derived refractory turns the novelty curve into a clean onset stream. This
+// stream (per-hop strength + sub-hop onset positions) is what the T4 PLL anchors to.
+var ONSET_NORM_WINDOW_SEC = 1.5; // running median/MAD window for novelty normalization
+var ONSET_MAD_SCALE = 1.4826; // MAD → σ consistency factor (Gaussian)
+var ONSET_THRESHOLD = 3.0; // normalized-novelty peak threshold (robust z-score)
+var ONSET_NOISE_FLOOR_FRAC = 0.1; // a peak must clear this fraction of the running flux peak
+var ONSET_ABS_FLOOR = 1e-4; // absolute novelty floor — kills divide-by-noise in silence
+var ONSET_PEAK_DECAY = 0.999; // per-hop decay of the running flux peak (noise-floor reference)
+var ONSET_MIN_REFRACTORY_SEC = 0.1; // minimum spacing between detected onsets (~100 ms)
+var ONSET_REFRACTORY_IBI_FRAC = 0.4; // once locked, refractory = max(min, frac × IBI)
+var ONSET_BEAT_COAST_IBI = 2.0; // suppress beat emission after this many IBIs without an onset
+var ONSET_RING_SIZE = 16; // recent onsets retained for T4's PLL nearestOnset()
+
 // Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
 function computeAcfInline(flux, n, minLag, maxLag, out) {
     var lagCount = maxLag - minLag + 1;
@@ -241,7 +258,28 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
         // RMS / onset state
         this._rms = 0;
-        this._onsetStrength = 0;
+        this._onsetStrength = 0; // per-hop normalised novelty (exposed to state + T4 PLL)
+
+        // ---- Onset peak-picker state (T3) ----
+        var onsetWinLen = Math.max(8, Math.round(ONSET_NORM_WINDOW_SEC * this._sampleRate / this._hopSize));
+        this._onsetWin   = new Float32Array(onsetWinLen); // ring of recent raw flux (normalization)
+        this._onsetWinPos = 0;
+        this._onsetWinCount = 0;
+        this._onsetSort  = new Float32Array(onsetWinLen); // scratch — sorted copy for median
+        this._onsetDev   = new Float32Array(onsetWinLen); // scratch — |x − median| for MAD
+        this._fluxPeak   = 0;     // decaying running flux maximum (noise-floor reference)
+        this._onsetPrev1 = 0;     // normalised novelty at the previous hop (rising-edge detect)
+        this._onsetHopCount  = 0;
+        this._onsetFiredThisHop = false; // a confirmed onset peak was registered this hop
+        // ---- Onset stream exposed for T4's PLL ----
+        // _lastOnsetSample / _lastOnsetStrength = most recent confirmed onset (sub-hop precise);
+        // the ring holds the last ONSET_RING_SIZE onsets so the PLL can pick nearestOnset().
+        this._lastOnsetSample   = -1;
+        this._lastOnsetStrength = 0;
+        this._onsetRingSamples   = new Float32Array(ONSET_RING_SIZE);
+        this._onsetRingStrengths = new Float32Array(ONSET_RING_SIZE);
+        this._onsetRingPos   = 0;
+        this._onsetRingCount = 0;
 
         // Band energy (for state messages)
         var LOW_BANDS  = Math.round(this._melBands * 0.25);
@@ -321,7 +359,6 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             var diff = this._melOut[b] - localMax;
             if (diff > 0) flux += diff;
         }
-        this._onsetStrength = flux;
 
         // Store current mel frame in circular buffer
         var prevFrame = this._prevMelFrames[this._prevMelFrameIdx];
@@ -334,6 +371,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._fluxWindow[this._fluxWritePos] = flux;
         this._fluxWritePos = (this._fluxWritePos + 1) % this._fluxWindow.length;
         if (this._fluxCount < this._fluxWindow.length) this._fluxCount++;
+
+        // Adaptive onset normalization + peak-picking (T3). Runs every hop (independent
+        // of the ACF/tempo path, which still consumes the raw _fluxWindow above).
+        this._detectOnset(flux);
 
         // Tempogram: compute ACF periodically
         this._hopsSinceACF++;
@@ -476,9 +517,92 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._updateConfidence();
     }
 
+    // Minimum spacing (samples) between two detected onsets. Once a tempo is locked the
+    // refractory tracks the beat (a fraction of the IBI); before lock it is a fixed floor.
+    _onsetRefractorySamples() {
+        var minR = ONSET_MIN_REFRACTORY_SEC * this._sampleRate;
+        if (this._bestBpm > 0) {
+            var r = ONSET_REFRACTORY_IBI_FRAC * (60 / this._bestBpm * this._sampleRate);
+            return r > minR ? r : minR;
+        }
+        return minR;
+    }
+
+    // Adaptive onset detection (T3). Normalises the raw flux against a running median/MAD
+    // baseline (so soft and hard onsets are comparable), then picks onsets on the UPWARD
+    // crossing of an adaptive threshold (the onset attack), gated by a noise floor and an
+    // IBI-derived refractory. Updates the per-hop _onsetStrength and the detected-onset
+    // stream consumed by T4's PLL.
+    _detectOnset(flux) {
+        // Decaying running flux maximum — the reference level for the noise floor.
+        this._fluxPeak *= ONSET_PEAK_DECAY;
+        if (flux > this._fluxPeak) this._fluxPeak = flux;
+
+        // Push raw flux into the normalization ring.
+        var W = this._onsetWin.length;
+        this._onsetWin[this._onsetWinPos] = flux;
+        this._onsetWinPos = (this._onsetWinPos + 1) % W;
+        if (this._onsetWinCount < W) this._onsetWinCount++;
+        var count = this._onsetWinCount;
+
+        // Robust baseline: median of the window, then MAD = median(|x − median|).
+        var s = this._onsetSort;
+        for (var i = 0; i < count; i++) s[i] = this._onsetWin[i];
+        var sub = s.subarray(0, count);
+        sub.sort();
+        var median = sub[count >> 1];
+        var d = this._onsetDev;
+        for (var j = 0; j < count; j++) { var dv = this._onsetWin[j] - median; d[j] = dv < 0 ? -dv : dv; }
+        var dsub = d.subarray(0, count);
+        dsub.sort();
+        var mad = dsub[count >> 1];
+
+        // Normalised novelty: deviation above baseline in robust-σ units, with the scale
+        // floored at a fraction of the running peak so a clean (MAD≈0) clicktrack still
+        // yields a finite, comparable onset strength instead of a divide-by-zero spike.
+        var floorScale = ONSET_NOISE_FLOOR_FRAC * this._fluxPeak;
+        var madScaled = ONSET_MAD_SCALE * mad;
+        var denom = madScaled > floorScale ? madScaled : floorScale;
+        if (denom < 1e-9) denom = 1e-9;
+        var norm = (flux - median) / denom;
+        if (norm < 0) norm = 0;
+        this._onsetStrength = norm;
+
+        // Rising-edge onset detection on the normalised novelty: fire on the UPWARD crossing
+        // of the adaptive threshold — the onset attack, exactly where the old crude heuristic
+        // fired, so the shipped beat-offset behaviour is preserved — gated by the noise floor
+        // and an IBI-derived refractory. Zero lookahead latency.
+        this._onsetFiredThisHop = false;
+        var noiseFloor = floorScale;
+        var refractory = this._onsetRefractorySamples();
+        var crossedUp = this._onsetHopCount >= 1 && this._onsetPrev1 <= ONSET_THRESHOLD && norm > ONSET_THRESHOLD;
+        var aboveFloor = flux > noiseFloor && flux > ONSET_ABS_FLOOR;
+        var pastRefractory = this._lastOnsetSample < 0 || (this._sampleCount - this._lastOnsetSample) >= refractory;
+        if (crossedUp && aboveFloor && pastRefractory) {
+            // Sub-hop onset position: linear-interpolate the threshold crossing between the
+            // previous hop and this one (stored for T4's PLL; the T3 grid snap uses the integer
+            // hop so the shipped beat-offset numbers are preserved).
+            var span = norm - this._onsetPrev1;
+            var frac = span > 1e-9 ? (ONSET_THRESHOLD - this._onsetPrev1) / span : 0;
+            if (frac < 0) frac = 0; else if (frac > 1) frac = 1;
+            var onsetSample = (this._sampleCount - this._hopSize) + frac * this._hopSize;
+            this._lastOnsetSample   = onsetSample;
+            this._lastOnsetStrength = norm;
+            this._onsetFiredThisHop = true;
+            this._onsetRingSamples[this._onsetRingPos]   = onsetSample;
+            this._onsetRingStrengths[this._onsetRingPos] = norm;
+            this._onsetRingPos = (this._onsetRingPos + 1) % this._onsetRingSamples.length;
+            if (this._onsetRingCount < this._onsetRingSamples.length) this._onsetRingCount++;
+        }
+
+        // Shift history for the next hop.
+        this._onsetPrev1 = norm;
+        this._onsetHopCount++;
+    }
+
     _tickPhase(flux) {
         if (this._lastBeatSample < 0) {
-            // Bootstrap: set first beat at current sample
+            // Bootstrap: set first beat at current sample (T4 will anchor this to an onset).
             this._lastBeatSample = this._sampleCount;
             return;
         }
@@ -486,27 +610,27 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         var beatIntervalSamples = 60 / this._bestBpm * this._sampleRate;
         var phase = (this._sampleCount - this._lastBeatSample) / beatIntervalSamples;
 
-        // Snap correction: if novelty peak is strong and phase is 0.7..1.3, snap
-        if (phase >= 0.7 && phase <= 1.3 && flux > 0) {
-            // Compute mean recent flux
-            var recentMean = 0;
-            var count = Math.min(this._fluxCount, 16);
-            var wp = this._fluxWritePos;
-            var len = this._fluxWindow.length;
-            for (var i = 0; i < count; i++) {
-                recentMean += this._fluxWindow[(wp - 1 - i + len) % len];
-            }
-            recentMean /= count || 1;
-            if (flux > 1.5 * recentMean && recentMean > 0) {
-                // Snap to this sample
-                this._lastBeatSample = this._sampleCount;
-                phase = 1.0;
-            }
+        // Snap correction (T3): the peak-picker's onset (from _detectOnset) replaces the old
+        // crude "flux > 1.5x recentMean" heuristic. When an onset fires near the predicted
+        // beat (phase 0.7..1.3) align the grid to the SUB-HOP onset position — more accurate
+        // than the old integer-hop snap, which tightens beat offsets on clean grids. The
+        // forced phase = 1.0 preserves the original "snap emits a beat this hop" behaviour.
+        if (this._onsetFiredThisHop && phase >= 0.7 && phase <= 1.3) {
+            this._lastBeatSample = this._lastOnsetSample;
+            phase = (this._sampleCount - this._lastBeatSample) / beatIntervalSamples;
+            if (phase < 1.0) phase = 1.0;
         }
 
+        // Noise-floor / coast gate (T3): after a sustained absence of onsets (a break or
+        // silence) keep the grid coasting but STOP emitting phantom beats — this is what
+        // removes the breakDrop false positives. Onset-rich material never trips this.
+        var coasting = this._lastOnsetSample >= 0 &&
+            (this._sampleCount - this._lastOnsetSample) > ONSET_BEAT_COAST_IBI * beatIntervalSamples;
+
         if (phase >= 1.0) {
-            var beatTime = (this._lastBeatSample + beatIntervalSamples) / this._sampleRate;
             this._lastBeatSample += beatIntervalSamples;
+            if (coasting) return; // suppress emission during silence (grid still advanced)
+            var beatTime = this._lastBeatSample / this._sampleRate;
 
             // Update IBI history
             this._ibiHistory[this._ibiIdx] = beatIntervalSamples;

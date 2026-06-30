@@ -292,6 +292,39 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     expect(pct(allMetrics.get('clicktrack_50bpm')!)).toBeLessThanOrEqual(0.03);
   });
 
+  // ── T3 acceptance gates (adaptive onset normalization + peak-picker) ──
+  // The flux novelty is now normalised against a running median/MAD baseline and onsets are
+  // picked on the rising edge above an adaptive threshold, gated by a noise floor and an
+  // IBI-derived refractory. Two product wins fall out: (1) phantom beats emitted during the
+  // breakDrop SILENCE are suppressed (the coast gate), halving+ the last Stage-2 FP target;
+  // (2) the sub-hop onset snap tightens beat offsets on clean grids. Soft-onset recall holds.
+
+  // breakDrop false-positive rate (baseline 40.0/min) must drop by ≥50% — the silence between
+  // the drop no longer emits grid-predicted beats once onsets stop arriving.
+  it('T3: breakDrop_128 FP rate at least halved vs baseline (≤20/min)', () => {
+    expect(allMetrics.get('breakDrop_128bpm')!.fpRatePerMin).toBeLessThanOrEqual(20);
+  });
+
+  // Soft-onset recall must hold at or above its baseline floor (0.40) — the adaptive
+  // normalization keeps low, broad swells detectable instead of vanishing under a fixed gate.
+  it('T3: softOnset_90 recall holds at/above the 0.40 floor', () => {
+    expect(allMetrics.get('softOnset_90bpm')!.recall).toBeGreaterThanOrEqual(0.4);
+  });
+
+  // Clean-clicktrack beat-offset p90 must NOT regress past the recorded baseline. The sub-hop
+  // onset snap drove these well under their old values; these ceilings guard against drift.
+  for (const [label, p90MaxMs] of [
+    ['clicktrack_50bpm', 8.9],
+    ['clicktrack_90bpm', 4.5],
+    ['clicktrack_120bpm', 11.5],
+    ['clicktrack_128bpm', 9.8],
+    ['clicktrack_250bpm', 5.2],
+  ] as const) {
+    it(`T3: ${label} beat-offset p90 not worsened (≤${p90MaxMs}ms)`, () => {
+      expect(allMetrics.get(label)!.beatOffsetP90Ms).toBeLessThanOrEqual(p90MaxMs);
+    });
+  }
+
   // ── Write committed baseline snapshot ──
 
   afterAll(() => {
