@@ -13,7 +13,7 @@ export interface CallbackRenderPassOptions extends RenderPassOptions {
   /**
    * Off-screen destination. When set, the callback runs redirected into this {@link RenderTexture} (save / restore).
    * `null` / omitted → the active target. Inside a target redirect, draw via `context.backend` (the active view is
-   * the target's); `context.render(node)` would reset the view to `context.camera`. Caller-owned and stable; never
+   * the target's); `context.render(node)` would reset the view to `context.view`. Caller-owned and stable; never
    * allocated, pooled, resized, or destroyed by the pass.
    */
   readonly target?: RenderTexture | null;

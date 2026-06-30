@@ -10,7 +10,6 @@ import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
-import { Camera } from './Camera';
 import { type RenderBackend } from './RenderBackend';
 import { type RenderBatch } from './RenderBatch';
 import { type RenderNode } from './RenderNode';
@@ -65,7 +64,7 @@ export class RenderingContext implements System {
   /** App-systems tick band — rendering last (camera + render-plan prep). @internal */
   public readonly order = 500;
   private readonly _backend: RenderBackend;
-  private _camera: Camera;
+  private _view: View;
   private readonly _screenView: View;
   /** Lazily-created pooled drawable reused by every {@link drawGeometry} call. */
   private _immediateMesh: ImmediateMesh | null = null;
@@ -80,7 +79,7 @@ export class RenderingContext implements System {
     const viewCenterX = backend.view?.center?.x ?? viewWidth / 2;
     const viewCenterY = backend.view?.center?.y ?? viewHeight / 2;
 
-    this._camera = new Camera({
+    this._view = View.from({
       center: { x: viewCenterX, y: viewCenterY },
       size: { width: viewWidth, height: viewHeight },
     });
@@ -88,21 +87,21 @@ export class RenderingContext implements System {
   }
 
   /**
-   * The active camera. Defaults to a camera that matches the initial
-   * backend view. Replace with a custom `Camera` instance for follow,
-   * zoom, bounds, or split-screen viewport behavior.
+   * The active world {@link View} — the default for {@link render}. Defaults to
+   * a view matching the initial backend view. Replace with a custom `View` for
+   * follow, zoom, bounds, or split-screen viewport behavior.
    */
-  public get camera(): Camera {
-    return this._camera;
+  public get view(): View {
+    return this._view;
   }
 
-  public set camera(camera: Camera) {
-    const previousCamera = this._camera;
+  public set view(view: View) {
+    const previousView = this._view;
 
-    this._camera = camera;
+    this._view = view;
 
-    if (previousCamera !== camera) {
-      previousCamera.destroy();
+    if (previousView !== view) {
+      previousView.destroy();
     }
   }
 
@@ -118,27 +117,22 @@ export class RenderingContext implements System {
     return this._screenView;
   }
 
-  /** Backward-compatible alias — returns the active {@link camera}. */
-  public get view(): View {
-    return this._camera;
-  }
-
   /**
    * Advance follow, shake, and bounds-constraint animations on the active
    * camera. Ticked once per frame via {@link Application.systems}.
    */
   public update(delta: Time): void {
-    this._camera.update(delta.milliseconds);
+    this._view.update(delta.milliseconds);
   }
 
   /**
-   * Destroy the resources this context owns — the active {@link Camera} and the
+   * Destroy the resources this context owns — the active {@link View} and the
    * screen-space {@link View}. The {@link RenderBackend} is owned by the
    * Application and destroyed separately.
    * @internal — invoked via Application.systems on teardown.
    */
   public destroy(): void {
-    this._camera.destroy();
+    this._view.destroy();
     this._screenView.destroy();
     this._immediateMesh?.destroy();
     this._immediateMesh = null;
@@ -151,7 +145,7 @@ export class RenderingContext implements System {
    * Preserves the camera's center and zoom; only the visible area size changes.
    */
   public resize(width: number, height: number): void {
-    this._camera.resize(width, height);
+    this._view.resize(width, height);
     this._screenView.resize(width, height);
     this._screenView.setCenter(width / 2, height / 2);
   }
@@ -164,7 +158,7 @@ export class RenderingContext implements System {
    * high-level rendering entry point.
    */
   public render(node: RenderNode, options: RenderOptions = {}): void {
-    const view = options.view ?? this._camera;
+    const view = options.view ?? this._view;
 
     this._backend.setView(view);
     playRenderTree(node, this._backend);
@@ -258,7 +252,7 @@ export class RenderingContext implements System {
       throw new Error(`drawGeometry material must target 'mesh' (got '${String(material.target)}').`);
     }
 
-    const view = options.view ?? this._camera;
+    const view = options.view ?? this._view;
     const mesh = (this._immediateMesh ??= new ImmediateMesh());
 
     // Set the view first: setView now only flushes when the view actually changes
@@ -298,7 +292,7 @@ export class RenderingContext implements System {
       return;
     }
 
-    const view = options.view ?? this._camera;
+    const view = options.view ?? this._view;
     const mesh = (this._batchMesh ??= new ImmediateMesh());
 
     // Set the view first (setView only flushes when the view actually changes;

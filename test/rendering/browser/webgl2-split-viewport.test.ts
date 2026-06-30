@@ -1,7 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
-import { Camera } from '#rendering/Camera';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
@@ -270,12 +269,12 @@ describe('WebGL2 split-screen viewport', () => {
     const redTex = createSolidTexture('#ff0000', 16, 16);
     const greenTex = createSolidTexture('#00ff00', 16, 16);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0, 0, 0.5, 1),
     });
-    const rightCam = new Camera({
+    const rightCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0.5, 0, 0.5, 1),
@@ -308,12 +307,12 @@ describe('WebGL2 split-screen viewport', () => {
     const blueTex = createSolidTexture('#0000ff', 16, 16);
     const yellowTex = createSolidTexture('#ffff00', 16, 16);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0, 0, 0.5, 1),
     });
-    const rightCam = new Camera({
+    const rightCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0.5, 0, 0.5, 1),
@@ -345,7 +344,7 @@ describe('WebGL2 split-screen viewport', () => {
     const { backend } = await createBackend();
     const whiteTex = createSolidTexture('#ffffff', 16, 16);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0, 0, 0.5, 1),

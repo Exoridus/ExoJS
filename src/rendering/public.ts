@@ -10,8 +10,6 @@
 export type { BackendRenderPass } from './BackendRenderPass';
 export type { CallbackRenderPassOptions } from './CallbackRenderPass';
 export { CallbackRenderPass } from './CallbackRenderPass';
-export type { CameraOptions } from './Camera';
-export { Camera } from './Camera';
 export { Container } from './Container';
 export { Drawable } from './Drawable';
 export type { PixelSnapMode } from './pixelSnap';
@@ -30,7 +28,7 @@ export type { RenderStats } from './RenderStats';
 export { createRenderStats, resetRenderStats } from './RenderStats';
 export { RenderTarget } from './RenderTarget';
 export { BlendModes, BufferTypes, BufferUsage, isAdvancedBlendMode, RenderingPrimitives, ScaleModes, ShaderPrimitives, WrapModes } from './types';
-export type { ViewFollowOptions, ViewFollowTarget, ViewShakeOptions } from './View';
+export type { ViewFollowOptions, ViewFollowTarget, ViewOptions, ViewShakeOptions } from './View';
 export { View, ViewFlags } from './View';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';

@@ -558,10 +558,10 @@ export class Application {
    * {@link Pointer.x}/{@link Pointer.y} and node positions, e.g. `0..app.width`
    * — to a world position using the active camera. At the default centered
    * camera this is the identity; with a panned/zoomed/rotated camera it undoes
-   * the transform. Equivalent to `app.rendering.camera.screenToWorld(x, y)`.
+   * the transform. Equivalent to `app.rendering.view.screenToWorld(x, y)`.
    */
   public screenToWorld(x: number, y: number): PointLike {
-    return this._rendering.camera.screenToWorld(x, y);
+    return this._rendering.view.screenToWorld(x, y);
   }
 
   /**

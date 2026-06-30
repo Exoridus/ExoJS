@@ -1,7 +1,6 @@
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
-import { Camera } from '#rendering/Camera';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
@@ -175,13 +174,6 @@ describe('RenderingContext', () => {
     expect(drawEvents[1]).toBe(green);
   });
 
-  test('view returns the active camera', () => {
-    const { backend } = createMockBackend();
-    const context = new RenderingContext(backend);
-
-    expect(context.view).toBe(context.camera);
-  });
-
   test('stats exposes backend stats', () => {
     const { backend } = createMockBackend();
     const context = new RenderingContext(backend);
@@ -321,7 +313,7 @@ describe('RenderingContext', () => {
 
     context.render(sprite);
 
-    expect(setViewSpy).toHaveBeenCalledWith(context.camera);
+    expect(setViewSpy).toHaveBeenCalledWith(context.view);
   });
 
   test('render() with custom view calls backend.setView with that view', () => {
@@ -342,12 +334,12 @@ describe('RenderingContext', () => {
     const texture = createTexture();
     const sprite = new Sprite(texture);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: 400, y: 300 },
       size: { width: 800, height: 600 },
       viewport: new Rectangle(0, 0, 0.5, 1),
     });
-    const rightCam = new Camera({
+    const rightCam = View.from({
       center: { x: 400, y: 300 },
       size: { width: 800, height: 600 },
       viewport: new Rectangle(0.5, 0, 0.5, 1),
@@ -548,7 +540,7 @@ describe('RenderingContext.drawGeometry', () => {
     const customView = new View(100, 100, 200, 200);
 
     context.drawGeometry(geometry, new Matrix());
-    expect(setViewSpy).toHaveBeenLastCalledWith(context.camera);
+    expect(setViewSpy).toHaveBeenLastCalledWith(context.view);
 
     context.drawGeometry(geometry, new Matrix(), { view: customView });
     expect(setViewSpy).toHaveBeenLastCalledWith(customView);
@@ -650,7 +642,7 @@ describe('RenderingContext.drawBatch', () => {
     const customView = new View(100, 100, 200, 200);
 
     context.drawBatch(batch);
-    expect(setViewSpy).toHaveBeenLastCalledWith(context.camera);
+    expect(setViewSpy).toHaveBeenLastCalledWith(context.view);
 
     context.drawBatch(batch, { view: customView });
     expect(setViewSpy).toHaveBeenLastCalledWith(customView);

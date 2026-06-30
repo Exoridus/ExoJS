@@ -33,7 +33,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Button",
   "CacheFirstStrategy",
   "CallbackRenderPass",
-  "Camera",
   "Capabilities",
   "ChannelOffset",
   "ChannelSize",
