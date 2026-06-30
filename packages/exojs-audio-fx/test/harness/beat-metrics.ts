@@ -71,6 +71,34 @@ export interface BeatMetrics {
   octaveError: OctaveError;
   /** Fraction of state messages (after settling) that report tempo > 0. */
   detectionRate: number;
+  /** T7 provisional/locked-beat metrics. */
+  t7: T7Stats;
+}
+
+export interface T7Stats {
+  /**
+   * Emission time (s) of the FIRST emitted beat of ANY status — the reactivity
+   * latency the "blink" visualizer feels. Uses the message-posting time
+   * (`_audioTimeSec`), not the (possibly back-dated) beat timestamp.
+   * null = no beats emitted.
+   */
+  timeToFirstBeatSec: number | null;
+  /** Emission time (s) of the first LOCKED beat. null = never locked. */
+  timeToFirstLockedBeatSec: number | null;
+  /** Beats emitted with status:'provisional'. */
+  provisionalBeatCount: number;
+  /** Beats emitted with status:'locked'. */
+  lockedBeatCount: number;
+  /** False-positive rate per minute computed over LOCKED beats only. */
+  lockedFpRatePerMin: number;
+  /** FP count over locked beats only. */
+  lockedFpCount: number;
+  /** Beat-offset mean (ms) over locked beats only. */
+  lockedBeatOffsetMeanMs: number;
+  /** Number of provisional→locked status transitions in the beat stream. */
+  provLockedTransitions: number;
+  /** True iff every emitted beat carries a valid `status` field. */
+  statusComplete: boolean;
 }
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
@@ -312,6 +340,37 @@ export function computeMetrics(
   const detectionRate =
     stateMessages.length > 0 ? settledStates.length / stateMessages.length : 0;
 
+  // ── T7: provisional vs locked beats ──
+
+  const timeToFirstBeatSec = beatMsgs.length > 0 ? beatMsgs[0]._audioTimeSec : null;
+  const lockedBeats = beatMsgs.filter((b) => b.status === 'locked');
+  const provisionalBeats = beatMsgs.filter((b) => b.status === 'provisional');
+  const firstLocked = lockedBeats[0];
+  const lockedMatch = greedyMatch(lockedBeats.map((b) => b.audioTime), gtTimes, matchWindowSec);
+  const lockedOffsetsMs = lockedMatch.offsets.map((o) => o * 1000);
+
+  let provLockedTransitions = 0;
+  for (let i = 1; i < beatMsgs.length; i++) {
+    if (beatMsgs[i - 1].status === 'provisional' && beatMsgs[i].status === 'locked') {
+      provLockedTransitions++;
+    }
+  }
+  const statusComplete = beatMsgs.every((b) => b.status === 'provisional' || b.status === 'locked');
+
+  const t7: T7Stats = {
+    timeToFirstBeatSec,
+    timeToFirstLockedBeatSec: firstLocked ? firstLocked._audioTimeSec : null,
+    provisionalBeatCount: provisionalBeats.length,
+    lockedBeatCount: lockedBeats.length,
+    lockedFpRatePerMin: durationMin > 0 ? lockedMatch.fpTimes.length / durationMin : 0,
+    lockedFpCount: lockedMatch.fpTimes.length,
+    lockedBeatOffsetMeanMs: lockedOffsetsMs.length
+      ? lockedOffsetsMs.reduce((a, b) => a + b, 0) / lockedOffsetsMs.length
+      : 0,
+    provLockedTransitions,
+    statusComplete,
+  };
+
   return {
     label: fixture.label,
     fixtureDurationSec,
@@ -323,6 +382,7 @@ export function computeMetrics(
     confidence,
     octaveError,
     detectionRate,
+    t7,
   };
 }
 

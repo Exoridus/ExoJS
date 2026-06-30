@@ -20,7 +20,12 @@ const SAMPLE_RATE = 48000;
 
 // ── Helpers to build synthetic message logs ────────────────────────────────────
 
-function makeBeat(audioTime: number, tempo: number, audioTimeSec?: number): BeatMessage {
+function makeBeat(
+  audioTime: number,
+  tempo: number,
+  audioTimeSec?: number,
+  status: 'provisional' | 'locked' = 'locked',
+): BeatMessage {
   return {
     type: 'beat',
     _audioTimeSec: audioTimeSec ?? audioTime,
@@ -31,6 +36,7 @@ function makeBeat(audioTime: number, tempo: number, audioTimeSec?: number): Beat
     energy: 0.5,
     isDownbeat: false,
     beatInBar: 1,
+    status,
   };
 }
 
@@ -284,6 +290,58 @@ describe('computeMetrics — lock time', () => {
     const fixture = makeFixture(gtTimes, bpm, durationSec);
     const m = computeMetrics(messages, fixture);
     expect(m.lockTimeSec).toBeCloseTo(firstCorrectTime, 6);
+  });
+});
+
+// ── T7 provisional/locked metrics ──────────────────────────────────────────────
+
+describe('computeMetrics — T7 provisional/locked stats', () => {
+  const bpm = 120;
+  const ibi = 60 / bpm;
+  const durationSec = 10;
+  const gtTimes = Array.from({ length: 8 }, (_, i) => 2 + i * ibi);
+
+  // First 3 beats provisional (emitted early, slightly late), rest locked (on grid).
+  // One locked beat is a false positive (far from any GT onset).
+  const beats: BeatMessage[] = [
+    makeBeat(gtTimes[0] + 0.005, bpm, 2.005, 'provisional'),
+    makeBeat(gtTimes[1] + 0.005, bpm, 2.505, 'provisional'),
+    makeBeat(gtTimes[2] + 0.005, bpm, 3.005, 'provisional'),
+    makeBeat(gtTimes[3], bpm, 3.5, 'locked'),
+    makeBeat(gtTimes[4], bpm, 4.0, 'locked'),
+    makeBeat(gtTimes[5], bpm, 4.5, 'locked'),
+    makeBeat(8.7, bpm, 8.7, 'locked'), // locked FP far from any GT onset
+  ];
+  const messages: WorkletMessage[] = [
+    ...Array.from({ length: 6 }, (_, i) => makeState(bpm, 3.5 + i * 0.5)),
+    ...beats,
+  ];
+  const fixture = makeFixture(gtTimes, bpm, durationSec);
+  const m = computeMetrics(messages, fixture);
+
+  it('time-to-first-beat is the first beat emission time (any status)', () => {
+    expect(m.t7.timeToFirstBeatSec).toBeCloseTo(2.005, 6);
+  });
+
+  it('time-to-first-locked-beat is the first locked emission time', () => {
+    expect(m.t7.timeToFirstLockedBeatSec).toBeCloseTo(3.5, 6);
+  });
+
+  it('counts provisional and locked beats', () => {
+    expect(m.t7.provisionalBeatCount).toBe(3);
+    expect(m.t7.lockedBeatCount).toBe(4);
+  });
+
+  it('exactly one provisional→locked transition', () => {
+    expect(m.t7.provLockedTransitions).toBe(1);
+  });
+
+  it('locked FP rate counts only the locked false positive', () => {
+    expect(m.t7.lockedFpCount).toBe(1);
+  });
+
+  it('status is complete (every beat tagged)', () => {
+    expect(m.t7.statusComplete).toBe(true);
   });
 });
 

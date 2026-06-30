@@ -54,7 +54,7 @@ detector.onTempoChange.add((newBpm, oldBpm) => {
 });
 ```
 
-The `settlingMs` option (default 1500) gates beat-phase output during initial warm-up so beat timing only starts after enough analysis history is available.
+Beats arrive in two trust levels via `BeatInfo.status`. Early, low-latency beats are tagged `'provisional'` (after a short `minSettlingMs` warm-up, default 400) — ideal for snappy visual reactivity like a beat "blink". Once the tempo grid is settled and trustworthy, beats promote to `'locked'` (each stable segment yields exactly one provisional→locked transition). The single `onBeat` signal carries both; check `info.status` to decide how much to trust a given beat, or set `emitProvisionalBeats: false` to receive only locked beats. The `tempo`/`confidence` getters only report once the grid is locked.
 
 ## Event signals
 
@@ -62,7 +62,7 @@ Four signals fire at discrete moments in the music:
 
 | Signal | Fires when | Payload |
 |--------|------------|---------|
-| `onBeat` | A beat occurs | `BeatInfo` — audio time, tempo, confidence, energy, isDownbeat, beatInBar |
+| `onBeat` | A beat occurs | `BeatInfo` — audio time, tempo, confidence, energy, isDownbeat, beatInBar, status (`'provisional'` \| `'locked'`) |
 | `onDownbeat` | The first beat of a bar | Same `BeatInfo` |
 | `onBarStart` | A new bar begins | `BarInfo` — audio time, tempo, confidence, barNumber |
 | `onTempoChange` | Tempo estimate changes | `(newBpm, oldBpm)` |
@@ -147,7 +147,8 @@ const detector = new BeatDetector({
     fastTempoWindowSec: 2.5,               // short tempogram window (reacts to tempo changes)
     stableTempoWindowSec: 8,               // long tempogram window (holds the grid steady)
     acfIntervalHops: 15,                   // hops between tempogram recomputations
-    settlingMs: 1500,                      // initial suppression period
+    minSettlingMs: 400,                    // warm-up before the first (provisional) beat
+    emitProvisionalBeats: true,            // emit early provisional beats for visual reactivity
     melBands: 24,                          // mel filterbank bands
     enableTimeSignatureDetection: true,    // auto-detect 3/4 vs 4/4
     source: app.audio.music,               // initial source: bus or Voice (optional)

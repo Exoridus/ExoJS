@@ -33,6 +33,8 @@ export interface BeatMessage {
   energy: number;
   isDownbeat: boolean;
   beatInBar: number;
+  /** T7 trust level: early reactive beat vs settled, trustworthy beat. */
+  status: 'provisional' | 'locked';
 }
 
 export interface StateMessage {

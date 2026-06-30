@@ -330,6 +330,65 @@ describe('BeatDetector', () => {
       expect(downbeatHandler).not.toHaveBeenCalled();
       d.destroy();
     });
+
+    it('forwards status:provisional to BeatInfo', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeat.add(handler);
+      simulateMessage(d, {
+        type: 'beat',
+        audioTime: 0.5,
+        tempo: 120,
+        confidence: 0.3,
+        beatPhase: 0,
+        energy: 0.4,
+        isDownbeat: false,
+        beatInBar: 2,
+        status: 'provisional',
+      });
+      expect(handler.mock.calls[0][0].status).toBe('provisional');
+      d.destroy();
+    });
+
+    it('forwards status:locked to BeatInfo', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeat.add(handler);
+      simulateMessage(d, {
+        type: 'beat',
+        audioTime: 2.0,
+        tempo: 120,
+        confidence: 0.8,
+        beatPhase: 0,
+        energy: 0.7,
+        isDownbeat: true,
+        beatInBar: 1,
+        status: 'locked',
+      });
+      expect(handler.mock.calls[0][0].status).toBe('locked');
+      d.destroy();
+    });
+
+    it('defaults BeatInfo.status to locked when the message omits it', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeat.add(handler);
+      simulateMessage(d, {
+        type: 'beat',
+        audioTime: 1.0,
+        tempo: 120,
+        confidence: 0.8,
+        beatPhase: 0,
+        energy: 0.5,
+        isDownbeat: false,
+        beatInBar: 2,
+      });
+      expect(handler.mock.calls[0][0].status).toBe('locked');
+      d.destroy();
+    });
   });
 
   describe('tempoChange message handling', () => {
@@ -363,26 +422,44 @@ describe('BeatDetector', () => {
     });
   });
 
-  // ---- Settling ----
+  // ---- Settling / provisional emission (T7) ----
 
-  describe('settling period', () => {
-    it('default settling is 1500ms', async () => {
-      const d = new BeatDetector();
-      // Can't test worklet settling directly (no real audio), but we can
-      // confirm the option is correctly passed to the worklet via processorOptions
-      let capturedProcessorOptions: Record<string, unknown> | undefined;
+  describe('provisional emission options', () => {
+    function captureProcessorOptions(): { get: () => Record<string, unknown> | undefined } {
+      let captured: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
       (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
-        capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
+        captured = opts.processorOptions as Record<string, unknown>;
         return new OrigAWN(c, name, opts);
       });
+      return { get: () => captured };
+    }
+
+    it('forwards default minSettlingMs (400) and emitProvisionalBeats (true)', async () => {
+      const cap = captureProcessorOptions();
+      const d = new BeatDetector();
+      await d.ready;
+      expect(cap.get()?.['minSettlingMs']).toBe(400);
+      expect(cap.get()?.['emitProvisionalBeats']).toBe(true);
+      // The removed `settlingMs` option must no longer be forwarded.
+      expect(cap.get()?.['settlingMs']).toBeUndefined();
       d.destroy();
-      const d2 = new BeatDetector({ settlingMs: 1500 });
-      // The worklet (and thus the processorOptions capture) is created when
-      // `ready` resolves — await it so the assertion actually runs.
-      await d2.ready;
-      expect(capturedProcessorOptions?.['settlingMs']).toBe(1500);
-      d2.destroy();
+    });
+
+    it('forwards a custom minSettlingMs to worklet processorOptions', async () => {
+      const cap = captureProcessorOptions();
+      const d = new BeatDetector({ minSettlingMs: 250 });
+      await d.ready;
+      expect(cap.get()?.['minSettlingMs']).toBe(250);
+      d.destroy();
+    });
+
+    it('forwards emitProvisionalBeats=false to worklet processorOptions', async () => {
+      const cap = captureProcessorOptions();
+      const d = new BeatDetector({ emitProvisionalBeats: false });
+      await d.ready;
+      expect(cap.get()?.['emitProvisionalBeats']).toBe(false);
+      d.destroy();
     });
   });
 

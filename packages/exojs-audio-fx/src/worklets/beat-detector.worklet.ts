@@ -151,6 +151,25 @@ var DRIFT_MAX_FRAC = 0.20;  // beyond this it is a hard jump → owned by the st
 var DRIFT_AGREE_FRAC = 0.04; // consecutive fast estimates within this keep the confirmation streak
 var DRIFT_CONFIRM_HOPS = 3; // consecutive confirming ACF hops required before the grid follows
 
+// ---- Provisional vs locked beats (T7) ----
+// Beats are emitted as soon as the early ACF finds ANY in-range tempo (gated at _minEmitHops,
+// derived from minSettlingMs ≈ 400 ms instead of waiting the full slowest-tempo window), tagged
+// status:'provisional' — this drives the low-latency "blink" visual reactivity. A beat is only
+// PROMOTED to status:'locked' once the evidence matches what the detector used to wait for: the
+// full stable window has filled (fluxCount ≥ maxLag+1 — one period of the slowest tempo, exactly
+// the old emission gate → the AUTHORITATIVE lock) AND at least LOCK_PROMOTE_BEATS beats have since
+// been emitted on that validated grid AND confidence clears a floor. (Persistence is counted as
+// beats-after-authoritative-lock, not onset-MATCHED beats: on syncopated material the IBI-derived
+// refractory hides the on-grid onsets so the grid legitimately free-runs — the full-window lock +
+// confidence already establish trustworthiness.) The promotion latches (one provisional→locked
+// transition per stable segment) and also gates the state-message tempo report, so sync-critical
+// consumers and the public tempo/confidence getters only ever see post-lock (trustworthy) values
+// while the visual layer still reacts early. The gains are INTERNAL constants (API decision: not
+// public). When emitProvisionalBeats is false, provisional beats are suppressed (grid bookkeeping
+// still runs) and only locked beats are posted — the pre-T7 emission shape.
+var LOCK_PROMOTE_BEATS = 3; // beats emitted after the authoritative lock before promotion to locked
+var LOCK_PROMOTE_CONFIDENCE = 0.1; // confidence floor that must be cleared to promote to locked
+
 // Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
 function computeAcfInline(flux, n, minLag, maxLag, out) {
     var lagCount = maxLag - minLag + 1;
@@ -208,7 +227,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._minBpm     = opts.minBpm     || 50;
         this._maxBpm     = opts.maxBpm     || 300;
         this._melBands   = opts.melBands   || 24;
-        this._settlingMs = opts.settlingMs !== undefined ? opts.settlingMs : 1500;
+        // T7 low-latency emission: minSettlingMs replaces the old settlingMs (1500). It sets the
+        // EARLIEST point a (provisional) beat may be emitted — the ACF starts hunting a tempo once
+        // the flux ring holds this many hops instead of waiting a full slowest-tempo period.
+        this._minSettlingMs = opts.minSettlingMs !== undefined ? opts.minSettlingMs : 400;
+        this._emitProvisionalBeats = opts.emitProvisionalBeats !== false; // default true
         // T5 dual tempo windows. The short FAST window detects a genuine tempo change quickly;
         // the long STABLE window holds the grid steady against noise/octave artefacts. A single
         // flux ring is sized to the stable window and the fast window is its most-recent sub-span.
@@ -293,9 +316,18 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._stateInterval = Math.max(1, STATE_INTERVAL_HOPS);
         this._hopsSinceState = 0;
 
-        // Settling
-        this._startSample   = currentFrame;
-        this._settledSamples = Math.round(this._settlingMs * 0.001 * this._sampleRate);
+        // T7 emission gate + provisional/locked state. _minEmitHops is the earliest hop at which
+        // the ACF may run (derived from minSettlingMs); _locked latches once the full-window
+        // evidence + beat persistence + confidence floor are met (see LOCK_PROMOTE_* and
+        // _emitBeat). _onGridStreak counts consecutive onset-matched beats toward promotion.
+        this._minEmitHops = Math.max(1, Math.round(this._minSettlingMs * 0.001 * this._sampleRate / this._hopSize));
+        // _authLocked flips true the first time the flux ring holds a full slowest-tempo period
+        // (fluxCount ≥ maxLag+1) — the AUTHORITATIVE lock, identical to the pre-T7 first lock.
+        // Before it, any ACF tempo is an early estimate that drives provisional beats only and is
+        // re-adopted every hop (never frozen). After it, the octave-aware hysteresis owns the grid.
+        this._authLocked         = false;
+        this._locked             = false;
+        this._beatsSinceAuthLock = 0; // beats emitted since the authoritative lock (promotion gate)
 
         // Lookahead
         this._lookahead = [];
@@ -420,9 +452,19 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         // of the ACF/tempo path, which still consumes the raw _fluxWindow above).
         this._detectOnset(flux);
 
-        // Tempogram: compute ACF periodically
+        // Tempogram: compute ACF periodically. T7 lowers the warm-up gate from a full slowest-
+        // tempo period (_maxLag+1, ~1.2 s at minBpm) to _minEmitHops (~0.4 s) so a fast/core tempo
+        // can lock — and a provisional beat can fire — far earlier. The ACF over a short span only
+        // resolves tempos that already have ≳1 period of evidence in it, so slow tempos still wait
+        // (physically) for their period; promotion to 'locked' still requires the full window.
         this._hopsSinceACF++;
-        if (this._hopsSinceACF >= this._acfInterval && this._fluxCount >= this._maxLag + 1) {
+        var dueForAcf = this._hopsSinceACF >= this._acfInterval && this._fluxCount >= this._minEmitHops;
+        // Force the AUTHORITATIVE compute the instant the full window first fills (independent of
+        // the earlier provisional ACF cadence), so the authoritative lock + phase re-bootstrap land
+        // on exactly the evidence the pre-T7 detector used for its first lock. That makes every
+        // LOCKED beat identical to the pre-T7 output (same tempo, same grid phase).
+        var firstFullWindow = !this._authLocked && this._fluxCount >= this._maxLag + 1;
+        if (dueForAcf || firstFullWindow) {
             this._hopsSinceACF = 0;
             this._computeACFAndCandidates();
         }
@@ -535,11 +577,35 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         var top = this._candidates[0];
 
         // Octave-aware hysteresis with a short first-lock grace window.
-        if (this._bestBpm <= 0) {
-            // First lock — adopt the stable window's top candidate.
+        if (!this._authLocked) {
+            // Pre-authoritative (provisional) phase: the flux ring does not yet hold a full
+            // slowest-tempo period, so this tempo is an EARLY, possibly under-resolved estimate
+            // used only to drive provisional beats. Re-adopt the current best estimate every hop —
+            // never freeze it (an under-resolved edge lock must not stick). The AUTHORITATIVE lock
+            // fires the instant the full window is available; that value is identical to the pre-T7
+            // first lock, so the locked grid + hysteresis (and every locked beat) are unchanged.
             this._bestBpm   = top.bpm;
             this._bestScore = top.score;
-            this._firstLockSample = this._sampleCount;
+            if (this._fluxCount >= this._maxLag + 1) {
+                this._authLocked = true;
+                this._firstLockSample = this._sampleCount;
+                this._beatsSinceAuthLock = 0;
+                // Re-anchor the beat phase + period to the full-window evidence, SILENTLY (no
+                // re-emit → no duplicate beat next to the last provisional one). A provisional beat
+                // may have anchored the grid on an early under-resolved tempo or, on syncopated
+                // material, an off-beat onset; snap _lastBeatSample to the same strongest recent
+                // onset the pre-T7 detector locked to here so locked beats sit on the trustworthy
+                // grid. If no provisional beat has run yet (_lastBeatSample < 0), leave it so
+                // _tickPhase bootstraps the first beat normally.
+                if (this._lastBeatSample >= 0) {
+                    var reIbi = 60 / this._bestBpm * this._sampleRate;
+                    var reAnchor = this._bootstrapOnset(PLL_BOOTSTRAP_MAX_AGE_IBI * reIbi);
+                    if (reAnchor >= 0) {
+                        this._lastBeatSample = reAnchor;
+                        this._ibiSamples = reIbi;
+                    }
+                }
+            }
         } else {
             // --- Stable-window hysteresis: holds the grid against noise + octave artefacts. ---
             // Fresh score of the currently-tracked tempo from this frame.
@@ -745,7 +811,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
 
     // Emit exactly one beat at beatSample (samples). Centralises the bar/confidence/lookahead
-    // bookkeeping + port messages so the PLL and the bootstrap share one emission path.
+    // bookkeeping + the provisional→locked promotion + port messages so the PLL and the bootstrap
+    // share one emission path. The grid bookkeeping ALWAYS runs (so confidence/IBI history build
+    // and the bar grid stays consistent even while provisional beats are suppressed); only the port
+    // messages are gated.
     _emitBeat(beatSample, flux) {
         var beatTime = beatSample / this._sampleRate;
 
@@ -758,6 +827,23 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._updateConfidence();
         this._updateLookahead(beatTime);
 
+        // Provisional→locked promotion (latched, one transition per stable segment). Locked needs
+        // the SAME evidence the old detector waited for before emitting at all — the full stable
+        // window (the AUTHORITATIVE lock) — PLUS LOCK_PROMOTE_BEATS beats sustained on that grid
+        // and a confidence floor, so a 'locked' beat is at least as trustworthy as a pre-T7 beat.
+        if (this._authLocked) { this._beatsSinceAuthLock++; }
+        if (!this._locked &&
+            this._authLocked &&
+            this._beatsSinceAuthLock >= LOCK_PROMOTE_BEATS &&
+            this._confidence >= LOCK_PROMOTE_CONFIDENCE) {
+            this._locked = true;
+        }
+        var status = this._locked ? 'locked' : 'provisional';
+
+        // Provisional gating: when emitProvisionalBeats is false, suppress the message until the
+        // beat is locked (grid bookkeeping above already ran). Locked beats always post.
+        if (!this._emitProvisionalBeats && !this._locked) return;
+
         var isDownbeat = this._barPosition === 1;
         this.port.postMessage({
             type: 'beat',
@@ -768,6 +854,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             energy: flux,
             isDownbeat: isDownbeat,
             beatInBar: this._barPosition,
+            status: status,
         });
 
         if (isDownbeat) {
@@ -1013,7 +1100,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
 
     _sendStateMessage() {
-        var settled = (this._sampleCount - this._settledSamples) > 0;
+        // T7: the state tempo report honours the LOCKED latch (not the old fixed settling window).
+        // Provisional early beats drive the visual layer, but tempo/confidence/tempoCandidates
+        // and the sync-critical fields stay zero until the detector has a trustworthy locked grid.
+        var settled = this._locked;
         var beatInterval = this._bestBpm > 0 ? 60 / this._bestBpm : 0;
         var currentTime = this._sampleCount / this._sampleRate;
         var lastBeatTime = this._lastBeatSample >= 0 ? this._lastBeatSample / this._sampleRate : 0;

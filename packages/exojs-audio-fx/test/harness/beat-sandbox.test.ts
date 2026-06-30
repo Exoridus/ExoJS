@@ -86,11 +86,12 @@ describe('BeatDetector sandbox — basic detection (120 BPM)', { timeout: 60_000
     expect(beatMessages(messages).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('produces state messages with tempo > 0 after the settling period', () => {
-    // Default settling = 1500 ms. Look for state messages beyond that.
-    const settlingMs = 1500;
+  it('produces state messages with tempo > 0 once the grid locks', () => {
+    // The state tempo report is gated on the locked grid (T7). A 120-BPM clicktrack
+    // locks well within ~2 s, so locked state messages with tempo > 0 must appear.
+    const warmupMs = 2000;
     const settledStates = stateMessages(messages).filter(
-      (s) => s._audioTimeSec * 1000 >= settlingMs && s.tempo > 0,
+      (s) => s._audioTimeSec * 1000 >= warmupMs && s.tempo > 0,
     );
     expect(settledStates.length).toBeGreaterThan(0);
   });

@@ -88,6 +88,14 @@ interface BaselineEntry {
   octaveHalf: boolean;
   octaveDouble: boolean;
   detectionRate: number;
+  // T7 provisional/locked metrics
+  timeToFirstBeatSec: number | null;
+  timeToFirstLockedBeatSec: number | null;
+  provisionalBeatCount: number;
+  lockedBeatCount: number;
+  lockedFpRatePerMin: number;
+  provLockedTransitions: number;
+  statusComplete: boolean;
   failures: string[];
   formatted: string;
 }
@@ -127,6 +135,13 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
         octaveHalf: m.octaveError.halfOctave,
         octaveDouble: m.octaveError.doubleOctave,
         detectionRate: m.detectionRate,
+        timeToFirstBeatSec: m.t7.timeToFirstBeatSec,
+        timeToFirstLockedBeatSec: m.t7.timeToFirstLockedBeatSec,
+        provisionalBeatCount: m.t7.provisionalBeatCount,
+        lockedBeatCount: m.t7.lockedBeatCount,
+        lockedFpRatePerMin: m.t7.lockedFpRatePerMin,
+        provLockedTransitions: m.t7.provLockedTransitions,
+        statusComplete: m.t7.statusComplete,
         failures,
         formatted: formatMetrics(m),
       };
@@ -426,6 +441,71 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     expect(e.octaveDouble).toBe(false);
     expect(pct(e)).toBeLessThanOrEqual(0.03);
   });
+
+  // ── T7 acceptance gates (provisional vs locked beats + low-latency emission) ──
+  // Beats now fire as soon as the early ACF resolves a tempo (gated at minSettlingMs ≈ 400 ms,
+  // not the full slowest-tempo period) tagged status:'provisional', then promote to 'locked' once
+  // the full-window AUTHORITATIVE lock has fired and the grid has held for a few beats above a
+  // confidence floor. Two product properties fall out: (1) the first beat reaches the visual layer
+  // far sooner (the "blink" reactivity); (2) locked beats are at least as trustworthy as the pre-T7
+  // beats — promotion re-anchors the phase to exactly the pre-T7 first-lock evidence, so locked FP
+  // never exceeds the pre-T7 settled-beat FP.
+
+  // Pre-T7 reference (measured on this branch's parent commit): the FIRST beat was emitted at a
+  // uniform 1.213 s for EVERY fixture (gated by the full slowest-tempo ACF window). T7's gate is a
+  // ≥50% reduction; we assert it on the across-fixture MEAN and MEDIAN (per-fixture, the 50/60 BPM
+  // edges are period-floored — a provisional beat still needs ≥1 period of the true tempo, ~1.2 s
+  // at 50 BPM — and cannot be halved; this is the documented latency↔precision floor).
+  const BASELINE_FIRST_BEAT_SEC = 1.213;
+
+  it('T7: mean time-to-first-beat reduced ≥50% vs the 1.213 s pre-T7 baseline', () => {
+    const times = FIXTURES.map((f) => allMetrics.get(f.label)!.timeToFirstBeatSec).filter(
+      (t): t is number => t !== null,
+    );
+    expect(times.length).toBe(FIXTURES.length); // every fixture emits a beat
+    const mean = times.reduce((a, b) => a + b, 0) / times.length;
+    expect(mean).toBeLessThanOrEqual(BASELINE_FIRST_BEAT_SEC * 0.5);
+  });
+
+  it('T7: median time-to-first-beat reduced ≥50% vs the 1.213 s pre-T7 baseline', () => {
+    const times = FIXTURES.map((f) => allMetrics.get(f.label)!.timeToFirstBeatSec!).sort(
+      (a, b) => a - b,
+    );
+    const median = times[Math.floor(times.length / 2)];
+    expect(median).toBeLessThanOrEqual(BASELINE_FIRST_BEAT_SEC * 0.5);
+  });
+
+  // Pre-T7 per-fixture FP rate (per minute) recorded in beat-baseline.json on the parent commit —
+  // the "current settled-beat FP rate". Every emitted beat was settled pre-T7, so this is the bar
+  // the LOCKED beats must not exceed.
+  const BASELINE_FP_PER_MIN: Record<string, number> = {
+    clicktrack_50bpm: 4, clicktrack_60bpm: 0, clicktrack_90bpm: 4, clicktrack_120bpm: 0,
+    clicktrack_128bpm: 0, clicktrack_140bpm: 0, clicktrack_180bpm: 0, clicktrack_220bpm: 0,
+    clicktrack_250bpm: 4, clicktrack_300bpm: 0, halfTime_64bpm: 0, doubleTime_128bpm: 0,
+    tempoRamp_120_to_135bpm: 0, breakDrop_128bpm: 2.5, swing_120bpm_67pct: 0,
+    grooveOffset_120bpm_10ms: 0, djMix_180bpm: 0, tempoDrift_150_to_128bpm: 0,
+    djMixDrift_180bpm_d5: 10, softOnset_90bpm: 4,
+  };
+
+  for (const fixture of FIXTURES) {
+    const label = fixture.label;
+
+    it(`T7: ${label} every emitted beat carries a status`, () => {
+      expect(allMetrics.get(label)!.statusComplete).toBe(true);
+    });
+
+    it(`T7: ${label} exactly one provisional→locked transition`, () => {
+      const e = allMetrics.get(label)!;
+      expect(e.provisionalBeatCount).toBeGreaterThan(0); // provisional beats actually emitted
+      expect(e.lockedBeatCount).toBeGreaterThan(0); // and the grid promotes to locked
+      expect(e.provLockedTransitions).toBe(1);
+    });
+
+    it(`T7: ${label} locked-beat FP rate ≤ pre-T7 settled FP rate`, () => {
+      const e = allMetrics.get(label)!;
+      expect(e.lockedFpRatePerMin).toBeLessThanOrEqual(BASELINE_FP_PER_MIN[label]! + 1e-9);
+    });
+  }
 
   // ── Write committed baseline snapshot ──
 
