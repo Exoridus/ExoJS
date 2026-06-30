@@ -900,11 +900,9 @@ export class WebGpuBackend implements RenderBackend {
       throw new Error('WebGPU is available, but navigator.gpu.getPreferredCanvasFormat is not implemented.');
     }
 
-    // Request the adapter before acquiring a WebGPU canvas context.
-    // getContext('webgpu') is exclusive per canvas — once it succeeds, the
-    // same canvas can no longer produce a WebGL2 context. Doing it the
-    // other way round means an unavailable adapter still locks the canvas
-    // and breaks the automatic WebGL2 fallback in Application.
+    // Request the adapter AND the device before acquiring a WebGPU canvas
+    // context — see the getContext('webgpu') call below for why the order
+    // matters.
     let adapter: GPUAdapter | null;
 
     try {
@@ -915,12 +913,6 @@ export class WebGpuBackend implements RenderBackend {
 
     if (adapter === null) {
       throw new Error('Could not acquire a WebGPU adapter.');
-    }
-
-    const context = this._canvas.getContext('webgpu');
-
-    if (context === null) {
-      throw new Error('Could not create WebGPU canvas context.');
     }
 
     if (typeof adapter.requestDevice !== 'function') {
@@ -937,6 +929,19 @@ export class WebGpuBackend implements RenderBackend {
 
     if (device === null) {
       throw new Error('Could not acquire a WebGPU device.');
+    }
+
+    // Acquire the WebGPU canvas context only after BOTH the adapter and the
+    // device are secured. getContext('webgpu') is exclusive per canvas — once
+    // it succeeds, the same canvas can no longer produce a WebGL2 context.
+    // Acquiring it earlier would lock the canvas even when WebGPU ultimately
+    // fails (a usable adapter but a failing requestDevice — e.g. a missing
+    // backend library), which breaks the automatic WebGL2 fallback in
+    // Application.
+    const context = this._canvas.getContext('webgpu');
+
+    if (context === null) {
+      throw new Error('Could not create WebGPU canvas context.');
     }
 
     const format = gpuNavigator.gpu.getPreferredCanvasFormat();

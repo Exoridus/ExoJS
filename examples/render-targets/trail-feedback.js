@@ -13,29 +13,46 @@ const app = new Application({
     },
 });
 class TrailFeedbackScene extends Scene {
-    rt;
-    decay;
+    // Two render targets, ping-ponged each frame. Reading from and writing to
+    // the SAME render target forms a GL feedback loop (INVALID_OPERATION), so we
+    // read the faded previous frame from one target and write the new
+    // accumulation into the other, then swap.
+    rtA;
+    rtB;
     bunny;
-    final;
-    pipeline;
+    pipeAtoB;
+    pipeBtoA;
+    forward = true;
     time = 0;
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/ship-a.png' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.rt = new RenderTexture(width, height);
-        this.decay = new Sprite(this.rt).setTint(new Color(255, 255, 255, 0.93));
+        this.rtA = new RenderTexture(width, height);
+        this.rtB = new RenderTexture(width, height);
         this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
-        this.final = new Sprite(this.rt);
-        // Feedback: the off-screen target is deliberately NOT cleared, so the decayed previous frame
-        // plus the bunny accumulate into a trail; the final sprite composites it to the screen.
-        this.pipeline = new RenderPipeline()
+        // A 93%-alpha copy of the source target = the decaying trail.
+        const decayA = new Sprite(this.rtA).setTint(new Color(255, 255, 255, 0.93));
+        const decayB = new Sprite(this.rtB).setTint(new Color(255, 255, 255, 0.93));
+        const showA = new Sprite(this.rtA);
+        const showB = new Sprite(this.rtB);
+        // Read A → write B → show B.
+        this.pipeAtoB = new RenderPipeline()
             .addPass(new CallbackRenderPass((context) => {
-            context.render(this.decay);
+            context.backend.clear();
+            context.render(decayA);
             context.render(this.bunny);
-        }, { target: this.rt }))
-            .addPass(new RenderNodePass(this.final, { clear: Color.black }));
+        }, { target: this.rtB }))
+            .addPass(new RenderNodePass(showB, { clear: Color.black }));
+        // Read B → write A → show A.
+        this.pipeBtoA = new RenderPipeline()
+            .addPass(new CallbackRenderPass((context) => {
+            context.backend.clear();
+            context.render(decayB);
+            context.render(this.bunny);
+        }, { target: this.rtA }))
+            .addPass(new RenderNodePass(showA, { clear: Color.black }));
     }
     update(delta) {
         const { width, height } = this.app.canvas;
@@ -43,12 +60,14 @@ class TrailFeedbackScene extends Scene {
         this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
     }
     draw(context) {
-        this.pipeline.execute(context);
+        (this.forward ? this.pipeAtoB : this.pipeBtoA).execute(context);
+        this.forward = !this.forward;
     }
     destroy() {
-        // Pipeline cascades destroy() to its passes; the caller-owned feedback target is freed here.
-        this.pipeline.destroy();
-        this.rt.destroy();
+        this.pipeAtoB.destroy();
+        this.pipeBtoA.destroy();
+        this.rtA.destroy();
+        this.rtB.destroy();
         super.destroy();
     }
 }

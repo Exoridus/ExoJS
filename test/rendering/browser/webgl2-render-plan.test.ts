@@ -418,6 +418,49 @@ describe('RenderPlan WebGL2 browser regressions', () => {
     }
   });
 
+  test('distinct mesh tints survive cross-call batching (pooled DrawCommand regression)', async () => {
+    const { backend } = await createBackend();
+    // White vertex colors so each mesh's tint alone determines its color.
+    const white = (): Uint32Array => new Uint32Array(6).fill(0xffffffff);
+    const rect = (): Float32Array => new Float32Array([0, 0, 16, 0, 16, 16, 0, 0, 16, 16, 0, 16]);
+    const meshA = new Mesh({ vertices: rect(), colors: white() });
+    const meshB = new Mesh({ vertices: rect(), colors: white() });
+    const meshC = new Mesh({ vertices: rect(), colors: white() });
+
+    try {
+      meshA.tint = new Color(255, 0, 0);
+      meshB.tint = new Color(0, 255, 0);
+      meshC.tint = new Color(0, 0, 255);
+      meshA.setPosition(0, 0);
+      meshB.setPosition(24, 0);
+      meshC.setPosition(48, 0);
+
+      // Each mesh is rendered in its OWN render() call within a single frame,
+      // with no flush between them — the cross-call batching path. Every draw's
+      // DrawCommand is pooled by the plan builder and its nodeIndex is
+      // frame-global; recycling the command pool per plan (the regression) lets
+      // each later build() overwrite the earlier deferred draws' command, so all
+      // three reads collapse onto the last command's transform+tint slot — every
+      // mesh would render blue at meshC's position (48, 0).
+      backend.resetStats();
+      backend.clear(Color.black);
+      meshA.render(backend);
+      meshB.render(backend);
+      meshC.render(backend);
+      backend.flush();
+
+      // Fixed: each mesh keeps its own slot — distinct color AND position.
+      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 32, 8), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(backend, 56, 8), [0, 0, 255, 255]);
+    } finally {
+      meshA.destroy();
+      meshB.destroy();
+      meshC.destroy();
+      backend.destroy();
+    }
+  });
+
   test('multiple sprites with distinct transforms batch into one draw, each at its own position', async () => {
     const { backend } = await createBackend();
     const texture = createSolidTexture('#ff0000', 8, 8);

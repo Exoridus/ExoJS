@@ -1,41 +1,27 @@
 #version 300 es
 precision highp float;
 
-layout(location = 0) in vec2  a_position;
+// a_position arrives already in WORLD space: the renderer applies each node's
+// world transform on the CPU while building the vertex buffer. This deliberately
+// avoids a vertex-stage texelFetch of the per-node data texture — on ANGLE/D3D11
+// a vertex texture fetch of the RGBA32F data texture returns garbage (RGB read as
+// 0) whenever an RGBA8 atlas is also bound, which collapsed all text glyphs to a
+// point and made colour/MSDF bitmap text invisible. The fragment still reads the
+// per-node style from the data texture (a fragment texture fetch is unaffected).
+layout(location = 0) in vec2  a_position;   // world-space quad corner
 layout(location = 1) in vec2  a_texcoord;
-layout(location = 2) in float a_nodeIndex;
+layout(location = 2) in float a_nodeIndex;  // row into the per-node data texture (style lookup)
+layout(location = 3) in vec2  a_gradUV;     // normalised gradient UV (CPU-computed)
 
 uniform mat3 u_projection;
-uniform sampler2D u_nodeData;
 
 flat out int  v_nodeIndex;
      out vec2 v_texcoord;
      out vec2 v_gradUV;
 
 void main(void) {
-    int ni = int(a_nodeIndex);
-
-    // texel 0: (a, c, 0, tx)   texel 1: (b, d, 0, ty)
-    vec4 t0 = texelFetch(u_nodeData, ivec2(0, ni), 0);
-    vec4 t1 = texelFetch(u_nodeData, ivec2(1, ni), 0);
-
-    // Reconstruct column-major mat3 from stored components
-    mat3 xf = mat3(
-        t0.x, t0.y, 0.0,   // col 0: (a, c, 0)
-        t1.x, t1.y, 0.0,   // col 1: (b, d, 0)
-        t0.w, t1.w, 1.0    // col 2: (tx, ty, 1)
-    );
-
-    gl_Position = vec4((u_projection * xf * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);
     v_texcoord  = a_texcoord;
-    v_nodeIndex = ni;
-
-    // texel 9: (minX, minY, width, height) — text block bounds in local space.
-    // Normalise a_position into [0,1] so fragment shaders can interpolate
-    // gradients across the whole block rather than individual atlas UVs.
-    vec4 tBounds = texelFetch(u_nodeData, ivec2(9, ni), 0);
-    vec2 bSize   = tBounds.zw;
-    v_gradUV = (bSize.x > 0.0 && bSize.y > 0.0)
-        ? clamp((a_position - tBounds.xy) / bSize, 0.0, 1.0)
-        : vec2(0.0);
+    v_nodeIndex = int(a_nodeIndex);
+    v_gradUV    = a_gradUV;
 }

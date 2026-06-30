@@ -87,7 +87,6 @@ export class RenderPlanBuilder {
     this._view = null;
     this._plan.reset();
     this._groupPoolCursor = 0;
-    this._commandPoolCursor = 0;
     this._drawEntryPoolCursor = 0;
     this._groupEntryPoolCursor = 0;
     this._barrierEntryPoolCursor = 0;
@@ -98,6 +97,18 @@ export class RenderPlanBuilder {
     // render() calls in the frame references a distinct slot and can batch.
     const frameBase = (backend as { transformBufferCount?: number }).transformBufferCount ?? 0;
     this._nodeIndex = frameBase;
+    // The draw-command pool must be frame-global too — not reset to 0 per plan.
+    // A drawable's renderer may DEFER its draw across render() calls (cross-call
+    // batching) while holding a reference to its pooled DrawCommand until the
+    // frame-end flush. Resetting the command cursor to 0 every plan recycles
+    // command objects between render() calls, so a later call's build() would
+    // overwrite an earlier deferred draw's nodeIndex/groupIndex/material and the
+    // deferred draw would read the wrong transform+tint slot (all draws collapse
+    // onto the last command's values). Basing the command cursor at the same
+    // frame-global slot as the node index keeps each frame's commands distinct
+    // and alive until flush; the cursor resets naturally when frameBase returns
+    // to 0 at the next frame's resetStats().
+    this._commandPoolCursor = frameBase;
 
     const rootScope = this._acquireGroupScope(false);
 

@@ -224,6 +224,19 @@ export class Gamepad {
   }
 
   /**
+   * Re-point this slot at the latest browser gamepad snapshot. The Web Gamepad
+   * API hands back a fresh, immutable snapshot object on every
+   * `navigator.getGamepads()` poll, so a slot that keeps the object captured at
+   * connect time would freeze its button/axis state. {@link InputManager} calls
+   * this each frame for already-connected pads; no signals fire.
+   *
+   * @internal
+   */
+  public _refreshBrowserGamepad(gamepad: BrowserGamepad): void {
+    this._browserGamepad = gamepad;
+  }
+
+  /**
    * Detach the physical gamepad and clear its channels.
    *
    * @internal

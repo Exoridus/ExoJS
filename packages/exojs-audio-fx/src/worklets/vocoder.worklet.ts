@@ -80,7 +80,11 @@ class VocoderProcessor extends AudioWorkletProcessor {
                 bandSum += carBand * this._envelopes[b];
             }
 
-            output[i] = (1 - wet) * carrierSample + wet * bandSum;
+            // Multiply bandSum by bandCount: for a broadband carrier the energy is
+            // split across N bands, so the raw product (carBand × envelope) is
+            // O(1/N) of the carrier amplitude. Scaling by N restores unity gain
+            // for typical broadband carrier + voice modulator inputs.
+            output[i] = (1 - wet) * carrierSample + wet * bandSum * bandCount;
         }
         return true;
     }

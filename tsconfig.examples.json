@@ -58,7 +58,8 @@
       "@codexo/exojs-physics": ["./packages/exojs-physics/src/index.ts"],
       "@codexo/exojs-physics/debug": ["./packages/exojs-physics/src/debug/index.ts"],
       "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
-      "@examples/runtime": ["./examples/shared/runtime.d.ts"]
+      "@examples/runtime": ["./examples/shared/runtime.d.ts"],
+      "@examples/physics-tilemap": ["./examples/shared/physics-tilemap.ts"]
     }
   },
   "include": ["examples/**/*.js", "examples/**/*.ts", "examples/shared/runtime.d.ts", "src/typings.d.ts"],

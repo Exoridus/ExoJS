@@ -810,6 +810,23 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  /**
+   * Make `unit` the active texture unit through the backend's unit cache.
+   *
+   * Renderers that bind a *raw* `WebGLTexture` to a unit (e.g. the text
+   * renderer's private node-data texture) must route the unit switch through
+   * here instead of calling `gl.activeTexture` directly — otherwise the cache
+   * goes stale and a later {@link bindTexture} can skip its own `activeTexture`
+   * call, binding to the wrong unit. After this returns the caller may issue its
+   * own raw `gl.bindTexture` on the now-active unit.
+   * @internal
+   */
+  public setActiveTextureUnit(unit: number): this {
+    this._setTextureUnit(unit);
+
+    return this;
+  }
+
   /** @internal */
   public bindTransformBufferTexture(unit: number, minCount: number): this {
     const requiredCount = Math.max(1, minCount);

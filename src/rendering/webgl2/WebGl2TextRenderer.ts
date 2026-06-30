@@ -39,12 +39,18 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 const nodeTexels = 10;
 const nodeFloats = nodeTexels * 4; // 40 floats per node
 
-// Per-vertex layout (20 bytes — same stride as WebGl2MeshRenderer):
-//   a_position : vec2  f32  (offset  0,  8 bytes)
+// Per-vertex layout (28 bytes):
+//   a_position : vec2  f32  (offset  0,  8 bytes)  ← WORLD space (CPU-transformed)
 //   a_texcoord : vec2  f32  (offset  8,  8 bytes)
-//   a_nodeIndex: float f32  (offset 16,  4 bytes)  ← was a_color u8x4 in mesh.vert
-const vertexStrideBytes = 20;
-const vertexStrideWords = vertexStrideBytes / 4; // 5 floats per vertex
+//   a_nodeIndex: float f32  (offset 16,  4 bytes)  ← row into the data texture (style lookup)
+//   a_gradUV   : vec2  f32  (offset 20,  8 bytes)  ← normalised gradient UV (CPU-computed)
+//
+// The vertex shader does NOT read the per-node data texture: the world transform and
+// gradient UV are computed on the CPU here and uploaded per vertex. This sidesteps an
+// ANGLE/D3D11 bug where a vertex texelFetch of the RGBA32F data texture returns RGB as
+// 0 when an RGBA8 atlas is bound, collapsing the transform and hiding bitmap text.
+const vertexStrideBytes = 28;
+const vertexStrideWords = vertexStrideBytes / 4; // 7 floats per vertex
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
@@ -174,8 +180,16 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       .addIndex(indexBuffer)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, 16)
-      .connect(this._createVaoRuntime(gl, vaoHandle));
+      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, 16);
+
+    // a_gradUV is bound only when the program declares it. The real shaders always
+    // do; reduced test stand-in vertex shaders may omit it (an unused attribute is
+    // optimised out and would not get a location).
+    if (this._sdfShader.attributes.has('a_gradUV')) {
+      vao.addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_gradUV'), gl.FLOAT, false, vertexStrideBytes, 20);
+    }
+
+    vao.connect(this._createVaoRuntime(gl, vaoHandle));
 
     const nodeDataTexture = this._createNodeDataTexture(gl, initialNodeCapacity);
 
@@ -336,7 +350,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       c.nodeDataCapacity = cap;
     }
 
-    gl.activeTexture(gl.TEXTURE1);
+    // Route the unit switch through the backend so its texture-unit cache stays
+    // in sync. A raw gl.activeTexture here would leave the cache reading unit 0,
+    // and the atlas bindTexture(_, 0) in _drawBatches would then skip its own
+    // switch and bind the atlas to unit 1 — leaving the SDF sampler (unit 0)
+    // empty and the text invisible whenever it is the first draw of a frame.
+    this.getBackend().setActiveTextureUnit(1);
     gl.bindTexture(gl.TEXTURE_2D, c.nodeDataTexture);
     gl.texSubImage2D(
       gl.TEXTURE_2D,
@@ -410,15 +429,38 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         const qVerts = batch.quadCount * 4;
         const { vertices, uvs, indices } = batch;
 
+        // Read this node's transform + gradient bounds back from the packed data array
+        // (same layout as _packNodeData) so we can transform vertices on the CPU. The
+        // vertex shader no longer reads the data texture; see the layout comment above.
+        const nb = nodeIndex * nodeFloats;
+        // In-bounds: `_packNodeData` wrote nodeFloats values at `nb` for every node index.
+        const a = this._nodeDataArray[nb + 0]!; // texel0.x
+        const cc = this._nodeDataArray[nb + 1]!; // texel0.y
+        const tx = this._nodeDataArray[nb + 3]!; // texel0.w
+        const b = this._nodeDataArray[nb + 4]!; // texel1.x
+        const dd = this._nodeDataArray[nb + 5]!; // texel1.y
+        const ty = this._nodeDataArray[nb + 7]!; // texel1.w
+        const boundsMinX = this._nodeDataArray[nb + 36]!; // texel9.x
+        const boundsMinY = this._nodeDataArray[nb + 37]!; // texel9.y
+        const boundsW = this._nodeDataArray[nb + 38]!; // texel9.z
+        const boundsH = this._nodeDataArray[nb + 39]!; // texel9.w
+        const hasGradBounds = boundsW > 0 && boundsH > 0;
+
         for (let v = 0; v < qVerts; v++) {
           const w = (vOffset + v) * vertexStrideWords;
           const vp = v * 2;
           // In-bounds: `vp + 1 < qVerts * 2`; `vertices`/`uvs` carry 2 floats per quad vertex.
-          this._float32View[w + 0] = vertices[vp]!;
-          this._float32View[w + 1] = vertices[vp + 1]!;
+          const lx = vertices[vp]!;
+          const ly = vertices[vp + 1]!;
+          // world = M · (lx, ly, 1) with M = column-major [a c 0 | b d 0 | tx ty 1].
+          this._float32View[w + 0] = a * lx + b * ly + tx;
+          this._float32View[w + 1] = cc * lx + dd * ly + ty;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
           this._float32View[w + 4] = nodeIndex;
+          // Normalised gradient UV across the text block (matches the old vertex math).
+          this._float32View[w + 5] = hasGradBounds ? Math.min(1, Math.max(0, (lx - boundsMinX) / boundsW)) : 0;
+          this._float32View[w + 6] = hasGradBounds ? Math.min(1, Math.max(0, (ly - boundsMinY) / boundsH)) : 0;
         }
 
         for (let x = 0; x < indices.length; x++) {

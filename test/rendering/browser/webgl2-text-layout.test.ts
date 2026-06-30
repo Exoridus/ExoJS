@@ -162,21 +162,25 @@ void main() {
   outColor = texture(u_texture, v_uv) * v_color;
 }`,
 
-  // Minimal text vertex path: project the laid-out local glyph position. The
+  // Minimal text vertex path: project the (already world-space) glyph position. The
   // assertions read geometry, not pixels, so the exact transform is immaterial;
-  // `a_nodeIndex` is referenced so it is not optimised out (the renderer wires it
-  // as a vertex attribute on connect and would fail to find the location).
+  // `a_nodeIndex` and `a_gradUV` are referenced so they are not optimised out (the
+  // renderer wires them as vertex attributes on connect and would fail to find the
+  // location). Mirrors the real text.vert attribute interface (no vertex texelFetch).
   textVertexSource: `#version 300 es
 precision highp float;
 layout(location = 0) in vec2 a_position;
 layout(location = 1) in vec2 a_texcoord;
 layout(location = 2) in float a_nodeIndex;
+layout(location = 3) in vec2 a_gradUV;
 uniform mat3 u_projection;
 out vec2 v_texcoord;
+out vec2 v_gradUV;
 void main(void) {
   vec2 local = a_position + vec2(a_nodeIndex * 0.0);
   gl_Position = vec4((u_projection * vec3(local, 1.0)).xy, 0.0, 1.0);
   v_texcoord = a_texcoord;
+  v_gradUV = a_gradUV;
 }`,
 
   // SDF coverage → premultiplied white. Background stays at the black clear color.
@@ -402,6 +406,37 @@ describe('Text layout WebGL2 browser', () => {
       vi.restoreAllMocks();
       first.destroy();
       second?.destroy();
+      backend.destroy();
+    }
+  });
+
+  // Regression: a Text node that is the ONLY draw in a frame must bind its glyph
+  // atlas to the texture unit its SDF shader samples (unit 0). The renderer binds
+  // its node-data texture to unit 1; if it does so with a raw gl.activeTexture
+  // that bypasses the backend's texture-unit cache, the subsequent
+  // bindTexture(atlas, 0) is skipped (the cache still reads 0 from frame start)
+  // and the atlas lands on unit 1 — leaving unit 0 (what the shader reads) empty,
+  // so every glyph samples 0 and the whole frame is transparent. A preceding
+  // sprite primes the cache off 0, which is why the bug only bites text that
+  // renders first. We assert the GL unit state rather than read-back pixels: the
+  // browser project mocks the text shaders, so pixel output is not meaningful, but
+  // the unit choreography that the bug corrupts is.
+  test('binds the glyph atlas to the sampled unit when text is the only draw (texture-unit priming regression)', async () => {
+    const backend = await createBackend(256, 64);
+    const gl = backend.context;
+    const text = new Text('HELLO', { fillColor: Color.white, fontSize: 30 });
+
+    try {
+      render(backend, text);
+      expect(backend.stats.drawCalls).toBeGreaterThan(0);
+
+      // After a correct text flush the active unit is 0 (the last atlas bind) with
+      // the atlas bound there; the bug leaves the active unit at 1 (the skipped
+      // switch) and unit 0 empty.
+      expect(gl.getParameter(gl.ACTIVE_TEXTURE)).toBe(gl.TEXTURE0);
+      expect(gl.getParameter(gl.TEXTURE_BINDING_2D)).not.toBeNull();
+    } finally {
+      text.destroy();
       backend.destroy();
     }
   });
