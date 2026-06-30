@@ -37,6 +37,7 @@ jobs:
     outputs:
       engine: ${{ steps.decide.outputs.engine }}
       site: ${{ steps.decide.outputs.site }}
+      audioFx: ${{ steps.decide.outputs.audioFx }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -335,6 +336,54 @@ jobs:
         continue-on-error: true
         run: pnpm test:browser:webgpu:firefox
 
+  # Renders the audio-fx worklet effects (PitchShift/Vocoder/Granular) through a
+  # real OfflineAudioContext + AudioWorklet in headless Chromium — the acoustic
+  # contract layer the jsdom mock cannot cover. Path-gated to `audioFx` so it
+  # only runs when the audio-fx package (or a shared root) changes; required
+  # (blocking) on those PRs because it exercises our own DSP.
+  browser-tests-audio:
+    name: Browser Tests (Audio)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.audioFx == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser tests (audio, headless Chromium)
+        run: pnpm test:browser:audio
+
   package-verify:
     name: Package Build + Verify
     needs: [changes, typecheck, lint]
@@ -511,7 +560,7 @@ jobs:
   required-ci:
     name: Required CI
     if: ${{ always() }}
-    needs: [changes, typecheck, lint, unit-tests, browser-tests, package-verify, site-build]
+    needs: [changes, typecheck, lint, unit-tests, browser-tests, browser-tests-audio, package-verify, site-build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -519,20 +568,23 @@ jobs:
         env:
           ENGINE: ${{ needs.changes.outputs.engine }}
           SITE: ${{ needs.changes.outputs.site }}
+          AUDIOFX: ${{ needs.changes.outputs.audioFx }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           UNIT_TESTS_RESULT: ${{ needs['unit-tests'].result }}
           BROWSER_TESTS_RESULT: ${{ needs['browser-tests'].result }}
+          BROWSER_AUDIO_RESULT: ${{ needs['browser-tests-audio'].result }}
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
         run: |
-          echo "areas: engine=$ENGINE site=$SITE"
+          echo "areas: engine=$ENGINE site=$SITE audioFx=$AUDIOFX"
           echo "changes: $CHANGES_RESULT"
           echo "typecheck: $TYPECHECK_RESULT"
           echo "lint: $LINT_RESULT"
           echo "unit-tests: $UNIT_TESTS_RESULT"
           echo "browser-tests: $BROWSER_TESTS_RESULT"
+          echo "browser-tests-audio: $BROWSER_AUDIO_RESULT"
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
 
@@ -555,6 +607,7 @@ jobs:
             "lint=$LINT_RESULT" \
             "unit-tests=$UNIT_TESTS_RESULT" \
             "browser-tests=$BROWSER_TESTS_RESULT" \
+            "browser-tests-audio=$BROWSER_AUDIO_RESULT" \
             "package-verify=$PACKAGE_VERIFY_RESULT" \
             "site-build=$SITE_BUILD_RESULT"; do
             name="${entry%%=*}"
@@ -582,6 +635,12 @@ jobs:
                 failed=1
               fi
             done
+          fi
+
+          # An audio-fx change must run the browser-audio lane.
+          if [ "$AUDIOFX" = "true" ] && [ "$BROWSER_AUDIO_RESULT" = "skipped" ]; then
+            echo "::error::Audio-fx change detected but 'browser-tests-audio' was skipped (path-filter regression)."
+            failed=1
           fi
 
           # Likewise a site-impacting change must build the site — unless the

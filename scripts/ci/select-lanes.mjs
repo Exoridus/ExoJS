@@ -26,7 +26,7 @@ import { pathToFileURL } from 'node:url';
  */
 
 /**
- * @typedef {{ engine: boolean, site: boolean }} LaneAreas
+ * @typedef {{ engine: boolean, site: boolean, audioFx: boolean }} LaneAreas
  * @typedef {{
  *   typecheck: boolean,
  *   lint: boolean,
@@ -35,6 +35,7 @@ import { pathToFileURL } from 'node:url';
  *   browserWebgl2: boolean,
  *   browserWebgpu: boolean,
  *   browserFirefox: boolean,
+ *   browserAudio: boolean,
  *   packageVerify: boolean,
  *   siteBuild: boolean,
  * }} EffectiveLanes
@@ -103,6 +104,25 @@ const isEnginePath = file => {
 };
 
 /**
+ * Audio-fx area: the browser-audio lane renders the audio-fx worklets through a
+ * real OfflineAudioContext in headless Chromium. It is expensive relative to its
+ * blast radius, so it gates on a NARROW set — the audio-fx package CODE plus the
+ * shared roots that can change how it builds/tests (the vitest config that
+ * defines the browser-audio project, the shared config preset, the root
+ * manifest/lockfile/workspace, and any workflow change). A change anywhere else
+ * in the engine does NOT drag in the browser-audio lane.
+ * @param {string} file
+ */
+const isAudioFxPath = file => {
+  if (file.startsWith('.github/workflows/')) return true;
+  if (file === 'vitest.config.ts') return true;
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  if (file.startsWith('packages/exojs-config/')) return true;
+  if (file.startsWith('packages/exojs-audio-fx/') && !isPackageDocPath(file)) return true;
+  return false;
+};
+
+/**
  * Site area: anything that can change the generated examples site / API docs.
  * Gates the site-build lane. Mirrors (and intentionally keeps) the prior `site`
  * filter: every `packages/**` change — docs included — can affect generated docs
@@ -127,15 +147,17 @@ const isSitePath = file => {
 export function selectAreas(changedFiles) {
   let engine = false;
   let site = false;
+  let audioFx = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
     const file = String(raw).replace(/\\/g, '/').trim();
     if (file === '') continue;
     if (!engine && isEnginePath(file)) engine = true;
     if (!site && isSitePath(file)) site = true;
-    if (engine && site) break;
+    if (!audioFx && isAudioFxPath(file)) audioFx = true;
+    if (engine && site && audioFx) break;
   }
-  return { engine, site };
+  return { engine, site, audioFx };
 }
 
 /**
@@ -145,12 +167,13 @@ export function selectAreas(changedFiles) {
  *   - unit/coverage, package-verify and all three browser lanes gate on `engine`
  *     (the WebGPU + Firefox browser lanes still run when engine is true; they are
  *     merely `continue-on-error`, i.e. non-blocking, in the workflow);
- *   - site-build gates on `site`.
+ *   - site-build gates on `site`;
+ *   - the browser-audio lane gates on `audioFx` (a narrow subset of engine).
  * @param {LaneAreas} areas
  * @returns {EffectiveLanes}
  */
 export function effectiveLanes(areas) {
-  const { engine, site } = areas;
+  const { engine, site, audioFx } = areas;
   return {
     typecheck: true,
     lint: true,
@@ -159,6 +182,7 @@ export function effectiveLanes(areas) {
     browserWebgl2: engine,
     browserWebgpu: engine,
     browserFirefox: engine,
+    browserAudio: audioFx,
     packageVerify: engine,
     siteBuild: site,
   };
@@ -197,11 +221,11 @@ function parseChangedFiles(raw) {
  */
 function main() {
   const eventName = process.env['EVENT_NAME'] ?? '';
-  const areas = eventName === 'pull_request' ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES'])) : { engine: true, site: true };
+  const areas = eventName === 'pull_request' ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES'])) : { engine: true, site: true, audioFx: true };
 
   // Human-readable trace to the job log (stderr keeps it out of $GITHUB_OUTPUT).
-  process.stderr.write(`select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site}\n`);
-  process.stdout.write(`engine=${areas.engine}\nsite=${areas.site}\n`);
+  process.stderr.write(`select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx}\n`);
+  process.stdout.write(`engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\n`);
 }
 
 // Only run the CLI when executed directly (`node scripts/ci/select-lanes.mjs`),
