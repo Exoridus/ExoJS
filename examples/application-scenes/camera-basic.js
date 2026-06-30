@@ -36,15 +36,15 @@ class CameraBasicScene extends Scene {
         this.uiBar.fillColor = new Color(0, 0, 0, 0.6);
         this.uiBar.drawRectangle(0, 0, width, 40);
         this.app.input.onPointerMove.add(p => {
-            this.app.rendering.camera.setCenter(p.x, p.y);
+            this.app.rendering.view.setCenter(p.x, p.y);
         });
         this.app.input.onMouseWheel.add(delta => {
             this.zoom = Math.max(0.2, Math.min(4, this.zoom - delta.y * 0.001));
-            this.app.rendering.camera.setZoom(this.zoom);
+            this.app.rendering.view.setZoom(this.zoom);
         });
     }
     update(delta) {
-        this.app.rendering.camera.rotation += delta.seconds * 15;
+        this.app.rendering.view.rotation += delta.seconds * 15;
     }
     draw(context) {
         const { width } = this.app.canvas;

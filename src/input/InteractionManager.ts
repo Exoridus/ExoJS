@@ -575,14 +575,14 @@ export class InteractionManager implements InteractionHooks, System {
       }
     }
 
-    const world = this._app.rendering.camera.screenToWorld(pointer.x, pointer.y);
+    const world = this._app.rendering.view.screenToWorld(pointer.x, pointer.y);
 
     return { node: this._hitTest(world.x, world.y), x: world.x, y: world.y };
   }
 
   /** Map a design-space pointer into either the screen-fixed UI view or the camera world. */
   private _pointerCoords(pointer: Pointer, ui: boolean): PointLike {
-    const view = ui ? this._app.rendering.screenView : this._app.rendering.camera;
+    const view = ui ? this._app.rendering.screenView : this._app.rendering.view;
 
     return view.screenToWorld(pointer.x, pointer.y);
   }

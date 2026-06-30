@@ -1,7 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
-import { Camera } from '#rendering/Camera';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
@@ -270,12 +269,12 @@ describe('WebGL2 split-screen viewport', () => {
     const redTex = createSolidTexture('#ff0000', 16, 16);
     const greenTex = createSolidTexture('#00ff00', 16, 16);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0, 0, 0.5, 1),
     });
-    const rightCam = new Camera({
+    const rightCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0.5, 0, 0.5, 1),
@@ -308,12 +307,12 @@ describe('WebGL2 split-screen viewport', () => {
     const blueTex = createSolidTexture('#0000ff', 16, 16);
     const yellowTex = createSolidTexture('#ffff00', 16, 16);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0, 0, 0.5, 1),
     });
-    const rightCam = new Camera({
+    const rightCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0.5, 0, 0.5, 1),
@@ -345,7 +344,7 @@ describe('WebGL2 split-screen viewport', () => {
     const { backend } = await createBackend();
     const whiteTex = createSolidTexture('#ffffff', 16, 16);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: canvasWidth / 2, y: canvasHeight / 2 },
       size: { width: canvasWidth, height: canvasHeight },
       viewport: new Rectangle(0, 0, 0.5, 1),
@@ -369,6 +368,47 @@ describe('WebGL2 split-screen viewport', () => {
     } finally {
       sprite.destroy();
       whiteTex.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('top viewport paints the TOP of the canvas (partial viewport y is not flipped to the bottom)', async () => {
+    const { backend } = await createBackend();
+    const redTex = createSolidTexture('#ff0000', 16, 16);
+    const greenTex = createSolidTexture('#00ff00', 16, 16);
+
+    const topView = View.from({
+      center: { x: canvasWidth / 2, y: canvasHeight / 2 },
+      size: { width: canvasWidth, height: canvasHeight },
+      viewport: new Rectangle(0, 0, 1, 0.5),
+    });
+    const bottomView = View.from({
+      center: { x: canvasWidth / 2, y: canvasHeight / 2 },
+      size: { width: canvasWidth, height: canvasHeight },
+      viewport: new Rectangle(0, 0.5, 1, 0.5),
+    });
+
+    const red = createFullscreenSprite(redTex);
+    const green = createFullscreenSprite(greenTex);
+
+    try {
+      backend.clear(Color.black);
+      backend.setView(topView);
+      red.render(backend);
+      backend.setView(bottomView);
+      green.render(backend);
+      backend.flush();
+
+      // readPixel takes top-left y: the top-left viewport must paint the TOP quarter
+      // red and the bottom viewport the BOTTOM quarter green (GL's bottom-left origin
+      // must be flipped for partial viewports).
+      expectPixelNear(readPixel(backend, canvasWidth / 2, canvasHeight * 0.25), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, canvasWidth / 2, canvasHeight * 0.75), [0, 255, 0, 255]);
+    } finally {
+      red.destroy();
+      green.destroy();
+      redTex.destroy();
+      greenTex.destroy();
       backend.destroy();
     }
   });

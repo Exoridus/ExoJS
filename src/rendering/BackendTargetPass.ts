@@ -14,7 +14,7 @@ import type { View } from './View';
 export interface BackendTargetPassOptions {
   /** Render target to draw into. `null` or omitted redirects output to the default framebuffer. */
   readonly target?: RenderTarget | null;
-  /** Camera {@link View} to use while executing this pass. Falls back to the backend's active view when omitted. */
+  /** {@link View} to use while executing this pass. Falls back to the backend's active view when omitted. */
   readonly view?: View | null;
   /** If provided, the target is cleared to this colour before the callback runs. */
   readonly clearColor?: Color;

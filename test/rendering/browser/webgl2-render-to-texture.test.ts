@@ -1,7 +1,12 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
+import { Container } from '#rendering/Container';
+import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderingContext } from '#rendering/RenderingContext';
+import { RenderNodePass } from '#rendering/RenderNodePass';
+import { RenderPipeline } from '#rendering/RenderPipeline';
 import type { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -563,7 +568,7 @@ describe('RenderTo WebGL2 browser', () => {
     try {
       // Render the red sprite into an off-screen RenderTexture via the context
       // (RenderingContext.renderTo → coordinator child pass).
-      const captured = context.renderTo(source, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
+      const captured = context.capture(source, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
       const display = new Sprite(captured);
 
       display.setPosition(0, 0);
@@ -621,6 +626,120 @@ describe('RenderTo WebGL2 browser', () => {
     } finally {
       redTexture.destroy();
       target.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('RenderingContext.renderTo draws into a caller-owned RenderTexture (per-frame, no realloc)', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(canvasSize, canvasSize);
+    const { sprite, texture } = createFullScreenSprite('#00ff00');
+
+    try {
+      context.renderTo(sprite, { target, view: target.view, clear: Color.transparentBlack });
+      backend.flush();
+
+      for (const [x, y] of [
+        [8, 8],
+        [32, 32],
+        [56, 56],
+      ] as const) {
+        expectPixelNear(readPixelsFromTarget(backend, target, x, y), [0, 255, 0, 255]);
+      }
+    } finally {
+      texture.destroy();
+      target.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('PassContext (CallbackRenderPass target): clear + render act on the target, never leak to the canvas', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(canvasSize, canvasSize);
+    const { sprite: green, texture: greenTex } = createFullScreenSprite('#00ff00');
+    const samples = [
+      [4, 4],
+      [32, 32],
+      [60, 60],
+    ] as const;
+
+    try {
+      backend.clear(Color.black); // root canvas starts black
+
+      new CallbackRenderPass(
+        pass => {
+          pass.clear(Color.red); // clears the TARGET (red) — must NOT leak to the canvas
+          pass.render(green); // opaque green over the red clear, into the target
+        },
+        { target },
+      ).execute(context);
+
+      backend.flush();
+
+      // Canvas stays fully black: neither the clear nor the render leaked out of the pass.
+      for (const [x, y] of samples) {
+        expectPixelNear(readPixel(backend, x, y), [0, 0, 0, 255]);
+      }
+
+      // Target is fully green: pass.clear + pass.render landed in the pass target.
+      for (const [x, y] of samples) {
+        expectPixelNear(readPixelsFromTarget(backend, target, x, y), [0, 255, 0, 255]);
+      }
+    } finally {
+      greenTex.destroy();
+      target.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a Sprite sampling a same-frame RenderTexture stays visible when a later draw follows (#1 order-independence)', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const worldRt = new RenderTexture(64, 64);
+    // RT content is GREEN; the canvas background is RED. The sampled pixel is red
+    // BEFORE the RT sprite draws, so a green readback proves the sprite actually
+    // painted the RT's sampled contents — an empty or invisible RT sprite leaves
+    // red. (The earlier shape drew the same colour to both, so it could not tell a
+    // working RT sprite from a transparent one.)
+    const rtContent = new Graphics();
+    rtContent.fillColor = new Color(0, 255, 0);
+    rtContent.drawRectangle(0, 0, canvasSize, canvasSize); // green content → into the RT
+    const canvasContent = new Graphics();
+    canvasContent.fillColor = new Color(255, 0, 0);
+    canvasContent.drawRectangle(0, 0, canvasSize, canvasSize); // red content → onto the canvas
+    const worldView = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
+
+    const rtSprite = new Sprite(worldRt);
+    rtSprite.setPosition(0, 0); // samples the world RT, full canvas
+    const frame = new Graphics();
+    frame.fillColor = new Color(0, 0, 255);
+    frame.drawRectangle(0, 0, 8, 8); // mesh frame in the corner
+
+    // overlay subtree: RT sprite FIRST, mesh frame AFTER → RT sampler is NOT the last
+    // draw (mini-map shape with the workaround inverted, so the bug — if present — bites).
+    const overlay = new Container();
+    overlay.addChild(rtSprite);
+    overlay.addChild(frame);
+
+    // The exact mini-map pipeline: green→RT, red→canvas, overlay→canvas.
+    const pipeline = new RenderPipeline()
+      .addPass(new RenderNodePass(rtContent, { target: worldRt, view: worldView, clear: Color.black }))
+      .addPass(new RenderNodePass(canvasContent, { clear: Color.black }))
+      .addPass(new RenderNodePass(overlay));
+
+    try {
+      pipeline.execute(context);
+      backend.flush();
+
+      // The centre is covered by the red canvas AND the RT sprite. It must show the
+      // RT's GREEN — proving the RT sprite painted its sampled contents.
+      expectPixelNear(readPixel(backend, canvasSize / 2, canvasSize / 2), [0, 255, 0, 255]);
+    } finally {
+      pipeline.destroy();
+      worldRt.destroy();
+      worldView.destroy();
       backend.destroy();
     }
   });

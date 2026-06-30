@@ -40,13 +40,10 @@ class MiniMapScene extends Scene {
         this.miniFrame.lineWidth = 2;
         this.miniFrame.lineColor = Color.white;
         this.miniFrame.drawRectangle(miniX, miniY, 220, 160);
-        // Sprite + frame in one overlay subtree, composited in a single pass. The
-        // frame is added first so the RenderTexture-sampling sprite stays the LAST
-        // draw of the frame: sampling a render target only reads back correctly
-        // when no further draw follows the sampling sprite.
+        // Sprite + frame composited in one pass; draw order is now independent (RT sampling is order-safe).
         this.overlay = new Container();
-        this.overlay.addChild(this.miniFrame);
         this.overlay.addChild(this.miniSprite);
+        this.overlay.addChild(this.miniFrame);
         // A dedicated view that frames the whole world, scaled down into the
         // 220×160 minimap texture so the entire grid stays visible.
         this.miniView = new View(width / 2, height / 2, width, height);
@@ -65,6 +62,10 @@ class MiniMapScene extends Scene {
         const marginY = 60;
         this.time += delta.seconds;
         this.world.clear();
+        // Filled play-area: gives the minimap a recognizable region. Sub-pixel grid
+        // lines alone vanish when the world is shrunk into the 220×160 texture.
+        this.world.fillColor = new Color(50, 90, 160);
+        this.world.drawRectangle(marginX, marginY, width - 2 * marginX, height - 2 * marginY);
         this.world.lineWidth = 2;
         this.world.lineColor = new Color(60, 70, 90);
         for (let x = marginX; x <= width - marginX; x += 80)

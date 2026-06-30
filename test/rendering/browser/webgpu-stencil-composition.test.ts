@@ -239,7 +239,7 @@ describe('WebGPU stencil composition', () => {
       clipped.addChild(clipSprite);
 
       await withValidation(ctx, backend, () => {
-        const first = context.renderTo(clipped, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
+        const first = context.capture(clipped, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
 
         backend.releaseRenderTexture(first);
       });
@@ -287,7 +287,7 @@ const renderClipIntoTextureAndSample = async (
   let readPixel!: (x: number, y: number) => RgbaTuple;
 
   await withValidation(ctx, backend, () => {
-    const offscreen = context.renderTo(clipped, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
+    const offscreen = context.capture(clipped, { width: canvasSize, height: canvasSize, clearColor: Color.transparentBlack });
     const display = new Sprite(offscreen);
 
     display.setPosition(0, 0);

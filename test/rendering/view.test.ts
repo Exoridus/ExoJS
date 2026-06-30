@@ -65,6 +65,43 @@ describe('View', () => {
   });
 });
 
+describe('View.from', () => {
+  test('applies center, size, viewport, rotation and zoom from options', () => {
+    const view = View.from({
+      center: { x: 50, y: 60 },
+      size: { width: 800, height: 600 },
+      viewport: new Rectangle(0.5, 0, 0.5, 1),
+      rotation: 90,
+      zoom: 2,
+    });
+    expect(view.center.x).toBe(50);
+    expect(view.center.y).toBe(60);
+    expect(view.viewport.equals(new Rectangle(0.5, 0, 0.5, 1))).toBe(true);
+    expect(view.rotation).toBe(90);
+    expect(view.zoomLevel).toBe(2);
+    expect(view.width).toBe(400); // zoom 2 halves the visible area
+    view.destroy();
+  });
+
+  test('defaults match a bare View (center 0,0 size 0,0 full viewport)', () => {
+    const view = View.from({});
+    expect(view.center.x).toBe(0);
+    expect(view.width).toBe(0);
+    expect(view.viewport.equals(new Rectangle(0, 0, 1, 1))).toBe(true);
+    view.destroy();
+  });
+});
+
+describe('View.setViewport', () => {
+  test('setViewport sets a normalized viewport fluently and returns this', () => {
+    const view = new View(0, 0, 100, 100);
+    const ret = view.setViewport(0.5, 0, 0.5, 1);
+    expect(ret).toBe(view);
+    expect(view.viewport.equals(new Rectangle(0.5, 0, 0.5, 1))).toBe(true);
+    view.destroy();
+  });
+});
+
 describe('View — coordinate conversion', () => {
   // Centered camera over an 800×600 design space, matching the default camera.
   const centered = (): View => new View(400, 300, 800, 600);

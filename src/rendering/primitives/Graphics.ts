@@ -29,6 +29,11 @@ const gradientTextureSize = 256;
  * Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor
  * point and flush a Mesh on each segment.
  *
+ * Fill and stroke are both opt-in: a shape is filled only once a fill
+ * color/style is set (the fill defaults to transparent), and stroked only while
+ * `lineWidth > 0`. An outline-only shape therefore needs just `lineColor` +
+ * `lineWidth`, with no fill bleeding underneath.
+ *
  * Gradient styles are rasterized once to a {@link DataTexture} via
  * {@link Gradient.toTexture} and sampled across each shape's local bounding
  * box, so {@link LinearGradient} and {@link RadialGradient} render through the
@@ -41,7 +46,11 @@ const gradientTextureSize = 256;
  */
 export class Graphics extends Container {
   private _lineWidth = 0;
-  private readonly _fillColor: Color = new Color();
+  // Fill defaults to transparent: a shape is filled only when a fill color/style is
+  // set, mirroring how the stroke is gated on `lineWidth > 0`. This keeps an
+  // outline-only shape (just `lineColor` + `lineWidth`) from silently painting an
+  // opaque fill over whatever sits beneath it.
+  private readonly _fillColor: Color = new Color(0, 0, 0, 0);
   private readonly _lineColor: Color = new Color();
   private _fillStyle: Color | Gradient = this._fillColor;
   private _strokeStyle: Color | Gradient = this._lineColor;
@@ -72,7 +81,10 @@ export class Graphics extends Container {
     this.strokeStyle = lineColor;
   }
 
-  /** Solid fill color slot: the last solid color assigned to the fill. */
+  /**
+   * Solid fill color slot: the last solid color assigned to the fill. Defaults to
+   * transparent, so shapes are not filled until a fill color/style is set.
+   */
   public get fillColor(): Color {
     return this._fillColor;
   }
@@ -299,7 +311,7 @@ export class Graphics extends Container {
   public drawPolygon(path: number[]): this {
     const data = buildPolygon(path);
 
-    this.addChild(this._createFillMesh(data));
+    this._appendFill(data);
 
     if (this._lineWidth > 0) {
       this.drawPath(data.points);
@@ -312,7 +324,7 @@ export class Graphics extends Container {
   public drawCircle(centerX: number, centerY: number, radius: number): this {
     const data = buildCircle(centerX, centerY, radius);
 
-    this.addChild(this._createFillMesh(data));
+    this._appendFill(data);
 
     if (this._lineWidth > 0) {
       this.drawPath(data.points);
@@ -325,7 +337,7 @@ export class Graphics extends Container {
   public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
     const data = buildEllipse(centerX, centerY, radiusX, radiusY);
 
-    this.addChild(this._createFillMesh(data));
+    this._appendFill(data);
 
     if (this._lineWidth > 0) {
       this.drawPath(data.points);
@@ -338,7 +350,7 @@ export class Graphics extends Container {
   public drawRectangle(x: number, y: number, width: number, height: number): this {
     const data = buildRectangle(x, y, width, height);
 
-    this.addChild(this._createFillMesh(data));
+    this._appendFill(data);
 
     if (this._lineWidth > 0) {
       this.drawPath(data.points);
@@ -355,7 +367,7 @@ export class Graphics extends Container {
   public drawRoundedRectangle(x: number, y: number, width: number, height: number, radius: number): this {
     const data = buildRoundedRectangle(x, y, width, height, radius);
 
-    this.addChild(this._createFillMesh(data));
+    this._appendFill(data);
 
     if (this._lineWidth > 0) {
       this.drawPath(data.points);
@@ -371,7 +383,7 @@ export class Graphics extends Container {
   public drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): this {
     const data = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
 
-    this.addChild(this._createFillMesh(data));
+    this._appendFill(data);
 
     if (this._lineWidth > 0) {
       this.drawPath(data.points);
@@ -385,7 +397,7 @@ export class Graphics extends Container {
     this.removeChildren();
 
     this._lineWidth = 0;
-    this._fillColor.copy(Color.black);
+    this._fillColor.copy(Color.transparentBlack);
     this._lineColor.copy(Color.black);
     this._fillStyle = this._fillColor;
     this._strokeStyle = this._lineColor;
@@ -426,6 +438,17 @@ export class Graphics extends Container {
     }
 
     return style.clone();
+  }
+
+  private _appendFill(data: MeshGeometryData): void {
+    // A fully transparent solid fill paints nothing — skip the mesh so an unset
+    // fill (the default) or an explicit transparent fill costs nothing and never
+    // covers what is drawn underneath. Gradients always produce a fill.
+    if (this._fillStyle instanceof Color && this._fillStyle.a === 0) {
+      return;
+    }
+
+    this.addChild(this._createFillMesh(data));
   }
 
   private _createFillMesh(data: MeshGeometryData): Mesh {

@@ -28,8 +28,7 @@ class PictureInPictureScene extends Scene {
         const { width, height } = this.app.canvas;
 
         this.mainView = new View(0, 0, width, height);
-        this.pipView = new View(0, 0, width * 0.3, height * 0.3);
-        this.pipView.viewport.set(0.68, 0.04, 0.28, 0.28);
+        this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
         this.pipView.setZoom(2.2);
 
         this.sprite.setAnchor(0.5).setPosition(-280, 0);
@@ -51,13 +50,10 @@ class PictureInPictureScene extends Scene {
     }
 
     override draw(context): void {
-        context.backend.clear();
-        context.backend.setView(this.mainView);
-        context.render(this.sprite);
-        context.backend.setView(this.pipView);
-        context.render(this.sprite);
-        context.backend.setView(null);
-        context.render(this.frame);
+        context.clear(Color.black);
+        context.render(this.sprite, { view: this.mainView });
+        context.render(this.sprite, { view: this.pipView });
+        context.render(this.frame, { view: context.screenView });
     }
 }
 

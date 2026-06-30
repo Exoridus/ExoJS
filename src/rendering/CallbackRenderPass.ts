@@ -2,19 +2,20 @@ import type { Color } from '#core/Color';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import { BackendTargetPass } from './BackendTargetPass';
+import { PassContext } from './PassContext';
 import type { RenderingContext } from './RenderingContext';
 import { RenderPass, type RenderPassOptions } from './RenderPass';
 import type { View } from './View';
 
 /** Options for {@link CallbackRenderPass}. @advanced */
 export interface CallbackRenderPassOptions extends RenderPassOptions {
-  /** View applied while the callback runs. Only meaningful with `target`. Default: `target.view`. */
+  /** View applied while the callback runs. Default: `target.view` (with `target`) else the active view. */
   readonly view?: View;
   /**
-   * Off-screen destination. When set, the callback runs redirected into this {@link RenderTexture} (save / restore).
-   * `null` / omitted → the active target. Inside a target redirect, draw via `context.backend` (the active view is
-   * the target's); `context.render(node)` would reset the view to `context.camera`. Caller-owned and stable; never
-   * allocated, pooled, resized, or destroyed by the pass.
+   * Off-screen destination. When set, the callback runs redirected into this {@link RenderTexture} (save / restore);
+   * `null` / omitted → the active target. The callback's {@link PassContext} is scoped to whichever target is
+   * active, so `pass.clear()` / `pass.render()` act on it and never leak. Caller-owned and stable; never allocated,
+   * pooled, resized, or destroyed by the pass.
    */
   readonly target?: RenderTexture | null;
   /** Clear the destination to this colour immediately before the callback runs. */
@@ -22,12 +23,13 @@ export interface CallbackRenderPassOptions extends RenderPassOptions {
 }
 
 /**
- * Runs a user callback as one pass. The callback receives the {@link RenderingContext} (high-level:
- * `context.render(node)`, `context.backend` immediate draws, etc.). Set `options.target` to redirect the callback's
- * output into an off-screen {@link RenderTexture} (immediate-mode "scene" → texture).
+ * Runs a user callback as one pass. The callback receives a {@link PassContext} scoped to the active target:
+ * `pass.render(node)`, `pass.clear(color)`, `pass.drawGeometry(...)`, `pass.renderTo(...)`, and `pass.backend` for
+ * raw draws. Set `options.target` to redirect the callback's output into an off-screen {@link RenderTexture}
+ * (immediate-mode "scene" → texture); inside that redirect every `pass.*` verb operates on the texture.
  *
  * To run a low-level {@link BackendRenderPass} inside a pipeline, bridge it here:
- * `new CallbackRenderPass((context) => context.backend.execute(myBackendPass))`.
+ * `new CallbackRenderPass((pass) => pass.backend.execute(myBackendPass))`.
  *
  * `view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame
  * (no per-frame allocation). `execute` is not re-entrant — a callback must not re-run the same pass instance; the
@@ -36,25 +38,27 @@ export interface CallbackRenderPassOptions extends RenderPassOptions {
  * @advanced
  */
 export class CallbackRenderPass extends RenderPass {
-  private readonly _callback: (context: RenderingContext) => void;
+  private readonly _callback: (pass: PassContext) => void;
   private readonly _clear: Color | null;
+  private readonly _target: RenderTexture | null;
+  private readonly _view: View | null;
   private readonly _redirect: BackendTargetPass | null;
   private _activeContext: RenderingContext | null = null;
   private _executing = false;
 
-  public constructor(callback: (context: RenderingContext) => void, options?: CallbackRenderPassOptions) {
+  public constructor(callback: (pass: PassContext) => void, options?: CallbackRenderPassOptions) {
     super(options);
 
     this._callback = callback;
     this._clear = options?.clear ?? null;
-
-    const target = options?.target ?? null;
+    this._target = options?.target ?? null;
+    this._view = options?.view ?? null;
 
     this._redirect =
-      target !== null
+      this._target !== null
         ? new BackendTargetPass(() => this._runCallback(), {
-            target,
-            view: options?.view ?? target.view,
+            target: this._target,
+            view: this._view ?? this._target.view,
             ...(this._clear !== null && { clearColor: this._clear }),
           })
         : null;
@@ -86,15 +90,15 @@ export class CallbackRenderPass extends RenderPass {
         context.backend.clear(this._clear);
       }
 
-      this._callback(context);
+      this._callback(new PassContext(context, context.backend.renderTarget, context.backend.view));
     } finally {
       this._executing = false;
     }
   }
 
   private _runCallback(): void {
-    if (this._activeContext !== null) {
-      this._callback(this._activeContext);
+    if (this._activeContext !== null && this._target !== null) {
+      this._callback(new PassContext(this._activeContext, this._target, this._view ?? this._target.view));
     }
   }
 }

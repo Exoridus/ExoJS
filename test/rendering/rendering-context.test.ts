@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
+import type { Time } from '#core/Time';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
-import { Camera } from '#rendering/Camera';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
@@ -175,13 +175,6 @@ describe('RenderingContext', () => {
     expect(drawEvents[1]).toBe(green);
   });
 
-  test('view returns the active camera', () => {
-    const { backend } = createMockBackend();
-    const context = new RenderingContext(backend);
-
-    expect(context.view).toBe(context.camera);
-  });
-
   test('stats exposes backend stats', () => {
     const { backend } = createMockBackend();
     const context = new RenderingContext(backend);
@@ -202,7 +195,7 @@ describe('RenderingContext', () => {
     const texture = createTexture();
     const sprite = new Sprite(texture);
 
-    const result = context.renderTo(sprite, { width: 128, height: 128, clearColor: Color.transparentBlack });
+    const result = context.capture(sprite, { width: 128, height: 128, clearColor: Color.transparentBlack });
 
     expect(result).toBeInstanceOf(RenderTexture);
     expect(result.width).toBe(128);
@@ -232,7 +225,7 @@ describe('RenderingContext', () => {
 
     container.addChild(red, green);
 
-    const result = context.renderTo(container, { width: 128, height: 128 });
+    const result = context.capture(container, { width: 128, height: 128 });
 
     expect(drawEvents).toHaveLength(2);
     expect(drawEvents[0]).toBe(red);
@@ -248,7 +241,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const sprite = new Sprite(createTexture());
 
-    const result = context.renderTo(sprite, { width: 64, height: 64 });
+    const result = context.capture(sprite, { width: 64, height: 64 });
 
     expect(clearCalls).toHaveLength(0);
 
@@ -260,7 +253,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const sprite = new Sprite(createTexture());
 
-    const result = context.renderTo(sprite, { width: 64, height: 64, clearColor: Color.red });
+    const result = context.capture(sprite, { width: 64, height: 64, clearColor: Color.red });
 
     expect(clearCalls).toHaveLength(1);
     expect(clearCalls[0].equals(Color.red)).toBe(true);
@@ -280,7 +273,7 @@ describe('RenderingContext', () => {
     });
 
     expect(() => {
-      context.renderTo(sprite, { width: 64, height: 64 });
+      context.capture(sprite, { width: 64, height: 64 });
     }).toThrow('forced render error');
 
     expect(backend.renderTarget).toBe(previousTarget);
@@ -292,7 +285,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const sprite = new Sprite(createTexture());
 
-    const result = context.renderTo(sprite, { width: 64, height: 64 });
+    const result = context.capture(sprite, { width: 64, height: 64 });
 
     expect(result.width).toBe(64);
     expect(result.height).toBe(64);
@@ -305,7 +298,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const container = new Container();
 
-    const result = context.renderTo(container, { width: 32, height: 32 });
+    const result = context.capture(container, { width: 32, height: 32 });
 
     expect(backend.renderTarget).toBe(root);
     expect(backend.view).toBe(root.view);
@@ -321,7 +314,7 @@ describe('RenderingContext', () => {
 
     context.render(sprite);
 
-    expect(setViewSpy).toHaveBeenCalledWith(context.camera);
+    expect(setViewSpy).toHaveBeenCalledWith(context.view);
   });
 
   test('render() with custom view calls backend.setView with that view', () => {
@@ -342,12 +335,12 @@ describe('RenderingContext', () => {
     const texture = createTexture();
     const sprite = new Sprite(texture);
 
-    const leftCam = new Camera({
+    const leftCam = View.from({
       center: { x: 400, y: 300 },
       size: { width: 800, height: 600 },
       viewport: new Rectangle(0, 0, 0.5, 1),
     });
-    const rightCam = new Camera({
+    const rightCam = View.from({
       center: { x: 400, y: 300 },
       size: { width: 800, height: 600 },
       viewport: new Rectangle(0.5, 0, 0.5, 1),
@@ -359,6 +352,48 @@ describe('RenderingContext', () => {
     expect(setViewSpy).toHaveBeenCalledTimes(2);
     expect(setViewSpy.mock.calls[0][0]).toBe(leftCam);
     expect(setViewSpy.mock.calls[1][0]).toBe(rightCam);
+  });
+
+  test('update advances tracked custom views; untrackView stops advancing them', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const pip = new View(0, 0, 100, 100);
+    const tick = { milliseconds: 16 } as Time;
+
+    pip.follow({ x: 40, y: 0 }, { lerp: 1 });
+    context.trackView(pip);
+    context.update(tick);
+    expect(pip.center.x).toBe(40); // tracked → followed to its target
+
+    context.untrackView(pip);
+    pip.follow({ x: 80, y: 0 }, { lerp: 1 });
+    context.update(tick);
+    expect(pip.center.x).toBe(40); // untracked → no longer advanced
+
+    pip.destroy();
+    context.destroy();
+  });
+
+  test('update auto-advances a view rendered last frame, then stops once it is no longer rendered', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const pip = new View(0, 0, 100, 100);
+    const node = new Container();
+    const tick = { milliseconds: 16 } as Time;
+
+    pip.follow({ x: 40, y: 0 }, { lerp: 1 });
+    context.render(node, { view: pip }); // render-usage registers pip for the next update
+    context.update(tick); // advances views rendered since the last update → pip follows
+    expect(pip.center.x).toBe(40);
+
+    // Stop rendering pip: it is no longer auto-advanced.
+    pip.follow({ x: 80, y: 0 }, { lerp: 1 });
+    context.update(tick);
+    expect(pip.center.x).toBe(40);
+
+    pip.destroy();
+    node.destroy();
+    context.destroy();
   });
 });
 
@@ -548,7 +583,7 @@ describe('RenderingContext.drawGeometry', () => {
     const customView = new View(100, 100, 200, 200);
 
     context.drawGeometry(geometry, new Matrix());
-    expect(setViewSpy).toHaveBeenLastCalledWith(context.camera);
+    expect(setViewSpy).toHaveBeenLastCalledWith(context.view);
 
     context.drawGeometry(geometry, new Matrix(), { view: customView });
     expect(setViewSpy).toHaveBeenLastCalledWith(customView);
@@ -650,7 +685,7 @@ describe('RenderingContext.drawBatch', () => {
     const customView = new View(100, 100, 200, 200);
 
     context.drawBatch(batch);
-    expect(setViewSpy).toHaveBeenLastCalledWith(context.camera);
+    expect(setViewSpy).toHaveBeenLastCalledWith(context.view);
 
     context.drawBatch(batch, { view: customView });
     expect(setViewSpy).toHaveBeenLastCalledWith(customView);

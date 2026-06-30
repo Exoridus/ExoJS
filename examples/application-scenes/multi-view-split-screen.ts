@@ -38,10 +38,8 @@ class SplitScreenScene extends Scene {
     override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.leftView = new View(0, 0, width / 2, height);
-        this.leftView.viewport.set(0, 0, 0.5, 1);
-        this.rightView = new View(0, 0, width / 2, height);
-        this.rightView.viewport.set(0.5, 0, 0.5, 1);
+        this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
+        this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);
 
         this.divider = new Graphics();
         this.divider.fillColor = Color.white;
@@ -116,15 +114,12 @@ class SplitScreenScene extends Scene {
     }
 
     override draw(context): void {
-        context.backend.clear();
-        context.backend.setView(this.leftView);
-        context.render(this.leftPlayer);
-        context.render(this.rightPlayer);
-        context.backend.setView(this.rightView);
-        context.render(this.leftPlayer);
-        context.render(this.rightPlayer);
-        context.backend.setView(null);
-        context.render(this.divider);
+        context.clear(Color.black);
+        context.render(this.leftPlayer, { view: this.leftView });
+        context.render(this.rightPlayer, { view: this.leftView });
+        context.render(this.leftPlayer, { view: this.rightView });
+        context.render(this.rightPlayer, { view: this.rightView });
+        context.render(this.divider, { view: context.screenView });
     }
 }
 

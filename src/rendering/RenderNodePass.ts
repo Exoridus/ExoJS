@@ -10,7 +10,7 @@ import type { View } from './View';
 
 /** Options for {@link RenderNodePass}. @advanced */
 export interface RenderNodePassOptions extends RenderPassOptions {
-  /** View to render the node with. Default: `target.view` when `target` is set, else `context.camera`. */
+  /** View to render the node with. Default: `target.view` when `target` is set, else `context.view`. */
   readonly view?: View;
   /**
    * Off-screen destination. When set, the node is rendered into this {@link RenderTexture} through the internal

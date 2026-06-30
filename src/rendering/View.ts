@@ -46,6 +46,20 @@ export interface ViewShakeOptions {
   decay?: boolean;
 }
 
+/** Options for {@link View.from}. */
+export interface ViewOptions {
+  /** World-space center position. Defaults to `{ x: 0, y: 0 }`. */
+  center?: { x: number; y: number };
+  /** Visible area size in world units (before zoom is applied). Defaults to `{ width: 0, height: 0 }`. */
+  size?: { width: number; height: number };
+  /** Normalized (0..1) viewport rectangle within the canvas. Defaults to the full canvas `(0, 0, 1, 1)`. */
+  viewport?: Rectangle;
+  /** Initial rotation in degrees. Defaults to `0`. */
+  rotation?: number;
+  /** Initial zoom level. A value of `2` halves the visible area. Defaults to `1`. */
+  zoom?: number;
+}
+
 /**
  * 2D camera that defines what region of the world is visible on screen.
  *
@@ -91,6 +105,29 @@ export class View implements ObservableVectorOwner {
     this._zoomBaseWidth = width;
     this._zoomBaseHeight = height;
     this._flags.push(ViewFlags.Transform, ViewFlags.TransformInverse, ViewFlags.BoundingBox);
+  }
+
+  /**
+   * Create a {@link View} from a {@link ViewOptions} bag.
+   *
+   * All options are optional and default to the same values as a bare
+   * `new View(0, 0, 0, 0)` call with a full-canvas viewport and no rotation
+   * or zoom.
+   */
+  public static from(options: ViewOptions = {}): View {
+    const view = new View(options.center?.x ?? 0, options.center?.y ?? 0, options.size?.width ?? 0, options.size?.height ?? 0);
+
+    if (options.viewport) {
+      view.viewport = options.viewport;
+    }
+    if (options.rotation && options.rotation !== 0) {
+      view.rotation = options.rotation;
+    }
+    if (options.zoom !== undefined && options.zoom !== 1) {
+      view.setZoom(options.zoom);
+    }
+
+    return view;
   }
 
   /**
@@ -191,6 +228,25 @@ export class View implements ObservableVectorOwner {
     if (this._rotation !== rotation) {
       this._rotation = rotation;
       this._setRotationDirty();
+    }
+
+    return this;
+  }
+
+  /**
+   * Set the normalized (0..1) viewport rectangle fluently.
+   * Mirrors the `set viewport` property setter without allocating a
+   * {@link Rectangle} — pass the four components directly.
+   *
+   * @param x      - Left edge as a fraction of the canvas width.
+   * @param y      - Top edge as a fraction of the canvas height.
+   * @param width  - Width as a fraction of the canvas width.
+   * @param height - Height as a fraction of the canvas height.
+   */
+  public setViewport(x: number, y: number, width: number, height: number): this {
+    if (this._viewport.x !== x || this._viewport.y !== y || this._viewport.width !== width || this._viewport.height !== height) {
+      this._viewport.set(x, y, width, height);
+      this._setDirty();
     }
 
     return this;
