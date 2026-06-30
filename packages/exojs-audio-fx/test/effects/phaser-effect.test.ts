@@ -37,11 +37,20 @@ const makeOscillatorNode = (ctx: AudioContext) => ({
   stop: vi.fn(),
 });
 
+const makeDelayNode = (ctx: AudioContext) => ({
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  context: ctx,
+  delayTime: makeAudioParam(0),
+});
+
 /**
  * Wire all nodes for a PhaserEffect with the given stage count.
- * PhaserEffect._setupNodes createGain order:
- *   inputGain[0], outputGain[1], dryGain[2], wetGain[3], feedbackGain[4], lfoGain[5]
- * Then createBiquadFilter for each stage, then createOscillator once.
+ * PhaserEffect._setupNodes creation order:
+ *   createGain × 6: inputGain[0], outputGain[1], dryGain[2], wetGain[3], feedbackGain[4], lfoGain[5]
+ *   createDelay × 1: feedbackDelay
+ *   createBiquadFilter × stages: allpassFilters
+ *   createOscillator × 1: lfoOscillator
  */
 const wireAll = (ctx: AudioContext, stages = 4) => {
   const inputGain = makeGainNode(ctx);
@@ -50,12 +59,15 @@ const wireAll = (ctx: AudioContext, stages = 4) => {
   const wetGain = makeGainNode(ctx);
   const feedbackGain = makeGainNode(ctx);
   const lfoGain = makeGainNode(ctx);
+  const feedbackDelay = makeDelayNode(ctx);
   const allpassFilters = Array.from({ length: stages }, () => makeBiquadFilterNode(ctx));
   const lfoOscillator = makeOscillatorNode(ctx);
 
   const gainOrder = [inputGain, outputGain, dryGain, wetGain, feedbackGain, lfoGain];
   let gainCallCount = 0;
   const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gainOrder[gainCallCount++] as unknown as GainNode);
+
+  const delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(feedbackDelay as unknown as DelayNode);
 
   let filterCallCount = 0;
   const filterSpy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(
@@ -64,7 +76,7 @@ const wireAll = (ctx: AudioContext, stages = 4) => {
 
   const oscillatorSpy = vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
-  return { inputGain, outputGain, dryGain, wetGain, feedbackGain, lfoGain, allpassFilters, lfoOscillator, gainSpy, filterSpy, oscillatorSpy };
+  return { inputGain, outputGain, dryGain, wetGain, feedbackGain, feedbackDelay, lfoGain, allpassFilters, lfoOscillator, gainSpy, delaySpy, filterSpy, oscillatorSpy };
 };
 
 // ---------------------------------------------------------------------------
@@ -268,6 +280,7 @@ describe('PhaserEffect', () => {
     let dryGain: ReturnType<typeof makeGainNode>;
     let wetGain: ReturnType<typeof makeGainNode>;
     let feedbackGain: ReturnType<typeof makeGainNode>;
+    let feedbackDelay: ReturnType<typeof makeDelayNode>;
     let lfoGain: ReturnType<typeof makeGainNode>;
     let allpassFilters: ReturnType<typeof makeBiquadFilterNode>[];
     let lfoOscillator: ReturnType<typeof makeOscillatorNode>;
@@ -280,6 +293,7 @@ describe('PhaserEffect', () => {
       dryGain = wired.dryGain;
       wetGain = wired.wetGain;
       feedbackGain = wired.feedbackGain;
+      feedbackDelay = wired.feedbackDelay;
       lfoGain = wired.lfoGain;
       allpassFilters = wired.allpassFilters;
       lfoOscillator = wired.lfoOscillator;
@@ -322,11 +336,14 @@ describe('PhaserEffect', () => {
       effect.destroy();
     });
 
-    it('connects feedback path: allpass[N-1] → feedbackGain → allpass[0]', () => {
+    it('connects feedback path through DelayNode: allpass[N-1] → feedbackGain → feedbackDelay → allpass[0]', () => {
       const effect = new PhaserEffect();
       const lastFilter = allpassFilters[allpassFilters.length - 1];
       expect(lastFilter.connect).toHaveBeenCalledWith(feedbackGain);
-      expect(feedbackGain.connect).toHaveBeenCalledWith(allpassFilters[0]);
+      // feedbackDelay breaks the zero-latency cycle; feedbackGain must NOT connect directly to allpass[0]
+      expect(feedbackGain.connect).toHaveBeenCalledWith(feedbackDelay);
+      expect(feedbackDelay.connect).toHaveBeenCalledWith(allpassFilters[0]);
+      expect(feedbackGain.connect).not.toHaveBeenCalledWith(allpassFilters[0]);
       effect.destroy();
     });
 
@@ -604,13 +621,14 @@ describe('PhaserEffect', () => {
       }
     });
 
-    it('disconnects feedbackGain, dryGain, wetGain, inputGain, outputGain', () => {
+    it('disconnects feedbackGain, feedbackDelay, dryGain, wetGain, inputGain, outputGain', () => {
       const ctx = getAudioContext();
-      const { feedbackGain, dryGain, wetGain, inputGain, outputGain } = wireAll(ctx);
+      const { feedbackGain, feedbackDelay, dryGain, wetGain, inputGain, outputGain } = wireAll(ctx);
 
       const effect = new PhaserEffect();
       effect.destroy();
       expect(feedbackGain.disconnect).toHaveBeenCalled();
+      expect(feedbackDelay.disconnect).toHaveBeenCalled();
       expect(dryGain.disconnect).toHaveBeenCalled();
       expect(wetGain.disconnect).toHaveBeenCalled();
       expect(inputGain.disconnect).toHaveBeenCalled();

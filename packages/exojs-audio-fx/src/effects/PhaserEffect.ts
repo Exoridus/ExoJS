@@ -39,6 +39,7 @@ interface PhaserEffectSetup {
   readonly dryGain: GainNode;
   readonly wetGain: GainNode;
   readonly feedbackGain: GainNode;
+  readonly feedbackDelay: DelayNode;
   readonly lfoGain: GainNode;
   readonly allpassFilters: BiquadFilterNode[];
   readonly lfoOscillator: OscillatorNode;
@@ -59,10 +60,13 @@ interface PhaserEffectSetup {
  *           │                                                   ├── outputGain
  *           └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘
  *                 ▲                      │
- *                 └──── feedbackGain ◄───┘
+ *                 └── feedbackDelay ◄── feedbackGain ◄─────────┘
  *
  * lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency
  * ```
+ * Note: `feedbackDelay` is a {@link DelayNode} with `delayTime = 0`. Even at
+ * zero delay the node itself breaks the zero-latency cycle, which spec-compliant
+ * browsers (Chrome, Edge, Safari) would otherwise mute entirely.
  * Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`;
  * `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`.
  *
@@ -237,6 +241,7 @@ export class PhaserEffect extends AudioEffect {
         filter.disconnect();
       }
       this._setup.feedbackGain.disconnect();
+      this._setup.feedbackDelay.disconnect();
       this._setup.dryGain.disconnect();
       this._setup.wetGain.disconnect();
       this._setup.inputGain.disconnect();
@@ -256,6 +261,15 @@ export class PhaserEffect extends AudioEffect {
     const wetGain = ctx.createGain();
     const feedbackGain = ctx.createGain();
     const lfoGain = ctx.createGain();
+
+    // A zero-length DelayNode in the feedback path is required so that
+    // spec-compliant browsers do not mute the entire allpass chain. Browsers
+    // are permitted to silence feedback cycles that contain no DelayNode (i.e.
+    // zero-latency cycles), so even delayTime=0 here is sufficient to make the
+    // cycle legal — the DelayNode itself introduces at least one render-quantum
+    // of delay regardless of its delayTime parameter.
+    const feedbackDelay = ctx.createDelay(1);
+    feedbackDelay.delayTime.setValueAtTime(0, ctx.currentTime);
 
     inputGain.gain.setValueAtTime(1, ctx.currentTime);
     outputGain.gain.setValueAtTime(1, ctx.currentTime);
@@ -296,9 +310,11 @@ export class PhaserEffect extends AudioEffect {
     allpassFilters[allpassFilters.length - 1]!.connect(wetGain);
     wetGain.connect(outputGain);
 
-    // Feedback path: allpass[N-1] → feedbackGain → allpass[0]
+    // Feedback path: allpass[N-1] → feedbackGain → feedbackDelay → allpass[0]
+    // feedbackDelay breaks the zero-latency cycle so browsers do not mute the chain.
     allpassFilters[allpassFilters.length - 1]!.connect(feedbackGain);
-    feedbackGain.connect(allpassFilters[0]!);
+    feedbackGain.connect(feedbackDelay);
+    feedbackDelay.connect(allpassFilters[0]!);
 
     lfoOscillator.start();
 
@@ -308,6 +324,7 @@ export class PhaserEffect extends AudioEffect {
       dryGain,
       wetGain,
       feedbackGain,
+      feedbackDelay,
       lfoGain,
       allpassFilters,
       lfoOscillator,
