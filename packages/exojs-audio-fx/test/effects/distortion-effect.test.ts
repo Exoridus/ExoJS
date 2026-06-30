@@ -2,23 +2,6 @@ import { getAudioContext } from '@codexo/exojs';
 
 import { DistortionEffect } from '../../src/effects/DistortionEffect';
 
-// The shared MockAudioContext (test/setup-env.vitest.ts) does not include
-// createWaveShaper. Patch it here so the effect can be constructed in jsdom.
-beforeAll(() => {
-  Object.defineProperty(AudioContext.prototype, 'createWaveShaper', {
-    configurable: true,
-    value(): WaveShaperNode {
-      return {
-        connect: vi.fn(),
-        disconnect: vi.fn(),
-        context: this as AudioContext,
-        curve: null as Float32Array | null,
-        oversample: 'none' as OverSampleType,
-      } as unknown as WaveShaperNode;
-    },
-  });
-});
-
 const makeAudioParam = (initial: number) => ({
   setValueAtTime: vi.fn(),
   setTargetAtTime: vi.fn(),

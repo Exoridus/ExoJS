@@ -42,22 +42,8 @@ const makeWaveShaperNode = (ctx: AudioContext) => ({
 // ---------------------------------------------------------------------------
 
 describe('AutoWahEffect', () => {
-  // The shared jsdom mock (test/setup-env.vitest.ts) does not implement
-  // createWaveShaper. Install a minimal version on the prototype here so that
-  // vi.spyOn can wrap it and production code can call it without error.
-  beforeAll(() => {
-    const ctx = getAudioContext();
-    const proto = Object.getPrototypeOf(ctx) as Record<string, unknown>;
-    proto['createWaveShaper'] = function (this: AudioContext) {
-      return makeWaveShaperNode(this);
-    };
-  });
-
-  afterAll(() => {
-    const ctx = getAudioContext();
-    const proto = Object.getPrototypeOf(ctx) as Record<string, unknown>;
-    delete proto['createWaveShaper'];
-  });
+  // createWaveShaper is provided centrally by the shared MockAudioContext in
+  // test/setup-env.vitest.ts, so no per-test patching is needed here.
 
   afterEach(() => {
     vi.restoreAllMocks();
