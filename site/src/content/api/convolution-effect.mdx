@@ -1,0 +1,58 @@
+---
+title: "ConvolutionEffect"
+description: "Convolution effect that convolves the input signal with a user-supplied impulse response (IR). Unlike ReverbEffect, which generates a procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR — enabling convolution reverb from acoustic-space captures, cabinet/speaker simulations, telephone/pipe character filtering, and any other linear time-invariant transformation. Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called — safe to add to a bus before an IR is available. Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → convolver → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`."
+symbol: "ConvolutionEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 9
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts#L70"
+---
+## Import
+
+`import { ConvolutionEffect } from '@codexo/exojs-audio-fx'`
+
+Convolution effect that convolves the input signal with a user-supplied
+impulse response (IR). Unlike ReverbEffect, which generates a
+procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR —
+enabling convolution reverb from acoustic-space captures, cabinet/speaker
+simulations, telephone/pipe character filtering, and any other linear
+time-invariant transformation.
+
+Pass the IR as an `AudioBuffer` (typically decoded via
+`AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used).
+Omitting the IR leaves `convolver.buffer` as `null`, making the wet path
+silent and the effect act as a passthrough until setImpulse is
+called — safe to add to a bus before an IR is available.
+
+Node graph:
+```
+input(GainNode) → dryGain → output(GainNode)
+input           → convolver → wetGain → output
+```
+Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`.
+
+## Constructors
+
+- `new(options: ConvolutionEffectOptions): ConvolutionEffect`
+
+## Methods
+
+- `destroy(): void`
+- `setImpulse(ir: AudioBuffer | Sound | null): void`
+
+## Properties
+
+- `gain: number`
+- `inputNode: AudioNode`
+- `normalize: boolean`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+- `wet: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts#L70)
