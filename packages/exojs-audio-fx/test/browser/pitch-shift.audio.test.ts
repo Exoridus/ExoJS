@@ -17,7 +17,7 @@ describe('PitchShift worklet — real Web Audio', () => {
       source: pitchShiftWorkletSource,
       processorName: 'exojs-pitch-shift',
       processorOptions: { grainSize: 1024 },
-      params: { pitch, wet: 1.0 },
+      params: { pitch },
       inputFreq: INPUT,
       durationSeconds: 2,
     });
@@ -46,23 +46,6 @@ describe('PitchShift worklet — real Web Audio', () => {
     const f = await shiftedFreq(2.0);
     expect(f).toBeGreaterThan(880 * 0.97);
     expect(f).toBeLessThan(880 * 1.03);
-  });
-
-  it('wet=0 passes the input through (level preserved)', async () => {
-    const out = await renderWorklet({
-      source: pitchShiftWorkletSource,
-      processorName: 'exojs-pitch-shift',
-      processorOptions: { grainSize: 1024 },
-      params: { pitch: 2.0, wet: 0.0 },
-      inputFreq: INPUT,
-      durationSeconds: 1,
-    });
-    const meas = tail(out, 0.25);
-    // dry oscillator at unit amplitude -> RMS ≈ 1/sqrt(2)
-    expect(rms(meas)).toBeGreaterThan(0.6);
-    const f = dominantFreq(meas);
-    expect(f).toBeGreaterThan(INPUT * 0.97);
-    expect(f).toBeLessThan(INPUT * 1.03);
   });
 
   it('wet=0.5 with dry-latency compensation keeps the tone level (no comb cancellation)', async () => {

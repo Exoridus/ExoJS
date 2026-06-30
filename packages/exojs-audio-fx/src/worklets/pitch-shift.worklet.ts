@@ -3,7 +3,6 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [
             { name: 'pitch', defaultValue: 1.0, minValue: 0.25, maxValue: 4.0, automationRate: 'k-rate' },
-            { name: 'wet', defaultValue: 1.0, minValue: 0, maxValue: 1.0, automationRate: 'k-rate' },
         ];
     }
 
@@ -96,7 +95,6 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
         if (!input || !output) return true;
 
         const pitch = parameters.pitch[0];
-        const wet = parameters.wet[0];
         const ob = this._outBuf, oL = this._outLen;
 
         for (let i = 0; i < input.length; i++) {
@@ -119,8 +117,7 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
                 this._readPos += pitch;
             }
 
-            // Dry stays latency-free: wet=0 is an exact bypass, wet=1 a full shift.
-            output[i] = (1 - wet) * input[i] + wet * shifted;
+            output[i] = shifted;
         }
         return true;
     }

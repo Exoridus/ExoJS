@@ -82,7 +82,7 @@ function dominantFreq(buf: Float32Array, lo = 50, hi = 4000): { freq: number; ma
 function runWorklet(
   Processor: PitchProcessorConstructor,
   input: Float32Array,
-  opts: { pitch: number; wet: number; grainSize: number },
+  opts: { pitch: number; grainSize: number },
 ): Float32Array {
   const proc = new Processor({ processorOptions: { grainSize: opts.grainSize } });
   const n = input.length;
@@ -91,7 +91,7 @@ function runWorklet(
     const len = Math.min(BLOCK, n - off);
     const iB = input.subarray(off, off + len);
     const oB = new Float32Array(len);
-    proc.process([[iB]], [[oB]], { pitch: [opts.pitch], wet: [opts.wet] });
+    proc.process([[iB]], [[oB]], { pitch: [opts.pitch] });
     out.set(oB, off);
   }
   return out;
@@ -112,7 +112,7 @@ describe('PitchShiftProcessor DSP', () => {
 
   function measureShift(pitch: number): { freq: number; purity: number; ratioRms: number } {
     const input = makeSine(INPUT_FREQ, 0.5, TOTAL);
-    const out = runWorklet(Processor, input, { pitch, wet: 1.0, grainSize: GRAIN });
+    const out = runWorklet(Processor, input, { pitch, grainSize: GRAIN });
     const meas = out.subarray(WARMUP);
     const { freq, mag } = dominantFreq(meas);
     const purity = mag / (Math.SQRT2 * (rms(meas) || 1e-9));
@@ -161,14 +161,5 @@ describe('PitchShiftProcessor DSP', () => {
     const { ratioRms } = measureShift(2.0);
     expect(ratioRms).toBeGreaterThan(0.25); // > -12 dB
     expect(ratioRms).toBeLessThan(2.0); // < +6 dB
-  });
-
-  // ── Bypass: wet=0 is the dry signal, unchanged ─────────────────────────────
-  it('wet=0 passes the input through unchanged', () => {
-    const input = makeSine(INPUT_FREQ, 0.5, GRAIN * 4);
-    const out = runWorklet(Processor, input, { pitch: 2.0, wet: 0.0, grainSize: GRAIN });
-    let maxDiff = 0;
-    for (let i = 0; i < input.length; i++) maxDiff = Math.max(maxDiff, Math.abs(input[i] - out[i]));
-    expect(maxDiff).toBeLessThan(1e-6);
   });
 });
