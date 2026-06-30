@@ -115,12 +115,7 @@ export class View implements ObservableVectorOwner {
    * or zoom.
    */
   public static from(options: ViewOptions = {}): View {
-    const view = new View(
-      options.center?.x ?? 0,
-      options.center?.y ?? 0,
-      options.size?.width ?? 0,
-      options.size?.height ?? 0,
-    );
+    const view = new View(options.center?.x ?? 0, options.center?.y ?? 0, options.size?.width ?? 0, options.size?.height ?? 0);
 
     if (options.viewport) {
       view.viewport = options.viewport;
