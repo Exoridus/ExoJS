@@ -17,6 +17,7 @@ export type {
 export { BeatDetector } from './BeatDetector';
 export { ChorusEffect, type ChorusEffectOptions } from './effects/ChorusEffect';
 export { CompressorEffect, type CompressorEffectOptions } from './effects/CompressorEffect';
+export { ConvolutionEffect, type ConvolutionEffectOptions } from './effects/ConvolutionEffect';
 export { DelayEffect, type DelayEffectOptions } from './effects/DelayEffect';
 export { DuckingEffect, type DuckingEffectOptions } from './effects/DuckingEffect';
 export { EqualizerEffect, type EqualizerEffectOptions } from './effects/EqualizerEffect';
