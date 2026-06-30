@@ -1263,9 +1263,14 @@ export class WebGl2Backend implements RenderBackend {
       const scaleX = target.root && target.width > 0 ? this._canvas.width / target.width : 1;
       const scaleY = target.root && target.height > 0 ? this._canvas.height / target.height : 1;
       const x = Math.floor(viewport.x * scaleX);
-      const y = Math.floor(viewport.y * scaleY);
       const width = Math.max(0, Math.round(viewport.width * scaleX));
       const height = Math.max(0, Math.round(viewport.height * scaleY));
+      // `viewport.y` is top-left (the View / RenderTarget convention); GL's viewport
+      // origin is bottom-left, so flip it. A full viewport (y = 0, height = full) maps
+      // to y = 0 unchanged — only partial viewports (split-screen / pip / minimap) were
+      // affected, landing at the wrong edge before this flip.
+      const backingHeight = target.root ? this._canvas.height : target.height;
+      const y = backingHeight - (Math.floor(viewport.y * scaleY) + height);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
       gl.viewport(x, y, width, height);

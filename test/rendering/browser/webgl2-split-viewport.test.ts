@@ -371,4 +371,45 @@ describe('WebGL2 split-screen viewport', () => {
       backend.destroy();
     }
   });
+
+  test('top viewport paints the TOP of the canvas (partial viewport y is not flipped to the bottom)', async () => {
+    const { backend } = await createBackend();
+    const redTex = createSolidTexture('#ff0000', 16, 16);
+    const greenTex = createSolidTexture('#00ff00', 16, 16);
+
+    const topView = View.from({
+      center: { x: canvasWidth / 2, y: canvasHeight / 2 },
+      size: { width: canvasWidth, height: canvasHeight },
+      viewport: new Rectangle(0, 0, 1, 0.5),
+    });
+    const bottomView = View.from({
+      center: { x: canvasWidth / 2, y: canvasHeight / 2 },
+      size: { width: canvasWidth, height: canvasHeight },
+      viewport: new Rectangle(0, 0.5, 1, 0.5),
+    });
+
+    const red = createFullscreenSprite(redTex);
+    const green = createFullscreenSprite(greenTex);
+
+    try {
+      backend.clear(Color.black);
+      backend.setView(topView);
+      red.render(backend);
+      backend.setView(bottomView);
+      green.render(backend);
+      backend.flush();
+
+      // readPixel takes top-left y: the top-left viewport must paint the TOP quarter
+      // red and the bottom viewport the BOTTOM quarter green (GL's bottom-left origin
+      // must be flipped for partial viewports).
+      expectPixelNear(readPixel(backend, canvasWidth / 2, canvasHeight * 0.25), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, canvasWidth / 2, canvasHeight * 0.75), [0, 255, 0, 255]);
+    } finally {
+      red.destroy();
+      green.destroy();
+      redTex.destroy();
+      greenTex.destroy();
+      backend.destroy();
+    }
+  });
 });
