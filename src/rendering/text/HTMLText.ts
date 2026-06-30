@@ -1,3 +1,4 @@
+import { logger, LogSeverity } from '#core/logging';
 import { Container } from '#rendering/Container';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Texture } from '#rendering/texture/Texture';
@@ -218,8 +219,7 @@ export class HTMLText extends Container {
   private _schedule(): void {
     const version = ++this._renderVersion;
     this._activeRender = this._render(version).catch(error => {
-      // eslint-disable-next-line no-console -- SVG/HTML render failures are meaningful dev-time diagnostics
-      console.warn('[ExoJS] HTMLText render failed.', error);
+      logger.log(LogSeverity.Warning, 'rendering', 'HTMLText render failed.', error instanceof Error ? { error } : undefined);
     });
   }
 

@@ -518,7 +518,7 @@ describe('Application', () => {
     expect(activeClock.stop).toHaveBeenCalledTimes(1);
     expect(frameClock.stop).toHaveBeenCalledTimes(1);
     expect(app.status).toBe(ApplicationStatus.Stopped);
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Application.stop() failed to unload the active scene.', sceneTeardownError);
+    expect(consoleErrorSpy).toHaveBeenCalledWith('[ExoJS:core]', 'Application.stop() failed to unload the active scene.', sceneTeardownError);
 
     cancelSpy.mockRestore();
     consoleErrorSpy.mockRestore();

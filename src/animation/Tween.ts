@@ -1,3 +1,5 @@
+import { warnOnce } from '#core/dev';
+
 import { Ease } from './Easing';
 import type { TweenManager } from './TweenManager';
 import type { EasingFunction, TweenLifecycleCallback, TweenUpdateCallback } from './types';
@@ -359,7 +361,10 @@ export class Tween<T extends object = object> {
       const val = this._target[key];
 
       if (typeof val !== 'number') {
-        console.warn(`Tween: property "${String(key)}" is not a number on target ` + `(got ${typeof val}). It will be skipped.`);
+        warnOnce(
+          `tween:non-numeric-prop:${String(key)}`,
+          `Tween: property "${String(key)}" is not a number on target (got ${typeof val}). It will be skipped.`,
+        );
         continue;
       }
 
