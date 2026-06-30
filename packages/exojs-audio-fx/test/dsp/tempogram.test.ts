@@ -1,5 +1,4 @@
 import {
-  applyTempoHysteresis,
   computeAcf,
   computeTempoCandidates,
   findTempoPeaks,
@@ -205,48 +204,5 @@ describe('isOctaveRelated', () => {
   it('does not flag a nearby non-octave tempo', () => {
     expect(isOctaveRelated(130, 120)).toBe(false);
     expect(isOctaveRelated(140, 120)).toBe(false); // 1.17 — legitimate drift, not metrical
-  });
-});
-
-describe('applyTempoHysteresis', () => {
-  const makeCandidates = (bpm: number, score: number) => [{ bpm, score, lag: 0 }];
-
-  it('returns first BPM when currentBpm is 0', () => {
-    const result = applyTempoHysteresis(makeCandidates(120, 0.9), 0, 0);
-    expect(result).toBe(120);
-  });
-
-  it('does not switch to candidate with insufficient score improvement', () => {
-    // current = 120 at score 0.9; new candidate 130 at score 0.95 (< 1.15x)
-    const result = applyTempoHysteresis(makeCandidates(130, 0.95), 120, 0.9);
-    expect(result).toBeCloseTo(120, 0);
-  });
-
-  it('switches when score is clearly better', () => {
-    // New candidate score = 0.9 * 1.2 = 1.08 > threshold
-    const result = applyTempoHysteresis(makeCandidates(130, 0.9 * 1.2), 120, 0.9);
-    expect(result).toBeCloseTo(130, 0);
-  });
-
-  it('requires 1.5x margin to switch to octave-related candidate', () => {
-    // 240 is octave of 120; score 1.1 is not enough (needs > 1.5x)
-    const result = applyTempoHysteresis(makeCandidates(240, 0.9 * 1.1), 120, 0.9);
-    expect(result).toBeCloseTo(120, 0);
-  });
-
-  it('switches to octave if score is > 1.5x', () => {
-    const result = applyTempoHysteresis(makeCandidates(240, 0.9 * 1.6), 120, 0.9);
-    expect(result).toBeCloseTo(240, 0);
-  });
-
-  it('treats a 3x candidate as octave-related (needs > 1.5x to switch)', () => {
-    // 180 is the triple of 60; score 1.1x is not enough.
-    const result = applyTempoHysteresis(makeCandidates(180, 0.9 * 1.1), 60, 0.9);
-    expect(result).toBeCloseTo(60, 0);
-  });
-
-  it('returns empty candidates unchanged', () => {
-    const result = applyTempoHysteresis([], 120, 0.9);
-    expect(result).toBe(120);
   });
 });

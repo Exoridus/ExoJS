@@ -10,7 +10,8 @@
  * If the two ever diverge (someone edits one copy but not the other) this fails.
  */
 
-import { computeTempoCandidates } from '../../src/dsp/tempogram';
+import { computeTempoCandidates, isOctaveRelated } from '../../src/dsp/tempogram';
+import { beatDetectorWorkletSource } from '../../src/worklets/beat-detector.worklet';
 import { clicktrack, doubleTime, halfTime, swing } from '../fixtures/beat-fixtures';
 import { buildBeatProcessor, SAMPLE_RATE } from '../harness/beat-sandbox';
 
@@ -82,6 +83,43 @@ function driveAndCompare(samples: Float32Array): void {
     expect(worklet[i]!.score).toBeCloseTo(expected[i]!.score, 6);
   }
 }
+
+/**
+ * Builds a callable that mirrors the worklet's inline `isOctave` check by extracting the
+ * expression directly from the worklet source string. Any divergence in constants between
+ * `isOctaveRelated` (tempogram.ts) and the worklet's copy causes the test below to fail.
+ */
+function buildWorkletOctaveCheck(): (bpm: number, ref: number) => boolean {
+  const m = beatDetectorWorkletSource.match(/var isOctave\s*=\s*([^;]+);/);
+  if (!m) throw new Error('isOctave assignment not found in worklet source');
+  const expr = m[1]!.trim();
+  return new Function('bpm', 'ref', `var ratio = bpm / ref; return !!(${expr});`) as (
+    bpm: number,
+    ref: number,
+  ) => boolean;
+}
+
+describe('isOctaveRelated ↔ worklet inline octave check parity', () => {
+  // Parsed live from the worklet source string — if worklet constants drift, this fails.
+  const workletIsOctave = buildWorkletOctaveCheck();
+
+  const cases: [number, number, boolean, string][] = [
+    [60, 120, true, 'ratio 0.5 (half)'],
+    [120, 120, false, 'ratio 1.0 (unison — not metrical)'],
+    [240, 120, true, 'ratio 2.0 (double)'],
+    [360, 120, true, 'ratio 3.0 (triple)'],
+    [180, 120, true, 'ratio 1.5 (3:2 dotted)'],
+    [80, 120, true, 'ratio 0.667 (2:3 triple)'],
+    [130, 120, false, 'ratio ~1.083 (near-miss, legitimate drift)'],
+  ];
+
+  for (const [bpm, ref, expected, label] of cases) {
+    it(`${label}: isOctaveRelated and worklet agree (→ ${String(expected)})`, () => {
+      expect(isOctaveRelated(bpm, ref)).toBe(expected);
+      expect(workletIsOctave(bpm, ref)).toBe(expected);
+    });
+  }
+});
 
 describe('worklet ↔ src/dsp tempogram parity', () => {
   it('clicktrack_120 candidates match computeTempoCandidates', () => {

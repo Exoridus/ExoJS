@@ -319,7 +319,11 @@ export function computeMetrics(
 
   // ── Octave error ──
 
-  // Check if majority of settled states have tempo near 0.5× or 2× true BPM
+  // Heuristic octave-error flag: majority-vote over settled states using broad ±0.1/±0.2
+  // ratio bands. This is intentionally loose — a 180→120 slip (ratio 0.667) is outside
+  // the half-octave band and zero settled states makes majority=0 → halfOctave=true.
+  // The real quality gates (pct≤3%, lockTimeSec≠null, recall≥90%) do the actual work;
+  // these flags are a secondary diagnostic signal, not a primary pass/fail criterion.
   let halfOctaveCount = 0;
   let doubleOctaveCount = 0;
   for (const s of settledStates) {

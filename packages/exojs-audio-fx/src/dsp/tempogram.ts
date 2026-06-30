@@ -335,36 +335,3 @@ export function isOctaveRelated(bpm: number, reference: number): boolean {
   );
 }
 
-/**
- * Apply octave-aware hysteresis to tempo candidate selection.
- *
- * Prevents rapid switching between tempo estimates:
- * - Only switches to a new best if its score is > currentBestScore * 1.15.
- * - Metrically-related candidates (½×, 2×, 3×, ⅓×, 3:2, 2:3) require a score > 1.5× to switch.
- *
- * @param candidates   Candidates from `computeTempoCandidates` (sorted by score).
- * @param currentBpm   Currently tracked BPM.
- * @param currentScore Currently tracked best score.
- * @returns            The selected best BPM.
- */
-export function applyTempoHysteresis(
-  candidates: TempoCandidateResult[],
-  currentBpm: number,
-  currentScore: number,
-): number {
-  if (candidates.length === 0) return currentBpm;
-
-  const top = candidates[0]!;
-
-  // First-time selection (no current BPM)
-  if (currentBpm <= 0) return top.bpm;
-
-  const requiredMargin = isOctaveRelated(top.bpm, currentBpm) ? 1.5 : 1.15;
-
-  if (top.score > currentScore * requiredMargin) {
-    return top.bpm;
-  }
-
-  // Insufficient score to switch — keep current BPM
-  return currentBpm;
-}

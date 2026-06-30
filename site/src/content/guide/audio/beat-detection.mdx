@@ -130,7 +130,7 @@ const detector = new BeatDetector({
 
 ## Worklet processor
 
-`BeatDetector` uses an `AudioWorkletProcessor` that runs entirely in the Web Audio rendering thread. It applies a Hann window, runs a radix-2 FFT, computes mel-band energies, detects onsets via spectral flux, builds a tempogram with autocorrelation, and tracks beat phase with a dynamic-programming grid. All of this is internal — the public API is the events and getters listed above.
+`BeatDetector` uses an `AudioWorkletProcessor` that runs entirely in the Web Audio rendering thread. It applies a Hann window, runs a radix-2 FFT, computes mel-band energies, detects onsets via spectral flux, builds a tempogram with autocorrelation, and tracks beat phase with a bounded phase-locked loop (PLL). All of this is internal — the public API is the events and getters listed above.
 
 Beat/state messages are posted from the worklet and handled asynchronously on the main thread. They are not locked to your scene's `update` timing, and worklet timing can be finer than `requestAnimationFrame`. For frame-stable visual animation, prefer polling getters in `update` (see [Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/)).
 

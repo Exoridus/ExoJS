@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */ // worklet body is a single template-literal string that cannot be import-split
 export const beatDetectorWorkletSource = `
 // ---- Hann window + FFT (radix-2 Cooley-Tukey) ----
 function applyHannWindow(real, imag) {
@@ -104,6 +105,17 @@ var COMB_W_HALF = 0.5;
 var COMB_W_THIRD = 0.3;
 var COMB_PENALTY_DOUBLE = 1.0;
 var COMB_PENALTY_TRIPLE = 0.5;
+
+// ---- Utility ----
+// Sorts arr[0..n-1] in-place using insertion sort. Avoids creating a subarray view so
+// the hot path (_detectOnset, ~93 calls/s) produces zero per-call GC pressure.
+function partialSort(arr, n) {
+    for (var i = 1; i < n; i++) {
+        var v = arr[i], j = i - 1;
+        while (j >= 0 && arr[j] > v) { arr[j + 1] = arr[j]; j--; }
+        arr[j + 1] = v;
+    }
+}
 
 // ---- Onset peak-picker (T3): adaptive normalization + noise gate + refractory ----
 // The raw spectral flux is normalised against a running median/MAD baseline so that
@@ -622,8 +634,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             var ratio = top.bpm / this._bestBpm;
             // Metrically-related = same beat at another level (octaves + 3:2/2:3 dotted/triple).
             // Switching across these needs the strong margin so subdivision artefacts (e.g. the
-            // 120 "dotted" grouping of a drifting 180 kit) cannot steal the lock. Mirrors
-            // isOctaveRelated in src/dsp/tempogram.ts.
+            // 120 "dotted" grouping of a drifting 180 kit) cannot steal the lock. Independent
+            // reimplementation of isOctaveRelated (src/dsp/tempogram.ts) — constants must stay in sync.
             var isOctave = Math.abs(ratio - 0.5) < 0.05 || Math.abs(ratio - 2) < 0.1 ||
                            Math.abs(ratio - 3) < 0.15 || Math.abs(ratio - 1/3) < 0.05 ||
                            Math.abs(ratio - 2/3) < 0.04 || Math.abs(ratio - 3/2) < 0.06;
@@ -722,14 +734,12 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         // Robust baseline: median of the window, then MAD = median(|x − median|).
         var s = this._onsetSort;
         for (var i = 0; i < count; i++) s[i] = this._onsetWin[i];
-        var sub = s.subarray(0, count);
-        sub.sort();
-        var median = sub[count >> 1];
+        partialSort(s, count);
+        var median = s[count >> 1];
         var d = this._onsetDev;
         for (var j = 0; j < count; j++) { var dv = this._onsetWin[j] - median; d[j] = dv < 0 ? -dv : dv; }
-        var dsub = d.subarray(0, count);
-        dsub.sort();
-        var mad = dsub[count >> 1];
+        partialSort(d, count);
+        var mad = d[count >> 1];
 
         // Normalised novelty: deviation above baseline in robust-σ units, with the scale
         // floored at a fraction of the running peak so a clean (MAD≈0) clicktrack still
