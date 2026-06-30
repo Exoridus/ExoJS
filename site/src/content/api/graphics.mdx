@@ -1,6 +1,6 @@
 ---
 title: "Graphics"
-description: "Immediate-mode 2D shape API backed by Mesh children. Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a new Mesh child painted with the active fill or stroke style. A style is either a solid Color or a Gradient, assigned through fillStyle / strokeStyle. The fillColor / lineColor accessors are color-only conveniences over those styles. The active `lineWidth` controls stroke thickness for path and outline draws. Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor point and flush a Mesh on each segment. Gradient styles are rasterized once to a DataTexture via Gradient.toTexture and sampled across each shape's local bounding box, so LinearGradient and RadialGradient render through the same texture path as a textured Mesh. The textures are owned by the Graphics and released on clear / destroy. Call clear to remove all child meshes and reset pen state. Because each shape is a separate Mesh, `Graphics` inherits full filter, blend, tint, and mask support from Container."
+description: "Immediate-mode 2D shape API backed by Mesh children. Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a new Mesh child painted with the active fill or stroke style. A style is either a solid Color or a Gradient, assigned through fillStyle / strokeStyle. The fillColor / lineColor accessors are color-only conveniences over those styles. The active `lineWidth` controls stroke thickness for path and outline draws. Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor point and flush a Mesh on each segment. Fill and stroke are both opt-in: a shape is filled only once a fill color/style is set (the fill defaults to transparent), and stroked only while `lineWidth > 0`. An outline-only shape therefore needs just `lineColor` + `lineWidth`, with no fill bleeding underneath. Gradient styles are rasterized once to a DataTexture via Gradient.toTexture and sampled across each shape's local bounding box, so LinearGradient and RadialGradient render through the same texture path as a textured Mesh. The textures are owned by the Graphics and released on clear / destroy. Call clear to remove all child meshes and reset pen state. Because each shape is a separate Mesh, `Graphics` inherits full filter, blend, tint, and mask support from Container."
 symbol: "Graphics"
 kind: "class"
 subsystem: "rendering"
@@ -9,7 +9,7 @@ memberCount: 113
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/primitives/Graphics.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L42"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L47"
 ---
 ## Import
 
@@ -25,6 +25,11 @@ lineColor accessors are color-only conveniences over those styles.
 The active `lineWidth` controls stroke thickness for path and outline draws.
 Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor
 point and flush a Mesh on each segment.
+
+Fill and stroke are both opt-in: a shape is filled only once a fill
+color/style is set (the fill defaults to transparent), and stroked only while
+`lineWidth > 0`. An outline-only shape therefore needs just `lineColor` +
+`lineWidth`, with no fill bleeding underneath.
 
 Gradient styles are rasterized once to a DataTexture via
 Gradient.toTexture and sampled across each shape's local bounding
@@ -163,4 +168,4 @@ tint, and mask support from Container.
 
 ## Source
 
-[src/rendering/primitives/Graphics.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L42)
+[src/rendering/primitives/Graphics.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L47)
