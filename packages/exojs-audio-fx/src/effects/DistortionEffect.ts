@@ -5,7 +5,9 @@ export interface DistortionEffectOptions {
   /**
    * Drive amount: controls the intensity of the tanh soft-clip curve.
    * Range 0..1, default 0.4. Higher values produce heavier, more saturated
-   * distortion; lower values keep the signal nearly linear.
+   * distortion; lower values produce a milder soft-clip. Note that even at
+   * drive=0 the curve is not perfectly linear — the formula
+   * `tanh(x) / tanh(1)` has a gain of `1/tanh(1) ≈ 1.31` at the origin.
    */
   drive?: number;
   /**
@@ -193,12 +195,14 @@ export class DistortionEffect extends AudioEffect {
    *
    * Maps drive to a distortion amount `a = drive * 400 + 1`, then fills the
    * curve with `tanh(x * a) / tanh(a)` so that the output is always bounded
-   * to [-1, 1] and is nearly linear at drive=0.
+   * to [-1, 1]. At drive=0, `a = 1` and the curve is `tanh(x) / tanh(1)`,
+   * which has a small-signal gain of `1/tanh(1) ≈ 1.31` — not perfectly
+   * linear. At drive=1, `a = 401` and the curve approximates a hard-clipper.
    */
   private static _buildCurve(drive: number): Float32Array<ArrayBuffer> {
     const n = 256;
     const curve: Float32Array<ArrayBuffer> = new Float32Array(n);
-    // drive=0 → amount=1 (essentially linear); drive=1 → amount=401 (near hard-clip)
+    // drive=0 → amount=1 (mild curve: gain ≈ 1/tanh(1) ≈ 1.31 at origin); drive=1 → amount=401 (near hard-clip)
     const amount = drive * 400 + 1;
     const norm = Math.tanh(amount);
     for (let i = 0; i < n; i++) {

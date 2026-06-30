@@ -217,8 +217,8 @@ describe('TremoloEffect', () => {
     it('connects LFO: lfoOscillator → lfoGain → tremoloGain.gain', () => {
       const effect = new TremoloEffect();
       expect(lfoOscillator.connect).toHaveBeenCalledWith(lfoGain);
-      // lfoGain connects to tremoloGain.gain AudioParam
-      expect(lfoGain.connect).toHaveBeenCalled();
+      // lfoGain must connect specifically to tremoloGain.gain (the AudioParam), not just anything
+      expect(lfoGain.connect).toHaveBeenCalledWith(tremoloGain.gain);
       effect.destroy();
     });
 
@@ -309,8 +309,8 @@ describe('TremoloEffect', () => {
     it('connects LFO to pan: lfoOscillator → panGain → panner.pan', () => {
       const effect = new TremoloEffect({ autoPan: true });
       expect(lfoOscillator.connect).toHaveBeenCalledWith(panGain);
-      // panGain connects to panner.pan AudioParam
-      expect(panGain.connect).toHaveBeenCalled();
+      // panGain must connect specifically to panner.pan (the AudioParam), not just anything
+      expect(panGain.connect).toHaveBeenCalledWith(panner.pan);
       effect.destroy();
     });
 

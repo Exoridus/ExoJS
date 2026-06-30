@@ -10,8 +10,9 @@ export interface TremoloEffectOptions {
   /**
    * Modulation depth, 0..1. Determines the amplitude of the LFO that modulates
    * `tremoloGain.gain`. The base gain is `1 - depth`; adding the LFO (peak = `depth`)
-   * makes the gain oscillate between `1 - 2 * depth` and `1`.
-   * At 0 the effect is transparent; at 1 the signal dips to near silence. Default 0.7.
+   * makes the gain oscillate between `1 - 2 * depth` and `1`. At depth=0 the effect
+   * is transparent; at depth=0.5 the gain briefly reaches zero at the trough; at
+   * depth>0.5 the gain goes negative (phase inversion at the trough). Default 0.7.
    */
   depth?: number;
   /**
@@ -134,8 +135,9 @@ export class TremoloEffect extends AudioEffect {
   }
 
   /**
-   * Modulation depth, 0..1. At 0 the effect is transparent; at 1 the signal dips to
-   * near silence at the LFO trough. Default 0.7. Ramped via `setTargetAtTime`.
+   * Modulation depth, 0..1. At 0 the effect is transparent; at 0.5 the gain briefly
+   * reaches zero at the trough; at depth>0.5 the gain goes negative (phase inversion).
+   * Default 0.7. Ramped via `setTargetAtTime`.
    */
   public get depth(): number {
     return this._depth;
