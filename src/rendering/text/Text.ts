@@ -240,6 +240,8 @@ export class Text extends AbstractText {
       if (py > maxY) maxY = py;
     }
     this._textBounds = { width: maxX, height: maxY };
+    this.getLocalBounds().set(0, 0, maxX, maxY);
+    this._invalidateBoundsCascade();
 
     this._pageQuads = buildTextPageQuads(placements);
     this._style.consumeDirty();
