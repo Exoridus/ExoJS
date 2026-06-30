@@ -140,6 +140,17 @@ var PLL_FREERUN_FRAC = 0.25; // free-run (grid) emit once the prediction is pass
 var PLL_RESYNC_FRAC = 0.25; // re-seed the PLL period from the ACF tempo if it drifts beyond this
 var PLL_BOOTSTRAP_MAX_AGE_IBI = 2.0; // bootstrap anchors to the newest onset within this many IBIs
 
+// ---- DJ-drift dual-window tracking (T5) ----
+// The tracked tempo normally follows the long STABLE window (octave-safe, steady). When the
+// short FAST window consistently reports a DIFFERENT, non-octave tempo over several ACF hops,
+// the grid follows it — a genuine DJ drift, not noise. A single noisy hop can never move the
+// grid (the persistence streak below), and octave-scale disagreements are left to the stable
+// hysteresis (they are metrical ambiguity, owned by the octave guards there).
+var DRIFT_MIN_FRAC = 0.012; // fast must differ from the grid by > this to count as drift (~1.2%)
+var DRIFT_MAX_FRAC = 0.20;  // beyond this it is a hard jump → owned by the stable hysteresis
+var DRIFT_AGREE_FRAC = 0.04; // consecutive fast estimates within this keep the confirmation streak
+var DRIFT_CONFIRM_HOPS = 3; // consecutive confirming ACF hops required before the grid follows
+
 // Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
 function computeAcfInline(flux, n, minLag, maxLag, out) {
     var lagCount = maxLag - minLag + 1;
@@ -198,7 +209,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._maxBpm     = opts.maxBpm     || 300;
         this._melBands   = opts.melBands   || 24;
         this._settlingMs = opts.settlingMs !== undefined ? opts.settlingMs : 1500;
-        this._tempoWindowSec = opts.tempoWindowSec || 6;
+        // T5 dual tempo windows. The short FAST window detects a genuine tempo change quickly;
+        // the long STABLE window holds the grid steady against noise/octave artefacts. A single
+        // flux ring is sized to the stable window and the fast window is its most-recent sub-span.
+        this._fastTempoWindowSec   = opts.fastTempoWindowSec   || 2.5;
+        this._stableTempoWindowSec = opts.stableTempoWindowSec || 8;
         this._enableTsDetection = opts.enableTimeSignatureDetection !== false;
 
         var numBins = this._fftSize >> 1;
@@ -212,11 +227,15 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
         this._melBandFilters = buildMelFilterbank(this._melBands, 80, 8000, this._fftSize, this._sampleRate);
         this._melOut         = new Float32Array(this._melBands);
-        var fluxWindowLen    = Math.ceil(this._tempoWindowSec * this._sampleRate / this._hopSize);
+        var fluxWindowLen    = Math.ceil(this._stableTempoWindowSec * this._sampleRate / this._hopSize);
         this._fluxWindow     = new Float32Array(fluxWindowLen);
         this._linFlux        = new Float32Array(fluxWindowLen); // scratch: ring → linear (oldest first)
         this._fluxWritePos   = 0;
         this._fluxCount      = 0;
+        // Window spans in hops. The STABLE span is the whole ring; the FAST span is its most
+        // recent slice. Both still hold ≥ maxLag+1 hops so the slowest tempo stays resolvable.
+        this._stableWindowHops = fluxWindowLen;
+        this._fastWindowHops   = Math.min(fluxWindowLen, Math.ceil(this._fastTempoWindowSec * this._sampleRate / this._hopSize));
         var LAG_K = 3;
         this._prevMelFrames  = [];
         for (var i = 0; i < LAG_K; i++) {
@@ -234,14 +253,20 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._acf    = new Float32Array(this._maxLag - this._acfMinLag + 1); // scratch ACF buffer
 
         this._hopsSinceACF = 0;
-        var ACF_INTERVAL = 15;
-        this._acfInterval = ACF_INTERVAL;
+        // ACF cadence: hops between tempogram recomputations. Configurable via acfIntervalHops
+        // (default 15). Lower = faster reaction at more CPU; keep ≥ 1.
+        this._acfInterval = Math.max(1, Math.round(opts.acfIntervalHops !== undefined ? opts.acfIntervalHops : 15));
 
         // Tempo state
         this._bestBpm        = 0;
         this._bestScore      = 0;
         this._candidates     = [];
         this._firstLockSample = -1; // sample index of first lock (for hysteresis grace window)
+
+        // T5 drift-tracking state. The fast window must point at a different, non-octave tempo
+        // CONSISTENTLY (over several ACF hops) before the held grid follows it.
+        this._driftBpm  = 0; // tempo the fast window is currently pointing at (the streak target)
+        this._driftHops = 0; // consecutive ACF hops the fast window has confirmed that target
 
         // Phase state
         this._lastBeatSample = -1;
@@ -418,19 +443,25 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         }
     }
 
-    _computeACFAndCandidates() {
-        var n   = this._fluxCount;
+    // Score tempo candidates over the most-recent spanHops of the flux ring (capped at the
+    // available count). Mirrors src/dsp/tempogram.computeTempoCandidates over that span: ACF →
+    // positive peaks (parabola-refined interior, raw endpoints) → comb − super-harmonic penalty
+    // × tempo prior → top-3 sorted by score. The STABLE span (whole ring) is the parity-checked
+    // candidate set. Shares the _linFlux / _acf scratch buffers, so the caller must consume the
+    // returned array before the next call.
+    _scoreSpan(spanHops) {
         var buf = this._fluxWindow;
         var wp  = this._fluxWritePos;
         var len = buf.length;
+        var n   = spanHops < this._fluxCount ? spanHops : this._fluxCount;
         var minLag  = this._acfMinLag;        // extended ACF base (see constructor)
         var maxLag  = this._maxLag;
         var numLags = maxLag - minLag + 1;
         var loBpm   = this._minBpm * 0.95;    // CANDIDATE_EDGE_TOLERANCE = 0.05
         var hiBpm   = this._maxBpm * 1.05;
 
-        // Linearise the flux ring buffer (oldest first) into a scratch array so the ACF
-        // operates on the same layout src/dsp/tempogram.computeAcf expects.
+        // Linearise the most-recent n hops of the flux ring (oldest first) into a scratch array
+        // so the ACF operates on the same layout src/dsp/tempogram.computeAcf expects.
         var lin = this._linFlux;
         for (var t = 0; t < n; t++) {
             lin[t] = buf[((wp - 1 - (n - 1 - t)) % len + len) % len];
@@ -488,18 +519,29 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         }
         scored.sort(function(a, b) { return b.score - a.score; });
 
-        this._candidates = scored.slice(0, 3);
+        return scored.slice(0, 3);
+    }
+
+    _computeACFAndCandidates() {
+        // T5 dual ACF windows over the SAME flux ring. The long STABLE span holds the grid (and
+        // is the parity-checked candidate set the state message reports); the short FAST span
+        // detects a genuine tempo change quickly. Both feed the octave-aware hysteresis below.
+        var stable = this._scoreSpan(this._stableWindowHops);
+        var fast   = this._scoreSpan(this._fastWindowHops);
+
+        this._candidates = stable;
         if (this._candidates.length === 0) return;
 
         var top = this._candidates[0];
 
         // Octave-aware hysteresis with a short first-lock grace window.
         if (this._bestBpm <= 0) {
-            // First lock
+            // First lock — adopt the stable window's top candidate.
             this._bestBpm   = top.bpm;
             this._bestScore = top.score;
             this._firstLockSample = this._sampleCount;
         } else {
+            // --- Stable-window hysteresis: holds the grid against noise + octave artefacts. ---
             // Fresh score of the currently-tracked tempo from this frame.
             var currentScore = 0;
             for (var c = 0; c < this._candidates.length; c++) {
@@ -533,9 +575,54 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             } else {
                 this._bestScore = currentScore;
             }
+
+            // --- Fast-window drift adaptation: follows a genuine, sustained DJ drift. ---
+            this._trackDrift(fast);
         }
 
         this._updateConfidence();
+    }
+
+    // T5 DJ-drift adaptation. The fast window leads a genuine tempo drift that the long stable
+    // window (and thus the held grid) lags. When the fast window points at a non-octave tempo a
+    // small-but-meaningful distance from the grid, and keeps pointing there for DRIFT_CONFIRM_HOPS
+    // consecutive ACF hops, the grid follows it. Octave-scale and hard-jump disagreements are
+    // left to the stable hysteresis above (it carries the octave guards); single noisy hops are
+    // filtered out by the persistence streak — so a static tempo is never made nervous.
+    _trackDrift(fast) {
+        if (fast.length === 0) { this._driftHops = 0; this._driftBpm = 0; return; }
+        var fastTop = fast[0];
+        var r = fastTop.bpm / this._bestBpm;
+        var diff = r > 1 ? r - 1 : 1 - r;
+
+        var octave = Math.abs(r - 0.5) < 0.05 || Math.abs(r - 2) < 0.1 ||
+                     Math.abs(r - 3) < 0.15 || Math.abs(r - 1/3) < 0.05 ||
+                     Math.abs(r - 2/3) < 0.04 || Math.abs(r - 3/2) < 0.06;
+
+        // Fast agrees with the grid, or disagrees at octave / hard-jump scale → not a drift.
+        if (octave || diff <= DRIFT_MIN_FRAC || diff > DRIFT_MAX_FRAC) {
+            this._driftHops = 0;
+            this._driftBpm = 0;
+            return;
+        }
+
+        // Diverging within the drift band — accumulate a confirmation streak on a stable target.
+        if (this._driftBpm > 0 && Math.abs(fastTop.bpm / this._driftBpm - 1) < DRIFT_AGREE_FRAC) {
+            this._driftHops++;
+        } else {
+            this._driftHops = 1;
+        }
+        this._driftBpm = fastTop.bpm;
+
+        if (this._driftHops >= DRIFT_CONFIRM_HOPS) {
+            var oldBpm = this._bestBpm;
+            this._bestBpm   = fastTop.bpm;
+            this._bestScore = fastTop.score;
+            this._driftHops = 0; // restart the streak; the next step must re-confirm
+            if (Math.abs(this._bestBpm - oldBpm) / oldBpm > 0.05) {
+                this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
+            }
+        }
     }
 
     // Minimum spacing (samples) between two detected onsets. Once a tempo is locked the

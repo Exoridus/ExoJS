@@ -17,8 +17,27 @@ export interface BeatDetectorOptions {
   fftSize?: number;
   /** Hop size in samples between successive FFTs. Default 512. */
   hopSize?: number;
-  /** Sliding window duration for tempogram (seconds). Default 6. */
-  tempoWindowSec?: number;
+  /**
+   * Short tempogram window (seconds) that reacts quickly to a genuine tempo
+   * change. Default 2.5. The tracked tempo follows this FAST window only when it
+   * disagrees with {@link stableTempoWindowSec} consistently over several
+   * analysis hops, so a real DJ drift is tracked without making a steady tempo
+   * nervous.
+   */
+  fastTempoWindowSec?: number;
+  /**
+   * Long tempogram window (seconds) that holds the tempo grid steady against
+   * noise and octave ambiguity. Default 8. Should be ≥ {@link fastTempoWindowSec}
+   * and large enough to hold ≳ 2 periods of the slowest tempo; it also sizes the
+   * internal flux ring buffer.
+   */
+  stableTempoWindowSec?: number;
+  /**
+   * Hops between successive autocorrelation (tempogram) recomputations.
+   * Default 15 (~160 ms at 48 kHz with the default 512-sample hop). Lower values
+   * react faster to tempo changes at the cost of more CPU.
+   */
+  acfIntervalHops?: number;
   /** Initial suppression period before beats are emitted (ms). Default 1500. */
   settlingMs?: number;
   /** Number of mel filterbank bands. Default 24. */
@@ -181,7 +200,9 @@ export class BeatDetector {
       maxBpm: options?.maxBpm ?? 300,
       fftSize: options?.fftSize ?? 2048,
       hopSize: options?.hopSize ?? 512,
-      tempoWindowSec: options?.tempoWindowSec ?? 6,
+      fastTempoWindowSec: options?.fastTempoWindowSec ?? 2.5,
+      stableTempoWindowSec: options?.stableTempoWindowSec ?? 8,
+      acfIntervalHops: options?.acfIntervalHops ?? 15,
       settlingMs: options?.settlingMs ?? 1500,
       melBands: options?.melBands ?? 24,
       enableTimeSignatureDetection: options?.enableTimeSignatureDetection ?? true,
@@ -402,7 +423,9 @@ export class BeatDetector {
           maxBpm: opts.maxBpm,
           melBands: opts.melBands,
           settlingMs: opts.settlingMs,
-          tempoWindowSec: opts.tempoWindowSec,
+          fastTempoWindowSec: opts.fastTempoWindowSec,
+          stableTempoWindowSec: opts.stableTempoWindowSec,
+          acfIntervalHops: opts.acfIntervalHops,
           enableTimeSignatureDetection: opts.enableTimeSignatureDetection,
         },
       });

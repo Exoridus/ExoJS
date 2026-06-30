@@ -386,6 +386,47 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     expect(allMetrics.get('breakDrop_128bpm')!.fpRatePerMin).toBeLessThanOrEqual(2.5);
   });
 
+  // ── T5 acceptance gates (DJ-drift: fast + stable dual tempo windows) ──
+  // The tracked tempo now runs two autocorrelation spans over one flux ring: a long STABLE
+  // window holds the grid, and a short FAST window detects a genuine tempo change. The grid
+  // follows the fast window only when it disagrees with the stable one CONSISTENTLY over several
+  // ACF hops, so a real DJ drift is tracked tightly while a steady tempo stays put. The drift
+  // fixtures' steady-state tempo error drops sharply vs the single-window baseline (tempoRamp
+  // mean 4.09→~2.0 BPM, tempoDrift 5.86→~3.1 BPM, djMixDrift 3.39→~2.7 BPM) while beat offset,
+  // recall and every static fixture (T1–T4 gates above) are held.
+
+  // Steady-state BPM error well within ±5%, and strictly better than the single-window baseline.
+  it('T5: tempoRamp steady-state BPM error ≤3% and improved vs baseline (4.09 BPM)', () => {
+    const e = allMetrics.get('tempoRamp_120_to_135bpm')!;
+    expect(pct(e)).toBeLessThanOrEqual(0.03);
+    expect(e.bpmErrorMeanAbs).toBeLessThan(4.09);
+  });
+  it('T5: tempoDrift steady-state BPM error ≤4% and improved vs baseline (5.86 BPM)', () => {
+    const e = allMetrics.get('tempoDrift_150_to_128bpm')!;
+    expect(pct(e)).toBeLessThanOrEqual(0.04);
+    expect(e.bpmErrorMeanAbs).toBeLessThan(5.86);
+  });
+
+  // Drift tracking must not cost recall, and beat-offset p90 is held vs the recorded baseline.
+  for (const [label, p90MaxMs] of [
+    ['tempoRamp_120_to_135bpm', 37],
+    ['tempoDrift_150_to_128bpm', 55],
+  ] as const) {
+    it(`T5: ${label} recall ≥90% and beat-offset p90 held (≤${p90MaxMs}ms)`, () => {
+      const e = allMetrics.get(label)!;
+      expect(e.recall).toBeGreaterThanOrEqual(0.9);
+      expect(e.beatOffsetP90Ms).toBeLessThanOrEqual(p90MaxMs);
+    });
+  }
+
+  // The flagship drift case stays locked to 180 under drift — no octave slip (T1b gates ≤3%).
+  it('T5: djMixDrift_180 stays locked to 180 (no octave slip)', () => {
+    const e = allMetrics.get('djMixDrift_180bpm_d5')!;
+    expect(e.octaveHalf).toBe(false);
+    expect(e.octaveDouble).toBe(false);
+    expect(pct(e)).toBeLessThanOrEqual(0.03);
+  });
+
   // ── Write committed baseline snapshot ──
 
   afterAll(() => {

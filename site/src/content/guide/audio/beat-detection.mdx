@@ -141,10 +141,12 @@ Construction options with their defaults:
 ```js
 const detector = new BeatDetector({
     minBpm: 50,                            // minimum detectable tempo
-    maxBpm: 250,                           // maximum detectable tempo
+    maxBpm: 300,                           // maximum detectable tempo
     fftSize: 2048,                         // internal FFT window
     hopSize: 512,                          // samples between successive FFTs
-    tempoWindowSec: 6,                     // sliding window for tempogram
+    fastTempoWindowSec: 2.5,               // short tempogram window (reacts to tempo changes)
+    stableTempoWindowSec: 8,               // long tempogram window (holds the grid steady)
+    acfIntervalHops: 15,                   // hops between tempogram recomputations
     settlingMs: 1500,                      // initial suppression period
     melBands: 24,                          // mel filterbank bands
     enableTimeSignatureDetection: true,    // auto-detect 3/4 vs 4/4
@@ -152,7 +154,7 @@ const detector = new BeatDetector({
 });
 ```
 
-`minBpm` and `maxBpm` constrain the tempo search. `tempoWindowSec` controls how much history the autocorrelation uses — larger values give more stable tempo estimates on steady music but slower reaction to tempo changes. `melBands` controls the granularity of the internal onset detection; the default of 24 is sufficient for most music.
+`minBpm` and `maxBpm` constrain the tempo search. The tempogram runs two autocorrelation windows: `stableTempoWindowSec` holds a steady tempo grid, while the shorter `fastTempoWindowSec` reacts to tempo changes — the tracked tempo only follows the fast window when it disagrees with the stable one consistently, so a real DJ drift is tracked without making a steady tempo nervous. `acfIntervalHops` sets how often the tempogram is recomputed (lower reacts faster at more CPU). `melBands` controls the granularity of the internal onset detection; the default of 24 is sufficient for most music.
 
 ## Lifecycle
 
