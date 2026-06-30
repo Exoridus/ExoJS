@@ -34,10 +34,8 @@ class SplitScreenScene extends Scene {
     }
     init() {
         const { width, height } = this.app.canvas;
-        this.leftView = new View(0, 0, width / 2, height);
-        this.leftView.viewport.set(0, 0, 0.5, 1);
-        this.rightView = new View(0, 0, width / 2, height);
-        this.rightView.viewport.set(0.5, 0, 0.5, 1);
+        this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
+        this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);
         this.divider = new Graphics();
         this.divider.fillColor = Color.white;
         this.divider.drawRectangle(width / 2 - 1, 0, 2, height);
@@ -106,15 +104,12 @@ class SplitScreenScene extends Scene {
         this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
     }
     draw(context) {
-        context.backend.clear();
-        context.backend.setView(this.leftView);
-        context.render(this.leftPlayer);
-        context.render(this.rightPlayer);
-        context.backend.setView(this.rightView);
-        context.render(this.leftPlayer);
-        context.render(this.rightPlayer);
-        context.backend.setView(null);
-        context.render(this.divider);
+        context.clear(Color.black);
+        context.render(this.leftPlayer, { view: this.leftView });
+        context.render(this.rightPlayer, { view: this.leftView });
+        context.render(this.leftPlayer, { view: this.rightView });
+        context.render(this.rightPlayer, { view: this.rightView });
+        context.render(this.divider, { view: context.screenView });
     }
 }
 app.start(new SplitScreenScene());
