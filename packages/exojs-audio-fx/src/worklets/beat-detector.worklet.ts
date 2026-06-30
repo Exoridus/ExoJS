@@ -122,6 +122,24 @@ var ONSET_REFRACTORY_IBI_FRAC = 0.4; // once locked, refractory = max(min, frac 
 var ONSET_BEAT_COAST_IBI = 2.0; // suppress beat emission after this many IBIs without an onset
 var ONSET_RING_SIZE = 16; // recent onsets retained for T4's PLL nearestOnset()
 
+// ---- PLL beat-phase tracker (T4) ----
+// A bounded phase-locked loop replaces the old constant-IBI predictor + buggy snap. Each
+// predicted beat is corrected toward the nearest detected onset (sub-hop precise, from the
+// T3 onset ring): a proportional phase nudge plus a small period adjustment, BOTH clamped so
+// a single noisy onset can never yank the grid. Exactly one beat is emitted per predicted
+// beat (the old snap double-advanced and timestamped a beat an IBI ahead). The first beat is
+// bootstrapped to a real recent onset, never an arbitrary settling boundary. The gains are
+// INTERNAL constants (API decision: not public). Tempo selection (T1/T1b/T2) is untouched —
+// the PLL only refines phase/period locally around the ACF-chosen tempo.
+var PLL_PHASE_GAIN = 0.25; // fraction of phase error applied as a phase nudge per beat
+var PLL_TEMPO_GAIN = 0.03; // fraction of phase error folded into the period per beat
+var PLL_MAX_PHASE_FRAC = 0.08; // |phaseCorr| clamp, fraction of the IBI
+var PLL_MAX_TEMPO_FRAC = 0.02; // |ibiCorr| clamp, fraction of the IBI
+var PLL_ACCEPT_FRAC = 0.25; // an onset within ±this·IBI of the prediction is "the" beat onset
+var PLL_FREERUN_FRAC = 0.25; // free-run (grid) emit once the prediction is passed by this·IBI
+var PLL_RESYNC_FRAC = 0.25; // re-seed the PLL period from the ACF tempo if it drifts beyond this
+var PLL_BOOTSTRAP_MAX_AGE_IBI = 2.0; // bootstrap anchors to the newest onset within this many IBIs
+
 // Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
 function computeAcfInline(flux, n, minLag, maxLag, out) {
     var lagCount = maxLag - minLag + 1;
@@ -227,6 +245,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
         // Phase state
         this._lastBeatSample = -1;
+        this._ibiSamples     = 0;  // PLL-tracked inter-beat interval (samples); seeded from ACF tempo
         this._ibiHistory     = new Float32Array(4); // last 4 inter-beat intervals
         this._ibiIdx         = 0;
 
@@ -383,9 +402,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             this._computeACFAndCandidates();
         }
 
-        // Phase tracker
-        var settled = (this._sampleCount - this._settledSamples) > 0;
-        if (this._bestBpm > 0 && settled) {
+        // Phase tracker — runs as soon as a tempo is locked. It is no longer gated on the
+        // full settling window: the PLL bootstraps its phase from a real onset, so beats are
+        // not lost to warm-up (the state-message tempo report still honours settling). Lock
+        // itself cannot occur before the flux window holds ≥ maxLag+1 hops (~1.2 s at minBpm).
+        if (this._bestBpm > 0) {
             this._tickPhase(flux);
         }
 
@@ -600,76 +621,147 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._onsetHopCount++;
     }
 
-    _tickPhase(flux) {
-        if (this._lastBeatSample < 0) {
-            // Bootstrap: set first beat at current sample (T4 will anchor this to an onset).
-            this._lastBeatSample = this._sampleCount;
-            return;
+    // Onset CLOSEST to targetSample within ±windowSamples (sub-hop precise, from the T3 ring) —
+    // the PLL's nearestOnset(): the phase-error reference for the period/phase correction. Using
+    // the closest (not the loudest) onset keeps the loop locked to the phase it is tracking; a
+    // louder neighbour (e.g. a bright off-beat hat) must not be allowed to yank the grid.
+    // Returns the onset sample, or -1 if none.
+    _nearestOnset(targetSample, windowSamples) {
+        var best = -1;
+        var bestDist = windowSamples + 1;
+        var cnt = this._onsetRingCount;
+        for (var i = 0; i < cnt; i++) {
+            var s = this._onsetRingSamples[i];
+            if (s < 0) continue;
+            var d = s - targetSample;
+            if (d < 0) d = -d;
+            if (d <= windowSamples && d < bestDist) { bestDist = d; best = s; }
         }
+        return best;
+    }
 
-        var beatIntervalSamples = 60 / this._bestBpm * this._sampleRate;
-        var phase = (this._sampleCount - this._lastBeatSample) / beatIntervalSamples;
-
-        // Snap correction (T3): the peak-picker's onset (from _detectOnset) replaces the old
-        // crude "flux > 1.5x recentMean" heuristic. When an onset fires near the predicted
-        // beat (phase 0.7..1.3) align the grid to the SUB-HOP onset position — more accurate
-        // than the old integer-hop snap, which tightens beat offsets on clean grids. The
-        // forced phase = 1.0 preserves the original "snap emits a beat this hop" behaviour.
-        if (this._onsetFiredThisHop && phase >= 0.7 && phase <= 1.3) {
-            this._lastBeatSample = this._lastOnsetSample;
-            phase = (this._sampleCount - this._lastBeatSample) / beatIntervalSamples;
-            if (phase < 1.0) phase = 1.0;
+    // Strongest onset no older than maxAgeSamples (ties → most recent) — the phase anchor for
+    // the first beat. Anchoring to the strongest recent transient, rather than merely the
+    // latest, biases the bootstrap toward a real beat onset. Always a real onset — never the old
+    // arbitrary settling boundary. Returns the anchor sample, or -1 if the ring is empty.
+    _bootstrapOnset(maxAgeSamples) {
+        var best = -1;
+        var bestStrength = -1;
+        var cnt = this._onsetRingCount;
+        for (var i = 0; i < cnt; i++) {
+            var s = this._onsetRingSamples[i];
+            if (s < 0 || (this._sampleCount - s) > maxAgeSamples) continue;
+            var st = this._onsetRingStrengths[i];
+            if (st > bestStrength || (st === bestStrength && s > best)) { bestStrength = st; best = s; }
         }
+        return best;
+    }
 
-        // Noise-floor / coast gate (T3): after a sustained absence of onsets (a break or
-        // silence) keep the grid coasting but STOP emitting phantom beats — this is what
-        // removes the breakDrop false positives. Onset-rich material never trips this.
-        var coasting = this._lastOnsetSample >= 0 &&
-            (this._sampleCount - this._lastOnsetSample) > ONSET_BEAT_COAST_IBI * beatIntervalSamples;
+    // Emit exactly one beat at beatSample (samples). Centralises the bar/confidence/lookahead
+    // bookkeeping + port messages so the PLL and the bootstrap share one emission path.
+    _emitBeat(beatSample, flux) {
+        var beatTime = beatSample / this._sampleRate;
 
-        if (phase >= 1.0) {
-            this._lastBeatSample += beatIntervalSamples;
-            if (coasting) return; // suppress emission during silence (grid still advanced)
-            var beatTime = this._lastBeatSample / this._sampleRate;
+        // Update IBI history with the current PLL period.
+        this._ibiHistory[this._ibiIdx] = this._ibiSamples;
+        this._ibiIdx = (this._ibiIdx + 1) & 3;
 
-            // Update IBI history
-            this._ibiHistory[this._ibiIdx] = beatIntervalSamples;
-            this._ibiIdx = (this._ibiIdx + 1) & 3;
+        this._beatsSinceStart++;
+        this._updateBarPosition(flux);
+        this._updateConfidence();
+        this._updateLookahead(beatTime);
 
-            this._beatsSinceStart++;
+        var isDownbeat = this._barPosition === 1;
+        this.port.postMessage({
+            type: 'beat',
+            audioTime: beatTime,
+            tempo: this._bestBpm,
+            confidence: this._confidence,
+            beatPhase: 0,
+            energy: flux,
+            isDownbeat: isDownbeat,
+            beatInBar: this._barPosition,
+        });
 
-            // Update bar position
-            this._updateBarPosition(flux);
-
-            // Compute confidence
-            this._updateConfidence();
-
-            // Lookahead
-            this._updateLookahead(beatTime);
-
-            var isDownbeat = this._barPosition === 1;
-            var beatInfo = {
-                type: 'beat',
+        if (isDownbeat) {
+            this.port.postMessage({
+                type: 'barStart',
                 audioTime: beatTime,
                 tempo: this._bestBpm,
                 confidence: this._confidence,
-                beatPhase: 0,
-                energy: flux,
-                isDownbeat: isDownbeat,
-                beatInBar: this._barPosition,
-            };
-            this.port.postMessage(beatInfo);
-
-            if (isDownbeat) {
-                this.port.postMessage({
-                    type: 'barStart',
-                    audioTime: beatTime,
-                    tempo: this._bestBpm,
-                    confidence: this._confidence,
-                    barNumber: this._barNumber,
-                });
-            }
+                barNumber: this._barNumber,
+            });
         }
+    }
+
+    // Bounded PLL beat-phase tracker (T4). Predicts the next beat at lastBeat + ibi, corrects
+    // phase + period toward the nearest onset (clamped), and emits exactly one beat per
+    // predicted beat. Free-runs on the grid when an onset is missing; coasts (advances the
+    // grid but stops emitting) during sustained silence so breaks don't spawn phantom beats.
+    _tickPhase(flux) {
+        var acfIbi = 60 / this._bestBpm * this._sampleRate;
+
+        // Bootstrap: anchor the first beat to a real recent onset (never an arbitrary
+        // boundary). Emit it — it is a genuine, just-detected transient — so the leading
+        // on-grid beat is not lost to warm-up. If no onset has arrived yet, wait.
+        if (this._lastBeatSample < 0) {
+            var anchor = this._bootstrapOnset(PLL_BOOTSTRAP_MAX_AGE_IBI * acfIbi);
+            if (anchor < 0) return;
+            this._ibiSamples = acfIbi;
+            this._lastBeatSample = anchor;
+            this._emitBeat(anchor, flux);
+            return;
+        }
+
+        // Keep the PLL period anchored to the ACF tempo: it may track drift within the bounded
+        // tempoGain, but a large gap (octave re-lock / tempoChange) re-seeds it so the loop
+        // never chases a stale interval. Tempo SELECTION is unchanged — this only refines the
+        // local period the phase tracker runs on.
+        if (this._ibiSamples <= 0) this._ibiSamples = acfIbi;
+        if (Math.abs(this._ibiSamples - acfIbi) > PLL_RESYNC_FRAC * acfIbi) {
+            this._ibiSamples = acfIbi;
+        }
+        var ibi = this._ibiSamples;
+
+        var predicted = this._lastBeatSample + ibi;
+        var acceptWin = PLL_ACCEPT_FRAC * ibi;
+
+        // Still early in the beat cycle — wait until we approach the prediction.
+        if (this._sampleCount < predicted - acceptWin) return;
+
+        var onset = this._nearestOnset(predicted, acceptWin);
+
+        var beatSample;
+        if (onset >= 0) {
+            // Bounded phase + period correction toward the matched onset.
+            var error = onset - predicted;
+            var maxPhase = PLL_MAX_PHASE_FRAC * ibi;
+            var phaseCorr = error * PLL_PHASE_GAIN;
+            if (phaseCorr > maxPhase) phaseCorr = maxPhase; else if (phaseCorr < -maxPhase) phaseCorr = -maxPhase;
+            var maxTempo = PLL_MAX_TEMPO_FRAC * ibi;
+            var ibiCorr = error * PLL_TEMPO_GAIN;
+            if (ibiCorr > maxTempo) ibiCorr = maxTempo; else if (ibiCorr < -maxTempo) ibiCorr = -maxTempo;
+            beatSample = predicted + phaseCorr;
+            this._ibiSamples = ibi + ibiCorr;
+        } else if (this._sampleCount >= predicted + PLL_FREERUN_FRAC * ibi) {
+            // Prediction passed with no matching onset → free-run on the grid (period held).
+            beatSample = predicted;
+        } else {
+            // Inside the accept window with no onset yet — give a late onset a chance next hop.
+            return;
+        }
+
+        // Advance the grid by exactly one beat.
+        this._lastBeatSample = beatSample;
+
+        // Coast gate (T3): after a sustained onset gap (break / silence) keep the grid
+        // advancing but STOP emitting — this is what holds the breakDrop false-positive rate
+        // down. Onset-rich material never trips it.
+        var coasting = this._lastOnsetSample >= 0 &&
+            (this._sampleCount - this._lastOnsetSample) > ONSET_BEAT_COAST_IBI * ibi;
+        if (coasting) return;
+
+        this._emitBeat(beatSample, flux);
     }
 
     _computeBeatLikelihood(flux) {

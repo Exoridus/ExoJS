@@ -325,6 +325,67 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     });
   }
 
+  // ── T4 acceptance gates (bounded PLL beat-phase tracker + reliable per-beat emission) ──
+  // The constant-IBI predictor and its double-advancing snap are replaced by a bounded
+  // phase-locked loop bootstrapped to a real onset. Two product wins fall out: (1) the large
+  // anti-phase beat offsets (victims of the old arbitrary-bootstrap phase) collapse from
+  // 120–490 ms to a few ms; (2) emitting exactly one beat per predicted beat lifts recall from
+  // ~40–70 % to ≥90 % on every BPM-correct fixture (the old snap dropped every second beat).
+
+  // Big anti-phase offenders must now sit within a few ms (mean AND p90 well under 60 ms).
+  for (const [label, maxMs] of [
+    ['clicktrack_60bpm', 60],
+    ['clicktrack_140bpm', 60],
+    ['clicktrack_180bpm', 60],
+    ['clicktrack_220bpm', 60],
+    ['clicktrack_300bpm', 60],
+    ['halfTime_64bpm', 60],
+  ] as const) {
+    it(`T4: ${label} beat-offset collapses (<${maxMs}ms mean & p90)`, () => {
+      const e = allMetrics.get(label)!;
+      expect(e.beatOffsetMeanMs).toBeLessThan(maxMs);
+      expect(e.beatOffsetP90Ms).toBeLessThan(maxMs);
+    });
+  }
+
+  // Reliable per-beat emission: recall ≥90 % on every BPM-correct constant-tempo fixture.
+  for (const label of [
+    'clicktrack_50bpm',
+    'clicktrack_60bpm',
+    'clicktrack_90bpm',
+    'clicktrack_120bpm',
+    'clicktrack_128bpm',
+    'clicktrack_140bpm',
+    'clicktrack_180bpm',
+    'clicktrack_220bpm',
+    'clicktrack_250bpm',
+    'clicktrack_300bpm',
+    'halfTime_64bpm',
+    'doubleTime_128bpm',
+    'swing_120bpm_67pct',
+    'grooveOffset_120bpm_10ms',
+    'djMix_180bpm',
+    'softOnset_90bpm',
+  ]) {
+    it(`T4: ${label} recall ≥90%`, () => {
+      expect(allMetrics.get(label)!.recall).toBeGreaterThanOrEqual(0.9);
+    });
+  }
+
+  // djMix-180 locks ON-beat (the flagship DJ-mix case): the bootstrap anchors to the strong
+  // kick onset, not the 8th-note hat, so emitted beats sit on the kick within a few ms.
+  it('T4: djMix_180 locks on-beat (offset <60ms mean & p90)', () => {
+    const e = allMetrics.get('djMix_180bpm')!;
+    expect(e.beatOffsetMeanMs).toBeLessThan(60);
+    expect(e.beatOffsetP90Ms).toBeLessThan(60);
+  });
+
+  // The coast gate must still suppress phantom beats in the breakDrop silence — the PLL may
+  // not reintroduce false positives there.
+  it('T4: breakDrop_128 FP rate stays low (≤2.5/min)', () => {
+    expect(allMetrics.get('breakDrop_128bpm')!.fpRatePerMin).toBeLessThanOrEqual(2.5);
+  });
+
   // ── Write committed baseline snapshot ──
 
   afterAll(() => {
