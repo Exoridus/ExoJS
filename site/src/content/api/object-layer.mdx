@@ -9,7 +9,7 @@ memberCount: 18
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-tilemap/src/ObjectLayer.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L248"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L281"
 ---
 ## Import
 
@@ -33,11 +33,11 @@ parameter reproduces the original untyped behaviour, so
 
 ## Methods
 
-- `byKind(kind: K): Extract<RectangleObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<EllipseObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<PointObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<PolygonObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<PolylineObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<TileObject<Readonly<Record<string, TilePropertyValue>>>, object> | Extract<TextObject<Readonly<Record<string, TilePropertyValue>>>, object>[]`
+- `byKind(kind: K): Extract<RectangleObject<TileProperties>, object> | Extract<EllipseObject<TileProperties>, object> | Extract<PointObject<TileProperties>, object> | Extract<PolygonObject<TileProperties>, object> | Extract<PolylineObject<TileProperties>, object> | Extract<TileObject<TileProperties>, object> | Extract<TextObject<TileProperties>, object>[]`
 - `byType(type: T): TypedObject<S, T>[]`
-- `getObjectById(id: number): TileMapObject<Readonly<Record<string, TilePropertyValue>>> | undefined`
-- `getObjectByName(name: string): TileMapObject<Readonly<Record<string, TilePropertyValue>>> | undefined`
-- `query(filter: ObjectQuery): TileMapObject<Readonly<Record<string, TilePropertyValue>>>[]`
+- `getObjectById(id: number): TileMapObject<TileProperties> | undefined`
+- `getObjectByName(name: string): TileMapObject<TileProperties> | undefined`
+- `query(filter: ObjectQuery): TileMapObject<TileProperties>[]`
 - `where(type: T, predicate: object): TypedObject<S, T>[]`
 
 ## Properties
@@ -47,7 +47,7 @@ parameter reproduces the original untyped behaviour, so
 - `id: number`
 - `kind: "object"`
 - `name: string`
-- `objects: readonly TileMapObject<Readonly<Record<string, TilePropertyValue>>>[]`
+- `objects: readonly TileMapObject<TileProperties>[]`
 - `offsetX: number`
 - `offsetY: number`
 - `opacity: number`
@@ -56,4 +56,4 @@ parameter reproduces the original untyped behaviour, so
 
 ## Source
 
-[packages/exojs-tilemap/src/ObjectLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L248)
+[packages/exojs-tilemap/src/ObjectLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts#L281)

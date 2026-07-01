@@ -420,6 +420,14 @@ describe('TiledMap.toTileMap() — image layers', () => {
     expect(layer?.repeatY).toBe(false);
     expect(layer?.texture).not.toBeNull();
   });
+
+  it('carries the image layer custom properties through toTileMap()', async () => {
+    const tiled = await loadTiledMap('orthogonal-rich.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    const layer = runtime.getImageLayer('Background');
+    expect(layer?.properties.parallaxLayer).toBe('sky');
+  });
 });
 
 // ── Parallax forwarding ──────────────────────────────────────────────────────

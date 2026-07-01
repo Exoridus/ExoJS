@@ -62,10 +62,16 @@ const realShaderPlugin = {
 // Per-project browser headedness:
 //  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
 //  - WebGL2 Firefox:  headless.
-//  - WebGPU Chromium: new headless — WebGPU adapter is available via swiftshader.
+//  - WebGPU Chromium: headless by default (safe for local dev with no display server).
+//    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 — Mesa lavapipe needs a
+//    real display to report a real Vulkan adapter instead of falling back to
+//    SwiftShader, and CI supplies one via xvfb (see `browser-tests-webgpu-chromium`
+//    in `_ci-checks.yml`). Without this gate, `headless: false` would pop a real,
+//    visible Chromium window on every local `pnpm test:browser:webgpu` run.
 //  - WebGPU Firefox:  headed — Firefox only exposes a WebGPU adapter in a headed session.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
 const webgl2Headless = !headed;
+const webgpuCiHeaded = process.env['EXOJS_WEBGPU_CI_HEADED'] === '1';
 
 // Setup run in every browser project to install the `__DEV__` global (see the
 // browserBase note) before any engine module evaluates.
@@ -186,7 +192,17 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu — WebGPU via Chromium new headless (swiftshader) ──
+      // ── browser-webgpu — WebGPU via Chromium + Mesa lavapipe (Vulkan software
+      // rasterizer) ─────────────────────────────────────────────────────────
+      // The `--enable-features=Vulkan` / `--disable-vulkan-surface` flags are the
+      // three.js-proven recipe for getting a REAL (non-SwiftShader) Vulkan adapter
+      // out of Chromium on a free `ubuntu-latest` runner. Locally these args are
+      // harmless (verified against a real Windows/NVIDIA adapter). `headless`
+      // stays true by default so local dev never pops a visible browser window;
+      // CI opts into `headless: false` via `EXOJS_WEBGPU_CI_HEADED=1` because Mesa
+      // lavapipe needs a real display surface to report a real Vulkan adapter
+      // instead of silently falling back to SwiftShader — CI supplies that
+      // display via xvfb (see `browser-tests-webgpu-chromium` in `_ci-checks.yml`).
       {
         ...browserBase,
         test: {
@@ -196,9 +212,20 @@ export default defineConfig({
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,
-            headless: true,
+            headless: !webgpuCiHeaded,
             provider: playwright({
-              launchOptions: { channel: 'chromium', args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'] },
+              launchOptions: {
+                channel: 'chromium',
+                args: [
+                  '--enable-unsafe-webgpu',
+                  '--enable-features=Vulkan',
+                  '--disable-vulkan-surface',
+                  '--ignore-gpu-blocklist',
+                  '--no-sandbox',
+                  '--disable-gpu-watchdog',
+                  '--disable-gpu-driver-bug-workarounds',
+                ],
+              },
             }),
             instances: [{ browser: 'chromium' }],
           },

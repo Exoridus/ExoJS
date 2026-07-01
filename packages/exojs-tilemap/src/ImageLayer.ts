@@ -1,5 +1,7 @@
 import type { Texture } from '@codexo/exojs';
 
+import type { TileProperties } from './types';
+
 /** Construction options for an {@link ImageLayer}. */
 export interface ImageLayerOptions {
   /** Layer id (unique within the map). */
@@ -30,6 +32,8 @@ export interface ImageLayerOptions {
   readonly repeatX?: boolean;
   /** Whether the image repeats vertically. Default `false`. */
   readonly repeatY?: boolean;
+  /** Layer properties (copied and frozen). */
+  readonly properties?: TileProperties;
 }
 
 /**
@@ -75,6 +79,8 @@ export class ImageLayer {
   public readonly repeatX: boolean;
   /** Whether the image repeats vertically. */
   public readonly repeatY: boolean;
+  /** Immutable layer properties. */
+  public readonly properties: TileProperties;
 
   public constructor(options: ImageLayerOptions) {
     this.id = options.id;
@@ -91,5 +97,8 @@ export class ImageLayer {
     this.tintColor = options.tintColor ?? null;
     this.repeatX = options.repeatX ?? false;
     this.repeatY = options.repeatY ?? false;
+    this.properties = options.properties
+      ? Object.freeze({ ...options.properties })
+      : Object.freeze({});
   }
 }

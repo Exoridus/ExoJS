@@ -232,23 +232,43 @@ jobs:
       - name: Browser tests (Chromium WebGL2, new headless)
         run: pnpm test:browser:webgl
 
-  # Optional, non-blocking lane. Chromium WebGPU new-headless is real coverage
-  # locally, but the GitHub-hosted runner currently drops the device on
-  # custom-material tests; keep non-blocking until runner/driver stability is
-  # solved. A failure here never blocks a merge — the lane still runs and
-  # reports. Run locally via `pnpm test:browser:webgpu`.
+  # Blocking lane. Chromium WebGPU is run against Mesa lavapipe (a real Vulkan
+  # software rasterizer) instead of Chromium's bundled SwiftShader WebGPU
+  # fallback — the three.js-proven recipe for getting actual GPU-path coverage
+  # out of a free `ubuntu-latest` runner (no Docker / self-hosted runner
+  # needed). `mesa-vulkan-drivers` provides the lavapipe ICD, `VK_DRIVER_FILES`
+  # points Chromium's ANGLE Vulkan backend at it, and the launch args in
+  # `vitest.config.ts` (`--enable-features=Vulkan`, `--disable-vulkan-surface`)
+  # are required for Chromium to actually pick up a Vulkan adapter instead of
+  # silently falling back to SwiftShader. lavapipe additionally needs a real
+  # display surface to report a usable adapter, so this job sets
+  # `EXOJS_WEBGPU_CI_HEADED=1` (opts the `browser-webgpu` vitest project into
+  # `headless: false`) and runs under `xvfb-run` to supply that display — CI
+  # only; the project stays headless by default so a plain local
+  # `pnpm test:browser:webgpu` never pops a visible browser window. Previously
+  # this lane self-skipped almost everything via `getBackendDeviceOrSkip()`
+  # under SwiftShader and was `continue-on-error`, so it reported green
+  # without proving anything; it is now a real, blocking WebGPU lane.
   browser-tests-webgpu-chromium:
-    name: Browser Tests (Chromium WebGPU, experimental)
+    name: Browser Tests (Chromium WebGPU)
     needs: [changes]
     if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true
+    env:
+      VK_DRIVER_FILES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+      # Opts the `browser-webgpu` vitest project into `headless: false` (see
+      # vitest.config.ts). Unset locally, so `pnpm test:browser:webgpu` stays
+      # headless by default and never pops a visible browser window on a dev box.
+      EXOJS_WEBGPU_CI_HEADED: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install Mesa lavapipe + xvfb
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers xvfb
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -278,8 +298,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Browser tests (Chromium WebGPU, new headless)
-        run: pnpm test:browser:webgpu
+      - name: Browser tests (Chromium WebGPU, Mesa lavapipe via xvfb)
+        run: xvfb-run -a pnpm test:browser:webgpu
 
   # Optional, non-blocking lane. The Ubuntu CI runner does not give headless
   # Firefox a usable WebGL2 context, and Firefox WebGPU adapter availability
@@ -560,7 +580,7 @@ jobs:
   required-ci:
     name: Required CI
     if: ${{ always() }}
-    needs: [changes, typecheck, lint, unit-tests, browser-tests, browser-tests-audio, package-verify, site-build]
+    needs: [changes, typecheck, lint, unit-tests, browser-tests, browser-tests-webgpu-chromium, browser-tests-audio, package-verify, site-build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -574,6 +594,7 @@ jobs:
           LINT_RESULT: ${{ needs.lint.result }}
           UNIT_TESTS_RESULT: ${{ needs['unit-tests'].result }}
           BROWSER_TESTS_RESULT: ${{ needs['browser-tests'].result }}
+          BROWSER_WEBGPU_RESULT: ${{ needs['browser-tests-webgpu-chromium'].result }}
           BROWSER_AUDIO_RESULT: ${{ needs['browser-tests-audio'].result }}
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
@@ -584,6 +605,7 @@ jobs:
           echo "lint: $LINT_RESULT"
           echo "unit-tests: $UNIT_TESTS_RESULT"
           echo "browser-tests: $BROWSER_TESTS_RESULT"
+          echo "browser-tests-webgpu-chromium: $BROWSER_WEBGPU_RESULT"
           echo "browser-tests-audio: $BROWSER_AUDIO_RESULT"
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
@@ -607,6 +629,7 @@ jobs:
             "lint=$LINT_RESULT" \
             "unit-tests=$UNIT_TESTS_RESULT" \
             "browser-tests=$BROWSER_TESTS_RESULT" \
+            "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
             "browser-tests-audio=$BROWSER_AUDIO_RESULT" \
             "package-verify=$PACKAGE_VERIFY_RESULT" \
             "site-build=$SITE_BUILD_RESULT"; do
@@ -623,10 +646,16 @@ jobs:
           # run. A "skipped" here means the path filter wrongly excluded an
           # impacted change — exactly the defect that let package-only PRs go
           # green while their unit / package / browser lanes were skipped.
+          # `browser-tests-webgpu-chromium` shares the same `engine` gate as
+          # `browser-tests` / `unit-tests` / `package-verify` (see its `if:`
+          # above), so it belongs in this same contract check rather than a
+          # bespoke one like `browser-tests-audio`'s (audio-fx has its own,
+          # narrower path-filter flag).
           if [ "$ENGINE" = "true" ]; then
             for entry in \
               "unit-tests=$UNIT_TESTS_RESULT" \
               "browser-tests=$BROWSER_TESTS_RESULT" \
+              "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
               "package-verify=$PACKAGE_VERIFY_RESULT"; do
               name="${entry%%=*}"
               result="${entry#*=}"

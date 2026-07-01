@@ -1,4 +1,5 @@
-import type { ResolvedTile, TileProperties, TilePropertyValue } from './types';
+import type { ResolvedTile, TileProperties, TilePropertyObjectRef, TilePropertyValue } from './types';
+import { TilePropertyKind } from './types';
 
 /**
  * Geometry kinds for a {@link TileMapObject}, as an `as const` value object.
@@ -194,6 +195,38 @@ export interface ObjectQuery {
   readonly value?: TilePropertyValue;
 }
 
+/**
+ * Type guard for the {@link TilePropertyObjectRef} variant of
+ * {@link TilePropertyValue}.
+ * @internal
+ */
+function isTilePropertyObjectRef(value: TilePropertyValue): value is TilePropertyObjectRef {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (value as { kind?: unknown }).kind === TilePropertyKind.ObjectRef
+  );
+}
+
+/**
+ * Equality used by {@link ObjectLayer.query}'s `value` filter.
+ *
+ * Scalars and `null` compare with `===`. `objectRef` values compare by `id`
+ * alone — the one genuinely common "find all objects referencing X" query
+ * need — regardless of differing LDtk navigation fields. Every other
+ * structured shape (`point`, `tileRef`, arrays, nested property bags) has no
+ * obvious value-equality semantics (exact float coordinates? array order?)
+ * and only matches when reference-identical; use `query({ property })`
+ * (presence-only) for those.
+ * @internal
+ */
+function tilePropertyValueEquals(a: TilePropertyValue, b: TilePropertyValue): boolean {
+  if (a === b) return true;
+  if (isTilePropertyObjectRef(a) && isTilePropertyObjectRef(b)) return a.id === b.id;
+  return false;
+}
+
 /** Construction options for an {@link ObjectLayer}. */
 export interface ObjectLayerOptions {
   /** Layer id (unique within the map). */
@@ -299,11 +332,15 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
       }
 
       if (filter.property !== undefined) {
-        if (!(filter.property in object.properties)) {
+        // TilePropertyValue never includes `undefined`, so an `undefined`
+        // read is a reliable "key absent" signal (equivalent to, but avoids
+        // re-indexing after, an `in` check).
+        const value = object.properties[filter.property];
+        if (value === undefined) {
           return false;
         }
 
-        if (filter.value !== undefined && object.properties[filter.property] !== filter.value) {
+        if (filter.value !== undefined && !tilePropertyValueEquals(value, filter.value)) {
           return false;
         }
       }

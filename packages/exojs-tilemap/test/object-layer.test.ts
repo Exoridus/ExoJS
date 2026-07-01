@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TileMapObject } from '../src/index';
-import { ObjectKind, ObjectLayer, TileMap } from '../src/index';
+import type {
+  TileMapObject,
+  TilePropertyObjectRef,
+  TilePropertyPoint,
+  TilePropertyTileRef,
+  TilePropertyValue,
+} from '../src/index';
+import { ObjectKind, ObjectLayer, TileMap, TilePropertyKind } from '../src/index';
 
-const rectangle = (id: number, name: string, type: string, properties: Record<string, string> = {}): TileMapObject => ({
+const rectangle = (id: number, name: string, type: string, properties: Record<string, TilePropertyValue> = {}): TileMapObject => ({
   kind: 'rectangle',
   id,
   name,
@@ -83,6 +89,113 @@ describe('ObjectLayer', () => {
     expect(layer.getObjectByName('hero')?.id).toBe(7);
     expect(layer.getObjectById(99)).toBeUndefined();
     expect(layer.getObjectByName('missing')).toBeUndefined();
+  });
+});
+
+describe('ObjectLayer query() value-matching for structured TilePropertyValue kinds', () => {
+  const objectRefA: TilePropertyObjectRef = {
+    kind: TilePropertyKind.ObjectRef,
+    id: 'entity-1',
+    layerIid: 'layer-a',
+    levelIid: 'level-a',
+    worldIid: 'world-a',
+  };
+  // Same `id`, every nav field differs — must still match by id alone.
+  const objectRefASameId: TilePropertyObjectRef = {
+    kind: TilePropertyKind.ObjectRef,
+    id: 'entity-1',
+    layerIid: 'layer-b',
+    levelIid: 'level-b',
+    worldIid: 'world-b',
+  };
+  const objectRefB: TilePropertyObjectRef = {
+    kind: TilePropertyKind.ObjectRef,
+    id: 'entity-2',
+  };
+  const pointValue: TilePropertyPoint = { kind: TilePropertyKind.Point, cx: 1, cy: 2 };
+  const tileRef: TilePropertyTileRef = {
+    kind: TilePropertyKind.TileRef,
+    tilesetUid: 1,
+    x: 0,
+    y: 0,
+    w: 16,
+    h: 16,
+  };
+  const nested = { a: 1 };
+  const array = [1, 2, 3] as const;
+
+  it('scalar value equality is unchanged', () => {
+    const layer = new ObjectLayer({
+      id: 1,
+      objects: [
+        rectangle(1, 'a', 'spawn', { team: 'red' }),
+        rectangle(2, 'b', 'spawn', { team: 'blue' }),
+      ],
+    });
+
+    expect(layer.query({ property: 'team', value: 'red' })).toHaveLength(1);
+    expect(layer.query({ property: 'team', value: 'red' })[0]!.id).toBe(1);
+    expect(layer.query({ property: 'team', value: 'green' })).toHaveLength(0);
+  });
+
+  it('matches objectRef values by id, regardless of differing nav fields', () => {
+    const layer = new ObjectLayer({
+      id: 1,
+      objects: [
+        rectangle(1, 'a', 'ref', { target: objectRefA }),
+        rectangle(2, 'b', 'ref', { target: objectRefASameId }),
+        rectangle(3, 'c', 'ref', { target: objectRefB }),
+      ],
+    });
+
+    const matches = layer.query({ property: 'target', value: objectRefA });
+    expect(matches.map(o => o.id)).toEqual([1, 2]);
+  });
+
+  it('point values match by reference identity (=== fast path), never structurally', () => {
+    const layer = new ObjectLayer({
+      id: 1,
+      objects: [rectangle(1, 'a', 'p', { at: pointValue })],
+    });
+
+    expect(layer.query({ property: 'at' })).toHaveLength(1);
+    // Same reference as stored -> hits the === fast path.
+    expect(layer.query({ property: 'at', value: pointValue })).toHaveLength(1);
+    // Structurally identical but a distinct object -> never matches.
+    expect(layer.query({ property: 'at', value: { ...pointValue } })).toHaveLength(0);
+  });
+
+  it('tileRef values match by reference identity, never structurally', () => {
+    const layer = new ObjectLayer({
+      id: 1,
+      objects: [rectangle(1, 'a', 't', { region: tileRef })],
+    });
+
+    expect(layer.query({ property: 'region' })).toHaveLength(1);
+    expect(layer.query({ property: 'region', value: tileRef })).toHaveLength(1);
+    expect(layer.query({ property: 'region', value: { ...tileRef } })).toHaveLength(0);
+  });
+
+  it('array values match by reference identity, never structurally', () => {
+    const layer = new ObjectLayer({
+      id: 1,
+      objects: [rectangle(1, 'a', 'arr', { list: array })],
+    });
+
+    expect(layer.query({ property: 'list' })).toHaveLength(1);
+    expect(layer.query({ property: 'list', value: array })).toHaveLength(1);
+    expect(layer.query({ property: 'list', value: [1, 2, 3] })).toHaveLength(0);
+  });
+
+  it('nested property bags match by reference identity, never structurally', () => {
+    const layer = new ObjectLayer({
+      id: 1,
+      objects: [rectangle(1, 'a', 'n', { meta: nested })],
+    });
+
+    expect(layer.query({ property: 'meta' })).toHaveLength(1);
+    expect(layer.query({ property: 'meta', value: nested })).toHaveLength(1);
+    expect(layer.query({ property: 'meta', value: { ...nested } })).toHaveLength(0);
   });
 });
 

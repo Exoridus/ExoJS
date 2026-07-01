@@ -96,6 +96,13 @@ const fromConfig = await loader.load({
 > an absolute `https://…` URL, or set `loader.basePath` to an absolute origin so relative map paths
 > resolve to absolute URLs. A bare relative or root-relative path will fail tileset resolution.
 
+> **Note:** LDtk's "Save levels to separate files" project option stores each level's layers and
+> fields in a sibling `<identifier>.ldtkl` file instead of inline in the `.ldtk` document —
+> `loadLdtkMap()` detects and fetches these external level files automatically as part of the load,
+> so there is nothing extra to do on your end. If you call [`ldtkToTileMap`](#converting-manually-advanced)
+> directly on a raw document whose external levels have not been resolved, those levels convert with
+> empty layers instead (`layerInstances` is `null` until resolved).
+
 ## The LdtkMap result
 
 A loaded `LdtkMap` exposes one runtime `TileMap` per LDtk level, plus the raw parsed document:
@@ -107,8 +114,37 @@ world.data;                        // the raw parsed LdtkData document
 ```
 
 Each level's `TileMap` carries the LDtk tile layers (as `TileLayer`s) and entity layers (as data-only
-`ObjectLayer`s, with each entity's position, size, and scalar fields preserved as object
-properties). World-space placement is stored in `TileMap.properties` (`worldX` / `worldY`).
+`ObjectLayer`s, with each entity's position, size, and fields preserved as object properties). Entity
+positions are corrected for LDtk's per-entity `__pivot` anchor, so an object's `x`/`y` always give the
+bounding box's top-left corner, regardless of which pivot the entity definition uses in the editor.
+See [Entity field values](#entity-field-values) below for how individual field values convert.
+
+World-space placement is stored in `TileMap.properties` (`worldX` / `worldY`), alongside `ldtkUid` /
+`ldtkIid` identifiers and any custom fields set on the **level itself** in the LDtk editor (the
+level's own "Custom fields" tab — distinct from fields on the entities placed inside it), merged in
+under their own field identifier:
+
+```js no-check
+level.properties.worldX;       // number — level's world-space X position in pixels
+level.properties.musicTrack;   // whatever value the level's own custom field carries
+```
+
+## Multi-world projects
+
+LDtk projects can enable "Multi-Worlds" (an advanced project setting) to hold several independent
+worlds — each with its own set of levels — in one `.ldtk` file. When that setting is on, levels live
+under `data.worlds[].levels` instead of the root `data.levels`, which LDtk's format then keeps empty.
+
+The overwhelming majority of projects use a single world and never touch this setting — for those,
+nothing below applies and `world.levels` behaves exactly as shown above. When multi-world **is** in
+use, ExoJS handles it transparently: `LdtkMap.levels` and `getLevelByName()` flatten every world's
+levels into the same single ordered list, so the rest of this guide's API is unchanged either way.
+The only difference is that each converted level's `TileMap.properties` additionally carries the
+owning world's id under the reserved `ldtkWorldIid` key:
+
+```js no-check
+level.properties.ldtkWorldIid; // string | undefined — set only for multi-world projects
+```
 
 ## Rendering a level
 
@@ -133,6 +169,82 @@ for (const level of world.levels) {
 `TileMapNode` handles per-chunk culling and renders the level's layers in document order. For
 interleaving actors between tile layers, use `TileMap.createView()` to obtain independently
 placeable layer nodes — see the [`TileMapView`](/ExoJS/en/api/tile-map-view/) API.
+
+## Entity field values
+
+Every custom field an entity carries in the LDtk editor ends up as a property on that entity's
+`TileMapObject` (found on the entity layer's `ObjectLayer`). Scalar field types — Int, Float, Bool,
+String, Multilines, Color, FilePath, Enum — convert directly to their JS scalar. Three structured
+field types — **Point**, **EntityRef**, and **Tile** — convert into the tagged `TilePropertyValue`
+variants from `@codexo/exojs-tilemap`, discriminated by a `kind` string:
+
+```ts no-check
+import { TilePropertyKind } from '@codexo/exojs-tilemap';
+
+const entities = level.getObjectLayer('Entities');
+const chest = entities?.objects.find((object) => object.type === 'Chest');
+const linkedSwitch = chest?.properties.linkedSwitch;
+
+if (linkedSwitch && typeof linkedSwitch === 'object' && 'kind' in linkedSwitch) {
+    switch (linkedSwitch.kind) {
+        case TilePropertyKind.Point:
+            linkedSwitch.cx; // grid-cell X — a Point field
+            linkedSwitch.cy;
+            break;
+        case TilePropertyKind.ObjectRef:
+            linkedSwitch.id;       // the referenced entity's entityIid — an EntityRef field
+            linkedSwitch.levelIid; // LDtk navigation context, when set
+            break;
+        case TilePropertyKind.TileRef:
+            linkedSwitch.tilesetUid; // a Tile field: region within a tileset, in pixels
+            linkedSwitch.x;
+            linkedSwitch.y;
+            break;
+    }
+}
+```
+
+- **Point** fields (`{ kind: 'point', cx, cy }`) give the field's grid-cell coordinates.
+- **EntityRef** fields (`{ kind: 'objectRef', id, layerIid?, levelIid?, worldIid? }`) reference
+  another entity — `id` is that entity's `entityIid`, matched against `iid`-based lookups rather than
+  the numeric `TileMapObject.id` ExoJS assigns during conversion. The optional `layerIid` /
+  `levelIid` / `worldIid` are LDtk's own navigation context for locating the reference without
+  searching the whole project.
+- **Tile** fields (`{ kind: 'tileRef', tilesetUid, x, y, w, h }`) reference a pixel region within a
+  tileset — useful for entities whose "icon" is picked from a tileset in the editor.
+
+`Array<T>` fields (`Array<Int>`, `Array<Point>`, and so on) convert to a `readonly` array of the same
+per-element conversion — an `Array<Point>` field becomes `readonly TilePropertyPoint[]`, for example.
+Unset (`null`) fields, and unset elements within an array field, are omitted entirely rather than
+carried through as `null` properties.
+
+## IntGrid values
+
+IntGrid layers classify each grid cell with a small integer you assign meaning to in the LDtk editor
+(e.g. `1` = Wall, `2` = Water). Query a converted IntGrid layer's classification with
+`getLdtkIntGridValueAt(layer, x, y)`:
+
+```ts no-check
+import { getLdtkIntGridValueAt } from '@codexo/exojs-ldtk';
+
+const collision = level.getLayerByName('Collision');
+const cell = collision && getLdtkIntGridValueAt(collision, 3, 5);
+
+if (cell) {
+    cell.value;       // the raw integer assigned in the editor
+    cell.identifier;  // the name given to that value in the editor, or null
+    cell.color;       // the editor's swatch colour, as a CSS hex string
+}
+```
+
+`getLdtkIntGridValueAt` returns `undefined` for an out-of-bounds coordinate, an empty cell (raw value
+`0`), a raw value with no matching definition, or a `TileLayer` that was not converted from an IntGrid
+layer in the first place — you don't need to special-case any of those yourself.
+
+Under the hood, the raw per-cell data is stored as JSON-encoded strings under two reserved
+`TileLayer.properties` keys — `ldtkIntGridCsv` (the flat `number[]` CSV, index `y * layer.width + x`)
+and `ldtkIntGridValues` (the layer's raw-value → name/colour definitions). Both exist for advanced
+consumers that want the unprocessed data; prefer `getLdtkIntGridValueAt` for everyday lookups.
 
 ## Converting manually (advanced)
 

@@ -516,7 +516,7 @@ describe('serialization — AnimatedSprite', () => {
     const texture = createTexture(64, 16);
     const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
     const sprite = new AnimatedSprite(texture, {
-      run: { frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)], fps: 10, loop: true },
+      run: { frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)], fps: 10 },
     });
 
     sprite.play('run');
@@ -532,6 +532,82 @@ describe('serialization — AnimatedSprite', () => {
     expect(restored.currentClip).toBe('run');
     expect(restored.playing).toBe(true);
     expect(() => restored.play('run')).not.toThrow();
+  });
+
+  it('round-trips per-frame frameDurations', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      idle: {
+        frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)],
+        frameDurations: [100, 300],
+      },
+    });
+
+    const data = serializeTree(sprite, loader);
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+
+    restored.play('idle');
+    restored.update(100);
+    expect(restored.currentFrame).toBe(1);
+
+    // Frame 1 holds 300ms (frameDurations), not the 100ms it would hold at
+    // the default 12fps if frameDurations had been lost in the round-trip.
+    restored.update(100);
+    expect(restored.currentFrame).toBe(1);
+  });
+
+  it('round-trips per-frame frameOffsets', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      punch: {
+        frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)],
+        frameOffsets: [
+          { x: 0, y: 0 },
+          { x: 4, y: -2 },
+        ],
+      },
+    });
+
+    const data = serializeTree(sprite, loader);
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+
+    restored.play('punch');
+    expect(restored.getLocalBounds().x).toBe(0);
+
+    restored.update(100);
+    expect(restored.currentFrame).toBe(1);
+    expect(restored.getLocalBounds().x).toBe(4);
+    expect(restored.getLocalBounds().y).toBe(-2);
+  });
+
+  it('round-trips a finite repeat count', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      triple: {
+        frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)],
+        fps: 10,
+        repeat: 2,
+      },
+    });
+
+    const data = serializeTree(sprite, loader);
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+    const completeSpy = vi.fn();
+
+    restored.onComplete.add(completeSpy);
+    restored.play('triple');
+
+    // 2 frames @ 10fps = 100ms/frame; one full cycle is 200ms.
+    restored.update(200);
+    expect(restored.playing).toBe(true);
+    expect(completeSpy).not.toHaveBeenCalled();
+
+    restored.update(200);
+    expect(restored.playing).toBe(false);
+    expect(completeSpy).toHaveBeenCalledWith('triple');
   });
 });
 

@@ -18,7 +18,8 @@ import { stencilContentDepthStencilState } from './WebGpuStencilState';
 // both the shader path and the geometry path entry points.
 // ---------------------------------------------------------------------------
 
-const commonWgsl = `
+/** Shared WGSL structs/bindings used by both repeating-sprite entry points. @internal */
+export const commonWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
 };
@@ -44,7 +45,8 @@ struct VOut {
 // Shader path WGSL — one quad per sprite, UVs computed in vertex shader.
 // ---------------------------------------------------------------------------
 
-const shaderPathEntries = `
+/** WGSL entry points for the shader (one-quad-per-sprite) repeating-sprite path. @internal */
+export const shaderPathEntries = `
 struct ShaderVIn {
     @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
     @location(1) uvParams:   vec4<f32>,  // tilingX, tilingY, offsetU, offsetV
@@ -85,7 +87,8 @@ fn shaderFrag(input: VOut) -> @location(0) vec4<f32> {
 // Geometry path WGSL — N quads per sprite, UVs pre-computed in CPU.
 // ---------------------------------------------------------------------------
 
-const geoPathEntries = `
+/** WGSL entry points for the geometry (N-quads-per-sprite) repeating-sprite path. @internal */
+export const geoPathEntries = `
 struct GeoVIn {
     @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
     @location(1) uvBounds:   vec4<f32>,  // u0,v0,u1,v1 (normalised, flipY pre-applied)

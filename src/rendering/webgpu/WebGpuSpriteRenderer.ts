@@ -14,7 +14,8 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
-const spriteShaderSource = `
+/** WGSL source for the default sprite pipeline. @internal */
+export const spriteShaderSource = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
 };

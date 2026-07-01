@@ -11,7 +11,8 @@ export const stencilAttachmentFormat: GPUTextureFormat = 'depth24plus-stencil8';
 const positionNames = new Set<string>(['a_position', 'position']);
 const matrixByteLength = 64; // mat4x4<f32>
 
-const stencilWriteShaderSource = `
+/** WGSL source for the stencil-write pipeline. @internal */
+export const stencilWriteShaderSource = `
 struct Uniforms {
     matrix: mat4x4<f32>,
 };

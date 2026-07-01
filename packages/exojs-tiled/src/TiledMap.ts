@@ -1,8 +1,8 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
 import type { ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
-import { ImageLayer, ObjectLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { ImageLayer, ObjectLayer, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
 
-import type { TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
+import type { TiledClassPropertyValueData, TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
 import {
   maskTiledGid,
   TILED_FLIPPED_DIAGONALLY_FLAG,
@@ -242,6 +242,7 @@ export class TiledMap {
             tintColor: parseTiledColor(layer.tintColor),
             repeatX: layer.repeatX,
             repeatY: layer.repeatY,
+            properties: convertProperties(layer.properties),
           }));
         }
       }
@@ -261,6 +262,7 @@ export class TiledMap {
       class: this.class,
       backgroundColor: parseTiledColor(this.backgroundColor),
       renderOrder: this.renderOrder ?? 'right-down',
+      properties: convertProperties(this.properties),
     });
   }
 
@@ -504,17 +506,82 @@ function convertCollisionObject(obj: TiledObjectData): TileMapObject | null {
 }
 
 /**
- * Project Tiled custom properties to the generic flat property bag. Class /
- * object-valued properties are not representable and are skipped.
+ * Project Tiled custom properties to the generic flat property bag.
+ * `object`-typed properties become a {@link TilePropertyKind.ObjectRef}
+ * (the wire value is already the referenced object's numeric id — Tiled has
+ * no LDtk-style navigation fields, so those stay `undefined`). `class`-typed
+ * properties recursively convert their nested member bag into a
+ * {@link TileProperties}.
  */
 function convertProperties(properties: readonly TiledPropertyData[]): TileProperties {
   if (properties.length === 0) return Object.freeze({});
   const out: Record<string, TilePropertyValue> = {};
   for (const property of properties) {
-    const value = property.value;
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    const value = convertPropertyValue(property);
+    if (value !== undefined) {
       out[property.name] = value;
     }
+  }
+  return Object.freeze(out);
+}
+
+/** Convert one {@link TiledPropertyData} to its canonical {@link TilePropertyValue}. */
+function convertPropertyValue(property: TiledPropertyData): TilePropertyValue | undefined {
+  switch (property.type) {
+    case 'string':
+    case 'int':
+    case 'float':
+    case 'bool':
+    case 'color':
+    case 'file':
+      return property.value;
+
+    case 'object':
+      return { kind: TilePropertyKind.ObjectRef, id: property.value as number };
+
+    case 'class':
+      return convertClassPropertyValue(property.value as TiledClassPropertyValueData, property.propertytype);
+
+    default: {
+      // Exhaustiveness check: if a new TiledPropertyType is ever added,
+      // `property.type` will fail to narrow to `never` here and tsc will error.
+      const _exhaustive: never = property.type;
+      void _exhaustive;
+      throw new Error(`convertProperties: unrecognised Tiled property type "${property.type as string}".`);
+    }
+  }
+}
+
+/**
+ * Reserved key under which a `class`-typed property's Tiled custom-class name
+ * ({@link TiledPropertyData.propertytype}, e.g. `"Stats"`) is stored inside the
+ * converted nested {@link TileProperties} bag, mirroring the `ldtkUid`/
+ * `ldtkWorldIid`-style reserved-metadata-key convention used by the LDtk
+ * adapter (`packages/exojs-ldtk/src/ldtkToTileMap.ts`). Only set on the
+ * top-level converted bag for a class-typed property that has a
+ * `propertytype` — nested-class members carry no `propertytype` of their own
+ * in Tiled's data model, so recursive calls never set it.
+ */
+const tiledClassNameProperty = 'tiledClassName';
+
+/**
+ * Recursively convert a `class`-typed property's nested member bag into a
+ * {@link TileProperties}. Scalar members pass through; nested-class members
+ * recurse (Tiled classes may nest arbitrarily deep). When `propertytype` is
+ * given (the Tiled custom-class name), it is tagged onto the bag under the
+ * reserved {@link tiledClassNameProperty} key, applied last so it can never
+ * be clobbered by a same-named member.
+ */
+function convertClassPropertyValue(value: TiledClassPropertyValueData, propertytype?: string): TileProperties {
+  const out: Record<string, TilePropertyValue> = {};
+  for (const [name, member] of Object.entries(value)) {
+    out[name] =
+      typeof member === 'string' || typeof member === 'number' || typeof member === 'boolean'
+        ? member
+        : convertClassPropertyValue(member);
+  }
+  if (propertytype !== undefined) {
+    out[tiledClassNameProperty] = propertytype;
   }
   return Object.freeze(out);
 }

@@ -9,7 +9,8 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
-const compositorShaderSource = `
+/** WGSL source for the backdrop-blend compositor pipeline. @internal */
+export const compositorShaderSource = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
 };

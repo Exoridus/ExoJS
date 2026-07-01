@@ -110,6 +110,199 @@ map.data;             // the raw parsed TiledMapData
 textures; you decide how to render them (for example, by building a `Mesh` or batching `Sprite`s
 per visible tile). A built-in tilemap renderer is out of this extension's initial scope.
 
+## Custom properties
+
+Tiled's custom properties (on maps, layers, tiles, and objects) survive the trip through
+`map.toTileMap()`. Every runtime `ObjectLayer`, `TileMapObject`, and `TileDefinition` carries a
+`properties` bag — a flat, frozen `Readonly<Record<string, TilePropertyValue>>` built from the
+map's Tiled property list. Plain-scalar Tiled types (`string`, `int`, `float`, `bool`, `color`,
+`file`) come through as their equivalent JS value:
+
+```js no-check
+const tileMap = map.toTileMap();
+const [spawnLayer] = tileMap.objectLayers;
+const spawn = spawnLayer.objects.find(object => object.name === 'PlayerSpawn');
+
+spawn.properties.maxHealth; // number, e.g. 100
+spawn.properties.label;     // string
+spawn.properties.locked;    // boolean
+```
+
+Two Tiled property types aren't plain scalars and convert to structured values instead:
+
+- **`object`-typed properties** — a reference to another Tiled object by numeric id — convert to
+  a `TilePropertyObjectRef`: `{ kind: 'objectRef', id }`. Resolve it by matching `id` against
+  another object's `id` in the same map:
+
+  ```js no-check
+  import { TilePropertyKind } from '@codexo/exojs-tilemap';
+
+  const door = spawnLayer.objects.find(object => object.name === 'Door');
+  const target = door.properties.linkedSwitch;
+
+  if (target?.kind === TilePropertyKind.ObjectRef) {
+    const linkedSwitch = spawnLayer.objects.find(object => object.id === target.id);
+  }
+  ```
+
+- **`class`-typed properties** — Tiled's nested custom-property groups — recursively convert into
+  their own `properties`-shaped bag instead of being dropped. Nesting can be arbitrarily deep, and
+  each nested bag reads the same way as the top-level one:
+
+  ```js no-check
+  const stats = spawn.properties.stats; // a nested TileProperties bag
+  stats.health; // number
+  stats.resistances.fire; // further nesting reads the same way
+  ```
+
+Before this conversion existed, `object`- and `class`-typed properties were indistinguishable from
+a plain number or silently dropped; both are now tagged (`TilePropertyObjectRef`) or preserved
+(nested `TileProperties`) so you can tell them apart from real scalars at runtime.
+
+## Text objects
+
+An object drawn with Tiled's text tool converts to a `TextObject` — a `TileMapObject` whose
+`kind` is `'text'` and whose `text` field carries the styled content:
+
+```js no-check
+import { ObjectKind } from '@codexo/exojs-tilemap';
+
+const tileMap = map.toTileMap();
+const [captionLayer] = tileMap.objectLayers;
+const [caption] = captionLayer.byKind(ObjectKind.Text);
+
+caption.text.text;       // the text content
+caption.text.color;      // 0xRRGGBB, or null for the default colour
+caption.text.fontFamily; // e.g. 'sans-serif'
+caption.text.pixelSize;  // font size in px
+caption.text.bold;
+caption.text.italic;
+caption.text.wrap;       // wrap within the object's [width, height] bounds
+caption.text.halign;     // 'left' | 'center' | 'right' | 'justify'
+caption.text.valign;     // 'top' | 'center' | 'bottom'
+```
+
+`caption.x`, `caption.y`, `caption.width`, and `caption.height` (inherited from the common
+`TileMapObject` fields) give the text box's placement and bounds; ExoJS does not lay out or draw
+the text for you — pair `caption.text` with a [`Text`](/ExoJS/en/guide/rendering/text/) node or
+your own renderer.
+
+## Image layers
+
+A Tiled image layer converts to an `ImageLayer` — a data-only layer holding a single resolved
+image, alongside the same offset/parallax/tint/opacity/`properties` fields tile and object layers
+carry:
+
+```js no-check
+const tileMap = map.toTileMap();
+const [background] = tileMap.imageLayers;
+
+background.texture;   // the resolved Texture (Loader-owned), or null if the image failed to load
+background.repeatX;   // tiles the image horizontally when true
+background.repeatY;   // tiles the image vertically when true
+background.parallaxX; // horizontal parallax factor
+background.parallaxY; // vertical parallax factor
+background.properties.fogDensity; // custom properties — same TileProperties bag as other layers
+```
+
+Like `ObjectLayer`, `ImageLayer` is not a `Drawable` — it exposes the resolved image and its
+placement so a renderer or scene node can draw it; there is no built-in image-layer renderer.
+
+## Per-tile collision shapes
+
+Shapes drawn in Tiled's tile collision editor (the `objectgroup` on an individual tile within a
+tileset) survive the trip through `toTileMap()` as `TileDefinition.collision` — a list of
+`TileMapObject`s in tile-local pixel space (origin at the top-left of the cell):
+
+```js no-check
+const tileMap = map.toTileMap();
+const [ground] = tileMap.layers;
+const tile = ground.getTileAt(3, 5);
+const definition = tile?.tileset.getTileDefinition(tile.localTileId);
+
+for (const shape of definition?.collision ?? []) {
+  shape.kind;   // 'rectangle' | 'ellipse' | 'polygon' | 'polyline' | 'point'
+  shape.x;      // tile-local pixel space
+  shape.y;
+  shape.width;
+  shape.height;
+}
+```
+
+`collision` is only present on definitions for tiles that actually declare shapes in Tiled;
+`getTileDefinition` returns `undefined` for a tile with no per-tile metadata at all. Combine the
+shape's local coordinates with the cell's world position (`tx * tileWidth`, `ty * tileHeight`) to
+place it in map space.
+
+## Base64 and compressed tile data
+
+Tiled can write a tile layer's `data` as a plain CSV array, or as a base64 string that's
+optionally gzip- or zlib-compressed. `@codexo/exojs-tiled` decodes both transparently during the
+async load phase — by the time you read `map.layers`, every layer's data is a plain GID array
+regardless of which encoding the map was exported with. There's no user-facing API for this step;
+it just works.
+
+The one exception is `zstd`: Tiled's zstd tile-layer compression has no native decoder in this
+extension and throws `TiledFormatError`. Re-export the map with gzip, zlib, or uncompressed CSV
+data instead.
+
+## Wang and autotile sets
+
+Wang sets — Tiled's terrain/auto-tile definitions — parse onto `TiledTileset.wangSets` as raw
+`TiledWangSetData`. Convert one with `tiledWangSetToWangSet` into a runtime `WangSet`, then apply
+it to a layer with `autoTile` (a full-layer pass) or `refreshCell` (an incremental, single-cell
+update) from `@codexo/exojs-tilemap`:
+
+```js no-check
+import { tiledWangSetToWangSet } from '@codexo/exojs-tiled';
+import { autoTile, refreshCell } from '@codexo/exojs-tilemap';
+
+const tileMap = map.toTileMap();
+const [ground] = tileMap.layers;
+
+// wangSets live on the parsed TiledTileset, keyed by the runtime tileset's
+// index within `layer.tilesets` (0 here — the layer's only tileset).
+const [wangSetData] = map.tilesets[0].wangSets;
+const wangSet = tiledWangSetToWangSet(wangSetData, 0);
+
+// Re-derive every autotiled variant across the whole layer, e.g. after
+// generating terrain procedurally:
+autoTile(ground, wangSet);
+
+// Or, after painting a single cell, refresh just that cell and its eight
+// neighbours instead of re-running autoTile over the whole layer:
+refreshCell(ground, tx, ty, wangSet);
+```
+
+`tiledWangSetToWangSet` handles Tiled's `'corner'` (blob-style, 8-neighbour) and `'edge'`
+(4-neighbour) wangset types; `'mixed'` wangsets interleave both semantics in a way that can't be
+faithfully represented by a single mask and convert to `null`. This conversion is a deliberate
+manual step (not run automatically by `toTileMap()`) — you decide which layers get autotiled and
+when.
+
+## Per-tile animation
+
+Tiled's tile editor lets you give a tile an animation: a sequence of frames, each showing a
+different local tile ID for a set duration. `toTileMap()` carries these frames into
+`TileDefinition.animation`; `@codexo/exojs-tilemap` ships `TileAnimator` to drive them at runtime,
+RPG-Maker style — advancing every animated cell across one or more layers on a shared clock:
+
+```js no-check
+import { TileAnimator } from '@codexo/exojs-tilemap';
+
+const tileMap = map.toTileMap();
+const animator = new TileAnimator(tileMap.layers);
+
+// Somewhere in your update loop:
+scene.systems.add({ update: (t) => animator.update(t.deltaSeconds) });
+```
+
+`TileAnimator` only rewrites a cell — and rebuilds the chunk that contains it — on the frame it
+actually changes; static tiles, and animated tiles between frame boundaries, are left untouched.
+Call `animator.reset()` to snap every animated cell back to its first frame (useful before
+serialising or pausing), and `animator.rescan()` after structural edits that add or remove
+animated tiles.
+
 ## Tileset texture ownership
 
 The tileset textures a `TiledMap` exposes are loaded through the `Loader` and owned by the
@@ -125,23 +318,33 @@ the loader's own unload path when nothing else needs them — never from the map
 
 ## Supported scope
 
-The initial extension covers the common orthogonal workflow:
+The extension covers the common orthogonal workflow, including format details beyond the basics:
 
 - Orthogonal orientation
-- Tile layers (the tile-index grid)
-- Image-based tilesets (each tileset's `image` is resolved to a `Texture`)
-- Basic object layers (object metadata is preserved in `map.data`)
+- Tile layers, including base64 and gzip/zlib-compressed `data`
+- Image-based (atlas) tilesets, embedded in the map or referenced externally (`.tsj`)
+- Object layers — rectangle, ellipse, point, polygon, polyline, tile, and text objects
+- Image layers
+- Per-tile collision shapes, animation frames, and custom properties
+- Wang/autotile sets, via the `tiledWangSetToWangSet` conversion step (see
+  [Wang and autotile sets](#wang-and-autotile-sets) above)
 
 ## Not supported
 
-These raise a clear error or are intentionally absent in the initial scope:
+These raise a clear error or are intentionally absent from this release:
 
-- **`.tmx` / XML maps** — only the JSON `.tmj` format is parsed. Export from Tiled as JSON.
+- **`.tmx` maps and `.tsx` tilesets (XML)** — only the JSON format is parsed: `.tmj` for maps,
+  `.tsj` for external tilesets. Export from Tiled as JSON.
 - **Infinite maps** — chunked/infinite maps throw; use a fixed-size map.
 - **Non-orthogonal orientations** — isometric, staggered, and hexagonal throw.
-- **Advanced editor features** — external tilesets (`.tsx`), embedded image collections,
-  per-tile animations, and Wang/terrain sets are not interpreted (data may still be present in
-  `map.data` but is not resolved by the handler).
+- **Collection-of-images tilesets** — a tileset built from one image per tile, rather than a
+  single atlas, throws in `toTileMap()`. Use an atlas tileset.
+- **`zstd`-compressed tile data** — no native decoder is wired up; re-export with gzip, zlib, or
+  uncompressed CSV data instead.
+- **Object templates (`.tx`)** — an object's template path is preserved on `TiledObject.template`
+  but not fetched or merged into the object. Avoid templates, or resolve them yourself.
+- **Text kerning** — Tiled's per-text `kerning` flag is parsed (`TiledTextData.kerning`) but
+  dropped during `toTileMap()`; it isn't carried into `TextStyle`.
 
 ## Where to look next
 

@@ -1,6 +1,7 @@
 import type { TileMap } from '@codexo/exojs-tilemap';
 
 import type { LdtkData } from './LdtkData';
+import { getLdtkLevelEntries } from './ldtkLevelEntries';
 
 /**
  * A parsed LDtk world document: holds the raw JSON data and the converted
@@ -22,9 +23,12 @@ export class LdtkMap {
   /**
    * Runtime TileMaps — one per LDtk level, in document order.
    *
-   * The index here corresponds to `data.levels[i]`. Levels for which
-   * conversion was skipped (e.g. external `.ldtkl` files not yet loaded)
-   * are `undefined` at that position.
+   * The index here corresponds to
+   * {@link import('./ldtkLevelEntries').getLdtkLevelEntries}`(data)[i]`, not
+   * `data.levels[i]` — the latter is empty for multi-world documents, where
+   * levels live under `data.worlds[].levels` instead. `loadLdtkMap` fully
+   * resolves external `.ldtkl` levels before conversion, so every entry here
+   * is always a fully converted `TileMap`.
    */
   public readonly levels: readonly TileMap[];
 
@@ -38,10 +42,17 @@ export class LdtkMap {
    * Find a level's runtime {@link TileMap} by the LDtk level `identifier`,
    * or `undefined` when no level with that name exists.
    *
+   * Searches across {@link import('./ldtkLevelEntries').getLdtkLevelEntries}'s
+   * flattened level set rather than `data.levels` directly, so this works for
+   * both single-world and multi-world documents — `data.levels` alone is
+   * empty for the latter.
+   *
    * The lookup is O(n) in the number of levels.
    */
   public getLevelByName(identifier: string): TileMap | undefined {
-    const index = this.data.levels.findIndex(level => level.identifier === identifier);
+    const index = getLdtkLevelEntries(this.data).findIndex(
+      entry => entry.level.identifier === identifier,
+    );
     if (index === -1) return undefined;
     return this.levels[index];
   }
