@@ -31,6 +31,7 @@ export function useSignal<Args extends unknown[], T>(signal: Signal<Args> | null
   const subscribe = useCallback(
     (onStoreChange: () => void): (() => void) => {
       if (!signal) {
+        // No signal to subscribe to (e.g. before an Application exists) — nothing to unsubscribe either.
         return () => {};
       }
 

@@ -61,10 +61,14 @@ function colorKey(color: Color | undefined): string | undefined {
  *
  * @param options - Application options (the canvas element is the one you render).
  * @param onReady - Called once each time an Application is created.
+ * @param onError - Called for every {@link Application.onError} dispatch (async
+ *   init/scene-load failures) while an Application exists. Re-subscribed
+ *   automatically whenever the Application is (re)created.
  */
 export function useExoApplication(
   options?: ExoApplicationOptions,
   onReady?: (app: Application) => void,
+  onError?: (error: unknown) => void,
 ): UseExoApplicationResult {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [app, setApp] = useState<Application | null>(null);
@@ -74,6 +78,12 @@ export function useExoApplication(
   const onReadyRef = useRef(onReady);
   useEffect(() => {
     onReadyRef.current = onReady;
+  });
+
+  // Latest onError without retriggering the subscribe effect below.
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
   });
 
   // Identity: only the backend type forces a full recreation.
@@ -105,6 +115,23 @@ export function useExoApplication(
     // by the effects below. `options` is intentionally read at (re)create time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendKey]);
+
+  // ── Live sync: error reporting ─────────────────────────────────────────────
+  useEffect(() => {
+    if (app === null) {
+      return;
+    }
+
+    const handleError = (error: Error): void => {
+      onErrorRef.current?.(error);
+    };
+
+    app.onError.add(handleError);
+
+    return () => {
+      app.onError.remove(handleError);
+    };
+  }, [app]);
 
   // ── Live sync: size ───────────────────────────────────────────────────────
   const width = options?.canvas?.width;

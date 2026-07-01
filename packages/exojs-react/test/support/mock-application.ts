@@ -30,6 +30,41 @@ interface MockApplicationOptions {
 }
 
 /**
+ * Minimal `Signal`-alike (add/remove/dispatch/count) for `MockApplication.onError`.
+ * Deliberately NOT the real `Signal` from `@codexo/exojs` — this module is
+ * dynamically imported from inside the `vi.mock('@codexo/exojs', …)` factory
+ * (see `configureApplicationStatus` above for the same reasoning), so a
+ * top-level `import { Signal } from '@codexo/exojs'` here would re-enter the
+ * still-resolving mock factory and deadlock the module loader.
+ */
+class MockSignal<Args extends unknown[]> {
+  private readonly _handlers: ((...args: Args) => void)[] = [];
+
+  public get count(): number {
+    return this._handlers.length;
+  }
+
+  public add(handler: (...args: Args) => void): void {
+    if (!this._handlers.includes(handler)) {
+      this._handlers.push(handler);
+    }
+  }
+
+  public remove(handler: (...args: Args) => void): void {
+    const index = this._handlers.indexOf(handler);
+    if (index !== -1) {
+      this._handlers.splice(index, 1);
+    }
+  }
+
+  public dispatch(...args: Args): void {
+    for (const handler of [...this._handlers]) {
+      handler(...args);
+    }
+  }
+}
+
+/**
  * Minimal stand-in for the engine {@link Application}. It owns no GPU backend;
  * it only records the calls the React glue makes (construction, resize,
  * sizingMode / clearColor assignment, start / setScene, destroy) so the tests
@@ -59,6 +94,9 @@ export class MockApplication {
   public readonly clearColorAssignments: unknown[] = [];
 
   public readonly resize = vi.fn();
+
+  /** Tests dispatch through this exactly like the engine's `Application.onError`. */
+  public readonly onError = new MockSignal<[error: Error]>();
 
   public readonly destroy = vi.fn((): void => {
     this.destroyed = true;

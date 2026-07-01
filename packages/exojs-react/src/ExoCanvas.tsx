@@ -22,6 +22,13 @@ export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
    */
   onReady?: (app: Application) => void;
   /**
+   * Called for every {@link Application.onError} dispatch — async init or
+   * scene-load failures (including the ones surfaced by
+   * {@link import('./useScene').useScene} and {@link import('./Scenes').Scenes}
+   * descendants) — while an Application exists.
+   */
+  onError?: (error: unknown) => void;
+  /**
    * Props forwarded to the inner `<canvas>` (e.g. its own `style`/`className`).
    * `ref`, `width` and `height` are managed by the engine and cannot be set.
    */
@@ -47,8 +54,8 @@ export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
  * </ExoCanvas>
  * ```
  */
-export function ExoCanvas({ options, onReady, canvasProps, children, style, ...divProps }: ExoCanvasProps): ReactElement {
-  const { app, canvasRef } = useExoApplication(options, onReady);
+export function ExoCanvas({ options, onReady, onError, canvasProps, children, style, ...divProps }: ExoCanvasProps): ReactElement {
+  const { app, canvasRef } = useExoApplication(options, onReady, onError);
 
   const { style: canvasStyle, ...restCanvasProps } = canvasProps ?? {};
   const wrapperStyle: CSSProperties = { position: 'relative', ...style };
