@@ -238,16 +238,17 @@ jobs:
   # out of a free `ubuntu-latest` runner (no Docker / self-hosted runner
   # needed). `mesa-vulkan-drivers` provides the lavapipe ICD, `VK_DRIVER_FILES`
   # points Chromium's ANGLE Vulkan backend at it, and the launch args in
-  # `vitest.config.ts` (`--enable-features=Vulkan`, `--disable-vulkan-surface`,
-  # `headless: false`) are required for Chromium to actually pick up a Vulkan
-  # adapter instead of silently falling back to SwiftShader — which is why this
-  # runs under `xvfb-run` (a real display is needed for the non-headless
-  # launch). Previously this lane self-skipped almost everything via
-  # `getBackendDeviceOrSkip()` under SwiftShader and was `continue-on-error`,
-  # so it reported green without proving anything; it is now a real, blocking
-  # WebGPU lane. Run locally via `pnpm test:browser:webgpu` (requires a display
-  # or `xvfb-run -a` on a headless dev box, since the project now launches
-  # headed).
+  # `vitest.config.ts` (`--enable-features=Vulkan`, `--disable-vulkan-surface`)
+  # are required for Chromium to actually pick up a Vulkan adapter instead of
+  # silently falling back to SwiftShader. lavapipe additionally needs a real
+  # display surface to report a usable adapter, so this job sets
+  # `EXOJS_WEBGPU_CI_HEADED=1` (opts the `browser-webgpu` vitest project into
+  # `headless: false`) and runs under `xvfb-run` to supply that display — CI
+  # only; the project stays headless by default so a plain local
+  # `pnpm test:browser:webgpu` never pops a visible browser window. Previously
+  # this lane self-skipped almost everything via `getBackendDeviceOrSkip()`
+  # under SwiftShader and was `continue-on-error`, so it reported green
+  # without proving anything; it is now a real, blocking WebGPU lane.
   browser-tests-webgpu-chromium:
     name: Browser Tests (Chromium WebGPU)
     needs: [changes]
@@ -256,6 +257,10 @@ jobs:
     timeout-minutes: 20
     env:
       VK_DRIVER_FILES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+      # Opts the `browser-webgpu` vitest project into `headless: false` (see
+      # vitest.config.ts). Unset locally, so `pnpm test:browser:webgpu` stays
+      # headless by default and never pops a visible browser window on a dev box.
+      EXOJS_WEBGPU_CI_HEADED: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
