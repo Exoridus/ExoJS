@@ -254,6 +254,50 @@ describe('AsepriteSheet.parse — repeat', () => {
   });
 });
 
+// ── AsepriteSheet.parse — slices ────────────────────────────────────────────────
+
+describe('AsepriteSheet.parse — slices', () => {
+  it('populates the slices map keyed by slice name', () => {
+    const sheet = AsepriteSheet.parse(arrayData, newTexture());
+    expect(sheet.slices.has('hitbox')).toBe(true);
+  });
+
+  it('preserves the slice bounds/keys/color from the Aseprite JSON', () => {
+    const sheet = AsepriteSheet.parse(arrayData, newTexture());
+    const hitbox = sheet.slices.get('hitbox')!;
+    expect(hitbox.name).toBe('hitbox');
+    expect(hitbox.color).toBe('#0000ffff');
+    expect(hitbox.keys).toHaveLength(1);
+    expect(hitbox.keys[0]!.frame).toBe(0);
+    expect(hitbox.keys[0]!.bounds).toEqual({ x: 2, y: 2, w: 12, h: 12 });
+  });
+
+  it('produces an empty slices map when meta.slices is absent', () => {
+    const data: AsepriteData = {
+      frames: [
+        {
+          duration: 100,
+          frame: { x: 0, y: 0, w: 16, h: 16 },
+          rotated: false,
+          trimmed: false,
+          sourceSize: { w: 16, h: 16 },
+          spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+        },
+      ],
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 16, h: 16 },
+        scale: '1',
+      },
+    };
+    const sheet = AsepriteSheet.parse(data, newTexture());
+    expect(sheet.slices.size).toBe(0);
+  });
+});
+
 // ── AsepriteSheet.parse — fps averaging and fallbacks ──────────────────────────
 
 describe('AsepriteSheet.parse — fps derivation', () => {

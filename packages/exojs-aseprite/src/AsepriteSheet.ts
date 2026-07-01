@@ -1,6 +1,6 @@
 import { AnimatedSprite, type AnimatedSpriteClipDefinition, type Rectangle, Spritesheet, type Texture } from '@codexo/exojs';
 
-import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag,isAsepriteArrayData } from './AsepriteData';
+import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteSlice,isAsepriteArrayData } from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of
@@ -113,13 +113,24 @@ export class AsepriteSheet {
   public readonly clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>;
 
   /**
+   * Named slices from the Aseprite `meta.slices` metadata, keyed by slice
+   * name. Slices describe editor-defined regions — hitboxes, nine-patch
+   * borders, UI anchor points — that aren't part of the frame/animation
+   * data itself. Each {@link AsepriteSlice} carries one {@link AsepriteSliceKey}
+   * per frame at which its bounds change; consumers resolve the applicable
+   * key for a given frame index themselves.
+   */
+  public readonly slices: ReadonlyMap<string, AsepriteSlice>;
+
+  /**
    * @internal — use {@link AsepriteSheet.parse} to create instances.
    * The public modifier is required for the Loader's `AssetConstructor` token
    * contract; users should call `parse()` instead of constructing directly.
    */
-  public constructor(spritesheet: Spritesheet, clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>) {
+  public constructor(spritesheet: Spritesheet, clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>, slices: ReadonlyMap<string, AsepriteSlice>) {
     this.spritesheet = spritesheet;
     this.clips = clips;
+    this.slices = slices;
   }
 
   /**
@@ -180,7 +191,14 @@ export class AsepriteSheet {
       });
     }
 
-    return new AsepriteSheet(spritesheet, clips);
+    // Build the slices map from meta.slices, keyed by slice name.
+    const slices = new Map<string, AsepriteSlice>();
+
+    for (const slice of data.meta.slices ?? []) {
+      slices.set(slice.name, slice);
+    }
+
+    return new AsepriteSheet(spritesheet, clips, slices);
   }
 
   /**
