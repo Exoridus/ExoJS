@@ -23,9 +23,12 @@ export class LdtkMap {
   /**
    * Runtime TileMaps — one per LDtk level, in document order.
    *
-   * The index here corresponds to `data.levels[i]`. Levels for which
-   * conversion was skipped (e.g. external `.ldtkl` files not yet loaded)
-   * are `undefined` at that position.
+   * The index here corresponds to
+   * {@link import('./ldtkLevelEntries').getLdtkLevelEntries}`(data)[i]`, not
+   * `data.levels[i]` — the latter is empty for multi-world documents, where
+   * levels live under `data.worlds[].levels` instead. `loadLdtkMap` fully
+   * resolves external `.ldtkl` levels before conversion, so every entry here
+   * is always a fully converted `TileMap`.
    */
   public readonly levels: readonly TileMap[];
 
