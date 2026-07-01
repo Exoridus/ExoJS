@@ -99,7 +99,7 @@ describe('AsepriteSheet.parse — clips from frameTags', () => {
     expect(sheet.clips.get('walk')!.frames[1]).toBe(sheet.spritesheet.getFrame('1'));
   });
 
-  it('marks every clip as looping regardless of direction', () => {
+  it('marks every clip as looping by default regardless of direction', () => {
     const sheet = AsepriteSheet.parse(arrayData, newTexture());
     expect(sheet.clips.get('walk')!.loop).toBe(true);
     expect(sheet.clips.get('bounce')!.loop).toBe(true);
@@ -210,6 +210,47 @@ describe('AsepriteSheet.parse — direction expansion', () => {
     // Expanded sequence is [100, 300, 100, 300] (frame 1's duration counted twice)
     // -> avg 200ms -> 5fps. A naive from..to average (100+300+100)/3 would give 6fps.
     expect(sheet.clips.get('clip')!.fps).toBe(5);
+  });
+});
+
+// ── AsepriteSheet.parse — repeat (one-shot vs looping) ─────────────────────────
+
+describe('AsepriteSheet.parse — repeat', () => {
+  function makeData(repeat: string | undefined): AsepriteData {
+    return {
+      frames: [0, 1].map(i => ({
+        duration: 100,
+        frame: { x: i * 16, y: 0, w: 16, h: 16 },
+        rotated: false,
+        trimmed: false,
+        sourceSize: { w: 16, h: 16 },
+        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+      })),
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 32, h: 16 },
+        scale: '1',
+        frameTags: [{ name: 'clip', from: 0, to: 1, direction: 'forward', repeat }],
+      },
+    };
+  }
+
+  it('repeat: "1" marks the clip as one-shot (loop: false)', () => {
+    const sheet = AsepriteSheet.parse(makeData('1'), newTexture());
+    expect(sheet.clips.get('clip')!.loop).toBe(false);
+  });
+
+  it('no repeat field means infinite loop (loop: true)', () => {
+    const sheet = AsepriteSheet.parse(makeData(undefined), newTexture());
+    expect(sheet.clips.get('clip')!.loop).toBe(true);
+  });
+
+  it('repeat: "3" (finite N-times) falls back to infinite loop (loopCount not yet supported)', () => {
+    const sheet = AsepriteSheet.parse(makeData('3'), newTexture());
+    expect(sheet.clips.get('clip')!.loop).toBe(true);
   });
 });
 

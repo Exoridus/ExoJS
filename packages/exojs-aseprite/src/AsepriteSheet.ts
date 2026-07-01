@@ -134,7 +134,9 @@ export class AsepriteSheet {
    * clip — `forward` and `reverse` play the `[from, to]` range in order or
    * in reverse, while `pingpong`/`pingpong_reverse` append a backward pass
    * (excluding both endpoints) so the bounce plays back correctly on the
-   * engine's forward-only {@link AnimatedSprite} playback.
+   * engine's forward-only {@link AnimatedSprite} playback. A clip loops
+   * (`loop: true`) unless the tag's `repeat` is exactly `"1"`, in which case
+   * it plays once (`loop: false`).
    */
   public static parse(data: AsepriteData, texture: Texture): AsepriteSheet {
     const frameArray = normaliseFrames(data);
@@ -167,10 +169,14 @@ export class AsepriteSheet {
         continue;
       }
 
+      // `repeat === '1'` is an explicit one-shot. Any other finite N (e.g. '2',
+      // '3') falls back to an infinite loop pending engine `loopCount` support.
+      const loop = tag.repeat !== '1';
+
       clips.set(tag.name, {
         fps: avgFps(frameArray, indices),
         frames,
-        loop: true,
+        loop,
       });
     }
 
