@@ -136,13 +136,14 @@ The first time a scene starts:
 
 Then, every frame while the scene is active:
 
-3. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
-4. `draw(context)` — render the current state.
+3. `fixedUpdate(delta)` — zero or more deterministic steps with a constant `delta`, run before `update`.
+4. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
+5. `draw(context)` — render the current state.
 
 When the scene is replaced or the application shuts down:
 
-5. `async unload(loader)` — release scene-private assets that aren't needed by the next scene.
-6. `destroy()` — drop scene-graph references and cancel input bindings.
+6. `async unload(loader)` — release scene-private assets that aren't needed by the next scene.
+7. `destroy()` — drop scene-graph references and cancel input bindings.
 
 You override the hooks you need. Empty hooks like `update` and `draw` do nothing by default, so there is no setup ceremony for scenes that only need one or two phases. Cleanup hooks are different: if you override `destroy`, keep the built-in cleanup path intact unless the API reference for your version says otherwise.
 
@@ -179,6 +180,49 @@ init(loader) {
 ```
 
 The `init` hook runs once per scene-start. If you start the scene again later it runs again on the new instance, not on the old one.
+
+## fixedUpdate: deterministic steps
+
+`update` runs once per real frame, so its `delta` varies with the display's refresh rate and any hitches. `fixedUpdate` is the other logic hook: the engine runs it a constant number of times per second — independent of frame rate — before `update`:
+
+```js
+fixedUpdate(delta) {
+    this.world.step(delta.seconds);
+}
+```
+
+Behind the scenes, the application accumulates each frame's elapsed time and drains it in fixed-size chunks — `1 / 60` s by default, configurable via `fixedTimeStep` (seconds) on the `Application` constructor options:
+
+```js
+const app = new Application({ fixedTimeStep: 1 / 30 });
+```
+
+At 60 fps, that is one `fixedUpdate` call per frame, tracking `update` one-to-one. At 144 fps, some frames get zero calls and others get one, averaging out to the configured rate. On a stalled frame (a GC pause, a dropped tab), it can run several calls back-to-back so simulation time is never silently lost — capped at an internal maximum so a single long freeze cannot spiral into minutes of catch-up.
+
+Because the step size never changes, `fixedUpdate` is the right place for anything that must behave identically regardless of frame rate — physics stepping is the headline case; see [Physics basics](/ExoJS/en/guide/physics/physics-basics/) for a full `world.step(delta.seconds)` walkthrough. Leave camera movement, UI, and anything purely visual in `update`: running those at a fixed rate would make them look choppy on high-refresh-rate displays instead of smoother.
+
+### frameAlpha: smoothing between steps
+
+Because `fixedUpdate` calls don't line up one-to-one with rendered frames, there is always a small unrendered remainder — the fraction of the current fixed step already elapsed since the last one ran. The application exposes it as `app.frameAlpha`, a value in `[0, 1)`.
+
+**`frameAlpha` is not applied automatically** — the scene graph never interpolates itself. It exists for you to read and use if you want smooth visual motion between fixed steps: keep the previous and current fixed-step positions and lerp between them by `frameAlpha` when you draw.
+
+```js
+fixedUpdate() {
+    this.hero.prevX = this.hero.x;
+    this.world.step(1 / 60); // moves the body; the binding updates this.hero.x
+}
+
+draw(context) {
+    const alpha = this.app.frameAlpha;
+    const renderX = this.hero.prevX + (this.hero.x - this.hero.prevX) * alpha;
+    this.hero.setPosition(renderX, this.hero.y);
+    context.backend.clear();
+    context.render(this.root);
+}
+```
+
+If you don't need buttery-smooth motion, ignore `frameAlpha` — most scenes never touch it. It matters once the fixed step is coarser than the display's frame rate (say `fixedTimeStep: 1 / 30` on a 144 Hz screen), where skipping interpolation shows up as visible stutter on fast-moving objects.
 
 ## update: per-frame logic
 
