@@ -137,6 +137,7 @@ const layeredData: LdtkData = {
               px: [32, 48],
               width: 16,
               height: 16,
+              __pivot: [0, 0],
               fieldInstances: [
                 { __identifier: 'speed', __type: 'Float', __value: 1.5 },
                 { __identifier: 'name', __type: 'String', __value: 'Hero' },
@@ -150,6 +151,7 @@ const layeredData: LdtkData = {
               px: [64, 32],
               width: 8,
               height: 8,
+              __pivot: [0, 0],
               fieldInstances: [],
               iid: 'cccccccc-0000-0000-0000-000000000002',
               defUid: 201,

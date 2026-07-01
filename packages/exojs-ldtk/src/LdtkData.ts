@@ -50,10 +50,20 @@ export interface LdtkEntityInstance {
   readonly __identifier: string;
   /** Alias of `__identifier`, mirrors the entity definition type. */
   readonly __type: string;
-  /** Pixel position `[x, y]` of the entity origin. */
+  /**
+   * Pixel position `[x, y]` of the entity's pivot-adjusted anchor — NOT the
+   * top-left corner. Combine with {@link __pivot} to recover the bounding
+   * box's top-left corner: `topLeftX = px[0] - width * __pivot[0]`.
+   */
   readonly px: readonly [number, number];
   readonly width: number;
   readonly height: number;
+  /**
+   * Normalised `[x, y]` anchor point within the entity's bounding box, each
+   * in `[0, 1]`. `[0, 0]` = top-left, `[0.5, 0.5]` = center, `[1, 1]` =
+   * bottom-right. Determines how {@link px} relates to the bounding box.
+   */
+  readonly __pivot: readonly [number, number];
   readonly fieldInstances: readonly LdtkFieldInstance[];
   /** Globally unique instance id (UUID string). */
   readonly iid: string;

@@ -315,13 +315,17 @@ function convertEntityLayer(
 }
 
 function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
+  // entity.px is the pivot-adjusted anchor, not the bounding box's top-left
+  // corner — undo the pivot offset to recover the corner TileMapObject expects.
+  const x = entity.px[0] - entity.width * entity.__pivot[0];
+  const y = entity.px[1] - entity.height * entity.__pivot[1];
   return {
     kind: 'rectangle',
     id,
     name: entity.__identifier,
     type: entity.__identifier,
-    x: entity.px[0],
-    y: entity.px[1],
+    x,
+    y,
     width: entity.width,
     height: entity.height,
     rotation: 0,

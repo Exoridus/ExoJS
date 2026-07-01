@@ -513,6 +513,104 @@ describe('ldtkToTileMap — level field instances', () => {
   });
 });
 
+// ── Entity pivot correction ────────────────────────────────────────────────────
+
+describe('ldtkToTileMap — entity pivot correction', () => {
+  it('adjusts px by the pivot to compute the bounding-box top-left corner', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 4,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Torch',
+          __type: 'Torch',
+          px: [40, 64],
+          width: 16,
+          height: 32,
+          __pivot: [0.5, 1],
+          iid: 'torch-1',
+          defUid: 400,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const object = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!;
+    // x = 40 - 16 * 0.5 = 32; y = 64 - 32 * 1 = 32
+    expect(object.x).toBe(32);
+    expect(object.y).toBe(32);
+  });
+
+  it('leaves position unchanged for a default top-left pivot [0, 0]', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 4,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Torch',
+          __type: 'Torch',
+          px: [40, 64],
+          width: 16,
+          height: 32,
+          __pivot: [0, 0],
+          iid: 'torch-1',
+          defUid: 400,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const object = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!;
+    expect(object.x).toBe(40);
+    expect(object.y).toBe(64);
+  });
+
+  it('adjusts by the full width/height for a bottom-right pivot [1, 1]', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 4,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Torch',
+          __type: 'Torch',
+          px: [40, 64],
+          width: 16,
+          height: 32,
+          __pivot: [1, 1],
+          iid: 'torch-1',
+          defUid: 400,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const object = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!;
+    expect(object.x).toBe(24); // 40 - 16
+    expect(object.y).toBe(32); // 64 - 32
+  });
+});
+
 // ── Grid-size derivation ────────────────────────────────────────────────────────
 
 describe('ldtkToTileMap — level tile size derivation', () => {
@@ -727,6 +825,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [0, 0],
           width: 16,
           height: 16,
+          __pivot: [0, 0],
           iid: 'npc-1',
           defUid: 300,
           fieldInstances: [
@@ -768,6 +867,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [0, 0],
           width: 16,
           height: 16,
+          __pivot: [0, 0],
           iid: 'npc-1',
           defUid: 300,
           fieldInstances: [{ __identifier: 'hp', __type: 'Int', __value: 10 }],
@@ -797,6 +897,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [0, 0],
           width: 0,
           height: 0,
+          __pivot: [0, 0],
           iid: 'm-1',
           defUid: 301,
           fieldInstances: [],
@@ -827,6 +928,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [3, 5],
           width: 16,
           height: 16,
+          __pivot: [0, 0],
           iid: 'door-1',
           defUid: 302,
           fieldInstances: [],
@@ -947,6 +1049,7 @@ function makeEntity(identifier: string): LdtkEntityInstance {
     px: [0, 0],
     width: 16,
     height: 16,
+    __pivot: [0, 0],
     iid: `iid-${identifier}`,
     defUid: 0,
     fieldInstances: [],
