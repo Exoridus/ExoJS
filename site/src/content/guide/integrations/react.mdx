@@ -184,12 +184,17 @@ Any component rendered inside `<ExoCanvas>` can read the running app:
 - `ExoContext` is the underlying context object, exported for advanced use (testing, custom
   providers).
 
+`app.frameCount` is a plain getter the engine updates on its own frame loop — reading it
+alone does not make a component re-render. Pair `useExoApp()` with `useSignal()` to subscribe
+to `app.onFrame` and re-render on every dispatch:
+
 ```tsx no-check
-import { useExoApp } from '@codexo/exojs-react';
+import { useExoApp, useSignal } from '@codexo/exojs-react';
 
 function FrameCounter() {
   const app = useExoApp(); // throws if rendered outside <ExoCanvas>
-  return <span>Frame: {app.frameCount}</span>;
+  const frameCount = useSignal(app.onFrame, () => app.frameCount);
+  return <span>Frame: {frameCount}</span>;
 }
 ```
 
