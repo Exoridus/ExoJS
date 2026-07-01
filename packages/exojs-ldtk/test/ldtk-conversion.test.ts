@@ -423,6 +423,96 @@ describe('ldtkToTileMap — IntGrid value exposure', () => {
   });
 });
 
+// ── Level field instances ────────────────────────────────────────────────────────
+
+describe('ldtkToTileMap — level field instances', () => {
+  it('merges scalar level field instances into TileMap.properties', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 7,
+          iid: 'iid-7',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+          fieldInstances: [
+            { __identifier: 'difficulty', __type: 'String', __value: 'hard' },
+            { __identifier: 'timeLimit', __type: 'Int', __value: 60 },
+          ],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.properties['difficulty']).toBe('hard');
+    expect(map.properties['timeLimit']).toBe(60);
+    expect(map.properties['ldtkUid']).toBe(7);
+    expect(map.properties['ldtkIid']).toBe('iid-7');
+  });
+
+  it('never lets a user-defined field clobber a reserved key (reserved keys win)', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 7,
+          iid: 'iid-7',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+          fieldInstances: [
+            { __identifier: 'ldtkUid', __type: 'Int', __value: 999 },
+            { __identifier: 'worldX', __type: 'Int', __value: -1 },
+          ],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.properties['ldtkUid']).toBe(7);
+    expect(map.properties['worldX']).toBe(0);
+  });
+
+  it('produces only the reserved keys when fieldInstances is absent', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(Object.keys(map.properties).sort()).toEqual([
+      'ldtkIid',
+      'ldtkUid',
+      'worldX',
+      'worldY',
+    ]);
+  });
+});
+
 // ── Grid-size derivation ────────────────────────────────────────────────────────
 
 describe('ldtkToTileMap — level tile size derivation', () => {

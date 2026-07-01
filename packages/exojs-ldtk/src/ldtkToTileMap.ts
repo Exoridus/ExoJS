@@ -155,7 +155,10 @@ function convertLevel(
     tilesets: runtimeTilesets,
     layers: runtimeLayers,
     objectLayers: runtimeObjectLayers,
+    // Convert user-defined level fields first, then apply the reserved keys
+    // last so a same-named user field can never clobber them.
     properties: {
+      ...convertFieldInstances(level.fieldInstances ?? []),
       ldtkUid: level.uid,
       ldtkIid: level.iid,
       worldX: level.worldX,
