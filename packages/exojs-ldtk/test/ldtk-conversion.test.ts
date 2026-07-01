@@ -1,7 +1,7 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
 import type { TileProperties } from '@codexo/exojs-tilemap';
 import { TileSet } from '@codexo/exojs-tilemap';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   LdtkData,
@@ -454,6 +454,72 @@ describe('ldtkToTileMap — IntGrid value exposure', () => {
 
     const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
     expect(getLdtkIntGridValueAt(layer, 0, 0)).toBeUndefined();
+  });
+
+  it('parses the CSV/value-defs JSON only once per layer, regardless of call count', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [1, 0, 2, 1],
+    });
+    const withDefs: LdtkData = {
+      ...data,
+      defs: {
+        tilesets: [],
+        layers: [
+          {
+            uid: 120,
+            identifier: 'Collision',
+            type: 'IntGrid',
+            gridSize: 16,
+            intGridValues: [
+              { value: 1, identifier: 'Wall', color: '#ff0000' },
+              { value: 2, identifier: 'Water', color: '#0000ff' },
+            ],
+          },
+        ],
+      },
+    };
+
+    const layer = ldtkToTileMap(withDefs).levels[0]!.layers[0]!;
+
+    const parseSpy = vi.spyOn(JSON, 'parse');
+    try {
+      // Repeated lookups across the whole layer, several times over — a
+      // naive implementation would re-parse both JSON-encoded properties on
+      // every single call.
+      for (let pass = 0; pass < 5; pass++) {
+        expect(getLdtkIntGridValueAt(layer, 0, 0)).toEqual({
+          value: 1,
+          identifier: 'Wall',
+          color: '#ff0000',
+        });
+        expect(getLdtkIntGridValueAt(layer, 1, 0)).toBeUndefined();
+        expect(getLdtkIntGridValueAt(layer, 2, 0)).toEqual({
+          value: 2,
+          identifier: 'Water',
+          color: '#0000ff',
+        });
+        expect(getLdtkIntGridValueAt(layer, 3, 0)).toEqual({
+          value: 1,
+          identifier: 'Wall',
+          color: '#ff0000',
+        });
+      }
+
+      // One parse for the CSV array, one for the value-defs array — cached
+      // after the first lookup and reused for every subsequent call.
+      expect(parseSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      parseSpy.mockRestore();
+    }
   });
 });
 

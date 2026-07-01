@@ -275,6 +275,45 @@ function buildIntGridProperties(
   });
 }
 
+/** Parsed, cached form of a `TileLayer`'s {@link ldtkIntGridCsvProperty} / {@link ldtkIntGridValuesProperty}. */
+interface ParsedIntGridData {
+  readonly csv: readonly number[];
+  readonly values: readonly LdtkIntGridValueDef[];
+}
+
+/**
+ * Per-`TileLayer` cache of parsed IntGrid CSV/value-defs data, populated
+ * lazily on first {@link getLdtkIntGridValueAt} lookup for a given layer.
+ *
+ * Keyed by the `TileLayer` instance itself (`WeakMap`), so an entry is
+ * naturally garbage-collected once the layer it was derived from is no
+ * longer referenced — no manual invalidation needed since
+ * {@link TileLayer.properties} is frozen and copied at construction time and
+ * can never change afterwards.
+ */
+const intGridCache = new WeakMap<TileLayer, ParsedIntGridData>();
+
+/**
+ * Parse (or retrieve from {@link intGridCache}) the IntGrid CSV/value-defs
+ * data attached to `layer`, or `undefined` when `layer` carries no such data
+ * (not converted from an IntGrid layer instance).
+ */
+function getParsedIntGridData(layer: TileLayer): ParsedIntGridData | undefined {
+  const cached = intGridCache.get(layer);
+  if (cached) return cached;
+
+  const csvRaw = layer.properties[ldtkIntGridCsvProperty];
+  const valuesRaw = layer.properties[ldtkIntGridValuesProperty];
+  if (typeof csvRaw !== 'string' || typeof valuesRaw !== 'string') return undefined;
+
+  const parsed: ParsedIntGridData = {
+    csv: JSON.parse(csvRaw) as readonly number[],
+    values: JSON.parse(valuesRaw) as readonly LdtkIntGridValueDef[],
+  };
+  intGridCache.set(layer, parsed);
+  return parsed;
+}
+
 /**
  * Look up the named/coloured {@link LdtkIntGridValueDef} at a tile coordinate
  * on a `TileLayer` converted from an LDtk `IntGrid` layer instance.
@@ -283,6 +322,10 @@ function buildIntGridProperties(
  * value is `0` (empty), the raw value has no matching definition, or `layer`
  * was not converted from an IntGrid layer instance (no IntGrid data attached
  * via {@link ldtkIntGridCsvProperty} / {@link ldtkIntGridValuesProperty}).
+ *
+ * The underlying JSON-encoded CSV/value-defs properties are parsed once per
+ * layer and cached (see {@link getParsedIntGridData}) — safe to call from a
+ * hot path (e.g. per-cell or per-frame collision/classification checks).
  */
 export function getLdtkIntGridValueAt(
   layer: TileLayer,
@@ -291,16 +334,13 @@ export function getLdtkIntGridValueAt(
 ): LdtkIntGridValueDef | undefined {
   if (!layer.inBounds(x, y)) return undefined;
 
-  const csvRaw = layer.properties[ldtkIntGridCsvProperty];
-  const valuesRaw = layer.properties[ldtkIntGridValuesProperty];
-  if (typeof csvRaw !== 'string' || typeof valuesRaw !== 'string') return undefined;
+  const parsed = getParsedIntGridData(layer);
+  if (!parsed) return undefined;
 
-  const csv = JSON.parse(csvRaw) as readonly number[];
-  const raw = csv[y * layer.width + x];
+  const raw = parsed.csv[y * layer.width + x];
   if (raw === undefined || raw === 0) return undefined;
 
-  const values = JSON.parse(valuesRaw) as readonly LdtkIntGridValueDef[];
-  return values.find(v => v.value === raw);
+  return parsed.values.find(v => v.value === raw);
 }
 
 // ── Helpers: ObjectLayer ──────────────────────────────────────────────────────
