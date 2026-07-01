@@ -177,4 +177,81 @@ describe('AnimatedSprite', () => {
     expect(sprite.currentClip).toBe('idle');
     expect(sprite.currentFrame).toBe(1);
   });
+
+  test('frameOffsets translate the local quad so trimmed frames stay anchored to the untrimmed canvas', () => {
+    const frames = createFrames();
+    const sprite = new AnimatedSprite(null, {
+      punch: {
+        frames,
+        fps: 10,
+        loop: true,
+        frameOffsets: [
+          { x: 0, y: 0 },
+          { x: 4, y: -2 },
+          { x: 0, y: 0 },
+        ],
+      },
+    });
+
+    sprite.play('punch');
+    expect(sprite.getLocalBounds().x).toBe(0);
+    expect(sprite.getLocalBounds().y).toBe(0);
+
+    sprite.update(100);
+    expect(sprite.currentFrame).toBe(1);
+    expect(sprite.getLocalBounds().x).toBe(4);
+    expect(sprite.getLocalBounds().y).toBe(-2);
+
+    sprite.update(100);
+    expect(sprite.currentFrame).toBe(2);
+    expect(sprite.getLocalBounds().x).toBe(0);
+    expect(sprite.getLocalBounds().y).toBe(0);
+  });
+
+  test('frameOffsets do not affect a sprite without any offset data (pixel-identical to today)', () => {
+    const frames = createFrames();
+    const sprite = new AnimatedSprite(null, {
+      walk: {
+        frames,
+        fps: 10,
+        loop: true,
+      },
+    });
+
+    sprite.play('walk');
+    sprite.update(100);
+
+    expect(sprite.getLocalBounds().x).toBe(0);
+    expect(sprite.getLocalBounds().y).toBe(0);
+    expect(sprite.getLocalBounds().width).toBe(16);
+    expect(sprite.getLocalBounds().height).toBe(16);
+  });
+
+  test('frameOffsets length must match the frame count', () => {
+    const frames = createFrames();
+    const sprite = new AnimatedSprite(null);
+
+    expect(() =>
+      sprite.defineClip('bad', {
+        frames,
+        frameOffsets: [{ x: 0, y: 0 }],
+      }),
+    ).toThrow(/frameOffsets/);
+  });
+
+  test('frameOffsets entries must have finite x/y', () => {
+    const frames = createFrames();
+    const sprite = new AnimatedSprite(null);
+
+    expect(() =>
+      sprite.defineClip('bad', {
+        frames,
+        frameOffsets: [
+          { x: 0, y: 0 },
+          { x: Number.NaN, y: 0 },
+          { x: 0, y: 0 },
+        ],
+      }),
+    ).toThrow(/frameOffsets/);
+  });
 });

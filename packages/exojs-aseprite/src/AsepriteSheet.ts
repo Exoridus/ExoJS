@@ -152,7 +152,11 @@ export class AsepriteSheet {
    * Each clip's `frameDurations` carries the real per-frame `duration` from
    * the export (falling back to the tag's average when a frame's duration is
    * non-positive), so uneven hold-frames survive into playback instead of
-   * being flattened to a uniform fps.
+   * being flattened to a uniform fps. `frameOffsets` carries each frame's
+   * `spriteSourceSize` `{x,y}` — its trimmed content's offset within the
+   * untrimmed canvas — whenever any frame in the tag is trimmed, so frames
+   * trimmed by different amounts stay anchored instead of jittering; it's
+   * omitted entirely for tags with no trimmed frames.
    */
   public static parse(data: AsepriteData, texture: Texture): AsepriteSheet {
     const frameArray = normaliseFrames(data);
@@ -174,7 +178,7 @@ export class AsepriteSheet {
     for (const tag of frameTags) {
       // Out-of-range indices are silently skipped; `validIndices` parallels
       // `frames` exactly, so it's the basis for every other per-frame array
-      // (durations) built below.
+      // (durations, offsets) built below.
       const validIndices = expandFrameIndices(tag).filter(i => i >= 0 && i < frameArray.length);
       const frames = validIndices.map(i => spritesheet.getFrame(String(i)));
 
@@ -198,11 +202,25 @@ export class AsepriteSheet {
         return duration > 0 ? duration : avgDurationFallback;
       });
 
+      // Per-frame trim offset (Aseprite "spriteSourceSize"), so frames trimmed
+      // by different amounts stay anchored to the same point in the untrimmed
+      // canvas instead of jittering frame to frame. Omitted entirely when no
+      // frame in the tag is trimmed, to avoid noise on untrimmed sheets.
+      const anyTrimmed = validIndices.some(i => frameArray[i]!.trimmed);
+      const frameOffsets = anyTrimmed
+        ? validIndices.map(i => {
+            const { x, y } = frameArray[i]!.spriteSourceSize;
+
+            return { x, y };
+          })
+        : undefined;
+
       clips.set(tag.name, {
         fps,
         frames,
         loop,
         frameDurations,
+        ...(frameOffsets ? { frameOffsets } : {}),
       });
     }
 

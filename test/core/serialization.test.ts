@@ -557,6 +557,32 @@ describe('serialization — AnimatedSprite', () => {
     restored.update(100);
     expect(restored.currentFrame).toBe(1);
   });
+
+  it('round-trips per-frame frameOffsets', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      punch: {
+        frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)],
+        loop: true,
+        frameOffsets: [
+          { x: 0, y: 0 },
+          { x: 4, y: -2 },
+        ],
+      },
+    });
+
+    const data = serializeTree(sprite, loader);
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+
+    restored.play('punch');
+    expect(restored.getLocalBounds().x).toBe(0);
+
+    restored.update(100);
+    expect(restored.currentFrame).toBe(1);
+    expect(restored.getLocalBounds().x).toBe(4);
+    expect(restored.getLocalBounds().y).toBe(-2);
+  });
 });
 
 describe('serialization — BitmapText', () => {

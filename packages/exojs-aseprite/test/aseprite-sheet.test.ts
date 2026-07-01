@@ -294,6 +294,53 @@ describe('AsepriteSheet.parse — per-frame durations', () => {
   });
 });
 
+// ── AsepriteSheet.parse — trimmed-frame offsets ─────────────────────────────────
+
+describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
+  it('populates frameOffsets from spriteSourceSize when any frame in the tag is trimmed', () => {
+    const data: AsepriteData = {
+      frames: [
+        {
+          duration: 100,
+          frame: { x: 0, y: 0, w: 12, h: 14 },
+          rotated: false,
+          trimmed: true,
+          sourceSize: { w: 16, h: 16 },
+          spriteSourceSize: { x: 2, y: 3, w: 12, h: 14 },
+        },
+        {
+          duration: 100,
+          frame: { x: 16, y: 0, w: 16, h: 16 },
+          rotated: false,
+          trimmed: false,
+          sourceSize: { w: 16, h: 16 },
+          spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+        },
+      ],
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 32, h: 16 },
+        scale: '1',
+        frameTags: [{ name: 'clip', from: 0, to: 1, direction: 'forward' }],
+      },
+    };
+    const sheet = AsepriteSheet.parse(data, newTexture());
+    const clip = sheet.clips.get('clip')!;
+    expect(clip.frameOffsets).toEqual([
+      { x: 2, y: 3 },
+      { x: 0, y: 0 },
+    ]);
+  });
+
+  it('omits frameOffsets entirely when no frame in the tag is trimmed', () => {
+    const sheet = AsepriteSheet.parse(arrayData, newTexture());
+    expect(sheet.clips.get('walk')!.frameOffsets).toBeUndefined();
+  });
+});
+
 // ── AsepriteSheet.parse — repeat (one-shot vs looping) ─────────────────────────
 
 describe('AsepriteSheet.parse — repeat', () => {

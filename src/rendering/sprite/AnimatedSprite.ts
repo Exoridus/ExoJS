@@ -20,6 +20,14 @@ export interface AnimatedSpriteClipDefinition {
    * export where one frame intentionally lingers longer than the rest.
    */
   readonly frameDurations?: readonly number[];
+  /**
+   * Per-frame local translation in local (pre-scale) pixels, indexed the
+   * same as `frames`, applied on top of the sprite's own position/origin.
+   * Use this to keep frames anchored to a stable point when a source atlas
+   * trims frames to different sizes (Aseprite's `spriteSourceSize`) — without
+   * it, differently-trimmed frames would jitter around their own top-left.
+   */
+  readonly frameOffsets?: ReadonlyArray<{ readonly x: number; readonly y: number }>;
 }
 
 /** Per-call options passed to {@link AnimatedSprite.play}. */
@@ -32,6 +40,7 @@ interface NormalizedAnimatedSpriteClip {
   readonly frames: readonly Rectangle[];
   readonly frameDurationMs: number;
   readonly frameDurations: readonly number[] | null;
+  readonly frameOffsets: ReadonlyArray<{ readonly x: number; readonly y: number }> | null;
   readonly loop: boolean;
 }
 
@@ -149,10 +158,27 @@ export class AnimatedSprite extends Sprite {
       frameDurations = [...clip.frameDurations];
     }
 
+    let frameOffsets: ReadonlyArray<{ readonly x: number; readonly y: number }> | null = null;
+
+    if (clip.frameOffsets) {
+      if (clip.frameOffsets.length !== frames.length) {
+        throw new Error(`AnimatedSprite clip "${name}" frameOffsets length (${clip.frameOffsets.length}) must match its frame count (${frames.length}).`);
+      }
+
+      for (const offset of clip.frameOffsets) {
+        if (!Number.isFinite(offset.x) || !Number.isFinite(offset.y)) {
+          throw new Error(`AnimatedSprite clip "${name}" has an invalid frameOffsets value (${JSON.stringify(offset)}).`);
+        }
+      }
+
+      frameOffsets = clip.frameOffsets.map(offset => ({ x: offset.x, y: offset.y }));
+    }
+
     this._clips.set(name, {
       frames: frames.map(frame => frame.clone()),
       frameDurationMs: 1000 / fps,
       frameDurations,
+      frameOffsets,
       loop: clip.loop ?? true,
     });
 
@@ -161,9 +187,9 @@ export class AnimatedSprite extends Sprite {
 
   /**
    * Returns the registered clips as serializable definitions (frames as
-   * {@link Rectangle}s, `fps`, `loop`, and `frameDurations` when the clip has
-   * one). Used by scene serialization to read back clip state the normalized
-   * internal store no longer exposes directly.
+   * {@link Rectangle}s, `fps`, `loop`, and `frameDurations`/`frameOffsets`
+   * when the clip has them). Used by scene serialization to read back clip
+   * state the normalized internal store no longer exposes directly.
    * @internal
    */
   public _getClipDefinitions(): Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'loop'>> & AnimatedSpriteClipDefinition> {
@@ -175,6 +201,7 @@ export class AnimatedSprite extends Sprite {
         fps: 1000 / clip.frameDurationMs,
         loop: clip.loop,
         ...(clip.frameDurations ? { frameDurations: [...clip.frameDurations] } : {}),
+        ...(clip.frameOffsets ? { frameOffsets: clip.frameOffsets.map(offset => ({ x: offset.x, y: offset.y })) } : {}),
       };
     }
 
@@ -212,7 +239,7 @@ export class AnimatedSprite extends Sprite {
       this._currentFrameIndex = 0;
       this._elapsedFrameTimeMs = 0;
       // Normalized clips always hold at least one frame.
-      this._applyFrame(clip.frames[0]!);
+      this._applyFrame(clip, 0);
       this.onFrame.dispatch(name, 0);
     }
 
@@ -236,7 +263,7 @@ export class AnimatedSprite extends Sprite {
     if (clip && clip.frames.length > 0) {
       this._currentFrameIndex = 0;
       // Guarded non-empty above.
-      this._applyFrame(clip.frames[0]!);
+      this._applyFrame(clip, 0);
       this.onFrame.dispatch(this._currentClipName, 0);
     }
 
@@ -297,7 +324,7 @@ export class AnimatedSprite extends Sprite {
         if (this.loop) {
           this._currentFrameIndex = 0;
           // clip has > 1 frame here (early-returned otherwise).
-          this._applyFrame(clip.frames[0]!);
+          this._applyFrame(clip, 0);
           this.onFrame.dispatch(this._currentClipName, 0);
           thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
           continue;
@@ -305,7 +332,7 @@ export class AnimatedSprite extends Sprite {
 
         this._currentFrameIndex = clip.frames.length - 1;
         // In-bounds: last frame index.
-        this._applyFrame(clip.frames[this._currentFrameIndex]!);
+        this._applyFrame(clip, this._currentFrameIndex);
         this._playing = false;
         this.onComplete.dispatch(this._currentClipName);
 
@@ -314,7 +341,7 @@ export class AnimatedSprite extends Sprite {
 
       this._currentFrameIndex = nextFrame;
       // In-bounds: nextFrame < frames.length.
-      this._applyFrame(clip.frames[this._currentFrameIndex]!);
+      this._applyFrame(clip, this._currentFrameIndex);
       this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
       thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
     }
@@ -355,7 +382,23 @@ export class AnimatedSprite extends Sprite {
     return new AnimatedSprite(spritesheet.texture, clips);
   }
 
-  private _applyFrame(frame: Rectangle): void {
-    this.setTextureFrame(frame, false);
+  /**
+   * Apply the clip's frame at `frameIndex` to the sprite's texture region,
+   * and — when the clip defines `frameOffsets` — translate the local quad by
+   * that frame's `{x,y}` on top of the sprite's own position/origin. The
+   * offset lives entirely in local (pre-scale) space via {@link getLocalBounds},
+   * so it composes correctly under rotation/scale and never mutates the
+   * public `x`/`y`/`origin` a caller set.
+   */
+  private _applyFrame(clip: NormalizedAnimatedSpriteClip, frameIndex: number): void {
+    // In-bounds by every call site's own guard.
+    this.setTextureFrame(clip.frames[frameIndex]!, false);
+
+    const offset = clip.frameOffsets?.[frameIndex];
+
+    if (offset) {
+      this.getLocalBounds().setPosition(offset.x, offset.y);
+      this._invalidateBoundsCascade();
+    }
   }
 }
