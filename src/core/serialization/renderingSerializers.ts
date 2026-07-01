@@ -13,7 +13,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
 import type { NodeSerializer } from './NodeSerializer';
-import { asNumberArray, asObject, asSerializedNode, readBoolean, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
+import { asNumberArray, asObject, asSerializedNode, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
 
@@ -224,7 +224,7 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
       clips[name] = compact({
         frames: clip.frames.map(frame => [frame.x, frame.y, frame.width, frame.height]),
         fps: clip.fps,
-        loop: clip.loop,
+        repeat: clip.repeat,
         frameDurations: clip.frameDurations ? [...clip.frameDurations] : undefined,
         frameOffsets: clip.frameOffsets ? clip.frameOffsets.map(offset => [offset.x, offset.y]) : undefined,
       });
@@ -270,7 +270,7 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
             })
           : undefined;
 
-        clips[name] = compact({ frames, fps: num(clip.fps), loop: readBoolean(clip, 'loop'), frameDurations, frameOffsets });
+        clips[name] = compact({ frames, fps: num(clip.fps), repeat: num(clip.repeat), frameDurations, frameOffsets });
       }
     }
 

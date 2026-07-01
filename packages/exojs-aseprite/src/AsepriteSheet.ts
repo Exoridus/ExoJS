@@ -145,9 +145,11 @@ export class AsepriteSheet {
    * clip — `forward` and `reverse` play the `[from, to]` range in order or
    * in reverse, while `pingpong`/`pingpong_reverse` append a backward pass
    * (excluding both endpoints) so the bounce plays back correctly on the
-   * engine's forward-only {@link AnimatedSprite} playback. A clip loops
-   * (`loop: true`) unless the tag's `repeat` is exactly `"1"`, in which case
-   * it plays once (`loop: false`).
+   * engine's forward-only {@link AnimatedSprite} playback. The tag's
+   * `repeat` field maps directly onto {@link AnimatedSpriteClipDefinition.repeat}:
+   * absent means the clip loops indefinitely (`repeat: -1`); a numeric
+   * string (`"1"`, `"2"`, …) means it plays exactly that many full cycles
+   * before stopping.
    *
    * Each clip's `frameDurations` carries the real per-frame `duration` from
    * the export (falling back to the tag's average when a frame's duration is
@@ -186,9 +188,10 @@ export class AsepriteSheet {
         continue;
       }
 
-      // `repeat === '1'` is an explicit one-shot. Any other finite N (e.g. '2',
-      // '3') falls back to an infinite loop pending engine `loopCount` support.
-      const loop = tag.repeat !== '1';
+      // Aseprite's `tag.repeat` (a numeric string, `'1'` through any N) maps
+      // directly onto the engine's `repeat` count. Absent means the tag
+      // loops indefinitely, the engine's `-1` sentinel.
+      const repeat = tag.repeat !== undefined ? Number(tag.repeat) : -1;
       const fps = avgFps(frameArray, validIndices);
 
       // Per-frame hold duration (Aseprite "duration"), so uneven hold-frames
@@ -218,7 +221,7 @@ export class AsepriteSheet {
       clips.set(tag.name, {
         fps,
         frames,
-        loop,
+        repeat,
         frameDurations,
         ...(frameOffsets ? { frameOffsets } : {}),
       });

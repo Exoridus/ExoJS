@@ -99,10 +99,10 @@ describe('AsepriteSheet.parse — clips from frameTags', () => {
     expect(sheet.clips.get('walk')!.frames[1]).toBe(sheet.spritesheet.getFrame('1'));
   });
 
-  it('marks every clip as looping by default regardless of direction', () => {
+  it('marks every clip as looping indefinitely (repeat: -1) by default regardless of direction', () => {
     const sheet = AsepriteSheet.parse(arrayData, newTexture());
-    expect(sheet.clips.get('walk')!.loop).toBe(true);
-    expect(sheet.clips.get('bounce')!.loop).toBe(true);
+    expect(sheet.clips.get('walk')!.repeat).toBe(-1);
+    expect(sheet.clips.get('bounce')!.repeat).toBe(-1);
   });
 
   it('a two-frame pingpong tag has no middle frame to repeat, so it plays like forward', () => {
@@ -341,7 +341,7 @@ describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
   });
 });
 
-// ── AsepriteSheet.parse — repeat (one-shot vs looping) ─────────────────────────
+// ── AsepriteSheet.parse — repeat (one-shot vs finite vs infinite) ──────────────
 
 describe('AsepriteSheet.parse — repeat', () => {
   function makeData(repeat: string | undefined): AsepriteData {
@@ -366,19 +366,19 @@ describe('AsepriteSheet.parse — repeat', () => {
     };
   }
 
-  it('repeat: "1" marks the clip as one-shot (loop: false)', () => {
+  it('repeat: "1" maps to repeatCount 1 (one-shot)', () => {
     const sheet = AsepriteSheet.parse(makeData('1'), newTexture());
-    expect(sheet.clips.get('clip')!.loop).toBe(false);
+    expect(sheet.clips.get('clip')!.repeat).toBe(1);
   });
 
-  it('no repeat field means infinite loop (loop: true)', () => {
-    const sheet = AsepriteSheet.parse(makeData(undefined), newTexture());
-    expect(sheet.clips.get('clip')!.loop).toBe(true);
-  });
-
-  it('repeat: "3" (finite N-times) falls back to infinite loop (loopCount not yet supported)', () => {
+  it('repeat: "3" maps to repeatCount 3', () => {
     const sheet = AsepriteSheet.parse(makeData('3'), newTexture());
-    expect(sheet.clips.get('clip')!.loop).toBe(true);
+    expect(sheet.clips.get('clip')!.repeat).toBe(3);
+  });
+
+  it('no repeat field means infinite loop (repeat: -1)', () => {
+    const sheet = AsepriteSheet.parse(makeData(undefined), newTexture());
+    expect(sheet.clips.get('clip')!.repeat).toBe(-1);
   });
 });
 
@@ -561,13 +561,13 @@ describe('AsepriteSheet.createAnimatedSprite', () => {
     expect(() => sprite.play('bounce')).not.toThrow();
   });
 
-  it('play() activates the named clip and adopts its looping flag', () => {
+  it('play() activates the named clip and adopts its repeat setting', () => {
     const sheet = AsepriteSheet.parse(arrayData, newTexture());
     const sprite = sheet.createAnimatedSprite();
     sprite.play('walk');
     expect(sprite.currentClip).toBe('walk');
     expect(sprite.playing).toBe(true);
-    expect(sprite.loop).toBe(true);
+    expect(sprite.repeat).toBe(-1);
   });
 
   it('throws when playing a clip that has no matching tag', () => {

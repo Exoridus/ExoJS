@@ -11,7 +11,15 @@ import type { Spritesheet } from './Spritesheet';
 export interface AnimatedSpriteClipDefinition {
   readonly frames: readonly Rectangle[];
   readonly fps?: number;
-  readonly loop?: boolean;
+  /**
+   * How many full cycles (advancing through every frame once counts as one
+   * cycle) the clip plays before stopping and dispatching `onComplete`.
+   * `-1` (the default when omitted) loops indefinitely; `1` plays once; any
+   * other positive integer plays exactly that many times. Use this to
+   * preserve Aseprite's frame-tag `repeat` count (e.g. an attack that should
+   * play exactly twice, not once or forever).
+   */
+  readonly repeat?: number;
   /**
    * Per-frame hold duration in milliseconds, indexed the same as `frames`.
    * When provided it is authoritative for playback timing and `fps` is
@@ -32,7 +40,8 @@ export interface AnimatedSpriteClipDefinition {
 
 /** Per-call options passed to {@link AnimatedSprite.play}. */
 export interface AnimatedSpritePlayOptions {
-  loop?: boolean;
+  /** Per-call override of the clip's {@link AnimatedSpriteClipDefinition.repeat}, for the duration of this `play()` call. */
+  repeat?: number;
   restart?: boolean;
 }
 
@@ -41,10 +50,25 @@ interface NormalizedAnimatedSpriteClip {
   readonly frameDurationMs: number;
   readonly frameDurations: readonly number[] | null;
   readonly frameOffsets: ReadonlyArray<{ readonly x: number; readonly y: number }> | null;
-  readonly loop: boolean;
+  readonly repeat: number;
 }
 
 const defaultClipFps = 12;
+
+/** Sentinel {@link AnimatedSpriteClipDefinition.repeat}/{@link AnimatedSprite.repeat} value meaning "loop indefinitely"; also the default when `repeat` is omitted. */
+const infiniteRepeat = -1;
+
+/**
+ * Throws if `repeat` is not `infiniteRepeat` (`-1`) or a positive integer.
+ * Shared by {@link AnimatedSprite.defineClip}, the {@link AnimatedSprite.repeat}
+ * setter, and {@link AnimatedSprite.play}'s `options.repeat` so every entry
+ * point rejects the same invalid values consistently.
+ */
+function assertValidRepeat(context: string, repeat: number): void {
+  if (!Number.isInteger(repeat) || (repeat !== infiniteRepeat && repeat < 1)) {
+    throw new Error(`AnimatedSprite ${context} has an invalid repeat value (${repeat}). Must be ${infiniteRepeat} (infinite) or a positive integer.`);
+  }
+}
 
 /**
  * A {@link Sprite} that advances through a sequence of texture-frame
@@ -54,7 +78,7 @@ const defaultClipFps = 12;
  * constructor. Call {@link play} to start a clip; call {@link update} each
  * frame with the elapsed delta (seconds or a `Time` object) to advance
  * playback. The `onFrame` signal fires on every frame advance and
- * `onComplete` fires when a non-looping clip reaches its last frame.
+ * `onComplete` fires when a clip completes its final {@link AnimatedSpriteClipDefinition.repeat} cycle.
  *
  * Use {@link AnimatedSprite.fromSpritesheet} to create an instance directly
  * from a {@link Spritesheet}'s named animations.
@@ -64,8 +88,9 @@ export class AnimatedSprite extends Sprite {
   private _currentClipName: string | null = null;
   private _currentFrameIndex = 0;
   private _playing = false;
-  private _loopOverride: boolean | null = null;
+  private _repeatOverride: number | null = null;
   private _elapsedFrameTimeMs = 0;
+  private _completedCycles = 0;
 
   public readonly onComplete = new Signal<[clip: string]>();
   public readonly onFrame = new Signal<[clip: string, frame: number]>();
@@ -91,23 +116,26 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
-   * Whether the current clip loops. Returns the per-call loop override if set,
-   * otherwise the clip's own `loop` flag.
+   * How many cycles the current clip plays before stopping. Returns the
+   * per-call override if set via {@link play} or this setter, otherwise the
+   * clip's own `repeat` value (or `-1` if no clip is active).
    */
-  public get loop(): boolean {
-    if (this._loopOverride !== null) {
-      return this._loopOverride;
+  public get repeat(): number {
+    if (this._repeatOverride !== null) {
+      return this._repeatOverride;
     }
 
     if (!this._currentClipName) {
-      return false;
+      return infiniteRepeat;
     }
 
-    return this._clips.get(this._currentClipName)?.loop ?? false;
+    return this._clips.get(this._currentClipName)?.repeat ?? infiniteRepeat;
   }
 
-  public set loop(loop: boolean) {
-    this._loopOverride = loop;
+  public set repeat(repeat: number) {
+    assertValidRepeat('repeat', repeat);
+
+    this._repeatOverride = repeat;
   }
 
   /** Replace all registered clips with the provided map. Clears any previously registered clips first. */
@@ -141,6 +169,10 @@ export class AnimatedSprite extends Sprite {
     if (!Number.isFinite(fps) || fps <= 0) {
       throw new Error(`AnimatedSprite clip "${name}" has an invalid fps value (${fps}).`);
     }
+
+    const repeat = clip.repeat ?? infiniteRepeat;
+
+    assertValidRepeat(`clip "${name}"`, repeat);
 
     let frameDurations: readonly number[] | null = null;
 
@@ -179,7 +211,7 @@ export class AnimatedSprite extends Sprite {
       frameDurationMs: 1000 / fps,
       frameDurations,
       frameOffsets,
-      loop: clip.loop ?? true,
+      repeat,
     });
 
     return this;
@@ -187,19 +219,19 @@ export class AnimatedSprite extends Sprite {
 
   /**
    * Returns the registered clips as serializable definitions (frames as
-   * {@link Rectangle}s, `fps`, `loop`, and `frameDurations`/`frameOffsets`
+   * {@link Rectangle}s, `fps`, `repeat`, and `frameDurations`/`frameOffsets`
    * when the clip has them). Used by scene serialization to read back clip
    * state the normalized internal store no longer exposes directly.
    * @internal
    */
-  public _getClipDefinitions(): Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'loop'>> & AnimatedSpriteClipDefinition> {
-    const out: Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'loop'>> & AnimatedSpriteClipDefinition> = {};
+  public _getClipDefinitions(): Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition> {
+    const out: Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition> = {};
 
     for (const [name, clip] of this._clips) {
       out[name] = {
         frames: clip.frames.map(frame => frame.clone()),
         fps: 1000 / clip.frameDurationMs,
-        loop: clip.loop,
+        repeat: clip.repeat,
         ...(clip.frameDurations ? { frameDurations: [...clip.frameDurations] } : {}),
         ...(clip.frameOffsets ? { frameOffsets: clip.frameOffsets.map(offset => ({ x: offset.x, y: offset.y })) } : {}),
       };
@@ -222,13 +254,17 @@ export class AnimatedSprite extends Sprite {
   /**
    * Start playing the named clip. By default restarts from frame 0; pass
    * `{ restart: false }` to resume from the current frame if the same clip
-   * is already active. Optionally overrides the clip's loop setting.
+   * is already active. Optionally overrides the clip's `repeat` setting.
    */
   public play(name: string, options: AnimatedSpritePlayOptions = {}): this {
     const clip = this._clips.get(name);
 
     if (!clip) {
       throw new Error(`AnimatedSprite clip "${name}" is not defined.`);
+    }
+
+    if (options.repeat !== undefined) {
+      assertValidRepeat('play() options.repeat', options.repeat);
     }
 
     const isSameClip = this._currentClipName === name;
@@ -238,12 +274,13 @@ export class AnimatedSprite extends Sprite {
       this._currentClipName = name;
       this._currentFrameIndex = 0;
       this._elapsedFrameTimeMs = 0;
+      this._completedCycles = 0;
       // Normalized clips always hold at least one frame.
       this._applyFrame(clip, 0);
       this.onFrame.dispatch(name, 0);
     }
 
-    this._loopOverride = options.loop ?? this._loopOverride;
+    this._repeatOverride = options.repeat ?? this._repeatOverride;
     this._playing = true;
 
     return this;
@@ -287,7 +324,8 @@ export class AnimatedSprite extends Sprite {
   /**
    * Advance playback by `delta` milliseconds (or a `Time` object). Call once
    * per frame from the game loop. Dispatches `onFrame` for each frame
-   * boundary crossed and `onComplete` when a non-looping clip ends.
+   * boundary crossed and `onComplete` when the clip completes its final
+   * {@link AnimatedSpriteClipDefinition.repeat} cycle.
    */
   public update(delta: Time | number): this {
     if (!this._playing || this._currentClipName === null) {
@@ -321,7 +359,20 @@ export class AnimatedSprite extends Sprite {
       const nextFrame = this._currentFrameIndex + 1;
 
       if (nextFrame >= clip.frames.length) {
-        if (this.loop) {
+        // `repeat` is the single source of truth for whether playback wraps.
+        // Infinite always wraps; a finite count wraps until it has completed
+        // that many full cycles, then stops on the same path play-once used to.
+        const activeRepeat = this._repeatOverride ?? clip.repeat;
+        let shouldWrap: boolean;
+
+        if (activeRepeat === infiniteRepeat) {
+          shouldWrap = true;
+        } else {
+          this._completedCycles++;
+          shouldWrap = this._completedCycles < activeRepeat;
+        }
+
+        if (shouldWrap) {
           this._currentFrameIndex = 0;
           // clip has > 1 frame here (early-returned otherwise).
           this._applyFrame(clip, 0);
@@ -366,8 +417,9 @@ export class AnimatedSprite extends Sprite {
 
   /**
    * Construct an {@link AnimatedSprite} from the named animations defined on
-   * a {@link Spritesheet}. Each animation becomes a looping clip whose frames
-   * are the spritesheet frame rectangles in declaration order.
+   * a {@link Spritesheet}. Each animation becomes an indefinitely-looping
+   * clip whose frames are the spritesheet frame rectangles in declaration
+   * order.
    */
   public static fromSpritesheet(spritesheet: Spritesheet): AnimatedSprite {
     const clips: Record<string, AnimatedSpriteClipDefinition> = {};
@@ -375,7 +427,6 @@ export class AnimatedSprite extends Sprite {
     for (const [clipName, frameNames] of spritesheet.animations) {
       clips[clipName] = {
         frames: frameNames.map(frameName => spritesheet.getFrame(frameName)),
-        loop: true,
       };
     }
 
