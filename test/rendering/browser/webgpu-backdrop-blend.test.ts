@@ -1,3 +1,5 @@
+/// <reference types="@webgpu/types" />
+
 /**
  * WebGPU backdrop-aware blend SPIKE — proves the advanced-blend primitive
  * (`WebGpuBackdropBlendCompositor`) end-to-end in isolation, before any
@@ -13,6 +15,12 @@
  *     right place (a vertically-split backdrop under an opaque white source comes
  *     back unflipped — copyTextureToTexture preserves top-left order, unlike the
  *     WebGL2 framebuffer blit).
+ *
+ * Pixel readback is real GPU-side readback (`copyTextureToBuffer` +
+ * `mapAsync`), NOT `ctx.drawImage(webgpuCanvas)` into a 2D canvas — the
+ * drawImage path silently reads back all-zero on the software (SwiftShader /
+ * lavapipe) adapters CI runs on, which would make this spike pass without
+ * proving anything.
  *
  * All tests skip gracefully when WebGPU is unavailable or the software adapter
  * drops the device mid-test.
@@ -86,27 +94,56 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
 
-// Read the presented WebGPU canvas back through a 2D canvas (drawImage accepts a
-// WebGPU-configured canvas as an image source), giving CPU-side pixel access.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
+// GPU-side row alignment: copyTextureToBuffer requires bytesPerRow to be a
+// multiple of 256. A 64x64 RGBA8 canvas is already 256 bytes/row (64 * 4), but
+// this is computed generically so a future canvasSize change doesn't silently
+// break the readback.
+const bytesPerRowAligned = (widthPx: number, bytesPerPixel: number): number => Math.ceil((widthPx * bytesPerPixel) / 256) * 256;
 
-  readback.width = canvasSize;
-  readback.height = canvasSize;
+// Read the presented WebGPU canvas back via a real GPU-side readback:
+// copyTextureToBuffer -> mapAsync -> getMappedRange, mirroring
+// `WebGpuStorageBuffer.read`. `ctx.drawImage(webgpuCanvas)` into a 2D canvas
+// looks like a readback but returns all-zero on the software (SwiftShader /
+// lavapipe) adapters CI runs the WebGPU lane on — it never actually exercises
+// the GPU-visible pixel data, so a real regression there would go undetected.
+const readGpuCanvas = async (backend: WebGpuBackend): Promise<(x: number, y: number) => RgbaTuple> => {
+  const device = backend.device;
+  const texture = backend.context.getCurrentTexture();
+  const bytesPerPixel = 4; // canvas context is always an 8-bit-per-channel RGBA format (rgba8unorm / bgra8unorm).
+  const bytesPerRow = bytesPerRowAligned(canvasSize, bytesPerPixel);
+  const bufferSize = bytesPerRow * canvasSize;
 
-  const ctx = readback.getContext('2d');
+  const readbackBuffer = device.createBuffer({
+    label: 'webgpu-backdrop-blend-test-readback',
+    size: bufferSize,
+    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+  });
 
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
+  const encoder = device.createCommandEncoder({ label: 'webgpu-backdrop-blend-test-readback-copy' });
 
-  ctx.drawImage(source, 0, 0);
+  encoder.copyTextureToBuffer({ texture }, { buffer: readbackBuffer, bytesPerRow, rowsPerImage: canvasSize }, { width: canvasSize, height: canvasSize });
+  device.queue.submit([encoder.finish()]);
+
+  await readbackBuffer.mapAsync(GPUMapMode.READ);
+
+  // Copy out of the mapped range before unmap() detaches its backing buffer.
+  const pixels = new Uint8Array(readbackBuffer.getMappedRange().slice(0));
+
+  readbackBuffer.unmap();
+  readbackBuffer.destroy();
+
+  // The preferred canvas format is commonly `bgra8unorm` on Chromium; swap
+  // channels back to RGBA so callers don't need to know the swizzle.
+  const swapRedBlue = backend.format === 'bgra8unorm';
 
   return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
+    const offset = Math.floor(y) * bytesPerRow + Math.floor(x) * bytesPerPixel;
+    const c0 = pixels[offset];
+    const c1 = pixels[offset + 1];
+    const c2 = pixels[offset + 2];
+    const c3 = pixels[offset + 3];
 
-    return [data[0], data[1], data[2], data[3]];
+    return swapRedBlue ? [c2, c1, c0, c3] : [c0, c1, c2, c3];
   };
 };
 
@@ -166,7 +203,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       backend.clear(new Color(60, 120, 200)); // backdrop (deferred; compose flushes it)
       composeBackdropBlend(backend, source, BlendModes.Darken);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = await readGpuCanvas(backend);
 
       // Left (red over blue, Darken): min((60,120,200),(255,0,0)) = (60,0,0).
       expectRgbNear(readPixel(16, 32), [60, 0, 0]);
@@ -216,7 +253,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       drawBackdrop(backend, backdrop);
       composeBackdropBlend(backend, white, BlendModes.Darken);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = await readGpuCanvas(backend);
 
       expectRgbNear(readPixel(32, 8), [200, 40, 40]); // top
       expectRgbNear(readPixel(32, 56), [40, 40, 200]); // bottom
@@ -264,7 +301,9 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
         drawBackdrop(backend, backdrop);
         compositor.compose(backend, source, 0, 0, canvasSize, canvasSize, mode);
 
-        expectRgbNear(readCanvas(backend)(32, 32), expectedOpaqueBlend(mode, backdropColor, sourceColor), 5);
+        const readPixel = await readGpuCanvas(backend);
+
+        expectRgbNear(readPixel(32, 32), expectedOpaqueBlend(mode, backdropColor, sourceColor), 5);
       }
     } catch (error) {
       if (isDeviceLoss(error)) {
