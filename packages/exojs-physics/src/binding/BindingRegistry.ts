@@ -1,7 +1,6 @@
 import type { SceneNode } from '@codexo/exojs';
 
 import type { PhysicsBody } from '../PhysicsBody';
-import type { BindingOptions } from './PhysicsBinding';
 import { PhysicsBinding } from './PhysicsBinding';
 
 /**
@@ -12,12 +11,12 @@ export class BindingRegistry {
   private readonly _bindings = new Map<PhysicsBody, PhysicsBinding>();
 
   /** Link `body` to `node`. Rejects nodes with non-zero skew; runtime scale is ignored. */
-  public bind(body: PhysicsBody, node: SceneNode, options?: BindingOptions): PhysicsBinding {
+  public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
     if (node.skewX !== 0 || node.skewY !== 0) {
       throw new Error(`PhysicsBinding: the bound node has non-zero skew (${node.skewX}°, ${node.skewY}°); skewed nodes are not supported.`);
     }
 
-    const binding = new PhysicsBinding(body, node, options?.drive ?? 'body-to-node');
+    const binding = new PhysicsBinding(body, node);
 
     this._bindings.set(body, binding);
     binding.sync();
