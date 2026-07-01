@@ -58,6 +58,9 @@ export type {
   TileMapViewOptions,
   TileObject,
   TileProperties,
+  TilePropertyObjectRef,
+  TilePropertyPoint,
+  TilePropertyTileRef,
   TilePropertyValue,
   TileSetOptions,
   TileTransform,
@@ -70,6 +73,7 @@ export {
   TileMap,
   tilemapExtension,
   TileMapView,
+  TilePropertyKind,
   TileSet,
 } from '@codexo/exojs-tilemap';
 
