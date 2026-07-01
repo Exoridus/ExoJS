@@ -221,11 +221,12 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
     const clips: Record<string, unknown> = {};
 
     for (const [name, clip] of Object.entries(node._getClipDefinitions())) {
-      clips[name] = {
+      clips[name] = compact({
         frames: clip.frames.map(frame => [frame.x, frame.y, frame.width, frame.height]),
         fps: clip.fps,
         loop: clip.loop,
-      };
+        frameDurations: clip.frameDurations ? [...clip.frameDurations] : undefined,
+      });
     }
 
     out.clips = clips;
@@ -258,7 +259,9 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
             })
           : [];
 
-        clips[name] = compact({ frames, fps: num(clip.fps), loop: readBoolean(clip, 'loop') });
+        const frameDurations = Array.isArray(clip.frameDurations) ? (asNumberArray(clip.frameDurations) ?? undefined) : undefined;
+
+        clips[name] = compact({ frames, fps: num(clip.fps), loop: readBoolean(clip, 'loop'), frameDurations });
       }
     }
 

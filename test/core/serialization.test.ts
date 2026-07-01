@@ -533,6 +533,30 @@ describe('serialization — AnimatedSprite', () => {
     expect(restored.playing).toBe(true);
     expect(() => restored.play('run')).not.toThrow();
   });
+
+  it('round-trips per-frame frameDurations', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      idle: {
+        frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)],
+        loop: true,
+        frameDurations: [100, 300],
+      },
+    });
+
+    const data = serializeTree(sprite, loader);
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+
+    restored.play('idle');
+    restored.update(100);
+    expect(restored.currentFrame).toBe(1);
+
+    // Frame 1 holds 300ms (frameDurations), not the 100ms it would hold at
+    // the default 12fps if frameDurations had been lost in the round-trip.
+    restored.update(100);
+    expect(restored.currentFrame).toBe(1);
+  });
 });
 
 describe('serialization — BitmapText', () => {

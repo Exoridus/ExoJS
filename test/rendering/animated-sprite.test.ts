@@ -107,6 +107,58 @@ describe('AnimatedSprite', () => {
     expect(() => sprite.play('missing')).toThrow('AnimatedSprite clip "missing" is not defined.');
   });
 
+  test('per-frame frameDurations hold each frame for its own duration instead of the uniform fps rate', () => {
+    const frames = createFrames();
+    const sprite = new AnimatedSprite(null, {
+      idle: {
+        frames,
+        frameDurations: [100, 100, 300],
+        loop: true,
+      },
+    });
+
+    sprite.play('idle');
+
+    // Frame 0 holds 100ms.
+    sprite.update(100);
+    expect(sprite.currentFrame).toBe(1);
+
+    // Frame 1 holds 100ms.
+    sprite.update(100);
+    expect(sprite.currentFrame).toBe(2);
+
+    // Frame 2 holds 300ms; 100ms is not enough to advance yet.
+    sprite.update(100);
+    expect(sprite.currentFrame).toBe(2);
+
+    sprite.update(200);
+    expect(sprite.currentFrame).toBe(0);
+  });
+
+  test('frameDurations length must match the frame count', () => {
+    const frames = createFrames();
+    const sprite = new AnimatedSprite(null);
+
+    expect(() =>
+      sprite.defineClip('bad', {
+        frames,
+        frameDurations: [100, 100],
+      }),
+    ).toThrow(/frameDurations/);
+  });
+
+  test('frameDurations entries must be finite positive numbers', () => {
+    const frames = createFrames();
+    const sprite = new AnimatedSprite(null);
+
+    expect(() =>
+      sprite.defineClip('bad', {
+        frames,
+        frameDurations: [100, 0, 100],
+      }),
+    ).toThrow(/frameDurations/);
+  });
+
   test('can build clips from spritesheet animation metadata', () => {
     const spritesheet = new Spritesheet(createTextureStub(), {
       frames: {

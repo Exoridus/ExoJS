@@ -12,6 +12,14 @@ export interface AnimatedSpriteClipDefinition {
   readonly frames: readonly Rectangle[];
   readonly fps?: number;
   readonly loop?: boolean;
+  /**
+   * Per-frame hold duration in milliseconds, indexed the same as `frames`.
+   * When provided it is authoritative for playback timing and `fps` is
+   * ignored while advancing frames (still accepted as a display-only
+   * average). Use this to preserve uneven hold-frames — e.g. an Aseprite
+   * export where one frame intentionally lingers longer than the rest.
+   */
+  readonly frameDurations?: readonly number[];
 }
 
 /** Per-call options passed to {@link AnimatedSprite.play}. */
@@ -23,6 +31,7 @@ export interface AnimatedSpritePlayOptions {
 interface NormalizedAnimatedSpriteClip {
   readonly frames: readonly Rectangle[];
   readonly frameDurationMs: number;
+  readonly frameDurations: readonly number[] | null;
   readonly loop: boolean;
 }
 
@@ -124,9 +133,26 @@ export class AnimatedSprite extends Sprite {
       throw new Error(`AnimatedSprite clip "${name}" has an invalid fps value (${fps}).`);
     }
 
+    let frameDurations: readonly number[] | null = null;
+
+    if (clip.frameDurations) {
+      if (clip.frameDurations.length !== frames.length) {
+        throw new Error(`AnimatedSprite clip "${name}" frameDurations length (${clip.frameDurations.length}) must match its frame count (${frames.length}).`);
+      }
+
+      for (const duration of clip.frameDurations) {
+        if (!Number.isFinite(duration) || duration <= 0) {
+          throw new Error(`AnimatedSprite clip "${name}" has an invalid frameDurations value (${duration}).`);
+        }
+      }
+
+      frameDurations = [...clip.frameDurations];
+    }
+
     this._clips.set(name, {
       frames: frames.map(frame => frame.clone()),
       frameDurationMs: 1000 / fps,
+      frameDurations,
       loop: clip.loop ?? true,
     });
 
@@ -135,15 +161,21 @@ export class AnimatedSprite extends Sprite {
 
   /**
    * Returns the registered clips as serializable definitions (frames as
-   * {@link Rectangle}s, `fps`, `loop`). Used by scene serialization to read
-   * back clip state the normalized internal store no longer exposes directly.
+   * {@link Rectangle}s, `fps`, `loop`, and `frameDurations` when the clip has
+   * one). Used by scene serialization to read back clip state the normalized
+   * internal store no longer exposes directly.
    * @internal
    */
-  public _getClipDefinitions(): Record<string, { frames: Rectangle[]; fps: number; loop: boolean }> {
-    const out: Record<string, { frames: Rectangle[]; fps: number; loop: boolean }> = {};
+  public _getClipDefinitions(): Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'loop'>> & AnimatedSpriteClipDefinition> {
+    const out: Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'loop'>> & AnimatedSpriteClipDefinition> = {};
 
     for (const [name, clip] of this._clips) {
-      out[name] = { frames: clip.frames.map(frame => frame.clone()), fps: 1000 / clip.frameDurationMs, loop: clip.loop };
+      out[name] = {
+        frames: clip.frames.map(frame => frame.clone()),
+        fps: 1000 / clip.frameDurationMs,
+        loop: clip.loop,
+        ...(clip.frameDurations ? { frameDurations: [...clip.frameDurations] } : {}),
+      };
     }
 
     return out;
@@ -249,8 +281,15 @@ export class AnimatedSprite extends Sprite {
 
     this._elapsedFrameTimeMs += deltaMs;
 
-    while (this._elapsedFrameTimeMs >= clip.frameDurationMs) {
-      this._elapsedFrameTimeMs -= clip.frameDurationMs;
+    // The hold duration for the frame CURRENTLY displayed determines how long
+    // it takes to advance past it. `frameDurations`, when present, overrides
+    // the clip's uniform `frameDurationMs` per frame — re-read after every
+    // index change below rather than cached once, since it depends on
+    // `_currentFrameIndex`.
+    let thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
+
+    while (this._elapsedFrameTimeMs >= thresholdMs) {
+      this._elapsedFrameTimeMs -= thresholdMs;
 
       const nextFrame = this._currentFrameIndex + 1;
 
@@ -260,6 +299,7 @@ export class AnimatedSprite extends Sprite {
           // clip has > 1 frame here (early-returned otherwise).
           this._applyFrame(clip.frames[0]!);
           this.onFrame.dispatch(this._currentClipName, 0);
+          thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
           continue;
         }
 
@@ -276,6 +316,7 @@ export class AnimatedSprite extends Sprite {
       // In-bounds: nextFrame < frames.length.
       this._applyFrame(clip.frames[this._currentFrameIndex]!);
       this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
+      thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
     }
 
     return this;

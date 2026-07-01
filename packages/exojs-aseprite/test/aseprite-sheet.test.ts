@@ -213,6 +213,87 @@ describe('AsepriteSheet.parse — direction expansion', () => {
   });
 });
 
+// ── AsepriteSheet.parse — per-frame durations (hold frames) ────────────────────
+
+describe('AsepriteSheet.parse — per-frame durations', () => {
+  it('populates frameDurations with each expanded frame index real duration', () => {
+    const data: AsepriteData = {
+      frames: [100, 100, 300].map((duration, i) => ({
+        duration,
+        frame: { x: i * 16, y: 0, w: 16, h: 16 },
+        rotated: false,
+        trimmed: false,
+        sourceSize: { w: 16, h: 16 },
+        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+      })),
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 48, h: 16 },
+        scale: '1',
+        frameTags: [{ name: 'idle', from: 0, to: 2, direction: 'forward' }],
+      },
+    };
+    const sheet = AsepriteSheet.parse(data, newTexture());
+    expect(sheet.clips.get('idle')!.frameDurations).toEqual([100, 100, 300]);
+    // fps stays the computed average, unaffected by the per-frame durations.
+    expect(sheet.clips.get('idle')!.fps).toBeCloseTo(1000 / ((100 + 100 + 300) / 3));
+  });
+
+  it('expands frameDurations to match a pingpong sequence, repeating bounced indices', () => {
+    const data: AsepriteData = {
+      frames: [100, 300, 100].map((duration, i) => ({
+        duration,
+        frame: { x: i * 16, y: 0, w: 16, h: 16 },
+        rotated: false,
+        trimmed: false,
+        sourceSize: { w: 16, h: 16 },
+        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+      })),
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 48, h: 16 },
+        scale: '1',
+        frameTags: [{ name: 'clip', from: 0, to: 2, direction: 'pingpong' }],
+      },
+    };
+    const sheet = AsepriteSheet.parse(data, newTexture());
+    // Expanded sequence is [0,1,2,1] -> durations [100, 300, 100, 300].
+    expect(sheet.clips.get('clip')!.frameDurations).toEqual([100, 300, 100, 300]);
+  });
+
+  it('falls back to the average duration for a non-positive per-frame duration', () => {
+    const data: AsepriteData = {
+      frames: [100, 0, 100].map((duration, i) => ({
+        duration,
+        frame: { x: i * 16, y: 0, w: 16, h: 16 },
+        rotated: false,
+        trimmed: false,
+        sourceSize: { w: 16, h: 16 },
+        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+      })),
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 48, h: 16 },
+        scale: '1',
+        frameTags: [{ name: 'clip', from: 0, to: 2, direction: 'forward' }],
+      },
+    };
+    const sheet = AsepriteSheet.parse(data, newTexture());
+    const clip = sheet.clips.get('clip')!;
+    const avgMs = 1000 / clip.fps!;
+    expect(clip.frameDurations).toEqual([100, avgMs, 100]);
+  });
+});
+
 // ── AsepriteSheet.parse — repeat (one-shot vs looping) ─────────────────────────
 
 describe('AsepriteSheet.parse — repeat', () => {

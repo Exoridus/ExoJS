@@ -1,4 +1,4 @@
-import { AnimatedSprite, type AnimatedSpriteClipDefinition, type Rectangle, Spritesheet, type Texture } from '@codexo/exojs';
+import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture } from '@codexo/exojs';
 
 import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteSlice,isAsepriteArrayData } from './AsepriteData';
 
@@ -148,6 +148,11 @@ export class AsepriteSheet {
    * engine's forward-only {@link AnimatedSprite} playback. A clip loops
    * (`loop: true`) unless the tag's `repeat` is exactly `"1"`, in which case
    * it plays once (`loop: false`).
+   *
+   * Each clip's `frameDurations` carries the real per-frame `duration` from
+   * the export (falling back to the tag's average when a frame's duration is
+   * non-positive), so uneven hold-frames survive into playback instead of
+   * being flattened to a uniform fps.
    */
   public static parse(data: AsepriteData, texture: Texture): AsepriteSheet {
     const frameArray = normaliseFrames(data);
@@ -167,14 +172,11 @@ export class AsepriteSheet {
     const frameTags = data.meta.frameTags ?? [];
 
     for (const tag of frameTags) {
-      const indices = expandFrameIndices(tag);
-      const frames: Rectangle[] = [];
-
-      for (const i of indices) {
-        if (i >= 0 && i < frameArray.length) {
-          frames.push(spritesheet.getFrame(String(i)));
-        }
-      }
+      // Out-of-range indices are silently skipped; `validIndices` parallels
+      // `frames` exactly, so it's the basis for every other per-frame array
+      // (durations) built below.
+      const validIndices = expandFrameIndices(tag).filter(i => i >= 0 && i < frameArray.length);
+      const frames = validIndices.map(i => spritesheet.getFrame(String(i)));
 
       if (frames.length === 0) {
         continue;
@@ -183,11 +185,24 @@ export class AsepriteSheet {
       // `repeat === '1'` is an explicit one-shot. Any other finite N (e.g. '2',
       // '3') falls back to an infinite loop pending engine `loopCount` support.
       const loop = tag.repeat !== '1';
+      const fps = avgFps(frameArray, validIndices);
+
+      // Per-frame hold duration (Aseprite "duration"), so uneven hold-frames
+      // (e.g. a lingering idle frame) survive into playback instead of being
+      // flattened to the tag's average fps. A non-positive duration (same
+      // degenerate case `avgFps` guards against) falls back to the average.
+      const avgDurationFallback = 1000 / fps;
+      const frameDurations = validIndices.map(i => {
+        const duration = frameArray[i]!.duration;
+
+        return duration > 0 ? duration : avgDurationFallback;
+      });
 
       clips.set(tag.name, {
-        fps: avgFps(frameArray, indices),
+        fps,
         frames,
         loop,
+        frameDurations,
       });
     }
 
