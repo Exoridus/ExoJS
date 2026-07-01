@@ -108,6 +108,9 @@ Distributions let each spawned particle get a different value. The most commonly
 | `VectorRange(xMin, xMax, yMin, yMax)` | Independent uniform random per axis |
 | `ConeDirection(angle, halfAngle, minSpeed, maxSpeed)` | Velocity vector within a directional cone |
 | `ConeDirection.omni(minSpeed, maxSpeed)` | Full 360° omnidirectional velocity |
+| `BoxArea(minX, maxX, minY, maxY, mode)` | Random point in an axis-aligned box — `'volume'` (default) fills the area, `'edge'` sticks to the perimeter |
+| `CircleArea(centerX, centerY, radius, mode)` | Random point in a circle — `'volume'` (default) fills the disk with uniform area density, `'edge'` sticks to the circumference |
+| `LineSegment(x0, y0, x1, y1)` | Random point uniformly distributed along a line segment |
 | `Curve(keys)` | Piecewise-linear spline evaluated over a particle's lifetime normalised progress (0..1) |
 | `ColorGradient(keys)` | Same as `Curve` but interpolates `Color` values |
 

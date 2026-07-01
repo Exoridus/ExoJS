@@ -1,8 +1,12 @@
 import { Color, Texture, Time } from '@codexo/exojs';
 
+import { BoxArea } from '../src/distributions/BoxArea';
+import { CircleArea } from '../src/distributions/CircleArea';
 import { ColorGradient } from '../src/distributions/ColorGradient';
+import { ConeDirection } from '../src/distributions/ConeDirection';
 import { Constant } from '../src/distributions/Constant';
 import { Curve } from '../src/distributions/Curve';
+import { LineSegment } from '../src/distributions/LineSegment';
 import { Range } from '../src/distributions/Range';
 import { VectorRange } from '../src/distributions/VectorRange';
 import { AlphaFadeOverLifetime } from '../src/modules/AlphaFadeOverLifetime';
@@ -160,6 +164,95 @@ describe('Distribution', () => {
 
     expect(g.evaluateRgba(0)).toBe(0);
   });
+
+  test('BoxArea volume mode stays within the box', () => {
+    const box = new BoxArea(10, 20, -5, 5, 'volume');
+
+    for (let i = 0; i < 50; i++) {
+      const v = box.sample();
+      expect(v.x).toBeGreaterThanOrEqual(10);
+      expect(v.x).toBeLessThanOrEqual(20);
+      expect(v.y).toBeGreaterThanOrEqual(-5);
+      expect(v.y).toBeLessThanOrEqual(5);
+    }
+  });
+
+  test('BoxArea edge mode lands on the perimeter', () => {
+    const box = new BoxArea(0, 10, 0, 20, 'edge');
+
+    for (let i = 0; i < 50; i++) {
+      const v = box.sample();
+      const onVerticalEdge = v.x === 0 || v.x === 10;
+      const onHorizontalEdge = v.y === 0 || v.y === 20;
+
+      expect(onVerticalEdge || onHorizontalEdge).toBe(true);
+      expect(v.x).toBeGreaterThanOrEqual(0);
+      expect(v.x).toBeLessThanOrEqual(10);
+      expect(v.y).toBeGreaterThanOrEqual(0);
+      expect(v.y).toBeLessThanOrEqual(20);
+    }
+  });
+
+  test('CircleArea volume mode stays within the radius', () => {
+    const circle = new CircleArea(100, 50, 25, 'volume');
+
+    for (let i = 0; i < 50; i++) {
+      const v = circle.sample();
+      const dist = Math.hypot(v.x - 100, v.y - 50);
+
+      expect(dist).toBeLessThanOrEqual(25);
+    }
+  });
+
+  test('CircleArea edge mode lands exactly on the circumference', () => {
+    const circle = new CircleArea(0, 0, 10, 'edge');
+
+    for (let i = 0; i < 50; i++) {
+      const v = circle.sample();
+      const dist = Math.hypot(v.x, v.y);
+
+      expect(dist).toBeCloseTo(10);
+    }
+  });
+
+  test('LineSegment stays on the line between the endpoints', () => {
+    const line = new LineSegment(0, 0, 10, 10);
+
+    for (let i = 0; i < 50; i++) {
+      const v = line.sample();
+
+      expect(v.x).toBeGreaterThanOrEqual(0);
+      expect(v.x).toBeLessThanOrEqual(10);
+      // Diagonal 45° segment: y must track x exactly.
+      expect(v.y).toBeCloseTo(v.x);
+    }
+  });
+
+  test('ConeDirection stays within the angular spread and speed range', () => {
+    const cone = new ConeDirection(0, Math.PI / 6, 50, 100);
+
+    for (let i = 0; i < 50; i++) {
+      const v = cone.sample();
+      const speed = Math.hypot(v.x, v.y);
+      const angle = Math.atan2(v.y, v.x);
+
+      expect(speed).toBeGreaterThanOrEqual(50);
+      expect(speed).toBeLessThanOrEqual(100);
+      expect(Math.abs(angle)).toBeLessThanOrEqual(Math.PI / 6 + 1e-9);
+    }
+  });
+
+  test('ConeDirection.omni produces full-circle directions within the speed range', () => {
+    const cone = ConeDirection.omni(10, 20);
+
+    for (let i = 0; i < 50; i++) {
+      const v = cone.sample();
+      const speed = Math.hypot(v.x, v.y);
+
+      expect(speed).toBeGreaterThanOrEqual(10);
+      expect(speed).toBeLessThanOrEqual(20);
+    }
+  });
 });
 
 describe('SpawnModule', () => {
@@ -228,6 +321,50 @@ describe('SpawnModule', () => {
     // Tick past t=0.5 fires the second burst.
     system.update(tick(0.5));
     expect(system.liveCount).toBe(15);
+  });
+
+  test('BurstSpawn loop repeats the schedule once exhausted', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 128 });
+
+    system.addSpawnModule(
+      new BurstSpawn({
+        schedule: [{ time: 0, count: 5 }],
+        lifetime: new Constant(10),
+        loop: true,
+      }),
+    );
+
+    // First tick fires the t=0 burst, then wraps back to t=0 since the
+    // 1-entry schedule is immediately exhausted.
+    system.update(tick(0.1));
+    expect(system.liveCount).toBe(5);
+
+    // Wrapped schedule fires again on the next tick.
+    system.update(tick(0.1));
+    expect(system.liveCount).toBe(10);
+  });
+
+  test('BurstSpawn.reset() restarts the schedule from t=0', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 128 });
+
+    const burst = new BurstSpawn({
+      schedule: [{ time: 0, count: 5 }],
+      lifetime: new Constant(10),
+    });
+
+    system.addSpawnModule(burst);
+
+    // Fires once; without looping, the schedule stays exhausted afterwards.
+    system.update(tick(0.1));
+    expect(system.liveCount).toBe(5);
+
+    system.update(tick(1));
+    expect(system.liveCount).toBe(5);
+
+    // Explicit reset rewinds the schedule so the t=0 burst can fire again.
+    burst.reset();
+    system.update(tick(0.1));
+    expect(system.liveCount).toBe(10);
   });
 });
 
@@ -412,6 +549,36 @@ describe('UpdateModule', () => {
 
     expect(system.velX[slot]).toBeGreaterThan(0);
     expect(Math.abs(system.velY[slot])).toBeLessThan(0.001);
+  });
+
+  test('AttractToPoint falloff softens the pull inside the falloff radius', () => {
+    const strength = 1000;
+
+    // Unsoftened (falloff=0, the default): full strength regardless of distance.
+    const unsoftened = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const unsoftenedSlot = unsoftened.spawn();
+
+    unsoftened.lifetime[unsoftenedSlot] = 10;
+    unsoftened.posX[unsoftenedSlot] = 90;
+    unsoftened.posY[unsoftenedSlot] = 0;
+    unsoftened.addUpdateModule(new AttractToPoint(100, 0, strength));
+
+    // Softened: particle is at dist=10 from the target, inside falloff=50,
+    // so k = min(1, dist / falloff) = 0.2 scales the acceleration down.
+    const softened = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const softenedSlot = softened.spawn();
+
+    softened.lifetime[softenedSlot] = 10;
+    softened.posX[softenedSlot] = 90;
+    softened.posY[softenedSlot] = 0;
+    softened.addUpdateModule(new AttractToPoint(100, 0, strength, 50));
+
+    unsoftened.update(tick(1));
+    softened.update(tick(1));
+
+    expect(unsoftened.velX[unsoftenedSlot]).toBeCloseTo(1000);
+    expect(softened.velX[softenedSlot]).toBeCloseTo(200);
+    expect(softened.velX[softenedSlot]).toBeLessThan(unsoftened.velX[unsoftenedSlot]);
   });
 
   test('RepelFromPoint pushes particle away from source', () => {

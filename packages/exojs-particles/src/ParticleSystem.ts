@@ -112,7 +112,6 @@ export interface ParticleSystemOptions {
  * // Backend-agnostic — runs CPU on WebGL2, GPU on WebGPU automatically.
  * const system = new ParticleSystem(loader.get(Texture, 'spark'), {
  *     capacity: 8192,
- *     backend: app.backend,
  * });
  *
  * system.addSpawnModule(new RateSpawn({ rate: new Constant(60), ... }));
