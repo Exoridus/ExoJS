@@ -262,6 +262,7 @@ export class TiledMap {
       class: this.class,
       backgroundColor: parseTiledColor(this.backgroundColor),
       renderOrder: this.renderOrder ?? 'right-down',
+      properties: convertProperties(this.properties),
     });
   }
 

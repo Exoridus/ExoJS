@@ -377,6 +377,26 @@ describe('TiledMap.toTileMap — object/class property conversion', () => {
   });
 });
 
+describe('TiledMap.toTileMap — map-level property conversion', () => {
+  it('carries map-level custom properties into TileMap.properties', () => {
+    const data = validateTiledMapData({
+      ...RAW_MINIMAL,
+      properties: [
+        { name: 'biome', type: 'string', value: 'forest' },
+        { name: 'maxPlayers', type: 'int', value: 4 },
+      ],
+    }, 'mapprops.tmj');
+    const tm = new TiledMap('mapprops.tmj', data, [ATLAS_TILESET]).toTileMap();
+    expect(tm.properties['biome']).toBe('forest');
+    expect(tm.properties['maxPlayers']).toBe(4);
+  });
+
+  it('defaults TileMap.properties to an empty bag when the map has no custom properties', () => {
+    const tm = makeAtlasMap().toTileMap();
+    expect(tm.properties).toEqual({});
+  });
+});
+
 describe('TiledMap.toTileMap — error cases', () => {
   it('throws TiledFormatError for a collection-of-images tileset', () => {
     const collectionTs = new TiledTileset(
