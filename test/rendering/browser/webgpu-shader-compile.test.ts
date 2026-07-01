@@ -98,7 +98,10 @@ const compileWgsl = async (device: GPUDevice, code: string): Promise<CompileResu
   const module = device.createShaderModule({ code });
   const info = await module.getCompilationInfo();
   const errors = info.messages.filter(message => message.type === 'error');
-  const log = info.messages.length > 0 ? info.messages.map(message => `${message.type} ${message.lineNum}:${message.linePos} ${message.message}`).join('\n') : '<no messages>';
+  const log =
+    info.messages.length > 0
+      ? info.messages.map(message => `${message.type} ${message.lineNum}:${message.linePos} ${message.message}`).join('\n')
+      : '<no messages>';
 
   return { errorCount: errors.length, log };
 };
