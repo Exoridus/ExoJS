@@ -62,6 +62,37 @@ init() {
 
 Either approach works — poll in `update` for small scenes, react to `onResize` when re-layout is expensive.
 
+## Sizing modes
+
+The manual `app.resize` + `onResize` pattern above works well when you compute the size yourself. For the common cases — filling a container, scaling a fixed-resolution canvas to fit, or letterboxing — pass `canvas.sizingMode` instead and let the application manage the CSS and `ResizeObserver` for you:
+
+```js
+import { Application } from '@codexo/exojs';
+
+const app = new Application({
+    canvas: { width: 320, height: 240, sizingMode: 'letterbox' },
+});
+```
+
+- `'fixed'` (default) — exact pixel size, no responsive behavior.
+- `'fill'` — observes the parent element and calls `app.resize(...)` to match its size exactly.
+- `'fit'` / `'shrink'` — CSS-scales the fixed-resolution canvas to fit its container via `object-fit: contain`; `'fit'` always fills the available space, `'shrink'` never scales up past 100%.
+- `'letterbox'` — keeps the design-space render target fixed and centers it in the parent at native resolution, with the parent background showing through as bars around it.
+
+`sizingMode` is also a live, runtime-settable property — not just a constructor option. Assigning `app.sizingMode` re-applies the strategy immediately: it disconnects any previous `ResizeObserver` and installs the new mode's CSS/observer. That makes it easy to switch strategies in response to user actions, for example filling the screen on fullscreen entry and returning to a fixed size on exit:
+
+```js
+import { Application } from '@codexo/exojs';
+
+const app = new Application({
+    canvas: { width: 800, height: 600 },
+});
+
+document.addEventListener('fullscreenchange', () => {
+    app.sizingMode = document.fullscreenElement ? 'fill' : 'fixed';
+});
+```
+
 ## Example
 
 <ExamplePreview chapter="getting-started" slug="resize-and-dpr" />
