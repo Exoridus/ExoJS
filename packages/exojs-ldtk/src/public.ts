@@ -28,6 +28,8 @@ export type {
   LdtkLevel,
   LdtkTileData,
   LdtkTilesetDef,
+  LdtkWorldData,
+  LdtkWorldLayout,
 } from './LdtkData';
 export { ldtkFlipNone, ldtkFlipX, ldtkFlipXy, ldtkFlipY } from './LdtkData';
 

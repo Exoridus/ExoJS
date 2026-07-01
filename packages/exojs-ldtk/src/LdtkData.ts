@@ -219,6 +219,37 @@ export interface LdtkLevel {
   readonly externalRelPath?: string;
 }
 
+// ── Worlds ────────────────────────────────────────────────────────────────────
+
+/**
+ * How a {@link LdtkWorldData}'s levels are spatially organised. `null` is a
+ * valid LDtk value (unset), same as the other nullable enum-ish fields in
+ * this file.
+ */
+export type LdtkWorldLayout = 'Free' | 'GridVania' | 'LinearHorizontal' | 'LinearVertical' | null;
+
+/**
+ * A single world in a multi-world LDtk project (`root.worlds[]`, populated
+ * when the project has "Multi-Worlds" enabled in its advanced settings).
+ * Each world owns its own {@link levels}; `defs` (tilesets/layers/entity
+ * definitions) is declared once at the document root and shared by every
+ * world rather than duplicated per-world — see {@link LdtkData.defs}.
+ */
+export interface LdtkWorldData {
+  /** Human-readable world identifier (unique within the project). */
+  readonly identifier: string;
+  /** Globally unique instance id (UUID string). */
+  readonly iid: string;
+  /** Width of the world grid in pixels. */
+  readonly worldGridWidth: number;
+  /** Height of the world grid in pixels. */
+  readonly worldGridHeight: number;
+  /** How this world's levels are spatially organised. */
+  readonly worldLayout: LdtkWorldLayout;
+  /** Levels belonging to this world, in document order. */
+  readonly levels: readonly LdtkLevel[];
+}
+
 // ── Definitions ───────────────────────────────────────────────────────────────
 
 /** Tileset definition from `defs.tilesets`. */
@@ -278,5 +309,22 @@ export interface LdtkData {
   readonly defaultGridSize?: number;
   readonly bgColor?: string;
   readonly defs: LdtkDefs;
+  /**
+   * Levels not organised into worlds. Always populated for pre-multi-world
+   * documents; kept EMPTY (per the LDtk spec's backward-compatibility rule)
+   * when {@link worlds} is used instead — read levels via `worlds[].levels`
+   * in that case, or use {@link import('./ldtkLevelEntries').getLdtkLevelEntries}
+   * (or simply {@link import('./LdtkMap').LdtkMap.levels} /
+   * {@link import('./LdtkMap').LdtkMap.getLevelByName}) to get "all levels,
+   * in order" regardless of which shape the document uses.
+   */
   readonly levels: readonly LdtkLevel[];
+  /**
+   * Worlds, present and non-empty only when the project has "Multi-Worlds"
+   * enabled in its advanced settings. Absent or empty for the (overwhelmingly
+   * common) single-world case, in which levels live directly in the root
+   * {@link levels} array instead. `defs` is NOT duplicated per-world — it
+   * stays declared once at the document root regardless of this field.
+   */
+  readonly worlds?: readonly LdtkWorldData[];
 }
