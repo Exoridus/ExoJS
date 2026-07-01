@@ -22,6 +22,17 @@ export interface LimiterEffectOptions {
    * processing workflows.
    */
   wet?: number;
+  /**
+   * Input-to-output dB ratio above the threshold. Range 1..20, default 20
+   * (brick-wall). Lower it for a softer, more compressor-like limiter.
+   */
+  ratio?: number;
+  /**
+   * Width in dB of the transition region around the threshold (soft knee).
+   * Range 0..40, default 0 (hard knee). Raise it for a gentler transition
+   * into limiting.
+   */
+  knee?: number;
 }
 
 interface LimiterEffectSetup {
@@ -38,10 +49,14 @@ interface LimiterEffectSetup {
  * fast attack. Use it as a final-chain safety net to prevent clipping and
  * protect downstream output.
  *
- * The compressor `ratio` (20) and `knee` (0) are fixed internally and are not
- * user-configurable options. The effect exposes a dry/wet mix for API
- * consistency and parallel processing workflows, though a fully-wet signal
- * (`wet = 1`) is the typical configuration.
+ * The compressor `ratio` and `knee` default to brick-wall values (20 and 0
+ * respectively) but remain configurable, unlike a truly fixed limiter,
+ * because callers occasionally want a softer, more compressor-like limiting
+ * curve (lower ratio) or a gentler transition into limiting (larger knee)
+ * without switching to {@link CompressorEffect} and losing the dry/wet mix.
+ * The effect also exposes a dry/wet mix for API consistency and parallel
+ * processing workflows, though a fully-wet signal (`wet = 1`) is the typical
+ * configuration.
  *
  * Node graph:
  * ```
@@ -62,6 +77,8 @@ export class LimiterEffect extends AudioEffect {
   private _attack: number;
   private _release: number;
   private _wet: number;
+  private _ratio: number;
+  private _knee: number;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setupNodes(ctx);
@@ -73,6 +90,8 @@ export class LimiterEffect extends AudioEffect {
     this._attack = Math.max(0, Math.min(1, options.attack ?? 0.003));
     this._release = Math.max(0, Math.min(1, options.release ?? 0.25));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
+    this._ratio = Math.max(1, Math.min(20, options.ratio ?? 20));
+    this._knee = Math.max(0, Math.min(40, options.knee ?? 0));
     if (isAudioContextReady()) {
       this._setupNodes(getAudioContext());
     } else {
@@ -156,6 +175,38 @@ export class LimiterEffect extends AudioEffect {
   }
 
   /**
+   * Input-to-output dB ratio above the threshold. Range 1..20, default 20
+   * (brick-wall). Lower for a softer, more compressor-like limiter.
+   * Changes are ramped smoothly via `setTargetAtTime`.
+   */
+  public get ratio(): number {
+    return this._ratio;
+  }
+
+  public set ratio(value: number) {
+    this._ratio = Math.max(1, Math.min(20, value));
+    if (this._setup) {
+      this._setup.compressor.ratio.setTargetAtTime(this._ratio, this._setup.compressor.context.currentTime, 0.01);
+    }
+  }
+
+  /**
+   * Width in dB of the transition region around the threshold (soft knee).
+   * Range 0..40, default 0 (hard knee). Raise for a gentler transition into
+   * limiting. Changes are ramped smoothly via `setTargetAtTime`.
+   */
+  public get knee(): number {
+    return this._knee;
+  }
+
+  public set knee(value: number) {
+    this._knee = Math.max(0, Math.min(40, value));
+    if (this._setup) {
+      this._setup.compressor.knee.setTargetAtTime(this._knee, this._setup.compressor.context.currentTime, 0.01);
+    }
+  }
+
+  /**
    * Dry/wet mix level, 0..1. The dry level is automatically `1 - wet`.
    * Changes are ramped smoothly via `setTargetAtTime`. Default 1.0.
    */
@@ -196,9 +247,10 @@ export class LimiterEffect extends AudioEffect {
     dryGain.gain.setValueAtTime(1 - this._wet, ctx.currentTime);
     wetGain.gain.setValueAtTime(this._wet, ctx.currentTime);
 
-    // Fixed limiter settings: high ratio for brick-wall behaviour, hard knee (0).
-    compressor.ratio.setValueAtTime(20, ctx.currentTime);
-    compressor.knee.setValueAtTime(0, ctx.currentTime);
+    // Defaults to brick-wall behaviour (high ratio, hard knee) but both remain
+    // configurable — see LimiterEffectOptions.ratio / .knee.
+    compressor.ratio.setValueAtTime(this._ratio, ctx.currentTime);
+    compressor.knee.setValueAtTime(this._knee, ctx.currentTime);
     compressor.threshold.setValueAtTime(this._threshold, ctx.currentTime);
     compressor.attack.setValueAtTime(this._attack, ctx.currentTime);
     compressor.release.setValueAtTime(this._release, ctx.currentTime);
