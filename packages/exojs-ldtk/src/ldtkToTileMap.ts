@@ -5,6 +5,7 @@ import type {
   LdtkData,
   LdtkEntityInstance,
   LdtkFieldInstance,
+  LdtkIntGridValueDef,
   LdtkLayerInstance,
   LdtkLevel,
   LdtkTileData,
@@ -106,9 +107,11 @@ function convertLevel(
       }
 
       case 'IntGrid': {
-        const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets);
+        const intGridProperties = buildIntGridProperties(layerInst, data);
+        const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, intGridProperties);
         // IntGrid layers may carry auto-tiles when "Auto-layer" rules are
-        // configured. Use those for rendering; raw intGridCsv is data-only.
+        // configured. Use those for rendering; raw intGridCsv is exposed as
+        // data-only layer properties (see buildIntGridProperties).
         const autoTiles = layerInst.autoLayerTiles ?? [];
         const tsUid = layerInst.__tilesetDefUid;
         if (autoTiles.length > 0 && tsUid !== undefined) {
@@ -167,6 +170,7 @@ function makeTileLayer(
   layerInst: LdtkLayerInstance,
   layerId: number,
   tilesets: readonly TileSet[],
+  properties?: TileProperties,
 ): TileLayer {
   return new TileLayer({
     id: layerId,
@@ -180,6 +184,7 @@ function makeTileLayer(
     opacity: layerInst.opacity ?? 1,
     offsetX: layerInst.pxOffsetX ?? 0,
     offsetY: layerInst.pxOffsetY ?? 0,
+    ...(properties && { properties }),
   });
 }
 
@@ -208,6 +213,80 @@ function populateTileLayer(
       },
     });
   }
+}
+
+// ── Helpers: IntGrid ──────────────────────────────────────────────────────────
+
+/**
+ * Reserved {@link TileLayer.properties} key holding the JSON-encoded raw
+ * IntGrid CSV array (`readonly number[]`) for a `TileLayer` converted from an
+ * LDtk `IntGrid` layer instance. Index = `y * layer.width + x`; `0` = empty.
+ * Prefer {@link getLdtkIntGridValueAt} over reading this directly.
+ */
+export const ldtkIntGridCsvProperty = 'ldtkIntGridCsv';
+
+/**
+ * Reserved {@link TileLayer.properties} key holding the JSON-encoded
+ * {@link LdtkIntGridValueDef} array for a `TileLayer` converted from an LDtk
+ * `IntGrid` layer instance — the raw-int → named/coloured mapping declared on
+ * the owning layer definition (`data.defs.layers[].intGridValues`).
+ * Prefer {@link getLdtkIntGridValueAt} over reading this directly.
+ */
+export const ldtkIntGridValuesProperty = 'ldtkIntGridValues';
+
+/**
+ * Build the reserved IntGrid properties for a `TileLayer` from an LDtk
+ * `IntGrid` layer instance, or `undefined` when the layer carries no
+ * `intGridCsv` data (nothing to expose).
+ *
+ * {@link TileLayer.properties} values are scalar-only, so the raw CSV array
+ * and the value-definition mapping are JSON-encoded into two reserved string
+ * properties rather than stored as nested structures — the same
+ * `properties`-bag mechanism the Tiled adapter already uses for per-layer
+ * metadata, just serialized to fit its scalar-only value type.
+ */
+function buildIntGridProperties(
+  layerInst: LdtkLayerInstance,
+  data: LdtkData,
+): TileProperties | undefined {
+  const csv = layerInst.intGridCsv;
+  if (!csv || csv.length === 0) return undefined;
+
+  const layerDef = data.defs.layers.find(def => def.uid === layerInst.layerDefUid);
+  const values = layerDef?.intGridValues ?? [];
+
+  return Object.freeze({
+    [ldtkIntGridCsvProperty]: JSON.stringify(csv),
+    [ldtkIntGridValuesProperty]: JSON.stringify(values),
+  });
+}
+
+/**
+ * Look up the named/coloured {@link LdtkIntGridValueDef} at a tile coordinate
+ * on a `TileLayer` converted from an LDtk `IntGrid` layer instance.
+ *
+ * Returns `undefined` when the coordinate is out of bounds, the cell's raw
+ * value is `0` (empty), the raw value has no matching definition, or `layer`
+ * was not converted from an IntGrid layer instance (no IntGrid data attached
+ * via {@link ldtkIntGridCsvProperty} / {@link ldtkIntGridValuesProperty}).
+ */
+export function getLdtkIntGridValueAt(
+  layer: TileLayer,
+  x: number,
+  y: number,
+): LdtkIntGridValueDef | undefined {
+  if (!layer.inBounds(x, y)) return undefined;
+
+  const csvRaw = layer.properties[ldtkIntGridCsvProperty];
+  const valuesRaw = layer.properties[ldtkIntGridValuesProperty];
+  if (typeof csvRaw !== 'string' || typeof valuesRaw !== 'string') return undefined;
+
+  const csv = JSON.parse(csvRaw) as readonly number[];
+  const raw = csv[y * layer.width + x];
+  if (raw === undefined || raw === 0) return undefined;
+
+  const values = JSON.parse(valuesRaw) as readonly LdtkIntGridValueDef[];
+  return values.find(v => v.value === raw);
 }
 
 // ── Helpers: ObjectLayer ──────────────────────────────────────────────────────
