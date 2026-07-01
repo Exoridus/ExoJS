@@ -1,6 +1,6 @@
 import { AnimatedSprite, type AnimatedSpriteClipDefinition, type Rectangle, Spritesheet, type Texture } from '@codexo/exojs';
 
-import { type AsepriteData, type AsepriteFrameData,isAsepriteArrayData } from './AsepriteData';
+import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag,isAsepriteArrayData } from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of
@@ -16,19 +16,67 @@ function normaliseFrames(data: AsepriteData): AsepriteFrameData[] {
 }
 
 /**
- * Calculates the average frames-per-second for a subset of frames, based on
- * the per-frame `duration` field (milliseconds per frame) exported by Aseprite.
- * Falls back to `12` fps when all durations are zero or the slice is empty.
+ * Expands a frame tag's inclusive `[from, to]` range into the ordered
+ * sequence of frame indices it actually plays, according to its
+ * {@link AsepriteDirection}. Indices are not bounds-checked against the
+ * frame array here; callers filter out-of-range entries separately.
+ *
+ * - `forward`: `[from, from+1, ..., to]`.
+ * - `reverse`: `[to, to-1, ..., from]`.
+ * - `pingpong`: a forward pass followed by a backward pass that excludes
+ *   both endpoints, e.g. `[0,1,2]` becomes `[0,1,2,1]`.
+ * - `pingpong_reverse`: the mirrored shape, starting from `to`.
+ * - A single-frame tag (`from === to`) always yields just that one frame.
  */
-function avgFps(frames: AsepriteFrameData[], from: number, to: number): number {
-  const slice = frames.slice(from, to + 1);
+function expandFrameIndices(tag: AsepriteFrameTag): number[] {
+  const { from, to } = tag;
 
-  if (slice.length === 0) {
+  if (from === to) {
+    return [from];
+  }
+
+  const indices: number[] = [];
+
+  switch (tag.direction) {
+    case 'reverse':
+      for (let i = to; i >= from; i--) indices.push(i);
+      break;
+
+    case 'pingpong':
+      for (let i = from; i <= to; i++) indices.push(i);
+      for (let i = to - 1; i > from; i--) indices.push(i);
+      break;
+
+    case 'pingpong_reverse':
+      for (let i = to; i >= from; i--) indices.push(i);
+      for (let i = from + 1; i < to; i++) indices.push(i);
+      break;
+
+    case 'forward':
+    default:
+      for (let i = from; i <= to; i++) indices.push(i);
+      break;
+  }
+
+  return indices;
+}
+
+/**
+ * Calculates the average frames-per-second for a sequence of frame indices,
+ * based on the per-frame `duration` field (milliseconds per frame) exported
+ * by Aseprite. Every occurrence of an index counts toward the average — for
+ * ping-pong sequences that means repeated (bounced) frames are weighted twice.
+ * Falls back to `12` fps when all durations are zero or the sequence is empty.
+ */
+function avgFps(frameArray: AsepriteFrameData[], indices: number[]): number {
+  const durations = indices.filter(i => i >= 0 && i < frameArray.length).map(i => frameArray[i]!.duration);
+
+  if (durations.length === 0) {
     return 12;
   }
 
-  const totalMs = slice.reduce((sum, f) => sum + f.duration, 0);
-  const avgMs = totalMs / slice.length;
+  const totalMs = durations.reduce((sum, d) => sum + d, 0);
+  const avgMs = totalMs / durations.length;
 
   return avgMs > 0 ? 1000 / avgMs : 12;
 }
@@ -82,9 +130,11 @@ export class AsepriteSheet {
    * `frameTags` are resolved against the ordered frame array; out-of-range
    * indices are silently skipped.
    *
-   * Ping-pong directions (`pingpong`, `pingpong_reverse`) are recorded with
-   * `loop: true` but the reversed segment is not automatically appended —
-   * the clip plays only the declared `from`→`to` range.
+   * A tag's `direction` determines the expanded frame sequence fed into the
+   * clip — `forward` and `reverse` play the `[from, to]` range in order or
+   * in reverse, while `pingpong`/`pingpong_reverse` append a backward pass
+   * (excluding both endpoints) so the bounce plays back correctly on the
+   * engine's forward-only {@link AnimatedSprite} playback.
    */
   public static parse(data: AsepriteData, texture: Texture): AsepriteSheet {
     const frameArray = normaliseFrames(data);
@@ -104,9 +154,10 @@ export class AsepriteSheet {
     const frameTags = data.meta.frameTags ?? [];
 
     for (const tag of frameTags) {
+      const indices = expandFrameIndices(tag);
       const frames: Rectangle[] = [];
 
-      for (let i = tag.from; i <= tag.to; i++) {
+      for (const i of indices) {
         if (i >= 0 && i < frameArray.length) {
           frames.push(spritesheet.getFrame(String(i)));
         }
@@ -117,7 +168,7 @@ export class AsepriteSheet {
       }
 
       clips.set(tag.name, {
-        fps: avgFps(frameArray, tag.from, tag.to),
+        fps: avgFps(frameArray, indices),
         frames,
         loop: true,
       });

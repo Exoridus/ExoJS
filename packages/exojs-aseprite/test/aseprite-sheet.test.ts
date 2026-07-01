@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { AnimatedSprite, Spritesheet, Texture } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
-import type { AsepriteData } from '../src/AsepriteData';
+import type { AsepriteData, AsepriteDirection } from '../src/AsepriteData';
 import { isAsepriteArrayData } from '../src/AsepriteData';
 import { AsepriteSheet } from '../src/AsepriteSheet';
 
@@ -105,15 +105,111 @@ describe('AsepriteSheet.parse — clips from frameTags', () => {
     expect(sheet.clips.get('bounce')!.loop).toBe(true);
   });
 
-  it('does NOT expand a pingpong tag into a reversed segment (plays only from->to)', () => {
+  it('a two-frame pingpong tag has no middle frame to repeat, so it plays like forward', () => {
     const sheet = AsepriteSheet.parse(arrayData, newTexture());
-    // bounce: from 1 to 2 pingpong -> 2 frames (1, 2), not 3 (1, 2, 1).
+    // bounce: from 1 to 2 pingpong -> forward pass [1,2], backward pass excludes
+    // both endpoints, and there is no frame strictly between 1 and 2 -> [1, 2].
     expect(sheet.clips.get('bounce')!.frames).toHaveLength(2);
+    expect(sheet.clips.get('bounce')!.frames[0]).toBe(sheet.spritesheet.getFrame('1'));
+    expect(sheet.clips.get('bounce')!.frames[1]).toBe(sheet.spritesheet.getFrame('2'));
   });
 
   it('derives clip fps from the average frame duration (100ms -> 10fps)', () => {
     const sheet = AsepriteSheet.parse(arrayData, newTexture());
     expect(sheet.clips.get('walk')!.fps).toBe(10);
+  });
+});
+
+// ── AsepriteSheet.parse — direction expansion ──────────────────────────────────
+
+describe('AsepriteSheet.parse — direction expansion', () => {
+  function makeData(tag: { from: number; to: number; direction: AsepriteDirection }): AsepriteData {
+    return {
+      frames: [0, 1, 2].map(i => ({
+        duration: 100,
+        frame: { x: i * 16, y: 0, w: 16, h: 16 },
+        rotated: false,
+        trimmed: false,
+        sourceSize: { w: 16, h: 16 },
+        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+      })),
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 48, h: 16 },
+        scale: '1',
+        frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: tag.direction }],
+      },
+    };
+  }
+
+  function indicesOf(sheet: AsepriteSheet): number[] {
+    const frames = sheet.clips.get('clip')!.frames;
+
+    return frames.map(rect => {
+      for (let i = 0; i < 3; i++) {
+        if (rect === sheet.spritesheet.getFrame(String(i))) {
+          return i;
+        }
+      }
+
+      throw new Error('frame not found');
+    });
+  }
+
+  it('forward (default) expands to [from..to] unchanged', () => {
+    const sheet = AsepriteSheet.parse(makeData({ from: 0, to: 2, direction: 'forward' }), newTexture());
+    expect(indicesOf(sheet)).toEqual([0, 1, 2]);
+  });
+
+  it('reverse expands to [to..from]', () => {
+    const sheet = AsepriteSheet.parse(makeData({ from: 0, to: 2, direction: 'reverse' }), newTexture());
+    expect(indicesOf(sheet)).toEqual([2, 1, 0]);
+  });
+
+  it('pingpong expands to a forward pass then a backward pass excluding both endpoints', () => {
+    const sheet = AsepriteSheet.parse(makeData({ from: 0, to: 2, direction: 'pingpong' }), newTexture());
+    expect(indicesOf(sheet)).toEqual([0, 1, 2, 1]);
+  });
+
+  it('pingpong_reverse expands starting from the reverse end', () => {
+    const sheet = AsepriteSheet.parse(makeData({ from: 0, to: 2, direction: 'pingpong_reverse' }), newTexture());
+    expect(indicesOf(sheet)).toEqual([2, 1, 0, 1]);
+  });
+
+  it('a single-frame tag (from === to) emits just that frame for any direction', () => {
+    for (const direction of ['forward', 'reverse', 'pingpong', 'pingpong_reverse'] as const) {
+      const sheet = AsepriteSheet.parse(makeData({ from: 1, to: 1, direction }), newTexture());
+      expect(indicesOf(sheet)).toEqual([1]);
+    }
+  });
+
+  it('averages duration across the full expanded pingpong sequence, weighting repeated frames', () => {
+    const data: AsepriteData = {
+      frames: [100, 300, 100].map((duration, i) => ({
+        duration,
+        frame: { x: i * 16, y: 0, w: 16, h: 16 },
+        rotated: false,
+        trimmed: false,
+        sourceSize: { w: 16, h: 16 },
+        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+      })),
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 48, h: 16 },
+        scale: '1',
+        frameTags: [{ name: 'clip', from: 0, to: 2, direction: 'pingpong' }],
+      },
+    };
+    const sheet = AsepriteSheet.parse(data, newTexture());
+    // Expanded sequence is [100, 300, 100, 300] (frame 1's duration counted twice)
+    // -> avg 200ms -> 5fps. A naive from..to average (100+300+100)/3 would give 6fps.
+    expect(sheet.clips.get('clip')!.fps).toBe(5);
   });
 });
 
