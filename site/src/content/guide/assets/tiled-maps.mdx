@@ -110,6 +110,55 @@ map.data;             // the raw parsed TiledMapData
 textures; you decide how to render them (for example, by building a `Mesh` or batching `Sprite`s
 per visible tile). A built-in tilemap renderer is out of this extension's initial scope.
 
+## Custom properties
+
+Tiled's custom properties (on maps, layers, tiles, and objects) survive the trip through
+`map.toTileMap()`. Every runtime `ObjectLayer`, `TileMapObject`, and `TileDefinition` carries a
+`properties` bag — a flat, frozen `Readonly<Record<string, TilePropertyValue>>` built from the
+map's Tiled property list. Plain-scalar Tiled types (`string`, `int`, `float`, `bool`, `color`,
+`file`) come through as their equivalent JS value:
+
+```js no-check
+const tileMap = map.toTileMap();
+const [spawnLayer] = tileMap.objectLayers;
+const spawn = spawnLayer.objects.find(object => object.name === 'PlayerSpawn');
+
+spawn.properties.maxHealth; // number, e.g. 100
+spawn.properties.label;     // string
+spawn.properties.locked;    // boolean
+```
+
+Two Tiled property types aren't plain scalars and convert to structured values instead:
+
+- **`object`-typed properties** — a reference to another Tiled object by numeric id — convert to
+  a `TilePropertyObjectRef`: `{ kind: 'objectRef', id }`. Resolve it by matching `id` against
+  another object's `id` in the same map:
+
+  ```js no-check
+  import { TilePropertyKind } from '@codexo/exojs-tilemap';
+
+  const door = spawnLayer.objects.find(object => object.name === 'Door');
+  const target = door.properties.linkedSwitch;
+
+  if (target?.kind === TilePropertyKind.ObjectRef) {
+    const linkedSwitch = spawnLayer.objects.find(object => object.id === target.id);
+  }
+  ```
+
+- **`class`-typed properties** — Tiled's nested custom-property groups — recursively convert into
+  their own `properties`-shaped bag instead of being dropped. Nesting can be arbitrarily deep, and
+  each nested bag reads the same way as the top-level one:
+
+  ```js no-check
+  const stats = spawn.properties.stats; // a nested TileProperties bag
+  stats.health; // number
+  stats.resistances.fire; // further nesting reads the same way
+  ```
+
+Before this conversion existed, `object`- and `class`-typed properties were indistinguishable from
+a plain number or silently dropped; both are now tagged (`TilePropertyObjectRef`) or preserved
+(nested `TileProperties`) so you can tell them apart from real scalars at runtime.
+
 ## Tileset texture ownership
 
 The tileset textures a `TiledMap` exposes are loaded through the `Loader` and owned by the
