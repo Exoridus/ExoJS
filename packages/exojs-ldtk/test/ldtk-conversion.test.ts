@@ -9,7 +9,7 @@ import type {
   LdtkLevel,
 } from '../src/LdtkData';
 import { ldtkFlipNone, ldtkFlipX, ldtkFlipXy, ldtkFlipY } from '../src/LdtkData';
-import { ldtkToTileMap } from '../src/ldtkToTileMap';
+import { getLdtkIntGridValueAt, ldtkToTileMap } from '../src/ldtkToTileMap';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -294,6 +294,132 @@ describe('ldtkToTileMap — IntGrid', () => {
       .layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(0);
     expect(layer.width).toBe(4);
+  });
+});
+
+describe('ldtkToTileMap — IntGrid value exposure', () => {
+  it('exposes the named/coloured IntGrid value at a tile coordinate', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [1, 0, 2, 1],
+    });
+    const withDefs: LdtkData = {
+      ...data,
+      defs: {
+        tilesets: [],
+        layers: [
+          {
+            uid: 120,
+            identifier: 'Collision',
+            type: 'IntGrid',
+            gridSize: 16,
+            intGridValues: [
+              { value: 1, identifier: 'Wall', color: '#ff0000' },
+              { value: 2, identifier: 'Water', color: '#0000ff' },
+            ],
+          },
+        ],
+      },
+    };
+
+    const layer = ldtkToTileMap(withDefs).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toEqual({
+      value: 1,
+      identifier: 'Wall',
+      color: '#ff0000',
+    });
+    expect(getLdtkIntGridValueAt(layer, 2, 0)).toEqual({
+      value: 2,
+      identifier: 'Water',
+      color: '#0000ff',
+    });
+    expect(getLdtkIntGridValueAt(layer, 3, 0)).toEqual({
+      value: 1,
+      identifier: 'Wall',
+      color: '#ff0000',
+    });
+  });
+
+  it('returns undefined for empty cells (raw value 0)', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [1, 0, 2, 1],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 1, 0)).toBeUndefined();
+  });
+
+  it('returns undefined for out-of-bounds coordinates', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [1, 0, 2, 1],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, -1, 0)).toBeUndefined();
+    expect(getLdtkIntGridValueAt(layer, 99, 99)).toBeUndefined();
+  });
+
+  it('returns undefined for a layer with no IntGrid data attached (e.g. a Tiles layer)', () => {
+    const data = docWithLayer({
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: true,
+      iid: 'tiles-1',
+      gridTiles: [],
+      autoLayerTiles: [],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toBeUndefined();
+  });
+
+  it('returns undefined for a raw value with no matching definition', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [5, 0, 0, 0], // 5 has no defs.layers[].intGridValues entry
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toBeUndefined();
   });
 });
 
