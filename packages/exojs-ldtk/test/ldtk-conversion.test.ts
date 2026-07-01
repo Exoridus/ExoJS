@@ -1,15 +1,17 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
+import type { TileProperties } from '@codexo/exojs-tilemap';
 import { TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, it } from 'vitest';
 
 import type {
   LdtkData,
   LdtkEntityInstance,
+  LdtkFieldInstance,
   LdtkLayerInstance,
   LdtkLevel,
 } from '../src/LdtkData';
 import { ldtkFlipNone, ldtkFlipX, ldtkFlipXy, ldtkFlipY } from '../src/LdtkData';
-import { ldtkToTileMap } from '../src/ldtkToTileMap';
+import { getLdtkIntGridValueAt, ldtkToTileMap } from '../src/ldtkToTileMap';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,38 @@ function docWithLayer(layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}):
       },
     ],
   };
+}
+
+/**
+ * Convert a document with one Entities layer holding exactly one entity with
+ * exactly one field, returning that entity's converted properties bag.
+ */
+function convertSingleField(field: LdtkFieldInstance): TileProperties {
+  const data = docWithLayer({
+    __identifier: 'Entities',
+    __type: 'Entities',
+    __cWid: 4,
+    __cHei: 1,
+    __gridSize: 16,
+    layerDefUid: 130,
+    levelId: 1,
+    visible: true,
+    iid: 'ent-1',
+    entityInstances: [
+      {
+        __identifier: 'E',
+        __type: 'E',
+        px: [0, 0],
+        width: 16,
+        height: 16,
+        __pivot: [0, 0],
+        iid: 'e-1',
+        defUid: 0,
+        fieldInstances: [field],
+      },
+    ],
+  });
+  return ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!.properties;
 }
 
 // ── Flip-bit constants ──────────────────────────────────────────────────────────
@@ -297,6 +331,320 @@ describe('ldtkToTileMap — IntGrid', () => {
   });
 });
 
+describe('ldtkToTileMap — IntGrid value exposure', () => {
+  it('exposes the named/coloured IntGrid value at a tile coordinate', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [1, 0, 2, 1],
+    });
+    const withDefs: LdtkData = {
+      ...data,
+      defs: {
+        tilesets: [],
+        layers: [
+          {
+            uid: 120,
+            identifier: 'Collision',
+            type: 'IntGrid',
+            gridSize: 16,
+            intGridValues: [
+              { value: 1, identifier: 'Wall', color: '#ff0000' },
+              { value: 2, identifier: 'Water', color: '#0000ff' },
+            ],
+          },
+        ],
+      },
+    };
+
+    const layer = ldtkToTileMap(withDefs).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toEqual({
+      value: 1,
+      identifier: 'Wall',
+      color: '#ff0000',
+    });
+    expect(getLdtkIntGridValueAt(layer, 2, 0)).toEqual({
+      value: 2,
+      identifier: 'Water',
+      color: '#0000ff',
+    });
+    expect(getLdtkIntGridValueAt(layer, 3, 0)).toEqual({
+      value: 1,
+      identifier: 'Wall',
+      color: '#ff0000',
+    });
+  });
+
+  it('returns undefined for empty cells (raw value 0)', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [1, 0, 2, 1],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 1, 0)).toBeUndefined();
+  });
+
+  it('returns undefined for out-of-bounds coordinates', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [1, 0, 2, 1],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, -1, 0)).toBeUndefined();
+    expect(getLdtkIntGridValueAt(layer, 99, 99)).toBeUndefined();
+  });
+
+  it('returns undefined for a layer with no IntGrid data attached (e.g. a Tiles layer)', () => {
+    const data = docWithLayer({
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: true,
+      iid: 'tiles-1',
+      gridTiles: [],
+      autoLayerTiles: [],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toBeUndefined();
+  });
+
+  it('returns undefined for a raw value with no matching definition', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [5, 0, 0, 0], // 5 has no defs.layers[].intGridValues entry
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toBeUndefined();
+  });
+});
+
+// ── Level field instances ────────────────────────────────────────────────────────
+
+describe('ldtkToTileMap — level field instances', () => {
+  it('merges scalar level field instances into TileMap.properties', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 7,
+          iid: 'iid-7',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+          fieldInstances: [
+            { __identifier: 'difficulty', __type: 'String', __value: 'hard' },
+            { __identifier: 'timeLimit', __type: 'Int', __value: 60 },
+          ],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.properties['difficulty']).toBe('hard');
+    expect(map.properties['timeLimit']).toBe(60);
+    expect(map.properties['ldtkUid']).toBe(7);
+    expect(map.properties['ldtkIid']).toBe('iid-7');
+  });
+
+  it('never lets a user-defined field clobber a reserved key (reserved keys win)', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 7,
+          iid: 'iid-7',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+          fieldInstances: [
+            { __identifier: 'ldtkUid', __type: 'Int', __value: 999 },
+            { __identifier: 'worldX', __type: 'Int', __value: -1 },
+          ],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.properties['ldtkUid']).toBe(7);
+    expect(map.properties['worldX']).toBe(0);
+  });
+
+  it('produces only the reserved keys when fieldInstances is absent', () => {
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(Object.keys(map.properties).sort()).toEqual([
+      'ldtkIid',
+      'ldtkUid',
+      'worldX',
+      'worldY',
+    ]);
+  });
+});
+
+// ── Entity pivot correction ────────────────────────────────────────────────────
+
+describe('ldtkToTileMap — entity pivot correction', () => {
+  it('adjusts px by the pivot to compute the bounding-box top-left corner', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 4,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Torch',
+          __type: 'Torch',
+          px: [40, 64],
+          width: 16,
+          height: 32,
+          __pivot: [0.5, 1],
+          iid: 'torch-1',
+          defUid: 400,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const object = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!;
+    // x = 40 - 16 * 0.5 = 32; y = 64 - 32 * 1 = 32
+    expect(object.x).toBe(32);
+    expect(object.y).toBe(32);
+  });
+
+  it('leaves position unchanged for a default top-left pivot [0, 0]', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 4,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Torch',
+          __type: 'Torch',
+          px: [40, 64],
+          width: 16,
+          height: 32,
+          __pivot: [0, 0],
+          iid: 'torch-1',
+          defUid: 400,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const object = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!;
+    expect(object.x).toBe(40);
+    expect(object.y).toBe(64);
+  });
+
+  it('adjusts by the full width/height for a bottom-right pivot [1, 1]', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 4,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: [
+        {
+          __identifier: 'Torch',
+          __type: 'Torch',
+          px: [40, 64],
+          width: 16,
+          height: 32,
+          __pivot: [1, 1],
+          iid: 'torch-1',
+          defUid: 400,
+          fieldInstances: [],
+        },
+      ],
+    });
+
+    const object = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!;
+    expect(object.x).toBe(24); // 40 - 16
+    expect(object.y).toBe(32); // 64 - 32
+  });
+});
+
 // ── Grid-size derivation ────────────────────────────────────────────────────────
 
 describe('ldtkToTileMap — level tile size derivation', () => {
@@ -493,7 +841,7 @@ describe('ldtkToTileMap — TileLayer metadata', () => {
 // ── Entity → ObjectLayer conversion ─────────────────────────────────────────────
 
 describe('ldtkToTileMap — entity field projection', () => {
-  it('keeps scalar fields and drops complex (array/object/null) field values', () => {
+  it('keeps scalar fields, maps structured/array fields, and omits null-valued fields', () => {
     const data = docWithLayer({
       __identifier: 'Entities',
       __type: 'Entities',
@@ -511,6 +859,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [0, 0],
           width: 16,
           height: 16,
+          __pivot: [0, 0],
           iid: 'npc-1',
           defUid: 300,
           fieldInstances: [
@@ -518,7 +867,6 @@ describe('ldtkToTileMap — entity field projection', () => {
             { __identifier: 'label', __type: 'String', __value: 'Bob' },
             { __identifier: 'hostile', __type: 'Bool', __value: true },
             { __identifier: 'path', __type: 'Array<Point>', __value: [{ cx: 1, cy: 2 }] },
-            { __identifier: 'meta', __type: 'Object', __value: { k: 1 } },
             { __identifier: 'nothing', __type: 'String', __value: null },
           ],
         },
@@ -529,8 +877,7 @@ describe('ldtkToTileMap — entity field projection', () => {
     expect(props['hp']).toBe(10);
     expect(props['label']).toBe('Bob');
     expect(props['hostile']).toBe(true);
-    expect(props['path']).toBeUndefined();
-    expect(props['meta']).toBeUndefined();
+    expect(props['path']).toEqual([{ kind: 'point', cx: 1, cy: 2 }]);
     expect(props['nothing']).toBeUndefined();
   });
 
@@ -552,6 +899,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [0, 0],
           width: 16,
           height: 16,
+          __pivot: [0, 0],
           iid: 'npc-1',
           defUid: 300,
           fieldInstances: [{ __identifier: 'hp', __type: 'Int', __value: 10 }],
@@ -581,6 +929,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [0, 0],
           width: 0,
           height: 0,
+          __pivot: [0, 0],
           iid: 'm-1',
           defUid: 301,
           fieldInstances: [],
@@ -611,6 +960,7 @@ describe('ldtkToTileMap — entity field projection', () => {
           px: [3, 5],
           width: 16,
           height: 16,
+          __pivot: [0, 0],
           iid: 'door-1',
           defUid: 302,
           fieldInstances: [],
@@ -625,6 +975,144 @@ describe('ldtkToTileMap — entity field projection', () => {
     expect(object.rotation).toBe(0);
     expect(object.visible).toBe(true);
   });
+});
+
+// ── Structured field types (Point / EntityRef / Tile / Array) ───────────────────
+
+describe('ldtkToTileMap — Point field conversion', () => {
+  it('maps a Point field to a TilePropertyPoint', () => {
+    const props = convertSingleField({
+      __identifier: 'spawn',
+      __type: 'Point',
+      __value: { cx: 3, cy: 4 },
+    });
+
+    expect(props['spawn']).toEqual({ kind: 'point', cx: 3, cy: 4 });
+  });
+
+  it('omits a null-valued Point field', () => {
+    const props = convertSingleField({
+      __identifier: 'spawn',
+      __type: 'Point',
+      __value: null,
+    });
+
+    expect(props['spawn']).toBeUndefined();
+    expect('spawn' in props).toBe(false);
+  });
+});
+
+describe('ldtkToTileMap — EntityRef field conversion', () => {
+  it('maps an EntityRef field to a TilePropertyObjectRef, threading all 4 source fields through', () => {
+    const props = convertSingleField({
+      __identifier: 'target',
+      __type: 'EntityRef',
+      __value: {
+        entityIid: 'target-entity-iid',
+        layerIid: 'target-layer-iid',
+        levelIid: 'target-level-iid',
+        worldIid: 'target-world-iid',
+      },
+    });
+
+    expect(props['target']).toEqual({
+      kind: 'objectRef',
+      id: 'target-entity-iid',
+      layerIid: 'target-layer-iid',
+      levelIid: 'target-level-iid',
+      worldIid: 'target-world-iid',
+    });
+  });
+
+  it('omits a null-valued EntityRef field', () => {
+    const props = convertSingleField({
+      __identifier: 'target',
+      __type: 'EntityRef',
+      __value: null,
+    });
+
+    expect('target' in props).toBe(false);
+  });
+});
+
+describe('ldtkToTileMap — Tile field conversion', () => {
+  it('maps a Tile field to a TilePropertyTileRef', () => {
+    const props = convertSingleField({
+      __identifier: 'icon',
+      __type: 'Tile',
+      __value: { tilesetUid: 7, x: 16, y: 32, w: 16, h: 16 },
+    });
+
+    expect(props['icon']).toEqual({ kind: 'tileRef', tilesetUid: 7, x: 16, y: 32, w: 16, h: 16 });
+  });
+
+  it('omits a null-valued Tile field', () => {
+    const props = convertSingleField({
+      __identifier: 'icon',
+      __type: 'Tile',
+      __value: null,
+    });
+
+    expect('icon' in props).toBe(false);
+  });
+});
+
+describe('ldtkToTileMap — Array field conversion', () => {
+  it('maps an Array<Int> field to a plain array of numbers', () => {
+    const props = convertSingleField({
+      __identifier: 'scores',
+      __type: 'Array<Int>',
+      __value: [1, 2, 3],
+    });
+
+    expect(props['scores']).toEqual([1, 2, 3]);
+  });
+
+  it('maps an Array<Point> field to an array of TilePropertyPoint (nested complex conversion)', () => {
+    const props = convertSingleField({
+      __identifier: 'path',
+      __type: 'Array<Point>',
+      __value: [
+        { cx: 0, cy: 0 },
+        { cx: 1, cy: 2 },
+      ],
+    });
+
+    expect(props['path']).toEqual([
+      { kind: 'point', cx: 0, cy: 0 },
+      { kind: 'point', cx: 1, cy: 2 },
+    ]);
+  });
+
+  it('omits a null-valued Array field', () => {
+    const props = convertSingleField({
+      __identifier: 'scores',
+      __type: 'Array<Int>',
+      __value: null,
+    });
+
+    expect('scores' in props).toBe(false);
+  });
+
+  it('maps an empty array to an empty array (still present, not omitted)', () => {
+    const props = convertSingleField({
+      __identifier: 'scores',
+      __type: 'Array<Int>',
+      __value: [],
+    });
+
+    expect(props['scores']).toEqual([]);
+  });
+});
+
+describe('ldtkToTileMap — null-valued scalar fields (all scalar types)', () => {
+  it.each(['Int', 'Float', 'Bool', 'String', 'Multilines', 'Color', 'FilePath', 'Enum'] as const)(
+    'omits a null-valued %s field',
+    __type => {
+      const props = convertSingleField({ __identifier: 'x', __type, __value: null });
+      expect('x' in props).toBe(false);
+    },
+  );
 });
 
 describe('ldtkToTileMap — ObjectLayer metadata', () => {
@@ -731,6 +1219,7 @@ function makeEntity(identifier: string): LdtkEntityInstance {
     px: [0, 0],
     width: 16,
     height: 16,
+    __pivot: [0, 0],
     iid: `iid-${identifier}`,
     defUid: 0,
     fieldInstances: [],

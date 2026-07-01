@@ -1,0 +1,115 @@
+{
+  "jsonVersion": "1.5.3",
+  "defaultGridSize": 16,
+  "defs": {
+    "tilesets": [
+      {
+        "uid": 1,
+        "identifier": "Atlas",
+        "relPath": "tiles.png",
+        "tileGridSize": 16,
+        "pxWid": 64,
+        "pxHei": 64,
+        "spacing": 0,
+        "padding": 0
+      }
+    ],
+    "layers": [
+      { "uid": 101, "identifier": "Tiles", "type": "Tiles", "gridSize": 16, "tilesetDefUid": 1 },
+      { "uid": 102, "identifier": "Entities", "type": "Entities", "gridSize": 16 }
+    ]
+  },
+  "levels": [],
+  "worlds": [
+    {
+      "identifier": "WorldA",
+      "iid": "world-a-iid",
+      "worldGridWidth": 256,
+      "worldGridHeight": 256,
+      "worldLayout": "GridVania",
+      "levels": [
+        {
+          "identifier": "A_Level1",
+          "uid": 1,
+          "iid": "aaaaaaaa-0000-0000-0000-000000000001",
+          "worldX": 0,
+          "worldY": 0,
+          "pxWid": 64,
+          "pxHei": 64,
+          "layerInstances": [
+            {
+              "__identifier": "Tiles",
+              "__type": "Tiles",
+              "__cWid": 4,
+              "__cHei": 4,
+              "__gridSize": 16,
+              "layerDefUid": 101,
+              "levelId": 1,
+              "visible": true,
+              "iid": "bbbbbbbb-0000-0000-0000-000000000001",
+              "__tilesetDefUid": 1,
+              "gridTiles": [
+                { "px": [0, 0], "src": [0, 0], "f": 0, "t": 0 },
+                { "px": [16, 0], "src": [16, 0], "f": 1, "t": 1 }
+              ],
+              "autoLayerTiles": []
+            },
+            {
+              "__identifier": "Entities",
+              "__type": "Entities",
+              "__cWid": 4,
+              "__cHei": 4,
+              "__gridSize": 16,
+              "layerDefUid": 102,
+              "levelId": 1,
+              "visible": true,
+              "iid": "bbbbbbbb-0000-0000-0000-000000000002",
+              "entityInstances": [
+                {
+                  "__identifier": "Player",
+                  "__type": "Player",
+                  "px": [8, 8],
+                  "width": 16,
+                  "height": 16,
+                  "__pivot": [0, 0],
+                  "fieldInstances": [],
+                  "iid": "cccccccc-0000-0000-0000-000000000001",
+                  "defUid": 200
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "identifier": "A_Level2",
+          "uid": 2,
+          "iid": "aaaaaaaa-0000-0000-0000-000000000002",
+          "worldX": 64,
+          "worldY": 0,
+          "pxWid": 32,
+          "pxHei": 32,
+          "layerInstances": []
+        }
+      ]
+    },
+    {
+      "identifier": "WorldB",
+      "iid": "world-b-iid",
+      "worldGridWidth": 128,
+      "worldGridHeight": 128,
+      "worldLayout": "Free",
+      "levels": [
+        {
+          "identifier": "B_Level1",
+          "uid": 3,
+          "iid": "dddddddd-0000-0000-0000-000000000003",
+          "worldX": 0,
+          "worldY": 0,
+          "pxWid": 16,
+          "pxHei": 16,
+          "layerInstances": []
+        }
+      ]
+    }
+  ]
+}

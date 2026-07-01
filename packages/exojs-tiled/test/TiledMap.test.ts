@@ -323,6 +323,60 @@ describe('TiledMap.toTileMap — multi-tileset', () => {
   });
 });
 
+describe('TiledMap.toTileMap — object/class property conversion', () => {
+  function makeObjectPropsMap(properties: readonly { name: string; type: string; value: unknown; propertytype?: string }[]): TileMap {
+    const data = validateTiledMapData({
+      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
+      width: 1, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+      layers: [{
+        id: 1, name: 'Objects', type: 'objectgroup', visible: true, x: 0, y: 0, opacity: 1,
+        draworder: 'topdown',
+        objects: [{
+          id: 1, name: 'door', type: '', x: 0, y: 0, width: 16, height: 16,
+          rotation: 0, visible: true, properties,
+        }],
+      }],
+      tilesets: [],
+    }, 'objprops.tmj');
+    return new TiledMap('objprops.tmj', data, []).toTileMap();
+  }
+
+  it('maps an object-typed property to a TilePropertyObjectRef by numeric id', () => {
+    const tm = makeObjectPropsMap([{ name: 'target', type: 'object', value: 42 }]);
+    const obj = tm.objectLayers[0]!.objects[0]!;
+    expect(obj.properties['target']).toEqual({ kind: 'objectRef', id: 42 });
+  });
+
+  it('recursively maps a class-typed property to a nested TileProperties bag, including 2-level nesting', () => {
+    const tm = makeObjectPropsMap([{
+      name: 'config',
+      type: 'class',
+      propertytype: 'DoorConfig',
+      value: {
+        locked: true,
+        label: 'Vault',
+        access: { level: 2, tags: { vip: true } },
+      },
+    }]);
+    const obj = tm.objectLayers[0]!.objects[0]!;
+    expect(obj.properties['config']).toEqual({
+      locked: true,
+      label: 'Vault',
+      access: { level: 2, tags: { vip: true } },
+    });
+  });
+
+  it('keeps scalar properties unaffected alongside object/class properties', () => {
+    const tm = makeObjectPropsMap([
+      { name: 'label', type: 'string', value: 'north gate' },
+      { name: 'target', type: 'object', value: 7 },
+    ]);
+    const obj = tm.objectLayers[0]!.objects[0]!;
+    expect(obj.properties['label']).toBe('north gate');
+    expect(obj.properties['target']).toEqual({ kind: 'objectRef', id: 7 });
+  });
+});
+
 describe('TiledMap.toTileMap — error cases', () => {
   it('throws TiledFormatError for a collection-of-images tileset', () => {
     const collectionTs = new TiledTileset(

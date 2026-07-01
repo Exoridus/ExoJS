@@ -8,7 +8,12 @@ export { ldtkExtension } from './ldtkExtension';
 // ── Parsed source model ───────────────────────────────────────────────────────
 export { LdtkMap } from './LdtkMap';
 export type { LdtkToTileMapOptions } from './ldtkToTileMap';
-export { ldtkToTileMap } from './ldtkToTileMap';
+export {
+  getLdtkIntGridValueAt,
+  ldtkIntGridCsvProperty,
+  ldtkIntGridValuesProperty,
+  ldtkToTileMap,
+} from './ldtkToTileMap';
 
 // ── Raw LDtk JSON types ───────────────────────────────────────────────────────
 export type {
@@ -23,6 +28,8 @@ export type {
   LdtkLevel,
   LdtkTileData,
   LdtkTilesetDef,
+  LdtkWorldData,
+  LdtkWorldLayout,
 } from './LdtkData';
 export { ldtkFlipNone, ldtkFlipX, ldtkFlipXy, ldtkFlipY } from './LdtkData';
 
