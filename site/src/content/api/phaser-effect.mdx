@@ -1,6 +1,6 @@
 ---
 title: "PhaserEffect"
-description: "Phaser effect implemented with native Web Audio nodes (no worklet required). The wet signal passes through a cascade of allpass `BiquadFilterNode`s whose centre frequencies are swept synchronously by a sine LFO. The phase shift produced by each allpass stage creates sweeping notches when summed with the dry signal. An optional feedback path from the last stage back to the first adds resonance and sharpens the effect. Node graph: ``` inputGain ┬── dryGain ───────────────────────────────────────┐ │ ├── outputGain └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘ ▲ │ └──── feedbackGain ◄───┘ lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`."
+description: "Phaser effect implemented with native Web Audio nodes (no worklet required). The wet signal passes through a cascade of allpass `BiquadFilterNode`s whose centre frequencies are swept synchronously by a sine LFO. The phase shift produced by each allpass stage creates sweeping notches when summed with the dry signal. An optional feedback path from the last stage back to the first adds resonance and sharpens the effect. Node graph: ``` inputGain ┬── dryGain ───────────────────────────────────────┐ │ ├── outputGain └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘ ▲ │ └── feedbackDelay ◄── feedbackGain ◄─────────┘ lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency ``` Note: `feedbackDelay` is a DelayNode with `delayTime = 0`. Even at zero delay the node itself breaks the zero-latency cycle, which spec-compliant browsers (Chrome, Edge, Safari) would otherwise mute entirely. Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`."
 symbol: "PhaserEffect"
 kind: "class"
 subsystem: "audio"
@@ -9,7 +9,7 @@ memberCount: 11
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-audio-fx/src/effects/PhaserEffect.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts#L78"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts#L82"
 ---
 ## Import
 
@@ -29,10 +29,13 @@ inputGain ┬── dryGain ─────────────────�
           │                                                   ├── outputGain
           └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘
                 ▲                      │
-                └──── feedbackGain ◄───┘
+                └── feedbackDelay ◄── feedbackGain ◄─────────┘
 
 lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency
 ```
+Note: `feedbackDelay` is a DelayNode with `delayTime = 0`. Even at
+zero delay the node itself breaks the zero-latency cycle, which spec-compliant
+browsers (Chrome, Edge, Safari) would otherwise mute entirely.
 Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`;
 `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`.
 
@@ -58,4 +61,4 @@ Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`;
 
 ## Source
 
-[packages/exojs-audio-fx/src/effects/PhaserEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts#L78)
+[packages/exojs-audio-fx/src/effects/PhaserEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts#L82)
