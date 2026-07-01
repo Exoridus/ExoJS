@@ -79,8 +79,8 @@ const DEFAULT_CHUNK_SIZE = 32;
  * changes. Direct chunk mutation is not supported — the layer owns chunk
  * storage and exposes only a {@link ReadonlyTileChunk} view.
  *
- * The layer is NOT a SceneNode — that integration lives in the future
- * renderer slice.
+ * The layer is NOT a SceneNode — that integration lives in
+ * {@link import('./TileLayerNode').TileLayerNode}.
  *
  * @advanced
  */

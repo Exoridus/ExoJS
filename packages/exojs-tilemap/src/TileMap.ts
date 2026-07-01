@@ -55,7 +55,8 @@ export interface TileMapOptions {
  * Tile data is stored in compact chunked arrays — no per-tile heap objects.
  *
  * The map does NOT own tileset textures (those are Loader-owned) and does
- * NOT own SceneNode children (the future TileMapNode will own those).
+ * NOT own SceneNode children — see {@link import('./TileMapNode').TileMapNode},
+ * which owns those.
  *
  * Multiple tilesets are supported: each cell stores a packed tileset index
  * and local tile ID, so different tilesets may have different tile dimensions.
