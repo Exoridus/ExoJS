@@ -1,7 +1,7 @@
 import { type AssetLoaderContext, Texture, TextureRegion } from '@codexo/exojs';
 import { TileSet } from '@codexo/exojs-tilemap';
 
-import type { LdtkData, LdtkTilesetDef } from './LdtkData';
+import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
 import type { LdtkMap } from './LdtkMap';
 import { ldtkToTileMap } from './ldtkToTileMap';
 
@@ -64,12 +64,46 @@ async function loadLdtkTileset(
   });
 }
 
+// ── External level loading ───────────────────────────────────────────────────
+
+/**
+ * Resolve a level's external `.ldtkl` payload and merge its layer/field data
+ * into the level record.
+ *
+ * LDtk's "Save levels to separate files" project option nulls out
+ * `layerInstances` on the root document; the real layer data lives in a
+ * sibling `<levelIdentifier>.ldtkl` file referenced by {@link LdtkLevel.externalRelPath}.
+ * That file also carries its own `fieldInstances`, which is authoritative —
+ * the root document's copy is typically stripped or stale for externalized
+ * levels. Levels that already carry `layerInstances` (not externalized) are
+ * returned unchanged.
+ */
+async function loadExternalLevel(
+  level: LdtkLevel,
+  ldtkSource: string,
+  context: AssetLoaderContext,
+): Promise<LdtkLevel> {
+  if (level.layerInstances !== null || !level.externalRelPath) return level;
+
+  const externalUrl = resolveLdtkUrl(level.externalRelPath, ldtkSource);
+  // Cast without deep validation, matching the root document's fetch below —
+  // structural errors surface as runtime exceptions during conversion.
+  const external = (await context.fetchJson(externalUrl)) as LdtkLevel;
+  const fieldInstances = external.fieldInstances ?? level.fieldInstances;
+
+  return {
+    ...level,
+    layerInstances: external.layerInstances,
+    ...(fieldInstances !== undefined && { fieldInstances }),
+  };
+}
+
 // ── Public loader ─────────────────────────────────────────────────────────────
 
 /**
- * Fetch a `.ldtk` file, load all referenced tileset images, and return a
- * fully assembled {@link LdtkMap} with one runtime {@link import('@codexo/exojs-tilemap').TileMap}
- * per level.
+ * Fetch a `.ldtk` file, load all referenced tileset images, resolve any
+ * externalized (`.ldtkl`) levels, and return a fully assembled {@link LdtkMap}
+ * with one runtime {@link import('@codexo/exojs-tilemap').TileMap} per level.
  *
  * Tilesets without an atlas image (`relPath = null`) are silently skipped;
  * their tiles will not appear in the rendered output.
@@ -84,18 +118,21 @@ export async function loadLdtkMap(
   // exceptions when we access fields during conversion.
   const data = raw as LdtkData;
 
-  // Load all referenced tilesets concurrently.
-  const tilesetEntries = await Promise.all(
-    data.defs.tilesets.map(async (def) => {
-      const ts = await loadLdtkTileset(def, source, context);
-      return [def.uid, ts] as const;
-    }),
-  );
+  // Load all referenced tilesets and resolve externalized levels concurrently.
+  const [tilesetEntries, levels] = await Promise.all([
+    Promise.all(
+      data.defs.tilesets.map(async (def) => {
+        const ts = await loadLdtkTileset(def, source, context);
+        return [def.uid, ts] as const;
+      }),
+    ),
+    Promise.all(data.levels.map((level) => loadExternalLevel(level, source, context))),
+  ]);
 
   const tilesets = new Map<number, TileSet>();
   for (const [uid, ts] of tilesetEntries) {
     if (ts !== null) tilesets.set(uid, ts);
   }
 
-  return ldtkToTileMap(data, { source, tilesets });
+  return ldtkToTileMap({ ...data, levels }, { source, tilesets });
 }

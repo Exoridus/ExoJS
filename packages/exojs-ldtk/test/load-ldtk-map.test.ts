@@ -104,6 +104,103 @@ describe('loadLdtkMap — happy path (absolute source)', () => {
   });
 });
 
+describe('loadLdtkMap — external levels (.ldtkl)', () => {
+  // "Save levels to separate files" projects null out layerInstances on the
+  // root document and store the real layer data in a sibling `<id>.ldtkl`
+  // file referenced by externalRelPath.
+  const EXTERNAL_URL = 'https://example.com/maps/levels/Level_0.ldtkl';
+
+  const rootFixture: LdtkData = {
+    jsonVersion: '1.5.3',
+    defaultGridSize: 16,
+    defs: {
+      tilesets: [],
+      layers: [{ uid: 101, identifier: 'Entities', type: 'Entities', gridSize: 16 }],
+    },
+    levels: [
+      {
+        identifier: 'Level_0',
+        uid: 1,
+        iid: 'iid-1',
+        worldX: 0,
+        worldY: 0,
+        pxWid: 64,
+        pxHei: 16,
+        layerInstances: null,
+        externalRelPath: 'levels/Level_0.ldtkl',
+        // The root doc's own fieldInstances copy is stale/stripped once a
+        // level is externalized; the .ldtkl file's copy is authoritative.
+        fieldInstances: [{ __identifier: 'stale', __type: 'String', __value: 'root' }],
+      },
+    ],
+  };
+
+  const externalFixture = {
+    identifier: 'Level_0',
+    uid: 1,
+    iid: 'iid-1',
+    worldX: 0,
+    worldY: 0,
+    pxWid: 64,
+    pxHei: 16,
+    fieldInstances: [{ __identifier: 'difficulty', __type: 'String', __value: 'hard' }],
+    layerInstances: [
+      {
+        __identifier: 'Entities',
+        __type: 'Entities',
+        __cWid: 4,
+        __cHei: 1,
+        __gridSize: 16,
+        layerDefUid: 101,
+        levelId: 1,
+        visible: true,
+        iid: 'ent-1',
+        entityInstances: [
+          {
+            __identifier: 'Player',
+            __type: 'Player',
+            px: [8, 8],
+            width: 16,
+            height: 16,
+            __pivot: [0, 0],
+            fieldInstances: [],
+            iid: 'player-1',
+            defUid: 200,
+          },
+        ],
+      },
+    ],
+  };
+
+  function context() {
+    return makeContext({
+      [ABS_SOURCE]: rootFixture,
+      [EXTERNAL_URL]: externalFixture,
+    });
+  }
+
+  it('fetches the external .ldtkl file for a level with null layerInstances', async () => {
+    const { context: ctx } = context();
+    await loadLdtkMap(ABS_SOURCE, ctx);
+    expect(ctx.fetchJson).toHaveBeenCalledWith(EXTERNAL_URL);
+  });
+
+  it('merges the external layerInstances into the level before conversion (no longer empty)', async () => {
+    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const level = map.levels[0]!;
+    expect(level.objectLayers).toHaveLength(1);
+    expect(level.objectLayers[0]!.objects).toHaveLength(1);
+    expect(level.objectLayers[0]!.objects[0]!.type).toBe('Player');
+  });
+
+  it('prefers the external fieldInstances over the stale root copy', async () => {
+    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const level = map.levels[0]!;
+    expect(level.properties['difficulty']).toBe('hard');
+    expect(level.properties['stale']).toBeUndefined();
+  });
+});
+
 describe('loadLdtkMap — tilesets without an atlas image', () => {
   // relPath: null → the tileset is skipped entirely; tiles cannot render.
   const fixture: LdtkData = {
