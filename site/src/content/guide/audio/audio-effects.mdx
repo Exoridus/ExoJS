@@ -127,12 +127,119 @@ const chorus = new ChorusEffect({ rateHz: 1.5, depthMs: 5, wet: 0.5 });
 
 All parameters on these effects are live get/set. The [`EqualizerEffect` API reference](/ExoJS/en/api/equalizer-effect/) documents individual band frequencies; the [`ChorusEffect`](/ExoJS/en/api/chorus-effect/) and [`LowpassFilter`](/ExoJS/en/api/lowpass-filter/) references cover constructor options in detail.
 
+## Distortion and modulation effects
+
+Like `ChorusEffect`, the six filters below are built from native Web Audio nodes — they're ready the instant you construct them, with no worklet loading or `ready` promise involved. All expose a live `wet` dry/wet mix; see each API reference for the full option list.
+
+### DistortionEffect
+
+Soft-clip saturation through a tanh-based `WaveShaperNode` curve, followed by a tone-control lowpass on the wet path. `drive` (0..1) controls clip intensity and `tone` (0..1) sweeps the wet-path cutoff logarithmically from 100 Hz to 20 kHz:
+
+```js
+import { DistortionEffect } from '@codexo/exojs-audio-fx';
+
+const dist = new DistortionEffect({ drive: 0.6, tone: 0.7, wet: 0.8 });
+app.audio.sound.addEffect(dist);
+```
+
+### PhaserEffect
+
+Sweeps a cascade of allpass filters with a sine LFO, producing moving notches in the spectrum. `stages` (an even number, 2..12) sets the notch count and `feedback` (0..0.9) sharpens the resonance:
+
+```js
+import { PhaserEffect } from '@codexo/exojs-audio-fx';
+
+const phaser = new PhaserEffect({ stages: 6, rateHz: 0.3, depth: 0.8, feedback: 0.4, wet: 0.6 });
+app.audio.music.addEffect(phaser);
+```
+
+### FlangerEffect
+
+A short (0.5–20 ms) LFO-modulated delay with a feedback loop, producing the classic sweeping "jet-plane" comb-filter sound. Unlike `ChorusEffect` — a longer, feedback-free delay used for thickening — the feedback here reinforces phase cancellation:
+
+```js
+import { FlangerEffect } from '@codexo/exojs-audio-fx';
+
+const flanger = new FlangerEffect({ delayMs: 3, depthMs: 2, rateHz: 0.25, feedback: 0.5, wet: 0.5 });
+app.audio.sound.addEffect(flanger);
+```
+
+### TremoloEffect
+
+Amplitude-modulates the signal with a sine LFO for classic volume pulsing. Set `autoPan: true` to have the same LFO drive stereo panning in sync with the pulse:
+
+```js
+import { TremoloEffect } from '@codexo/exojs-audio-fx';
+
+const tremolo = new TremoloEffect({ rateHz: 5, depth: 0.7, autoPan: true });
+app.audio.music.addEffect(tremolo);
+```
+
+### RingModulatorEffect
+
+Multiplies the input by a carrier oscillator, producing sum/difference sidebands while suppressing the fundamental. Mid-range carrier frequencies (100–1000 Hz) give the classic robotic ring-mod timbre; sub-audio rates (< 20 Hz) sound like tremolo:
+
+```js
+import { RingModulatorEffect } from '@codexo/exojs-audio-fx';
+
+const ringMod = new RingModulatorEffect({ frequency: 220, waveform: 'sine', wet: 0.8 });
+app.audio.sound.addEffect(ringMod);
+```
+
+### AutoWahEffect
+
+An envelope-driven wah: a rectifier and smoothing filter track input loudness and sweep a resonant bandpass filter upward from `baseFrequency`. `sensitivity` sets the maximum sweep in Hz and `responseMs` controls how snappy or legato the response feels:
+
+```js
+import { AutoWahEffect } from '@codexo/exojs-audio-fx';
+
+const wah = new AutoWahEffect({ baseFrequency: 300, sensitivity: 2500, q: 5, wet: 0.8 });
+app.audio.sound.addEffect(wah);
+```
+
+## Ping-pong delay, limiting, and convolution
+
+### PingPongDelayEffect
+
+A stereo delay whose taps cross-feed between channels, bouncing echoes hard-left/hard-right. `delayTime` sets the per-tap interval in seconds and `feedback` (0..0.9) controls how long the bounce sustains:
+
+```js
+import { PingPongDelayEffect } from '@codexo/exojs-audio-fx';
+
+const pingPong = new PingPongDelayEffect({ delayTime: 0.3, feedback: 0.5, wet: 0.5 });
+app.audio.music.addEffect(pingPong);
+```
+
+### LimiterEffect
+
+A brick-wall limiter — a `DynamicsCompressorNode` fixed at a high ratio and hard knee — meant as a safety net at the end of a chain to catch peaks before they clip:
+
+```js
+import { LimiterEffect } from '@codexo/exojs-audio-fx';
+
+const limiter = new LimiterEffect({ threshold: -3, release: 0.1 });
+app.audio.master.addEffect(limiter);
+```
+
+### ConvolutionEffect
+
+Convolves the signal with a real impulse response instead of `ReverbEffect`'s procedurally generated one — useful for captured spaces, cabinet/speaker simulation, or telephone-style filtering. Pass a decoded `AudioBuffer` or a loaded `Sound`; call `setImpulse()` to swap the IR later:
+
+```js
+import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
+import { Sound } from '@codexo/exojs';
+
+await loader.load(Sound, { hall: 'hall.wav' });
+const convReverb = new ConvolutionEffect({ impulse: loader.get(Sound, 'hall'), wet: 0.6 });
+app.audio.master.addEffect(convReverb);
+```
+
 ## Worklet-based effects
 
-Three filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletEffect`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
+Four filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletEffect`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
 
 ```js no-check
-import { GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs-audio-fx';
+import { BitCrusherEffect, GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs-audio-fx';
 
 // Granular pitch shifting (0.25x to 4x)
 const shifter = new PitchShiftEffect({ pitch: 1.2, wet: 1.0 });
@@ -142,9 +249,12 @@ const vocoder = new VocoderEffect({ modulator: modulatorBus, numBands: 14 });
 
 // Slices input into short grains with random pitch and time offset
 const granular = new GranularEffect({ grainSize: 0.05, density: 50, wet: 1.0 });
+
+// Lo-fi bit-depth and sample-rate reduction
+const crusher = new BitCrusherEffect({ bits: 4, frequencyReduction: 0.3, wet: 0.8 });
 ```
 
-All three have live `wet` controls. `PitchShiftEffect` exposes `pitch`; `GranularEffect` exposes `grainSize`, `density`, `spread`, `pitchMin`, and `pitchMax` for real-time grain cloud manipulation. The API reference documents the full constructor options for each.
+All four have live `wet` controls. `PitchShiftEffect` exposes `pitch`; `GranularEffect` exposes `grainSize`, `density`, `spread`, `pitchMin`, and `pitchMax` for real-time grain cloud manipulation; `BitCrusherEffect` exposes `bits` (1..16, quantization depth) and `frequencyReduction` (0..1, sample-and-hold rate). The API reference documents the full constructor options for each.
 
 ## Custom buses
 
