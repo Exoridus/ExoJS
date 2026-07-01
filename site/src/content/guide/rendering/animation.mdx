@@ -131,6 +131,40 @@ first.start();
 
 Only the first tween in the chain needs a `start()` call — each chained tween automatically starts when its predecessor completes.
 
+### Sequencing with TweenSequencer
+
+`chain()` links exactly one tween to exactly one successor — fine for a short relay, but it can't express "run these two tweens together, then move on" or "pause for a beat between steps" without extra bookkeeping. [`TweenSequencer`](/ExoJS/en/api/tween-sequencer/) covers those cases. Create one with `app.tweens.createSequencer()` and build it up with `.then()` and `.wait()`:
+
+```js
+const fadeIn = this.app.tweens.create(sprite)
+    .to({ alpha: 1 }, 0.4);
+
+const moveLeft = this.app.tweens.create(sprite.position)
+    .to({ x: 200 }, 0.6)
+    .easing(Ease.cubicOut);
+
+const scaleUp = this.app.tweens.create(sprite.scale)
+    .to({ x: 1.2, y: 1.2 }, 0.6)
+    .easing(Ease.cubicOut);
+
+const fadeOut = this.app.tweens.create(sprite)
+    .to({ alpha: 0 }, 0.4);
+
+this.app.tweens.createSequencer()
+    .then(fadeIn)
+    .wait(0.5)
+    .then([moveLeft, scaleUp])
+    .then(fadeOut)
+    .onComplete(() => console.log('sequence done'))
+    .start();
+```
+
+Each `.then()` call adds a stage. Pass a single tween to run it alone, or an array of tweens to run them in parallel — the stage only advances once every tween in it has completed, which is how `moveLeft` and `scaleUp` above end up running side by side before `fadeOut` begins. `.wait(seconds)` inserts a timed pause as its own stage, without needing a dummy tween to hold up the sequence.
+
+The sequencer also has lifecycle controls of its own, independent of any individual tween's: `.repeat(count)` and `.yoyo()` replay the whole stage sequence (optionally reversed), `.onStart()` / `.onComplete()` fire once for the sequence as a whole, and `.pause()` / `.resume()` / `.stop()` act on whichever stage is currently active. `createSequencer()` binds the sequencer to `app.tweens`, so — like tweens created via `app.tweens.create()` — it's ticked automatically once `start()` is called; no manual `update()` calls needed.
+
+Reach for `.chain()` when you already have two tween references and just need one to follow the other. Reach for `TweenSequencer` when a step in the sequence involves multiple simultaneous tweens, needs a timed gap, or the sequence itself needs repeat/yoyo/callback control.
+
 ### Interruption and replacement
 
 Calling `start()` on an active tween restarts it from zero. To replace a running animation cleanly, stop the old tween and start a new one on the same target:
