@@ -1,5 +1,5 @@
 import type { TileMapObject, TileProperties, TilePropertyValue, TileSet } from '@codexo/exojs-tilemap';
-import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap } from '@codexo/exojs-tilemap';
+import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TilePropertyKind } from '@codexo/exojs-tilemap';
 
 import type {
   LdtkData,
@@ -336,19 +336,123 @@ function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
 
 /**
  * Project LDtk field instances to a flat {@link TileProperties} bag.
- * Only scalar values (string, number, boolean) are forwarded; complex types
- * (arrays, colours, enums-as-objects) are silently skipped.
+ * Every LDtk field type maps to a canonical {@link TilePropertyValue}
+ * (scalars pass through; `Point`/`EntityRef`/`Tile` become their tagged
+ * structured variants; `Array<T>` fields recursively convert each element).
+ * A field whose raw `__value` is `null` (LDtk's "not set" convention) is
+ * omitted from the bag entirely, matching the property-absent case rather
+ * than a present-but-null value.
  */
 function convertFieldInstances(fields: readonly LdtkFieldInstance[]): TileProperties {
   if (fields.length === 0) return Object.freeze({});
   const out: Record<string, TilePropertyValue> = {};
   for (const field of fields) {
-    const v = field.__value;
-    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
-      out[field.__identifier] = v;
+    const value = convertField(field);
+    if (value !== undefined) {
+      out[field.__identifier] = value;
     }
   }
   return Object.freeze(out);
+}
+
+/**
+ * Type guard narrowing to the `Array<T>` member of {@link LdtkFieldInstance}.
+ * `String.prototype.startsWith` alone does not narrow a template-literal
+ * union member for the compiler; a predicate on `field` itself does.
+ */
+function isLdtkArrayField(
+  field: LdtkFieldInstance,
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- LDtk uses __ prefix for runtime fields
+): field is Extract<LdtkFieldInstance, { readonly __type: `Array<${string}>` }> {
+  return field.__type.startsWith('Array<');
+}
+
+/** Convert one {@link LdtkFieldInstance} to its canonical {@link TilePropertyValue}, or `undefined` for a `null` (unset) field. */
+function convertField(field: LdtkFieldInstance): TilePropertyValue | undefined {
+  switch (field.__type) {
+    case 'Int':
+    case 'Float':
+    case 'Bool':
+    case 'String':
+    case 'Multilines':
+    case 'Color':
+    case 'FilePath':
+    case 'Enum':
+    case 'Point':
+    case 'EntityRef':
+    case 'Tile':
+      return mapLdtkFieldValue(field.__type, field.__value);
+
+    default:
+      break;
+  }
+
+  if (isLdtkArrayField(field)) {
+    if (field.__value === null) return undefined;
+    const elementType = field.__type.slice('Array<'.length, -1);
+    const elements: TilePropertyValue[] = [];
+    for (const raw of field.__value) {
+      const converted = mapLdtkFieldValue(elementType, raw);
+      if (converted !== undefined) elements.push(converted);
+    }
+    return Object.freeze(elements);
+  }
+
+  // Exhaustiveness check: if LDtk ever adds a new field type, `field` will
+  // fail to narrow to `never` here and tsc will error.
+  const _exhaustive: never = field;
+  void _exhaustive;
+  throw new Error(`convertFieldInstances: unrecognised LDtk field type "${(field as LdtkFieldInstance).__type}".`);
+}
+
+/**
+ * Map a single raw LDtk field value (or array element) to its canonical
+ * {@link TilePropertyValue}, given the LDtk type name it was declared with.
+ * Shared by {@link convertField} (top-level fields) and array-element
+ * conversion (`typeName` is the `T` extracted from an `Array<T>` field).
+ * Returns `undefined` for a `null` value or an unrecognised `typeName`.
+ */
+function mapLdtkFieldValue(typeName: string, value: unknown): TilePropertyValue | undefined {
+  if (value === null || value === undefined) return undefined;
+
+  switch (typeName) {
+    case 'Int':
+    case 'Float':
+    case 'Bool':
+    case 'String':
+    case 'Multilines':
+    case 'Color':
+    case 'FilePath':
+    case 'Enum':
+      return value as string | number | boolean;
+
+    case 'Point': {
+      const v = value as { cx: number; cy: number };
+      return { kind: TilePropertyKind.Point, cx: v.cx, cy: v.cy };
+    }
+
+    case 'EntityRef': {
+      const v = value as { entityIid: string; layerIid: string; levelIid: string; worldIid: string };
+      return {
+        kind: TilePropertyKind.ObjectRef,
+        id: v.entityIid,
+        layerIid: v.layerIid,
+        levelIid: v.levelIid,
+        worldIid: v.worldIid,
+      };
+    }
+
+    case 'Tile': {
+      const v = value as { tilesetUid: number; x: number; y: number; w: number; h: number };
+      return { kind: TilePropertyKind.TileRef, tilesetUid: v.tilesetUid, x: v.x, y: v.y, w: v.w, h: v.h };
+    }
+
+    default:
+      // Unknown/unsupported array element type (e.g. a future LDtk type
+      // inside Array<T>) — skip rather than throw, since this path is not
+      // compiler-exhaustive (element types are plain runtime strings).
+      return undefined;
+  }
 }
 
 // ── Helpers: grid size ────────────────────────────────────────────────────────

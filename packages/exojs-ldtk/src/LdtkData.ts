@@ -10,6 +10,8 @@
 
 /* eslint-disable @typescript-eslint/naming-convention -- LDtk uses __ prefix for runtime fields */
 
+import type { TilePropertyPoint, TilePropertyTileRef } from '@codexo/exojs-tilemap';
+
 // ── Tile data ─────────────────────────────────────────────────────────────────
 
 /** Flip-bit constants for {@link LdtkTileData.f}. */
@@ -37,12 +39,81 @@ export interface LdtkTileData {
 
 // ── Entity data ───────────────────────────────────────────────────────────────
 
-/** A field value on an entity or level instance. */
-export interface LdtkFieldInstance {
-  readonly __identifier: string;
-  readonly __type: string;
-  readonly __value: unknown;
+/**
+ * LDtk field types whose `__value` is a bare scalar (or `null`, when the
+ * field has no value set).
+ */
+export type LdtkFieldScalarType =
+  | 'Int'
+  | 'Float'
+  | 'Bool'
+  | 'String'
+  | 'Multilines'
+  | 'Color'
+  | 'FilePath'
+  | 'Enum';
+
+/**
+ * Raw `__value` shape for a `Point`-typed field. Structurally identical to
+ * {@link TilePropertyPoint} minus its `kind` tag, so the canonical shape is
+ * reused directly rather than duplicated.
+ */
+export type LdtkFieldPointValue = Omit<TilePropertyPoint, 'kind'>;
+
+/**
+ * Raw `__value` shape for an `EntityRef`-typed field: the referenced
+ * entity's own iid plus LDtk's navigation context (owning layer/level/world).
+ * Maps to {@link import('@codexo/exojs-tilemap').TilePropertyObjectRef} —
+ * `entityIid` becomes `id`.
+ */
+export interface LdtkFieldEntityRefValue {
+  readonly entityIid: string;
+  readonly layerIid: string;
+  readonly levelIid: string;
+  readonly worldIid: string;
 }
+
+/**
+ * Raw `__value` shape for a `Tile`-typed field. Structurally identical to
+ * {@link TilePropertyTileRef} minus its `kind` tag, so the canonical shape is
+ * reused directly rather than duplicated.
+ */
+export type LdtkFieldTileValue = Omit<TilePropertyTileRef, 'kind'>;
+
+/**
+ * A field value on an entity or level instance, discriminated by `__type`.
+ * `Array<T>` fields (e.g. `Array<Int>`, `Array<Point>`) carry a raw element
+ * array whose per-element shape matches the corresponding non-array
+ * `__value` shape above; see {@link import('./ldtkToTileMap').ldtkToTileMap}'s
+ * field conversion for the exhaustive mapping into the canonical
+ * {@link import('@codexo/exojs-tilemap').TilePropertyValue}.
+ */
+export type LdtkFieldInstance =
+  | {
+      readonly __identifier: string;
+      readonly __type: LdtkFieldScalarType;
+      readonly __value: string | number | boolean | null;
+    }
+  | {
+      readonly __identifier: string;
+      readonly __type: 'Point';
+      readonly __value: LdtkFieldPointValue | null;
+    }
+  | {
+      readonly __identifier: string;
+      readonly __type: 'EntityRef';
+      readonly __value: LdtkFieldEntityRefValue | null;
+    }
+  | {
+      readonly __identifier: string;
+      readonly __type: 'Tile';
+      readonly __value: LdtkFieldTileValue | null;
+    }
+  | {
+      readonly __identifier: string;
+      readonly __type: `Array<${string}>`;
+      readonly __value: readonly unknown[] | null;
+    };
 
 /** An entity instance placed in an Entities layer. */
 export interface LdtkEntityInstance {

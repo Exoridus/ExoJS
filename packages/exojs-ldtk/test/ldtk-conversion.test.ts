@@ -1,10 +1,12 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
+import type { TileProperties } from '@codexo/exojs-tilemap';
 import { TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, it } from 'vitest';
 
 import type {
   LdtkData,
   LdtkEntityInstance,
+  LdtkFieldInstance,
   LdtkLayerInstance,
   LdtkLevel,
 } from '../src/LdtkData';
@@ -54,6 +56,38 @@ function docWithLayer(layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}):
       },
     ],
   };
+}
+
+/**
+ * Convert a document with one Entities layer holding exactly one entity with
+ * exactly one field, returning that entity's converted properties bag.
+ */
+function convertSingleField(field: LdtkFieldInstance): TileProperties {
+  const data = docWithLayer({
+    __identifier: 'Entities',
+    __type: 'Entities',
+    __cWid: 4,
+    __cHei: 1,
+    __gridSize: 16,
+    layerDefUid: 130,
+    levelId: 1,
+    visible: true,
+    iid: 'ent-1',
+    entityInstances: [
+      {
+        __identifier: 'E',
+        __type: 'E',
+        px: [0, 0],
+        width: 16,
+        height: 16,
+        __pivot: [0, 0],
+        iid: 'e-1',
+        defUid: 0,
+        fieldInstances: [field],
+      },
+    ],
+  });
+  return ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!.properties;
 }
 
 // ── Flip-bit constants ──────────────────────────────────────────────────────────
@@ -807,7 +841,7 @@ describe('ldtkToTileMap — TileLayer metadata', () => {
 // ── Entity → ObjectLayer conversion ─────────────────────────────────────────────
 
 describe('ldtkToTileMap — entity field projection', () => {
-  it('keeps scalar fields and drops complex (array/object/null) field values', () => {
+  it('keeps scalar fields, maps structured/array fields, and omits null-valued fields', () => {
     const data = docWithLayer({
       __identifier: 'Entities',
       __type: 'Entities',
@@ -833,7 +867,6 @@ describe('ldtkToTileMap — entity field projection', () => {
             { __identifier: 'label', __type: 'String', __value: 'Bob' },
             { __identifier: 'hostile', __type: 'Bool', __value: true },
             { __identifier: 'path', __type: 'Array<Point>', __value: [{ cx: 1, cy: 2 }] },
-            { __identifier: 'meta', __type: 'Object', __value: { k: 1 } },
             { __identifier: 'nothing', __type: 'String', __value: null },
           ],
         },
@@ -844,8 +877,7 @@ describe('ldtkToTileMap — entity field projection', () => {
     expect(props['hp']).toBe(10);
     expect(props['label']).toBe('Bob');
     expect(props['hostile']).toBe(true);
-    expect(props['path']).toBeUndefined();
-    expect(props['meta']).toBeUndefined();
+    expect(props['path']).toEqual([{ kind: 'point', cx: 1, cy: 2 }]);
     expect(props['nothing']).toBeUndefined();
   });
 
@@ -943,6 +975,144 @@ describe('ldtkToTileMap — entity field projection', () => {
     expect(object.rotation).toBe(0);
     expect(object.visible).toBe(true);
   });
+});
+
+// ── Structured field types (Point / EntityRef / Tile / Array) ───────────────────
+
+describe('ldtkToTileMap — Point field conversion', () => {
+  it('maps a Point field to a TilePropertyPoint', () => {
+    const props = convertSingleField({
+      __identifier: 'spawn',
+      __type: 'Point',
+      __value: { cx: 3, cy: 4 },
+    });
+
+    expect(props['spawn']).toEqual({ kind: 'point', cx: 3, cy: 4 });
+  });
+
+  it('omits a null-valued Point field', () => {
+    const props = convertSingleField({
+      __identifier: 'spawn',
+      __type: 'Point',
+      __value: null,
+    });
+
+    expect(props['spawn']).toBeUndefined();
+    expect('spawn' in props).toBe(false);
+  });
+});
+
+describe('ldtkToTileMap — EntityRef field conversion', () => {
+  it('maps an EntityRef field to a TilePropertyObjectRef, threading all 4 source fields through', () => {
+    const props = convertSingleField({
+      __identifier: 'target',
+      __type: 'EntityRef',
+      __value: {
+        entityIid: 'target-entity-iid',
+        layerIid: 'target-layer-iid',
+        levelIid: 'target-level-iid',
+        worldIid: 'target-world-iid',
+      },
+    });
+
+    expect(props['target']).toEqual({
+      kind: 'objectRef',
+      id: 'target-entity-iid',
+      layerIid: 'target-layer-iid',
+      levelIid: 'target-level-iid',
+      worldIid: 'target-world-iid',
+    });
+  });
+
+  it('omits a null-valued EntityRef field', () => {
+    const props = convertSingleField({
+      __identifier: 'target',
+      __type: 'EntityRef',
+      __value: null,
+    });
+
+    expect('target' in props).toBe(false);
+  });
+});
+
+describe('ldtkToTileMap — Tile field conversion', () => {
+  it('maps a Tile field to a TilePropertyTileRef', () => {
+    const props = convertSingleField({
+      __identifier: 'icon',
+      __type: 'Tile',
+      __value: { tilesetUid: 7, x: 16, y: 32, w: 16, h: 16 },
+    });
+
+    expect(props['icon']).toEqual({ kind: 'tileRef', tilesetUid: 7, x: 16, y: 32, w: 16, h: 16 });
+  });
+
+  it('omits a null-valued Tile field', () => {
+    const props = convertSingleField({
+      __identifier: 'icon',
+      __type: 'Tile',
+      __value: null,
+    });
+
+    expect('icon' in props).toBe(false);
+  });
+});
+
+describe('ldtkToTileMap — Array field conversion', () => {
+  it('maps an Array<Int> field to a plain array of numbers', () => {
+    const props = convertSingleField({
+      __identifier: 'scores',
+      __type: 'Array<Int>',
+      __value: [1, 2, 3],
+    });
+
+    expect(props['scores']).toEqual([1, 2, 3]);
+  });
+
+  it('maps an Array<Point> field to an array of TilePropertyPoint (nested complex conversion)', () => {
+    const props = convertSingleField({
+      __identifier: 'path',
+      __type: 'Array<Point>',
+      __value: [
+        { cx: 0, cy: 0 },
+        { cx: 1, cy: 2 },
+      ],
+    });
+
+    expect(props['path']).toEqual([
+      { kind: 'point', cx: 0, cy: 0 },
+      { kind: 'point', cx: 1, cy: 2 },
+    ]);
+  });
+
+  it('omits a null-valued Array field', () => {
+    const props = convertSingleField({
+      __identifier: 'scores',
+      __type: 'Array<Int>',
+      __value: null,
+    });
+
+    expect('scores' in props).toBe(false);
+  });
+
+  it('maps an empty array to an empty array (still present, not omitted)', () => {
+    const props = convertSingleField({
+      __identifier: 'scores',
+      __type: 'Array<Int>',
+      __value: [],
+    });
+
+    expect(props['scores']).toEqual([]);
+  });
+});
+
+describe('ldtkToTileMap — null-valued scalar fields (all scalar types)', () => {
+  it.each(['Int', 'Float', 'Bool', 'String', 'Multilines', 'Color', 'FilePath', 'Enum'] as const)(
+    'omits a null-valued %s field',
+    __type => {
+      const props = convertSingleField({ __identifier: 'x', __type, __value: null });
+      expect('x' in props).toBe(false);
+    },
+  );
 });
 
 describe('ldtkToTileMap — ObjectLayer metadata', () => {
