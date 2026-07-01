@@ -99,4 +99,33 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     await waitFor(() => expect(app.scene.setScene).toHaveBeenCalledWith(null));
     expect(view.queryByTestId('hud')).toBeNull();
   });
+
+  it('routes a rejected app.start() to app.onError instead of an unhandled rejection', async () => {
+    const app = makeApp();
+    const onError = vi.fn();
+    app.onError.add(onError);
+    const failure = new Error('scene failed to load');
+    app.start.mockRejectedValueOnce(failure);
+
+    const view = render(<Tree app={app} active="title" />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
+    // The overlay never appears — no active scene was ever installed.
+    expect(view.queryByTestId('hud')).toBeNull();
+  });
+
+  it('routes a rejected app.scene.setScene() (scene switch) to app.onError', async () => {
+    const app = makeApp();
+    const view = render(<Tree app={app} active="title" />);
+    await view.findByTestId('active');
+
+    const onError = vi.fn();
+    app.onError.add(onError);
+    const failure = new Error('switch failed');
+    app.scene.setScene.mockRejectedValueOnce(failure);
+
+    view.rerender(<Tree app={app} active="game" />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
+  });
 });

@@ -321,4 +321,64 @@ describe('SG-J — joints', () => {
     expect(heavy.x).toBeGreaterThan(0); // it did move toward the target
     expect(heavy.x).toBeLessThan(200); // but maxForce kept it from reaching the far target
   });
+
+  it('SG-J19: a motorized wheel joint reaches and holds its target spin speed', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
+
+    world.addJoint(
+      new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }),
+    );
+
+    advance(world, 1);
+
+    expect(wheel.angularVelocity).toBeCloseTo(5, 0); // driven to the target rad/s and held
+  });
+
+  it('SG-J20: a wheel suspension spring settles to a bounded rest sag under gravity', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // Suspension axis vertical (0,1) = gravity: an unloaded soft spring sags then settles.
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
+
+    world.addJoint(new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, hertz: 1, dampingRatio: 1 }));
+
+    advance(world, 3);
+
+    const settledY = wheel.y;
+    expect(settledY).toBeGreaterThan(40); // sagged down under gravity
+    expect(settledY).toBeLessThan(90); // but bounded by the spring, not free fall
+    expect(Math.abs(wheel.x)).toBeLessThan(1); // lateral still locked
+
+    advance(world, 0.5);
+    expect(Math.abs(wheel.y - settledY)).toBeLessThan(1); // at rest — no longer moving
+  });
+
+  it('SG-J21: a wheel suspension-travel limit caps how far the spring compresses', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // The same spring as SG-J20 would sag to ~55 (translation ~25) under gravity
+    // alone, but the travel limit caps the compression at upperTranslation (20).
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
+
+    world.addJoint(
+      new WheelJoint({
+        bodyA: chassis,
+        bodyB: wheel,
+        anchor: { x: 0, y: 30 },
+        axis: { x: 0, y: 1 },
+        hertz: 1,
+        dampingRatio: 1,
+        enableLimit: true,
+        lowerTranslation: -20,
+        upperTranslation: 20,
+      }),
+    );
+
+    advance(world, 3);
+
+    expect(wheel.y).toBeGreaterThan(45); // pulled down to the limit
+    expect(wheel.y).toBeLessThan(51); // capped at upperTranslation (30 + 20)
+  });
 });

@@ -10,9 +10,8 @@ const lookupSize = 256;
 
 /**
  * Sets every live particle's scale to a curve sampled at the particle's
- * current lifetime ratio. Both axes share one curve — for non-uniform
- * scaling layer two ScaleOverLifetime modules with separate `axis` filters
- * (or extend with a per-axis variant).
+ * current lifetime ratio. Both axes share one curve; non-uniform per-axis
+ * scaling isn't supported by this module.
  *
  * Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like
  * curve up to peak then down), slow-grow (linear ramp).

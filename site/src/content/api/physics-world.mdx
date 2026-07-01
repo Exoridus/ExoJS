@@ -5,11 +5,11 @@ symbol: "PhysicsWorld"
 kind: "class"
 subsystem: "physics"
 importPath: "@codexo/exojs-physics"
-memberCount: 37
+memberCount: 36
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "packages/exojs-physics/src/PhysicsWorld.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts#L124"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts#L120"
 ---
 ## Import
 
@@ -58,7 +58,7 @@ each is pinned by a gate in `dynamics.test.ts`:
 - `add(body: PhysicsBody): PhysicsBody`
 - `addJoint(joint: T): T`
 - `attach(node: SceneNode, options: AttachOptions): PhysicsBody`
-- `bind(body: PhysicsBody, node: SceneNode, options?: BindingOptions): PhysicsBinding`
+- `bind(body: PhysicsBody, node: SceneNode): PhysicsBinding`
 - `destroy(): void`
 - `destroyBody(body: PhysicsBody): void`
 - `destroyCollider(collider: Collider): void`
@@ -78,7 +78,6 @@ each is pinned by a gate in `dynamics.test.ts`:
 - `dampingRatio: number`
 - `enableSleeping: boolean`
 - `gravity: Vector`
-- `interpolation: boolean`
 - `sleepAngularVelocity: number`
 - `sleepLinearVelocity: number`
 - `subStepCount: number`
@@ -98,4 +97,4 @@ each is pinned by a gate in `dynamics.test.ts`:
 
 ## Source
 
-[packages/exojs-physics/src/PhysicsWorld.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts#L124)
+[packages/exojs-physics/src/PhysicsWorld.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts#L120)

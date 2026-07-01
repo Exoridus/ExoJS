@@ -52,6 +52,18 @@ describe('LimiterEffect', () => {
       effect.destroy();
     });
 
+    it('uses default ratio of 20', () => {
+      const effect = new LimiterEffect();
+      expect(effect.ratio).toBe(20);
+      effect.destroy();
+    });
+
+    it('uses default knee of 0', () => {
+      const effect = new LimiterEffect();
+      expect(effect.knee).toBe(0);
+      effect.destroy();
+    });
+
     it('accepts custom threshold option', () => {
       const effect = new LimiterEffect({ threshold: -6 });
       expect(effect.threshold).toBe(-6);
@@ -76,6 +88,18 @@ describe('LimiterEffect', () => {
       effect.destroy();
     });
 
+    it('accepts custom ratio option', () => {
+      const effect = new LimiterEffect({ ratio: 8 });
+      expect(effect.ratio).toBe(8);
+      effect.destroy();
+    });
+
+    it('accepts custom knee option', () => {
+      const effect = new LimiterEffect({ knee: 6 });
+      expect(effect.knee).toBe(6);
+      effect.destroy();
+    });
+
     it('clamps threshold to -60 minimum on construction', () => {
       const effect = new LimiterEffect({ threshold: -100 });
       expect(effect.threshold).toBe(-60);
@@ -97,6 +121,30 @@ describe('LimiterEffect', () => {
     it('clamps wet to 1 maximum on construction', () => {
       const effect = new LimiterEffect({ wet: 2 });
       expect(effect.wet).toBe(1);
+      effect.destroy();
+    });
+
+    it('clamps ratio to 1 minimum on construction', () => {
+      const effect = new LimiterEffect({ ratio: 0 });
+      expect(effect.ratio).toBe(1);
+      effect.destroy();
+    });
+
+    it('clamps ratio to 20 maximum on construction', () => {
+      const effect = new LimiterEffect({ ratio: 30 });
+      expect(effect.ratio).toBe(20);
+      effect.destroy();
+    });
+
+    it('clamps knee to 0 minimum on construction', () => {
+      const effect = new LimiterEffect({ knee: -5 });
+      expect(effect.knee).toBe(0);
+      effect.destroy();
+    });
+
+    it('clamps knee to 40 maximum on construction', () => {
+      const effect = new LimiterEffect({ knee: 50 });
+      expect(effect.knee).toBe(40);
       effect.destroy();
     });
   });
@@ -198,7 +246,7 @@ describe('LimiterEffect', () => {
       compressorSpy.mockRestore();
     });
 
-    it('sets fixed ratio of 20 on compressor', () => {
+    it('sets default ratio of 20 on compressor', () => {
       const ctx = getAudioContext();
       const { compressor, gainSpy, compressorSpy } = wireAll(ctx);
       const effect = new LimiterEffect();
@@ -208,11 +256,31 @@ describe('LimiterEffect', () => {
       compressorSpy.mockRestore();
     });
 
-    it('sets fixed knee of 0 on compressor', () => {
+    it('sets default knee of 0 on compressor', () => {
       const ctx = getAudioContext();
       const { compressor, gainSpy, compressorSpy } = wireAll(ctx);
       const effect = new LimiterEffect();
       expect(compressor.knee.setValueAtTime).toHaveBeenCalledWith(0, expect.anything());
+      effect.destroy();
+      gainSpy.mockRestore();
+      compressorSpy.mockRestore();
+    });
+
+    it('sets ratio on compressor from option', () => {
+      const ctx = getAudioContext();
+      const { compressor, gainSpy, compressorSpy } = wireAll(ctx);
+      const effect = new LimiterEffect({ ratio: 8 });
+      expect(compressor.ratio.setValueAtTime).toHaveBeenCalledWith(8, expect.anything());
+      effect.destroy();
+      gainSpy.mockRestore();
+      compressorSpy.mockRestore();
+    });
+
+    it('sets knee on compressor from option', () => {
+      const ctx = getAudioContext();
+      const { compressor, gainSpy, compressorSpy } = wireAll(ctx);
+      const effect = new LimiterEffect({ knee: 6 });
+      expect(compressor.knee.setValueAtTime).toHaveBeenCalledWith(6, expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
@@ -345,6 +413,74 @@ describe('LimiterEffect', () => {
       const effect = new LimiterEffect();
       effect.release = 0.3;
       expect(compressor.release.setTargetAtTime).toHaveBeenCalledWith(0.3, expect.anything(), expect.anything());
+      effect.destroy();
+      gainSpy.mockRestore();
+      compressorSpy.mockRestore();
+    });
+  });
+
+  describe('ratio setter', () => {
+    it('ratio setter clamps to 1 minimum', () => {
+      const effect = new LimiterEffect();
+      effect.ratio = 0;
+      expect(effect.ratio).toBe(1);
+      effect.destroy();
+    });
+
+    it('ratio setter clamps to 20 maximum', () => {
+      const effect = new LimiterEffect();
+      effect.ratio = 30;
+      expect(effect.ratio).toBe(20);
+      effect.destroy();
+    });
+
+    it('ratio setter ramps compressor ratio', () => {
+      const ctx = getAudioContext();
+      const compressor = makeCompressorNode(ctx);
+      const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
+      let i = 0;
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
+      const compressorSpy = vi
+        .spyOn(ctx, 'createDynamicsCompressor')
+        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+
+      const effect = new LimiterEffect();
+      effect.ratio = 8;
+      expect(compressor.ratio.setTargetAtTime).toHaveBeenCalledWith(8, expect.anything(), expect.anything());
+      effect.destroy();
+      gainSpy.mockRestore();
+      compressorSpy.mockRestore();
+    });
+  });
+
+  describe('knee setter', () => {
+    it('knee setter clamps to 0 minimum', () => {
+      const effect = new LimiterEffect();
+      effect.knee = -5;
+      expect(effect.knee).toBe(0);
+      effect.destroy();
+    });
+
+    it('knee setter clamps to 40 maximum', () => {
+      const effect = new LimiterEffect();
+      effect.knee = 50;
+      expect(effect.knee).toBe(40);
+      effect.destroy();
+    });
+
+    it('knee setter ramps compressor knee', () => {
+      const ctx = getAudioContext();
+      const compressor = makeCompressorNode(ctx);
+      const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
+      let i = 0;
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
+      const compressorSpy = vi
+        .spyOn(ctx, 'createDynamicsCompressor')
+        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+
+      const effect = new LimiterEffect();
+      effect.knee = 6;
+      expect(compressor.knee.setTargetAtTime).toHaveBeenCalledWith(6, expect.anything(), expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
