@@ -1,6 +1,7 @@
 import type { TileMap } from '@codexo/exojs-tilemap';
 
 import type { LdtkData } from './LdtkData';
+import { getLdtkLevelEntries } from './ldtkLevelEntries';
 
 /**
  * A parsed LDtk world document: holds the raw JSON data and the converted
@@ -38,10 +39,17 @@ export class LdtkMap {
    * Find a level's runtime {@link TileMap} by the LDtk level `identifier`,
    * or `undefined` when no level with that name exists.
    *
+   * Searches across {@link import('./ldtkLevelEntries').getLdtkLevelEntries}'s
+   * flattened level set rather than `data.levels` directly, so this works for
+   * both single-world and multi-world documents — `data.levels` alone is
+   * empty for the latter.
+   *
    * The lookup is O(n) in the number of levels.
    */
   public getLevelByName(identifier: string): TileMap | undefined {
-    const index = this.data.levels.findIndex(level => level.identifier === identifier);
+    const index = getLdtkLevelEntries(this.data).findIndex(
+      entry => entry.level.identifier === identifier,
+    );
     if (index === -1) return undefined;
     return this.levels[index];
   }
