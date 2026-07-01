@@ -76,6 +76,48 @@ All debug layers live on `DebugOverlay.layers`. The overlay subscribes to applic
 
 Debug layers have zero overhead when their `visible` flag is `false` — `DebugOverlay._onFrame` skips invisible layers entirely. You can leave the overlay constructed for a full development session without worrying about perf impact on profiling.
 
+## Logging
+
+Separately from the visual overlays above, ExoJS ships a channel-based [`Logger`](/ExoJS/en/api/logger/) in the core module — no special entrypoint required. The engine uses it internally (for example, `Application` logs unexpected failures on the `'core'` channel), and it's available for your own code too. A ready-to-use default instance, `logger`, is exported alongside the class:
+
+```js
+import { logger } from '@codexo/exojs';
+
+logger.debug('assets', 'Bundle "level-1" queued');
+logger.info('scene', 'Entered gameplay scene');
+logger.warn('audio', 'AudioContext resumed after a user gesture');
+logger.error('physics', 'Simulation step threw', new Error('physics step failed'));
+```
+
+Each call takes a `channel` — one of the built-in channels (`'core'`, `'rendering'`, `'audio'`, `'input'`, `'assets'`, `'physics'`, `'ui'`, `'animation'`, `'scene'`) or any custom string — plus a `message`, and either an optional `data` object (`debug`/`info`/`warn`) or an optional `Error` (`error`). Filter or route by channel in your own tooling to focus on one subsystem at a time.
+
+Severity follows `LogSeverity`: `Debug < Info < Warning < Error`. In production builds, `Debug`/`Info`/`Warning` calls are compiled out entirely — only `Error` survives — so it's safe to leave `logger.debug`/`logger.info` calls in shipped code without gating them yourself. In development builds, a console handler is registered by default and prefixes every line with `[ExoJS:<channel>]`.
+
+To capture log entries yourself — for an in-game console, telemetry, or a custom debug panel — register a handler with `addHandler`. It returns an unsubscribe function:
+
+```js
+import { logger, LogSeverity } from '@codexo/exojs';
+
+const unsubscribe = logger.addHandler((entry) => {
+    if (entry.severity >= LogSeverity.Warning) {
+        console.warn(entry.channel, entry.message, entry.data ?? entry.error);
+    }
+});
+
+// later
+unsubscribe();
+```
+
+For warnings that could otherwise repeat every frame (a stale asset reference checked in `update`, say), use `warnOnce` — it logs the first time for a given key and silently skips every call after:
+
+```js
+update(delta) {
+    if (this.texture.width > 4096) {
+        logger.warnOnce('huge-texture', 'rendering', 'Texture exceeds 4096px — this may hurt performance on mobile GPUs.');
+    }
+}
+```
+
 ## Inspecting the render pipeline
 
 Every filter attached to a drawable costs at least one extra render pass. A stack of three filters on a container means the container renders to an off-screen target, the first filter reads and writes a target, the second does the same, and the third composites the result — four passes for one element. When your frame budget tightens, knowing who is adding passes and why matters.
