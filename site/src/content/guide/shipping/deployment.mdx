@@ -122,7 +122,9 @@ await loader.load(Texture, { bunny: 'assets/bunny.png' }); // correct
 
 ## CDN and release bundle usage
 
-If you want to use ExoJS from a CDN or include the release bundle directly (without npm), use ES module imports with a `<script type="module">` tag.
+If you want to use ExoJS from a CDN or include the release bundle directly (without npm), there are two bundle formats to choose from: an ES module bundle for use with `<script type="module">`, or a plain-script IIFE bundle for use with a regular `<script>` tag. Both are published with the npm package and available from any CDN that mirrors it (unpkg, jsDelivr).
+
+### ES module bundle
 
 For the core engine bundle:
 
@@ -156,6 +158,23 @@ For the debug bundle (`exo.debug.esm.js`), note that it is an **external-core** 
 Without the import map, `exo.debug.esm.js` cannot resolve `@codexo/exojs` and will fail with a module not found error. The debug bundle is not a standalone engine; it extends the core bundle.
 
 Import maps are supported in all modern browsers. If you need to support older environments, use the npm + Vite workflow instead.
+
+### Script-tag (IIFE) bundle
+
+If you don't have any module-aware setup — no bundler, no import maps, just a plain HTML file with `<script>` tags — use the IIFE bundle instead. It is a classic (non-module) script that attaches every export as a property of a single global variable, `Exo`:
+
+```html
+<script src="./dist/exo.iife.js"></script>
+<script>
+    const { Application, Scene } = Exo;
+
+    const app = new Application({ canvas: { width: 800, height: 600 } });
+</script>
+```
+
+There is no `import` statement anywhere in this path — `Exo` is already in scope by the time the second `<script>` block runs, as long as it comes after the bundle's `<script>` tag. A minified build for production is available at `dist/exo.iife.min.js`; swap the `src` to use it.
+
+Prefer the ES module bundle when your host supports import maps and you want the browser to load only what you use. Prefer the IIFE bundle when you need a true zero-build setup — for example a single static HTML file, a CMS or forum post that only allows pasting a `<script>` tag, or any environment without import-map support.
 
 ## MIME types
 

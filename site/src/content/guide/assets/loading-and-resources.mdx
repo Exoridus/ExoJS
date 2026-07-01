@@ -226,6 +226,48 @@ async load(loader) {
 }
 ```
 
+## Signals for a global loading screen
+
+`LoadingQueue.onProgress` and `onBundleProgress` (above) are scoped to one call or one bundle. When you want a single loading screen that reflects *everything* the loader is doing — regardless of how many separate `loader.load(...)` calls triggered it — subscribe to the loader instance's own signals instead: `onLoadStart`, `onLoadProgress`, `onLoadComplete`, and `onLoadError`. These track one shared, loader-wide batch: as long as any foreground load is in flight, new loads join the same batch instead of starting a new one.
+
+| Signal | Payload | Fires |
+|--------|---------|-------|
+| `onLoadStart` | `(key, url)` | Once, when the loader goes from idle to active. `key`/`url` identify the asset that triggered it. |
+| `onLoadProgress` | `(loaded, total, key)` | After every asset in the batch settles (success or failure). `loaded`/`total` are running counts across the whole batch; `key` is the asset that just settled. |
+| `onLoadComplete` | — | Once, when every in-flight foreground load has settled and the batch returns to idle. |
+| `onLoadError` | `(key, error)` | For each asset that fails. Does not prevent `onLoadComplete` from firing afterward. |
+
+Because the batch is shared, `total` can grow mid-flight: if a new `loader.load(...)` call starts while others are still pending, its assets are added to the same running total rather than starting a fresh count at 0. That is exactly what you want for a boot screen — one progress bar that stays accurate no matter how many scenes or systems kick off loads concurrently.
+
+```js
+class BootScene extends Scene {
+    init(loader) {
+        loader.onLoadStart.add((key, url) => {
+            this.progressBar.visible = true;
+        });
+
+        loader.onLoadProgress.add((loaded, total, key) => {
+            this.progressBar.value = loaded / total;
+        });
+
+        loader.onLoadError.add((key, error) => {
+            console.warn(`Failed to load "${key}":`, error);
+            // onLoadComplete still fires once the rest of the batch settles
+        });
+
+        loader.onLoadComplete.add(() => {
+            this.progressBar.visible = false;
+            this._enterGame();
+        });
+
+        // Trigger loads from anywhere — the signals above see all of them
+        loader.load(TitleAssets);
+    }
+}
+```
+
+Unlike `LoadingQueue.onProgress`, which you attach to the return value of one `loader.load(...)` call, these four are properties on the `Loader` itself — subscribe once (for example in your boot scene's `init`) and they report every foreground load for the lifetime of that loader.
+
 ## Aliases and identity
 
 Aliases come from the keys you supply in a record or `Assets` container. The same `Asset<T>` reference can appear under multiple aliases — the loader issues only one network request and stores the result under each alias independently:

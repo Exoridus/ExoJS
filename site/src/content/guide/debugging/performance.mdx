@@ -72,6 +72,42 @@ Updating a texture source (e.g. a canvas, video frame, or `DataTexture` buffer) 
 
 Nodes that fall entirely outside the current `View`'s viewport are skipped by the renderer. This is automatic and per-node. The culling check is AABB-based rather than exact shape, so nodes near the viewport edge may still be rendered even if partially outside. For large scrolling worlds, this is a significant performance multiplier — only the visible subset of your scene graph incurs draw cost.
 
+### Overriding the cull check with `cullArea`
+
+The automatic check calls `getBounds()`, which for a `Container` walks every visible child and unions their bounds — for a complex `Graphics` node or a container with hundreds of children, that walk runs every frame even when the node's on-screen footprint is trivial to reason about. Set `cullArea` to a `Rectangle` and the cull check uses it directly instead of computing bounds:
+
+```js
+import { Color, Container, Graphics, Rectangle } from '@codexo/exojs';
+
+// A debris field built from hundreds of small Graphics children — walking
+// all of them for getBounds() every frame is wasted work once we already
+// know the field never exceeds a 200x200 footprint at its spawn position.
+const debris = new Container();
+
+for (let i = 0; i < 300; i++) {
+  const shard = new Graphics();
+  shard.fillColor = Color.slateGray;
+  shard.drawCircle(0, 0, 2);
+  shard.x = Math.random() * 200;
+  shard.y = Math.random() * 200;
+  debris.addChild(shard);
+}
+
+debris.x = 400;
+debris.y = 300;
+
+// cullArea is compared directly against the view's bounds, in the same
+// world-space coordinates getBounds() would otherwise produce — it is not
+// re-transformed by the node's own position/scale/rotation. Since `debris`
+// is positioned once and never moves, a static rectangle here stays correct.
+debris.cullArea = new Rectangle(debris.x, debris.y, 200, 200);
+```
+
+Two things to keep in mind:
+
+- `cullArea` replaces `getBounds()` only in the `inView()` check — it has no effect on hit-testing, collision, or rendering, and it's ignored entirely when `cullable = false`.
+- Because the rectangle is used as-is (not transformed), a `cullArea` on a node that moves, rotates, or scales after it's set will go stale. Either recompute it when the node's position changes, or reserve it for nodes whose world placement is fixed once configured — e.g. static level decoration, or particle-heavy effects anchored to a known spawn point.
+
 ## Not a checklist
 
 The most useful performance practice is measurement. Turn on the performance layer, watch the numbers, change one thing, measure again. The engine's behavior under your specific scene — your sprite counts, your texture layout, your filter stacks — matters more than any general guideline.

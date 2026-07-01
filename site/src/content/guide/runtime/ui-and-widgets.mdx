@@ -10,7 +10,7 @@ import TryIt from '../../../components/TryIt.astro';
 
 Every scene owns a screen-fixed UI layer, [`scene.ui`](/ExoJS/en/api/uiroot/), that is rendered automatically on top of the world. It lives in screen space (origin top-left, `0..width` × `0..height`), so its contents never scroll or zoom with the camera. Add anything to it with `scene.ui.addChild(...)`.
 
-On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), and a [`Stack`](/ExoJS/en/api/stack/) layout container — for HUDs, menus, and pause screens without hand-built hit-tests.
+On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) for overflowing content, and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
 
 ## Building blocks
 
@@ -78,6 +78,31 @@ class MenuScene extends Scene {
 }
 ```
 
+## Scrolling content
+
+A `ScrollContainer` clips its content to a fixed `width` × `height` and scrolls it with the mouse wheel — useful for inventories, logs, or any list longer than its box. Add children to `scroll.content`, not to the container itself:
+
+```js
+import { Label, Scene, ScrollContainer } from '@codexo/exojs';
+
+class InventoryScene extends Scene {
+    init() {
+        const scroll = new ScrollContainer({ width: 280, height: 320, direction: 'vertical' });
+        scroll.anchorIn(this.ui, 'center');
+
+        for (let i = 0; i < 20; i++) {
+            const item = new Label(`Item ${i}`, { fontSize: 16 });
+            item.setPosition(12, i * 28);
+            scroll.content.addChild(item);
+        }
+
+        this.ui.addChild(scroll);
+    }
+}
+```
+
+`scroll.scrollTo(x, y)` and `scroll.scrollBy(dx, dy)` move the content programmatically, clamped so it never scrolls past its edges; `direction` restricts the wheel to `'vertical'`, `'horizontal'`, or `'both'`.
+
 ## Clicks and keyboard focus
 
 UI nodes are hit-tested in screen space *before* the world, so a `Button` on `scene.ui` is clickable even under a panned or zoomed camera. Listen to `button.onClick`:
@@ -113,6 +138,27 @@ field.onKeyDown.add(event => {
 
 The per-application focus service, [`app.focus`](/ExoJS/en/api/focus-manager/), tracks the focused node, moves focus with `Tab` / `Shift+Tab`, activates a focused button on `Enter` / `Space`, and exposes `app.focus.focus(node)` to focus programmatically.
 
+## Tooltips
+
+A `Tooltip` attaches to any `interactive` node and shows a small text label near the pointer after a short delay, hiding again as soon as the pointer leaves. It parents itself to the nearest `UIRoot` ancestor of its target, so it always renders above other content — the target just needs to already be in the scene tree:
+
+```js
+import { Button, Scene, Tooltip } from '@codexo/exojs';
+
+class ShopScene extends Scene {
+    init() {
+        const upgrade = new Button({ label: 'Upgrade', width: 160, height: 44 });
+        upgrade.interactive = true;
+        upgrade.anchorIn(this.ui, 'top-left', 24, 20);
+        this.ui.addChild(upgrade);
+
+        this.tooltip = new Tooltip(upgrade, { text: 'Costs 50 gold', delay: 0.3 });
+    }
+}
+```
+
+Options cover the delay before showing (`delay`, in seconds), the offset from the pointer (`offsetX` / `offsetY`), and basic styling (`background`, `textColor`, `padding`, `fontSize`). Call `tooltip.destroy()` to remove the listeners it attached to its target — e.g. when the target itself is destroyed.
+
 ## Pause overlays
 
 A pause menu is the canonical combination: freeze the world with `scene.paused = true` — which skips `update` and the scene's systems while it keeps drawing — and show an overlay built from widgets on `scene.ui`:
@@ -147,5 +193,5 @@ class GameScene extends Scene {
 
 <TryIt
     examples={['ui/hud-and-widgets', 'application-scenes/hud-overlay-scene']}
-    api={['uiroot', 'button', 'panel', 'label', 'progress-bar']}
+    api={['uiroot', 'button', 'panel', 'label', 'progress-bar', 'scroll-container', 'tooltip']}
 />
