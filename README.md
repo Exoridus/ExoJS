@@ -111,9 +111,7 @@ import { Application, Scene, Graphics, Color, type RenderingContext, type Time }
 class HelloScene extends Scene {
   private readonly box = new Graphics();
 
-  public constructor() {
-    super();
-
+  public override load(): void {
     this.box.fillColor = Color.white;
     this.box.drawRectangle(-32, -32, 64, 64);
     this.box.setPosition(400, 300);
