@@ -310,6 +310,32 @@ class MockAudioContext {
     } as unknown as DelayNode;
   }
 
+  public createWaveShaper(): WaveShaperNode {
+    return {
+      connect: () => undefined,
+      disconnect: () => undefined,
+      context: this,
+      curve: null as Float32Array | null,
+      oversample: 'none' as OverSampleType,
+    } as unknown as WaveShaperNode;
+  }
+
+  public createChannelMerger(_numberOfInputs?: number): ChannelMergerNode {
+    return {
+      connect: () => undefined,
+      disconnect: () => undefined,
+      context: this,
+    } as unknown as ChannelMergerNode;
+  }
+
+  public createChannelSplitter(_numberOfOutputs?: number): ChannelSplitterNode {
+    return {
+      connect: () => undefined,
+      disconnect: () => undefined,
+      context: this,
+    } as unknown as ChannelSplitterNode;
+  }
+
   public createConvolver(): ConvolverNode {
     return {
       connect: () => undefined,

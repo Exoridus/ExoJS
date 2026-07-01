@@ -1,0 +1,66 @@
+---
+title: "TremoloEffect"
+description: "Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes. A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of tremolo. The base gain is `1 - depth` and the LFO peak deviation is `depth`, so the gain oscillates between `1 - 2 * depth` and `1`. Optionally the same LFO can drive a `StereoPannerNode.pan` for a synchronized auto-pan effect. Node graph (`autoPan = false`): ``` inputGain ┬── dryGain ──────────────────────────┐ │ ├── outputGain └── tremoloGain ── wetGain ─────────────┘ lfoOscillator ── lfoGain (depth) ── tremoloGain.gain ``` Node graph (`autoPan = true`): ``` inputGain ┬── dryGain ──────────────────────────────────┐ │ ├── outputGain └── tremoloGain ── panner ── wetGain ──────────┘ lfoOscillator ── lfoGain (depth) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth`."
+symbol: "TremoloEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 9
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/TremoloEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/TremoloEffect.ts#L82"
+---
+## Import
+
+`import { TremoloEffect } from '@codexo/exojs-audio-fx'`
+
+Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes.
+
+A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of
+tremolo. The base gain is `1 - depth` and the LFO peak deviation is `depth`, so the gain
+oscillates between `1 - 2 * depth` and `1`. Optionally the same LFO can drive a
+`StereoPannerNode.pan` for a synchronized auto-pan effect.
+
+Node graph (`autoPan = false`):
+```
+inputGain ┬── dryGain ──────────────────────────┐
+          │                                       ├── outputGain
+          └── tremoloGain ── wetGain ─────────────┘
+
+lfoOscillator ── lfoGain (depth) ── tremoloGain.gain
+```
+
+Node graph (`autoPan = true`):
+```
+inputGain ┬── dryGain ──────────────────────────────────┐
+          │                                               ├── outputGain
+          └── tremoloGain ── panner ── wetGain ──────────┘
+
+lfoOscillator ── lfoGain (depth) ── tremoloGain.gain
+lfoOscillator ── panGain (depth) ── panner.pan
+```
+
+Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth`.
+
+## Constructors
+
+- `new(options: TremoloEffectOptions): TremoloEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `autoPan: boolean`
+- `depth: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `rateHz: number`
+- `ready: Promise<void>`
+- `wet: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/TremoloEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/TremoloEffect.ts#L82)

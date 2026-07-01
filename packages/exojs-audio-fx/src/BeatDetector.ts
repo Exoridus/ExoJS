@@ -11,16 +11,50 @@ export type BeatDetectorSource = AudioBus | Voice | MediaStream | AudioNode | nu
 export interface BeatDetectorOptions {
   /** Minimum detectable BPM. Default 50. */
   minBpm?: number;
-  /** Maximum detectable BPM. Default 250. */
+  /** Maximum detectable BPM. Default 300. */
   maxBpm?: number;
   /** FFT size for onset detection. Default 2048. */
   fftSize?: number;
   /** Hop size in samples between successive FFTs. Default 512. */
   hopSize?: number;
-  /** Sliding window duration for tempogram (seconds). Default 6. */
-  tempoWindowSec?: number;
-  /** Initial suppression period before beats are emitted (ms). Default 1500. */
-  settlingMs?: number;
+  /**
+   * Short tempogram window (seconds) that reacts quickly to a genuine tempo
+   * change. Default 2.5. The tracked tempo follows this FAST window only when it
+   * disagrees with {@link stableTempoWindowSec} consistently over several
+   * analysis hops, so a real DJ drift is tracked without making a steady tempo
+   * nervous.
+   */
+  fastTempoWindowSec?: number;
+  /**
+   * Long tempogram window (seconds) that holds the tempo grid steady against
+   * noise and octave ambiguity. Default 8. Should be ≥ {@link fastTempoWindowSec}
+   * and large enough to hold ≳ 2 periods of the slowest tempo; it also sizes the
+   * internal flux ring buffer.
+   */
+  stableTempoWindowSec?: number;
+  /**
+   * Hops between successive autocorrelation (tempogram) recomputations.
+   * Default 15 (~160 ms at 48 kHz with the default 512-sample hop). Lower values
+   * react faster to tempo changes at the cost of more CPU.
+   */
+  acfIntervalHops?: number;
+  /**
+   * Minimum warm-up (ms) before the first beat may be emitted. Default 400.
+   * The detector starts hunting a tempo once this much analysis history exists
+   * instead of waiting a full slowest-tempo period, so early {@link BeatInfo}
+   * beats (tagged `status: 'provisional'`) arrive with low latency for visual
+   * reactivity. A beat is promoted to `status: 'locked'` only once the tempo grid
+   * is trustworthy (full analysis window + sustained on-grid tracking). Replaces
+   * the former `settlingMs` (default 1500).
+   */
+  minSettlingMs?: number;
+  /**
+   * When true (default), early low-confidence beats are emitted tagged
+   * `status: 'provisional'` (then promoted to `'locked'`) for snappy visual
+   * reactivity. Set false to suppress provisional beats entirely — {@link onBeat}
+   * then fires only for `'locked'` beats, matching the pre-provisional behaviour.
+   */
+  emitProvisionalBeats?: boolean;
   /** Number of mel filterbank bands. Default 24. */
   melBands?: number;
   /**
@@ -66,6 +100,15 @@ export interface BeatInfo {
   isDownbeat: boolean;
   /** Beat position within the bar (1..N). */
   beatInBar: number;
+  /**
+   * Detection trust level:
+   * - `'provisional'` — an early, low-latency beat emitted before the tempo grid
+   *   is fully settled. Good for visual reactivity (a "blink"); may be revised.
+   * - `'locked'` — the tempo grid is settled and trustworthy. Safe for
+   *   sync-critical use. Each stable segment yields exactly one provisional→locked
+   *   transition.
+   */
+  status: 'provisional' | 'locked';
 }
 
 export interface UpcomingBeat {
@@ -118,10 +161,13 @@ const workletName = 'exojs-beat-detector';
  * - {@link BeatDetector.onTempoChange} — when the tracked BPM changes
  * - {@link BeatDetector.onBeatPredicted} — look-ahead schedule notice
  *
- * Detection is delayed by `settlingMs` (default 1500 ms) after a new
- * source is attached; this prevents spurious beats during the algorithm's
- * warm-up. Time-signature detection (3/4 vs 4/4) is on by default; lock
- * to 4/4 by setting `enableTimeSignatureDetection: false`.
+ * Early beats arrive with low latency tagged `status: 'provisional'` (after a
+ * short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity,
+ * then promote to `status: 'locked'` once the tempo grid is trustworthy — a
+ * single {@link BeatDetector.onBeat} signal carries both via {@link BeatInfo.status}.
+ * Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature
+ * detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting
+ * `enableTimeSignatureDetection: false`.
  */
 export class BeatDetector {
   // ---- Signals ----
@@ -178,11 +224,14 @@ export class BeatDetector {
   public constructor(options?: BeatDetectorOptions) {
     this._options = {
       minBpm: options?.minBpm ?? 50,
-      maxBpm: options?.maxBpm ?? 250,
+      maxBpm: options?.maxBpm ?? 300,
       fftSize: options?.fftSize ?? 2048,
       hopSize: options?.hopSize ?? 512,
-      tempoWindowSec: options?.tempoWindowSec ?? 6,
-      settlingMs: options?.settlingMs ?? 1500,
+      fastTempoWindowSec: options?.fastTempoWindowSec ?? 2.5,
+      stableTempoWindowSec: options?.stableTempoWindowSec ?? 8,
+      acfIntervalHops: options?.acfIntervalHops ?? 15,
+      minSettlingMs: options?.minSettlingMs ?? 400,
+      emitProvisionalBeats: options?.emitProvisionalBeats ?? true,
       melBands: options?.melBands ?? 24,
       enableTimeSignatureDetection: options?.enableTimeSignatureDetection ?? true,
       // Visual-state options aren't part of worklet config; cached in the public
@@ -401,8 +450,11 @@ export class BeatDetector {
           minBpm: opts.minBpm,
           maxBpm: opts.maxBpm,
           melBands: opts.melBands,
-          settlingMs: opts.settlingMs,
-          tempoWindowSec: opts.tempoWindowSec,
+          minSettlingMs: opts.minSettlingMs,
+          emitProvisionalBeats: opts.emitProvisionalBeats,
+          fastTempoWindowSec: opts.fastTempoWindowSec,
+          stableTempoWindowSec: opts.stableTempoWindowSec,
+          acfIntervalHops: opts.acfIntervalHops,
           enableTimeSignatureDetection: opts.enableTimeSignatureDetection,
         },
       });
@@ -452,6 +504,7 @@ export class BeatDetector {
           energy: message.energy as number,
           isDownbeat: message.isDownbeat as boolean,
           beatInBar: message.beatInBar as number,
+          status: (message.status as 'provisional' | 'locked' | undefined) ?? 'locked',
         };
         this.onBeat.dispatch(bi);
         if (bi.isDownbeat) this.onDownbeat.dispatch(bi);

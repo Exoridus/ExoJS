@@ -1,0 +1,55 @@
+---
+title: "LimiterEffect"
+description: "Brick-wall limiter backed by a Web Audio `DynamicsCompressorNode` configured for hard limiting: a fixed high ratio (~20), zero knee (hard knee), and a fast attack. Use it as a final-chain safety net to prevent clipping and protect downstream output. The compressor `ratio` (20) and `knee` (0) are fixed internally and are not user-configurable options. The effect exposes a dry/wet mix for API consistency and parallel processing workflows, though a fully-wet signal (`wet = 1`) is the typical configuration. Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → compressor → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
+symbol: "LimiterEffect"
+kind: "class"
+subsystem: "audio"
+importPath: "@codexo/exojs-audio-fx"
+memberCount: 9
+tier: "stable"
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "packages/exojs-audio-fx/src/effects/LimiterEffect.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/LimiterEffect.ts#L59"
+---
+## Import
+
+`import { LimiterEffect } from '@codexo/exojs-audio-fx'`
+
+Brick-wall limiter backed by a Web Audio `DynamicsCompressorNode` configured
+for hard limiting: a fixed high ratio (~20), zero knee (hard knee), and a
+fast attack. Use it as a final-chain safety net to prevent clipping and
+protect downstream output.
+
+The compressor `ratio` (20) and `knee` (0) are fixed internally and are not
+user-configurable options. The effect exposes a dry/wet mix for API
+consistency and parallel processing workflows, though a fully-wet signal
+(`wet = 1`) is the typical configuration.
+
+Node graph:
+```
+input(GainNode) → dryGain → output(GainNode)
+input           → compressor → wetGain → output
+```
+Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.
+
+## Constructors
+
+- `new(options: LimiterEffectOptions): LimiterEffect`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `attack: number`
+- `inputNode: AudioNode`
+- `outputNode: AudioNode`
+- `ready: Promise<void>`
+- `release: number`
+- `threshold: number`
+- `wet: number`
+
+## Source
+
+[packages/exojs-audio-fx/src/effects/LimiterEffect.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/LimiterEffect.ts#L59)
