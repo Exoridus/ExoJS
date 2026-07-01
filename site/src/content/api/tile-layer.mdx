@@ -1,6 +1,6 @@
 ---
 title: "TileLayer"
-description: "A generic, format-independent tile layer with chunk-first storage. Tile data is stored in fixed-size TileChunks indexed by signed chunk coordinates. For finite maps, only chunks that intersect the layer bounds exist. **Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported — the layer owns chunk storage and exposes only a ReadonlyTileChunk view. The layer is NOT a SceneNode — that integration lives in the future renderer slice."
+description: "A generic, format-independent tile layer with chunk-first storage. Tile data is stored in fixed-size TileChunks indexed by signed chunk coordinates. For finite maps, only chunks that intersect the layer bounds exist. **Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported — the layer owns chunk storage and exposes only a ReadonlyTileChunk view. The layer is NOT a SceneNode — that integration lives in import('./TileLayerNode').TileLayerNode."
 symbol: "TileLayer"
 kind: "class"
 subsystem: "tilemap"
@@ -27,8 +27,8 @@ and increment revision counters only when the stored value actually
 changes. Direct chunk mutation is not supported — the layer owns chunk
 storage and exposes only a ReadonlyTileChunk view.
 
-The layer is NOT a SceneNode — that integration lives in the future
-renderer slice.
+The layer is NOT a SceneNode — that integration lives in
+import('./TileLayerNode').TileLayerNode.
 
 ## Constructors
 
