@@ -98,7 +98,7 @@ Call `resetTextureFrame()` to restore the full texture.
 
 ## Blend modes
 
-`sprite.blendMode` controls how the sprite composites with pixels already in the framebuffer. The default is normal alpha blending. Alternative modes (`additive`, `subtract`, `multiply`, `screen`) are available via `BlendModes`:
+`sprite.blendMode` controls how the sprite composites with pixels already in the framebuffer. The default is `BlendModes.Normal` (standard alpha blending):
 
 ```js
 import { BlendModes } from '@codexo/exojs';
@@ -107,6 +107,31 @@ this.glow.blendMode = BlendModes.Additive;
 ```
 
 Blend modes are per-sprite. Combined with tinting they cover common glow, shadow, and knock-out compositing without needing custom shaders.
+
+`BlendModes` implements the full W3C compositing/blending set. `Normal`, `Additive`, `Subtract`, `Multiply`, and `Screen` are fixed-function GPU blends with no extra draw cost. The remaining "advanced" modes go through a backdrop-aware compositor that copies the current render target before drawing each sprite, so they carry a small per-draw backdrop-copy cost — reach for them deliberately in draw-call-heavy scenes. `isAdvancedBlendMode(mode)` reports which category a given mode falls into.
+
+| Mode | Visual effect |
+| --- | --- |
+| `Normal` | Standard alpha compositing — source drawn over the backdrop. |
+| `Additive` | Adds source and backdrop colors; brightens. Good for glows, light, fire, particles. |
+| `Subtract` | Subtracts source from backdrop; darkens toward black. |
+| `Multiply` | Multiplies channel values; darkens, like stacking transparencies. |
+| `Screen` | Inverse of multiply; lightens, like projecting two images onto the same surface. |
+| `Darken` * | Keeps the darker of source and backdrop, per channel. |
+| `Lighten` * | Keeps the lighter of source and backdrop, per channel. |
+| `Overlay` * | Multiplies dark backdrop areas and screens light ones; boosts contrast. |
+| `ColorDodge` * | Brightens the backdrop to reflect the source color; intense highlights. |
+| `ColorBurn` * | Darkens the backdrop to reflect the source color; intense shadows. |
+| `HardLight` * | Overlay with source and backdrop roles swapped; harsh, directional lighting. |
+| `SoftLight` * | Softer version of Overlay; subtle, diffused lighting. |
+| `Difference` * | Absolute value of the channel difference; inversion / comparison effects. |
+| `Exclusion` * | Lower-contrast variant of Difference. |
+| `Hue` * | Source hue with backdrop saturation and luminosity. |
+| `Saturation` * | Source saturation with backdrop hue and luminosity. |
+| `Color` * | Source hue and saturation with backdrop luminosity; recolors while preserving shading. |
+| `Luminosity` * | Source luminosity with backdrop hue and saturation; inverse of `Color`. |
+
+\* Advanced mode — routed through the backdrop-aware compositor (`isAdvancedBlendMode` returns `true`).
 
 ## Spritesheets
 
