@@ -57,11 +57,15 @@ export type {
   TileAnimationFrame,
   TileDefinition,
   TileProperties,
+  TilePropertyObjectRef,
+  TilePropertyPoint,
+  TilePropertyTileRef,
   TilePropertyValue,
   TileTransform,
 } from './types';
 export {
   TILE_TRANSFORM_IDENTITY,
+  TilePropertyKind,
   tileToChunkCoord,
   tileToLocalInChunk,
 } from './types';
