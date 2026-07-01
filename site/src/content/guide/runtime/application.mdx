@@ -46,9 +46,10 @@ Options are organised into groups:
 - `backend` — `{ type: 'auto' }` (default), or pin to `'webgl2'` / `'webgpu'`.
 
 `clearColor` is not just a construction-time default — `app.clearColor` returns the render
-backend's live {@link Color} instance, so it stays readable and writable for the whole life of
-the application. Assigning a new `Color` copies its channels into the backend (effective from the
-next frame), which makes it a convenient way to react to game state without touching draw code:
+backend's live [`Color`](/ExoJS/en/api/color/) instance, so it stays readable and writable for the
+whole life of the application. Assigning a new `Color` copies its channels into the backend
+(effective from the next frame), which makes it a convenient way to react to game state without
+touching draw code:
 
 ```js
 import { Application, Color } from '@codexo/exojs';
