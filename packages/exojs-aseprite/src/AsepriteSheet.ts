@@ -1,6 +1,6 @@
-import { AnimatedSprite, type AnimatedSpriteClipDefinition, type Rectangle, Spritesheet, type Texture } from '@codexo/exojs';
+import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture } from '@codexo/exojs';
 
-import { type AsepriteData, type AsepriteFrameData,isAsepriteArrayData } from './AsepriteData';
+import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteSlice,isAsepriteArrayData } from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of
@@ -16,19 +16,67 @@ function normaliseFrames(data: AsepriteData): AsepriteFrameData[] {
 }
 
 /**
- * Calculates the average frames-per-second for a subset of frames, based on
- * the per-frame `duration` field (milliseconds per frame) exported by Aseprite.
- * Falls back to `12` fps when all durations are zero or the slice is empty.
+ * Expands a frame tag's inclusive `[from, to]` range into the ordered
+ * sequence of frame indices it actually plays, according to its
+ * {@link AsepriteDirection}. Indices are not bounds-checked against the
+ * frame array here; callers filter out-of-range entries separately.
+ *
+ * - `forward`: `[from, from+1, ..., to]`.
+ * - `reverse`: `[to, to-1, ..., from]`.
+ * - `pingpong`: a forward pass followed by a backward pass that excludes
+ *   both endpoints, e.g. `[0,1,2]` becomes `[0,1,2,1]`.
+ * - `pingpong_reverse`: the mirrored shape, starting from `to`.
+ * - A single-frame tag (`from === to`) always yields just that one frame.
  */
-function avgFps(frames: AsepriteFrameData[], from: number, to: number): number {
-  const slice = frames.slice(from, to + 1);
+function expandFrameIndices(tag: AsepriteFrameTag): number[] {
+  const { from, to } = tag;
 
-  if (slice.length === 0) {
+  if (from === to) {
+    return [from];
+  }
+
+  const indices: number[] = [];
+
+  switch (tag.direction) {
+    case 'reverse':
+      for (let i = to; i >= from; i--) indices.push(i);
+      break;
+
+    case 'pingpong':
+      for (let i = from; i <= to; i++) indices.push(i);
+      for (let i = to - 1; i > from; i--) indices.push(i);
+      break;
+
+    case 'pingpong_reverse':
+      for (let i = to; i >= from; i--) indices.push(i);
+      for (let i = from + 1; i < to; i++) indices.push(i);
+      break;
+
+    case 'forward':
+    default:
+      for (let i = from; i <= to; i++) indices.push(i);
+      break;
+  }
+
+  return indices;
+}
+
+/**
+ * Calculates the average frames-per-second for a sequence of frame indices,
+ * based on the per-frame `duration` field (milliseconds per frame) exported
+ * by Aseprite. Every occurrence of an index counts toward the average — for
+ * ping-pong sequences that means repeated (bounced) frames are weighted twice.
+ * Falls back to `12` fps when all durations are zero or the sequence is empty.
+ */
+function avgFps(frameArray: AsepriteFrameData[], indices: number[]): number {
+  const durations = indices.filter(i => i >= 0 && i < frameArray.length).map(i => frameArray[i]!.duration);
+
+  if (durations.length === 0) {
     return 12;
   }
 
-  const totalMs = slice.reduce((sum, f) => sum + f.duration, 0);
-  const avgMs = totalMs / slice.length;
+  const totalMs = durations.reduce((sum, d) => sum + d, 0);
+  const avgMs = totalMs / durations.length;
 
   return avgMs > 0 ? 1000 / avgMs : 12;
 }
@@ -65,13 +113,24 @@ export class AsepriteSheet {
   public readonly clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>;
 
   /**
+   * Named slices from the Aseprite `meta.slices` metadata, keyed by slice
+   * name. Slices describe editor-defined regions — hitboxes, nine-patch
+   * borders, UI anchor points — that aren't part of the frame/animation
+   * data itself. Each {@link AsepriteSlice} carries one {@link AsepriteSliceKey}
+   * per frame at which its bounds change; consumers resolve the applicable
+   * key for a given frame index themselves.
+   */
+  public readonly slices: ReadonlyMap<string, AsepriteSlice>;
+
+  /**
    * @internal — use {@link AsepriteSheet.parse} to create instances.
    * The public modifier is required for the Loader's `AssetConstructor` token
    * contract; users should call `parse()` instead of constructing directly.
    */
-  public constructor(spritesheet: Spritesheet, clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>) {
+  public constructor(spritesheet: Spritesheet, clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>, slices: ReadonlyMap<string, AsepriteSlice>) {
     this.spritesheet = spritesheet;
     this.clips = clips;
+    this.slices = slices;
   }
 
   /**
@@ -82,9 +141,24 @@ export class AsepriteSheet {
    * `frameTags` are resolved against the ordered frame array; out-of-range
    * indices are silently skipped.
    *
-   * Ping-pong directions (`pingpong`, `pingpong_reverse`) are recorded with
-   * `loop: true` but the reversed segment is not automatically appended —
-   * the clip plays only the declared `from`→`to` range.
+   * A tag's `direction` determines the expanded frame sequence fed into the
+   * clip — `forward` and `reverse` play the `[from, to]` range in order or
+   * in reverse, while `pingpong`/`pingpong_reverse` append a backward pass
+   * (excluding both endpoints) so the bounce plays back correctly on the
+   * engine's forward-only {@link AnimatedSprite} playback. The tag's
+   * `repeat` field maps directly onto {@link AnimatedSpriteClipDefinition.repeat}:
+   * absent means the clip loops indefinitely (`repeat: -1`); a numeric
+   * string (`"1"`, `"2"`, …) means it plays exactly that many full cycles
+   * before stopping.
+   *
+   * Each clip's `frameDurations` carries the real per-frame `duration` from
+   * the export (falling back to the tag's average when a frame's duration is
+   * non-positive), so uneven hold-frames survive into playback instead of
+   * being flattened to a uniform fps. `frameOffsets` carries each frame's
+   * `spriteSourceSize` `{x,y}` — its trimmed content's offset within the
+   * untrimmed canvas — whenever any frame in the tag is trimmed, so frames
+   * trimmed by different amounts stay anchored instead of jittering; it's
+   * omitted entirely for tags with no trimmed frames.
    */
   public static parse(data: AsepriteData, texture: Texture): AsepriteSheet {
     const frameArray = normaliseFrames(data);
@@ -104,26 +178,63 @@ export class AsepriteSheet {
     const frameTags = data.meta.frameTags ?? [];
 
     for (const tag of frameTags) {
-      const frames: Rectangle[] = [];
-
-      for (let i = tag.from; i <= tag.to; i++) {
-        if (i >= 0 && i < frameArray.length) {
-          frames.push(spritesheet.getFrame(String(i)));
-        }
-      }
+      // Out-of-range indices are silently skipped; `validIndices` parallels
+      // `frames` exactly, so it's the basis for every other per-frame array
+      // (durations, offsets) built below.
+      const validIndices = expandFrameIndices(tag).filter(i => i >= 0 && i < frameArray.length);
+      const frames = validIndices.map(i => spritesheet.getFrame(String(i)));
 
       if (frames.length === 0) {
         continue;
       }
 
+      // Aseprite's `tag.repeat` (a numeric string, `'1'` through any N) maps
+      // directly onto the engine's `repeat` count. Absent means the tag
+      // loops indefinitely, the engine's `-1` sentinel.
+      const repeat = tag.repeat !== undefined ? Number(tag.repeat) : -1;
+      const fps = avgFps(frameArray, validIndices);
+
+      // Per-frame hold duration (Aseprite "duration"), so uneven hold-frames
+      // (e.g. a lingering idle frame) survive into playback instead of being
+      // flattened to the tag's average fps. A non-positive duration (same
+      // degenerate case `avgFps` guards against) falls back to the average.
+      const avgDurationFallback = 1000 / fps;
+      const frameDurations = validIndices.map(i => {
+        const duration = frameArray[i]!.duration;
+
+        return duration > 0 ? duration : avgDurationFallback;
+      });
+
+      // Per-frame trim offset (Aseprite "spriteSourceSize"), so frames trimmed
+      // by different amounts stay anchored to the same point in the untrimmed
+      // canvas instead of jittering frame to frame. Omitted entirely when no
+      // frame in the tag is trimmed, to avoid noise on untrimmed sheets.
+      const anyTrimmed = validIndices.some(i => frameArray[i]!.trimmed);
+      const frameOffsets = anyTrimmed
+        ? validIndices.map(i => {
+            const { x, y } = frameArray[i]!.spriteSourceSize;
+
+            return { x, y };
+          })
+        : undefined;
+
       clips.set(tag.name, {
-        fps: avgFps(frameArray, tag.from, tag.to),
+        fps,
         frames,
-        loop: true,
+        repeat,
+        frameDurations,
+        ...(frameOffsets ? { frameOffsets } : {}),
       });
     }
 
-    return new AsepriteSheet(spritesheet, clips);
+    // Build the slices map from meta.slices, keyed by slice name.
+    const slices = new Map<string, AsepriteSlice>();
+
+    for (const slice of data.meta.slices ?? []) {
+      slices.set(slice.name, slice);
+    }
+
+    return new AsepriteSheet(spritesheet, clips, slices);
   }
 
   /**

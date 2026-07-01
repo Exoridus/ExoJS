@@ -13,7 +13,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
 import type { NodeSerializer } from './NodeSerializer';
-import { asNumberArray, asObject, asSerializedNode, readBoolean, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
+import { asNumberArray, asObject, asSerializedNode, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
 
@@ -221,11 +221,13 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
     const clips: Record<string, unknown> = {};
 
     for (const [name, clip] of Object.entries(node._getClipDefinitions())) {
-      clips[name] = {
+      clips[name] = compact({
         frames: clip.frames.map(frame => [frame.x, frame.y, frame.width, frame.height]),
         fps: clip.fps,
-        loop: clip.loop,
-      };
+        repeat: clip.repeat,
+        frameDurations: clip.frameDurations ? [...clip.frameDurations] : undefined,
+        frameOffsets: clip.frameOffsets ? clip.frameOffsets.map(offset => [offset.x, offset.y]) : undefined,
+      });
     }
 
     out.clips = clips;
@@ -258,7 +260,17 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
             })
           : [];
 
-        clips[name] = compact({ frames, fps: num(clip.fps), loop: readBoolean(clip, 'loop') });
+        const frameDurations = Array.isArray(clip.frameDurations) ? (asNumberArray(clip.frameDurations) ?? undefined) : undefined;
+
+        const frameOffsets = Array.isArray(clip.frameOffsets)
+          ? clip.frameOffsets.map(entry => {
+              const values = asNumberArray(entry) ?? [];
+
+              return { x: values[0] ?? 0, y: values[1] ?? 0 };
+            })
+          : undefined;
+
+        clips[name] = compact({ frames, fps: num(clip.fps), repeat: num(clip.repeat), frameDurations, frameOffsets });
       }
     }
 
