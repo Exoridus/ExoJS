@@ -150,7 +150,7 @@ Tween interpolation is purely numeric. Attempting to tween a non-number property
 
 ## Animated sprites
 
-[`AnimatedSprite`](/ExoJS/en/api/animated-sprite/) extends `Sprite` with frame-based animation playback from named clips. Each clip is a sequence of texture-frame rectangles with a playback speed.
+[`AnimatedSprite`](/ExoJS/en/api/animated-sprite/) extends `Sprite` with frame-based animation playback from named clips. Each clip is a sequence of texture-frame rectangles with a playback speed and repeat count.
 
 ### Defining clips
 
@@ -167,32 +167,51 @@ player.defineClip('walk', {
         new Rectangle(96, 0, 32, 32),
     ],
     fps: 10,       // frames per second (default 12)
-    loop: true,    // default true
+    repeat: -1,    // full cycles to play; -1 loops indefinitely (default)
 });
 ```
+
+`repeat` counts full cycles through every frame: `-1` (the default when omitted) loops indefinitely, `1` plays the clip once and stops on its last frame, and any other positive integer plays exactly that many cycles before `onComplete` fires. This is the same `-1` = infinite convention [`Tween.repeat()`](#tweens) uses above — `AnimatedSprite.repeat` now agrees with `Tween` on what "loop forever" means.
 
 Multiple clips can be registered on the same `AnimatedSprite`:
 
 ```js
-player.defineClip('idle', { frames: [new Rectangle(0, 32, 32, 32)], fps: 1, loop: true });
-player.defineClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 1, loop: false });
+player.defineClip('idle', { frames: [new Rectangle(0, 32, 32, 32)], fps: 1 });              // repeat: -1 (default) — loops forever
+player.defineClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 1, repeat: 1 });  // plays once
 ```
 
 Call `setClips()` to replace all clips at once with a map.
+
+### Per-frame timing and offsets
+
+Two optional clip fields cover cases a single `fps` value can't express:
+
+- **`frameDurations`** — a per-frame hold time in milliseconds, parallel to `frames`. When present it drives playback timing directly and `fps` is ignored while advancing frames (still accepted as a display-only average). Use it for clips with intentionally uneven pacing, such as an impact frame that lingers longer than the rest.
+- **`frameOffsets`** — a per-frame local draw offset (`{ x, y }` in local pixels), parallel to `frames`. Use it to keep frames anchored to a stable point when the source frames are trimmed to different sizes — without it, differently-trimmed frames jitter around their own top-left corner.
+
+```js
+player.defineClip('hit', {
+    frames: [frame0, frame1, frame2],
+    frameDurations: [80, 40, 200],                                    // ms per frame — frame1 is a quick flash, frame2 lingers
+    frameOffsets: [{ x: 0, y: 0 }, { x: -2, y: 1 }, { x: 0, y: 0 }],   // keep the trimmed frame1 anchored
+});
+```
+
+Both arrays are usually populated automatically rather than written by hand: the [Aseprite guide](/ExoJS/en/guide/assets/aseprite/) (`@codexo/exojs-aseprite`) fills `frameDurations` from each tag's per-frame export duration and `frameOffsets` from trimmed `spriteSourceSize` data. Set them yourself when building clips directly from a `Spritesheet` or raw `Rectangle`s and you need the same fidelity.
 
 ### Playback control
 
 ```js
 player.play('walk');                        // start from frame 0
 player.play('walk', { restart: false });    // resume if same clip
-player.play('walk', { loop: false });       // override loop setting for this play
+player.play('walk', { repeat: 1 });         // override repeat count for this play
 
 player.pause();    // freeze playback
 player.resume();   // continue
 player.stop();     // stop and rewind to frame 0
 ```
 
-The `onFrame` signal fires on every frame advance; `onComplete` fires when a non-looping clip reaches its last frame:
+The `onFrame` signal fires on every frame advance; `onComplete` fires when the clip completes its final `repeat` cycle:
 
 ```js
 player.onFrame.add((clip, frame) => {
@@ -224,11 +243,11 @@ const hero = AnimatedSprite.fromSpritesheet(sheet);
 hero.play('walk');
 ```
 
-The spritesheet's `animations` map — ordered lists of frame names — becomes named `AnimatedSprite` clips, each frame rectangle sourced from the spritesheet's `frames` map.
+The spritesheet's `animations` map — ordered lists of frame names — becomes named `AnimatedSprite` clips (repeating indefinitely, since `repeat` isn't set), each frame rectangle sourced from the spritesheet's `frames` map.
 
 ### When to use
 
-Use `AnimatedSprite` when you have frame strips from a texture atlas and want clip-based playback with names, speeds, and looping. Use manual `sprite.setTextureFrame()` calls in `update` when you need per-frame logic beyond simple clip playback — responsive frame selection based on game state, for example.
+Use `AnimatedSprite` when you have frame strips from a texture atlas and want clip-based playback with names, speeds, and repeat counts. Use manual `sprite.setTextureFrame()` calls in `update` when you need per-frame logic beyond simple clip playback — responsive frame selection based on game state, for example.
 
 ## Standing tween vs. frame-loop animation
 
