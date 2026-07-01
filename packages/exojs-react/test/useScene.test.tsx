@@ -67,4 +67,33 @@ describe('useScene', () => {
 
     expect(app.scene.setScene).toHaveBeenCalledWith(null);
   });
+
+  it('routes a rejected app.start() to app.onError instead of an unhandled rejection', async () => {
+    const app = makeApp();
+    const onError = vi.fn();
+    app.onError.add(onError);
+    const failure = new Error('scene failed to load');
+    app.start.mockRejectedValueOnce(failure);
+
+    const { findByText } = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
+    // The probe never receives a scene — it stays in the loading state.
+    expect(await findByText('loading')).toBeTruthy();
+  });
+
+  it('routes a rejected app.scene.setScene() (dep-change switch) to app.onError', async () => {
+    const app = makeApp();
+    const view = render(provide(app, <SceneProbe sceneClass={LevelScene} deps={[1]} />));
+    await view.findByText('LevelScene');
+
+    const onError = vi.fn();
+    app.onError.add(onError);
+    const failure = new Error('switch failed');
+    app.scene.setScene.mockRejectedValueOnce(failure);
+
+    view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
+  });
 });

@@ -7,3 +7,4 @@ export { useExoApp } from './useExoApp';
 export type { ExoApplicationOptions, UseExoApplicationResult } from './useExoApplication';
 export { useExoApplication } from './useExoApplication';
 export { useScene } from './useScene';
+export { useSignal } from './useSignal';

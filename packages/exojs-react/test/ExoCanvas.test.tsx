@@ -85,4 +85,16 @@ describe('<ExoCanvas>', () => {
     const hud = getByTestId('hud');
     expect(hud.textContent).toBe('has-app');
   });
+
+  it('forwards Application.onError dispatches to the onError prop', () => {
+    const onError = vi.fn();
+    render(<ExoCanvas options={{ canvas: { width: 800, height: 600 } }} onError={onError} />);
+
+    const app = MockApplication.instances[0]!;
+    const error = new Error('boom');
+    app.onError.dispatch(error);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(error);
+  });
 });

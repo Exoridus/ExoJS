@@ -15,6 +15,12 @@ import { useExoApp } from './useExoApp';
  * The scene is cleared (`setScene(null)`) when the component unmounts or
  * when `deps` change — mirroring `useEffect` semantics.
  *
+ * A failure in `app.start()`/`app.scene.setScene()` (e.g. a scene's `onLoad`
+ * rejects) is caught and routed to {@link Application.onError} rather than
+ * left as an unhandled promise rejection — subscribe via
+ * `app.onError.add(...)` or the {@link import('./ExoCanvas').ExoCanvas}
+ * `onError` prop to observe it.
+ *
  * @param SceneClass - Constructor for the scene to instantiate.
  * @param deps - Extra deps that trigger scene replacement when changed, in
  *   addition to the stable `app` reference (same semantics as `useEffect`).
@@ -39,16 +45,23 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
     const s = new SceneClass();
 
     const apply = async (): Promise<void> => {
-      if (app.status === ApplicationStatus.Stopped) {
-        // First activation — initialize the backend and start the frame loop.
-        await app.start(s);
-      } else {
-        // Engine already running — switch scenes without restarting.
-        await app.scene.setScene(s);
-      }
+      try {
+        if (app.status === ApplicationStatus.Stopped) {
+          // First activation — initialize the backend and start the frame loop.
+          await app.start(s);
+        } else {
+          // Engine already running — switch scenes without restarting.
+          await app.scene.setScene(s);
+        }
 
-      if (!cancelled) {
-        setScene(s);
+        if (!cancelled) {
+          setScene(s);
+        }
+      } catch (error) {
+        // Route to Application.onError instead of leaving an unhandled
+        // rejection — app.start()/setScene() reject rather than dispatching
+        // onError themselves.
+        app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       }
     };
 
@@ -59,7 +72,9 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
       setScene(null);
       // Best-effort scene clear; the Application.destroy() called by
       // ExoCanvas cleanup will also handle any remaining active scene.
-      void app.scene.setScene(null);
+      void app.scene.setScene(null).catch((error: unknown) => {
+        app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
+      });
     };
     // SceneClass is intentionally excluded from deps: a new class reference
     // (e.g. inline arrow class) on every render would recreate the scene
