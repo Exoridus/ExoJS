@@ -363,7 +363,41 @@ describe('TiledMap.toTileMap — object/class property conversion', () => {
       locked: true,
       label: 'Vault',
       access: { level: 2, tags: { vip: true } },
+      tiledClassName: 'DoorConfig',
     });
+  });
+
+  it('tags a class-typed property with its Tiled propertytype under the reserved tiledClassName key', () => {
+    const tm = makeObjectPropsMap([{
+      name: 'stats',
+      type: 'class',
+      propertytype: 'Stats',
+      value: { hp: 10 },
+    }]);
+    const obj = tm.objectLayers[0]!.objects[0]!;
+    expect(obj.properties['stats']).toMatchObject({ hp: 10, tiledClassName: 'Stats' });
+  });
+
+  it('omits the reserved tiledClassName key on nested class members, which carry no propertytype of their own', () => {
+    const tm = makeObjectPropsMap([{
+      name: 'config',
+      type: 'class',
+      propertytype: 'DoorConfig',
+      value: { access: { level: 2 } },
+    }]);
+    const obj = tm.objectLayers[0]!.objects[0]!;
+    const config = obj.properties['config'] as Record<string, unknown>;
+    expect(config['access']).toEqual({ level: 2 });
+  });
+
+  it('omits the reserved tiledClassName key when the class-typed property has no propertytype', () => {
+    const tm = makeObjectPropsMap([{
+      name: 'config',
+      type: 'class',
+      value: { locked: true },
+    }]);
+    const obj = tm.objectLayers[0]!.objects[0]!;
+    expect(obj.properties['config']).toEqual({ locked: true });
   });
 
   it('keeps scalar properties unaffected alongside object/class properties', () => {

@@ -540,7 +540,7 @@ function convertPropertyValue(property: TiledPropertyData): TilePropertyValue | 
       return { kind: TilePropertyKind.ObjectRef, id: property.value as number };
 
     case 'class':
-      return convertClassPropertyValue(property.value as TiledClassPropertyValueData);
+      return convertClassPropertyValue(property.value as TiledClassPropertyValueData, property.propertytype);
 
     default: {
       // Exhaustiveness check: if a new TiledPropertyType is ever added,
@@ -553,17 +553,35 @@ function convertPropertyValue(property: TiledPropertyData): TilePropertyValue | 
 }
 
 /**
+ * Reserved key under which a `class`-typed property's Tiled custom-class name
+ * ({@link TiledPropertyData.propertytype}, e.g. `"Stats"`) is stored inside the
+ * converted nested {@link TileProperties} bag, mirroring the `ldtkUid`/
+ * `ldtkWorldIid`-style reserved-metadata-key convention used by the LDtk
+ * adapter (`packages/exojs-ldtk/src/ldtkToTileMap.ts`). Only set on the
+ * top-level converted bag for a class-typed property that has a
+ * `propertytype` — nested-class members carry no `propertytype` of their own
+ * in Tiled's data model, so recursive calls never set it.
+ */
+const tiledClassNameProperty = 'tiledClassName';
+
+/**
  * Recursively convert a `class`-typed property's nested member bag into a
  * {@link TileProperties}. Scalar members pass through; nested-class members
- * recurse (Tiled classes may nest arbitrarily deep).
+ * recurse (Tiled classes may nest arbitrarily deep). When `propertytype` is
+ * given (the Tiled custom-class name), it is tagged onto the bag under the
+ * reserved {@link tiledClassNameProperty} key, applied last so it can never
+ * be clobbered by a same-named member.
  */
-function convertClassPropertyValue(value: TiledClassPropertyValueData): TileProperties {
+function convertClassPropertyValue(value: TiledClassPropertyValueData, propertytype?: string): TileProperties {
   const out: Record<string, TilePropertyValue> = {};
   for (const [name, member] of Object.entries(value)) {
     out[name] =
       typeof member === 'string' || typeof member === 'number' || typeof member === 'boolean'
         ? member
         : convertClassPropertyValue(member);
+  }
+  if (propertytype !== undefined) {
+    out[tiledClassNameProperty] = propertytype;
   }
   return Object.freeze(out);
 }
