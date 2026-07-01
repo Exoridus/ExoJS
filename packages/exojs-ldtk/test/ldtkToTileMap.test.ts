@@ -163,6 +163,69 @@ const layeredData: LdtkData = {
   ],
 };
 
+/** Multi-world document: two worlds, each owning its own `levels[]`. */
+const multiWorldData: LdtkData = {
+  jsonVersion: '1.5.3',
+  defaultGridSize: 16,
+  defs: {
+    tilesets: [],
+    layers: [],
+  },
+  // Root `levels` is kept empty per the LDtk spec's backward-compat shape
+  // when `worlds` is used.
+  levels: [],
+  worlds: [
+    {
+      identifier: 'WorldA',
+      iid: 'world-a-iid',
+      worldGridWidth: 256,
+      worldGridHeight: 256,
+      worldLayout: 'GridVania',
+      levels: [
+        {
+          identifier: 'A_Level1',
+          uid: 20,
+          iid: 'aaaaaaaa-0000-0000-0000-000000000020',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 64,
+          pxHei: 64,
+          layerInstances: [],
+        },
+        {
+          identifier: 'A_Level2',
+          uid: 21,
+          iid: 'aaaaaaaa-0000-0000-0000-000000000021',
+          worldX: 64,
+          worldY: 0,
+          pxWid: 32,
+          pxHei: 32,
+          layerInstances: [],
+        },
+      ],
+    },
+    {
+      identifier: 'WorldB',
+      iid: 'world-b-iid',
+      worldGridWidth: 128,
+      worldGridHeight: 128,
+      worldLayout: 'Free',
+      levels: [
+        {
+          identifier: 'B_Level1',
+          uid: 30,
+          iid: 'bbbbbbbb-0000-0000-0000-000000000030',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 16,
+          pxHei: 16,
+          layerInstances: [],
+        },
+      ],
+    },
+  ],
+};
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ldtkToTileMap', () => {
@@ -304,6 +367,45 @@ describe('ldtkToTileMap', () => {
       const result = ldtkToTileMap(minimalData);
       // Just ensure destroy() does not throw
       expect(() => result.destroy()).not.toThrow();
+    });
+  });
+
+  describe('multi-world documents (data.worlds present)', () => {
+    it('flattens every world into result.levels, in world order', () => {
+      const result = ldtkToTileMap(multiWorldData);
+      expect(result.levels).toHaveLength(3);
+      expect(result.levels.map(l => l.name)).toEqual(['A_Level1', 'A_Level2', 'B_Level1']);
+    });
+
+    it("tags each level's properties with its owning world's iid", () => {
+      const result = ldtkToTileMap(multiWorldData);
+      expect(result.levels[0]?.properties['ldtkWorldIid']).toBe('world-a-iid');
+      expect(result.levels[1]?.properties['ldtkWorldIid']).toBe('world-a-iid');
+      expect(result.levels[2]?.properties['ldtkWorldIid']).toBe('world-b-iid');
+    });
+
+    it('finds levels across worlds via getLevelByName', () => {
+      const result = ldtkToTileMap(multiWorldData);
+      expect(result.getLevelByName('A_Level2')).toBe(result.levels[1]);
+      expect(result.getLevelByName('B_Level1')).toBe(result.levels[2]);
+      expect(result.getLevelByName('Missing')).toBeUndefined();
+    });
+
+    it('still records ordinary reserved level metadata alongside ldtkWorldIid', () => {
+      const result = ldtkToTileMap(multiWorldData);
+      const map = result.levels[1];
+      expect(map?.properties['ldtkUid']).toBe(21);
+      expect(map?.properties['worldX']).toBe(64);
+      expect(map?.properties['worldY']).toBe(0);
+    });
+  });
+
+  describe('single-world backward compatibility (no data.worlds)', () => {
+    it('never adds an ldtkWorldIid property key when the document has no worlds', () => {
+      const result = ldtkToTileMap(multiLevelData);
+      for (const level of result.levels) {
+        expect(Object.hasOwn(level.properties, 'ldtkWorldIid')).toBe(false);
+      }
     });
   });
 });

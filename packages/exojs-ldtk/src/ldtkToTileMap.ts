@@ -11,6 +11,7 @@ import type {
   LdtkTileData,
 } from './LdtkData';
 import { ldtkFlipX, ldtkFlipY } from './LdtkData';
+import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import { LdtkMap } from './LdtkMap';
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -49,13 +50,18 @@ export interface LdtkToTileMapOptions {
  *
  * Pass `options.tilesets` to populate tile data; omit it for structure-only
  * conversion (useful in unit tests that do not need textures).
+ *
+ * Transparently handles both LDtk root shapes via {@link getLdtkLevelEntries}:
+ * single-world (`data.levels`) and multi-world (`data.worlds[].levels`) — in
+ * the latter case every converted level's `TileMap.properties` is additionally
+ * tagged with its owning world's iid under the reserved `ldtkWorldIid` key.
  */
 export function ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): LdtkMap {
   const source = options?.source ?? '';
   const tilesets = options?.tilesets ?? new Map<number, TileSet>();
 
-  const levels = data.levels.map((level, levelIndex) =>
-    convertLevel(level, levelIndex, data, tilesets),
+  const levels = getLdtkLevelEntries(data).map((entry, levelIndex) =>
+    convertLevel(entry.level, entry.worldIid, levelIndex, data, tilesets),
   );
 
   return new LdtkMap(source, data, levels);
@@ -66,6 +72,7 @@ export function ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): L
 // eslint-disable-next-line complexity
 function convertLevel(
   level: LdtkLevel,
+  worldIid: string | undefined,
   levelIndex: number,
   data: LdtkData,
   tilesets: ReadonlyMap<number, TileSet>,
@@ -156,13 +163,17 @@ function convertLevel(
     layers: runtimeLayers,
     objectLayers: runtimeObjectLayers,
     // Convert user-defined level fields first, then apply the reserved keys
-    // last so a same-named user field can never clobber them.
+    // last so a same-named user field can never clobber them. ldtkWorldIid is
+    // only added for multi-world documents (worldIid !== undefined) — a
+    // single-world document's properties must stay exactly as they were
+    // before multi-world support existed.
     properties: {
       ...convertFieldInstances(level.fieldInstances ?? []),
       ldtkUid: level.uid,
       ldtkIid: level.iid,
       worldX: level.worldX,
       worldY: level.worldY,
+      ...(worldIid !== undefined && { ldtkWorldIid: worldIid }),
     },
   });
 }

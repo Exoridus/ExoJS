@@ -2,6 +2,7 @@ import { type AssetLoaderContext, Texture, TextureRegion } from '@codexo/exojs';
 import { TileSet } from '@codexo/exojs-tilemap';
 
 import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
+import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import type { LdtkMap } from './LdtkMap';
 import { ldtkToTileMap } from './ldtkToTileMap';
 
@@ -98,6 +99,32 @@ async function loadExternalLevel(
   };
 }
 
+/**
+ * Rebuild an {@link LdtkData} document with its levels replaced by
+ * `resolvedLevels` (external `.ldtkl` payloads merged in via
+ * {@link loadExternalLevel}), preserving whichever root shape the source
+ * document used — single-world (`levels`) or multi-world (`worlds[].levels`).
+ *
+ * `resolvedLevels` must be in the same flattened order
+ * {@link getLdtkLevelEntries} produced for `data` — each world's slice is
+ * recovered by walking `data.worlds` in that same order, so a second pass
+ * through {@link getLdtkLevelEntries} (performed inside {@link ldtkToTileMap})
+ * reproduces an identical flattened list, now with external levels resolved.
+ */
+function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]): LdtkData {
+  if (data.worlds && data.worlds.length > 0) {
+    let cursor = 0;
+    const worlds = data.worlds.map((world) => {
+      const levels = resolvedLevels.slice(cursor, cursor + world.levels.length);
+      cursor += world.levels.length;
+      return { ...world, levels };
+    });
+    return { ...data, worlds };
+  }
+
+  return { ...data, levels: resolvedLevels };
+}
+
 // ── Public loader ─────────────────────────────────────────────────────────────
 
 /**
@@ -119,14 +146,19 @@ export async function loadLdtkMap(
   const data = raw as LdtkData;
 
   // Load all referenced tilesets and resolve externalized levels concurrently.
-  const [tilesetEntries, levels] = await Promise.all([
+  // Iterate the flattened level list (not raw data.levels) so multi-world
+  // documents — whose levels live under worlds[].levels, with an empty root
+  // levels[] — still get their external .ldtkl files resolved.
+  const [tilesetEntries, resolvedLevels] = await Promise.all([
     Promise.all(
       data.defs.tilesets.map(async (def) => {
         const ts = await loadLdtkTileset(def, source, context);
         return [def.uid, ts] as const;
       }),
     ),
-    Promise.all(data.levels.map((level) => loadExternalLevel(level, source, context))),
+    Promise.all(
+      getLdtkLevelEntries(data).map((entry) => loadExternalLevel(entry.level, source, context)),
+    ),
   ]);
 
   const tilesets = new Map<number, TileSet>();
@@ -134,5 +166,5 @@ export async function loadLdtkMap(
     if (ts !== null) tilesets.set(uid, ts);
   }
 
-  return ldtkToTileMap({ ...data, levels }, { source, tilesets });
+  return ldtkToTileMap(withResolvedLevels(data, resolvedLevels), { source, tilesets });
 }
