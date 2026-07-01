@@ -62,7 +62,8 @@ const realShaderPlugin = {
 // Per-project browser headedness:
 //  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
 //  - WebGL2 Firefox:  headless.
-//  - WebGPU Chromium: new headless — WebGPU adapter is available via swiftshader.
+//  - WebGPU Chromium: headed (Mesa lavapipe needs a real display; CI runs it under
+//    xvfb — see `browser-tests-webgpu-chromium` in `_ci-checks.yml`).
 //  - WebGPU Firefox:  headed — Firefox only exposes a WebGPU adapter in a headed session.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
 const webgl2Headless = !headed;
@@ -186,7 +187,16 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu — WebGPU via Chromium new headless (swiftshader) ──
+      // ── browser-webgpu — WebGPU via Chromium + Mesa lavapipe (Vulkan software
+      // rasterizer), headed under xvfb in CI ────────────────────────────────
+      // `headless: false` + the `--enable-features=Vulkan` / `--disable-vulkan-surface`
+      // flags are the three.js-proven recipe for getting a REAL (non-SwiftShader)
+      // Vulkan adapter out of Chromium on a free `ubuntu-latest` runner: CI supplies
+      // an xvfb virtual display (see `_ci-checks.yml`, job
+      // `browser-tests-webgpu-chromium`) so `headless: false` still runs unattended.
+      // Locally without a display/xvfb this project will fail to launch — run under
+      // `xvfb-run -a` (Linux) or keep `EXOJS_BROWSER_HEADED` semantics in mind before
+      // invoking `pnpm test:browser:webgpu` on a headless dev box.
       {
         ...browserBase,
         test: {
@@ -196,9 +206,20 @@ export default defineConfig({
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,
-            headless: true,
+            headless: false,
             provider: playwright({
-              launchOptions: { channel: 'chromium', args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'] },
+              launchOptions: {
+                channel: 'chromium',
+                args: [
+                  '--enable-unsafe-webgpu',
+                  '--enable-features=Vulkan',
+                  '--disable-vulkan-surface',
+                  '--ignore-gpu-blocklist',
+                  '--no-sandbox',
+                  '--disable-gpu-watchdog',
+                  '--disable-gpu-driver-bug-workarounds',
+                ],
+              },
             }),
             instances: [{ browser: 'chromium' }],
           },
