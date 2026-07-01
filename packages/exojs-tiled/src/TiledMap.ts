@@ -242,6 +242,7 @@ export class TiledMap {
             tintColor: parseTiledColor(layer.tintColor),
             repeatX: layer.repeatX,
             repeatY: layer.repeatY,
+            properties: convertProperties(layer.properties),
           }));
         }
       }
