@@ -282,7 +282,9 @@ export class RenderingContext implements System, DrawContext {
           clearColor: color,
           stencil: StencilAttachmentMode.None,
         },
-        () => {},
+        () => {
+          /* Clear is expressed entirely by the pass descriptor above; the pass body is intentionally empty. */
+        },
       );
 
       return;

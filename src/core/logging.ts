@@ -76,7 +76,10 @@ export const logger = new Logger();
 if (__DEV__) {
   logger.addHandler(entry => {
     const prefix = `[ExoJS:${entry.channel}]`;
-    const method = entry.severity >= LogSeverity.Error ? 'error' : entry.severity >= LogSeverity.Warning ? 'warn' : 'log';
+    let method: 'log' | 'warn' | 'error' = 'log';
+    if (entry.severity >= LogSeverity.Error) method = 'error';
+    else if (entry.severity >= LogSeverity.Warning) method = 'warn';
+    /* eslint-disable no-console -- DEV-only handler: the single sanctioned console sink that all logging routes through (#216). */
     if (entry.error) {
       console[method](prefix, entry.message, entry.error);
     } else if (entry.data) {
@@ -84,5 +87,6 @@ if (__DEV__) {
     } else {
       console[method](prefix, entry.message);
     }
+    /* eslint-enable no-console */
   });
 }
