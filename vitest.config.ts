@@ -192,26 +192,23 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu — WebGPU via Chromium + Mesa lavapipe (Vulkan software
-      // rasterizer) ─────────────────────────────────────────────────────────
-      // The `--use-angle=vulkan` / `--enable-features=Vulkan` / `--disable-vulkan-surface`
-      // flags are the exact recipe from Chrome for Developers' headless-WebGPU
-      // guide for getting a REAL (non-SwiftShader) Vulkan adapter out of Chromium
-      // on a free `ubuntu-latest` runner. NOTE: an earlier revision of this recipe
-      // also expanded `--enable-features` to `Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`
-      // per an anecdotal report in gpuweb/gpuweb#5022 — that combination was
-      // measured against this CI's xvfb-headed (not `--headless=new`) lavapipe
-      // setup and made things *worse*: `requestAdapter()` started returning
-      // `null` outright (WebGPU browser suite dropped from 100/100 tests
-      // actually exercised down to 4/100, the rest skip-passing), instead of
-      // the pre-existing SwiftShader fallback. Reverted to the plain,
-      // officially-documented single feature flag. Locally these args are
-      // harmless (verified against a real Windows/NVIDIA adapter). `headless`
-      // stays true by default so local dev never pops a visible browser window;
-      // CI opts into `headless: false` via `EXOJS_WEBGPU_CI_HEADED=1` because Mesa
-      // lavapipe needs a real display surface to report a real Vulkan adapter
-      // instead of silently falling back to SwiftShader — CI supplies that
-      // display via xvfb (see `browser-tests-webgpu-chromium` in `_ci-checks.yml`).
+      // ── browser-webgpu — WebGPU via Chromium (SwiftShader software backend) ──
+      // The `--enable-features=Vulkan` / `--disable-vulkan-surface` flags are the
+      // three.js-proven recipe for headless WebGPU on a free `ubuntu-latest`
+      // runner (confirmed against three.js's own CI recipe, which matches this
+      // baseline). Two later attempts to force real Mesa-lavapipe/Vulkan routing
+      // via `--use-angle=vulkan` (optionally combined with
+      // `--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`) both
+      // regressed `requestAdapter()` to returning `null` for almost every test —
+      // the WebGPU browser suite dropped from 100/100 tests actually exercised
+      // down to ~4/100, with the rest silently skip-passing. Reverted to this
+      // plain baseline, which runs the full suite against Chromium's bundled
+      // SwiftShader software WebGPU implementation — a real, working software
+      // backend, just not Mesa lavapipe. Locally these args are harmless
+      // (verified against a real Windows/NVIDIA adapter). `headless` stays true
+      // by default so local dev never pops a visible browser window; CI opts
+      // into `headless: false` via `EXOJS_WEBGPU_CI_HEADED=1` (see
+      // `browser-tests-webgpu-chromium` in `_ci-checks.yml`).
       {
         ...browserBase,
         test: {
@@ -227,7 +224,6 @@ export default defineConfig({
                 channel: 'chromium',
                 args: [
                   '--enable-unsafe-webgpu',
-                  '--use-angle=vulkan',
                   '--enable-features=Vulkan',
                   '--disable-vulkan-surface',
                   '--ignore-gpu-blocklist',
