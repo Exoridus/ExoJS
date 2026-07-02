@@ -194,13 +194,19 @@ export default defineConfig({
 
       // ── browser-webgpu — WebGPU via Chromium + Mesa lavapipe (Vulkan software
       // rasterizer) ─────────────────────────────────────────────────────────
-      // The `--use-angle=vulkan` / `--enable-features=Vulkan,VulkanFromANGLE,
-      // DefaultANGLEVulkan` / `--disable-vulkan-surface` flags are the recipe
-      // (per Chrome for Developers' headless-WebGPU guide and gpuweb/gpuweb#5022)
-      // for getting a REAL (non-SwiftShader) Vulkan adapter out of Chromium on a
-      // free `ubuntu-latest` runner — `--enable-features=Vulkan` alone still lets
-      // Chromium silently fall back to its bundled SwiftShader. Locally these
-      // args are harmless (verified against a real Windows/NVIDIA adapter). `headless`
+      // The `--use-angle=vulkan` / `--enable-features=Vulkan` / `--disable-vulkan-surface`
+      // flags are the exact recipe from Chrome for Developers' headless-WebGPU
+      // guide for getting a REAL (non-SwiftShader) Vulkan adapter out of Chromium
+      // on a free `ubuntu-latest` runner. NOTE: an earlier revision of this recipe
+      // also expanded `--enable-features` to `Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`
+      // per an anecdotal report in gpuweb/gpuweb#5022 — that combination was
+      // measured against this CI's xvfb-headed (not `--headless=new`) lavapipe
+      // setup and made things *worse*: `requestAdapter()` started returning
+      // `null` outright (WebGPU browser suite dropped from 100/100 tests
+      // actually exercised down to 4/100, the rest skip-passing), instead of
+      // the pre-existing SwiftShader fallback. Reverted to the plain,
+      // officially-documented single feature flag. Locally these args are
+      // harmless (verified against a real Windows/NVIDIA adapter). `headless`
       // stays true by default so local dev never pops a visible browser window;
       // CI opts into `headless: false` via `EXOJS_WEBGPU_CI_HEADED=1` because Mesa
       // lavapipe needs a real display surface to report a real Vulkan adapter
@@ -222,7 +228,7 @@ export default defineConfig({
                 args: [
                   '--enable-unsafe-webgpu',
                   '--use-angle=vulkan',
-                  '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan',
+                  '--enable-features=Vulkan',
                   '--disable-vulkan-surface',
                   '--ignore-gpu-blocklist',
                   '--no-sandbox',
