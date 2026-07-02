@@ -817,6 +817,18 @@ export class WebGpuBackend implements RenderBackend {
     };
   }
 
+  /**
+   * The `GPUTextureFormat` a given `Texture`/`RenderTexture` is (or will be)
+   * backed by. Unlike {@link renderTargetFormat} (which reflects whatever
+   * target is *currently bound*), this is keyed off the texture itself, so
+   * callers that build a pipeline for a specific offscreen target — before
+   * that target is bound as the active render target — can match its format
+   * exactly instead of reading unrelated, possibly-stale backend state.
+   */
+  public getTextureFormat(texture: Texture | RenderTexture): GPUTextureFormat {
+    return this._getGpuTextureFormat(texture);
+  }
+
   public shouldPremultiplyTextureSample(texture: Texture | RenderTexture): boolean {
     return !(texture instanceof RenderTexture) && texture.premultiplyAlpha;
   }

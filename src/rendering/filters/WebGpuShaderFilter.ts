@@ -263,7 +263,7 @@ export class WebGpuShaderFilter extends Filter {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private _ensureConnected(backend: WebGpuBackend, _output: RenderTexture): void {
+  private _ensureConnected(backend: WebGpuBackend, output: RenderTexture): void {
     if (this._connection !== null) {
       return;
     }
@@ -304,7 +304,14 @@ export class WebGpuShaderFilter extends Filter {
     });
 
     // ---- Render pipeline ----
-    const targetFormat = backend.renderTargetFormat;
+    // `output` is always a temporary offscreen RenderTexture (see Filter.apply
+    // docs) — never the canvas/root target directly — and this pipeline is
+    // built and cached before BackendTargetPass redirects rendering into it.
+    // Reading `backend.renderTargetFormat` here would reflect whatever target
+    // is *currently* bound (typically still the canvas), not the format
+    // `output` will actually have, producing a permanent color-target format
+    // mismatch that WebGPU validation silently rejects on every draw.
+    const targetFormat = backend.getTextureFormat(output);
     const pipeline = device.createRenderPipeline({
       layout: pipelineLayout,
       vertex: {
