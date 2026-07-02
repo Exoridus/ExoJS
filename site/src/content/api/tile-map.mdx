@@ -1,15 +1,15 @@
 ---
 title: "TileMap"
-description: "A generic, format-independent tile map. Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays — no per-tile heap objects. The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children (the future TileMapNode will own those). Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions."
+description: "A generic, format-independent tile map. Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays — no per-tile heap objects. The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children — see import('./TileMapNode').TileMapNode, which owns those. Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions."
 symbol: "TileMap"
 kind: "class"
 subsystem: "tilemap"
 importPath: "@codexo/exojs-tilemap"
-memberCount: 37
+memberCount: 41
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-tilemap/src/TileMap.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L65"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L66"
 ---
 ## Import
 
@@ -21,7 +21,8 @@ Owns a finite grid of TileLayers and a shared set of TileSets.
 Tile data is stored in compact chunked arrays — no per-tile heap objects.
 
 The map does NOT own tileset textures (those are Loader-owned) and does
-NOT own SceneNode children (the future TileMapNode will own those).
+NOT own SceneNode children — see import('./TileMapNode').TileMapNode,
+which owns those.
 
 Multiple tilesets are supported: each cell stores a packed tileset index
 and local tile ID, so different tilesets may have different tile dimensions.
@@ -39,14 +40,18 @@ and local tile ID, so different tilesets may have different tile dimensions.
 - `createView(options?: TileMapViewOptions): TileMapView`
 - `destroy(): void`
 - `getImageLayer(name: string): ImageLayer | undefined`
+- `getImageLayerById(id: number): ImageLayer | undefined`
 - `getLayerById(id: number): TileLayer | undefined`
 - `getLayerByName(name: string): TileLayer | undefined`
 - `getObjectLayer(name: string): ObjectLayer<S> | undefined`
+- `getObjectLayerById(id: number): ObjectLayer<S> | undefined`
 - `getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null`
 - `getTileLayer(name: string): TileLayer | undefined`
 - `getTileset(name: string): TileSet | undefined`
 - `pixelToTile(px: number, py: number): object`
+- `removeImageLayer(id: number): boolean`
 - `removeLayer(id: number): boolean`
+- `removeObjectLayer(id: number): boolean`
 - `setTileAt(layerId: number, tx: number, ty: number, tile: ResolvedTile): void`
 - `tileToPixel(tx: number, ty: number): object`
 
@@ -74,4 +79,4 @@ and local tile ID, so different tilesets may have different tile dimensions.
 
 ## Source
 
-[packages/exojs-tilemap/src/TileMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L65)
+[packages/exojs-tilemap/src/TileMap.ts](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts#L66)

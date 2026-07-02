@@ -16,7 +16,8 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
-const meshShaderSource = `
+/** WGSL source for the default (non-instanced) mesh pipeline. @internal */
+export const meshShaderSource = `
 struct VertexInput {
     @location(0) position: vec2<f32>,
     @location(1) texcoord: vec2<f32>,
@@ -59,7 +60,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-const instancedMeshShaderSource = `
+/** WGSL source for the instanced mesh pipeline. @internal */
+export const instancedMeshShaderSource = `
 struct VertexInput {
     @location(0) position: vec2<f32>,
     @location(1) texcoord: vec2<f32>,

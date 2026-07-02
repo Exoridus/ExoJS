@@ -63,6 +63,7 @@
               "px": [8, 8],
               "width": 16,
               "height": 16,
+              "__pivot": [0, 0],
               "fieldInstances": [],
               "iid": "cccccccc-0000-0000-0000-000000000001",
               "defUid": 200

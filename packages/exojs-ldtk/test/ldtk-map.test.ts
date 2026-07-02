@@ -1,7 +1,7 @@
 import type { TileMap } from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LdtkData, LdtkLevel } from '../src/LdtkData';
+import type { LdtkData, LdtkLevel, LdtkWorldData } from '../src/LdtkData';
 import { LdtkMap } from '../src/LdtkMap';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -27,6 +27,38 @@ function makeData(identifiers: readonly string[]): LdtkData {
     defaultGridSize: 16,
     defs: { tilesets: [], layers: [] },
     levels: identifiers.map((id, i) => makeLevel(id, i + 1)),
+  };
+}
+
+/** Build a bare LDtk world record carrying the given level identifiers. */
+function makeWorld(worldIid: string, identifiers: readonly string[], uidStart: number): LdtkWorldData {
+  return {
+    identifier: worldIid,
+    iid: worldIid,
+    worldGridWidth: 256,
+    worldGridHeight: 256,
+    worldLayout: 'Free',
+    levels: identifiers.map((id, i) => makeLevel(id, uidStart + i)),
+  };
+}
+
+/**
+ * Build multi-world LdtkData: root `levels` stays empty (per the LDtk spec's
+ * backward-compatibility shape) and every level lives under `worlds[].levels`.
+ */
+function makeMultiWorldData(worlds: ReadonlyMap<string, readonly string[]>): LdtkData {
+  let uidCursor = 1;
+  const worldEntries: LdtkWorldData[] = [];
+  for (const [worldIid, identifiers] of worlds) {
+    worldEntries.push(makeWorld(worldIid, identifiers, uidCursor));
+    uidCursor += identifiers.length;
+  }
+  return {
+    jsonVersion: '1.5.3',
+    defaultGridSize: 16,
+    defs: { tilesets: [], layers: [] },
+    levels: [],
+    worlds: worldEntries,
   };
 }
 
@@ -97,6 +129,36 @@ describe('LdtkMap.getLevelByName', () => {
     const map = new LdtkMap('', data, [makeFakeTileMap()]);
 
     expect(map.getLevelByName('External')).toBeUndefined();
+  });
+
+  describe('multi-world documents (data.worlds present)', () => {
+    it('finds levels across every world, not just the (empty) root levels array', () => {
+      const data = makeMultiWorldData(
+        new Map([
+          ['world-a', ['A1', 'A2']],
+          ['world-b', ['B1']],
+        ]),
+      );
+      const a1 = makeFakeTileMap();
+      const a2 = makeFakeTileMap();
+      const b1 = makeFakeTileMap();
+      const map = new LdtkMap('', data, [a1, a2, b1]);
+
+      // Regression guard: root `data.levels` is empty in the multi-world
+      // shape — a naive `data.levels.findIndex(...)` lookup would silently
+      // fail to find any of these.
+      expect(data.levels).toHaveLength(0);
+      expect(map.getLevelByName('A1')).toBe(a1);
+      expect(map.getLevelByName('A2')).toBe(a2);
+      expect(map.getLevelByName('B1')).toBe(b1);
+    });
+
+    it('returns undefined for an identifier that exists in no world', () => {
+      const data = makeMultiWorldData(new Map([['world-a', ['A1']]]));
+      const map = new LdtkMap('', data, [makeFakeTileMap()]);
+
+      expect(map.getLevelByName('Missing')).toBeUndefined();
+    });
   });
 });
 

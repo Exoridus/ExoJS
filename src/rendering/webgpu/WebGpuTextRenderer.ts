@@ -57,7 +57,8 @@ interface BatchDraw {
 }
 
 // ── WGSL: shared vertex + three fragment entry points ────────────────────────
-const textShaderSource = `
+/** WGSL source for the text pipeline (shared vertex + color/SDF/MSDF fragment entry points). @internal */
+export const textShaderSource = `
 struct FrameUniforms {
     projCol0 : vec4<f32>,
     projCol1 : vec4<f32>,

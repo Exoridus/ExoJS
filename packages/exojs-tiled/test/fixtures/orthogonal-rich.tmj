@@ -75,7 +75,10 @@
       "y": 0,
       "image": "bg.png",
       "repeatx": true,
-      "repeaty": false
+      "repeaty": false,
+      "properties": [
+        { "name": "parallaxLayer", "type": "string", "value": "sky" }
+      ]
     },
     {
       "id": 4,

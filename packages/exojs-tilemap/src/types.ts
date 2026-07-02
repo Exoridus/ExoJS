@@ -4,23 +4,91 @@ import type { TileSet } from './TileSet';
 // ── Properties ────────────────────────────────────────────────────────────
 
 /**
+ * Discriminant for the three structured, non-scalar {@link TilePropertyValue}
+ * variants: {@link TilePropertyPoint}, {@link TilePropertyObjectRef}, and
+ * {@link TilePropertyTileRef}.
+ *
+ * Modelled as a frozen string map (not a TS `enum`) so the values stay
+ * wire-stable, survive `verbatimModuleSyntax` (no emitted runtime helper),
+ * and follow the package convention for enum-like constants (see
+ * {@link import('./ObjectLayer').ObjectKind}).
+ * @stable
+ */
+export const TilePropertyKind = {
+  Point: 'point',
+  ObjectRef: 'objectRef',
+  TileRef: 'tileRef',
+} as const;
+
+/** Structured-value discriminant for {@link TilePropertyValue}. */
+export type TilePropertyKind = (typeof TilePropertyKind)[keyof typeof TilePropertyKind];
+
+/** A 2D point-valued tile property (e.g. an LDtk `Point` field). */
+export interface TilePropertyPoint {
+  readonly kind: typeof TilePropertyKind.Point;
+  readonly cx: number;
+  readonly cy: number;
+}
+
+/**
+ * A reference to another object/entity. `id` is the referenced object's
+ * identity — Tiled's numeric object id, or LDtk's `entityIid`. The extra
+ * fields are LDtk-only navigation context (`undefined` for Tiled-sourced
+ * refs) that lets a consumer resolve the reference without searching the
+ * whole level tree.
+ */
+export interface TilePropertyObjectRef {
+  readonly kind: typeof TilePropertyKind.ObjectRef;
+  readonly id: string | number;
+  readonly layerIid?: string;
+  readonly levelIid?: string;
+  readonly worldIid?: string;
+}
+
+/** A reference into a tileset region (e.g. an LDtk `Tile`-typed field). */
+export interface TilePropertyTileRef {
+  readonly kind: typeof TilePropertyKind.TileRef;
+  readonly tilesetUid: number;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+/**
  * Union of legal tile-property value types in the generic runtime.
- * Format-neutral; adapters map their native property systems into this set.
+ * Format-neutral; adapters map their native property systems into this set —
+ * including the structured {@link TilePropertyPoint}, {@link TilePropertyObjectRef},
+ * and {@link TilePropertyTileRef} variants, arrays of any of the above, and
+ * nested property bags (e.g. Tiled `class`-typed properties).
  * @advanced
  */
 export type TilePropertyValue =
   | null
   | boolean
   | number
-  | string;
+  | string
+  | TilePropertyPoint
+  | TilePropertyObjectRef
+  | TilePropertyTileRef
+  | readonly TilePropertyValue[]
+  | TileProperties;
 
 /**
  * An immutable, flat key-value bag of generic tile properties.
  * Adapters copy and freeze source properties; the runtime never retains
  * a caller-owned mutable object.
+ *
+ * Declared as an interface (not a `Record<...>` type alias) so it can
+ * mutually recurse with {@link TilePropertyValue} — a nested-bag member of
+ * that union — without TypeScript's "circularly references itself" alias
+ * restriction; structurally it behaves exactly like
+ * `Readonly<Record<string, TilePropertyValue>>`.
  * @advanced
  */
-export type TileProperties = Readonly<Record<string, TilePropertyValue>>;
+export interface TileProperties {
+  readonly [key: string]: TilePropertyValue;
+}
 
 // ── Tile orientation / transform ──────────────────────────────────────────
 

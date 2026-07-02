@@ -2,6 +2,8 @@ import { TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
+import { ImageLayer } from '../src/ImageLayer';
+import { ObjectLayer } from '../src/ObjectLayer';
 import { TileChunk } from '../src/TileChunk';
 import { TileLayer } from '../src/TileLayer';
 import { TileMap } from '../src/TileMap';
@@ -1023,6 +1025,74 @@ describe('TileMap', () => {
       tilesets: [ts],
     });
     expect(map.removeLayer(999)).toBe(false);
+  });
+
+  it('getObjectLayerById finds an object layer by ID', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      objectLayers: [
+        new ObjectLayer({ id: 1, name: 'spawns' }),
+        new ObjectLayer({ id: 2, name: 'triggers' }),
+      ],
+    });
+    expect(map.getObjectLayerById(1)!.name).toBe('spawns');
+    expect(map.getObjectLayerById(2)!.name).toBe('triggers');
+    expect(map.getObjectLayerById(999)).toBeUndefined();
+  });
+
+  it('removeObjectLayer removes the layer by ID', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+    });
+    const layer = new ObjectLayer({ id: 1, name: 'removable' });
+    map.addObjectLayer(layer);
+    expect(map.removeObjectLayer(1)).toBe(true);
+    expect(map.getObjectLayerById(1)).toBeUndefined();
+    expect(map.objectLayers).toHaveLength(0);
+  });
+
+  it('removeObjectLayer returns false for non-existent ID', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+    });
+    expect(map.removeObjectLayer(999)).toBe(false);
+  });
+
+  it('getImageLayerById finds an image layer by ID', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      imageLayers: [
+        new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' }),
+        new ImageLayer({ id: 2, name: 'fg', image: 'fg.png' }),
+      ],
+    });
+    expect(map.getImageLayerById(1)!.name).toBe('bg');
+    expect(map.getImageLayerById(2)!.name).toBe('fg');
+    expect(map.getImageLayerById(999)).toBeUndefined();
+  });
+
+  it('removeImageLayer removes the layer by ID', () => {
+    const layer = new ImageLayer({ id: 1, name: 'removable', image: 'bg.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      imageLayers: [layer],
+    });
+    expect(map.removeImageLayer(1)).toBe(true);
+    expect(map.getImageLayerById(1)).toBeUndefined();
+    expect(map.imageLayers).toHaveLength(0);
+  });
+
+  it('removeImageLayer returns false for non-existent ID', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+    });
+    expect(map.removeImageLayer(999)).toBe(false);
   });
 
   it('getLayerByName returns first match', () => {

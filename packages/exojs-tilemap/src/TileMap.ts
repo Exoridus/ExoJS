@@ -55,7 +55,8 @@ export interface TileMapOptions {
  * Tile data is stored in compact chunked arrays — no per-tile heap objects.
  *
  * The map does NOT own tileset textures (those are Loader-owned) and does
- * NOT own SceneNode children (the future TileMapNode will own those).
+ * NOT own SceneNode children — see {@link import('./TileMapNode').TileMapNode},
+ * which owns those.
  *
  * Multiple tilesets are supported: each cell stores a packed tileset index
  * and local tile ID, so different tilesets may have different tile dimensions.
@@ -271,6 +272,29 @@ export class TileMap {
     return this._objectLayers.find(layer => layer.name === name) as ObjectLayer<S> | undefined;
   }
 
+  /**
+   * Get an object layer by ID.
+   *
+   * Supply an {@link ObjectSchema} type argument `S` to obtain a typed view of
+   * the layer, as with {@link getObjectLayer}.
+   */
+  public getObjectLayerById<S extends ObjectSchema = ObjectSchema>(id: number): ObjectLayer<S> | undefined {
+    return this._objectLayers.find(layer => layer.id === id) as ObjectLayer<S> | undefined;
+  }
+
+  /**
+   * Remove an object layer by ID.
+   * @returns true if the layer was found and removed.
+   */
+  public removeObjectLayer(id: number): boolean {
+    this._checkDestroyed();
+    const index = this._objectLayers.findIndex(layer => layer.id === id);
+    if (index === -1) return false;
+    this._objectLayers.splice(index, 1);
+    this._revision++;
+    return true;
+  }
+
   // ── Image layers (data-only) ──────────────────────────────────────────
 
   /** Immutable snapshot of image layers (insertion order). */
@@ -283,6 +307,26 @@ export class TileMap {
    */
   public getImageLayer(name: string): ImageLayer | undefined {
     return this._imageLayers.find(layer => layer.name === name);
+  }
+
+  /**
+   * Get an image layer by ID.
+   */
+  public getImageLayerById(id: number): ImageLayer | undefined {
+    return this._imageLayers.find(layer => layer.id === id);
+  }
+
+  /**
+   * Remove an image layer by ID.
+   * @returns true if the layer was found and removed.
+   */
+  public removeImageLayer(id: number): boolean {
+    this._checkDestroyed();
+    const index = this._imageLayers.findIndex(layer => layer.id === id);
+    if (index === -1) return false;
+    this._imageLayers.splice(index, 1);
+    this._revision++;
+    return true;
   }
 
   // ── Scene composition ─────────────────────────────────────────────────

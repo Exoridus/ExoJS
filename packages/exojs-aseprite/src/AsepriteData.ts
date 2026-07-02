@@ -43,6 +43,11 @@ export interface AsepriteFrameTag {
   /** Inclusive start frame index. */
   readonly from: number;
   readonly name: string;
+  /**
+   * Number of times the tag plays before stopping, as a numeric string
+   * (e.g. `"1"`, `"2"`). Absent means the tag loops indefinitely.
+   */
+  readonly repeat?: string;
 }
 
 /** A single layer entry in the Aseprite JSON metadata. */

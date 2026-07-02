@@ -130,24 +130,137 @@ sheet.clips.keys();        // iterate tag names
 sheet.spritesheet;         // the underlying Spritesheet (frames keyed by index string)
 ```
 
-## Frame timing (fps)
+## Playback direction (reverse & ping-pong tags)
 
-Each clip's `fps` is derived from the per-frame `duration` values Aseprite exports (milliseconds per
-frame), averaged across the tag's `from`→`to` range:
+Aseprite frame tags carry a `direction`: `forward` (the default), `reverse`, `pingpong`, or
+`pingpong_reverse`. `AsepriteSheet.parse()` expands a tag's declared `from`→`to` range into the
+actual sequence of frame indices before building the clip, since `AnimatedSprite` itself always
+plays forward through whatever frame list it's given:
+
+- `forward` — unchanged: `[from, from+1, …, to]`.
+- `reverse` — the range played backwards: `[to, to-1, …, from]`.
+- `pingpong` — a forward pass followed by a backward pass that excludes both endpoints, e.g. a tag
+  with `from: 0, to: 2` expands to `[0, 1, 2, 1]`.
+- `pingpong_reverse` — the mirrored shape, starting from `to`: `[2, 1, 0, 1]`.
+- A single-frame tag (`from === to`) always yields just that one frame, regardless of `direction`.
+
+One consequence: a ping-pong tag's resulting clip has **more frames than `to - from + 1`** — the
+bounce frames are appended, not looped separately — so `sheet.clips.get(name).frames.length` (and
+the tag's average fps, see below) already reflect the expanded sequence, not the raw tag range:
+
+```ts no-check
+// Aseprite tag: { name: 'idle', from: 0, to: 2, direction: 'pingpong' }
+sheet.clips.get('idle').frames.length; // 4 — plays [0, 1, 2, 1], not the 3 declared source frames
+```
+
+## One-shot playback (repeat)
+
+Aseprite frame tags can also carry a `repeat` field — a numeric string (`"1"`, `"2"`, …) set from the
+Tag Properties panel — specifying how many full cycles the tag plays before stopping. `AsepriteSheet.parse()`
+maps it directly onto [`AnimatedSpriteClipDefinition.repeat`](/ExoJS/en/api/animated-sprite/):
+
+- No `repeat` on the tag → the clip's `repeat` is `-1` (loop indefinitely) — the same behaviour as
+  before.
+- `repeat: "1"` → the clip plays exactly once; `AnimatedSprite.onComplete` then fires and playback
+  stops on the last frame instead of looping.
+- `repeat: "3"` → the clip plays exactly three full cycles through its (possibly direction-expanded)
+  frame sequence, then stops.
+
+```ts no-check
+import { AsepriteSheet } from '@codexo/exojs-aseprite';
+
+const sheet = await loader.load(AsepriteSheet, 'sprites/hero.json');
+const player = sheet.createAnimatedSprite();
+
+player.onComplete.add(clip => {
+    if (clip === 'attack') {
+        player.play('idle'); // the 'attack' tag has repeat: "1" — plays once, then this fires
+    }
+});
+
+player.play('attack');
+```
+
+`AnimatedSprite.repeat` can be read back at any time and overridden per-call via
+`play(name, { repeat })` — see the [`AnimatedSprite`](/ExoJS/en/api/animated-sprite/) API reference
+for the full playback surface.
+
+## Frame timing
+
+Each clip still exposes an `fps` derived from the per-frame `duration` values Aseprite exports
+(milliseconds per frame), averaged across the tag's *expanded* frame sequence — for ping-pong tags
+that means bounced frames count toward the average twice, since they play twice:
 
 - A tag whose frames are all 100 ms produces **10 fps**; mixed durations are averaged (100/200/300 ms
   → 200 ms → **5 fps**).
 - When every frame duration in the tag is zero, the clip falls back to **12 fps**.
 
-Every clip is created with `loop: true`. Aseprite's ping-pong directions are recorded as looping but
-are **not** expanded into a reversed segment — a ping-pong tag plays only its declared `from`→`to`
-range. Frame indices in a tag that fall outside the frame array are skipped, and a tag whose entire
-range is out of bounds produces no clip.
+`fps` alone can't represent uneven timing, though — an artist holding one "impact" frame twice as
+long as the rest would get flattened to a single average interval. Each clip therefore also carries
+`frameDurations`, a per-frame hold-time array (`AnimatedSpriteClipDefinition.frameDurations`) taken
+directly from Aseprite's per-frame `duration` field. When present, `frameDurations` is authoritative
+during playback; `fps` is retained only as a display-only average. A non-positive frame duration
+falls back to the tag's average, the same degenerate case the `fps` calculation itself guards
+against.
+
+```ts no-check
+sheet.clips.get('walk').fps;             // 5 — display-only average
+sheet.clips.get('walk').frameDurations;  // [100, 200, 300] — authoritative per-frame hold times
+```
+
+Frame indices in a tag that fall outside the frame array are skipped, and a tag whose entire
+(expanded) range is out of bounds produces no clip.
+
+## Trimmed frames (frameOffsets)
+
+Exporting with Aseprite's *Trim* option removes transparent padding from each frame and records how
+much was trimmed via `spriteSourceSize` — different frames in the same animation are often trimmed by
+different amounts. Naively rendering trimmed frames at a fixed origin makes the sprite visibly jitter
+frame to frame.
+
+When any frame in a tag is trimmed, `AsepriteSheet.parse()` populates
+`AnimatedSpriteClipDefinition.frameOffsets` with each frame's `spriteSourceSize` `{x, y}` — its
+trimmed content's offset within the untrimmed canvas. `AnimatedSprite` applies that offset as a local
+translation on top of the sprite's own position/origin as it advances frames, keeping every frame
+anchored to the same point instead of jittering. `frameOffsets` is omitted entirely for tags with no
+trimmed frames, so untrimmed sheets are unaffected.
+
+This is transparent — nothing to opt into beyond exporting with *Trim* enabled in Aseprite and
+consuming clips the normal way through `createAnimatedSprite()` or `sheet.clips`.
+
+## Slices
+
+Aseprite's editor lets you define named **slices** — hitboxes, nine-patch borders, UI anchor
+points — independently of the frame/animation data. `AsepriteSheet.parse()` reads `meta.slices` into
+`AsepriteSheet.slices: ReadonlyMap<string, AsepriteSlice>`, keyed by slice name:
+
+```ts no-check
+sheet.slices.size;                 // number of named slices
+sheet.slices.has('hitbox');        // true when the 'hitbox' slice exists
+sheet.slices.get('hitbox').keys;   // AsepriteSliceKey[] — bounds per frame
+```
+
+A slice's bounds can change per frame — each `AsepriteSlice` carries one `AsepriteSliceKey` per frame
+at which its bounds change, not one key per rendered frame. Resolve the key that applies to a given
+frame index yourself by taking the last key whose `frame` is at or before it:
+
+```ts
+import type { AsepriteSlice } from '@codexo/exojs-aseprite';
+
+function resolveSliceBounds(slice: AsepriteSlice, frameIndex: number) {
+    let bounds = slice.keys[0]?.bounds;
+
+    for (const key of slice.keys) {
+        if (key.frame > frameIndex) break;
+        bounds = key.bounds;
+    }
+
+    return bounds;
+}
+```
 
 ## Not yet supported
 
-- **Slices** — slice data (`AsepriteSlice` / `AsepriteSliceKey`) is parsed into the raw document
-  types but is **not** yet surfaced as a runtime API; there is no slice accessor on `AsepriteSheet`.
 - **Layers / nested tags** — Aseprite layer metadata is preserved in the parsed data but is not
   interpreted into clips.
 
@@ -161,10 +274,11 @@ texture through the loader's own unload path when nothing else needs it.
 
 - **Package README:** [`@codexo/exojs-aseprite`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/README.md)
   — install, entry points, and the supported-format matrix.
-- **API reference:** [`AsepriteSheet`](/ExoJS/en/api/aseprite-sheet/) documents `clips`,
+- **API reference:** [`AsepriteSheet`](/ExoJS/en/api/aseprite-sheet/) documents `clips`, `slices`,
   `spritesheet`, and `createAnimatedSprite()`; [`AnimatedSprite`](/ExoJS/en/api/animated-sprite/)
-  documents clip definition and playback; [`Loader`](/ExoJS/en/api/loader/) documents `load(...)`
-  and the `'asepriteSheet'` config-map type name.
+  documents clip definition (`repeat`, `frameDurations`, `frameOffsets`) and playback;
+  [`Loader`](/ExoJS/en/api/loader/) documents `load(...)` and the `'asepriteSheet'` config-map type
+  name.
 - **Guides:** [Sprites](/ExoJS/en/guide/rendering/sprites/) and
   [Loading & resources](/ExoJS/en/guide/assets/loading-and-resources/) cover the rendering and asset
   model the sheet plugs into.

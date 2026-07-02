@@ -11,7 +11,8 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
-const nineSliceShaderSource = `
+/** WGSL source for the nine-slice sprite pipeline. @internal */
+export const nineSliceShaderSource = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
 };

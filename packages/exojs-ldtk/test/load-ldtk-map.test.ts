@@ -102,6 +102,269 @@ describe('loadLdtkMap — happy path (absolute source)', () => {
     expect(objectLayers).toHaveLength(1);
     expect(objectLayers[0]!.objects[0]!.type).toBe('Player');
   });
+
+  it('never adds an ldtkWorldIid property key for a single-world document (backward-compat guard)', async () => {
+    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    expect(Object.hasOwn(map.levels[0]!.properties, 'ldtkWorldIid')).toBe(false);
+  });
+});
+
+describe('loadLdtkMap — multi-world (worlds[] present)', () => {
+  const MULTI_WORLD_SOURCE = 'https://example.com/maps/multi-world.ldtk';
+
+  function context() {
+    return makeContext({ [MULTI_WORLD_SOURCE]: loadFixture('multi-world.ldtk') });
+  }
+
+  it('flattens every world into map.levels, in world order', async () => {
+    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    expect(map.levels).toHaveLength(3);
+    expect(map.levels.map(l => l.name)).toEqual(['A_Level1', 'A_Level2', 'B_Level1']);
+  });
+
+  it("tags each level's properties with its owning world's iid", async () => {
+    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    expect(map.levels[0]!.properties['ldtkWorldIid']).toBe('world-a-iid');
+    expect(map.levels[1]!.properties['ldtkWorldIid']).toBe('world-a-iid');
+    expect(map.levels[2]!.properties['ldtkWorldIid']).toBe('world-b-iid');
+  });
+
+  it('finds levels across worlds via getLevelByName', async () => {
+    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    expect(map.getLevelByName('A_Level1')).toBe(map.levels[0]);
+    expect(map.getLevelByName('B_Level1')).toBe(map.levels[2]);
+    expect(map.getLevelByName('Missing')).toBeUndefined();
+  });
+
+  it('populates tile/entity data for a level nested inside a world (defs shared at root)', async () => {
+    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    const tilesLayer = map.levels[0]!.layers.find(l => l.name === 'Tiles')!;
+    expect(tilesLayer.countNonEmptyTiles()).toBe(2);
+    expect(map.levels[0]!.objectLayers[0]!.objects[0]!.type).toBe('Player');
+  });
+});
+
+describe('loadLdtkMap — multi-world with an external (.ldtkl) level', () => {
+  // Combines Task 2's world-flattening with the existing external-level
+  // resolution: one level in World A is externalized; World B's level is
+  // stored inline. Both must resolve correctly through the same flattened
+  // pass.
+  const MULTI_SOURCE = 'https://example.com/maps/multi-external.ldtk';
+  const EXTERNAL_URL = 'https://example.com/maps/levels/A_External.ldtkl';
+
+  const rootFixture: LdtkData = {
+    jsonVersion: '1.5.3',
+    defaultGridSize: 16,
+    defs: {
+      tilesets: [],
+      layers: [{ uid: 101, identifier: 'Entities', type: 'Entities', gridSize: 16 }],
+    },
+    levels: [],
+    worlds: [
+      {
+        identifier: 'WorldA',
+        iid: 'world-a-iid',
+        worldGridWidth: 256,
+        worldGridHeight: 256,
+        worldLayout: 'Free',
+        levels: [
+          {
+            identifier: 'A_External',
+            uid: 1,
+            iid: 'iid-a-external',
+            worldX: 0,
+            worldY: 0,
+            pxWid: 64,
+            pxHei: 16,
+            layerInstances: null,
+            externalRelPath: 'levels/A_External.ldtkl',
+          },
+        ],
+      },
+      {
+        identifier: 'WorldB',
+        iid: 'world-b-iid',
+        worldGridWidth: 128,
+        worldGridHeight: 128,
+        worldLayout: 'Free',
+        levels: [
+          {
+            identifier: 'B_Inline',
+            uid: 2,
+            iid: 'iid-b-inline',
+            worldX: 0,
+            worldY: 0,
+            pxWid: 16,
+            pxHei: 16,
+            layerInstances: [],
+          },
+        ],
+      },
+    ],
+  };
+
+  const externalFixture = {
+    identifier: 'A_External',
+    uid: 1,
+    iid: 'iid-a-external',
+    worldX: 0,
+    worldY: 0,
+    pxWid: 64,
+    pxHei: 16,
+    fieldInstances: [],
+    layerInstances: [
+      {
+        __identifier: 'Entities',
+        __type: 'Entities',
+        __cWid: 4,
+        __cHei: 1,
+        __gridSize: 16,
+        layerDefUid: 101,
+        levelId: 1,
+        visible: true,
+        iid: 'ent-a-external',
+        entityInstances: [
+          {
+            __identifier: 'Player',
+            __type: 'Player',
+            px: [8, 8],
+            width: 16,
+            height: 16,
+            __pivot: [0, 0],
+            fieldInstances: [],
+            iid: 'player-a-external',
+            defUid: 200,
+          },
+        ],
+      },
+    ],
+  };
+
+  function context() {
+    return makeContext({
+      [MULTI_SOURCE]: rootFixture,
+      [EXTERNAL_URL]: externalFixture,
+    });
+  }
+
+  it('fetches the external .ldtkl file for the level nested inside a world', async () => {
+    const { context: ctx } = context();
+    await loadLdtkMap(MULTI_SOURCE, ctx);
+    expect(ctx.fetchJson).toHaveBeenCalledWith(EXTERNAL_URL);
+  });
+
+  it('merges the resolved external level into map.levels alongside the inline one', async () => {
+    const map = await loadLdtkMap(MULTI_SOURCE, context().context);
+    expect(map.levels).toHaveLength(2);
+    expect(map.levels.map(l => l.name)).toEqual(['A_External', 'B_Inline']);
+
+    const external = map.levels[0]!;
+    expect(external.objectLayers).toHaveLength(1);
+    expect(external.objectLayers[0]!.objects[0]!.type).toBe('Player');
+  });
+
+  it("still tags the externally-resolved level with its owning world's iid", async () => {
+    const map = await loadLdtkMap(MULTI_SOURCE, context().context);
+    expect(map.levels[0]!.properties['ldtkWorldIid']).toBe('world-a-iid');
+    expect(map.levels[1]!.properties['ldtkWorldIid']).toBe('world-b-iid');
+  });
+});
+
+describe('loadLdtkMap — external levels (.ldtkl)', () => {
+  // "Save levels to separate files" projects null out layerInstances on the
+  // root document and store the real layer data in a sibling `<id>.ldtkl`
+  // file referenced by externalRelPath.
+  const EXTERNAL_URL = 'https://example.com/maps/levels/Level_0.ldtkl';
+
+  const rootFixture: LdtkData = {
+    jsonVersion: '1.5.3',
+    defaultGridSize: 16,
+    defs: {
+      tilesets: [],
+      layers: [{ uid: 101, identifier: 'Entities', type: 'Entities', gridSize: 16 }],
+    },
+    levels: [
+      {
+        identifier: 'Level_0',
+        uid: 1,
+        iid: 'iid-1',
+        worldX: 0,
+        worldY: 0,
+        pxWid: 64,
+        pxHei: 16,
+        layerInstances: null,
+        externalRelPath: 'levels/Level_0.ldtkl',
+        // The root doc's own fieldInstances copy is stale/stripped once a
+        // level is externalized; the .ldtkl file's copy is authoritative.
+        fieldInstances: [{ __identifier: 'stale', __type: 'String', __value: 'root' }],
+      },
+    ],
+  };
+
+  const externalFixture = {
+    identifier: 'Level_0',
+    uid: 1,
+    iid: 'iid-1',
+    worldX: 0,
+    worldY: 0,
+    pxWid: 64,
+    pxHei: 16,
+    fieldInstances: [{ __identifier: 'difficulty', __type: 'String', __value: 'hard' }],
+    layerInstances: [
+      {
+        __identifier: 'Entities',
+        __type: 'Entities',
+        __cWid: 4,
+        __cHei: 1,
+        __gridSize: 16,
+        layerDefUid: 101,
+        levelId: 1,
+        visible: true,
+        iid: 'ent-1',
+        entityInstances: [
+          {
+            __identifier: 'Player',
+            __type: 'Player',
+            px: [8, 8],
+            width: 16,
+            height: 16,
+            __pivot: [0, 0],
+            fieldInstances: [],
+            iid: 'player-1',
+            defUid: 200,
+          },
+        ],
+      },
+    ],
+  };
+
+  function context() {
+    return makeContext({
+      [ABS_SOURCE]: rootFixture,
+      [EXTERNAL_URL]: externalFixture,
+    });
+  }
+
+  it('fetches the external .ldtkl file for a level with null layerInstances', async () => {
+    const { context: ctx } = context();
+    await loadLdtkMap(ABS_SOURCE, ctx);
+    expect(ctx.fetchJson).toHaveBeenCalledWith(EXTERNAL_URL);
+  });
+
+  it('merges the external layerInstances into the level before conversion (no longer empty)', async () => {
+    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const level = map.levels[0]!;
+    expect(level.objectLayers).toHaveLength(1);
+    expect(level.objectLayers[0]!.objects).toHaveLength(1);
+    expect(level.objectLayers[0]!.objects[0]!.type).toBe('Player');
+  });
+
+  it('prefers the external fieldInstances over the stale root copy', async () => {
+    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const level = map.levels[0]!;
+    expect(level.properties['difficulty']).toBe('hard');
+    expect(level.properties['stale']).toBeUndefined();
+  });
 });
 
 describe('loadLdtkMap — tilesets without an atlas image', () => {
