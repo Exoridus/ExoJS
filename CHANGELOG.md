@@ -42,8 +42,8 @@ and **Removed**.
 - **`PitchShiftEffect` SOLA algorithm** replacing the previous approach, with
   acoustic-contract tests across the worklet effects (#218).
 - **`BeatDetector` flagship hardening.** Octave-error fix (mean-subtracted
-  ACF + log-Gaussian metric prior + subdivision-aware super-harmonic penalty
-  + 3:2/2:3 hysteresis), adaptive onset detection, a bounded PLL phase
+  ACF, log-Gaussian metric prior, subdivision-aware super-harmonic penalty,
+  and 3:2/2:3 hysteresis), adaptive onset detection, a bounded PLL phase
   tracker, dual fast/stable tempo windows, and provisional/locked beat
   states. Correct tempo across 50–300 BPM (previously locked to a
   sub-harmonic above ~90 BPM), recall 92–99% (previously 11–42%), beat
@@ -78,8 +78,9 @@ and **Removed**.
   is gone). `screenView` is unchanged (#217).
 - **BREAKING — `CallbackRenderPass` callbacks receive a `PassContext`**
   instead of the raw `RenderingContext`. The previous allocating `renderTo`
-  is renamed `capture()`; a new caller-owned `renderTo({ target, view,
-  clear })` and coordinator-routed `context.clear(color)` are added (#217).
+  is renamed `capture()`; a new caller-owned `renderTo` (accepting `target`,
+  `view`, and `clear`) and coordinator-routed `context.clear(color)` are
+  added (#217).
 - **Graphics fill is now opt-in.** `drawRectangle`/`drawCircle`/etc. no
   longer build a hidden opaque-black fill mesh by default — outline-only
   shapes stop silently painting a fill (#217).
