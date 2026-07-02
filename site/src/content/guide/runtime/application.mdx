@@ -45,6 +45,28 @@ Options are organised into groups:
 - `clearColor` — what `context.backend.clear()` paints each frame.
 - `backend` — `{ type: 'auto' }` (default), or pin to `'webgl2'` / `'webgpu'`.
 
+`clearColor` is not just a construction-time default — `app.clearColor` returns the render
+backend's live [`Color`](/ExoJS/en/api/color/) instance, so it stays readable and writable for the
+whole life of the application. Assigning a new `Color` copies its channels into the backend
+(effective from the next frame), which makes it a convenient way to react to game state without
+touching draw code:
+
+```js
+import { Application, Color } from '@codexo/exojs';
+
+const app = new Application();
+
+function onLowHealth(isLow) {
+    app.clearColor = isLow ? Color.darkRed : Color.cornflowerBlue;
+}
+```
+
+You can also mutate the existing instance in place instead of allocating a new `Color` each time:
+
+```js
+app.clearColor.set(20, 20, 40, 1); // dusk
+```
+
 ## Choosing the canvas
 
 By default the application creates its own canvas. Read it from `app.canvas` and place it in your page wherever your layout needs it:
