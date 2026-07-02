@@ -4,6 +4,137 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-07-02
+
+The rendering-views and audio-effects release. Core's render surface is
+reworked around `View` (folding in `Camera`), a scoped `PassContext` that
+stops pass callbacks from leaking state across targets, and multi-view
+viewport parity between WebGL2 and WebGPU (split-screen, picture-in-picture,
+minimaps). `@codexo/exojs-audio-fx` gains ten new insert effects and a
+flagship-hardened `BeatDetector` (correct tempo tracking across 50–300 BPM,
+92–99% recall, 1–4 ms beat offsets). `@codexo/exojs-ldtk`, `-aseprite`, and
+`-tiled` reach format completeness (multi-world LDtk, Aseprite frame
+direction/repeat/slices, structured Tiled/LDtk property values). This is a
+pre-1.0 release and includes intentional breaking changes; see **Changed**
+and **Removed**.
+
+### Added
+
+- **View API.** `View.from(options)` (`center`/`size`/`viewport`/`rotation`/
+  `zoom`) and a fluent `View.setViewport(x, y, w, h)` using SFML-style
+  normalized (0..1) viewport rectangles, enabling split-screen,
+  picture-in-picture, and minimap compositions (#217).
+- **Scoped pass context.** `DrawContext` and `PassContext` give a pass
+  callback a read-only `target`/`view` and route `clear`/`render`/`renderTo`/
+  `draw*` through the owning `RenderingContext`, so a callback can no longer
+  reset the active view or leak draws onto another target (#217).
+- **`@codexo/exojs-audio-fx` — ten new insert effects.** Native:
+  `DistortionEffect`, `PhaserEffect`, `FlangerEffect`, `TremoloEffect`
+  (auto-pan), `PingPongDelayEffect`, `LimiterEffect`, `AutoWahEffect`,
+  `RingModulatorEffect`, `ConvolutionEffect` (real impulse-response
+  convolution via `ConvolverNode`). Worklet: `BitCrusherEffect`. Each follows
+  the dry/wet-gain, bypass-until-ready, ramped-setter template (#219, #221).
+- **`WorkletEffect` dry/wet gain-staging primitive.** Dry/wet fan-out and a
+  `wet` getter/setter move into the `WorkletEffect` base class, plus
+  dry-latency compensation (a dry-path `DelayNode` time-aligned to each
+  worklet's algorithmic latency); `PitchShiftEffect`, `GranularEffect`, and
+  `VocoderEffect` migrate to emit pure wet through the shared base (#220).
+- **`PitchShiftEffect` SOLA algorithm** replacing the previous approach, with
+  acoustic-contract tests across the worklet effects (#218).
+- **`BeatDetector` flagship hardening.** Octave-error fix (mean-subtracted
+  ACF + log-Gaussian metric prior + subdivision-aware super-harmonic penalty
+  + 3:2/2:3 hysteresis), adaptive onset detection, a bounded PLL phase
+  tracker, dual fast/stable tempo windows, and provisional/locked beat
+  states. Correct tempo across 50–300 BPM (previously locked to a
+  sub-harmonic above ~90 BPM), recall 92–99% (previously 11–42%), beat
+  offsets 1–4 ms. A seeded synthetic testbench and committed golden baseline
+  make the detector objectively measurable (#221).
+- **`AnimatedSprite.repeat`** — finite N-cycle playback (`-1` loops
+  indefinitely, `1` plays once, `N` plays exactly N cycles), replacing
+  `loop: boolean`. Aseprite `direction` (pingpong/reverse) frame expansion,
+  `slices` exposure, per-frame `frameDurations` (hold-frame timing), and
+  `frameOffsets` (trim/`spriteSourceSize` anchoring) (#222).
+- **LDtk format completeness.** External `.ldtkl` level resolution, IntGrid
+  value exposure, level `fieldInstances`, entity pivot correction, and
+  multi-world support (`worlds[]` flattened with an `ldtkWorldIid` tag,
+  single-world docs unaffected) (#222).
+- **Structured `TilePropertyValue` variants** (Point/EntityRef/Tile) for LDtk
+  fields and Tiled `object`/`class`-typed custom properties, previously
+  dropped or left untagged (#222).
+- **`WheelJoint` suspension-travel limit** (`enableLimit`/`lowerTranslation`/
+  `upperTranslation`), matching `PrismaticJoint`'s existing limit (#224).
+- **React `useSignal` hook** bridges an engine `Signal` into React via
+  `useSyncExternalStore`; `ExoCanvas`/`useExoApplication` gain an `onError`
+  counterpart to `onReady`, wired to `Application.onError` (#224).
+- **WebGPU CI lane** now runs against Mesa lavapipe (a real Vulkan software
+  rasterizer) as a required, blocking check, with real GPU-side pixel
+  readback and a WGSL compile-coverage test mirroring the existing GLSL one
+  (#222).
+
+### Changed
+
+- **BREAKING — `Camera` folded into `View`.** The `Camera` class is removed;
+  `RenderingContext.camera` becomes `RenderingContext.view` (the `view` alias
+  is gone). `screenView` is unchanged (#217).
+- **BREAKING — `CallbackRenderPass` callbacks receive a `PassContext`**
+  instead of the raw `RenderingContext`. The previous allocating `renderTo`
+  is renamed `capture()`; a new caller-owned `renderTo({ target, view,
+  clear })` and coordinator-routed `context.clear(color)` are added (#217).
+- **Graphics fill is now opt-in.** `drawRectangle`/`drawCircle`/etc. no
+  longer build a hidden opaque-black fill mesh by default — outline-only
+  shapes stop silently painting a fill (#217).
+- **Multi-view viewport parity.** WebGL2 partial top-left viewports
+  (split-screen/picture-in-picture/minimap) no longer land at the wrong edge
+  (GL's viewport origin is bottom-left); WebGPU's pass coordinator now
+  applies the active view's viewport to match. Any view used in a render
+  ticks its follow/shake automatically next frame — `trackView`/`untrackView`
+  are now only an escape hatch (#217).
+- **Raw `console.*` calls routed through the DEV-gated logger.**
+  `Tween`/`Application`/`SceneManager`/`HTMLText` warnings and errors go
+  through `logger`/`warnOnce` instead of `console.*`, so they no longer ship
+  in production builds (#216).
+- **`LimiterEffect.ratio`/`.knee`** are now configurable, matching sibling
+  `CompressorEffect` (defaults unchanged) (#224).
+- **German (`de/`) locale pages** render the real English content directly
+  instead of a "translation coming soon" stub (#224).
+
+### Removed
+
+- **BREAKING — `PhysicsWorldOptions.interpolation` and
+  `BindingOptions.drive: 'node-to-body'`** — both were documented as
+  "reserved, no effect yet" and referenced nowhere (#224).
+
+### Fixed
+
+- **WebGL2 text rendering.** `WebGl2TextRenderer` bypassed the backend's
+  texture-unit cache when binding its node-data texture; when text rendered
+  first in a frame the atlas bound to the wrong unit and every glyph went
+  transparent (#215).
+- **Gamepad input froze after connect.** `InputManager.updateGamepads` never
+  re-read `navigator.getGamepads()` for already-connected pads; button/axis
+  state is now polled fresh every frame (#215).
+- **WebGPU shader filters rendered a black screen** (`crt-scanlines`,
+  `chromatic-aberration`) when the canvas' preferred texture format differed
+  from the filter's offscreen `rgba8unorm` output — `WebGpuShaderFilter`
+  cached its pipeline against whichever format was bound at first use instead
+  of its own output texture's format (#226).
+- Audio-fx ducking logged a spurious `setTargetAtTime` out-of-range warning
+  every frame; its attack/release params are `[0,1]` smoothing coefficients,
+  not times (#215).
+- Several playground examples (svg-drawable, trail-feedback,
+  tiled-physics-actor) fixed: a 0×0 rasterized SVG texture, a render-target
+  feedback loop, and a broken relative import in the playground's import map
+  (#215).
+
+### Docs
+
+- Audio effects guide extended with all ten effects added in #218–#221;
+  README quickstart switched to the `load()` lifecycle hook (#223).
+- Guide coverage catch-up: the full 18-mode W3C blend suite, `Tooltip`/
+  `ScrollContainer` widgets, loader progress signals and `Logger`, live
+  `sizingMode`/`clearColor`, `cullArea`, `fixedUpdate`/`frameAlpha`, and the
+  IIFE/CDN bundle path (#225).
+
 ## [0.14.0] - 2026-06-26
 
 The architecture and hardening release. Two new packages —
