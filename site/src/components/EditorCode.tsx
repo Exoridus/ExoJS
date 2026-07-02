@@ -179,11 +179,20 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
         const editor = editorRef.current;
         if (!editor) return;
         const code = editor.getValue();
+        if (language !== 'typescript') {
+            onUpdateCode({ code, executionCode: undefined });
+            onDirty(false);
+            return;
+        }
+
         const executionCode = await getExecutionCode(editor, language);
-        onUpdateCode({
-            code,
-            executionCode: language === 'typescript' ? executionCode : undefined,
-        });
+        if (executionCode === null) {
+            // TS worker couldn't emit JS (still warming up, or a transient
+            // failure) — keep the last successfully-compiled preview running
+            // instead of pushing raw, unparseable TypeScript into the iframe.
+            return;
+        }
+        onUpdateCode({ code, executionCode });
         onDirty(false);
     }, [language, onUpdateCode, onDirty]);
 
@@ -424,30 +433,37 @@ function updateDiagnostics(
     onDiagnostic(diagnostics);
 }
 
-async function getExecutionCode(editor: monaco.editor.IStandaloneCodeEditor, language: 'javascript' | 'typescript'): Promise<string> {
-    const source = editor.getValue();
-    if (language !== 'typescript') return source;
+// Emits JS for the editor's current TypeScript buffer via Monaco's TS worker.
+// Returns `null` (never the raw TS source) when emission isn't available yet —
+// raw TypeScript fed into the preview's `<script type="module">` fails with a
+// native parser SyntaxError (e.g. `private sprite!: Sprite` reads as two
+// adjacent identifiers), so callers must treat `null` as "not ready" and keep
+// the last successfully-compiled preview rather than swallow it into a crash.
+async function getExecutionCode(editor: monaco.editor.IStandaloneCodeEditor, language: 'javascript' | 'typescript'): Promise<string | null> {
     const model = editor.getModel();
-    if (!model) return source;
+    if (language !== 'typescript' || !model) return null;
 
-    try {
-        type TsWorkerClient = {
-            getEmitOutput(uri: string): Promise<{ outputFiles: Array<{ name: string; text: string }> }>;
-        };
-        type TsWorkerFactory = (...uris: monaco.Uri[]) => Promise<TsWorkerClient>;
-        type MonacoTs = { getTypeScriptWorker(): Promise<TsWorkerFactory> };
+    type TsWorkerClient = {
+        getEmitOutput(uri: string): Promise<{ outputFiles: Array<{ name: string; text: string }> }>;
+    };
+    type TsWorkerFactory = (...uris: monaco.Uri[]) => Promise<TsWorkerClient>;
+    type MonacoTs = { getTypeScriptWorker(): Promise<TsWorkerFactory> };
 
-        const monacoTs = (monaco.languages as unknown as { typescript: MonacoTs }).typescript;
-        const workerFactory = await monacoTs.getTypeScriptWorker();
-        const worker = await workerFactory(model.uri);
-        const output = await worker.getEmitOutput(model.uri.toString());
-        const jsFile = output.outputFiles.find(file => file.name.endsWith('.js'));
-        if (jsFile?.text) return jsFile.text;
-    } catch {
-        // Keep preview usable if the TS worker is still warming up.
+    for (const attempt of [0, 1]) {
+        try {
+            const monacoTs = (monaco.languages as unknown as { typescript: MonacoTs }).typescript;
+            const workerFactory = await monacoTs.getTypeScriptWorker();
+            const worker = await workerFactory(model.uri);
+            const output = await worker.getEmitOutput(model.uri.toString());
+            const jsFile = output.outputFiles.find(file => file.name.endsWith('.js'));
+            if (jsFile?.text) return jsFile.text;
+        } catch {
+            // Fall through to the retry below — the TS worker may still be warming up.
+        }
+        if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    return source;
+    return null;
 }
 
 function configureMonacoOnce(): Promise<void> {

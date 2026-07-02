@@ -40,6 +40,11 @@ class RectanglesCollisionScene extends Scene {
         this.boxB = this.makeBox(texture, 170, 200);
         this.boxB.setPosition(width / 2 + 180, height / 2);
 
+        // Dragging only works once a node is staged — interactive/draggable
+        // flags alone are inert until addChild puts it in the interaction quadtree.
+        this.addChild(this.boxA);
+        this.addChild(this.boxB);
+
         this.overlap = new Graphics();
 
         this.hud = mountControls({
