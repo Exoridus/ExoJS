@@ -59,18 +59,26 @@ describe('v0.14 release text invariants', () => {
 });
 
 describe('package manifest / changelog version coherence', () => {
+  // Version-agnostic: the expected version is derived from the root package.json
+  // rather than hard-coded, so this lockstep invariant does not go stale on every
+  // release bump. A pinned version previously failed the release pre-push hook at
+  // each cut (0.14.0 -> 0.15.0).
+  const rootManifest = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { version: string };
+  const rootVersion = rootManifest.version;
+  const peerRange = `${rootVersion.split('.').slice(0, 2).join('.')}.x`;
+
   const packages = ['@codexo/exojs-particles', '@codexo/exojs-tilemap', '@codexo/exojs-tiled', '@codexo/exojs-physics', '@codexo/exojs-audio-fx'];
 
   for (const pkg of packages) {
-    it(`${pkg} manifest version is 0.14.0`, () => {
+    it(`${pkg} manifest version matches the root version (${rootVersion})`, () => {
       const manifest = loadPackageJson(pkg);
-      expect(manifest.version).toBe('0.14.0');
+      expect(manifest.version).toBe(rootVersion);
     });
 
-    it(`${pkg} peer dependency range is 0.14.x`, () => {
+    it(`${pkg} peer dependency range is ${peerRange}`, () => {
       const manifest = loadPackageJson(pkg);
       const peers = (manifest.peerDependencies ?? {}) as Record<string, string>;
-      expect(peers['@codexo/exojs']).toBe('0.14.x');
+      expect(peers['@codexo/exojs']).toBe(peerRange);
     });
   }
 
@@ -80,8 +88,8 @@ describe('package manifest / changelog version coherence', () => {
     expect(deps['@codexo/exojs-tilemap']).toBeDefined();
   });
 
-  it('root package version is 0.14.0', () => {
-    const root = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
-    expect(root.version).toBe('0.14.0');
+  it(`the CHANGELOG documents the current version (${rootVersion}) with a concrete date`, () => {
+    const escaped = rootVersion.replace(/\./g, '\\.');
+    expect(readChangelog()).toMatch(new RegExp(`^## \\[${escaped}\\] - \\d{4}-\\d{2}-\\d{2}$`, 'm'));
   });
 });
