@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-aseprite",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Aseprite sprite sheet asset extension for ExoJS.",
   "repository": {
     "type": "git",
@@ -40,7 +40,7 @@
     "test": "vitest run --root ../.. --project=exojs-aseprite"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.14.x"
+    "@codexo/exojs": "0.15.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",

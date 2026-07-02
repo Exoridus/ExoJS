@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-ldtk",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "LDtk level format asset extension for ExoJS.",
   "repository": {
     "type": "git",
@@ -40,7 +40,7 @@
     "test": "vitest run --root ../.. --project=exojs-ldtk"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.14.x"
+    "@codexo/exojs": "0.15.x"
   },
   "dependencies": {
     "@codexo/exojs-tilemap": "workspace:*"
