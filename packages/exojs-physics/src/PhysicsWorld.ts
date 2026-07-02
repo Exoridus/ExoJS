@@ -5,7 +5,7 @@ import type { Aabb } from './Aabb';
 import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
 import type { PhysicsBackend } from './backend/PhysicsBackend';
 import { BindingRegistry } from './binding/BindingRegistry';
-import type { BindingOptions, PhysicsBinding } from './binding/PhysicsBinding';
+import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { Collider } from './Collider';
 import type { CollisionEvent, SensorEvent } from './events';
 import type { Joint } from './joints/Joint';
@@ -41,8 +41,6 @@ export interface PhysicsWorldOptions {
   contactHertz?: number;
   /** Soft-contact damping ratio (≥ 1 keeps contacts from oscillating). Default `10`. */
   dampingRatio?: number;
-  /** Interpolate bound nodes between fixed steps (reserved; no effect yet). Default `true`. */
-  interpolation?: boolean;
   /** Put resting bodies to sleep so they skip integration and solving. Default `true`. */
   enableSleeping?: boolean;
   /** Linear speed at or below which a body is a sleep candidate, px/s. Default `5`. */
@@ -84,8 +82,6 @@ export interface AttachOptions {
   isSensor?: boolean;
   /** Category/mask/group collision filter; partials merge over the defaults. */
   filter?: Partial<CollisionFilter>;
-  /** Binding options forwarded to {@link PhysicsWorld.bind}. */
-  binding?: BindingOptions;
 }
 
 /**
@@ -135,8 +131,6 @@ export class PhysicsWorld implements BodyOwner {
   public readonly gravity: Vector;
   /** The fixed-step accumulator. */
   public readonly timeStepper: TimeStepper;
-  /** Whether bound nodes interpolate between fixed steps (reserved; no effect yet). */
-  public readonly interpolation: boolean;
   /** TGS-Soft sub-steps per fixed step. */
   public readonly subStepCount: number;
   /** Soft-contact stiffness in Hz. */
@@ -179,7 +173,6 @@ export class PhysicsWorld implements BodyOwner {
       ...(options.fixedDelta !== undefined && { fixedDelta: options.fixedDelta }),
       ...(options.maxSubSteps !== undefined && { maxSubSteps: options.maxSubSteps }),
     });
-    this.interpolation = options.interpolation ?? true;
 
     const subStepCount = options.subStepCount ?? 4;
 
@@ -266,7 +259,7 @@ export class PhysicsWorld implements BodyOwner {
     });
 
     this.add(body);
-    this.bind(body, node, options.binding);
+    this.bind(body, node);
 
     return body;
   }
@@ -427,8 +420,8 @@ export class PhysicsWorld implements BodyOwner {
   // ── binding ────────────────────────────────────────────────────────────
 
   /** Link a body to a scene node; the node tracks the body after each step. */
-  public bind(body: PhysicsBody, node: SceneNode, options?: BindingOptions): PhysicsBinding {
-    return this._bindings.bind(body, node, options);
+  public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
+    return this._bindings.bind(body, node);
   }
 
   /** Remove a body↔node link. */

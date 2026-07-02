@@ -23,6 +23,12 @@ export interface WheelJointOptions {
   motorSpeed?: number;
   /** Maximum motor torque. Default `0`. */
   maxMotorTorque?: number;
+  /** Enable the suspension-travel limit (keeps the axis translation in `[lowerTranslation, upperTranslation]`). Default `false`. */
+  enableLimit?: boolean;
+  /** Lower suspension-travel limit along the axis (relative to the creation position). Default `0`. */
+  lowerTranslation?: number;
+  /** Upper suspension-travel limit along the axis. Default `0`. */
+  upperTranslation?: number;
 }
 
 /** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
@@ -32,7 +38,8 @@ const scratch: Mutable2D = { x: 0, y: 0 };
  * A wheel attached to a chassis: free to **spin** (no rotation lock) and sprung
  * along a **suspension axis** (a soft spring), but locked **laterally** (it
  * cannot slide perpendicular to the axis). Optionally driven by a rotation
- * motor. Used for vehicles. Solved in the sub-step loop, warm-started.
+ * motor and/or bounded by a suspension-travel limit. Used for vehicles. Solved
+ * in the sub-step loop, warm-started.
  */
 export class WheelJoint extends Joint {
   /** Suspension spring frequency in Hz (`0` = rigid axis). */
@@ -45,6 +52,12 @@ export class WheelJoint extends Joint {
   public motorSpeed: number;
   /** Maximum motor torque. */
   public maxMotorTorque: number;
+  /** When `true`, the axis translation is constrained to `[lowerTranslation, upperTranslation]`. */
+  public enableLimit: boolean;
+  /** Lower suspension-travel limit along the axis. */
+  public lowerTranslation: number;
+  /** Upper suspension-travel limit along the axis. */
+  public upperTranslation: number;
 
   private readonly _localAnchorAx: number;
   private readonly _localAnchorAy: number;
@@ -74,6 +87,8 @@ export class WheelJoint extends Joint {
   private _perpImpulse = 0;
   private _springImpulse = 0;
   private _motorImpulse = 0;
+  private _lowerImpulse = 0;
+  private _upperImpulse = 0;
 
   public constructor(options: WheelJointOptions) {
     super(options.bodyA, options.bodyB);
@@ -95,6 +110,9 @@ export class WheelJoint extends Joint {
     this.enableMotor = options.enableMotor ?? false;
     this.motorSpeed = options.motorSpeed ?? 0;
     this.maxMotorTorque = options.maxMotorTorque ?? 0;
+    this.enableLimit = options.enableLimit ?? false;
+    this.lowerTranslation = options.lowerTranslation ?? 0;
+    this.upperTranslation = options.upperTranslation ?? 0;
   }
 
   public override _prepare(h: number): void {
@@ -171,6 +189,11 @@ export class WheelJoint extends Joint {
     if (!this.enableMotor) {
       this._motorImpulse = 0;
     }
+
+    if (!this.enableLimit) {
+      this._lowerImpulse = 0;
+      this._upperImpulse = 0;
+    }
   }
 
   public override _warmStart(): void {
@@ -185,7 +208,7 @@ export class WheelJoint extends Joint {
     bodyA.angularVelocity -= bodyA.invInertia * this._motorImpulse;
     bodyB.angularVelocity += bodyB.invInertia * this._motorImpulse;
 
-    this._applyAxial(this._springImpulse);
+    this._applyAxial(this._springImpulse + this._lowerImpulse - this._upperImpulse);
     this._applyPerp(this._perpImpulse);
   }
 
@@ -217,6 +240,37 @@ export class WheelJoint extends Joint {
 
     this._springImpulse += springImpulse;
     this._applyAxial(springImpulse);
+
+    // Suspension-travel limits along the axis.
+    if (this.enableLimit) {
+      // Lower limit (translation ≥ lowerTranslation): positive impulse pushes along +axis.
+      const cLower = this._translation - this.lowerTranslation;
+      let biasLower = 0;
+
+      if (cLower > 0) {
+        biasLower = cLower * this._invH;
+      } else if (useBias) {
+        biasLower = 0.2 * this._invH * cLower;
+      }
+
+      const oldLower = this._lowerImpulse;
+      this._lowerImpulse = Math.max(0, oldLower - this._axialMass * (this._axisVelocity() + biasLower));
+      this._applyAxial(this._lowerImpulse - oldLower);
+
+      // Upper limit (translation ≤ upperTranslation): impulse pushes along −axis.
+      const cUpper = this.upperTranslation - this._translation;
+      let biasUpper = 0;
+
+      if (cUpper > 0) {
+        biasUpper = cUpper * this._invH;
+      } else if (useBias) {
+        biasUpper = 0.2 * this._invH * cUpper;
+      }
+
+      const oldUpper = this._upperImpulse;
+      this._upperImpulse = Math.max(0, oldUpper - this._axialMass * (-this._axisVelocity() + biasUpper));
+      this._applyAxial(-(this._upperImpulse - oldUpper));
+    }
 
     // Lateral lock (perpendicular, rigid).
     const cdotPerp = this._perpVelocity();

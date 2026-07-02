@@ -63,6 +63,11 @@ export interface ScenesProps {
  * (HUD overlay) render alongside, and can read the instance via
  * {@link useActiveScene}.
  *
+ * A failure in `app.start()`/`app.scene.setScene()` (e.g. a scene's `onLoad`
+ * rejects) is caught and routed to {@link Application.onError} rather than
+ * left as an unhandled promise rejection — subscribe via `app.onError.add(...)`
+ * or the {@link import('./ExoCanvas').ExoCanvas} `onError` prop to observe it.
+ *
  * @example
  * ```tsx
  * <ExoCanvas>
@@ -97,7 +102,9 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
   useEffect(() => {
     if (SceneClass === null) {
       setInstance(null);
-      void app.scene.setScene(null);
+      void app.scene.setScene(null).catch((error: unknown) => {
+        app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
+      });
       return;
     }
 
@@ -105,15 +112,22 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
     const scene = new SceneClass();
 
     const apply = async (): Promise<void> => {
-      if (app.status === ApplicationStatus.Stopped) {
-        // First activation initializes the backend and starts the frame loop;
-        // transitions only apply to subsequent switches.
-        await app.start(scene);
-      } else {
-        await app.scene.setScene(scene, transition !== undefined ? { transition } : {});
-      }
-      if (!cancelled) {
-        setInstance(scene);
+      try {
+        if (app.status === ApplicationStatus.Stopped) {
+          // First activation initializes the backend and starts the frame loop;
+          // transitions only apply to subsequent switches.
+          await app.start(scene);
+        } else {
+          await app.scene.setScene(scene, transition !== undefined ? { transition } : {});
+        }
+        if (!cancelled) {
+          setInstance(scene);
+        }
+      } catch (error) {
+        // Route to Application.onError instead of leaving an unhandled
+        // rejection — app.start()/setScene() reject rather than dispatching
+        // onError themselves.
+        app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       }
     };
 

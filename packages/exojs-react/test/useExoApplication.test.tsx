@@ -20,6 +20,7 @@ vi.mock('@codexo/exojs', async importActual => {
 interface HarnessProps {
   options?: ExoApplicationOptions;
   onReady?: (app: Application) => void;
+  onError?: (error: unknown) => void;
   expose: (result: UseExoApplicationResult) => void;
 }
 
@@ -29,8 +30,8 @@ interface HarnessProps {
  * Application (it bails out when `canvasRef.current` is null). `expose` hands the
  * latest hook result back to the test on every render.
  */
-function Harness({ options, onReady, expose }: HarnessProps): ReactElement {
-  const result = useExoApplication(options, onReady);
+function Harness({ options, onReady, onError, expose }: HarnessProps): ReactElement {
+  const result = useExoApplication(options, onReady, onError);
   expose(result);
 
   return <canvas ref={result.canvasRef} data-testid="exo-canvas" />;
@@ -160,5 +161,53 @@ describe('useExoApplication — teardown', () => {
 
     expect(app.destroy).toHaveBeenCalledTimes(1);
     expect(app.destroyed).toBe(true);
+  });
+});
+
+describe('useExoApplication — onError', () => {
+  it('forwards Application.onError dispatches to the onError callback', () => {
+    const onError = vi.fn();
+    mount({ options: { canvas: { width: 800, height: 600 } }, onError });
+    const app = onlyInstance();
+
+    const error = new Error('boom');
+    app.onError.dispatch(error);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(error);
+  });
+
+  it('always calls the LATEST onError without resubscribing on every render', () => {
+    const onErrorFirst = vi.fn();
+    const onErrorSecond = vi.fn();
+    const harness = mount({ options: { canvas: { width: 800, height: 600 } }, onError: onErrorFirst });
+    const app = onlyInstance();
+
+    harness.rerender({ options: { canvas: { width: 800, height: 600 } }, onError: onErrorSecond });
+
+    app.onError.dispatch(new Error('boom'));
+
+    expect(onErrorFirst).not.toHaveBeenCalled();
+    expect(onErrorSecond).toHaveBeenCalledTimes(1);
+    // A live prop change must not tear down and rebuild the Application.
+    expect(MockApplication.instances).toHaveLength(1);
+  });
+
+  it('unsubscribes from onError when the component unmounts', () => {
+    const onError = vi.fn();
+    const harness = mount({ options: { canvas: { width: 800, height: 600 } }, onError });
+    const app = onlyInstance();
+
+    expect(app.onError.count).toBe(1);
+    harness.unmount();
+
+    expect(app.onError.count).toBe(0);
+  });
+
+  it('does not throw when no onError callback is supplied', () => {
+    mount({ options: { canvas: { width: 800, height: 600 } } });
+    const app = onlyInstance();
+
+    expect(() => app.onError.dispatch(new Error('boom'))).not.toThrow();
   });
 });
