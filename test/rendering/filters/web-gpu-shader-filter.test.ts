@@ -147,6 +147,7 @@ function createMockWebGpuEnv(): MockWebGpuEnv {
 interface MockWebGpuBackendExtras {
   execute: MockInstance;
   getTextureBinding: MockInstance;
+  getTextureFormat: MockInstance;
   device: GPUDevice;
   renderTargetFormat: GPUTextureFormat;
   createColorAttachment: MockInstance;
@@ -167,6 +168,7 @@ function makeWebGpuBackend(env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     view: {} as GPUTextureView,
     sampler: {} as GPUSampler,
   }));
+  const getTextureFormat = vi.fn(() => 'rgba8unorm' as GPUTextureFormat);
   const createColorAttachment = vi.fn(() => ({
     view: {} as GPUTextureView,
     clearValue: { r: 0, g: 0, b: 0, a: 0 },
@@ -246,6 +248,7 @@ function makeWebGpuBackend(env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     },
     execute,
     getTextureBinding,
+    getTextureFormat,
     createColorAttachment,
     submit,
   } as unknown as RenderBackend & WebGpuBackend & MockWebGpuBackendExtras;
