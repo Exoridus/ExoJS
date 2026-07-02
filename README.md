@@ -106,14 +106,12 @@ npm install @codexo/exojs-audio-fx
 ## Quickstart
 
 ```ts
-import { Application, Scene, Graphics, Color, type RenderingContext, type Time } from '@codexo/exojs';
+import { Application, Scene, Graphics, Color, Loader, type RenderingContext, type Time } from '@codexo/exojs';
 
 class HelloScene extends Scene {
   private readonly box = new Graphics();
 
-  public constructor() {
-    super();
-
+  public override init(loader: Loader): void {
     this.box.fillColor = Color.white;
     this.box.drawRectangle(-32, -32, 64, 64);
     this.box.setPosition(400, 300);
