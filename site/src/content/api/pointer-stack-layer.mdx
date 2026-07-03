@@ -25,14 +25,14 @@ Screen-space.
 
 ## Methods
 
-- `destroy(): void`
-- `render(backend: RenderBackend): void`
-- `update(_delta: Time): void`
+- `destroy(): void` - Destroy the panel's Container subtree and release all child references.
+- `render(backend: RenderBackend): void` - Submit the panel's Container subtree to the backend for drawing.
+- `update(_delta: Time): void` - Lazily initialize the panel on first call, reposition it to the top-right corner, and populate text lines with the current pointer stack (up to 10 entries, sorted by zIndex descending).
 
 ## Properties
 
 - `visible: boolean`
-- `viewMode: DebugLayerViewMode`
+- `viewMode: DebugLayerViewMode` - Renders in screen-space so the panel stays fixed in the top-right corner.
 
 ## Source
 

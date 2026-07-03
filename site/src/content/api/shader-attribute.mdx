@@ -32,11 +32,11 @@ buffer layouts.
 
 ## Properties
 
-- `index: number`
-- `location: number`
-- `name: string`
-- `size: number`
-- `type: number`
+- `index: number` - Zero-based index of this attribute within the shader program.
+- `location: number` - WebGL attribute location assigned by the driver. -1 until the backend sets it.
+- `name: string` - GLSL attribute name as declared in the vertex shader source.
+- `size: number` - Byte size of one element of this attribute's type.
+- `type: number` - WebGL2 GLenum type token (e.g. gl.FLOAT_VEC2).
 
 ## Source
 

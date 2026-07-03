@@ -43,18 +43,18 @@ Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`;
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `delayMs: number`
-- `depthMs: number`
-- `feedback: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `rateHz: number`
-- `ready: Promise<void>`
-- `wet: number`
+- `delayMs: number` - Base delay time in milliseconds. Range 0.5..20, default 3.
+- `depthMs: number` - LFO modulation depth in milliseconds (peak deviation from base delay). Range 0..10, default 2.
+- `feedback: number` - Feedback amount — fraction of delay output fed back to delay input. Range 0..0.95, default 0.5.
+- `inputNode: AudioNode` - The node where audio enters this effect. Throws if the audio context is not yet initialized.
+- `outputNode: AudioNode` - The node where audio exits this effect. Throws if the audio context is not yet initialized.
+- `rateHz: number` - LFO oscillation rate in Hz. Range 0..10, default 0.25.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `wet: number` - Wet (flanged) mix level, 0..1. The dry level is automatically 1 - wet. Default 0.5.
 
 ## Source
 

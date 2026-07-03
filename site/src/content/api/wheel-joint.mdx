@@ -27,17 +27,17 @@ in the sub-step loop, warm-started.
 
 ## Properties
 
-- `bodyA: PhysicsBody`
-- `bodyB: PhysicsBody`
-- `dampingRatio: number`
-- `enabled: boolean`
-- `enableLimit: boolean`
-- `enableMotor: boolean`
-- `hertz: number`
-- `lowerTranslation: number`
-- `maxMotorTorque: number`
-- `motorSpeed: number`
-- `upperTranslation: number`
+- `bodyA: PhysicsBody` - First constrained body.
+- `bodyB: PhysicsBody` - Second constrained body.
+- `dampingRatio: number` - Suspension spring damping ratio.
+- `enabled: boolean` - When false, the joint is skipped by the solver (but still tracked by the world).
+- `enableLimit: boolean` - When true, the axis translation is constrained to [lowerTranslation, upperTranslation].
+- `enableMotor: boolean` - When true, the motor drives the wheel's spin toward motorSpeed.
+- `hertz: number` - Suspension spring frequency in Hz (0 = rigid axis).
+- `lowerTranslation: number` - Lower suspension-travel limit along the axis.
+- `maxMotorTorque: number` - Maximum motor torque.
+- `motorSpeed: number` - Target relative angular velocity (rad/s) for the motor.
+- `upperTranslation: number` - Upper suspension-travel limit along the axis.
 
 ## Source
 

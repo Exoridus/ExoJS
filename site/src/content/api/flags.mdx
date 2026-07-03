@@ -28,14 +28,14 @@ Internally stores the combined flags as a single 32-bit integer.
 
 - `clear(): this`
 - `destroy(): void`
-- `has(flags: V[]): boolean`
-- `pop(flag: V): boolean`
-- `push(flags: V[]): this`
-- `remove(flags: V[]): this`
+- `has(flags: V[]): boolean` - Return true when **any** of the supplied flags are currently set (bitwise OR test).
+- `pop(flag: V): boolean` - Remove flag and return true if it was active before removal, false otherwise. Useful for one-shot consumption of a flag.
+- `push(flags: V[]): this` - Set one or more flags (bitwise OR). Mutates in place and returns this for chaining.
+- `remove(flags: V[]): this` - Clear one or more flags (bitwise AND NOT). Mutates in place and returns this for chaining.
 
 ## Properties
 
-- `value: number`
+- `value: number` - Current combined bitmask of all active flags.
 
 ## Source
 

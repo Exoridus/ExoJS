@@ -28,22 +28,22 @@ uniforms, and additional texture bindings.
 
 ## Methods
 
-- `destroy(): void`
-- `setTexture(name: string, texture: Texture | RenderTexture): this`
-- `setUniform(name: string, value: UniformValue): this`
-- `from(source: ShaderSource, options?: Omit<MaterialOptions, "shader">): SpriteMaterial`
-- `from(glslVertex: string, glslFragment: string, options?: object): SpriteMaterial`
+- `destroy(): void` - Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used — renderers recompile on next draw — but typical usage is to drop the reference.
+- `setTexture(name: string, texture: Texture | RenderTexture): this` - Bind a named texture. Equivalent to material.textures[name] = texture, returned this for chaining.
+- `setUniform(name: string, value: UniformValue): this` - Set a uniform value. Equivalent to material.uniforms[name] = value, returned this for chaining.
+- `from(source: ShaderSource, options?: Omit<MaterialOptions, "shader">): SpriteMaterial` - Build a SpriteMaterial from an existing ShaderSource. Equivalent to new SpriteMaterial(\{ shader, ...options \}).
+- `from(glslVertex: string, glslFragment: string, options?: object): SpriteMaterial` - Build a SpriteMaterial from raw GLSL vertex and fragment source strings. Wraps them in a new ShaderSource; pass options.wgsl to also cover the WebGPU backend.
 
 ## Properties
 
-- `blendMode: BlendModes`
-- `sampler: SamplerOptions | null`
-- `shader: ShaderSource`
-- `target: "sprite"`
-- `textures: Record<string, Texture | RenderTexture>`
-- `uniforms: Record<string, UniformValue>`
-- `bindKey: number`
-- `pipelineKey: number`
+- `blendMode: BlendModes` - Compositing blend mode applied when drawing with this material.
+- `sampler: SamplerOptions | null` - Backend-agnostic sampling state descriptor, or null for the default.
+- `shader: ShaderSource` - GLSL/WGSL source pair backing this material.
+- `target: "sprite"` - Which drawable class this material can serve; renderers check compatibility.
+- `textures: Record<string, Texture | RenderTexture>` - Named texture bindings claimed in addition to the drawable's own texture.
+- `uniforms: Record<string, UniformValue>` - Mutable user uniform values. Mutate between frames to drive animated effects; the renderer reads from this map every draw. material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];
+- `bindKey: number` - Stable bind key: identical ⇒ same bindings (textures unchanged). Derived from this material's identity and the identities of its bound textures. Changes when a texture is swapped; drives bind-group/slot reuse.
+- `pipelineKey: number` - Stable pipeline key: identical ⇒ same GPU pipeline/program can be used. Derived from shader identity, blend mode, and sampler state, and is independent of the owning material instance so identically configured materials share a pipeline. Drives grouping and the pipeline cache.
 
 ## Source
 

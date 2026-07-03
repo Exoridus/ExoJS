@@ -25,15 +25,15 @@ they benefit from the same caching and IDB strategy as other assets.
 
 ## Methods
 
-- `create(source: unknown): Promise<BmFont>`
-- `createObjectUrl(blob: Blob): string`
-- `destroy(): void`
-- `process(response: Response): Promise<object>`
+- `create(source: unknown): Promise<BmFont>` - Constructs the final engine asset from the intermediate value produced by process (or retrieved from cache).
+- `createObjectUrl(blob: Blob): string` - Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked.
+- `destroy(): void` - Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool.
+- `process(response: Response): Promise<object>` - Converts a raw HTTP response into a serialisable intermediate value suitable for cache storage and later passed to create.
 - `revokeObjectUrl(objectUrl: string): void`
 
 ## Properties
 
-- `storageName: "bmfont"`
+- `storageName: "bmfont"` - Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore.
 
 ## Source
 

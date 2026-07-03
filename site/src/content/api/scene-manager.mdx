@@ -32,20 +32,20 @@ while it keeps rendering).
 ## Methods
 
 - `destroy(): void`
-- `fixedUpdate(delta: Time): this`
-- `setScene(scene: Scene | null, options: SetSceneOptions): Promise<SceneManager>`
-- `update(delta: Time): this`
+- `fixedUpdate(delta: Time): this` - Drive one fixed-timestep step on the active scene (unless paused). Called zero or more times per frame by the Application loop, ahead of SceneManager.update. No drawing or transition advance happens here — those are per-frame, not per fixed step.
+- `setScene(scene: Scene | null, options: SetSceneOptions): Promise<SceneManager>` - Switch to scene (or clear to null), unloading the previously active scene. No-op when scene is already active. An optional fade transition runs the swap at full opacity. The new scene is loaded before the old one is torn down, so there is no blank frame between them.
+- `update(delta: Time): this` - Per-frame entry point called by Application.update. Advances any active fade transition, then — for the active scene — runs update and ticks its systems (unless Scene.paused), draws it, and renders its UI layer on top.
 
 ## Properties
 
-- `currentScene: Scene | null`
+- `currentScene: Scene | null` - The active scene, or null when none is set.
 
 ## Events
 
-- `onChangeScene: Signal<[Scene | null]>`
-- `onStartScene: Signal<[Scene]>`
-- `onStopScene: Signal<[Scene]>`
-- `onUpdateScene: Signal<[Scene]>`
+- `onChangeScene: Signal<[Scene | null]>` - Fires whenever the active scene changes (set or clear). Payload is the new scene, or null when cleared.
+- `onStartScene: Signal<[Scene]>` - Fires after a scene's init resolves and it becomes active.
+- `onStopScene: Signal<[Scene]>` - Fires just before a scene is unloaded (unload then destroy).
+- `onUpdateScene: Signal<[Scene]>` - Fires once per frame for the active scene after its update ran.
 
 ## Source
 

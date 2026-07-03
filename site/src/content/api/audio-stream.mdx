@@ -38,17 +38,17 @@ pre-decoded `AudioBuffer` storage and pooled overlapping playback.
 
 ## Methods
 
-- `_createVoice(manager: AudioManager, options: PlayOptions): Voice`
-- `destroy(): void`
+- `_createVoice(manager: AudioManager, options: PlayOptions): Voice` - Implements Playable. Called by AudioManager.play. Stops any previously active voice (a stream has a single playhead), then starts a fresh AudioStreamVoice.
+- `destroy(): void` - Stop the active voice and release the media graph.
 
 ## Properties
 
-- `loop: boolean`
-- `muted: boolean`
-- `playbackRate: number`
-- `volume: number`
-- `audioElement: HTMLMediaElement`
-- `duration: number`
+- `loop: boolean` - Default loop flag applied to new voices.
+- `muted: boolean` - Default muted flag (starts a voice at volume 0).
+- `playbackRate: number` - Default playback rate applied to new voices.
+- `volume: number` - Default volume applied to new voices. Range [0, 1].
+- `audioElement: HTMLMediaElement` - The backing HTMLAudioElement.
+- `duration: number` - Total media duration in seconds (NaN until metadata has loaded).
 
 ## Source
 

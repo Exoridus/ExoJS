@@ -32,15 +32,15 @@ pass an explicit `mimeType` in options to override.
 
 ## Methods
 
-- `create(source: ArrayBuffer, options: ImageFactoryOptions): Promise<DecodedImage>`
-- `createObjectUrl(blob: Blob): string`
-- `destroy(): void`
-- `process(response: Response): Promise<ArrayBuffer>`
+- `create(source: ArrayBuffer, options: ImageFactoryOptions): Promise<DecodedImage>` - Decodes image bytes into a DecodedImage. Prefers createImageBitmap for a zero-copy GPU-upload path. Falls back to a temporary object URL + \<img> element on environments that do not support createImageBitmap.
+- `createObjectUrl(blob: Blob): string` - Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked.
+- `destroy(): void` - Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool.
+- `process(response: Response): Promise<ArrayBuffer>` - Reads the full response body as an ArrayBuffer for MIME-type detection and blob construction.
 - `revokeObjectUrl(objectUrl: string): void`
 
 ## Properties
 
-- `storageName: "image"`
+- `storageName: "image"` - Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore.
 
 ## Source
 

@@ -42,15 +42,15 @@ destroy only drops its own cell registry.
 
 ## Methods
 
-- `destroy(): void`
-- `rescan(): void`
-- `reset(): void`
-- `update(deltaSeconds: number): void`
+- `destroy(): void` - Drop the cell registry. Does not modify the layers or tilesets.
+- `rescan(): void` - Re-scan the layers for animated cells. Call after structural edits that add or remove animated tiles. Resets all currently-tracked cells to frame 0 first so the rescan starts from a clean, deterministic state.
+- `reset(): void` - Restore every animated cell to its first frame and reset the clock. Useful before serialising or pausing.
+- `update(deltaSeconds: number): void` - Advance all registered animations by deltaSeconds and write the current frame into any cell that crossed a frame boundary. Cells that did not change frame are not touched, so their chunks do not rebuild.
 
 ## Properties
 
-- `animatedCellCount: number`
-- `elapsedMs: number`
+- `animatedCellCount: number` - Number of animated cells currently registered across all layers.
+- `elapsedMs: number` - Total elapsed animation time in milliseconds since construction/reset.
 
 ## Source
 

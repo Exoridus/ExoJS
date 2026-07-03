@@ -29,18 +29,18 @@ Both maps are cleared on disconnect and destroy.
 ## Methods
 
 - `bind(): this`
-- `connect(program: ShaderProgram): this`
+- `connect(program: ShaderProgram): this` - Attach a backend GPU program, compile/link it, and populate the attribute and uniform maps. Must be called before bind, sync, or accessing attributes/uniforms.
 - `destroy(): void`
 - `disconnect(): this`
-- `getAttribute(name: string): ShaderAttribute`
-- `getUniform(name: string): ShaderUniform`
-- `sync(): this`
+- `getAttribute(name: string): ShaderAttribute` - Retrieve a named vertex attribute from the map populated by the backend.
+- `getUniform(name: string): ShaderUniform` - Retrieve a named uniform from the map populated by the backend.
+- `sync(): this` - Upload all dirty ShaderUniform values to the GPU. Call once per draw call after modifying uniform data.
 - `unbind(): this`
 
 ## Properties
 
-- `attributes: Map<string, ShaderAttribute>`
-- `uniforms: Map<string, ShaderUniform>`
+- `attributes: Map<string, ShaderAttribute>` - Vertex attribute metadata populated by the backend after connect.
+- `uniforms: Map<string, ShaderUniform>` - Uniform metadata populated by the backend after connect.
 - `fragmentSource: string`
 - `vertexSource: string`
 

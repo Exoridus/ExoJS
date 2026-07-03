@@ -27,15 +27,15 @@ InteractionEvent.stopPropagation to halt the bubble.
 
 ## Methods
 
-- `stopPropagation(): void`
+- `stopPropagation(): void` - Halt further bubbling up the parent chain for this event.
 
 ## Properties
 
-- `currentTarget: RenderNode`
+- `currentTarget: RenderNode` - The node currently dispatching this event during bubbling. Changes per bubble step.
 - `pointer: Pointer`
-- `target: RenderNode`
+- `target: RenderNode` - The node that was originally hit (deepest interactive). Stable across bubble.
 - `type: InteractionEventType`
-- `worldX: number`
+- `worldX: number` - Canvas-space coordinates (same space as Pointer.x/y).
 - `worldY: number`
 - `propagationStopped: boolean`
 

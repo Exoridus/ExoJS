@@ -28,15 +28,15 @@ AnimatedSprite with all clips pre-registered.
 
 ## Methods
 
-- `createAnimatedSprite(): AnimatedSprite`
-- `destroy(): void`
-- `parse(data: AsepriteData, texture: Texture): AsepriteSheet`
+- `createAnimatedSprite(): AnimatedSprite` - Create an AnimatedSprite with all frame-tag clips pre-defined. Each clip is registered via AnimatedSprite.defineClip, which clones the frame Rectangles so the sprite owns its own copies. Call AnimatedSprite.play with a tag name to start playback.
+- `destroy(): void` - Destroy the underlying Spritesheet and release its frame resources.
+- `parse(data: AsepriteData, texture: Texture): AsepriteSheet` - Parse a raw AsepriteData document and the already-loaded Texture into an AsepriteSheet. Supports both Aseprite array mode and hash mode. Frame indices from frameTags are resolved against the ordered frame array; out-of-range indices are silently skipped. A tag's direction determines the expanded frame sequence fed into the clip — forward and reverse play the [from, to] range in order or in reverse, while pingpong/pingpong_reverse append a backward pass (excluding both endpoints) so the bounce plays back correctly on the engine's forward-only AnimatedSprite playback. The tag's repeat field maps directly onto AnimatedSpriteClipDefinition.repeat: absent means the clip loops indefinitely (repeat: -1); a numeric string ("1", "2", …) means it plays exactly that many full cycles before stopping. Each clip's frameDurations carries the real per-frame duration from the export (falling back to the tag's average when a frame's duration is non-positive), so uneven hold-frames survive into playback instead of being flattened to a uniform fps. frameOffsets carries each frame's spriteSourceSize \{x,y\} — its trimmed content's offset within the untrimmed canvas — whenever any frame in the tag is trimmed, so frames trimmed by different amounts stay anchored instead of jittering; it's omitted entirely for tags with no trimmed frames.
 
 ## Properties
 
-- `clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>`
-- `slices: ReadonlyMap<string, AsepriteSlice>`
-- `spritesheet: Spritesheet`
+- `clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>` - Animation clips derived from the Aseprite frameTags metadata. Each clip's frames are live references into spritesheet.frames; they are cloned automatically when passed to AnimatedSprite.defineClip.
+- `slices: ReadonlyMap<string, AsepriteSlice>` - Named slices from the Aseprite meta.slices metadata, keyed by slice name. Slices describe editor-defined regions — hitboxes, nine-patch borders, UI anchor points — that aren't part of the frame/animation data itself. Each AsepriteSlice carries one AsepriteSliceKey per frame at which its bounds change; consumers resolve the applicable key for a given frame index themselves.
+- `spritesheet: Spritesheet` - The underlying Spritesheet whose frames are keyed by index string.
 
 ## Source
 

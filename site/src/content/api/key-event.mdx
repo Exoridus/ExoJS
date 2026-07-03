@@ -29,12 +29,12 @@ traversal), letting the focused widget consume the key itself.
 
 ## Methods
 
-- `preventDefault(): void`
+- `preventDefault(): void` - Suppress the FocusManager's built-in handling (e.g. Tab traversal) for this key.
 
 ## Properties
 
-- `channel: number`
-- `target: RenderNode`
+- `channel: number` - Input channel of the key — compare with the Keyboard.* channel constants.
+- `target: RenderNode` - The focused node this event was delivered to.
 - `type: KeyEventType`
 - `defaultPrevented: boolean`
 

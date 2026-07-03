@@ -24,12 +24,12 @@ A 2D vector expressed in polar coordinates: `radius` (magnitude) and `phi`
 
 ## Methods
 
-- `toVector(): Vector`
-- `fromVector(vector: Vector): PolarVector`
+- `toVector(): Vector` - Convert to a Cartesian Vector. Returns Vector.temp — do not store the reference across calls.
+- `fromVector(vector: Vector): PolarVector` - Create a PolarVector from a Cartesian vector, preserving both magnitude and direction. The roundtrip PolarVector.fromVector(v).toVector() reproduces v (modulo float precision).
 
 ## Properties
 
-- `phi: number`
+- `phi: number` - Angle in radians, measured from the positive X-axis.
 - `radius: number`
 
 ## Source

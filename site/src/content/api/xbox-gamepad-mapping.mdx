@@ -28,14 +28,14 @@ natively. The Share button (Xbox Series) maps to the Share channel.
 
 ## Methods
 
-- `destroy(): void`
-- `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean`
+- `destroy(): void` - Releases all button and axis control references held by this mapping. Call when the associated gamepad disconnects to allow garbage collection.
+- `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean` - Returns true when this mapping declares at least one button or axis control that writes to channel. Use to detect device-specific capabilities at runtime — e.g. before binding an input to a right-stick channel that may not exist on a single Joy-Con.
 
 ## Properties
 
-- `axes: readonly GamepadAxis[]`
-- `buttons: readonly GamepadButton[]`
-- `family: Xbox`
+- `axes: readonly GamepadAxis[]` - Ordered list of axes, indexed by the Gamepad API axis index.
+- `buttons: readonly GamepadButton[]` - Ordered list of buttons, indexed by the Gamepad API button index.
+- `family: Xbox` - Identifies the device family this mapping targets.
 
 ## Source
 

@@ -38,39 +38,39 @@ automatically — you do not instantiate this class yourself.
 ## Methods
 
 - `destroy(): void`
-- `getGamepad(slot: 0 | 1 | 2 | 3): Gamepad`
-- `getPrimaryPointerPosition(): object | null`
-- `onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `update(_delta: Time): void`
+- `getGamepad(slot: 0 | 1 | 2 | 3): Gamepad` - Direct accessor for a single gamepad slot. Equivalent to app.input.gamepads[slot] but reads more clearly at call sites.
+- `getPrimaryPointerPosition(): object | null` - Returns the canvas-relative position of the primary pointer (isPrimary = true), or the first non-cancelled pointer if no primary is found. Returns null when no active pointer is present. Used by debug layers to show cursor info.
+- `onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired every frame while any of channels is active.
+- `onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired once when any of channels becomes active. Manual lifecycle — call .unbind() on the returned binding to detach.
+- `onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired once when all of channels become inactive.
+- `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired when the input is released within InputBindingOptions.threshold ms of activation (a "tap").
+- `update(_delta: Time): void` - Per-frame entry point invoked by Application.update. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding.
 
 ## Properties
 
 - `canvasFocused: boolean`
-- `connectedGamepadCount: number`
-- `connectedGamepads: readonly Gamepad[]`
-- `firstConnectedGamepad: Gamepad | null`
-- `gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad]`
-- `gamepadSlotStrategy: GamepadSlotStrategy`
-- `hasGamepad: boolean`
+- `connectedGamepadCount: number` - Number of slots currently occupied by a physical gamepad.
+- `connectedGamepads: readonly Gamepad[]` - Subset of gamepads containing only currently connected pads, in slot order.
+- `firstConnectedGamepad: Gamepad | null` - First connected gamepad in slot order, or null when no pads are attached.
+- `gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad]` - Always-4 array of Gamepad slot mailboxes. Each entry exists for the application's full lifetime; check pad.connected for hardware presence. Listeners attached to a slot survive disconnect/reconnect.
+- `gamepadSlotStrategy: GamepadSlotStrategy` - The slot strategy active for this InputManager.
+- `hasGamepad: boolean` - true when at least one slot is occupied by a physical gamepad.
 - `pointersInCanvas: boolean`
 
 ## Events
 
-- `onAnyGamepadAxisChange: Signal<[Gamepad, GamepadAxis, number]>`
-- `onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>`
-- `onAnyGamepadButtonUp: Signal<[Gamepad, GamepadButton, number]>`
-- `onAnyGamepadReassigned: Signal<[Gamepad, fromSlot]>`
+- `onAnyGamepadAxisChange: Signal<[Gamepad, GamepadAxis, number]>` - Fires whenever any pad reports an axis value change.
+- `onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>` - Fires whenever any pad reports a button press transition.
+- `onAnyGamepadButtonUp: Signal<[Gamepad, GamepadButton, number]>` - Fires whenever any pad reports a button release transition.
+- `onAnyGamepadReassigned: Signal<[Gamepad, fromSlot]>` - Fires when a 'compact'-strategy disconnect shifts a higher-numbered slot's pad into a lower one. Dispatched once per moved pad with the destination slot and the slot index it came from.
 - `onCanvasFocusChange: Signal<[focused]>`
-- `onGamepadConnected: Signal<[Gamepad]>`
-- `onGamepadDisconnected: Signal<[Gamepad]>`
+- `onGamepadConnected: Signal<[Gamepad]>` - Fires when a physical pad connects to any slot.
+- `onGamepadDisconnected: Signal<[Gamepad]>` - Fires when a physical pad disconnects from any slot.
 - `onKeyDown: Signal<[number]>`
 - `onKeyUp: Signal<[number]>`
-- `onLongPress: Signal<[pointer]>`
+- `onLongPress: Signal<[pointer]>` - Fires when a pointer has been held without significant movement for ≥ 500 ms.
 - `onMouseWheel: Signal<[Vector]>`
-- `onPinch: Signal<[scale, center]>`
+- `onPinch: Signal<[scale, center]>` - Fires on every two-touch-pointer move where the distance between them changed. scale > 1 = spreading, \< 1 = pinching.
 - `onPointerCancel: Signal<[Pointer]>`
 - `onPointerDown: Signal<[Pointer]>`
 - `onPointerEnter: Signal<[Pointer]>`
@@ -79,7 +79,7 @@ automatically — you do not instantiate this class yourself.
 - `onPointerSwipe: Signal<[Pointer]>`
 - `onPointerTap: Signal<[Pointer]>`
 - `onPointerUp: Signal<[Pointer]>`
-- `onRotate: Signal<[angleDelta, center]>`
+- `onRotate: Signal<[angleDelta, center]>` - Fires on every two-touch-pointer move where the angle between them changed. angleDelta is in radians.
 
 ## Source
 

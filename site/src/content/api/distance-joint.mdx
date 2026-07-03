@@ -26,14 +26,14 @@ started across frames.
 
 ## Properties
 
-- `bodyA: PhysicsBody`
-- `bodyB: PhysicsBody`
-- `dampingRatio: number`
-- `enabled: boolean`
-- `hertz: number`
-- `length: number`
-- `maxLength: number`
-- `minLength: number`
+- `bodyA: PhysicsBody` - First constrained body.
+- `bodyB: PhysicsBody` - Second constrained body.
+- `dampingRatio: number` - Soft-spring damping ratio.
+- `enabled: boolean` - When false, the joint is skipped by the solver (but still tracked by the world).
+- `hertz: number` - Soft-spring frequency in Hz (0 = rigid).
+- `length: number` - Target distance between the anchors.
+- `maxLength: number` - Maximum allowed distance (rope/limit mode).
+- `minLength: number` - Minimum allowed distance (rope/limit mode).
 
 ## Source
 

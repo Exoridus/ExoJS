@@ -31,12 +31,12 @@ of the shape about its centroid.
 
 ## Properties
 
-- `area: number`
-- `boundingRadius: number`
-- `centroidX: number`
-- `centroidY: number`
+- `area: number` - Surface area in px². mass = density × area.
+- `boundingRadius: number` - Radius of the smallest circle about the local origin enclosing the shape.
+- `centroidX: number` - X of the area centroid in local space.
+- `centroidY: number` - Y of the area centroid in local space.
 - `type: ShapeType`
-- `unitInertia: number`
+- `unitInertia: number` - Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia.
 
 ## Source
 

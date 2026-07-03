@@ -38,25 +38,25 @@ properties listed in Tween.to emit a console warning and are skipped.
 
 ## Methods
 
-- `chain(next: Tween): Tween`
-- `delay(seconds: number): this`
-- `easing(easingFunction: EasingFunction): this`
-- `onComplete(callback: TweenLifecycleCallback): this`
-- `onRepeat(callback: TweenLifecycleCallback): this`
-- `onStart(callback: TweenLifecycleCallback): this`
-- `onUpdate(callback: TweenUpdateCallback): this`
-- `pause(): this`
-- `repeat(count: number): this`
-- `resume(): this`
-- `start(): this`
-- `stop(): this`
-- `to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this`
-- `update(deltaSeconds: number): void`
-- `yoyo(enabled: boolean): this`
+- `chain(next: Tween): Tween` - When this tween completes naturally, automatically start next. Returns next for fluent chaining: fadeIn.chain(moveOut).start() — note that start() here starts moveOut, so typically you only call start() on the first tween.
+- `delay(seconds: number): this` - Delay in seconds before the tween begins interpolating. Default 0.
+- `easing(easingFunction: EasingFunction): this` - Easing function applied to the normalized time. Default Ease.linear.
+- `onComplete(callback: TweenLifecycleCallback): this` - Register a callback fired when the tween finishes naturally (all repeat cycles exhausted). Does NOT fire when the tween is stopped via Tween.stop.
+- `onRepeat(callback: TweenLifecycleCallback): this` - Register a callback fired at the boundary of each repeat cycle, after the cycle counter is decremented and before the next cycle begins. Not fired on the final cycle's completion (use Tween.onComplete for that).
+- `onStart(callback: TweenLifecycleCallback): this` - Register a callback fired once when the tween begins interpolating (after any configured delay has elapsed). Fires only on the first cycle — repeats do not re-trigger it.
+- `onUpdate(callback: TweenUpdateCallback): this` - Register a callback fired on every active update. Receives the eased progress in 0..1 — already direction-flipped for yoyo cycles.
+- `pause(): this` - Pause the tween. update() calls are ignored while paused.
+- `repeat(count: number): this` - Number of additional repeat cycles. -1 = infinite. Default 0 (runs once). The argument counts cycles **after** the first, not the total cycle count — repeat(2) runs the animation three times total (the initial pass plus two repeats).
+- `resume(): this` - Resume a paused tween from where it left off.
+- `start(): this` - Start or restart the tween. Resets all elapsed time, the start-value snapshot, playback direction, and repeat counter. If this tween was previously owned by a manager but was evicted after natural completion or Tween.stop, it is automatically re-registered so it continues to receive frame updates. Stand-alone tweens (no manager) are unaffected.
+- `stop(): this` - Stop the tween without finishing. Target properties stay at their current interpolated values. onComplete does NOT fire. The tween is removed from its manager if one is assigned.
+- `to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this` - Set target end-values and duration in seconds. Replaces any prior to(). The starting values are captured lazily on first update() after start(), so mutating target between to() and start() is safe. Only numeric properties of target are accepted. Non-numeric keys are rejected at compile time; the runtime guard in update() remains as a safety net for untyped callers.
+- `update(deltaSeconds: number): void` - Advance the tween by deltaSeconds. Called by TweenManager each frame, or manually for stand-alone usage. No-ops when Paused, Stopped, or Complete.
+- `yoyo(enabled: boolean): this` - Reverse playback direction on each repeat cycle. Only meaningful when combined with repeat(). Calling yoyo() without repeat() is a no-op.
 
 ## Properties
 
-- `progress: number`
+- `progress: number` - Current eased progress in 0..1. Reflects the eased t after applying the easing function, not the raw elapsed/duration ratio. Returns 0 while the tween is in the delay phase (state is Active but the configured delay has not yet elapsed).
 - `state: TweenState`
 - `target: T`
 

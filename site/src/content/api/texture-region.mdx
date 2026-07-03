@@ -33,20 +33,20 @@ zero dimensions will cause the constructor to throw.
 
 ## Constructors
 
-- `new(texture: Texture, options: TextureRegionOptions): TextureRegion`
+- `new(texture: Texture, options: TextureRegionOptions): TextureRegion` - Create a new immutable region.
 
 ## Properties
 
-- `extrusion: Readonly<TextureRegionInsets>`
-- `height: number`
-- `texture: Texture`
-- `u0: number`
-- `u1: number`
-- `v0: number`
-- `v1: number`
-- `width: number`
-- `x: number`
-- `y: number`
+- `extrusion: Readonly<TextureRegionInsets>` - Per-edge extrusion/padding metadata (engine-owned, frozen).
+- `height: number` - Height of the region in texture pixels.
+- `texture: Texture` - The underlying Texture this region belongs to.
+- `u0: number` - Normalised left texture coordinate (U-min).
+- `u1: number` - Normalised right texture coordinate (U-max).
+- `v0: number` - Normalised top texture coordinate (V-min).
+- `v1: number` - Normalised bottom texture coordinate (V-max).
+- `width: number` - Width of the region in texture pixels.
+- `x: number` - Left edge of the region in texture pixels.
+- `y: number` - Top edge of the region in texture pixels.
 
 ## Source
 

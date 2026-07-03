@@ -26,19 +26,19 @@ smoothing ramp so they are artifact-free during playback.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `attack: number`
-- `inputNode: AudioNode`
-- `knee: number`
-- `outputNode: AudioNode`
-- `ratio: number`
-- `ready: Promise<void>`
-- `reduction: number`
-- `release: number`
-- `threshold: number`
+- `attack: number` - Time in seconds for the compressor to engage after the signal exceeds the threshold. Range 0..1, default 0.003.
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `knee: number` - Width in dB of the transition region around the threshold (soft knee). Range 0..40, default 30.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `ratio: number` - Input-to-output dB ratio above the threshold. Range 1..20, default 12.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `reduction: number` - Live gain reduction in dB applied by the compressor right now. Always \<= 0 (or 0 when the compressor isn't engaging). Read-only — drive input level meters / sidechain visualisations off this value. Returns 0 until the underlying node has been created (before the audio context is ready).
+- `release: number` - Time in seconds for the compressor to disengage after the signal drops below the threshold. Range 0..1, default 0.25.
+- `threshold: number` - Level above which compression begins, in dBFS. Range −100..0, default −24.
 
 ## Source
 

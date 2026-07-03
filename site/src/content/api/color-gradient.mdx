@@ -33,7 +33,7 @@ Two output paths:
 ## Methods
 
 - `evaluate(t: number, out: Color): Color`
-- `evaluateRgba(t: number): number`
+- `evaluateRgba(t: number): number` - Returns the gradient sample at t packed into a single 32-bit RGBA integer (0xAABBGGRR). Avoids the Color object on the hot path; suitable for direct write into a Uint32Array instance buffer.
 
 ## Source
 

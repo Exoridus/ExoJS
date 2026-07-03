@@ -28,15 +28,15 @@ import objects via `new WebAssembly.Instance(module, imports)`.
 
 ## Methods
 
-- `create(source: ArrayBuffer): Promise<Module>`
-- `createObjectUrl(blob: Blob): string`
-- `destroy(): void`
-- `process(response: Response): Promise<ArrayBuffer>`
+- `create(source: ArrayBuffer): Promise<Module>` - Compiles the Wasm binary asynchronously via WebAssembly.compile and returns the resulting module.
+- `createObjectUrl(blob: Blob): string` - Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked.
+- `destroy(): void` - Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool.
+- `process(response: Response): Promise<ArrayBuffer>` - Reads the full response body as an ArrayBuffer containing the raw Wasm binary.
 - `revokeObjectUrl(objectUrl: string): void`
 
 ## Properties
 
-- `storageName: "wasm"`
+- `storageName: "wasm"` - Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore.
 
 ## Source
 

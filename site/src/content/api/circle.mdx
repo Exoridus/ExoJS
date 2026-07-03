@@ -31,23 +31,23 @@ regenerated lazily when the shape mutates.
 ## Methods
 
 - `clone(): this`
-- `collidesWith(target: Collidable): CollisionResponse | null`
-- `contains(x: number, y: number): boolean`
+- `collidesWith(target: Collidable): CollisionResponse | null` - Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs.
+- `contains(x: number, y: number): boolean` - Returns true if the point (x, y) is inside this shape.
 - `copy(circle: Circle): this`
 - `destroy(): void`
 - `equals(__namedParameters: Partial<Circle>): boolean`
 - `getBounds(): Rectangle`
-- `getNormals(): Vector[]`
-- `intersectsWith(target: Collidable): boolean`
-- `project(axis: Vector, result: Interval): Interval`
+- `getNormals(): Vector[]` - Returns the edge normals for the approximated collision polygon. The returned array is cached and reused across calls — the same array reference is returned on consecutive calls when nothing has changed. This matches the Sprite.getNormals() behaviour introduced in 0.6.19. The cache is invalidated automatically when x, y, radius, position, setPosition, setRadius, set, or copy mutate the circle.
+- `intersectsWith(target: Collidable): boolean` - Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed.
+- `project(axis: Vector, result: Interval): Interval` - Project this circle onto axis and write the scalar interval into result. The projection accounts for both the centre and the radius.
 - `set(x: number, y: number, radius: number): this`
-- `setPosition(x: number, y: number): this`
-- `setRadius(radius: number): this`
+- `setPosition(x: number, y: number): this` - Set the circle's centre to (x, y). Invalidates the normal and vertex caches. Returns this for chaining.
+- `setRadius(radius: number): this` - Set the circle's radius. No-op when the value has not changed. Invalidates the normal and vertex caches. Returns this for chaining.
 
 ## Properties
 
 - `collisionType: CollisionType`
-- `collisionSegments: number`
+- `collisionSegments: number` - Number of polygon segments used to approximate the circle boundary for SAT collision tests. Increasing this improves accuracy at the cost of more normal comparisons. Default: 32.
 - `position: Vector`
 - `radius: number`
 - `x: number`

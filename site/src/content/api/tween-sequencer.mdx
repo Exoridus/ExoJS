@@ -35,22 +35,22 @@ manually — in that mode the sequencer also advances its child tweens.
 
 ## Methods
 
-- `onComplete(cb: object): this`
-- `onStart(cb: object): this`
-- `pause(): this`
-- `repeat(count: number): this`
-- `resume(): this`
-- `start(): this`
-- `stop(): this`
-- `then(tween: Tween<object> | Tween<object>[]): this`
-- `update(deltaSeconds: number): void`
-- `wait(seconds: number): this`
-- `yoyo(enabled: boolean): this`
+- `onComplete(cb: object): this` - Register a callback fired when the sequence finishes naturally (all stages and repeat cycles exhausted). Does NOT fire when stopped via TweenSequencer.stop.
+- `onStart(cb: object): this` - Register a callback fired once on the first TweenSequencer.update call after TweenSequencer.start.
+- `pause(): this` - Pause the sequence. Tweens in the current stage are also paused. The elapsed timer in delay stages is frozen.
+- `repeat(count: number): this` - Number of additional repeat cycles. -1 = infinite. Default 0 (plays once). repeat(2) plays the full sequence three times total (initial pass + 2 repeats).
+- `resume(): this` - Resume a paused sequence (and its current-stage tweens) from where they left off.
+- `start(): this` - Start (or restart) the sequence from stage 0. Resets all internal state and re-registers with the manager if one is attached.
+- `stop(): this` - Stop the sequence without finishing. Active tweens are stopped. TweenSequencer.onComplete does NOT fire. The sequencer is removed from its manager if one is assigned.
+- `then(tween: Tween<object> | Tween<object>[]): this` - Append a stage to the sequence. - **Single tween**: the stage plays that tween, then advances. - **Array of tweens**: all start simultaneously; the stage advances when every tween in the array has completed.
+- `update(deltaSeconds: number): void` - Advance the sequencer by deltaSeconds. Called automatically by the attached TweenManager each frame. When used stand-alone (no manager), call this manually and child tweens will also be advanced.
+- `wait(seconds: number): this` - Insert a fixed pause of seconds between stages.
+- `yoyo(enabled: boolean): this` - Reverse stage order on each repeat cycle. Only meaningful when combined with TweenSequencer.repeat.
 
 ## Properties
 
-- `progress: number`
-- `state: TweenSequencerState`
+- `progress: number` - Playback progress in 0..1, advancing in discrete steps as each stage completes. Equals 1 when the entire sequence has finished.
+- `state: TweenSequencerState` - Current lifecycle state of the sequencer.
 
 ## Source
 

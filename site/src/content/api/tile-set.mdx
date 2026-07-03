@@ -30,25 +30,25 @@ tile dimensions, spacing, and optional per-tile metadata.
 
 ## Methods
 
-- `definedTiles(): IterableIterator<TileDefinition>`
-- `getTileDefinition(localTileId: number): TileDefinition | undefined`
-- `getTileRect(localTileId: number): object`
+- `definedTiles(): IterableIterator<TileDefinition>` - Iterate over all defined tiles (sparse).
+- `getTileDefinition(localTileId: number): TileDefinition | undefined` - Retrieve per-tile metadata, or undefined if none defined.
+- `getTileRect(localTileId: number): object` - Compute the pixel-space source rectangle for a local tile ID within the atlas, accounting for columns, spacing, and margin.
 
 ## Properties
 
-- `class: string`
-- `columns: number`
-- `margin: number`
-- `name: string`
-- `offsetX: number`
-- `offsetY: number`
-- `rows: number`
-- `spacing: number`
-- `texture: TextureRegion`
-- `tileCount: number`
-- `tileHeight: number`
-- `tileWidth: number`
-- `allDefinitions: Readonly<Record<number, TileProperties | undefined>>`
+- `class: string` - Tileset class/type string (Tiled class; may be empty).
+- `columns: number` - Number of columns in the atlas grid.
+- `margin: number` - Pixel margin around the atlas.
+- `name: string` - Stable runtime name.
+- `offsetX: number` - Visual drawing offset X in pixels, applied to every tile of this set.
+- `offsetY: number` - Visual drawing offset Y in pixels, applied to every tile of this set.
+- `rows: number` - Number of rows implied by tileCount and columns.
+- `spacing: number` - Pixel spacing between tiles in the atlas.
+- `texture: TextureRegion` - Atlas texture region — Loader-owned, never destroyed by the tileset.
+- `tileCount: number` - Total number of tiles in the tileset.
+- `tileHeight: number` - Tile height in pixels.
+- `tileWidth: number` - Tile width in pixels.
+- `allDefinitions: Readonly<Record<number, TileProperties | undefined>>` - Read-only snapshot of all per-tile definitions. The returned record is a caller-owned copy.
 
 ## Source
 

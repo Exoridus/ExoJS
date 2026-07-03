@@ -194,6 +194,30 @@ const renderSignature = (name: string, signature: any): string => {
 const resolvePropertyType = (member: any): any =>
     member.type ?? member.getSignature?.type;
 
+const resolvePropertyComment = (member: any): any =>
+    member.comment ?? member.getSignature?.comment;
+
+/**
+ * Render a member's JSDoc summary as a single-line, MDX-safe description
+ * suitable for appending to a `- \`<signature>\`` bullet. Collapses
+ * multi-line comments to one line (the row regex in the API renderer is
+ * per-line), strips inline-code backticks (they would render as literal
+ * text inside the description cell), and MDX-escapes the result so
+ * characters like `<` or `{` don't break the generated `.mdx`.
+ */
+const toRowDescription = (comment: any): string => {
+    const raw = renderComment(comment);
+    if (!raw) return '';
+    const singleLine = raw.replaceAll(/\s+/g, ' ').trim();
+    const withoutBackticks = singleLine.replaceAll('`', '');
+    return escapeMdxText(withoutBackticks);
+};
+
+const renderMemberBullet = (signatureText: string, comment: any): string => {
+    const description = toRowDescription(comment);
+    return description.length > 0 ? `- \`${signatureText}\` - ${description}` : `- \`${signatureText}\``;
+};
+
 const renderClassMembers = (reflection: any): { body: string; sections: string[]; memberCount: number } => {
     const children = reflection.children ?? [];
     const constructors = children.filter((child: any) => (child.kind & ReflectionKind.Constructor) > 0);
@@ -213,27 +237,37 @@ const renderClassMembers = (reflection: any): { body: string; sections: string[]
     const sections: Array<string> = [];
 
     if (constructors.length > 0) {
-        const lines = constructors.flatMap((ctor: any) => (ctor.signatures ?? []).map((signature: any) => `- \`${renderSignature('new', signature)}\``));
+        const lines = constructors.flatMap((ctor: any) =>
+            (ctor.signatures ?? []).map((signature: any) =>
+                renderMemberBullet(renderSignature('new', signature), signature.comment ?? ctor.comment)
+            )
+        );
         blocks.push(`## Constructors\n\n${lines.join('\n')}`);
         sections.push('Constructors');
     }
 
     if (methods.length > 0) {
         const lines = methods.flatMap((method: any) =>
-            (method.signatures ?? []).map((signature: any) => `- \`${renderSignature(method.name, signature)}\``)
+            (method.signatures ?? []).map((signature: any) =>
+                renderMemberBullet(renderSignature(method.name, signature), signature.comment ?? method.comment)
+            )
         );
         blocks.push(`## Methods\n\n${lines.join('\n')}`);
         sections.push('Methods');
     }
 
     if (plainProperties.length > 0) {
-        const lines = plainProperties.map((property: any) => `- \`${property.name}: ${renderType(resolvePropertyType(property))}\``);
+        const lines = plainProperties.map((property: any) =>
+            renderMemberBullet(`${property.name}: ${renderType(resolvePropertyType(property))}`, resolvePropertyComment(property))
+        );
         blocks.push(`## Properties\n\n${lines.join('\n')}`);
         sections.push('Properties');
     }
 
     if (events.length > 0) {
-        const lines = events.map((event: any) => `- \`${event.name}: ${renderType(resolvePropertyType(event))}\``);
+        const lines = events.map((event: any) =>
+            renderMemberBullet(`${event.name}: ${renderType(resolvePropertyType(event))}`, resolvePropertyComment(event))
+        );
         blocks.push(`## Events\n\n${lines.join('\n')}`);
         sections.push('Events');
     }

@@ -30,20 +30,20 @@ Gradient.toTexture; wrap that texture in a `Sprite`/`Mesh` to draw it.
 
 ## Methods
 
-- `_copyGeometry(source: this): void`
-- `_geometryEquals(other: Gradient): boolean`
-- `clone(): this`
-- `copy(source: this): this`
+- `_copyGeometry(source: this): void` - Copy the concrete subclass geometry from a same-type source.
+- `_geometryEquals(other: Gradient): boolean` - Compare the concrete subclass geometry against other. Only invoked once Gradient.equals has confirmed both sides share the same GradientType, so implementations may narrow other accordingly.
+- `clone(): this` - Deep-clone into a new instance of the same concrete gradient type.
+- `copy(source: this): this` - Copy every value (stops and geometry) from a same-type source into this instance, replacing its current state. Returns this for chaining.
 - `destroy(): void`
-- `equals(other: Gradient): boolean`
+- `equals(other: Gradient): boolean` - Structural value equality: same GradientType, same ordered stops (offset and Color), and same subclass geometry.
 - `resolveT(u: number, v: number): number`
-- `sampleAt(t: number, out: Float32Array): void`
+- `sampleAt(t: number, out: Float32Array): void` - Shared stop sampling logic ported from the legacy GLSL implementation.
 - `toTexture(width: number, height: number, options?: GradientToTextureOptions & object): DataTexture<"rgba8">`
 - `toTexture(width: number, height: number, options: GradientToTextureOptions & object): DataTexture<"rgba32f">`
 
 ## Properties
 
-- `type: GradientType`
+- `type: GradientType` - Concrete gradient kind, e.g. 'linear' or 'radial'.
 - `stops: readonly GradientStop[]`
 
 ## Source

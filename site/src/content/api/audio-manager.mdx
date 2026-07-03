@@ -32,16 +32,16 @@ AudioManager.muteOnHidden is enabled.
 
 ## Methods
 
-- `_applyVisibility(visible: boolean): void`
-- `_registerSpatial(voice: SpatialVoice): void`
+- `_applyVisibility(visible: boolean): void` - Internal: called by Application when visibility changes.
+- `_registerSpatial(voice: SpatialVoice): void` - Internal: register a spatial voice for per-frame position updates. Called by a Voice the first time it is spatialized (position set or follow).
 - `destroy(): void`
-- `getBus(name: string): AudioBus`
-- `hasBus(name: string): boolean`
-- `open(input: AudioInput): InputVoice`
-- `play(source: Playable, options?: PlayOptions): Voice`
-- `registerBus(bus: AudioBus): this`
-- `unregisterBus(bus: AudioBus): this`
-- `update(_delta: Time): void`
+- `getBus(name: string): AudioBus` - Look up a bus by name. Throws if the name is not registered.
+- `hasBus(name: string): boolean` - true when a bus with name has been registered.
+- `open(input: AudioInput): InputVoice` - Open a live AudioInput (microphone / WebRTC stream) and return an InputVoice. The input is analysis-only by default (not audible) — tap it with an analyser, route it to a bus to monitor, or record it.
+- `play(source: Playable, options?: PlayOptions): Voice` - Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities).
+- `registerBus(bus: AudioBus): this` - Register a user-constructed AudioBus so it can be looked up by name via AudioManager.getBus. Throws if a bus with the same name is already registered.
+- `unregisterBus(bus: AudioBus): this` - Unregister and AudioBus.destroy a previously registered bus. Throws if you attempt to unregister one of the three built-ins (master, music, sound). No-op if the bus is unknown.
+- `update(_delta: Time): void` - Called once per frame from Application.update(). The frame delta is unused here (hence _delta); present for System contract compliance.
 
 ## Properties
 
@@ -49,12 +49,12 @@ AudioManager.muteOnHidden is enabled.
 - `master: AudioBus`
 - `music: AudioBus`
 - `sound: AudioBus`
-- `locked: boolean`
-- `muteOnHidden: boolean`
+- `locked: boolean` - true while audio is blocked by the browser's autoplay policy — no user gesture has resumed the AudioContext yet. Voices played while locked are deferred (streams) or skipped (generators) until that gesture.
+- `muteOnHidden: boolean` - When true, the master bus is muted while document.hidden is true. Wired to Application.onVisibilityChange via AudioManager._applyVisibility; the application calls that hook automatically — set this flag to opt in to the behavior.
 
 ## Events
 
-- `onUnlock: Signal<[]>`
+- `onUnlock: Signal<[]>` - Fires once when the AudioContext transitions to "running" — i.e. the first user gesture unlocks audio under the browser's autoplay policy. Check AudioManager.locked for the current state; sounds played while locked are deferred and start automatically on that gesture.
 
 ## Source
 

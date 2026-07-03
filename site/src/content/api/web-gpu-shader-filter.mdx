@@ -63,12 +63,12 @@ Texture/RenderTexture uniforms are bound as separate entries starting at
 
 ## Methods
 
-- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void`
-- `destroy(): void`
+- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void` - Execute the WGSL shader pass: flush uniforms, build bind groups, and render the input texture into output. Throws if the active backend is not WebGPU — use WebGl2ShaderFilter on WebGL2.
+- `destroy(): void` - Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). Default is a no-op for stateless filters; subclasses with state (BlurFilter, ColorFilter) override.
 
 ## Properties
 
-- `uniforms: Record<string, ShaderFilterUniformValue>`
+- `uniforms: Record<string, ShaderFilterUniformValue>` - Mutable map of uniform values. Set values via property assignment; they are flushed to the GPU before each apply(). filter.uniforms.uTime = 1.234; filter.uniforms.uColor = [1, 0.5, 0, 1]; // vec4
 
 ## Source
 

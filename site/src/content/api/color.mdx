@@ -39,10 +39,10 @@ channel writes and rebuilt lazily.
 - `copy(color: Color): this`
 - `destroy(): void`
 - `equals(__namedParameters: Partial<Color>): boolean`
-- `set(r: number, g: number, b: number, a: number): this`
-- `toArray(normalized: boolean): Float32Array`
-- `toRgba(): number`
-- `toString(prefixed: boolean): string`
+- `set(r: number, g: number, b: number, a: number): this` - Set any subset of channels. Omitted parameters default to the current channel value (use this for "set red, leave the rest"). RGB are clamped to 0..255; alpha is clamped to 0..1.
+- `toArray(normalized: boolean): Float32Array` - Return an RGBA Float32Array view backed by an internal cache. Pass normalized = true to map RGB into 0..1 (typical for shader uploads); default returns 0..255 RGB and 0..1 alpha. The returned array is the same instance across calls — copy it if you need a stable snapshot.
+- `toRgba(): number` - Return the color packed into a single 32-bit RGBA value (R in low byte, A in high byte). Cached after first call until any channel is written. RGB is preserved at every alpha — a fully transparent red and a fully transparent black pack to different values.
+- `toString(prefixed: boolean): string` - Return the RGB channels as a 6-digit hex string. Pass prefixed = false to omit the leading #. Alpha is not included — use Color.toRgba for the full RGBA32 packed form.
 
 ## Properties
 

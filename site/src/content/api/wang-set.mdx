@@ -43,15 +43,15 @@ Edge bitmask bit layout:
 
 ## Methods
 
-- `getTileId(mask: number): number | undefined`
-- `isMember(localTileId: number): boolean`
+- `getTileId(mask: number): number | undefined` - Look up the local tile ID for a given neighbor bitmask. Returns undefined if the mask has no mapping in this set.
+- `isMember(localTileId: number): boolean` - Whether a local tile ID belongs to this Wang group. True for every variant the set produces plus any explicit WangSetOptions.members. Used as the default, variant-stable neighbour-membership test by autoTile and refreshCell.
 
 ## Properties
 
-- `tilesetIndex: number`
-- `type: "blob" | "edge"`
-- `blobMap: ReadonlyMap<number, number>`
-- `members: ReadonlySet<number>`
+- `tilesetIndex: number` - Index of the tileset that contains the Wang tiles.
+- `type: "blob" | "edge"` - The Wang mode: 'blob' (8-neighbor) or 'edge' (4-neighbor).
+- `blobMap: ReadonlyMap<number, number>` - Read-only view of the full bitmask → tile-ID mapping.
+- `members: ReadonlySet<number>` - Read-only view of the local tile IDs that count as group members.
 
 ## Source
 

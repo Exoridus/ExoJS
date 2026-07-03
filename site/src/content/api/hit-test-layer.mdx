@@ -29,14 +29,14 @@ World-space.
 
 ## Methods
 
-- `destroy(): void`
-- `render(backend: RenderBackend): void`
-- `update(_delta: Time): void`
+- `destroy(): void` - Release the internal Graphics primitive.
+- `render(backend: RenderBackend): void` - Walk the scene tree and draw color-coded outlines around interactive nodes (magenta = idle, yellow = hovered, cyan = pointer-captured). Also draws faint gray quadrant boundaries when the spatial index is active, helping diagnose partitioning behavior.
+- `update(_delta: Time): void` - No per-frame pre-computation required; all state is derived in render.
 
 ## Properties
 
 - `visible: boolean`
-- `viewMode: DebugLayerViewMode`
+- `viewMode: DebugLayerViewMode` - Renders in world-space so outlines align with interactive node positions.
 
 ## Source
 

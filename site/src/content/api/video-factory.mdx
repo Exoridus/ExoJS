@@ -31,15 +31,15 @@ elements are paused and detached when VideoFactory.destroy is called.
 
 ## Methods
 
-- `create(source: ArrayBuffer, options: VideoFactoryOptions): Promise<Video>`
-- `createObjectUrl(blob: Blob): string`
-- `destroy(): void`
-- `process(response: Response): Promise<ArrayBuffer>`
+- `create(source: ArrayBuffer, options: VideoFactoryOptions): Promise<Video>` - Wraps video bytes in a \<video> element and resolves with a Video instance once the configured loadEvent fires. Rejects if the element emits error, abort, or emptied before the load event is received.
+- `createObjectUrl(blob: Blob): string` - Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked.
+- `destroy(): void` - Pauses and resets all \<video> elements created by this factory to release media resources, then delegates to the base AbstractAssetFactory.destroy to revoke any object URLs.
+- `process(response: Response): Promise<ArrayBuffer>` - Reads the full response body as an ArrayBuffer for blob construction.
 - `revokeObjectUrl(objectUrl: string): void`
 
 ## Properties
 
-- `storageName: "video"`
+- `storageName: "video"` - Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore.
 
 ## Source
 

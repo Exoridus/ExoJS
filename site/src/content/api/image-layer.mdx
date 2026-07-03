@@ -29,22 +29,22 @@ source Tiled map.
 
 ## Properties
 
-- `class: string`
-- `id: number`
-- `image: string`
-- `kind: "image"`
-- `name: string`
-- `offsetX: number`
-- `offsetY: number`
-- `opacity: number`
-- `parallaxX: number`
-- `parallaxY: number`
-- `properties: TileProperties`
-- `repeatX: boolean`
-- `repeatY: boolean`
-- `texture: Texture | null`
-- `tintColor: number | null`
-- `visible: boolean`
+- `class: string` - Layer class string.
+- `id: number` - Layer id (unique within the map).
+- `image: string` - Resolved URL of the layer image.
+- `kind: "image"` - Layer-kind discriminant.
+- `name: string` - Layer name.
+- `offsetX: number` - Layer pixel offset X.
+- `offsetY: number` - Layer pixel offset Y.
+- `opacity: number` - Layer opacity in [0, 1].
+- `parallaxX: number` - Horizontal parallax factor.
+- `parallaxY: number` - Vertical parallax factor.
+- `properties: TileProperties` - Immutable layer properties.
+- `repeatX: boolean` - Whether the image repeats horizontally.
+- `repeatY: boolean` - Whether the image repeats vertically.
+- `texture: Texture | null` - Loaded texture for the image, or null if unavailable.
+- `tintColor: number | null` - Tint colour as 0xRRGGBB, or null.
+- `visible: boolean` - Whether the layer is visible.
 
 ## Source
 

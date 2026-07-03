@@ -49,18 +49,18 @@ Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `baseFrequency: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `q: number`
-- `ready: Promise<void>`
-- `responseMs: number`
-- `sensitivity: number`
-- `wet: number`
+- `baseFrequency: number` - Centre frequency of the wah filter in Hz. Range 50..2000, default 200. Changes are ramped smoothly via setTargetAtTime.
+- `inputNode: AudioNode` - The node where audio enters this effect. Throws if the audio context is not yet initialized.
+- `outputNode: AudioNode` - The node where audio exits this effect. Throws if the audio context is not yet initialized.
+- `q: number` - Q (resonance) of the bandpass wah filter. Range 0.1..20, default 4. Changes are ramped smoothly via setTargetAtTime.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `responseMs: number` - Envelope smoothing time constant in milliseconds. Range 1..500, default 30. Updating this adjusts the smoothing lowpass cutoff immediately via setTargetAtTime.
+- `sensitivity: number` - Envelope sensitivity in Hz/unit: the maximum filter sweep above baseFrequency when input is at full amplitude. Range 0..6000, default 3000. Changes are ramped smoothly via setTargetAtTime.
+- `wet: number` - Wet (wah-filtered) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 0.7.
 
 ## Source
 

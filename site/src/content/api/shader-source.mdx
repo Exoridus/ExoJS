@@ -98,14 +98,14 @@ User uniforms live in `@group(2)`:
 
 ## Methods
 
-- `detectUniformDrift(): object`
-- `getDeclaredUniforms(): object`
+- `detectUniformDrift(): object` - Compare declared uniform names between the GLSL and WGSL sources. Returns lists of names declared in only one language. Use in CI to catch drift when both languages should expose the same logical uniforms. When only one language is provided, returns empty arrays. Auto-bound uniforms (u_projection, u_translation, u_tint, u_texture) are excluded from the comparison since the GLSL source declares them at the top-level uniform scope while the WGSL source receives them via the @group(0) mesh-uniforms struct and the @group(1) texture binding.
+- `getDeclaredUniforms(): object` - Reflect declared uniforms from each language's source. Returns a per- language map of uniform-name → declared type, parsed from the shader sources via lightweight regex (not a full GLSL/WGSL grammar). Texture uniforms (sampler2D/texture_2d) are included; sampler bindings are not (they pair with textures by binding index). Reflection is best-effort and intended for CI drift-checks and editor tooling, not for runtime uniform binding decisions. The renderers do NOT consult this map; they bind uniforms by name from Material.uniforms and let the underlying API resolve declared- but-unused entries.
 
 ## Properties
 
-- `glsl: object | null`
-- `wgsl: string | null`
-- `id: number`
+- `glsl: object | null` - GLSL source pair for the WebGL2 backend, or null if not provided.
+- `wgsl: string | null` - WGSL source for the WebGPU backend, or null if not provided.
+- `id: number` - Stable per-instance identity. Identical id ⇒ same compiled program/ pipeline can be reused. Monotonic across the session; never reused.
 
 ## Source
 

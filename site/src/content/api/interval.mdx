@@ -28,12 +28,12 @@ represent the projection of a shape onto a separating axis.
 ## Methods
 
 - `clone(): this`
-- `containsInterval(interval: Interval): boolean`
+- `containsInterval(interval: Interval): boolean` - Return true when interval is strictly contained within this interval (exclusive bounds).
 - `copy(interval: Interval): this`
 - `destroy(): void`
-- `getOverlap(interval: Interval): number`
-- `includes(value: number): boolean`
-- `overlaps(interval: Interval): boolean`
+- `getOverlap(interval: Interval): number` - Return the signed overlap length between this interval and interval. Positive when they overlap; the sign encodes which end overlaps more. Used by the SAT solver to compute penetration depth.
+- `includes(value: number): boolean` - Return true when value lies within [min, max] (inclusive).
+- `overlaps(interval: Interval): boolean` - Return true when this interval and interval share at least one point.
 - `set(min: number, max: number): this`
 
 ## Properties

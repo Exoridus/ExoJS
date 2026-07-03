@@ -32,36 +32,36 @@ always allocate a new `Vector`. Instance methods mutate in place and return
 
 ## Methods
 
-- `add(x: number, y: number): this`
+- `add(x: number, y: number): this` - Add (x, y) to this vector. When y is omitted it defaults to x. Mutates in place and returns this for chaining.
 - `clone(): this`
-- `collidesWith(_target: Collidable): CollisionResponse | null`
-- `contains(x: number, y: number): boolean`
+- `collidesWith(_target: Collidable): CollisionResponse | null` - Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs.
+- `contains(x: number, y: number): boolean` - Returns true if the point (x, y) is inside this shape.
 - `copy(vector: Vector): this`
-- `cross(vector: T): number`
+- `cross(vector: T): number` - 2D cross product (scalar z-component of the 3D cross product) of this vector with vector. A positive value means vector is to the left of this vector.
 - `destroy(): void`
-- `distanceTo(vector: T): number`
-- `divide(x: number, y: number): this`
-- `dot(x: number, y: number): number`
-- `equals(__namedParameters: Partial<T>): boolean`
+- `distanceTo(vector: T): number` - Euclidean distance from this vector's tip to vector's tip.
+- `divide(x: number, y: number): this` - Divide components by (x, y). Division is skipped silently when either divisor is zero to avoid NaN. Mutates in place and returns this for chaining.
+- `dot(x: number, y: number): number` - Dot product of this vector with (x, y).
+- `equals(__namedParameters: Partial<T>): boolean` - Return true when this vector matches all supplied components. Omitting a component skips that comparison, so v.equals(\{ x: 0 \}) checks only the X component.
 - `getBounds(): Rectangle`
-- `getNormals(): Vector[]`
-- `intersectsWith(target: Collidable): boolean`
-- `invert(): this`
-- `max(): number`
-- `min(): number`
-- `multiply(x: number, y: number): this`
-- `normalize(): this`
-- `perp(): this`
-- `project(_axis: Vector, interval: Interval): Interval`
-- `rperp(): this`
-- `set(x: number, y: number): this`
-- `subtract(x: number, y: number): this`
-- `transform(matrix: Matrix): this`
-- `transformInverse(matrix: Matrix): this`
-- `add(v1: Vector, v2: Vector): Vector`
-- `divide(v1: Vector, v2: Vector): Vector`
-- `multiply(v1: Vector, v2: Vector): Vector`
-- `subtract(v1: Vector, v2: Vector): Vector`
+- `getNormals(): Vector[]` - Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls.
+- `intersectsWith(target: Collidable): boolean` - Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed.
+- `invert(): this` - Negate both components. Mutates in place and returns this for chaining.
+- `max(): number` - Return the larger of the two components.
+- `min(): number` - Return the smaller of the two components.
+- `multiply(x: number, y: number): this` - Multiply components by (x, y). When y is omitted it defaults to x (uniform scale). Mutates in place and returns this for chaining.
+- `normalize(): this` - Scale this vector to unit length. No-op when the vector is zero. Mutates in place and returns this for chaining.
+- `perp(): this` - Rotate this vector 90° counter-clockwise (left perpendicular): (-y, x). Mutates in place and returns this for chaining.
+- `project(_axis: Vector, interval: Interval): Interval` - Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver.
+- `rperp(): this` - Rotate this vector 90° clockwise (right perpendicular): (y, -x). Mutates in place and returns this for chaining.
+- `set(x: number, y: number): this` - Set both components. When y is omitted it defaults to x (uniform assignment). Mutates in place and returns this for chaining.
+- `subtract(x: number, y: number): this` - Subtract (x, y) from this vector. When y is omitted it defaults to x. Mutates in place and returns this for chaining.
+- `transform(matrix: Matrix): this` - Apply a 3×3 affine matrix to this vector (translation + linear transform). Mutates in place and returns this for chaining.
+- `transformInverse(matrix: Matrix): this` - Apply the inverse of matrix to this vector. Useful for converting a world-space point into the local space defined by matrix. Mutates in place and returns this for chaining.
+- `add(v1: Vector, v2: Vector): Vector` - Return a new Vector equal to v1 + v2. Does not mutate either operand.
+- `divide(v1: Vector, v2: Vector): Vector` - Return a new Vector equal to the component-wise quotient of v1 / v2. Does not mutate either operand.
+- `multiply(v1: Vector, v2: Vector): Vector` - Return a new Vector equal to the component-wise product of v1 and v2. Does not mutate either operand.
+- `subtract(v1: Vector, v2: Vector): Vector` - Return a new Vector equal to v1 - v2. Does not mutate either operand.
 
 ## Properties
 
@@ -70,9 +70,9 @@ always allocate a new `Vector`. Instance methods mutate in place and return
 - `y: number`
 - `one: Vector`
 - `zero: Vector`
-- `angle: number`
-- `length: number`
-- `lengthSq: number`
+- `angle: number` - Angle of this vector in radians, measured from the positive Y-axis (clockwise). Setting this rotates the vector to the new angle while preserving its length. Mutates in place.
+- `length: number` - Euclidean magnitude of this vector. Setting rescales the vector to magnitude while preserving its angle. Mutates in place.
+- `lengthSq: number` - Squared Euclidean magnitude. Avoids the sqrt — prefer this over length when only relative comparisons are needed.
 - `temp: Vector`
 
 ## Source

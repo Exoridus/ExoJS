@@ -33,48 +33,48 @@ and local tile ID, so different tilesets may have different tile dimensions.
 
 ## Methods
 
-- `addLayer(layer: TileLayer): void`
-- `addObjectLayer(layer: ObjectLayer): void`
-- `addTileset(tileset: TileSet): void`
-- `clearTileAt(layerId: number, tx: number, ty: number): void`
-- `createView(options?: TileMapViewOptions): TileMapView`
-- `destroy(): void`
-- `getImageLayer(name: string): ImageLayer | undefined`
-- `getImageLayerById(id: number): ImageLayer | undefined`
-- `getObjectLayer(name: string): ObjectLayer<S> | undefined`
-- `getObjectLayerById(id: number): ObjectLayer<S> | undefined`
-- `getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null`
-- `getTileLayer(name: string): TileLayer | undefined`
-- `getTileLayerById(id: number): TileLayer | undefined`
-- `getTileset(name: string): TileSet | undefined`
-- `pixelToTile(px: number, py: number): object`
-- `removeImageLayer(id: number): boolean`
-- `removeLayer(id: number): boolean`
-- `removeObjectLayer(id: number): boolean`
-- `setTileAt(layerId: number, tx: number, ty: number, tile: ResolvedTile): void`
-- `tileToPixel(tx: number, ty: number): object`
+- `addLayer(layer: TileLayer): void` - Add a layer after construction.
+- `addObjectLayer(layer: ObjectLayer): void` - Add an object layer after construction.
+- `addTileset(tileset: TileSet): void` - Add a tileset. Tilesets must have unique names.
+- `clearTileAt(layerId: number, tx: number, ty: number): void` - Clear a tile on a given layer at tile coordinates. Convenience for map.getTileLayerById(id)?.clearTileAt(tx, ty).
+- `createView(options?: TileMapViewOptions): TileMapView` - Create a new TileMapView that groups this map's layers into independently placeable band / layer scene nodes for interleaving application actors between tile layers. Each call returns a fresh, independent view — the map does **not** cache a single global view, so multiple coexisting views of the same map are allowed. The view references this map but never owns it: destroying the view frees only its generated layer/band nodes — never the map, its layers, tileset textures, or any application actors.
+- `destroy(): void` - Destroy the map and all owned layers and chunk storage. Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any SceneNodes (those do not exist yet in this slice).
+- `getImageLayer(name: string): ImageLayer | undefined` - Get an image layer by name (first match in insertion order), or undefined.
+- `getImageLayerById(id: number): ImageLayer | undefined` - Get an image layer by ID.
+- `getObjectLayer(name: string): ObjectLayer<S> | undefined` - Get an object layer by name (first match in insertion order), or undefined. Supply an ObjectSchema type argument S to obtain a typed view of the layer — getObjectLayer\<LevelObjects>('Entities') returns an ObjectLayer\<LevelObjects> whose ObjectLayer.byType / ObjectLayer.where accessors narrow properties. The schema is a static developer promise only; no runtime validation is performed and the call remains fully back-compatible when omitted.
+- `getObjectLayerById(id: number): ObjectLayer<S> | undefined` - Get an object layer by ID. Supply an ObjectSchema type argument S to obtain a typed view of the layer, as with getObjectLayer.
+- `getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null` - Get a resolved tile from a given layer at tile coordinates. Convenience for map.getTileLayerById(id)?.getTileAt(tx, ty). Returns null for an empty cell, out-of-bounds, or missing layer.
+- `getTileLayer(name: string): TileLayer | undefined` - Get a tile layer by name. Returns the first match in insertion order.
+- `getTileLayerById(id: number): TileLayer | undefined` - Get a tile layer by ID.
+- `getTileset(name: string): TileSet | undefined` - Get a tileset by name, or undefined.
+- `pixelToTile(px: number, py: number): object` - Convert a pixel position in map-local space to the tile coordinate that contains it. Uses floor. May return coordinates outside map bounds.
+- `removeImageLayer(id: number): boolean` - Remove an image layer by ID.
+- `removeLayer(id: number): boolean` - Remove a layer by ID. The layer is destroyed.
+- `removeObjectLayer(id: number): boolean` - Remove an object layer by ID.
+- `setTileAt(layerId: number, tx: number, ty: number, tile: ResolvedTile): void` - Set a tile on a given layer at tile coordinates. Convenience for map.getTileLayerById(id)?.setTileAt(tx, ty, tile).
+- `tileToPixel(tx: number, ty: number): object` - Convert a tile coordinate to the pixel position of its top-left corner in map-local space (ignoring layer offsets).
 
 ## Properties
 
-- `backgroundColor: number | null`
-- `chunkHeight: number`
-- `chunkWidth: number`
-- `class: string`
-- `height: number`
-- `name: string`
-- `properties: TileProperties`
-- `renderOrder: string`
-- `tileHeight: number`
-- `tileWidth: number`
-- `width: number`
-- `destroyed: boolean`
-- `imageLayers: readonly ImageLayer[]`
-- `layers: readonly TileLayer[]`
-- `objectLayers: readonly ObjectLayer<ObjectSchema>[]`
-- `pixelHeight: number`
-- `pixelWidth: number`
-- `revision: number`
-- `tilesets: readonly TileSet[]`
+- `backgroundColor: number | null` - Map background colour as 0xRRGGBB, or null. Informational.
+- `chunkHeight: number` - Default chunk height for layers.
+- `chunkWidth: number` - Default chunk width for layers.
+- `class: string` - Map class/type string (Tiled class; may be empty).
+- `height: number` - Map height in tiles.
+- `name: string` - Map name (debug).
+- `properties: TileProperties` - Map-level properties (immutable).
+- `renderOrder: string` - Tile draw order (Tiled renderorder). Informational.
+- `tileHeight: number` - Tile height in pixels.
+- `tileWidth: number` - Tile width in pixels.
+- `width: number` - Map width in tiles.
+- `destroyed: boolean` - Whether the map has been destroyed.
+- `imageLayers: readonly ImageLayer[]` - Immutable snapshot of image layers (insertion order).
+- `layers: readonly TileLayer[]` - Immutable snapshot of layers (ordered).
+- `objectLayers: readonly ObjectLayer<ObjectSchema>[]` - Immutable snapshot of object layers (insertion order).
+- `pixelHeight: number` - Pixel height.
+- `pixelWidth: number` - Pixel width.
+- `revision: number` - Monotonic map revision counter. Increments on structural changes only (add/remove layer, add tileset). Cell mutations are tracked per-chunk and per-layer; the renderer reads chunk-level revisions directly.
+- `tilesets: readonly TileSet[]` - Immutable list of tilesets available to this map.
 
 ## Source
 

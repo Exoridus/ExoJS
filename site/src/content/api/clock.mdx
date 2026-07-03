@@ -31,10 +31,10 @@ Use Timer for a clock with a fixed limit and `expired` flag.
 ## Methods
 
 - `destroy(): void`
-- `reset(): this`
-- `restart(): this`
-- `start(): this`
-- `stop(): this`
+- `reset(): this` - Halt and zero the accumulated time. The clock is left stopped.
+- `restart(): this` - Reset accumulated time to zero, then immediately start. Common per-frame pattern.
+- `start(): this` - Begin accumulating time. No-op when already running.
+- `stop(): this` - Halt accumulation. Elapsed time stays at the moment of stopping.
 
 ## Properties
 
@@ -42,7 +42,7 @@ Use Timer for a clock with a fixed limit and `expired` flag.
 - `elapsedMilliseconds: number`
 - `elapsedMinutes: number`
 - `elapsedSeconds: number`
-- `elapsedTime: Time`
+- `elapsedTime: Time` - Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance — read the scalar fields if you need an unchanging snapshot.
 - `running: boolean`
 
 ## Source

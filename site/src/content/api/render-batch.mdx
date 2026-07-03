@@ -39,15 +39,15 @@ and the whole batch is a single instanced draw call.
 
 ## Methods
 
-- `add(transform: Matrix, tint: Color | null): this`
-- `clear(): this`
-- `destroy(): void`
+- `add(transform: Matrix, tint: Color | null): this` - Append one instance. transform is the instance's world matrix (taken as the raw a,b,c,d,tx,ty), tint modulates the geometry's vertex colors (defaults to white). Both are copied into the batch.
+- `clear(): this` - Reset to zero instances for reuse, retaining the pooled storage.
+- `destroy(): void` - Release the pooled per-instance storage. After this the batch must not be reused. The geometry and material are owned by the caller and are not destroyed.
 
 ## Properties
 
-- `geometry: Geometry`
-- `material: MeshMaterial | null`
-- `count: number`
+- `geometry: Geometry` - The geometry every instance in this batch draws.
+- `material: MeshMaterial | null` - The shared mesh material, or null for the default mesh material.
+- `count: number` - Number of instances currently in the batch.
 
 ## Source
 

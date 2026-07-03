@@ -45,29 +45,29 @@ detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting
 ## Methods
 
 - `destroy(): void`
-- `subdivisionPhase(division: number): number`
+- `subdivisionPhase(division: number): number` - Phase 0..1 within a subdivision of the current beat. division is the number of subdivisions per beat: 2 for 8th notes, 4 for 16th notes, 3 for triplets. Use to drive sub-beat-resolution effects: const sixteenth = clock.subdivisionPhase(4); if (sixteenth \< 0.05) flash();
 
 ## Properties
 
-- `barPulseHalfLife: number`
-- `justBeatWindow: number`
-- `pulseHalfLife: number`
+- `barPulseHalfLife: number` - Half-life for the barPulse envelope. Mutable; default 0.3.
+- `justBeatWindow: number` - Time window for justBeat. Mutable; default 0.03 (30ms).
+- `pulseHalfLife: number` - Half-life in seconds for the pulse envelope. Mutable; default 0.15. Smaller values give a snappier pulse, larger values a longer afterglow.
 - `bandEnergy: BandEnergy`
 - `barLength: number`
 - `barPosition: number`
-- `barPulse: number`
+- `barPulse: number` - Like pulse but resets on downbeats and decays per barPulseHalfLife. Useful for emphasizing the first beat of each bar (e.g. brighter flash on "1" vs "2,3,4").
 - `beatPhase: number`
 - `confidence: number`
 - `gridStability: number`
-- `justBeat: boolean`
+- `justBeat: boolean` - True for the visual frame(s) within justBeatWindow seconds of a beat onset. Use for one-shot triggers (strobe flash, particle burst, sample retrigger). Default window 30ms covers a typical 60fps frame.
 - `lookahead: readonly UpcomingBeat[]`
 - `nextBeatTime: number`
 - `nextDownbeatTime: number`
 - `onsetStrength: number`
-- `pulse: number`
+- `pulse: number` - 0..1 envelope, peaks at 1.0 the moment a beat fires and halves every pulseHalfLife seconds. Drives "pulse on the beat" visuals with a single multiplication: sprite.scale = 1 + clock.pulse * 0.3.
 - `ready: Promise<void>`
 - `rms: number`
-- `secondsSinceLastBeat: number`
+- `secondsSinceLastBeat: number` - Seconds elapsed since the most recent beat, derived from beatPhase and tempo. Returns 0 when the detector hasn't locked yet.
 - `source: BeatDetectorSource`
 - `tempo: number`
 - `tempoCandidates: readonly TempoCandidate[]`

@@ -33,20 +33,20 @@ and replays them with randomized parameters. Use cases:
 
 ## Methods
 
-- `_onWorkletReady(): void`
-- `destroy(): void`
+- `_onWorkletReady(): void` - Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input).
+- `destroy(): void` - Disconnects all nodes, cancels any pending worklet load, and releases resources.
 
 ## Properties
 
-- `density: number`
-- `grainSize: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `pitchMax: number`
-- `pitchMin: number`
-- `ready: Promise<void>`
-- `spread: number`
-- `wet: number`
+- `density: number` - Number of grains spawned per second. Range 1..500, default 50.
+- `grainSize: number` - Duration of each grain in seconds. Range 0.005..0.5, default 0.05.
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `pitchMax: number` - Maximum per-grain pitch ratio. Range 0.25..4, default 1.0.
+- `pitchMin: number` - Minimum per-grain pitch ratio. Range 0.25..4, default 1.0.
+- `ready: Promise<void>` - Resolves once the worklet is loaded and inserted into the wet path.
+- `spread: number` - Random time-offset spread for grain start positions, 0..1. Higher values scatter grains further into the past. Default 0.5.
+- `wet: number` - Wet (processed) mix level, 0..1. The dry level is automatically 1 - wet. Ramped smoothly.
 
 ## Source
 

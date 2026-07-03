@@ -35,8 +35,8 @@ AudioParam; the latest schedule wins (cancel via
 ## Methods
 
 - `destroy(): void`
-- `release(gainParam: AudioParam, atTime: number): void`
-- `trigger(gainParam: AudioParam, atTime: number): void`
+- `release(gainParam: AudioParam, atTime: number): void` - Schedule release → 0 starting at atTime. Call this when the note should stop (e.g., key release, sound dismissed).
+- `trigger(gainParam: AudioParam, atTime: number): void` - Schedule attack → decay → sustain on the target gain parameter starting at atTime (audioContext.currentTime).
 
 ## Properties
 
@@ -44,7 +44,7 @@ AudioParam; the latest schedule wins (cancel via
 - `decayMs: number`
 - `releaseMs: number`
 - `sustainLevel: number`
-- `totalDurationMs: number`
+- `totalDurationMs: number` - Total time from trigger to fully-released (attack + decay + release).
 
 ## Source
 
