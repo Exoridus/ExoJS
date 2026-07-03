@@ -765,6 +765,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       return this._frameBindGroup;
     }
     this._frameBindGroup = device.createBindGroup({
+      label: 'WebGpuTextRenderer/frame-bind-group',
       layout: this._frameBindGroupLayout!,
       entries: [
         { binding: 0, resource: { buffer: this._projBuffer! } },
@@ -787,6 +788,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (cached?.view === view) return cached.group;
 
     const group = device.createBindGroup({
+      label: 'WebGpuTextRenderer/texture-bind-group',
       layout: this._textureBindGroupLayout!,
       entries: [
         { binding: 0, resource: view },

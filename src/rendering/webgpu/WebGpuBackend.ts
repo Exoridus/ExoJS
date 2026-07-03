@@ -1220,6 +1220,7 @@ export class WebGpuBackend implements RenderBackend {
 
     if (!state) {
       const gpuTexture = this.device.createTexture({
+        label: 'backend:texture',
         size: {
           width: Math.max(texture.width, 1),
           height: Math.max(texture.height, 1),
@@ -1271,6 +1272,7 @@ export class WebGpuBackend implements RenderBackend {
         state.texture.destroy();
 
         const resizedTexture = this.device.createTexture({
+          label: 'backend:texture:resize',
           size: {
             width: texture.width,
             height: texture.height,
@@ -1455,6 +1457,7 @@ export class WebGpuBackend implements RenderBackend {
     const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(texture.scaleMode);
 
     return this.device.createSampler({
+      label: 'backend:sampler',
       addressModeU: this._getAddressMode(texture.wrapMode),
       addressModeV: this._getAddressMode(texture.wrapMode),
       magFilter: filter,
@@ -1554,10 +1557,11 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     const resources = this._getMipmapResources();
-    const encoder = this.device.createCommandEncoder();
+    const encoder = this.device.createCommandEncoder({ label: 'backend:command-encoder' });
 
     for (let mipLevel = 1; mipLevel < mipLevelCount; mipLevel++) {
       const bindGroup = this.device.createBindGroup({
+        label: 'backend:bind-group',
         layout: resources.bindGroupLayout,
         entries: [
           {
@@ -1574,6 +1578,7 @@ export class WebGpuBackend implements RenderBackend {
         ],
       });
       const pass = encoder.beginRenderPass({
+        label: 'backend:render-pass',
         colorAttachments: [
           {
             view: texture.createView({
@@ -1609,9 +1614,11 @@ export class WebGpuBackend implements RenderBackend {
       this._mipmapSampler === null
     ) {
       this._mipmapShaderModule = this.device.createShaderModule({
+        label: 'backend:mipmap-shader',
         code: mipmapWgsl,
       });
       this._mipmapBindGroupLayout = this.device.createBindGroupLayout({
+        label: 'backend:mipmap-bind-group-layout',
         entries: [
           {
             binding: 0,
@@ -1630,9 +1637,11 @@ export class WebGpuBackend implements RenderBackend {
         ],
       });
       this._mipmapPipelineLayout = this.device.createPipelineLayout({
+        label: 'backend:mipmap-pipeline-layout',
         bindGroupLayouts: [this._mipmapBindGroupLayout],
       });
       this._mipmapPipeline = this.device.createRenderPipeline({
+        label: 'backend:mipmap-pipeline',
         layout: this._mipmapPipelineLayout,
         vertex: {
           module: this._mipmapShaderModule,
@@ -1653,6 +1662,7 @@ export class WebGpuBackend implements RenderBackend {
         },
       });
       this._mipmapSampler = this.device.createSampler({
+        label: 'backend:mipmap-sampler',
         minFilter: 'linear',
         magFilter: 'linear',
         mipmapFilter: 'nearest',

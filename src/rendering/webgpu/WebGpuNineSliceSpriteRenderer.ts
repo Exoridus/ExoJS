@@ -117,9 +117,10 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     }
 
     this._device = backend.device;
-    this._shaderModule = this._device.createShaderModule({ code: nineSliceShaderSource });
+    this._shaderModule = this._device.createShaderModule({ label: 'nine-slice:shader', code: nineSliceShaderSource });
 
     this._uniformBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'nine-slice:bind-group-layout:uniform',
       entries: [
         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
         { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -127,6 +128,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     });
 
     this._textureBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'nine-slice:bind-group-layout:texture',
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
@@ -134,15 +136,18 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     });
 
     this._pipelineLayout = this._device.createPipelineLayout({
+      label: 'nine-slice:pipeline-layout',
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
 
     this._uniformBuffer = this._device.createBuffer({
+      label: 'nine-slice:uniform-buffer',
       size: projectionByteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this._indexBuffer = this._device.createBuffer({
+      label: 'nine-slice:index-buffer',
       size: quadIndices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
@@ -325,6 +330,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
     this._transformStorageBuffer = storageBuffer;
     this._transformBindGroup = device.createBindGroup({
+      label: 'nine-slice:transform-bind-group',
       layout: this._uniformBindGroupLayout!,
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
@@ -339,6 +345,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     const binding = backend.getTextureBinding(texture);
 
     return device.createBindGroup({
+      label: 'nine-slice:texture-bind-group',
       layout: this._textureBindGroupLayout!,
       entries: [
         { binding: 0, resource: binding.view },
@@ -360,6 +367,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     }
 
     const descriptor: GPURenderPipelineDescriptor = {
+      label: 'nine-slice:render-pipeline',
       layout: this._pipelineLayout,
       vertex: {
         module: this._shaderModule,
@@ -424,6 +432,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     }
 
     const instanceBuffer = this._device.createBuffer({
+      label: 'nine-slice:instance-buffer',
       size: instanceData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });

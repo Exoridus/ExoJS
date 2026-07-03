@@ -74,16 +74,19 @@ export class WebGpuStencilClipper {
     }
 
     this._device = device;
-    this._shaderModule = device.createShaderModule({ code: stencilWriteShaderSource });
+    this._shaderModule = device.createShaderModule({ label: 'stencil:shader', code: stencilWriteShaderSource });
     this._bindGroupLayout = device.createBindGroupLayout({
+      label: 'stencil:bind-group-layout',
       entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
     });
-    this._pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [this._bindGroupLayout] });
+    this._pipelineLayout = device.createPipelineLayout({ label: 'stencil:pipeline-layout', bindGroupLayouts: [this._bindGroupLayout] });
     this._uniformBuffer = device.createBuffer({
+      label: 'stencil:uniform-buffer',
       size: matrixByteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     this._bindGroup = device.createBindGroup({
+      label: 'stencil:bind-group',
       layout: this._bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this._uniformBuffer } }],
     });
@@ -137,6 +140,7 @@ export class WebGpuStencilClipper {
     existing?.texture.destroy();
 
     const texture = device.createTexture({
+      label: 'stencil:texture',
       size: { width: safeWidth, height: safeHeight },
       format: stencilAttachmentFormat,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -203,6 +207,7 @@ export class WebGpuStencilClipper {
     const stencilFace: GPUStencilFaceState = { compare: 'equal', failOp: 'keep', depthFailOp: 'keep', passOp: stencilOp };
 
     const pipeline = device.createRenderPipeline({
+      label: increment ? 'stencil:increment-pipeline' : 'stencil:decrement-pipeline',
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,
@@ -311,6 +316,7 @@ export class WebGpuStencilClipper {
       this._vertexBuffer?.destroy();
       this._vertexBufferCapacity = Math.max(requiredBytes, this._vertexBufferCapacity * 2 || 512);
       this._vertexBuffer = this._device!.createBuffer({
+        label: 'stencil:vertex-buffer',
         size: this._vertexBufferCapacity,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });

@@ -96,9 +96,10 @@ export class WebGpuMaskCompositor {
     }
 
     this._device = device;
-    this._shaderModule = device.createShaderModule({ code: compositorShaderSource });
+    this._shaderModule = device.createShaderModule({ label: 'mask:shader', code: compositorShaderSource });
 
     this._projectionBindGroupLayout = device.createBindGroupLayout({
+      label: 'mask:bind-group-layout:projection',
       entries: [
         {
           binding: 0,
@@ -109,6 +110,7 @@ export class WebGpuMaskCompositor {
     });
 
     this._textureBindGroupLayout = device.createBindGroupLayout({
+      label: 'mask:bind-group-layout:texture',
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
@@ -118,15 +120,18 @@ export class WebGpuMaskCompositor {
     });
 
     this._pipelineLayout = device.createPipelineLayout({
+      label: 'mask:pipeline-layout',
       bindGroupLayouts: [this._projectionBindGroupLayout, this._textureBindGroupLayout],
     });
 
     this._vertexBuffer = device.createBuffer({
+      label: 'mask:vertex-buffer',
       size: 4 * vertexStrideBytes,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     this._indexBuffer = device.createBuffer({
+      label: 'mask:index-buffer',
       size: 6 * Uint16Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
@@ -134,11 +139,13 @@ export class WebGpuMaskCompositor {
     device.queue.writeBuffer(this._indexBuffer, 0, this._indexData);
 
     this._projectionBuffer = device.createBuffer({
+      label: 'mask:uniform-buffer:projection',
       size: projectionUniformBytes,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this._projectionBindGroup = device.createBindGroup({
+      label: 'mask:bind-group:projection',
       layout: this._projectionBindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this._projectionBuffer } }],
     });
@@ -195,6 +202,7 @@ export class WebGpuMaskCompositor {
     const maskBinding = manager.getTextureBinding(mask);
 
     const textureBindGroup = device.createBindGroup({
+      label: 'mask:bind-group:texture',
       layout: this._textureBindGroupLayout!,
       entries: [
         { binding: 0, resource: contentBinding.view },
@@ -239,6 +247,7 @@ export class WebGpuMaskCompositor {
 
     const device = this._device!;
     const descriptor: GPURenderPipelineDescriptor = {
+      label: 'mask:render-pipeline',
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,

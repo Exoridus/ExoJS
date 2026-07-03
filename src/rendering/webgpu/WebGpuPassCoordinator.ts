@@ -138,6 +138,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     const backend = this._backend;
     const stencilEnabled = this.stencilActive;
     const descriptor: GPURenderPassDescriptor = {
+      label: 'pass-coordinator:render-pass',
       colorAttachments: [backend.createColorAttachment()],
     };
 
@@ -145,7 +146,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       descriptor.depthStencilAttachment = this._createStencilAttachment(backend.renderTarget);
     }
 
-    const encoder = backend.device.createCommandEncoder();
+    const encoder = backend.device.createCommandEncoder({ label: 'pass-coordinator:command-encoder' });
     const pass = encoder.beginRenderPass(descriptor);
 
     backend.stats.renderPasses++;

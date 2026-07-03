@@ -237,13 +237,15 @@ export class WebGpuBackdropBlendCompositor {
     }
 
     this._device = device;
-    this._shaderModule = device.createShaderModule({ code: compositorShaderSource });
+    this._shaderModule = device.createShaderModule({ label: 'backdrop-blend:shader', code: compositorShaderSource });
 
     this._projectionBindGroupLayout = device.createBindGroupLayout({
+      label: 'backdrop-blend:bind-group-layout:projection',
       entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
     });
 
     this._textureBindGroupLayout = device.createBindGroupLayout({
+      label: 'backdrop-blend:bind-group-layout:texture',
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
@@ -253,19 +255,23 @@ export class WebGpuBackdropBlendCompositor {
     });
 
     this._blendBindGroupLayout = device.createBindGroupLayout({
+      label: 'backdrop-blend:bind-group-layout:blend',
       entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
     });
 
     this._pipelineLayout = device.createPipelineLayout({
+      label: 'backdrop-blend:pipeline-layout',
       bindGroupLayouts: [this._projectionBindGroupLayout, this._textureBindGroupLayout, this._blendBindGroupLayout],
     });
 
     this._vertexBuffer = device.createBuffer({
+      label: 'backdrop-blend:vertex-buffer',
       size: 4 * vertexStrideBytes,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     this._indexBuffer = device.createBuffer({
+      label: 'backdrop-blend:index-buffer',
       size: 6 * Uint16Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
@@ -273,16 +279,19 @@ export class WebGpuBackdropBlendCompositor {
     device.queue.writeBuffer(this._indexBuffer, 0, this._indexData);
 
     this._projectionBuffer = device.createBuffer({
+      label: 'backdrop-blend:uniform-buffer:projection',
       size: projectionUniformBytes,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this._blendBuffer = device.createBuffer({
+      label: 'backdrop-blend:uniform-buffer:blend',
       size: blendUniformBytes,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this._backdropSampler = device.createSampler({
+      label: 'backdrop-blend:sampler',
       magFilter: 'nearest',
       minFilter: 'nearest',
       addressModeU: 'clamp-to-edge',
@@ -290,11 +299,13 @@ export class WebGpuBackdropBlendCompositor {
     });
 
     this._projectionBindGroup = device.createBindGroup({
+      label: 'backdrop-blend:bind-group:projection',
       layout: this._projectionBindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this._projectionBuffer } }],
     });
 
     this._blendBindGroup = device.createBindGroup({
+      label: 'backdrop-blend:bind-group:blend',
       layout: this._blendBindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this._blendBuffer } }],
     });
@@ -373,7 +384,7 @@ export class WebGpuBackdropBlendCompositor {
 
     // Capture the target region into the backdrop on a standalone encoder; a copy
     // cannot run inside a render pass (the coordinator's passes self-submit).
-    const encoder = device.createCommandEncoder();
+    const encoder = device.createCommandEncoder({ label: 'backdrop-blend:command-encoder' });
 
     encoder.copyTextureToTexture(
       { texture: manager._renderTargetTexture(target), origin: { x: ox, y: oy, z: 0 } },
@@ -390,6 +401,7 @@ export class WebGpuBackdropBlendCompositor {
     if (this._backdropTexture === null || this._backdropWidth !== width || this._backdropHeight !== height || this._backdropFormat !== format) {
       this._backdropTexture?.destroy();
       this._backdropTexture = device.createTexture({
+        label: 'backdrop-blend:texture',
         size: { width, height },
         format,
         usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
@@ -429,6 +441,7 @@ export class WebGpuBackdropBlendCompositor {
     const sourceBinding = manager.getTextureBinding(source);
 
     const textureBindGroup = device.createBindGroup({
+      label: 'backdrop-blend:bind-group:texture',
       layout: this._textureBindGroupLayout!,
       entries: [
         { binding: 0, resource: sourceBinding.view },
@@ -474,6 +487,7 @@ export class WebGpuBackdropBlendCompositor {
 
     const device = this._device!;
     const descriptor: GPURenderPipelineDescriptor = {
+      label: 'backdrop-blend:render-pipeline',
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,

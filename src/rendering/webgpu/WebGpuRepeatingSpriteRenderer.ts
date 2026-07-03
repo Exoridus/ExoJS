@@ -191,9 +191,13 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const device = backend.device;
     this._device = device;
 
-    this._shaderModule = device.createShaderModule({ code: commonWgsl + shaderPathEntries + geoPathEntries });
+    this._shaderModule = device.createShaderModule({
+      label: 'repeating-sprite:shader',
+      code: commonWgsl + shaderPathEntries + geoPathEntries,
+    });
 
     this._uniformBindGroupLayout = device.createBindGroupLayout({
+      label: 'repeating-sprite:bind-group-layout:uniform',
       entries: [
         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
         { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -201,6 +205,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     });
 
     this._textureBindGroupLayout = device.createBindGroupLayout({
+      label: 'repeating-sprite:bind-group-layout:texture',
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
@@ -208,11 +213,13 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     });
 
     this._uniformBuffer = device.createBuffer({
+      label: 'repeating-sprite:uniform-buffer',
       size: projectionByteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this._indexBuffer = device.createBuffer({
+      label: 'repeating-sprite:index-buffer',
       size: quadIndices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
@@ -452,6 +459,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const sampler = this._getOrCreateSampler(device, modeX, modeY);
     const texView = backend.getTextureBinding(this._currentTexture).view;
     const textureBindGroup = device.createBindGroup({
+      label: 'repeating-sprite:texture-bind-group:shader',
       layout: this._textureBindGroupLayout!,
       entries: [
         { binding: 0, resource: texView },
@@ -483,6 +491,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // Geometry path: use backend's default (clamp) sampler.
     const binding = backend.getTextureBinding(this._currentTexture);
     const textureBindGroup = device.createBindGroup({
+      label: 'repeating-sprite:texture-bind-group:geo',
       layout: this._textureBindGroupLayout!,
       entries: [
         { binding: 0, resource: binding.view },
@@ -517,6 +526,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     if (existing) return existing;
 
     const sampler = device.createSampler({
+      label: 'repeating-sprite:sampler',
       addressModeU: repeatModeToAddressMode(modeX),
       addressModeV: repeatModeToAddressMode(modeY),
       magFilter: 'linear',
@@ -532,6 +542,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     }
     this._transformStorageBuf = storageBuf;
     this._transformBindGroup = device.createBindGroup({
+      label: 'repeating-sprite:transform-bind-group',
       layout: this._uniformBindGroupLayout!,
       entries: [
         { binding: 0, resource: { buffer: uniformBuf } },
@@ -551,6 +562,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     }
 
     const layout = this._device.createPipelineLayout({
+      label: 'repeating-sprite:pipeline-layout',
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
 
@@ -584,6 +596,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
         ];
 
     const desc: GPURenderPipelineDescriptor = {
+      label: 'repeating-sprite:render-pipeline',
       layout,
       vertex: {
         module: this._shaderModule,
@@ -618,6 +631,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._shaderInstU32 = new Uint32Array(this._shaderInstData);
     this._shaderInstBuf?.destroy();
     this._shaderInstBuf = this._device.createBuffer({
+      label: 'repeating-sprite:shader-instance-buffer',
       size: this._shaderInstData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
@@ -634,6 +648,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._geoInstU32 = new Uint32Array(this._geoInstData);
     this._geoInstBuf?.destroy();
     this._geoInstBuf = this._device.createBuffer({
+      label: 'repeating-sprite:geo-instance-buffer',
       size: this._geoInstData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
