@@ -404,9 +404,68 @@ jobs:
       - name: Browser tests (audio, headless Chromium)
         run: pnpm test:browser:audio
 
+  # Builds the core package and all extension packages exactly once, then
+  # publishes the resulting dist trees as a shared artifact. `package-verify`
+  # and `site-build` both consume this artifact instead of each rebuilding the
+  # library themselves — this collapses what used to be a serial
+  # `lint -> package-verify (builds) -> site-build (rebuilds)` critical path
+  # into a single build that the two downstream jobs can consume in parallel.
+  build:
+    name: Build
+    needs: [changes]
+    # Gated on engine OR site (not just engine): a site-only change still
+    # needs the library built, because `site:build`'s vendor:sync reads from
+    # the built dist/ tree. `needs: [changes]` only (not typecheck/lint) so
+    # this build runs in parallel with those gates rather than after them — a
+    # wasted build on a rare lint/typecheck failure is an acceptable trade for
+    # the parallelism, since required-ci fails on typecheck/lint regardless.
+    if: ${{ needs.changes.outputs.engine == 'true' || needs.changes.outputs.site == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build core
+        run: pnpm build
+
+      # The extension packages each have their own rollup build; pnpm runs them
+      # in workspace-dependency order (tilemap before tiled).
+      - name: Build extension packages
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            dist/
+            packages/*/dist/
+          retention-days: 1
+          if-no-files-found: error
+
   package-verify:
     name: Package Build + Verify
-    needs: [changes, typecheck, lint]
+    needs: [changes, build]
     if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -433,18 +492,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # Core build first (verify:exports inspects the core dist tree).
-      - name: Build core
-        run: pnpm build
+      # Restores dist/ + packages/*/dist/ (built once by the `build` job)
+      # instead of rebuilding here.
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
 
       - name: Check bundle sizes
         run: pnpm size
-
-      # The extension packages each have their own rollup build; pnpm runs them
-      # in workspace-dependency order (tilemap before tiled). A broken package
-      # build is now caught here instead of only at release time.
-      - name: Build extension packages
-        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
 
       - name: Verify core package exports
         run: pnpm verify:exports
@@ -535,12 +591,12 @@ jobs:
 
   site-build:
     name: Site build
-    # Runs whenever site/examples/packages changed. Still ordered after
-    # package-verify so a site-only change skips it (package-verify is then
-    # "skipped", not "failure"), while a combined change won't waste a site
-    # build if the engine package failed to build.
-    needs: [changes, package-verify]
-    if: ${{ !cancelled() && needs.changes.outputs.site == 'true' && needs.package-verify.result != 'failure' }}
+    # Runs whenever site/examples/packages changed. Depends only on `build`
+    # (not `package-verify`) so it runs in parallel with package-verify
+    # instead of serially after it; it still won't waste a site build if the
+    # shared build failed.
+    needs: [changes, build]
+    if: ${{ !cancelled() && needs.changes.outputs.site == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -563,13 +619,17 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      # Root install + build are required because the site consumes the local
+      # Root install is required because the site consumes the local
       # workspace package and vendor:sync reads from the built dist/ tree.
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Build library
-        run: pnpm build
+      # Restores dist/ + packages/*/dist/ (built once by the `build` job)
+      # instead of rebuilding here.
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
 
       # Site build = vendor:sync + examples:sync + astro build.
       - name: Build site
@@ -580,7 +640,7 @@ jobs:
   required-ci:
     name: Required CI
     if: ${{ always() }}
-    needs: [changes, typecheck, lint, unit-tests, browser-tests, browser-tests-webgpu-chromium, browser-tests-audio, package-verify, site-build]
+    needs: [changes, typecheck, lint, unit-tests, browser-tests, browser-tests-webgpu-chromium, browser-tests-audio, build, package-verify, site-build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -596,6 +656,7 @@ jobs:
           BROWSER_TESTS_RESULT: ${{ needs['browser-tests'].result }}
           BROWSER_WEBGPU_RESULT: ${{ needs['browser-tests-webgpu-chromium'].result }}
           BROWSER_AUDIO_RESULT: ${{ needs['browser-tests-audio'].result }}
+          BUILD_RESULT: ${{ needs.build.result }}
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
         run: |
@@ -607,6 +668,7 @@ jobs:
           echo "browser-tests: $BROWSER_TESTS_RESULT"
           echo "browser-tests-webgpu-chromium: $BROWSER_WEBGPU_RESULT"
           echo "browser-tests-audio: $BROWSER_AUDIO_RESULT"
+          echo "build: $BUILD_RESULT"
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
 
@@ -631,6 +693,7 @@ jobs:
             "browser-tests=$BROWSER_TESTS_RESULT" \
             "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
             "browser-tests-audio=$BROWSER_AUDIO_RESULT" \
+            "build=$BUILD_RESULT" \
             "package-verify=$PACKAGE_VERIFY_RESULT" \
             "site-build=$SITE_BUILD_RESULT"; do
             name="${entry%%=*}"
@@ -656,6 +719,7 @@ jobs:
               "unit-tests=$UNIT_TESTS_RESULT" \
               "browser-tests=$BROWSER_TESTS_RESULT" \
               "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
+              "build=$BUILD_RESULT" \
               "package-verify=$PACKAGE_VERIFY_RESULT"; do
               name="${entry%%=*}"
               result="${entry#*=}"
