@@ -25,6 +25,7 @@ import { Loader, type LoaderOptions } from '#resources/Loader';
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
+import { assert, invariant } from './dev';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
@@ -288,6 +289,7 @@ export class Application {
   private _frameAlpha = 0;
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
+  private _destroyed = false;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
   private _designWidth: number = defaultCanvasSettings.width;
   private _designHeight: number = defaultCanvasSettings.height;
@@ -314,6 +316,9 @@ export class Application {
 
     const logicalWidth = canvasOptions.width ?? defaultCanvasSettings.width;
     const logicalHeight = canvasOptions.height ?? defaultCanvasSettings.height;
+
+    assert(logicalWidth > 0 && logicalHeight > 0, `Application canvas dimensions must be positive (got ${logicalWidth}×${logicalHeight}).`);
+
     this._pixelRatio = canvasOptions.pixelRatio ?? resolveAutoPixelRatio();
     this._designWidth = logicalWidth;
     this._designHeight = logicalHeight;
@@ -606,6 +611,8 @@ export class Application {
    * status returns to `Stopped` and the error propagates.
    */
   public async start(scene: Scene): Promise<this> {
+    invariant(!this._destroyed, 'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.');
+
     if (this._status === ApplicationStatus.Stopped) {
       this._status = ApplicationStatus.Loading;
 
@@ -743,6 +750,8 @@ export class Application {
    * notified.
    */
   public resize(width: number, height: number): this {
+    assert(width > 0 && height > 0, `Application.resize() dimensions must be positive (got ${width}×${height}).`);
+
     this._designWidth = width;
     this._designHeight = height;
     this._applyCanvasSize(width, height);
@@ -900,6 +909,8 @@ export class Application {
    * unusable after this call.
    */
   public destroy(): void {
+    this._destroyed = true;
+
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
     }

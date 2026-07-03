@@ -1,3 +1,4 @@
+import { invariant } from '#core/dev';
 import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -85,6 +86,17 @@ export class Container extends RenderNode {
 
     if (child === this) {
       return this;
+    }
+
+    // Reject reparenting an ancestor of this container as a child: it would
+    // close a cycle in the scene graph, and every recursive walk over it
+    // (bounds cascade, updateParentTransform, subtree destroy) would loop
+    // forever instead of terminating at the root.
+    for (let ancestor = this.parent; ancestor !== null; ancestor = ancestor.parent) {
+      invariant(
+        ancestor !== child,
+        'Container.addChild(): cannot add an ancestor of this container as a child — that would create a cycle in the scene graph.',
+      );
     }
 
     if (child.parent) {
