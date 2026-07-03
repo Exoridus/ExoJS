@@ -4,12 +4,17 @@ description: 'Stack shader and color effects to control final image style.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Filters
 
 A [`Filter`](/ExoJS/en/api/filter/) is a post-render effect applied to a single drawable's output. Every `RenderNode` — sprites, containers, graphics, meshes, text — carries a `filters` array. Each filter in that array transforms the node's rendered pixels before the result composites into the parent.
 
 Filters are the right tool for per-node visual effects: soften an avatar with blur, tint a background container, apply a CRT shader to a whole scene layer. They are not screen-wide post-processing — that belongs to [Post-processing](/ExoJS/en/guide/effects/post-processing/), which combines `RenderTexture` targets with filter chains. The relationship: a filter is the building block; post-processing is the composition technique.
+
+<Callout type="info" title="Every filter is another render pass">
+Each filter you attach re-renders that node's output once more per frame — a three-filter chain is three extra passes. Treat filters like draw calls and keep the stack short.
+</Callout>
 
 ## Attaching filters
 
@@ -26,7 +31,15 @@ sprite.filters = [blur, tint];
 
 Set `filters` to an empty array to clear the chain. Assigning a new array replaces the old one — you don't need to manually remove individual filters. An empty array means no extra render passes.
 
-Each filter in the chain costs one additional render pass per frame for that drawable. Three filters on a container means three extra passes. The [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/) chapter covers pass-count inspection and reduction strategies.
+The [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/) chapter covers pass-count inspection and reduction strategies.
+
+<Callout type="debug" title="Find which node is spending passes">
+The `RenderPassInspector` counts the live passes each frame. When your frame budget slips, it points straight at the node whose filter stack is responsible.
+</Callout>
+
+<Callout type="hint" title="Bake static filtered subtrees with `cacheAsBitmap`">
+Set `cacheAsBitmap = true` on a filtered subtree that doesn't change each frame: the chain runs once, then draws as a single cached texture instead of re-running every filter every frame.
+</Callout>
 
 ## BlurFilter
 

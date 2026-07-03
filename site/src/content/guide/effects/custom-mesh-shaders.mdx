@@ -4,12 +4,17 @@ description: 'Attach a custom GLSL or WGSL shader to a Mesh through a MeshMateri
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Custom mesh shaders
 
 A [`Mesh`](/ExoJS/en/api/mesh/) normally renders with the engine's built-in batch shader — textured or untextured, vertex-colored or uniform-tinted, lit with the mesh's own tint and blend mode. That covers most use cases. When you need something the default shader does not do — procedural displacement, custom lighting, multi-texture mixing, a Shadertoy-style effect mapped onto geometry — you attach a custom [`MeshMaterial`](/ExoJS/en/api/mesh-material/).
 
 A custom look is two objects. A [`ShaderSource`](/ExoJS/en/api/shader-source/) holds the immutable shader text — one program for WebGL2 (GLSL), one for WebGPU (WGSL). A `MeshMaterial` wraps that `ShaderSource` together with a map of uniform values, extra textures, and a blend mode. One `ShaderSource` can back many materials, and one `MeshMaterial` can be shared across multiple meshes; the renderer caches the compiled program/pipeline per shader source and reuses it for every material that references it.
+
+<Callout type="warning" title="Ship both GLSL and WGSL, or the skipped backend throws">
+Shaders compile lazily on first draw, and if the active backend has no source for its language the renderer throws — it does not fall back to the default shader. A mesh that works in WebGL2 hard-fails on WebGPU unless you supply both `glsl` and `wgsl`.
+</Callout>
 
 ## When to use a mesh material vs. a filter
 
@@ -177,6 +182,10 @@ Accepted uniform value types:
 - `Texture` / `RenderTexture` — bound to texture slots starting at slot 1 (slot 0 is the mesh's own texture)
 
 In WGSL, user uniforms belong to `@group(2)`. Scalar/vector/matrix uniforms declared as a struct are packed into `@group(2) @binding(0)`. Each `Texture`/`RenderTexture` uniform claims its own binding, declaration order, with its sampler at the next binding index.
+
+<Callout type="debug" title="Catch GLSL/WGSL uniform drift in CI">
+When a uniform is spelled differently across your two shader sources it silently misbinds on one backend. `material.shader.detectUniformDrift()` reports names present in only one language — assert both lists empty in CI to catch the typo before it ships.
+</Callout>
 
 ## Attaching to a Mesh
 

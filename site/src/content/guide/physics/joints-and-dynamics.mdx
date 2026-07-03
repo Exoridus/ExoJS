@@ -3,6 +3,8 @@ title: 'Joints, sleeping & CCD'
 description: 'Connect physics bodies with distance, revolute, weld, prismatic, wheel and mouse joints, let resting bodies sleep to save CPU, and stop fast projectiles tunnelling with continuous collision.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # Joints, sleeping & CCD
 
 This chapter builds on [Physics basics](/ExoJS/en/guide/physics/physics-basics/) — a
@@ -184,6 +186,10 @@ together — which brings us to sleeping.
 
 ## Sleeping
 
+<Callout type="info" title="Sleep is decided per island, not per body">
+Bodies that are jointed or touching belong to one island, so `allowSleep = false` on a single body keeps every body connected to it awake too, and a group only settles once all of its members qualify. Reason about sleep at the island level, not the individual body.
+</Callout>
+
 A body that has stayed below the velocity thresholds long enough is put to **sleep**: it
 stops integrating and is skipped by the solver until something wakes it. In a scene with
 many resting bodies — a settled stack, scattered debris — this is a large CPU saving, and
@@ -246,12 +252,9 @@ along the surface (keeping its tangential velocity), while a bouncy one (`restit
 `1`) rebounds elastically. The swept test runs against static, kinematic **and** dynamic
 bodies; sensors never block.
 
-> **Documented limit.** CCD sweeps the body's **centre point**, which is ideal for small,
-> point-like projectiles (bullets, pellets). A **large** fast body can still clip a corner,
-> because only its centre is swept — for those, raise
-> [`subStepCount`](/ExoJS/en/api/physics-world/) (or the step rate) so each step covers less
-> distance, or thicken the geometry it must not pass. A full swept-shape time-of-impact for
-> large bodies is a future enhancement.
+<Callout type="warning" title="CCD sweeps only the body's centre point">
+This is ideal for small, point-like projectiles (bullets, pellets), but a **large** fast body can still clip a corner because only its centre is swept. For those, raise [`subStepCount`](/ExoJS/en/api/physics-world/) (or the step rate) so each step covers less distance, or thicken the geometry it must not pass. A full swept-shape time-of-impact for large bodies is a future enhancement.
+</Callout>
 
 ## Where to go next
 

@@ -3,12 +3,18 @@ title: 'Physics basics'
 description: 'Add 2D rigid-body physics with the @codexo/exojs-physics library: build a PhysicsWorld, drop bodies onto colliders, and step it from Scene.fixedUpdate.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # Physics basics
 
 `@codexo/exojs-physics` is the official 2D rigid-body engine for ExoJS — a native,
 warm-started **TGS-Soft** solver (the Box2D-v3 "soft step") with shapes, colliders,
 bodies, contacts, sensors, queries, joints, sleeping and continuous collision. It
 turns a static scene graph into one where boxes fall, stack, bounce and collide.
+
+<Callout type="info" title="Physics is a library, not a registered extension">
+There is no `/register` import and no `extensions: [...]` entry — you construct a `PhysicsWorld` yourself and step it. Gravity is in px/s² with **+Y pointing down**, so a positive `y` value is "down".
+</Callout>
 
 > **Note:** physics ships as a separate package. Install `@codexo/exojs-physics`
 > alongside `@codexo/exojs`:
@@ -142,9 +148,9 @@ import { Application } from '@codexo/exojs';
 const app = new Application({ fixedTimeStep: 1 / 60 });
 ```
 
-> Stepping inside `update` works too — pass `delta.seconds` the same way — but
-> `fixedUpdate` is preferred because its constant delta keeps the simulation
-> deterministic regardless of display refresh rate.
+<Callout type="hint" title="Step in `fixedUpdate`, not `update`">
+Stepping inside `update` works — pass `delta.seconds` the same way — but `fixedUpdate` runs with a constant delta, which keeps the simulation deterministic regardless of display refresh rate.
+</Callout>
 
 ## Binding bodies to sprites
 

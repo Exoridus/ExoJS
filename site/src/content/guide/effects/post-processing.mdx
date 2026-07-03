@@ -4,6 +4,7 @@ description: 'Build multi-pass render flows for bloom, trails, and mirror effect
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Post-processing
 
@@ -49,6 +50,10 @@ class PostProcessScene extends Scene {
 ```
 
 A [`RenderNodePass`](/ExoJS/en/api/render-node-pass/) renders a scene subtree; with a `target` it redirects that output into the texture (and `clear` clears the target first). A [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) runs an arbitrary callback that receives the [`RenderingContext`](/ExoJS/en/api/rendering-context/) — here it issues the filter step via `context.backend`. `filter.apply(backend, inputRt, outputRt)` reads from one `RenderTexture` and writes filtered output to another. The pipeline runs its passes in order when you call `pipeline.execute(context)`.
+
+<Callout type="info" title="Count the passes before you add one">
+That pipeline is already three passes — scene render, blur, composite. Post-processing scales that way: a chain with three render targets and two filters is at least four passes, against one pass per filtered node for a per-node filter.
+</Callout>
 
 ## Bloom (lite)
 
@@ -204,6 +209,10 @@ class TrailScene extends Scene {
 ```
 
 Each frame, the previous frame's image fades slightly (the decay sprite's alpha=0.93), and the hero's current position is drawn on top. After several frames, older positions fade away while newer ones remain visible — a self-erasing trail. The same technique works for light streaks, ghost images, and feedback-based shader effects.
+
+<Callout type="pitfall" title="The missing `clear` on a feedback pass is deliberate">
+Add a `clear` to the feedback pass — or reach for a helper that clears by default — and every frame wipes the accumulated image, so the trail vanishes. If your trail renders as a single sprite with no history, an unwanted clear is the first thing to check.
+</Callout>
 
 ## Render-into-target passes vs. filter.apply
 
