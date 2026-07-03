@@ -36,7 +36,6 @@
         "@astrojs/mdx": "^6.0.3",
         "@astrojs/react": "^5.0.7",
         "@codexo/exojs": "workspace:*",
-        "@fontsource/inter": "^5.2.8",
         "@fontsource/jetbrains-mono": "^5.2.8",
         "@fontsource/space-grotesk": "^5.2.10",
         "@monaco-editor/react": "^4.7.0",
