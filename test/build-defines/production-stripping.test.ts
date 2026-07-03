@@ -6,18 +6,27 @@
  *   - buildInfo.development === false
  *   - version matching the packed package manifest
  *   - assert/assertDefined (the __DEV__-gated helpers) stripped to no-ops
+ *   - invariant (the always-on contract check) surviving into production
  *
- * The dist-dependent checks above are skipped when `dist/` has not been built
- * in production mode (run `pnpm build` first). The `invariant` always-on
- * contract is verified separately at the source/config level (always runs,
- * no build required) — see the note on that describe block below for why.
+ * The dist-dependent checks are skipped when `dist/` has not been built in
+ * production mode (run `pnpm build` first). Below that, a self-contained
+ * pipeline test runs the SAME mechanism the real prod build uses
+ * (`@rollup/plugin-replace` + `terser` with the repo's `pure_funcs`) against a
+ * small representative snippet, so the assert/assertDefined-stripped vs.
+ * invariant-survives guarantee is verified against real minified output on
+ * every run — independent of whether `dist/` has been built, and independent
+ * of which internal call sites currently exist for either helper.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import replace from '@rollup/plugin-replace';
+import terser from '@rollup/plugin-terser';
+import { type Plugin, rollup } from 'rollup';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-import { resolveVersion } from '../../packages/exojs-config/build-defines/index.js';
+import { createBuildDefines, resolveVersion } from '../../packages/exojs-config/build-defines/index.js';
 
 const rootDir = resolve(import.meta.dirname!, '..', '..');
 
@@ -41,14 +50,134 @@ const read = (rel: string): string => {
 };
 
 // ---------------------------------------------------------------------------
-// invariant always-on contract — static, source-level checks.
+// Real-pipeline test: assert/assertDefined stripped, invariant survives.
 //
-// `invariant` currently has zero internal call sites (it's an escape hatch
-// for future public-contract checks), so it is tree-shaken out of `dist/`
-// entirely regardless of how it's gated — there is nothing to observe in the
-// build artefacts either way. These checks verify the always-on contract
-// directly from source instead, independent of `dist/` and of whether/when
-// the engine grows an internal caller.
+// Builds a tiny representative module through the EXACT same transform chain
+// `rollup.config.ts` uses for production (`@rollup/plugin-replace` setting
+// `__DEV__ → false`, then `terser` with the repo's `pure_funcs` list), using
+// the real `src/core/dev.ts` implementations and real runtime messages lifted
+// from their actual call sites (Container.addChild's cycle guard). This is
+// self-contained (no dependency on a pre-built `dist/`) and fast (bundles one
+// tiny file), so it runs unconditionally on every `pnpm test`.
+// ---------------------------------------------------------------------------
+
+/** Extracts the `pure_funcs` list from `rollup.config.ts` — never hard-coded here. */
+function extractPureFuncs(): string[] {
+  const config = readFileSync(resolve(rootDir, 'rollup.config.ts'), 'utf8');
+  const match = /pure_funcs:\s*\[([^\]]*)\]/.exec(config);
+  expect(match).not.toBeNull();
+  return [...match![1]!.matchAll(/'([^']+)'/g)].map(m => m[1]!);
+}
+
+/** Extracts the real invariant message from Container.addChild's scene-graph cycle guard. */
+function extractContainerCycleMessage(): string {
+  const source = readFileSync(resolve(rootDir, 'src/rendering/Container.ts'), 'utf8');
+  const match = /invariant\(\s*ancestor !== child,\s*'([^']+)'/.exec(source);
+  expect(match).not.toBeNull();
+  return match![1]!;
+}
+
+/**
+ * Strips TypeScript syntax down to plain JS via the TypeScript compiler's own
+ * `transpileModule` API — the same tool `dist/exo.esm.js` (the bundle these
+ * dist-content checks care about) is actually compiled with, via
+ * `@rollup/plugin-typescript` in `rollup.config.ts`. `ts.transpileModule` is
+ * pure JS with no native binary, so it runs safely inside vitest's jsdom
+ * environment (unlike esbuild, which relies on a `TextEncoder` sanity check
+ * that jsdom's patched globals fail — irrelevant to production reality, since
+ * the real `dist/exo.esm.js` build never runs esbuild at all).
+ */
+function transpileTs(source: string): string {
+  return ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+}
+
+/**
+ * Runs a small snippet — importing the real `assert`/`assertDefined`/
+ * `invariant` from `src/core/dev.ts` and calling them the way real call sites
+ * do — through the production define-replace + terser pipeline, and returns
+ * the minified output.
+ */
+async function buildProductionSnippet(cycleMessage: string, pureFuncs: string[]): Promise<string> {
+  const virtualEntryId = '\0virtual-entry.js';
+  const virtualDevId = '\0virtual-dev.js';
+
+  const devSource = readFileSync(resolve(rootDir, 'src/core/dev.ts'), 'utf8');
+  const devJs = transpileTs(devSource);
+
+  const entryTs = `
+    import { assert, assertDefined, invariant } from ${JSON.stringify(virtualDevId)};
+
+    export function addChild(ancestor: unknown, child: unknown): void {
+      invariant(ancestor !== child, ${JSON.stringify(cycleMessage)});
+    }
+
+    export function validate(a: number, b: number | null): number {
+      assert(a > 0, 'dev-only-assert-marker-should-not-survive-minification');
+      return a + assertDefined(b, 'dev-only-assertDefined-marker-should-not-survive-minification');
+    }
+  `;
+  const entryJs = transpileTs(entryTs);
+
+  const virtualPlugin: Plugin = {
+    name: 'virtual-entry',
+    resolveId(id) {
+      return id === virtualEntryId || id === virtualDevId ? id : null;
+    },
+    load(id) {
+      if (id === virtualEntryId) return entryJs;
+      if (id === virtualDevId) return devJs;
+      return null;
+    },
+  };
+
+  // Same define values production uses (mode: 'production' → __DEV__: 'false').
+  const defines = createBuildDefines({ mode: 'production', version: resolveVersion(rootDir), revision: 'test' });
+
+  const bundle = await rollup({
+    input: virtualEntryId,
+    plugins: [virtualPlugin, replace({ preventAssignment: true, values: defines }), terser({ compress: { pure_funcs: pureFuncs } })],
+    onwarn: () => {
+      // Silence rollup's "unused external" / treeshaking noise for this tiny synthetic entry.
+    },
+  });
+
+  try {
+    const { output } = await bundle.generate({ format: 'es' });
+    return output[0]!.code;
+  } finally {
+    await bundle.close();
+  }
+}
+
+describe('assert/assertDefined stripped vs. invariant survives (real terser production pipeline)', () => {
+  it('strips assert/assertDefined callsites but keeps invariant and its real runtime message', async () => {
+    const pureFuncs = extractPureFuncs();
+    const cycleMessage = extractContainerCycleMessage();
+    const output = await buildProductionSnippet(cycleMessage, pureFuncs);
+
+    // assert/assertDefined: __DEV__ → false empties their bodies, and they're
+    // listed in pure_funcs, so terser drops the callsites entirely — the
+    // interpolated marker messages must not survive into the bundle.
+    expect(output).not.toContain('dev-only-assert-marker-should-not-survive-minification');
+    expect(output).not.toContain('dev-only-assertDefined-marker-should-not-survive-minification');
+    expect(output).not.toContain('assertion failed');
+    expect(output).not.toContain('expected a defined value');
+
+    // invariant: NOT in pure_funcs and never __DEV__-gated, so it must survive
+    // as a live call with its real Container.addChild cycle-guard message intact.
+    expect(output).toContain(cycleMessage);
+    expect(output).toMatch(/throw new Error/);
+  }, 20_000);
+});
+
+// ---------------------------------------------------------------------------
+// invariant always-on contract — static, config-level checks.
+//
+// Complementary to the pipeline test above: verifies the *configuration*
+// guarantees directly (no __DEV__ guard in the source, absent from every
+// pure_funcs list) independent of any specific call site or bundling step.
 // ---------------------------------------------------------------------------
 
 describe('invariant always-on contract (source-level, no build required)', () => {
@@ -156,6 +285,14 @@ describe.runIf(hasProductionBuild)('production build stripping', () => {
     const bundle = read('dist/exo.esm.js');
     expect(bundle).not.toContain('BmFont: texture count');
     expect(bundle).not.toContain('glyph page index');
+  });
+
+  it('keeps invariant alive in the single-file bundle (never stripped)', () => {
+    // Unlike assert/assertDefined, invariant is not in pure_funcs and is never
+    // __DEV__-gated — it must survive minification with its real message intact.
+    const bundle = read('dist/exo.esm.js');
+    const cycleMessage = extractContainerCycleMessage();
+    expect(bundle).toContain(cycleMessage);
   });
 
   it('the debug bundle has no unresolved constants', () => {
