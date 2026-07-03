@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Run the same gate on merge-queue entries so the queue can require it. On a
+  # merge_group event select-lanes.mjs (non-PR path) runs every lane, so the
+  # queued merge is checked against the full matrix.
+  merge_group:
   workflow_dispatch:
 
 permissions:
