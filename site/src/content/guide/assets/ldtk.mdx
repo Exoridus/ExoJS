@@ -3,6 +3,8 @@ title: 'LDtk levels'
 description: 'Load LDtk (.ldtk) level files and convert each level to a renderable TileMap through the official @codexo/exojs-ldtk extension.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # LDtk levels
 
 [LDtk](https://ldtk.io/) is a modern, open-source level editor. The official `@codexo/exojs-ldtk`
@@ -91,17 +93,13 @@ const fromConfig = await loader.load({
 });
 ```
 
-> **Note:** the LDtk loader resolves tileset image paths against the map's own URL with the `URL`
-> constructor, which requires that URL to be **absolute (origin-qualified)**. Load `.ldtk` files by
-> an absolute `https://…` URL, or set `loader.basePath` to an absolute origin so relative map paths
-> resolve to absolute URLs. A bare relative or root-relative path will fail tileset resolution.
+<Callout type="pitfall" title="Load .ldtk by an absolute URL, or tileset images fail to resolve">
+The loader resolves each tileset image against the map's own URL with `new URL(...)`, which needs an origin-qualified address. Pass an absolute `https://…` path, or set `loader.basePath` to an absolute origin — a bare relative or root-relative path fails tileset resolution.
+</Callout>
 
-> **Note:** LDtk's "Save levels to separate files" project option stores each level's layers and
-> fields in a sibling `<identifier>.ldtkl` file instead of inline in the `.ldtk` document —
-> `loadLdtkMap()` detects and fetches these external level files automatically as part of the load,
-> so there is nothing extra to do on your end. If you call [`ldtkToTileMap`](#converting-manually-advanced)
-> directly on a raw document whose external levels have not been resolved, those levels convert with
-> empty layers instead (`layerInstances` is `null` until resolved).
+<Callout type="info" title="External .ldtkl level files load automatically">
+With "Save levels to separate files" enabled, each level lives in a sibling `<identifier>.ldtkl` file — the loader detects and fetches these during load, so there's nothing extra to do. This only matters if you call [`ldtkToTileMap`](#converting-manually-advanced) on a raw document yourself, where unresolved external levels convert with empty layers.
+</Callout>
 
 ## The LdtkMap result
 

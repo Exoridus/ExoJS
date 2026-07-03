@@ -4,6 +4,7 @@ description: 'Fit the canvas to the window, render crisply on high-DPI displays,
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 
@@ -16,6 +17,10 @@ Your first scene rendered into a fixed 800×600 canvas. Real apps run in a windo
 By default the `Application` uses the `canvas.width` and `canvas.height` you pass — a fixed-size surface. That is the right choice for a pixel-art game with a locked resolution, or any layout designed around exact dimensions.
 
 For everything else you want the canvas to track its container. The size you draw against then changes at runtime, so any layout that assumes a fixed center or fixed edges needs to recompute when the size changes.
+
+<Callout type="pitfall" title="A resize won't move what you already placed">
+Changing the canvas size never repositions existing content — a sprite you placed at the old centre keeps its coordinates and drifts off-centre. Recompute every size-dependent position whenever the size changes.
+</Callout>
 
 ## Crisp rendering with `pixelRatio`
 
@@ -73,6 +78,10 @@ const app = new Application({
     canvas: { width: 320, height: 240, sizingMode: 'letterbox' },
 });
 ```
+
+<Callout type="hint" title="sizingMode is live, not just a constructor option">
+Assign `app.sizingMode` at any time to switch strategies on the fly — swap to `'fill'` when the player enters fullscreen and back to `'fixed'` on exit, with no other code changes.
+</Callout>
 
 - `'fixed'` (default) — exact pixel size, no responsive behavior.
 - `'fill'` — observes the parent element and calls `app.resize(...)` to match its size exactly.

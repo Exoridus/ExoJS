@@ -3,6 +3,8 @@ title: 'Aseprite sprite sheets'
 description: 'Load Aseprite JSON sprite sheet exports as AsepriteSheet assets through the official @codexo/exojs-aseprite extension.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # Aseprite sprite sheets
 
 [Aseprite](https://www.aseprite.org/) is a popular pixel-art and animation editor. The official
@@ -25,6 +27,10 @@ Like all extensions, the core ships nothing Aseprite-specific — an `Applicatio
 the `asepriteSheet` type once you activate the extension. There are two ways to do that.
 
 ## Activation
+
+<Callout type="info" title="Register the extension before you construct the Application">
+With `/register`, the import must run before `new Application()` — it seeds the global registry the constructor reads. The explicit `extensions: [asepriteExtension]` form binds to that one app and works no matter the import order.
+</Callout>
 
 ### Explicit (recommended)
 
@@ -72,6 +78,10 @@ This is the same add-only model the [Tiled maps](/ExoJS/en/guide/assets/tiled-ma
 [Particles](/ExoJS/en/guide/effects/particles/) extensions use.
 
 ## Loading a sheet
+
+<Callout type="pitfall" title="A bare path won't reach the Aseprite handler">
+The Aseprite binding claims no file extension, so `loader.load('hero.json')` falls through to the generic path loader instead of parsing the sheet. Load it by the `AsepriteSheet` token or the `'asepriteSheet'` type.
+</Callout>
 
 Once the extension is active, load the JSON export by the `AsepriteSheet` type token or by the
 `'asepriteSheet'` config-map type name:

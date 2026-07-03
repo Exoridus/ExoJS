@@ -4,6 +4,7 @@ description: 'The asset pipeline — how the loader registers, fetches, and reso
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Loading and resources
 
@@ -29,6 +30,10 @@ The loader offers several overloads. Pick the smallest one that covers your case
 | `new Asset(…)` / `new Assets(…)` | Reusable, file-level asset references |
 
 When in doubt, start simple. Promote to `Asset`/`Assets` when the same definition is referenced from more than one place.
+
+<Callout type="hint" title="Load different types together, not one await at a time">
+Awaiting loads sequentially makes each one wait for the previous download to finish. Group independent `loader.load(...)` calls in a single `Promise.all` so unrelated resource types fetch concurrently.
+</Callout>
 
 ## Loading a single asset
 
@@ -65,6 +70,10 @@ init(loader) {
 Keys are aliases — names you choose. The `loader.basePath` option in `ApplicationOptions` prepends a base prefix to all relative URLs, so these keys resolve to e.g. `assets/image/hero.png`.
 
 Calling `loader.get(Texture, 'hero')` returns the loaded `Texture` instance synchronously — the promise from `loader.load(...)` already settled before `init` ran.
+
+<Callout type="pitfall" title="get() on an unregistered alias throws">
+`loader.get(...)` never returns `undefined` as a fallback — ask for an alias you didn't register in `load` and it throws. Usually that means a typo in the name or a forgotten `loader.load(...)`, so you want it to fail loudly.
+</Callout>
 
 Values can also be config objects when you need type-specific fields alongside the source:
 
