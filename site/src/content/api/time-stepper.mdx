@@ -1,6 +1,6 @@
 ---
 title: "TimeStepper"
-description: "Fixed-timestep accumulator (package-owned; no engine clock dependency). Each frame, advance adds the variable frame delta to an internal accumulator and reports how many whole fixed sub-steps to run (`floor(accumulator / fixedDelta)`), clamped to maxSubSteps. When the clamp trips, the backlog beyond the clamp is discarded so a slow frame cannot cascade into an unbounded catch-up (the \"spiral of death\"). alpha is the leftover fraction of a step `[0, 1)`, for interpolating bound transforms between sub-steps. The stepper holds no mutable module-level state — two stepper instances are fully independent (world isolation, gate I-1)."
+description: "Fixed-timestep accumulator (package-owned; no engine clock dependency). Each frame, advance adds the variable frame delta to an internal accumulator and reports how many whole fixed sub-steps to run (`floor(accumulator / fixedDelta)`), clamped to maxSubSteps. When the clamp trips, the backlog beyond the clamp is discarded so a slow frame cannot cascade into an unbounded catch-up (the \"spiral of death\"). alpha is the leftover fraction of a step `[0, 1)`, for interpolating bound transforms between sub-steps. The stepper holds no mutable module-level state — two stepper instances are fully independent (world isolation)."
 symbol: "TimeStepper"
 kind: "class"
 subsystem: "physics"
@@ -26,7 +26,7 @@ alpha is the leftover fraction of a step `[0, 1)`, for interpolating
 bound transforms between sub-steps.
 
 The stepper holds no mutable module-level state — two stepper instances are
-fully independent (world isolation, gate I-1).
+fully independent (world isolation).
 
 ## Constructors
 
