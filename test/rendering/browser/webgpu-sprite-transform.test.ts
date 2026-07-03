@@ -15,7 +15,9 @@
  *  - Pixels: the presented WebGPU canvas is read back via drawImage onto a 2D
  *    canvas (a standard cross-context read) and sampled.
  *
- * All tests skip gracefully when WebGPU is unavailable.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `renderScene` only skips when the software adapter
+ * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -30,7 +32,7 @@ import { BlendModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -63,17 +65,7 @@ const createSolidTexture = (color: string, size: number): Texture => {
   return new Texture(source);
 };
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -119,18 +111,14 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12)
 };
 
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
-// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as an
-// unavailable-adapter skip rather than a failure, matching setupBackend().
+// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
+// device-lost skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -159,7 +147,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 
 describe('WebGPU sprite transform storage', () => {
   test('a translated sprite lands at its buffer-resolved position', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000', 16);
     const root = new Container();
     const sprite = new Sprite(texture);
@@ -188,7 +176,7 @@ describe('WebGPU sprite transform storage', () => {
   });
 
   test('a scaled sprite stretches to its scaled bounds via the buffer transform', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000', 8);
     const root = new Container();
     const sprite = new Sprite(texture);
@@ -218,7 +206,7 @@ describe('WebGPU sprite transform storage', () => {
   });
 
   test('multiple sprites with distinct transforms batch into one draw, each at its own position', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000', 8);
     const root = new Container();
     const a = new Sprite(texture);
@@ -263,7 +251,7 @@ describe('WebGPU sprite transform storage', () => {
     // command buffer still referenced the old one, causing WebGPU validation
     // errors. With reserve() called in _beginDrawPlan the buffer is sized for
     // the full plan once, so no reallocation happens between flushes.
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const textureA = createSolidTexture('#ff0000', 12);
     const textureB = createSolidTexture('#0000ff', 12);
     const root = new Container();
@@ -319,7 +307,7 @@ describe('WebGPU sprite transform storage', () => {
     // because it tracks blend-mode / texture / material — not render-group
     // boundaries. Each sprite fetches its own transform row independently via
     // its stable nodeIndex, so non-contiguous slots are handled correctly.
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000', 8);
     const root = new Container();
     const a = new Sprite(texture);

@@ -10,6 +10,10 @@
  * Pixels are read back via drawImage onto a 2D canvas, and every render runs
  * inside pushErrorScope('validation') to catch any GPU validation error.
  *
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `withValidation` only skips when the software
+ * adapter drops the device mid-test.
+ *
  * Run via:  pnpm test:browser:webgpu
  */
 
@@ -24,7 +28,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -65,17 +69,7 @@ const createQuadGeometry = (x: number, y: number, width: number, height: number)
     stride: 8,
   });
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -118,16 +112,12 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12)
 };
 
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
-// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as an
-// unavailable-adapter skip rather than a failure, matching setupBackend().
+// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
+// device-lost skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const withValidation = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, run: () => void): Promise<void> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -151,7 +141,7 @@ const withValidation = async (ctx: { skip: (reason: string) => void }, backend: 
 
 describe('WebGPU stencil composition', () => {
   test('clip into a RenderTexture, then sample it back as a Sprite', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const context = new RenderingContext(backend);
     const texture = createSolidTexture('#ff0000');
     const clipped = new Container();
@@ -181,7 +171,7 @@ describe('WebGPU stencil composition', () => {
   });
 
   test('a cacheAsBitmap node renders correctly inside a stencil clip', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const clipped = new Container();
@@ -222,7 +212,7 @@ describe('WebGPU stencil composition', () => {
   });
 
   test('a pooled RenderTexture reused after a clip carries no stale stencil', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const context = new RenderingContext(backend);
     const texture = createSolidTexture('#00ff00');
 

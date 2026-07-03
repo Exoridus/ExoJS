@@ -8,12 +8,10 @@
  * seam-free geometry, stays deterministic, and downgrades gracefully under
  * rotation.
  *
- * All WebGPU tests skip gracefully when WebGPU is unavailable (no adapter or
- * software adapter lost mid-test). The double-skip contract ensures no false
- * failures on headless CI or machines without --enable-unsafe-webgpu:
- *  1. `setupBackend` skips when navigator.gpu / requestAdapter() is absent.
- *  2. `renderScene` calls `getBackendDeviceOrSkip` (device-gone guard) and
- *     catches DOMException device-loss mid-test.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe), so these tests do not skip on a missing adapter —
+ * `renderScene` only skips when the software adapter drops the device
+ * mid-test (a DOMException device-loss caught during rendering).
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -28,7 +26,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -57,21 +55,7 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
   return new Texture(src);
 };
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend | null> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-    return null;
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-    return null;
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -117,11 +101,7 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 // Render a scene inside a validation error scope.
 // Returns false when the device dropped mid-test (caller should bail).
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -154,11 +134,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 
 describe('WebGPU pixel snapping — Sprite position mode', () => {
   test('renders correctly at a fractional position and leaves logical state untouched', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000', 16, 16);
     const root = new Container();
@@ -197,11 +173,7 @@ describe('WebGPU pixel snapping — Sprite position mode', () => {
   });
 
   test('unsnapped baseline renders the same interior color', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000', 16, 16);
     const root = new Container();
@@ -227,11 +199,7 @@ describe('WebGPU pixel snapping — Sprite position mode', () => {
   });
 
   test('snapped rendering is deterministic across frames', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#00ff00', 16, 16);
     const root = new Container();
@@ -282,11 +250,7 @@ describe('WebGPU pixel snapping — Sprite position mode', () => {
 
 describe('WebGPU pixel snapping — NineSlice geometry mode', () => {
   test('produces no interior seams at a fractional placement', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000', 32, 32);
     const root = new Container();
@@ -318,11 +282,7 @@ describe('WebGPU pixel snapping — NineSlice geometry mode', () => {
   });
 
   test('geometry mode under rotation downgrades without error and keeps logical transform', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#0000ff', 32, 32);
     const root = new Container();

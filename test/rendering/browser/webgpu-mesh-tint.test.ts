@@ -14,7 +14,9 @@
  * These tests therefore cover DataTexture, canvas-sourced Texture, a rasterized
  * Gradient, and a fractional tint, all through the default mesh path.
  *
- * All tests skip gracefully when WebGPU is unavailable.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `renderMesh` only skips when the software adapter
+ * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -29,7 +31,7 @@ import { ScaleModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -44,17 +46,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -112,11 +104,7 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 // Render a single mesh through the real flush path inside a validation error
 // scope. Returns false when the device dropped mid-test (caller should bail).
 const renderMesh = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, mesh: Mesh): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -146,7 +134,7 @@ const renderMesh = async (ctx: { skip: (reason: string) => void }, backend: WebG
 
 describe('WebGPU mesh tint and texture sampling', () => {
   test('samples intermediate DataTexture grayscale levels without saturating', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const levels = [32, 96, 160, 224];
     const width = levels.length;
     const data = new Uint8Array(width * 4);
@@ -178,7 +166,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
   });
 
   test('samples a 2x2 rgba8 DataTexture into the correct quadrants', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     // Row-major, top-left origin: row 0 = red, green; row 1 = blue, white.
     const texture = new DataTexture({
       width: 2,
@@ -208,7 +196,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
   });
 
   test('samples an intermediate canvas-sourced Texture without saturating', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const source = document.createElement('canvas');
 
     source.width = 2;
@@ -240,7 +228,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
   });
 
   test('renders a rasterized linear gradient DataTexture across the quad', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const gradient = new LinearGradient(
       [
         { offset: 0, color: Color.red },
@@ -272,7 +260,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
   });
 
   test('applies a fractional mesh tint to a white texture without saturating', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = new DataTexture({
       width: 1,
       height: 1,
@@ -306,7 +294,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
   // never change after the first draw. The fix re-resolves the binding each draw
   // (reusing the bind group only while the view is unchanged).
   test('re-uploads a DataTexture mutated between draws (no stale mesh bind-group cache)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = new DataTexture({
       width: 1,
       height: 1,

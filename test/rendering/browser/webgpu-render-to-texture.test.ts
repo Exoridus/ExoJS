@@ -1,9 +1,8 @@
 /**
  * WebGPU browser tests for renderTo — opt-in, capability-aware.
  *
- * All tests skip gracefully when WebGPU is unavailable. The WebGPU
- * backend supports all operations used by renderTo (setRenderTarget,
- * clear, draw, flush) so the facade delegates correctly.
+ * The WebGPU backend supports all operations used by renderTo
+ * (setRenderTarget, clear, draw, flush) so the facade delegates correctly.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -15,17 +14,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = 64;
@@ -48,8 +37,8 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
 };
 
 describe('RenderTo WebGPU browser', () => {
-  test('backend initializes and accepts render target changes', async ctx => {
-    const backend = await setupBackend(ctx);
+  test('backend initializes and accepts render target changes', async () => {
+    const backend = await setupBackend();
     const rtSize = 32;
     const target = new RenderTexture(rtSize, rtSize);
 
@@ -66,8 +55,8 @@ describe('RenderTo WebGPU browser', () => {
     backend.destroy();
   });
 
-  test('renderTo pattern correctly sets and restores render target', async ctx => {
-    const backend = await setupBackend(ctx);
+  test('renderTo pattern correctly sets and restores render target', async () => {
+    const backend = await setupBackend();
     const rtSize = 32;
     const target = new RenderTexture(rtSize, rtSize);
 

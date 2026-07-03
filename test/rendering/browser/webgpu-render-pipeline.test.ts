@@ -2,10 +2,11 @@
  * WebGPU RenderPipeline browser test — opt-in, capability-aware.
  *
  * Runs under the `browser-webgpu` project: new headless Chromium exposes a WebGPU
- * adapter via swiftshader (`--enable-unsafe-webgpu --ignore-gpu-blocklist`). Skips
- * gracefully when WebGPU is unavailable (no `navigator.gpu` / no adapter / no
- * device) AND when the software adapter drops the device mid-test (the canonical
- * `isDeviceLoss` + `withValidation` model shared by every webgpu-*.test.ts).
+ * adapter via swiftshader (`--enable-unsafe-webgpu --ignore-gpu-blocklist`). CI
+ * guarantees a real adapter (the required Chromium-WebGPU lane runs against Mesa
+ * lavapipe); `withValidation` only skips when the software adapter drops the
+ * device mid-test (the canonical `isDeviceLoss` model shared by every
+ * webgpu-*.test.ts).
  *
  * It drives a RenderPipeline (including a nested pipeline) whose CallbackRenderPass
  * redirects into an off-screen target via the BackendTargetPass/coordinator path,
@@ -24,7 +25,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 const makeApp = (canvas: HTMLCanvasElement): Application =>
   ({
@@ -35,21 +36,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend | null> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-    return null;
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-    return null;
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
   canvas.width = 64;
   canvas.height = 64;
@@ -64,11 +51,7 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const withValidation = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, run: () => void): Promise<void> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -92,11 +75,7 @@ const withValidation = async (ctx: { skip: (reason: string) => void }, backend: 
 
 describe('RenderPipeline WebGPU browser', () => {
   test('a nested pipeline redirecting into a target raises no validation error', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const context = new RenderingContext(backend);
     const target = new RenderTexture(64, 64);

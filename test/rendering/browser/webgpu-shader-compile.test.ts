@@ -30,8 +30,9 @@
  *    fixed prelude those custom-material shaders are prepended with, IS
  *    covered below.
  *
- * Skips gracefully when WebGPU is unavailable, matching every other browser
- * spec in this directory. Run via: pnpm test:browser:webgpu
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); tests only skip when the software adapter drops the
+ * device mid-test. Run via: pnpm test:browser:webgpu
  */
 
 import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
@@ -71,22 +72,10 @@ const shaders: readonly ShaderEntry[] = [
 // matching every other WebGPU browser spec in this directory.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
-const requestDeviceOrSkip = async (ctx: { skip: (reason: string) => void }): Promise<GPUDevice | null> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-    return null;
-  }
-
+const requestTestDevice = async (): Promise<GPUDevice> => {
   const adapter = await navigator.gpu.requestAdapter();
 
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-    return null;
-  }
-
-  return adapter.requestDevice();
+  return adapter!.requestDevice();
 };
 
 interface CompileResult {
@@ -123,11 +112,7 @@ describe('WebGPU WGSL shader sources', () => {
   // `webgpu-backdrop-blend.test.ts`), and keeping `ctx.skip` unambiguous.
   for (const { name, source } of shaders) {
     test(`compiles ${name}`, async ctx => {
-      const device = await requestDeviceOrSkip(ctx);
-
-      if (!device) {
-        return;
-      }
+      const device = await requestTestDevice();
 
       try {
         const { errorCount, log } = await compileWgsl(device, source);
@@ -135,6 +120,7 @@ describe('WebGPU WGSL shader sources', () => {
         expect(errorCount, `${name} failed to compile:\n${log}`).toBe(0);
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;
@@ -159,21 +145,8 @@ describe('WebGPU WGSL shader sources', () => {
   // reasons — so this is diagnostic logging only, not a hard pass/fail gate.
   // A human should read this log line in the CI run to confirm the adapter
   // description does not say "SwiftShader".
-  test('logs the requested adapter identity (informational, non-blocking)', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-      return;
-    }
-
+  test('logs the requested adapter identity (informational, non-blocking)', async () => {
     const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-      return;
-    }
-
     const info = (adapter as GPUAdapter & { info?: GPUAdapterInfo }).info;
 
     if (info) {

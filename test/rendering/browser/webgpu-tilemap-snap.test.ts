@@ -6,11 +6,10 @@
  * at a fractional world position produces no background/clear-colour gaps
  * across a chunk boundary in the rendered output.
  *
- * All WebGPU tests skip gracefully when WebGPU is unavailable (no adapter or
- * software adapter lost mid-test). The double-skip contract:
- *  1. `setupBackend` skips when navigator.gpu / requestAdapter() is absent.
- *  2. `renderScene` calls `getBackendDeviceOrSkip` (device-gone guard) and
- *     catches DOMException device-loss mid-test.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe), so these tests do not skip on a missing adapter —
+ * `renderScene` only skips when the software adapter drops the device
+ * mid-test (a DOMException device-loss caught during rendering).
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -23,7 +22,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { createSolidTexture, makeTileset, wireTilemapRenderers } from './_tilemapScene';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -35,21 +34,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     options: { canvas: { width: canvasSize, height: canvasSize }, clearColor: Color.black },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend | null> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-    return null;
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-    return null;
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -95,11 +80,7 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 // Render a scene inside a validation error scope.
 // Returns false when the device dropped mid-test (caller should bail).
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -165,11 +146,7 @@ function buildSeamMap(texture: ReturnType<typeof createSolidTexture>): TileMap {
 
 describe('WebGPU tilemap pixel snapping — chunk seam', () => {
   test('geometry mode: no clear-colour gap across chunk boundary at fractional position', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const node = new TileMapNode(buildSeamMap(texture));
@@ -203,11 +180,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
   });
 
   test('pixelSnapMode is render-only: logical position is unchanged after render', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#00ff00');
     const node = new TileMapNode(buildSeamMap(texture));
@@ -231,11 +204,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
   });
 
   test('snapped tilemap rendering is deterministic across frames', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#0000ff');
     const node = new TileMapNode(buildSeamMap(texture));
@@ -278,11 +247,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
   });
 
   test('position mode also produces no seam gap across chunk boundary', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const node = new TileMapNode(buildSeamMap(texture));
@@ -312,11 +277,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
   });
 
   test('unsnapped tilemap at integer position renders without gaps', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const node = new TileMapNode(buildSeamMap(texture));

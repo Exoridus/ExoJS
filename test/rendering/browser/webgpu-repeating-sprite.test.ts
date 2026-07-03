@@ -8,8 +8,9 @@
  *    built on the CPU with clamped UVs.
  *
  * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
- * Tests skip gracefully when WebGPU is unavailable (software adapter or
- * headless CI without --enable-unsafe-webgpu).
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `renderScene` only skips when the software adapter
+ * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -24,7 +25,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
@@ -43,21 +44,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend | null> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-    return null;
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-    return null;
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -113,11 +100,7 @@ const createSolidTexture = (color: string, size = 16): Texture => {
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -150,11 +133,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 
 describe('WebGPU RepeatingSprite — shader path', () => {
   test('solid-color texture fills destination', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
@@ -180,11 +159,7 @@ describe('WebGPU RepeatingSprite — shader path', () => {
   });
 
   test('stretch mode fills destination', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#00ff00', 8);
     const root = new Container();
@@ -215,11 +190,7 @@ describe('WebGPU RepeatingSprite — shader path', () => {
   });
 
   test('mirror-repeat mode does not crash', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#0000ff', 16);
     const root = new Container();
@@ -250,11 +221,7 @@ describe('WebGPU RepeatingSprite — shader path', () => {
   });
 
   test('tint is applied', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ffffff');
     const root = new Container();
@@ -283,11 +250,7 @@ describe('WebGPU RepeatingSprite — shader path', () => {
   });
 
   test('zero-size does not crash', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
@@ -312,11 +275,7 @@ describe('WebGPU RepeatingSprite — shader path', () => {
   });
 
   test('node transform (position) is applied', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000', 16);
     const root = new Container();
@@ -348,11 +307,7 @@ describe('WebGPU RepeatingSprite — shader path', () => {
 
 describe('WebGPU RepeatingSprite — geometry path', () => {
   test('solid-color atlas region fills destination', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#0000ff', 32);
     const region = new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 });
@@ -379,11 +334,7 @@ describe('WebGPU RepeatingSprite — geometry path', () => {
   });
 
   test('tint is applied on geometry path', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ffffff');
     const region = new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 });
@@ -413,11 +364,7 @@ describe('WebGPU RepeatingSprite — geometry path', () => {
   });
 
   test('zero-size geometry path does not crash', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const region = new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 });
@@ -443,11 +390,7 @@ describe('WebGPU RepeatingSprite — geometry path', () => {
   });
 
   test('mirror-repeat geometry path does not crash', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000', 16);
     const region = new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 });

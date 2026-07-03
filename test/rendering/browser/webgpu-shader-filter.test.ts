@@ -14,6 +14,10 @@
  * rejected by WebGPU validation and the filter's `output` never receives
  * any pixels — it stays cleared to transparent black.
  *
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); this only skips when the software adapter drops the
+ * device mid-test.
+ *
  * Run via:  pnpm test:browser:webgpu
  */
 
@@ -25,7 +29,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
 
@@ -38,21 +42,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend | null> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-    return null;
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-    return null;
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -67,8 +57,8 @@ const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<We
 };
 
 // On the software (swiftshader/lavapipe) adapter the WebGPU device can drop
-// mid-test; treat that as an unavailable-adapter skip rather than a failure
-// (mirrors every other webgpu-*.test.ts in this suite).
+// mid-test; treat that as a device-lost skip rather than a failure (mirrors
+// every other webgpu-*.test.ts in this suite).
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Ignores the input texture entirely and paints solid opaque red — so the
@@ -124,17 +114,8 @@ const readTexturePixel = (backend: WebGpuBackend, texture: RenderTexture, x: num
 
 describe('WebGpuShaderFilter (real GPU)', () => {
   test('apply() writes non-black pixels into output — pipeline format matches the offscreen target', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
-
-    const device = getBackendDeviceOrSkip(ctx, backend);
-
-    if (!device) {
-      return;
-    }
+    const backend = await setupBackend();
+    const device = getBackendDevice(backend);
 
     const input = new RenderTexture(canvasSize, canvasSize);
     const output = new RenderTexture(canvasSize, canvasSize);
@@ -153,6 +134,7 @@ describe('WebGpuShaderFilter (real GPU)', () => {
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;

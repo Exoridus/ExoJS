@@ -9,7 +9,9 @@
  * gradient samples through the real Graphics `fillStyle` / `strokeStyle`
  * API path.
  *
- * All tests skip gracefully when WebGPU is unavailable.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `renderAndValidate` only skips when the software
+ * adapter drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -23,7 +25,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -38,17 +40,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -70,11 +62,7 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 // assert it produced valid GPU work. Returns false when the device dropped
 // mid-test (the caller should bail).
 const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -136,7 +124,7 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 4):
 
 describe('WebGPU Graphics gradient fills', () => {
   test('linear gradient fill renders a red-to-blue ramp across the shape', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const graphics = new Graphics();
 
     graphics.fillStyle = new LinearGradient(
@@ -179,7 +167,7 @@ describe('WebGPU Graphics gradient fills', () => {
   });
 
   test('radial gradient fill distinguishes center from edge', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const graphics = new Graphics();
 
     graphics.fillStyle = new RadialGradient(
@@ -213,7 +201,7 @@ describe('WebGPU Graphics gradient fills', () => {
   });
 
   test('linear gradient stroke renders a red-to-blue ramp across the line', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const graphics = new Graphics();
 
     graphics.lineWidth = 8;
@@ -250,7 +238,7 @@ describe('WebGPU Graphics gradient fills', () => {
   });
 
   test('transformed Graphics gradient appears at the translated location', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const graphics = new Graphics();
 
     graphics.fillStyle = new LinearGradient(

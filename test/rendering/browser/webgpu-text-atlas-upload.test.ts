@@ -17,7 +17,9 @@
  * atlas is freshly created and fully uploaded every time — the partial,
  * post-cache upload path never runs.
  *
- * Skips gracefully when WebGPU is unavailable. Run via: pnpm test:browser:webgpu
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `renderText` only skips when the software adapter
+ * drops the device mid-test. Run via: pnpm test:browser:webgpu
  */
 
 import type { Application } from '#core/Application';
@@ -27,7 +29,7 @@ import { Text } from '#rendering/text/Text';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 128;
 
@@ -40,17 +42,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -70,11 +62,7 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 
 /** Render one node through the real flush path inside a validation error scope. */
 const renderText = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, node: Text): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -109,7 +97,7 @@ describe('WebGPU text atlas upload', () => {
   afterEach(() => resetDefaultGlyphAtlasPool());
 
   test('re-resolves the atlas binding when a later Text adds new glyphs (no stale bind-group cache)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     // The Text constructor rasterizes eagerly, so the second Text must be
     // created only after the first upload — only then are its (disjoint) glyphs
     // new to the shared atlas, exercising the post-cache re-sync path.

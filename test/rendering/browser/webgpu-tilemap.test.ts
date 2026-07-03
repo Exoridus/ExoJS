@@ -4,8 +4,9 @@
  * The parity counterpart of `webgl2-tilemap.test.ts`: single/multi-tileset
  * rendering, all 8 tile orientations, culling, layer opacity, and one-extension
  * Tiled wiring on a real WebGPU backend. All WebGPU renderers use inline WGSL —
- * no shader mocks. Tests skip gracefully when WebGPU is unavailable (no adapter)
- * or the software adapter is lost mid-test.
+ * no shader mocks. CI guarantees a real WebGPU adapter (the required
+ * Chromium-WebGPU lane runs against Mesa lavapipe); `renderScene` only skips
+ * when the software adapter drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -18,7 +19,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -30,24 +31,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     options: { canvas: { width: canvasSize, height: canvasSize }, clearColor: Color.black },
   }) as unknown as Application;
 
-const setupBackend = async (
-  ctx: { skip: (reason: string) => void },
-  wire: (backend: WebGpuBackend) => void = wireTilemapRenderers,
-): Promise<WebGpuBackend | null> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-
-    return null;
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-
-    return null;
-  }
-
+const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemapRenderers): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -88,11 +72,7 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 18)
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -123,11 +103,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 
 describe('WebGPU tilemap — single tile', () => {
   test('renders one tile at the node position', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const node = new TileMapNode(singleTileMap(texture));
@@ -152,11 +128,7 @@ describe('WebGPU tilemap — single tile', () => {
 
 describe('WebGPU tilemap — multiple tilesets', () => {
   test('renders adjacent tiles from two different tileset textures', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const red = createSolidTexture('#ff0000');
     const blue = createSolidTexture('#0000ff');
@@ -191,11 +163,7 @@ describe('WebGPU tilemap — multiple tilesets', () => {
 
 describe('WebGPU tilemap — tile orientation', () => {
   test('all 8 flip/diagonal orientations permute the source quadrants correctly', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createQuadrantTexture();
 
@@ -263,11 +231,7 @@ describe('WebGPU tilemap — tile orientation', () => {
 
 describe('WebGPU tilemap — chunk culling', () => {
   test('culls off-screen chunks and draws on-screen ones', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
@@ -308,11 +272,7 @@ describe('WebGPU tilemap — chunk culling', () => {
 
 describe('WebGPU tilemap — layer opacity', () => {
   test('applies layer opacity to the rendered tile', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const texture = createSolidTexture('#ffffff');
     const tileset = makeTileset(texture);
@@ -343,11 +303,7 @@ describe('WebGPU tilemap — layer opacity', () => {
 
 describe('WebGPU tilemap — one-extension Tiled wiring', () => {
   test('extensions: [tiledExtension] makes TileMapNode render via the tilemap dependency', async ctx => {
-    const backend = await setupBackend(ctx, wireViaTiledExtension);
-
-    if (!backend) {
-      return;
-    }
+    const backend = await setupBackend(wireViaTiledExtension);
 
     const texture = createSolidTexture('#00ff00');
     const node = new TileMapNode(singleTileMap(texture));
