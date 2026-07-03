@@ -58,7 +58,7 @@ if (api.length > 0) {
         if (!entry) {
             throw new Error(`[TryIt] Unknown API page "${slug}" — no matching page under src/content/api`);
         }
-        return { label: entry.data.symbol || entry.data.title, href: toApiHref(base, slug) };
+        return { label: entry.data.symbol || entry.data.title, href: toApiHref(base, slug, locale) };
     });
 }
 ---

@@ -1,0 +1,558 @@
+---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import DocsSidebar from '../DocsSidebar.astro';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
+import { GUIDE_PARTS, GUIDE_LEARNING_PATH, GUIDE_TOPICS } from '../../lib/guide-structure';
+
+interface Props {
+    locale: 'en' | 'de';
+}
+
+const { locale } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const guideHref = (path: string): string => `${base}${locale}/guide/${path}/`;
+const playgroundHref = (example: string): string => `${base}${locale}/playground/?example=${example}`;
+
+const guideEntries = await getCollection('guide');
+const dataByPath = new Map<string, CollectionEntry<'guide'>['data']>(
+    guideEntries.map((entry: CollectionEntry<'guide'>) => [entry.id.replace(/\.(md|mdx)$/, ''), entry.data]),
+);
+const titleOf = (path: string): string => dataByPath.get(path)?.title ?? path;
+const descriptionOf = (path: string): string => dataByPath.get(path)?.description ?? '';
+
+const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
+
+const learningPath = GUIDE_LEARNING_PATH;
+const topics = GUIDE_TOPICS;
+
+const getFirstChapterHref = (part: (typeof GUIDE_PARTS)[number]) => {
+    const firstChapter = part.chapters[0];
+    return firstChapter ? guideHref(`${part.slug}/${firstChapter.slug}`) : `${base}${locale}/guide/${part.slug}/`;
+};
+const sidebarParts = GUIDE_PARTS.map(part => ({
+    slug: part.slug,
+    title: part.title,
+    href: getFirstChapterHref(part),
+    baseHref: `${base}${locale}/guide/${part.slug}/`,
+    chapters: part.chapters.map(chapter => ({
+        slug: chapter.slug,
+        title: titleOf(chapter.path),
+        href: guideHref(chapter.path),
+    })),
+}));
+---
+
+<DocsLayout title="ExoJS Guide" description="Learn ExoJS from your first project to a complete, deployable game." variant="guide">
+    <DocsSidebar slot="sidebar" parts={sidebarParts} />
+    <aside slot="rail" class="toc" aria-label="Guide index shortcuts">
+        <h6>On this page</h6>
+        <ul>
+            <li><a href="#start">Start here</a></li>
+            <li><a href="#path">Learning path</a></li>
+            <li><a href="#topics">Browse by topic</a></li>
+            <li><a href="#all">All chapters</a></li>
+        </ul>
+        <div class="toc__resources">
+            <h6>Resources</h6>
+            <ul>
+                <li><a href={`${base}${locale}/api/`}>API reference</a></li>
+                <li><a href={`${base}${locale}/playground/`}>Playground</a></li>
+            </ul>
+        </div>
+    </aside>
+
+    <div class="prose guide-index-prose">
+        {locale === 'de' && <EnglishFallbackNotice />}
+        <section class="guide-hero" id="start">
+            <h1>Build your first ExoJS project</h1>
+            <p>
+                Start with a TypeScript project, learn the Scene and rendering model, then move into input, audio,
+                effects, debugging, and deployment.
+            </p>
+            <div class="guide-hero__cmd">
+                <code>npm create exo-app@latest my-game</code>
+            </div>
+            <div class="guide-hero__actions">
+                <a class="act act--primary" href={guideHref('introduction/setup')}>Create a project</a>
+                <a class="act" href={guideHref('introduction/what-is-exojs')}>Start the first guide</a>
+                <a class="act" href={`${base}${locale}/playground/`}>Open the Playground</a>
+            </div>
+        </section>
+
+        <section class="guide-section" id="path" aria-labelledby="path-title">
+            <h2 class="guide-section__title" id="path-title">Recommended learning path</h2>
+            <p class="guide-section__lead">Follow these in order to go from an empty folder to a deployable game.</p>
+            <ol class="path">
+                {learningPath.map((step, index) => (
+                    <li class="path__step">
+                        <span class="path__num" aria-hidden="true">{index + 1}</span>
+                        <div class="path__body">
+                            <a class="path__title" href={guideHref(step.path)}>{titleOf(step.path)}</a>
+                            <p class="path__goal">{step.goal}</p>
+                            {step.example && (
+                                <a class="path__example" href={playgroundHref(step.example)}>Open example ↗</a>
+                            )}
+                        </div>
+                    </li>
+                ))}
+            </ol>
+        </section>
+
+        <section class="guide-section" id="topics" aria-labelledby="topics-title">
+            <h2 class="guide-section__title" id="topics-title">Browse by topic</h2>
+            <div class="topic-grid">
+                {topics.map(topic => (
+                    <a class="topic-card" href={guideHref(topic.path)}>
+                        <h3>{topic.title}</h3>
+                        <p>{topic.description}</p>
+                    </a>
+                ))}
+            </div>
+        </section>
+
+        <section class="guide-section orient" aria-labelledby="orient-title">
+            <h2 class="guide-section__title" id="orient-title">Guides, Playground, and API</h2>
+            <div class="orient-grid">
+                <div class="orient-card">
+                    <p class="orient-card__k">Guides</p>
+                    <p class="orient-card__v">Explain concepts and workflows, step by step.</p>
+                </div>
+                <span class="orient-arrow" aria-hidden="true">→</span>
+                <div class="orient-card">
+                    <p class="orient-card__k">Playground</p>
+                    <p class="orient-card__v">Run and edit every example live in the browser.</p>
+                </div>
+                <span class="orient-arrow" aria-hidden="true">→</span>
+                <div class="orient-card">
+                    <p class="orient-card__k">API reference</p>
+                    <p class="orient-card__v">Documents every class, method, and option.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="all" aria-labelledby="all-title">
+            <h2 class="guide-section__title" id="all-title">All chapters</h2>
+            <p class="guide-section__lead">{chapterCount} chapters across {GUIDE_PARTS.length} parts.</p>
+            {GUIDE_PARTS.map(part => (
+                <section class="part-block" id={`part-${part.slug}`}>
+                    <h3 class="part-block__title">
+                        <span>{String(part.part).padStart(2, '0')}</span>
+                        <span>{part.title}</span>
+                    </h3>
+                    <div class="chapter-grid">
+                        {part.chapters.map(chapter => (
+                            <a class="chapter-card" href={guideHref(chapter.path)}>
+                                <h4>{titleOf(chapter.path)}</h4>
+                                <p>{descriptionOf(chapter.path)}</p>
+                            </a>
+                        ))}
+                    </div>
+                </section>
+            ))}
+        </section>
+    </div>
+</DocsLayout>
+
+<style>
+    .guide-index-prose {
+        max-width: none;
+    }
+
+    .guide-hero {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-5);
+        padding: var(--s-9) var(--s-7);
+        background: var(--bg-elevated);
+        margin-bottom: var(--s-8);
+    }
+
+    .guide-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(var(--grid-line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+        background-size: 32px 32px;
+        opacity: 0.6;
+        mask-image: radial-gradient(60% 100% at 100% 0%, #000, transparent 70%);
+        pointer-events: none;
+    }
+
+    .guide-hero > * {
+        position: relative;
+    }
+
+    .guide-hero h1 {
+        margin: 0;
+        font-size: 36px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+    }
+
+    .guide-hero p {
+        margin: 0.75rem 0 0;
+        max-width: 56ch;
+        color: var(--fg-muted);
+        line-height: 1.6;
+    }
+
+    .guide-hero__cmd {
+        margin-top: var(--s-5);
+    }
+
+    .guide-hero__cmd code {
+        display: inline-block;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-2);
+        background: var(--bg-canvas);
+        padding: 0.5rem 0.8rem;
+        font-family: var(--f-mono);
+        font-size: 13.5px;
+        color: var(--fg);
+    }
+
+    .guide-hero__actions {
+        margin-top: var(--s-5);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-3);
+    }
+
+    .act {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-2);
+        background: var(--bg-canvas);
+        color: var(--fg);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .act--primary {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+    }
+
+    .act:hover {
+        border-color: var(--accent-line);
+        color: var(--accent);
+    }
+
+    .act:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+    }
+
+    .guide-section {
+        margin-top: var(--s-8);
+    }
+
+    .guide-section__title {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        margin: 0 0 var(--s-2);
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        border: 0;
+        padding: 0;
+    }
+
+    .guide-section__lead {
+        margin: 0 0 var(--s-5);
+        color: var(--fg-muted);
+        max-width: 64ch;
+    }
+
+    .path {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: var(--s-3);
+    }
+
+    .path__step {
+        display: flex;
+        gap: var(--s-4);
+        align-items: flex-start;
+        padding: var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: var(--bg-elevated);
+    }
+
+    .path__num {
+        flex: none;
+        display: inline-grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--accent-line);
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-family: var(--f-mono);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .path__body {
+        min-width: 0;
+    }
+
+    .path__title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--fg);
+        text-decoration: none;
+    }
+
+    .path__title:hover {
+        color: var(--accent);
+    }
+
+    .path__goal {
+        margin: 4px 0 0;
+        color: var(--fg-muted);
+        font-size: 14px;
+        line-height: 1.5;
+        max-width: none;
+    }
+
+    .path__example {
+        display: inline-block;
+        margin-top: var(--s-2);
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--fg-faint);
+        text-decoration: none;
+    }
+
+    .path__example:hover {
+        color: var(--accent);
+    }
+
+    .topic-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--s-3);
+    }
+
+    .topic-card {
+        display: block;
+        padding: var(--s-5);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: var(--bg-elevated);
+        text-decoration: none;
+        color: inherit;
+        transition:
+            border-color var(--transition-fast),
+            transform var(--transition-fast);
+    }
+
+    .topic-card:hover {
+        border-color: var(--accent-line);
+        transform: translateY(-2px);
+    }
+
+    .topic-card:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+    }
+
+    .topic-card h3 {
+        margin: 0;
+        font-size: 16px;
+        color: var(--fg);
+    }
+
+    .topic-card p {
+        margin: var(--s-2) 0 0;
+        font-size: 13.5px;
+        line-height: 1.5;
+        color: var(--fg-muted);
+        max-width: none;
+    }
+
+    .orient-grid {
+        display: flex;
+        align-items: stretch;
+        gap: var(--s-3);
+    }
+
+    .orient-card {
+        flex: 1;
+        padding: var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: var(--bg-elevated);
+    }
+
+    .orient-card__k {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
+    }
+
+    .orient-card__v {
+        margin: var(--s-2) 0 0;
+        font-size: 13.5px;
+        line-height: 1.5;
+        color: var(--fg-muted);
+        max-width: none;
+    }
+
+    .orient-arrow {
+        display: flex;
+        align-items: center;
+        color: var(--fg-faint);
+        font-family: var(--f-mono);
+    }
+
+    .part-block + .part-block {
+        margin-top: var(--s-6);
+    }
+
+    .part-block__title {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        margin: 0 0 var(--s-3);
+        font-family: var(--f-mono);
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border: 0;
+        padding: 0;
+    }
+
+    .part-block__title span:first-child {
+        color: var(--accent);
+    }
+
+    .part-block__title span:last-child {
+        color: var(--fg-muted);
+    }
+
+    .chapter-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--s-3);
+    }
+
+    .chapter-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-2);
+        padding: var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: var(--bg-elevated);
+        text-decoration: none;
+        color: inherit;
+        transition:
+            border-color var(--transition-fast),
+            transform var(--transition-fast);
+    }
+
+    .chapter-card:hover {
+        border-color: var(--accent-line);
+        transform: translateY(-2px);
+    }
+
+    .chapter-card:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+    }
+
+    .chapter-card h4 {
+        margin: 0;
+        font-size: 15px;
+        color: var(--fg);
+    }
+
+    .chapter-card p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--fg-muted);
+        max-width: none;
+    }
+
+    .toc h6 {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .toc ul {
+        list-style: none;
+        margin: var(--s-3) 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .toc a {
+        display: block;
+        border-left: 2px solid transparent;
+        padding: 4px 0 4px var(--s-3);
+        margin-left: -10px;
+        color: var(--fg-muted);
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .toc a:hover,
+    .toc a:focus-visible {
+        color: var(--fg);
+        outline: none;
+    }
+
+    .toc ul li:first-child a {
+        color: var(--accent);
+        border-left-color: var(--accent);
+    }
+
+    .toc__resources {
+        margin-top: 1.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--line-soft);
+    }
+
+    @media (max-width: 900px) {
+        .topic-grid,
+        .chapter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .orient-grid {
+            flex-direction: column;
+        }
+
+        .orient-arrow {
+            transform: rotate(90deg);
+            justify-content: center;
+        }
+    }
+</style>

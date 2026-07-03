@@ -103,5 +103,5 @@ export const compactDescription = (value: string, maxLength = 140): string => {
     return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 };
 
-export const toApiHref = (baseUrl: string, symbol: string): string => `${baseUrl}en/api/${symbol}/`;
+export const toApiHref = (baseUrl: string, symbol: string, locale: 'en' | 'de' = 'en'): string => `${baseUrl}${locale}/api/${symbol}/`;
 
