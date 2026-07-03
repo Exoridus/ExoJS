@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
 import type { MeshGeometryData } from '#math/geometry';
 import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildRoundedRectangle, buildStar } from '#math/geometry';
-import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '#math/utils';
+import { bezierCurveTo, clamp, quadraticCurveTo, TAU } from '#math/utils';
 import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import type { Gradient } from '#rendering/gradient/Gradient';
@@ -263,9 +263,9 @@ export class Graphics extends Container {
     let sweep = endAngle - startAngle;
 
     if (!anticlockwise && sweep < 0) {
-      sweep += tau;
+      sweep += TAU;
     } else if (anticlockwise && sweep > 0) {
-      sweep -= tau;
+      sweep -= TAU;
     }
 
     if (sweep === 0) {

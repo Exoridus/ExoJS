@@ -184,7 +184,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
   it('decodes all 8 flip/transform combinations on the Ground layer', async () => {
     const map = await loadTiledMap('orthogonal-rich.tmj', context);
     const runtime = map.toTileMap();
-    const ground = runtime.getLayerByName('Ground')!;
+    const ground = runtime.getTileLayer('Ground')!;
 
     for (let i = 0; i < EXPECTED_FLIPS.length; i++) {
       const tile = ground.getTileAt(i % 4, Math.floor(i / 4));
@@ -199,7 +199,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
   it('resolves multi-tileset GIDs to the correct runtime tileset', async () => {
     const map = await loadTiledMap('orthogonal-rich.tmj', context);
     const runtime = map.toTileMap();
-    const decor = runtime.getLayerByName('DecorTiles')!;
+    const decor = runtime.getTileLayer('DecorTiles')!;
     const tile = decor.getTileAt(0, 0);
     expect(tile).not.toBeNull();
     expect(tile!.tileset.name).toBe('tiles-b');
@@ -222,7 +222,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
     expect(tsA.offsetY).toBe(-3);
 
     // Tile layer level (class + tint colour parsed to 0xRRGGBB).
-    const ground = runtime.getLayerByName('Ground')!;
+    const ground = runtime.getTileLayer('Ground')!;
     expect(ground.class).toBe('terrainLayer');
     expect(ground.tintColor).toBe(0xff8800);
 
@@ -264,7 +264,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
     // second conversion (textures are Loader-owned).
     first.destroy();
     const third = map.toTileMap();
-    expect(third.getLayerByName('Ground')!.getTileAt(0, 0)).not.toBeNull();
+    expect(third.getTileLayer('Ground')!.getTileAt(0, 0)).not.toBeNull();
   });
 });
 
@@ -457,7 +457,7 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
     const tiled = await loadTiledMap('parallax.tmj', context);
     const runtime = tiled.toTileMap();
 
-    const layer = runtime.getLayerByName('Background')!;
+    const layer = runtime.getTileLayer('Background')!;
     expect(layer).toBeDefined();
     expect(layer.parallaxX).toBe(0.5);
     expect(layer.parallaxY).toBe(0.25);
@@ -481,7 +481,7 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
     const tiled = await loadTiledMap('no-parallax.tmj', context);
     const runtime = tiled.toTileMap();
 
-    const layer = runtime.getLayerByName('Ground')!;
+    const layer = runtime.getTileLayer('Ground')!;
     expect(layer).toBeDefined();
     expect(layer.parallaxX).toBe(1);
     expect(layer.parallaxY).toBe(1);

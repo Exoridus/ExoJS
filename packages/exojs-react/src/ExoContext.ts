@@ -7,7 +7,6 @@ import { createContext, useContext } from 'react';
  * hook rather than reading this context directly; the context object is
  * exported for advanced use (e.g. testing, custom providers).
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const ExoContext = createContext<Application | null>(null);
 ExoContext.displayName = 'ExoContext';
 

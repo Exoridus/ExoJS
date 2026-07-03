@@ -8,7 +8,7 @@
  * Heap sort is not stable, but every physics comparator (`byMinX`, `byPairId`,
  * `byRecordPair`, `byColliderPair`, `bySensorPair`) breaks ties on collider id,
  * so no two elements ever compare equal — the ordering is total and therefore
- * bit-identical to the `Array.prototype.sort` it replaces (gate SG-D1, replay
+ * bit-identical to the `Array.prototype.sort` it replaces (replay
  * determinism). Do not use this with a comparator that can return 0 for distinct
  * elements; the result order would then differ from a stable sort.
  *

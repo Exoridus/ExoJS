@@ -12,7 +12,7 @@
  * (`pipelineKey:bindKey`) is NOT the same as GPU draw calls: the sprite renderer
  * merges up to 8 textures into one draw via per-instance slots, and the "9th
  * texture → flush" boundary lives inside the renderer. Only running the real
- * renderer reproduces that. See `.workspace/specs/v0.13-renderer-performance/`.
+ * renderer reproduces that.
  *
  * Fidelity contract: the fake never executes shaders, so values returned from
  * reflection/queries only need to be *internally consistent*, not real WebGL2

@@ -91,7 +91,7 @@ export interface AttachOptions {
  * body velocities, runs broad- and narrow-phase detection, solves contacts and
  * integrates positions, then fires immutable contact/sensor events and writes
  * bound node transforms. It holds **no module-level state**, so any number of
- * worlds run in isolation (gate I-1).
+ * worlds run in isolation.
  *
  * The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 "soft
  * step"): each fixed step runs detection once, then several sub-steps, each
@@ -108,11 +108,11 @@ export interface AttachOptions {
  * - **Mass ratio** — resting stacks are slop-accurate up to ~100:1. Beyond that
  *   the velocity-capped soft push-out (`maxBiasVelocity`) lets the lighter body
  *   settle progressively deeper (≈6px at 500:1, fully through a thin floor by
- *   ~5000:1) — always finite, never exploding (SG-MR3).
+ *   ~5000:1) — always finite, never exploding.
  * - **No CCD** — detection runs once per fixed step with no swept test, so a
  *   body that travels farther than an obstacle's thickness in one step tunnels
  *   straight through it (it stays finite). Reliably stopping fast projectiles is
- *   a future bullet-mode feature (SG-X5).
+ *   a future bullet-mode feature.
  * - **{@link PhysicsWorldOptions.subStepCount}** — the default `4` is
  *   load-bearing for tall-stack stability; lowering it below `2` visibly
  *   degrades stacking, so do not reduce it for performance.

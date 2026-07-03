@@ -5,7 +5,7 @@ symbol: "TileMap"
 kind: "class"
 subsystem: "tilemap"
 importPath: "@codexo/exojs-tilemap"
-memberCount: 41
+memberCount: 40
 tier: "advanced"
 sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "packages/exojs-tilemap/src/TileMap.ts"
@@ -41,12 +41,11 @@ and local tile ID, so different tilesets may have different tile dimensions.
 - `destroy(): void`
 - `getImageLayer(name: string): ImageLayer | undefined`
 - `getImageLayerById(id: number): ImageLayer | undefined`
-- `getLayerById(id: number): TileLayer | undefined`
-- `getLayerByName(name: string): TileLayer | undefined`
 - `getObjectLayer(name: string): ObjectLayer<S> | undefined`
 - `getObjectLayerById(id: number): ObjectLayer<S> | undefined`
 - `getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null`
 - `getTileLayer(name: string): TileLayer | undefined`
+- `getTileLayerById(id: number): TileLayer | undefined`
 - `getTileset(name: string): TileSet | undefined`
 - `pixelToTile(px: number, py: number): object`
 - `removeImageLayer(id: number): boolean`

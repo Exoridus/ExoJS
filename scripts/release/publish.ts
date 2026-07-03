@@ -5,7 +5,7 @@
  * Guarantees, all enforced here and covered by `test/release/publish.test.ts`:
  *
  *   - Build-once: re-hashes every tarball and aborts on drift from the manifest.
- *   - Order: Core → Particles → Tilemap → Tiled → Physics → AudioFx.
+ *   - Order: Core first, then the extensions, per PUBLISH_ORDER.
  *   - Direct latest: packages are published straight to `latest` (no staging tag).
  *     OIDC Trusted Publishing only mints tokens for `npm publish`, so the former
  *     two-phase staging→promote approach failed with E401 on `npm dist-tag add`.

@@ -10,7 +10,7 @@ import type {
   LdtkLevel,
   LdtkTileData,
 } from './LdtkData';
-import { ldtkFlipX, ldtkFlipY } from './LdtkData';
+import { LDTK_FLIP_X, LDTK_FLIP_Y } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import { LdtkMap } from './LdtkMap';
 
@@ -69,7 +69,6 @@ export function ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): L
 
 // ── Level conversion ──────────────────────────────────────────────────────────
 
-// eslint-disable-next-line complexity
 function convertLevel(
   level: LdtkLevel,
   worldIid: string | undefined,
@@ -91,65 +90,24 @@ function convertLevel(
   let entityCounter = 0;
 
   for (const layerInst of layerInstances) {
-    const layerGridSize = layerInst.__gridSize;
     // Layer IDs must be unique within a TileMap (= one level).
     // Use layerDefUid directly — it is unique per layer definition in the file.
     const layerId = layerInst.layerDefUid;
 
     switch (layerInst.__type) {
       case 'Tiles':
-      case 'AutoLayer': {
-        const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets);
-        const tiles =
-          layerInst.__type === 'Tiles'
-            ? (layerInst.gridTiles ?? [])
-            : (layerInst.autoLayerTiles ?? []);
-        const tsUid = layerInst.__tilesetDefUid;
-        if (tsUid !== undefined) {
-          const rts = tilesets.get(tsUid);
-          if (rts) populateTileLayer(rLayer, tiles, rts, layerGridSize);
-        }
-        runtimeLayers.push(rLayer);
+      case 'AutoLayer':
+        runtimeLayers.push(convertTilesOrAutoLayer(layerInst, layerId, runtimeTilesets, tilesets));
         break;
-      }
 
-      case 'IntGrid': {
-        const intGridProperties = buildIntGridProperties(layerInst, data);
-        const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, intGridProperties);
-        // IntGrid layers may carry auto-tiles when "Auto-layer" rules are
-        // configured. Use those for rendering; raw intGridCsv is exposed as
-        // data-only layer properties (see buildIntGridProperties).
-        const autoTiles = layerInst.autoLayerTiles ?? [];
-        const tsUid = layerInst.__tilesetDefUid;
-        if (autoTiles.length > 0 && tsUid !== undefined) {
-          const rts = tilesets.get(tsUid);
-          if (rts) populateTileLayer(rLayer, autoTiles, rts, layerGridSize);
-        }
-        runtimeLayers.push(rLayer);
+      case 'IntGrid':
+        runtimeLayers.push(convertIntGridLayer(layerInst, layerId, runtimeTilesets, tilesets, data));
         break;
-      }
 
-      case 'Entities': {
-        const objects = convertEntityLayer(
-          layerInst,
-          layerGridSize,
-          levelIndex,
-          entityCounter,
-        );
+      case 'Entities':
+        runtimeObjectLayers.push(convertEntitiesLayer(layerInst, layerId, levelIndex, entityCounter));
         entityCounter += layerInst.entityInstances?.length ?? 0;
-        runtimeObjectLayers.push(
-          new ObjectLayer({
-            id: layerId,
-            name: layerInst.__identifier,
-            visible: layerInst.visible,
-            opacity: layerInst.opacity ?? 1,
-            offsetX: layerInst.pxOffsetX ?? 0,
-            offsetY: layerInst.pxOffsetY ?? 0,
-            objects,
-          }),
-        );
         break;
-      }
     }
   }
 
@@ -175,6 +133,67 @@ function convertLevel(
       worldY: level.worldY,
       ...(worldIid !== undefined && { ldtkWorldIid: worldIid }),
     },
+  });
+}
+
+// ── Helpers: per-layer-type level conversion ─────────────────────────────────
+
+/** Convert a `Tiles`/`AutoLayer` LDtk layer instance into a runtime {@link TileLayer}. */
+function convertTilesOrAutoLayer(
+  layerInst: LdtkLayerInstance,
+  layerId: number,
+  runtimeTilesets: readonly TileSet[],
+  tilesets: ReadonlyMap<number, TileSet>,
+): TileLayer {
+  const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets);
+  const tiles =
+    layerInst.__type === 'Tiles' ? (layerInst.gridTiles ?? []) : (layerInst.autoLayerTiles ?? []);
+  const tsUid = layerInst.__tilesetDefUid;
+  if (tsUid !== undefined) {
+    const rts = tilesets.get(tsUid);
+    if (rts) populateTileLayer(rLayer, tiles, rts, layerInst.__gridSize);
+  }
+  return rLayer;
+}
+
+/** Convert an `IntGrid` LDtk layer instance into a runtime {@link TileLayer}. */
+function convertIntGridLayer(
+  layerInst: LdtkLayerInstance,
+  layerId: number,
+  runtimeTilesets: readonly TileSet[],
+  tilesets: ReadonlyMap<number, TileSet>,
+  data: LdtkData,
+): TileLayer {
+  const intGridProperties = buildIntGridProperties(layerInst, data);
+  const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, intGridProperties);
+  // IntGrid layers may carry auto-tiles when "Auto-layer" rules are
+  // configured. Use those for rendering; raw intGridCsv is exposed as
+  // data-only layer properties (see buildIntGridProperties).
+  const autoTiles = layerInst.autoLayerTiles ?? [];
+  const tsUid = layerInst.__tilesetDefUid;
+  if (autoTiles.length > 0 && tsUid !== undefined) {
+    const rts = tilesets.get(tsUid);
+    if (rts) populateTileLayer(rLayer, autoTiles, rts, layerInst.__gridSize);
+  }
+  return rLayer;
+}
+
+/** Convert an `Entities` LDtk layer instance into a runtime {@link ObjectLayer}. */
+function convertEntitiesLayer(
+  layerInst: LdtkLayerInstance,
+  layerId: number,
+  levelIndex: number,
+  entityCounter: number,
+): ObjectLayer {
+  const objects = convertEntityLayer(layerInst, layerInst.__gridSize, levelIndex, entityCounter);
+  return new ObjectLayer({
+    id: layerId,
+    name: layerInst.__identifier,
+    visible: layerInst.visible,
+    opacity: layerInst.opacity ?? 1,
+    offsetX: layerInst.pxOffsetX ?? 0,
+    offsetY: layerInst.pxOffsetY ?? 0,
+    objects,
   });
 }
 
@@ -221,8 +240,8 @@ function populateTileLayer(
       tileset,
       localTileId,
       transform: {
-        flipX: (f & ldtkFlipX) !== 0,
-        flipY: (f & ldtkFlipY) !== 0,
+        flipX: (f & LDTK_FLIP_X) !== 0,
+        flipY: (f & LDTK_FLIP_Y) !== 0,
         diagonal: false,
       },
     });

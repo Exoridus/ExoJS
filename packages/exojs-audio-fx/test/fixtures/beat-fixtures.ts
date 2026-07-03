@@ -489,7 +489,7 @@ export function djMix(startBpm = 180, durationSec = 30): BeatFixture {
  * fromBpm at the end (V-shaped tempo curve over `durationSec`).
  * Ground-truth beat times are integrated from the piecewise instantaneous tempo.
  *
- * Generalises `tempoRamp` to a full fall-and-rise cycle, exercising the T5
+ * Generalises `tempoRamp` to a full fall-and-rise cycle, exercising the
  * dual-tempo-window tracker across both slope directions.
  */
 export function tempoDrift(fromBpm = 150, toBpm = 128, durationSec = 30): BeatFixture {
@@ -522,7 +522,7 @@ export function tempoDrift(fromBpm = 150, toBpm = 128, durationSec = 30): BeatFi
 /**
  * DJ-mix kit pattern with a slow sinusoidal tempo drift of ±`driftBpm` around
  * `baseBpm`. Combines the realistic 4/4 kit texture from `djMix` with gradual
- * tempo variation to exercise the T5 dual-tempo-window tracker directly.
+ * tempo variation to exercise the dual-tempo-window tracker directly.
  *
  * Beat times are integrated from the instantaneous tempo; `bpm` is a function.
  */
@@ -559,7 +559,7 @@ export function djMixDrift(baseBpm = 180, driftBpm = 5, durationSec = 30): BeatF
  * and delayed relative to the notional onset time.
  *
  * Tests whether the detector can recall onsets when the novelty curve
- * lacks a sharp spike, validating T3 onset normalisation.
+ * lacks a sharp spike, validating the onset normalisation.
  *
  * Ground truth = swell start times (the notional onset, before the peak).
  */

@@ -18,7 +18,7 @@ export interface TimeStepperOptions {
  * bound transforms between sub-steps.
  *
  * The stepper holds no mutable module-level state — two stepper instances are
- * fully independent (world isolation, gate I-1).
+ * fully independent (world isolation).
  */
 export class TimeStepper {
   public readonly fixedDelta: number;

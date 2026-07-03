@@ -22,7 +22,7 @@ installed transitively — you do not need to install it manually.
 - `ldtkExtension` — extension descriptor; depends on `tilemapExtension` automatically
 - `ldtkMapBinding` — the underlying `AssetBinding` (advanced/custom wiring)
 - The raw LDtk JSON types (`LdtkData`, `LdtkLevel`, `LdtkLayerInstance`, `LdtkEntityInstance`, …)
-  and the flip-bit constants (`ldtkFlipX`, `ldtkFlipY`, `ldtkFlipXy`, `ldtkFlipNone`)
+  and the flip-bit constants (`LDTK_FLIP_X`, `LDTK_FLIP_Y`, `LDTK_FLIP_XY`, `LDTK_FLIP_NONE`)
 - `TileMap`, `TileMapNode`, `TileMapView`, `TileLayer`, `TileSet`, `ObjectLayer`, … re-exported
   from `@codexo/exojs-tilemap` (same class identity — `instanceof TileMap` holds across both import
   paths)

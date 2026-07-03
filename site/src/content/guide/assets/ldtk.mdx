@@ -227,7 +227,7 @@ IntGrid layers classify each grid cell with a small integer you assign meaning t
 ```ts no-check
 import { getLdtkIntGridValueAt } from '@codexo/exojs-ldtk';
 
-const collision = level.getLayerByName('Collision');
+const collision = level.getTileLayer('Collision');
 const cell = collision && getLdtkIntGridValueAt(collision, 3, 5);
 
 if (cell) {
@@ -260,7 +260,7 @@ const converted = ldtkToTileMap(world.data, { source: 'https://example.com/level
 
 Without an `options.tilesets` map, tile layers are created with correct dimensions but no tile data —
 the asset-loading path supplies the runtime tilesets for you. Tile flip flags are exposed as the
-constants `ldtkFlipNone`, `ldtkFlipX`, `ldtkFlipY`, and `ldtkFlipXy` for reading raw `LdtkTileData`.
+constants `LDTK_FLIP_NONE`, `LDTK_FLIP_X`, `LDTK_FLIP_Y`, and `LDTK_FLIP_XY` for reading raw `LdtkTileData`.
 
 ## Texture ownership
 

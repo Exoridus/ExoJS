@@ -117,12 +117,12 @@ function partialSort(arr, n) {
     }
 }
 
-// ---- Onset peak-picker (T3): adaptive normalization + noise gate + refractory ----
+// ---- Onset peak-picker: adaptive normalization + noise gate + refractory ----
 // The raw spectral flux is normalised against a running median/MAD baseline so that
 // soft onsets (low, broad novelty) and hard transients become comparable, then a
 // rising-edge picker (upward crossing of an adaptive threshold) with a noise-floor gate
 // and an IBI-derived refractory turns the novelty curve into a clean onset stream. This
-// stream (per-hop strength + sub-hop onset positions) is what the T4 PLL anchors to.
+// stream (per-hop strength + sub-hop onset positions) is what the PLL below anchors to.
 var ONSET_NORM_WINDOW_SEC = 1.5; // running median/MAD window for novelty normalization
 var ONSET_MAD_SCALE = 1.4826; // MAD → σ consistency factor (Gaussian)
 var ONSET_THRESHOLD = 3.0; // normalized-novelty peak threshold (robust z-score)
@@ -132,16 +132,16 @@ var ONSET_PEAK_DECAY = 0.999; // per-hop decay of the running flux peak (noise-f
 var ONSET_MIN_REFRACTORY_SEC = 0.1; // minimum spacing between detected onsets (~100 ms)
 var ONSET_REFRACTORY_IBI_FRAC = 0.4; // once locked, refractory = max(min, frac × IBI)
 var ONSET_BEAT_COAST_IBI = 2.0; // suppress beat emission after this many IBIs without an onset
-var ONSET_RING_SIZE = 16; // recent onsets retained for T4's PLL nearestOnset()
+var ONSET_RING_SIZE = 16; // recent onsets retained for the PLL's nearestOnset()
 
-// ---- PLL beat-phase tracker (T4) ----
+// ---- PLL beat-phase tracker ----
 // A bounded phase-locked loop replaces the old constant-IBI predictor + buggy snap. Each
 // predicted beat is corrected toward the nearest detected onset (sub-hop precise, from the
-// T3 onset ring): a proportional phase nudge plus a small period adjustment, BOTH clamped so
+// onset ring): a proportional phase nudge plus a small period adjustment, BOTH clamped so
 // a single noisy onset can never yank the grid. Exactly one beat is emitted per predicted
 // beat (the old snap double-advanced and timestamped a beat an IBI ahead). The first beat is
 // bootstrapped to a real recent onset, never an arbitrary settling boundary. The gains are
-// INTERNAL constants (API decision: not public). Tempo selection (T1/T1b/T2) is untouched —
+// INTERNAL constants (API decision: not public). Tempo selection is untouched —
 // the PLL only refines phase/period locally around the ACF-chosen tempo.
 var PLL_PHASE_GAIN = 0.25; // fraction of phase error applied as a phase nudge per beat
 var PLL_TEMPO_GAIN = 0.03; // fraction of phase error folded into the period per beat
@@ -152,7 +152,7 @@ var PLL_FREERUN_FRAC = 0.25; // free-run (grid) emit once the prediction is pass
 var PLL_RESYNC_FRAC = 0.25; // re-seed the PLL period from the ACF tempo if it drifts beyond this
 var PLL_BOOTSTRAP_MAX_AGE_IBI = 2.0; // bootstrap anchors to the newest onset within this many IBIs
 
-// ---- DJ-drift dual-window tracking (T5) ----
+// ---- DJ-drift dual-window tracking ----
 // The tracked tempo normally follows the long STABLE window (octave-safe, steady). When the
 // short FAST window consistently reports a DIFFERENT, non-octave tempo over several ACF hops,
 // the grid follows it — a genuine DJ drift, not noise. A single noisy hop can never move the
@@ -163,7 +163,7 @@ var DRIFT_MAX_FRAC = 0.20;  // beyond this it is a hard jump → owned by the st
 var DRIFT_AGREE_FRAC = 0.04; // consecutive fast estimates within this keep the confirmation streak
 var DRIFT_CONFIRM_HOPS = 3; // consecutive confirming ACF hops required before the grid follows
 
-// ---- Provisional vs locked beats (T7) ----
+// ---- Provisional vs locked beats ----
 // Beats are emitted as soon as the early ACF finds ANY in-range tempo (gated at _minEmitHops,
 // derived from minSettlingMs ≈ 400 ms instead of waiting the full slowest-tempo window), tagged
 // status:'provisional' — this drives the low-latency "blink" visual reactivity. A beat is only
@@ -178,7 +178,7 @@ var DRIFT_CONFIRM_HOPS = 3; // consecutive confirming ACF hops required before t
 // consumers and the public tempo/confidence getters only ever see post-lock (trustworthy) values
 // while the visual layer still reacts early. The gains are INTERNAL constants (API decision: not
 // public). When emitProvisionalBeats is false, provisional beats are suppressed (grid bookkeeping
-// still runs) and only locked beats are posted — the pre-T7 emission shape.
+// still runs) and only locked beats are posted — the original emission shape.
 var LOCK_PROMOTE_BEATS = 3; // beats emitted after the authoritative lock before promotion to locked
 var LOCK_PROMOTE_CONFIDENCE = 0.1; // confidence floor that must be cleared to promote to locked
 
@@ -239,12 +239,12 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._minBpm     = opts.minBpm     || 50;
         this._maxBpm     = opts.maxBpm     || 300;
         this._melBands   = opts.melBands   || 24;
-        // T7 low-latency emission: minSettlingMs replaces the old settlingMs (1500). It sets the
+        // Low-latency emission: minSettlingMs replaces the old settlingMs (1500). It sets the
         // EARLIEST point a (provisional) beat may be emitted — the ACF starts hunting a tempo once
         // the flux ring holds this many hops instead of waiting a full slowest-tempo period.
         this._minSettlingMs = opts.minSettlingMs !== undefined ? opts.minSettlingMs : 400;
         this._emitProvisionalBeats = opts.emitProvisionalBeats !== false; // default true
-        // T5 dual tempo windows. The short FAST window detects a genuine tempo change quickly;
+        // Dual tempo windows. The short FAST window detects a genuine tempo change quickly;
         // the long STABLE window holds the grid steady against noise/octave artefacts. A single
         // flux ring is sized to the stable window and the fast window is its most-recent sub-span.
         this._fastTempoWindowSec   = opts.fastTempoWindowSec   || 2.5;
@@ -298,7 +298,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._candidates     = [];
         this._firstLockSample = -1; // sample index of first lock (for hysteresis grace window)
 
-        // T5 drift-tracking state. The fast window must point at a different, non-octave tempo
+        // Drift-tracking state. The fast window must point at a different, non-octave tempo
         // CONSISTENTLY (over several ACF hops) before the held grid follows it.
         this._driftBpm  = 0; // tempo the fast window is currently pointing at (the streak target)
         this._driftHops = 0; // consecutive ACF hops the fast window has confirmed that target
@@ -328,13 +328,13 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._stateInterval = Math.max(1, STATE_INTERVAL_HOPS);
         this._hopsSinceState = 0;
 
-        // T7 emission gate + provisional/locked state. _minEmitHops is the earliest hop at which
+        // Emission gate + provisional/locked state. _minEmitHops is the earliest hop at which
         // the ACF may run (derived from minSettlingMs); _locked latches once the full-window
         // evidence + beat persistence + confidence floor are met (see LOCK_PROMOTE_* and
         // _emitBeat). _onGridStreak counts consecutive onset-matched beats toward promotion.
         this._minEmitHops = Math.max(1, Math.round(this._minSettlingMs * 0.001 * this._sampleRate / this._hopSize));
         // _authLocked flips true the first time the flux ring holds a full slowest-tempo period
-        // (fluxCount ≥ maxLag+1) — the AUTHORITATIVE lock, identical to the pre-T7 first lock.
+        // (fluxCount ≥ maxLag+1) — the AUTHORITATIVE lock, identical to the original first lock.
         // Before it, any ACF tempo is an early estimate that drives provisional beats only and is
         // re-adopted every hop (never frozen). After it, the octave-aware hysteresis owns the grid.
         this._authLocked         = false;
@@ -346,9 +346,9 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
         // RMS / onset state
         this._rms = 0;
-        this._onsetStrength = 0; // per-hop normalised novelty (exposed to state + T4 PLL)
+        this._onsetStrength = 0; // per-hop normalised novelty (exposed to state + the PLL)
 
-        // ---- Onset peak-picker state (T3) ----
+        // ---- Onset peak-picker state ----
         var onsetWinLen = Math.max(8, Math.round(ONSET_NORM_WINDOW_SEC * this._sampleRate / this._hopSize));
         this._onsetWin   = new Float32Array(onsetWinLen); // ring of recent raw flux (normalization)
         this._onsetWinPos = 0;
@@ -359,7 +359,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._onsetPrev1 = 0;     // normalised novelty at the previous hop (rising-edge detect)
         this._onsetHopCount  = 0;
         this._onsetFiredThisHop = false; // a confirmed onset peak was registered this hop
-        // ---- Onset stream exposed for T4's PLL ----
+        // ---- Onset stream exposed for the PLL ----
         // _lastOnsetSample / _lastOnsetStrength = most recent confirmed onset (sub-hop precise);
         // the ring holds the last ONSET_RING_SIZE onsets so the PLL can pick nearestOnset().
         this._lastOnsetSample   = -1;
@@ -460,11 +460,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._fluxWritePos = (this._fluxWritePos + 1) % this._fluxWindow.length;
         if (this._fluxCount < this._fluxWindow.length) this._fluxCount++;
 
-        // Adaptive onset normalization + peak-picking (T3). Runs every hop (independent
+        // Adaptive onset normalization + peak-picking. Runs every hop (independent
         // of the ACF/tempo path, which still consumes the raw _fluxWindow above).
         this._detectOnset(flux);
 
-        // Tempogram: compute ACF periodically. T7 lowers the warm-up gate from a full slowest-
+        // Tempogram: compute ACF periodically. The warm-up gate is lowered from a full slowest-
         // tempo period (_maxLag+1, ~1.2 s at minBpm) to _minEmitHops (~0.4 s) so a fast/core tempo
         // can lock — and a provisional beat can fire — far earlier. The ACF over a short span only
         // resolves tempos that already have ≳1 period of evidence in it, so slow tempos still wait
@@ -473,8 +473,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         var dueForAcf = this._hopsSinceACF >= this._acfInterval && this._fluxCount >= this._minEmitHops;
         // Force the AUTHORITATIVE compute the instant the full window first fills (independent of
         // the earlier provisional ACF cadence), so the authoritative lock + phase re-bootstrap land
-        // on exactly the evidence the pre-T7 detector used for its first lock. That makes every
-        // LOCKED beat identical to the pre-T7 output (same tempo, same grid phase).
+        // on exactly the evidence the original detector used for its first lock. That makes every
+        // LOCKED beat identical to the original output (same tempo, same grid phase).
         var firstFullWindow = !this._authLocked && this._fluxCount >= this._maxLag + 1;
         if (dueForAcf || firstFullWindow) {
             this._hopsSinceACF = 0;
@@ -577,7 +577,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
 
     _computeACFAndCandidates() {
-        // T5 dual ACF windows over the SAME flux ring. The long STABLE span holds the grid (and
+        // Dual ACF windows over the SAME flux ring. The long STABLE span holds the grid (and
         // is the parity-checked candidate set the state message reports); the short FAST span
         // detects a genuine tempo change quickly. Both feed the octave-aware hysteresis below.
         var stable = this._scoreSpan(this._stableWindowHops);
@@ -594,7 +594,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             // slowest-tempo period, so this tempo is an EARLY, possibly under-resolved estimate
             // used only to drive provisional beats. Re-adopt the current best estimate every hop —
             // never freeze it (an under-resolved edge lock must not stick). The AUTHORITATIVE lock
-            // fires the instant the full window is available; that value is identical to the pre-T7
+            // fires the instant the full window is available; that value is identical to the original
             // first lock, so the locked grid + hysteresis (and every locked beat) are unchanged.
             this._bestBpm   = top.bpm;
             this._bestScore = top.score;
@@ -606,7 +606,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
                 // re-emit → no duplicate beat next to the last provisional one). A provisional beat
                 // may have anchored the grid on an early under-resolved tempo or, on syncopated
                 // material, an off-beat onset; snap _lastBeatSample to the same strongest recent
-                // onset the pre-T7 detector locked to here so locked beats sit on the trustworthy
+                // onset the original detector locked to here so locked beats sit on the trustworthy
                 // grid. If no provisional beat has run yet (_lastBeatSample < 0), leave it so
                 // _tickPhase bootstraps the first beat normally.
                 if (this._lastBeatSample >= 0) {
@@ -661,7 +661,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._updateConfidence();
     }
 
-    // T5 DJ-drift adaptation. The fast window leads a genuine tempo drift that the long stable
+    // DJ-drift adaptation. The fast window leads a genuine tempo drift that the long stable
     // window (and thus the held grid) lags. When the fast window points at a non-octave tempo a
     // small-but-meaningful distance from the grid, and keeps pointing there for DRIFT_CONFIRM_HOPS
     // consecutive ACF hops, the grid follows it. Octave-scale and hard-jump disagreements are
@@ -714,11 +714,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         return minR;
     }
 
-    // Adaptive onset detection (T3). Normalises the raw flux against a running median/MAD
+    // Adaptive onset detection. Normalises the raw flux against a running median/MAD
     // baseline (so soft and hard onsets are comparable), then picks onsets on the UPWARD
     // crossing of an adaptive threshold (the onset attack), gated by a noise floor and an
     // IBI-derived refractory. Updates the per-hop _onsetStrength and the detected-onset
-    // stream consumed by T4's PLL.
+    // stream consumed by the PLL.
     _detectOnset(flux) {
         // Decaying running flux maximum — the reference level for the noise floor.
         this._fluxPeak *= ONSET_PEAK_DECAY;
@@ -764,7 +764,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         var pastRefractory = this._lastOnsetSample < 0 || (this._sampleCount - this._lastOnsetSample) >= refractory;
         if (crossedUp && aboveFloor && pastRefractory) {
             // Sub-hop onset position: linear-interpolate the threshold crossing between the
-            // previous hop and this one (stored for T4's PLL; the T3 grid snap uses the integer
+            // previous hop and this one (stored for the PLL; the onset detector's own grid snap uses the integer
             // hop so the shipped beat-offset numbers are preserved).
             var span = norm - this._onsetPrev1;
             var frac = span > 1e-9 ? (ONSET_THRESHOLD - this._onsetPrev1) / span : 0;
@@ -784,7 +784,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._onsetHopCount++;
     }
 
-    // Onset CLOSEST to targetSample within ±windowSamples (sub-hop precise, from the T3 ring) —
+    // Onset CLOSEST to targetSample within ±windowSamples (sub-hop precise, from the onset ring) —
     // the PLL's nearestOnset(): the phase-error reference for the period/phase correction. Using
     // the closest (not the loudest) onset keeps the loop locked to the phase it is tracking; a
     // louder neighbour (e.g. a bright off-beat hat) must not be allowed to yank the grid.
@@ -840,7 +840,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         // Provisional→locked promotion (latched, one transition per stable segment). Locked needs
         // the SAME evidence the old detector waited for before emitting at all — the full stable
         // window (the AUTHORITATIVE lock) — PLUS LOCK_PROMOTE_BEATS beats sustained on that grid
-        // and a confidence floor, so a 'locked' beat is at least as trustworthy as a pre-T7 beat.
+        // and a confidence floor, so a 'locked' beat is at least as trustworthy as a beat from the original detector.
         if (this._authLocked) { this._beatsSinceAuthLock++; }
         if (!this._locked &&
             this._authLocked &&
@@ -878,7 +878,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         }
     }
 
-    // Bounded PLL beat-phase tracker (T4). Predicts the next beat at lastBeat + ibi, corrects
+    // Bounded PLL beat-phase tracker. Predicts the next beat at lastBeat + ibi, corrects
     // phase + period toward the nearest onset (clamped), and emits exactly one beat per
     // predicted beat. Free-runs on the grid when an onset is missing; coasts (advances the
     // grid but stops emitting) during sustained silence so breaks don't spawn phantom beats.
@@ -938,7 +938,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         // Advance the grid by exactly one beat.
         this._lastBeatSample = beatSample;
 
-        // Coast gate (T3): after a sustained onset gap (break / silence) keep the grid
+        // Coast gate: after a sustained onset gap (break / silence) keep the grid
         // advancing but STOP emitting — this is what holds the breakDrop false-positive rate
         // down. Onset-rich material never trips it.
         var coasting = this._lastOnsetSample >= 0 &&
@@ -1110,7 +1110,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
 
     _sendStateMessage() {
-        // T7: the state tempo report honours the LOCKED latch (not the old fixed settling window).
+        // The state tempo report honours the LOCKED latch (not the old fixed settling window).
         // Provisional early beats drive the visual layer, but tempo/confidence/tempoCandidates
         // and the sync-critical fields stay zero until the detector has a trustworthy locked grid.
         var settled = this._locked;

@@ -71,7 +71,7 @@ export interface BeatMetrics {
   octaveError: OctaveError;
   /** Fraction of state messages (after settling) that report tempo > 0. */
   detectionRate: number;
-  /** T7 provisional/locked-beat metrics. */
+  /** Provisional/locked-beat metrics. */
   t7: T7Stats;
 }
 
@@ -344,7 +344,7 @@ export function computeMetrics(
   const detectionRate =
     stateMessages.length > 0 ? settledStates.length / stateMessages.length : 0;
 
-  // ── T7: provisional vs locked beats ──
+  // ── Provisional vs locked beats ──
 
   const timeToFirstBeatSec = beatMsgs.length > 0 ? beatMsgs[0]._audioTimeSec : null;
   const lockedBeats = beatMsgs.filter((b) => b.status === 'locked');

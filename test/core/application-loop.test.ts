@@ -1,7 +1,7 @@
 ﻿/**
  * Tests for Application.update() loop timing fixes:
- *   F1 — pauseOnHidden resume delta-spike fix (_frameClock.restart in hidden path)
- *   F2 — internal MAX_DELTA_MS clamp applied to simulation delta
+ *   - pauseOnHidden resume delta-spike fix (_frameClock.restart in hidden path)
+ *   - internal MAX_DELTA_MS clamp applied to simulation delta
  */
 
 import { Application, ApplicationStatus } from '#core/Application';
@@ -111,7 +111,7 @@ function mockFrameElapsed(app: Application, ms: number): MockInstance {
 // Suite
 // ---------------------------------------------------------------------------
 
-describe('Application.update() — loop timing (F1 + F2)', () => {
+describe('Application.update() — loop timing', () => {
   let app: Application;
   let rafSpy: MockInstance;
 
@@ -136,10 +136,10 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // F1 — pauseOnHidden resume delta-spike prevention
+  // pauseOnHidden resume delta-spike prevention
   // -------------------------------------------------------------------------
 
-  describe('F1 — pauseOnHidden: clock restart in hidden path', () => {
+  describe('pauseOnHidden: clock restart in hidden path', () => {
     test('when pauseOnHidden=true and document is hidden, _frameClock.restart() is called', () => {
       app.pauseOnHidden = true;
       (app as unknown as Record<string, unknown>)['_documentVisible'] = false;
@@ -221,10 +221,10 @@ describe('Application.update() — loop timing (F1 + F2)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // F2 — internal MAX_DELTA_MS clamp
+  // Internal MAX_DELTA_MS clamp
   // -------------------------------------------------------------------------
 
-  describe('F2 — simulation delta clamped to MAX_DELTA_MS (100ms)', () => {
+  describe('simulation delta clamped to MAX_DELTA_MS (100ms)', () => {
     test('a very large raw delta is clamped before tweens.update receives it', () => {
       mockFrameElapsed(app, 30_000); // 30 seconds — simulates device sleep
 

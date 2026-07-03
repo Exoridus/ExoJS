@@ -1,5 +1,5 @@
 /**
- * Compile-time type contracts for the opt-in ObjectLayer schema (D3).
+ * Compile-time type contracts for the opt-in ObjectLayer schema.
  *
  * Uses Vitest's built-in `expectTypeOf` (the same convention as
  * pixel-snap-types.test.ts and test/core/type-assertions.test.ts): the

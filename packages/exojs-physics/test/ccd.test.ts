@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '../src/index';
 
 /**
- * Continuous collision detection / bullet-mode (spec `03-ccd.md`, gate C-1).
+ * Continuous collision detection / bullet-mode.
  * A body flagged `isBullet` is swept against static geometry each step so it
- * cannot tunnel through thin walls. SG-C prefix, +Y down.
+ * cannot tunnel through thin walls. +Y down.
  */
 
 const FRAME = 1 / 60;
@@ -24,8 +24,8 @@ const fireAtWall = (bullet: boolean): { world: PhysicsWorld; ball: PhysicsBody }
   return { world, ball };
 };
 
-describe('SG-C — continuous collision (bullet mode)', () => {
-  it('SG-C1: a fast bullet does not tunnel through a thin static wall', () => {
+describe('continuous collision (bullet mode)', () => {
+  it('a fast bullet does not tunnel through a thin static wall', () => {
     // Without CCD the body tunnels straight through (the documented limit).
     const plain = fireAtWall(false);
     for (let frame = 0; frame < 30; frame++) {
@@ -42,7 +42,7 @@ describe('SG-C — continuous collision (bullet mode)', () => {
     expect(Number.isFinite(ccd.ball.x)).toBe(true);
   });
 
-  it('SG-C2: a bullet that does not cross a wall is not falsely stopped', () => {
+  it('a bullet that does not cross a wall is not falsely stopped', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     // The wall spans y ∈ [−200, 200]; the bullet flies past well above it.
     world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 400) }] }));
@@ -59,7 +59,7 @@ describe('SG-C — continuous collision (bullet mode)', () => {
     expect(ball.x).toBeGreaterThan(400); // flew freely past the wall's x without being clamped
   });
 
-  it('SG-C3: a fast bullet stays finite and contained in a closed static box', () => {
+  it('a fast bullet stays finite and contained in a closed static box', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const wall = (x: number, y: number, w: number, h: number): void => {
       world.add(new PhysicsBody({ type: 'static', position: { x, y }, colliders: [{ shape: new BoxShape(w, h) }] }));
@@ -86,7 +86,7 @@ describe('SG-C — continuous collision (bullet mode)', () => {
     expect(Math.abs(ball.y)).toBeLessThan(105);
   });
 
-  it('SG-C4: a fast bullet does not tunnel through a thin *dynamic* body', () => {
+  it('a fast bullet does not tunnel through a thin *dynamic* body', () => {
     // A thin dynamic target the bullet's per-step landings straddle without ever
     // landing inside it, so discrete detection misses it — only a swept test catches it.
     const make = (bullet: boolean): { world: PhysicsWorld; ball: PhysicsBody } => {
@@ -118,7 +118,7 @@ describe('SG-C — continuous collision (bullet mode)', () => {
     expect(Number.isFinite(ccd.ball.x)).toBe(true);
   });
 
-  it('SG-C5: a bullet hitting a wall obliquely deflects (keeps its tangential velocity)', () => {
+  it('a bullet hitting a wall obliquely deflects (keeps its tangential velocity)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 800) }] }));
 

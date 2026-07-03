@@ -1,13 +1,13 @@
 import type { Vector } from './Vector';
 
 /** τ = 2π, the full-circle radian constant. */
-export const tau = Math.PI * 2;
+export const TAU = Math.PI * 2;
 
 /** Multiply a degree value by this constant to convert to radians. */
-export const radiansPerDegree = Math.PI / 180;
+export const RADIANS_PER_DEGREE = Math.PI / 180;
 
 /** Multiply a radian value by this constant to convert to degrees. */
-export const degreesPerRadian = 180 / Math.PI;
+export const DEGREES_PER_RADIAN = 180 / Math.PI;
 
 /**
  * Classification of a point relative to a directed edge, used by the SAT
@@ -31,10 +31,10 @@ export const trimRotation = (degrees: number): number => {
 };
 
 /** Convert `degree` to radians. */
-export const degreesToRadians = (degree: number): number => degree * radiansPerDegree;
+export const degreesToRadians = (degree: number): number => degree * RADIANS_PER_DEGREE;
 
 /** Convert `radian` to degrees. */
-export const radiansToDegrees = (radian: number): number => radian * degreesPerRadian;
+export const radiansToDegrees = (radian: number): number => radian * DEGREES_PER_RADIAN;
 
 /** Clamp `value` to the closed interval `[min, max]`. */
 export const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
@@ -133,18 +133,13 @@ export const getVoronoiRegion = (line: Vector, point: Vector): VoronoiRegion => 
 };
 
 /**
- * Scalar + angle math helpers, grouped as a namespace so the public API carries
- * no loose math functions. The underlying functions stay module exports for
- * hot-path internal use (`import { clamp } from '#math/utils'`); only this
- * facade is re-exported from the public barrel.
+ * Angle + curve/geometry math helpers, grouped as a namespace. The common
+ * scalar utilities (`clamp`, `lerp`, `sign`, `inRange`, `isPowerOfTwo`, `TAU`)
+ * are free top-level exports instead — see `src/math/index.ts`. This facade
+ * groups the less-common angle/curve/geometry helpers that don't warrant
+ * their own top-level export.
  */
 export const MathUtils = {
-  tau,
-  clamp,
-  sign,
-  lerp,
-  inRange,
-  isPowerOfTwo,
   distance: getDistance,
   trimRotation,
   degreesToRadians,

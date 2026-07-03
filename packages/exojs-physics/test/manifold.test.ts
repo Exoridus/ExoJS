@@ -7,7 +7,7 @@ import { colliderAt } from './support';
 
 const manifold = new Manifold();
 
-describe('narrow phase — manifold generation (gate B-2)', () => {
+describe('narrow phase — manifold generation', () => {
   it('circle vs circle: normal A→B, single point, correct depth', () => {
     const world = new PhysicsWorld();
     const a = colliderAt(world, new CircleShape(5), { x: 0, y: 0 });
@@ -76,7 +76,7 @@ describe('narrow phase — manifold generation (gate B-2)', () => {
     expect(collide(far, box, manifold)).toBe(false);
   });
 
-  it('feature ids stay stable across a slow horizontal approach (SG-M1)', () => {
+  it('feature ids stay stable across a slow horizontal approach', () => {
     const world = new PhysicsWorld();
     const a = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
     const movingBody = world.add(new PhysicsBody({ type: 'static', position: { x: 20, y: 0 } }));

@@ -373,7 +373,7 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   let flip: boolean;
 
   // Bias toward keeping A as the reference for stability (reduces ref/incident
-  // role flapping when a body rocks slightly — gate SG-M3).
+  // role flapping when a body rocks slightly).
   if (sepA.separation >= sepB.separation * 0.95 + sepA.separation * 0.01) {
     ref = a;
     inc = b;

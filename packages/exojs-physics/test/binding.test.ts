@@ -32,7 +32,7 @@ const fakeNode = (skewX = 0, skewY = 0): FakeNode => ({
   },
 });
 
-describe('SceneNode binding (gate B-1)', () => {
+describe('SceneNode binding', () => {
   it('writes the body position onto the node on bind and after each step', () => {
     const world = new PhysicsWorld();
     const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 10, y: 20 }, colliders: [{ shape: new BoxShape(10, 10) }] }));

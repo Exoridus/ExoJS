@@ -2,7 +2,7 @@
  * Release manifest: the contract between the build-once `prepare` stage and the
  * `publish` stage.
  *
- * `prepare` packs exactly five npm tarballs, hashes them, and records the
+ * `prepare` packs one npm tarball per lockstep package, hashes them, and records the
  * digests here. `publish` re-hashes the on-disk tarballs and refuses to proceed
  * if any digest drifts from the manifest — that is the build-once guarantee:
  * the artifacts that were built, hashed and externally tested are byte-for-byte

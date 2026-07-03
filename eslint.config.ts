@@ -432,6 +432,15 @@ export default defineConfig([
       '@typescript-eslint/naming-convention': [
         'error',
         {
+          // Module-level const constants may be UPPER_CASE (mirrors the core config);
+          // const namespace-object facades stay PascalCase, regular consts camelCase.
+          selector: 'variable',
+          modifiers: ['const'],
+          format: ['strictCamelCase', 'StrictPascalCase', 'UPPER_CASE'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        {
           selector: 'variableLike',
           format: ['strictCamelCase'],
           leadingUnderscore: 'allow',
@@ -857,6 +866,17 @@ export default defineConfig([
   },
 
   {
+    files: ['src/rendering/webgpu/WebGpuBackend.ts', 'src/rendering/webgpu/WebGpuMeshRenderer.ts'],
+    rules: {
+      // Cohesive WebGPU backend/renderer surface; each file is a single
+      // tightly-coupled unit (device/pipeline state, draw submission).
+      // Splitting would scatter that state across files for no readability
+      // gain. Known deviation, candidate for a later extraction.
+      'max-lines': 'off',
+    },
+  },
+
+  {
     files: ['src/resources/CacheStore.ts'],
     rules: {
       '@typescript-eslint/no-redundant-type-constituents': 'off',
@@ -1136,6 +1156,34 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-return': 'warn',
       'unicorn/prefer-node-protocol': 'warn',
       'security/detect-non-literal-fs-filename': 'off',
+    },
+  },
+
+  // create-exo-app: a Node CLI scaffolder with its own tsconfig. Console output is
+  // the tool's primary interface, so no-console is allowed here.
+  {
+    files: ['packages/create-exo-app/src/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.node,
+        ...globals.es2024,
+      },
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      'no-console': 'off',
     },
   },
 

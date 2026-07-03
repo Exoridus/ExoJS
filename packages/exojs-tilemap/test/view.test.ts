@@ -451,7 +451,7 @@ describe('TileMapView ownership & destruction', () => {
 
     // The map, its layers, and textures survive.
     expect(map.destroyed).toBe(false);
-    expect(map.getLayerById(2)!.destroyed).toBe(false);
+    expect(map.getTileLayerById(2)!.destroyed).toBe(false);
     expect(tileset.texture.texture.destroy).not.toHaveBeenCalled();
   });
 
@@ -510,7 +510,7 @@ describe('TileMapView refreshLayers', () => {
     const node = view.getLayerNodeById(2)!;
 
     // Write into an existing chunk — picked up via chunk revisions, no view API needed.
-    map.getLayerById(2)!.setTileAt(0, 0, { tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+    map.getTileLayerById(2)!.setTileAt(0, 0, { tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
 
     expect(view.getLayerNodeById(2)).toBe(node);
 
@@ -902,7 +902,7 @@ describe('TileMapBand visibility & opacity', () => {
     const { map, view } = makeScene();
     const band = view.band('ground');
     const node = view.getLayerNodeById(1)!;
-    const layer = map.getLayerById(1)!;
+    const layer = map.getTileLayerById(1)!;
 
     layer.visible = false;
     layer.opacity = 0.25;
@@ -922,12 +922,12 @@ describe('TileMapBand visibility & opacity', () => {
     band.visible = false;
 
     // Hiding the band never writes through to the runtime layers …
-    expect(map.getLayerById(1)!.visible).toBe(true);
-    expect(map.getLayerById(2)!.visible).toBe(true);
+    expect(map.getTileLayerById(1)!.visible).toBe(true);
+    expect(map.getTileLayerById(2)!.visible).toBe(true);
 
     // … and layer visibility never feeds back into the band.
     band.visible = true;
-    map.getLayerById(1)!.visible = false;
+    map.getTileLayerById(1)!.visible = false;
 
     expect(band.visible).toBe(true);
   });

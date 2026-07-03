@@ -1,5 +1,5 @@
 import { triangulate } from './triangulate';
-import { tau } from './utils';
+import { TAU } from './utils';
 import { Vector } from './Vector';
 
 /**
@@ -453,7 +453,7 @@ export const buildStar = (
 ): MeshGeometryData => {
   const startAngle = Math.PI / -2 + rotation;
   const length = points * 2;
-  const delta = tau / length;
+  const delta = TAU / length;
   const path: number[] = [];
 
   for (let i = 0; i < length; i++) {

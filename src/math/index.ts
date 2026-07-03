@@ -30,5 +30,5 @@ export * from './ShapeLike';
 export * from './Size';
 export type { SweptHit } from './swept-collision';
 export { Sweep } from './swept-collision';
-export { MathUtils } from './utils';
+export { clamp, inRange, isPowerOfTwo, lerp, MathUtils, sign, TAU } from './utils';
 export * from './Vector';
