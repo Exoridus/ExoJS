@@ -23,13 +23,11 @@
 //      be guarded externally. (None exist in the current engine source.)
 //
 //   4. Always-on runtime validation — guards user input and public-contract
-//      invariants that must remain active in production. These do NOT use
-//      this module; they throw unconditionally.
+//      invariants that must remain active in production. {@link invariant}
+//      is this category: it throws unconditionally and is never stripped.
 //
 // New callers: prefer category 1 for simple checks. For anything that
 // allocates objects, calls functions, or formats strings use category 2.
-
-const _warned = new Set<string>();
 
 /**
  * Assert `condition` at dev/test time. Throws with `[ExoJS] message` when the
@@ -58,25 +56,16 @@ export function assertDefined<T>(value: T | null | undefined, message?: string):
   return value as T;
 }
 
-/** @internal — alias for {@link assert}; kept for backward compatibility. */
-export function invariant(condition: boolean, message?: string): asserts condition {
-  assert(condition, message);
-}
-
 /**
- * Print a `console.warn` at most once per unique `key`.
- * Subsequent calls with the same key are silenced to avoid per-frame spam.
- * No-op in production builds.
+ * Enforce a public-contract invariant. Always-on: throws with `[ExoJS]
+ * message` when `condition` is falsy in **every** build, including
+ * production — unlike {@link assert}, this is never stripped and never
+ * gated by `__DEV__`. Use it for contract checks that guard against corrupt
+ * state or misuse the type system cannot express, where silently continuing
+ * would be worse than throwing.
  */
-export function warnOnce(key: string, message: string): void {
-  if (__DEV__ && !_warned.has(key)) {
-    _warned.add(key);
-    // eslint-disable-next-line no-console
-    console.warn(`[ExoJS] ${message}`);
+export function invariant(condition: boolean, message?: string): asserts condition {
+  if (!condition) {
+    throw new Error(`[ExoJS] ${message ?? 'invariant violated'}`);
   }
-}
-
-/** @internal — clears the warned-keys set. For unit tests only. */
-export function _resetWarnOnce(): void {
-  _warned.clear();
 }

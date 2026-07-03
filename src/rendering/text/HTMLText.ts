@@ -1,4 +1,4 @@
-import { logger, LogSeverity } from '#core/logging';
+import { logger } from '#core/logging';
 import { Container } from '#rendering/Container';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Texture } from '#rendering/texture/Texture';
@@ -219,7 +219,7 @@ export class HTMLText extends Container {
   private _schedule(): void {
     const version = ++this._renderVersion;
     this._activeRender = this._render(version).catch(error => {
-      logger.log(LogSeverity.Warning, 'rendering', 'HTMLText render failed.', error instanceof Error ? { error } : undefined);
+      logger.warn('HTMLText render failed.', { source: 'HTMLText', ...(error instanceof Error && { error }) });
     });
   }
 

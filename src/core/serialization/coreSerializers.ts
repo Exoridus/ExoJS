@@ -1,4 +1,4 @@
-import { warnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -50,10 +50,10 @@ const spriteSerializer: NodeSerializer<Sprite> = {
     }
 
     if (node.material !== null) {
-      warnOnce(
-        'serialize:sprite-material',
-        'Sprite.material is not serialized (custom materials are deferred); the deserialized sprite falls back to the default material.',
-      );
+      logger.warn('Sprite.material is not serialized (custom materials are deferred); the deserialized sprite falls back to the default material.', {
+        source: 'serialize',
+        once: 'serialize:sprite-material',
+      });
     }
 
     const texture = node.texture;

@@ -1,8 +1,4 @@
-import { _resetWarnOnce, assert, assertDefined, invariant, warnOnce } from '#core/dev';
-
-beforeEach(() => {
-  _resetWarnOnce();
-});
+import { assert, assertDefined, invariant } from '#core/dev';
 
 // ---------------------------------------------------------------------------
 // assert
@@ -77,46 +73,15 @@ describe('invariant', () => {
   });
 
   test('falls back to a default message when none is given', () => {
-    expect(() => invariant(false)).toThrow('[ExoJS] assertion failed');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// warnOnce
-// ---------------------------------------------------------------------------
-
-describe('warnOnce', () => {
-  test('calls console.warn on the first invocation for a key', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    warnOnce('test:first', 'hello');
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith('[ExoJS] hello');
-    spy.mockRestore();
+    expect(() => invariant(false)).toThrow('[ExoJS] invariant violated');
   });
 
-  test('does not call console.warn on a second invocation with the same key', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    warnOnce('test:once', 'msg');
-    warnOnce('test:once', 'msg');
-    warnOnce('test:once', 'msg');
-    expect(spy).toHaveBeenCalledTimes(1);
-    spy.mockRestore();
-  });
-
-  test('warns separately for distinct keys', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    warnOnce('key-a', 'A');
-    warnOnce('key-b', 'B');
-    expect(spy).toHaveBeenCalledTimes(2);
-    spy.mockRestore();
-  });
-
-  test('_resetWarnOnce allows a key to warn again', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    warnOnce('test:reset', 'before');
-    _resetWarnOnce();
-    warnOnce('test:reset', 'after');
-    expect(spy).toHaveBeenCalledTimes(2);
-    spy.mockRestore();
+  test('is always-on: not gated by __DEV__, unlike assert/assertDefined', () => {
+    // invariant has no __DEV__ branch at all — it throws unconditionally in
+    // every build, including production. There's nothing to toggle in a test
+    // environment (vitest always sets __DEV__ = true), so this just pins the
+    // always-on contract: the condition alone determines the outcome.
+    expect(() => invariant(1 + 1 === 2, 'math is broken')).not.toThrow();
+    expect(() => invariant(1 + 1 === 3, 'math is broken')).toThrow('[ExoJS] math is broken');
   });
 });

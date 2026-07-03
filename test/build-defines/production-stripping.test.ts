@@ -5,10 +5,12 @@
  *   - no unresolved __DEV__, __VERSION__, or __REVISION__ references
  *   - buildInfo.development === false
  *   - version matching the packed package manifest
- *   - no dev-only warning/assertion messages selected for stripping
+ *   - assert/assertDefined (the __DEV__-gated helpers) stripped to no-ops
  *
- * These tests are skipped when `dist/` has not been built in production mode
- * (run `pnpm build` first).
+ * The dist-dependent checks above are skipped when `dist/` has not been built
+ * in production mode (run `pnpm build` first). The `invariant` always-on
+ * contract is verified separately at the source/config level (always runs,
+ * no build required) — see the note on that describe block below for why.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -38,6 +40,40 @@ const read = (rel: string): string => {
   return readFileSync(p, 'utf8');
 };
 
+// ---------------------------------------------------------------------------
+// invariant always-on contract — static, source-level checks.
+//
+// `invariant` currently has zero internal call sites (it's an escape hatch
+// for future public-contract checks), so it is tree-shaken out of `dist/`
+// entirely regardless of how it's gated — there is nothing to observe in the
+// build artefacts either way. These checks verify the always-on contract
+// directly from source instead, independent of `dist/` and of whether/when
+// the engine grows an internal caller.
+// ---------------------------------------------------------------------------
+
+describe('invariant always-on contract (source-level, no build required)', () => {
+  it('has no __DEV__ guard in its function body', () => {
+    const source = readFileSync(resolve(rootDir, 'src/core/dev.ts'), 'utf8');
+    const match = /export function invariant\([^)]*\)[^{]*\{([\s\S]*?)\n\}/.exec(source);
+    expect(match).not.toBeNull();
+    expect(match![1]).not.toMatch(/__DEV__/);
+    expect(match![1]).toMatch(/throw new Error/);
+  });
+
+  it('is absent from every rollup pure_funcs list (never stripped), unlike assert/assertDefined', () => {
+    const config = readFileSync(resolve(rootDir, 'rollup.config.ts'), 'utf8');
+    const pureFuncsBlocks = [...config.matchAll(/pure_funcs:\s*\[([^\]]*)\]/g)].map(m => m[1]!);
+    expect(pureFuncsBlocks.length).toBeGreaterThan(0);
+
+    for (const block of pureFuncsBlocks) {
+      expect(block).toContain("'assert'");
+      expect(block).toContain("'assertDefined'");
+      expect(block).not.toContain("'invariant'");
+      expect(block).not.toContain("'warnOnce'");
+    }
+  });
+});
+
 describe.runIf(hasProductionBuild)('production build stripping', () => {
   const expectedVersion = resolveVersion(rootDir);
 
@@ -49,15 +85,16 @@ describe.runIf(hasProductionBuild)('production build stripping', () => {
     expect(content).toContain('false');
   });
 
-  it('strips the dev-helper bodies to no-ops (no throw)', () => {
+  it('strips the __DEV__-gated assert/assertDefined bodies to no-ops', () => {
     // `__DEV__` → `false` turns every `if (false && …) throw …` into dead code,
-    // so Rollup's DCE empties the helper bodies. assert/assertDefined/invariant
-    // become no-ops with no runtime cost — independent of the consumer's
-    // minifier. This is the call-site-agnostic guarantee for the modular tree.
-    // Anchor on the `throw new` code pattern: the surviving `throw`/`[ExoJS]`
-    // tokens live only in the doc comment, which Rollup keeps verbatim.
+    // so Rollup's DCE empties the helper bodies. assert/assertDefined become
+    // no-ops with no runtime cost — independent of the consumer's minifier.
+    // This is the call-site-agnostic guarantee for the modular tree. Their
+    // default messages live only inside the now-dead branch, so they vanish
+    // along with it.
     const content = read('dist/esm/core/dev.js');
-    expect(content).not.toMatch(/throw new /);
+    expect(content).not.toContain('assertion failed');
+    expect(content).not.toContain('expected a defined value');
   });
 
   it('has no unresolved __VERSION__ or __REVISION__ in the dev helper', () => {

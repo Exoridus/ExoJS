@@ -1,4 +1,4 @@
-import { warnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 import { Rectangle } from '#math/Rectangle';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Graphics } from '#rendering/primitives/Graphics';
@@ -80,7 +80,10 @@ const meshSerializer: NodeSerializer<Mesh> = {
     if (source !== null) out.texture = source;
 
     if (node.material !== null) {
-      warnOnce('serialize:mesh-material', 'Mesh.material is not serialized (custom materials are deferred); the deserialized mesh uses the default material.');
+      logger.warn('Mesh.material is not serialized (custom materials are deferred); the deserialized mesh uses the default material.', {
+        source: 'serialize',
+        once: 'serialize:mesh-material',
+      });
     }
 
     return out;

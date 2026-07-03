@@ -184,7 +184,12 @@ describe('SceneManager', () => {
     await Promise.resolve();
 
     expect(unload).toHaveBeenCalledTimes(1);
-    expect(consoleErrorSpy).toHaveBeenCalledWith('[ExoJS:scene]', 'SceneManager.destroy() failed to unload the active scene.', expect.any(Error));
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '%c[ExoJS][SceneManager]',
+      expect.stringContaining('color'),
+      'SceneManager.destroy() failed to unload the active scene.',
+      expect.any(Error),
+    );
     consoleErrorSpy.mockRestore();
   });
 

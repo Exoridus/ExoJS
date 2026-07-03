@@ -3,7 +3,7 @@
  * (alignment, word-wrap, kerning, leading) and builds correct page quads.
  */
 
-import { _resetWarnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 import type { BmFontData } from '#rendering/text/BitmapText';
 import { BitmapText, BmFontAdapter } from '#rendering/text/BitmapText';
 import { BmFont } from '#rendering/text/BmFont';
@@ -229,7 +229,7 @@ describe('BmFontAdapter page index assertion', () => {
 
 describe('BmFontAdapter missing-glyph warnings', () => {
   beforeEach(() => {
-    _resetWarnOnce();
+    logger._resetOnce();
   });
 
   test('warns once when an unknown glyph is requested', () => {
@@ -249,7 +249,10 @@ describe('BmFontAdapter missing-glyph warnings', () => {
 
     adapter.getGlyph('Z', 0);
 
-    expect(spy.mock.calls[0]?.[0]).toContain('U+005A');
+    // The default console sink logs `(prefix, style, message)` — the message
+    // is the third argument, not the first.
+    expect(spy.mock.calls[0]?.[0]).toContain('[BitmapText]');
+    expect(spy.mock.calls[0]?.[2]).toContain('U+005A');
     spy.mockRestore();
   });
 

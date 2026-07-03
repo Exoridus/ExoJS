@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import { warnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 import type { SceneNode } from '#core/SceneNode';
 import { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
@@ -48,7 +48,10 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
     if (clipShape instanceof Rectangle) {
       out.clipShape = [clipShape.x, clipShape.y, clipShape.width, clipShape.height];
     } else if (clipShape !== null) {
-      warnOnce('serialize:geometry-clipshape', 'A Geometry clipShape is not serialized (deferred); the deserialized node clips to its bounds instead.');
+      logger.warn('A Geometry clipShape is not serialized (deferred); the deserialized node clips to its bounds instead.', {
+        source: 'serialize',
+        once: 'serialize:geometry-clipshape',
+      });
     }
   }
 
