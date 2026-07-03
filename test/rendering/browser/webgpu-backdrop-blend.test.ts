@@ -22,8 +22,9 @@
  * lavapipe) adapters CI runs on, which would make this spike pass without
  * proving anything.
  *
- * All tests skip gracefully when WebGPU is unavailable or the software adapter
- * drops the device mid-test.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); tests only skip when the software adapter drops the
+ * device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -38,7 +39,6 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { ADVANCED_BLEND_MODES, expectedOpaqueBlend } from './_blendReference';
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -62,17 +62,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -184,11 +174,7 @@ const composeBackdropBlend = (backend: WebGpuBackend, source: DataTexture, mode:
 
 describe('WebGPU backdrop-aware blend (Darken spike)', () => {
   test('transparent source region shows the backdrop; covered region is min(backdrop, source)', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!getBackendDeviceOrSkip(ctx, backend)) {
-      return;
-    }
+    const backend = await setupBackend();
 
     // Source: opaque red (texel 0, left half) then transparent (texel 1, right).
     const source = new DataTexture({
@@ -211,6 +197,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       expectRgbNear(readPixel(48, 32), [60, 120, 200]);
     } catch (error) {
       if (isDeviceLoss(error)) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
         ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
         return;
@@ -224,11 +211,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
   });
 
   test('backdrop is captured and composited unflipped (vertical split survives)', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!getBackendDeviceOrSkip(ctx, backend)) {
-      return;
-    }
+    const backend = await setupBackend();
 
     // Backdrop: red top row, blue bottom row (top-left origin → top of canvas).
     const backdrop = new DataTexture({
@@ -259,6 +242,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       expectRgbNear(readPixel(32, 56), [40, 40, 200]); // bottom
     } catch (error) {
       if (isDeviceLoss(error)) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
         ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
         return;
@@ -273,11 +257,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
   });
 
   test('every advanced blend mode matches the W3C reference (opaque over opaque)', async ctx => {
-    const backend = await setupBackend(ctx);
-
-    if (!getBackendDeviceOrSkip(ctx, backend)) {
-      return;
-    }
+    const backend = await setupBackend();
 
     const backdropColor: [number, number, number] = [180, 110, 60];
     const sourceColor: [number, number, number] = [90, 200, 150];
@@ -307,6 +287,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       }
     } catch (error) {
       if (isDeviceLoss(error)) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
         ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
         return;

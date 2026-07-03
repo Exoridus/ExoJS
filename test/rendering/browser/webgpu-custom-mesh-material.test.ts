@@ -1,8 +1,8 @@
 /**
  * WebGPU custom-MeshMaterial browser test — opt-in, capability-aware.
  *
- * Skips gracefully when WebGPU is unavailable (navigator.gpu absent or no
- * adapter), matching webgpu-smoke.test.ts. When WebGPU IS available it drives a
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe), so this test drives a
  * custom {@link MeshMaterial} (user uniform + user texture) through the real
  * {@link WebGpuMeshRenderer} and asserts the migrated WGSL custom path (group
  * 0 mesh-uniforms, group 1 mesh texture, group 2 user UBO + texture) issues a
@@ -22,7 +22,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 // Custom WGSL honouring the mesh contract: group(0) auto-bound mesh uniforms,
 // group(1) the mesh's own texture+sampler, group(2) the user UBO followed by
@@ -147,16 +147,6 @@ const createQuadGeometry = (size: number): Geometry => {
 
 describe('custom MeshMaterial WebGPU browser', () => {
   test('issues a custom-material draw with user uniform + texture and no validation error', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
-    const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-    }
-
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
@@ -166,13 +156,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
     await backend.initialize();
     wireCoreRenderers(backend);
 
-    const device = getBackendDeviceOrSkip(ctx, backend);
-
-    if (!device) {
-      backend.destroy();
-
-      return;
-    }
+    const device = getBackendDevice(backend);
 
     const pattern = createPatternTexture();
     const material = new MeshMaterial({
@@ -203,6 +187,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
         material.destroy();
         pattern.destroy();
         backend.destroy();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
         ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
         return;
@@ -222,17 +207,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
     }
   });
 
-  test('batches compatible static-geometry mesh draws with default material', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
-    const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-    }
-
+  test('batches compatible static-geometry mesh draws with default material', async () => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
@@ -266,17 +241,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
     }
   });
 
-  test('does not batch default static-geometry meshes across different groupIndex values', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
-    const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-    }
-
+  test('does not batch default static-geometry meshes across different groupIndex values', async () => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;

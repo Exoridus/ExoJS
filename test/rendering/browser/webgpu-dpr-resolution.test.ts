@@ -6,7 +6,9 @@
  * content fills every device pixel (crisp) and logical positions land at the
  * matching physical pixel.
  *
- * Skips gracefully when WebGPU is unavailable or the software adapter drops.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); this only skips when the software adapter drops the
+ * device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -18,7 +20,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -31,17 +33,7 @@ const makeApp = (canvas: HTMLCanvasElement, logical: number, pixelRatio: number)
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }, logical: number, pixelRatio: number): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (logical: number, pixelRatio: number): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = logical * pixelRatio;
@@ -114,12 +106,8 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 6):
 describe('WebGPU device-pixel-ratio resolution', () => {
   test('pixelRatio 2 scales the root viewport to fill the full backing store', async ctx => {
     const logical = 64;
-    const backend = await setupBackend(ctx, logical, 2);
-    const device = getBackendDeviceOrSkip(ctx, backend);
-
-    if (!device) {
-      return;
-    }
+    const backend = await setupBackend(logical, 2);
+    const device = getBackendDevice(backend);
 
     const white = createSolidTexture('#ffffff');
     const sprite = createLeftHalfSprite(white, logical);
@@ -140,6 +128,7 @@ describe('WebGPU device-pixel-ratio resolution', () => {
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;

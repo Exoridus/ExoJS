@@ -13,7 +13,9 @@
  *  - Pixels: the presented WebGPU canvas is read back via drawImage onto a 2D
  *    canvas (a standard cross-context read) and sampled.
  *
- * All tests skip gracefully when WebGPU is unavailable.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `renderClipped` only skips when the software adapter
+ * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -36,7 +38,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -172,17 +174,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `.trim();
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }, logicalSize = canvasSize): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (logicalSize = canvasSize): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   // The physical backing store is always canvasSize. A logicalSize < canvasSize
@@ -231,16 +223,12 @@ const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12)
 };
 
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
-// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as an
-// unavailable-adapter skip rather than a failure, matching setupBackend().
+// dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
+// device-lost skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderClipped = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<void> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -267,7 +255,7 @@ const renderClipped = async (ctx: { skip: (reason: string) => void }, backend: W
 
 describe('WebGPU geometric (stencil) clipping', () => {
   test('Geometry clipShape discards fragments outside the shape', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const clipped = new Container();
@@ -299,7 +287,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('nested stencil clips render only the intersection', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const outer = new Container();
@@ -339,7 +327,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('stencil clip composes with a scissor rect (intersection)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const clipped = new Container();
@@ -375,7 +363,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a clipped container clips multiple children', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const redTexture = createSolidTexture('#ff0000');
     const greenTexture = createSolidTexture('#00ff00');
     const root = new Container();
@@ -415,7 +403,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('scene without clip renders unchanged (stencil attachment inert)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const sprite = new Sprite(texture);
@@ -440,7 +428,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('balanced clips do not throw', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const clipped = new Container();
@@ -464,7 +452,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('Rectangle clipShape still uses the scissor path (no throw)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const clipped = new Container();
@@ -492,7 +480,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a default-material Mesh renders inside a Geometry stencil clip', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
     const mesh = createQuadMesh(48, Color.red);
@@ -519,7 +507,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a Graphics shape renders inside a Geometry stencil clip', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
     const graphics = new Graphics();
@@ -548,7 +536,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a Mesh stencil clip composes with a scissor rect (intersection)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
     const mesh = createQuadMesh(64, Color.red);
@@ -579,7 +567,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a custom-material Mesh renders inside a Geometry stencil clip', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
     const material = new MeshMaterial({ shader: new ShaderSource({ wgsl: customMeshWgsl }) });
@@ -612,7 +600,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a custom-material Mesh stencil clip composes with a scissor rect (intersection)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
     const material = new MeshMaterial({ shader: new ShaderSource({ wgsl: customMeshWgsl }) });
@@ -649,7 +637,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a custom-material Mesh renders only the intersection under nested clips', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const outer = new Container();
     const inner = new Container();
@@ -690,7 +678,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a custom-material Sprite renders inside a Geometry stencil clip', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
     const material = new SpriteMaterial({
@@ -729,7 +717,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
     // Logical render target 32×32, physical canvas 64×64 → pixelRatio 2. Before the
     // physical-sizing fix the root stencil attachment (logical 32) mismatched the
     // physical colour attachment (64) and the clip pass raised a validation error.
-    const backend = await setupBackend(ctx, 32);
+    const backend = await setupBackend(32);
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
     const clipped = new Container();
@@ -761,7 +749,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
   });
 
   test('a BitmapText renders inside a Geometry stencil clip', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
     const { text, texture } = createSolidBitmapText('#ff0000', 64);
@@ -798,7 +786,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
     // RenderEffectExecutor pushes the Geometry clip outermost, so the mask
     // compositor draws into the stencil-enabled pass. Without a stencil pipeline
     // variant on the compositor this raised a WebGPU validation error.
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const contentTexture = createSolidTexture('#ff0000');
     const maskTexture = createSolidTexture('#ffffff');
     const root = new Container();

@@ -1,8 +1,8 @@
 /**
  * WebGPU custom-SpriteMaterial browser test — opt-in, capability-aware.
  *
- * Skips gracefully when WebGPU is unavailable (navigator.gpu absent or no
- * adapter), matching webgpu-smoke.test.ts. When WebGPU IS available it drives a
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe), so this test drives a
  * custom {@link SpriteMaterial} (user uniform) through the real
  * {@link WebGpuSpriteRenderer} and asserts the custom path (group 0 projection +
  * shared transform storage, group 1 base texture, group 2 user UBO) issues an
@@ -22,7 +22,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 // Fragment-only WGSL: the engine prepends the canonical sprite vertex module
 // (spriteVertexWgsl), which declares VertexOutput, the group(0) projection, and
@@ -74,16 +74,6 @@ const createMaterial = (): SpriteMaterial =>
 
 describe('custom SpriteMaterial WebGPU browser', () => {
   test('issues an instanced custom-material draw with a user uniform and no validation error', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
-    const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-    }
-
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
@@ -93,13 +83,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
     await backend.initialize();
     wireCoreRenderers(backend);
 
-    const device = getBackendDeviceOrSkip(ctx, backend);
-
-    if (!device) {
-      backend.destroy();
-
-      return;
-    }
+    const device = getBackendDevice(backend);
 
     const texture = createSolidTexture(128, 128, 128);
     const material = createMaterial();
@@ -131,6 +115,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
         material.destroy();
         texture.destroy();
         backend.destroy();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
         ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
         return;

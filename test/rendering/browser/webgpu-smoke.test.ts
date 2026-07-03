@@ -1,9 +1,10 @@
 /**
- * WebGPU browser smoke tests — opt-in, capability-aware.
+ * WebGPU browser smoke tests.
  *
- * All tests skip gracefully when WebGPU is unavailable (navigator.gpu absent,
- * adapter null, or device request rejected). This keeps normal CI green even
- * on hosts without a usable GPU adapter.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe), so these tests exercise the API directly rather
+ * than skipping when it looks unavailable — a missing adapter here is a
+ * genuine failure, not an environment gap.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -42,19 +43,11 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 // ── Section 1: raw WebGPU API availability ────────────────────────────────
 
 describe('WebGPU API — navigator.gpu', () => {
-  test('navigator.gpu is present', ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent in this Chromium instance');
-    }
-
+  test('navigator.gpu is present', () => {
     expect(navigator.gpu).toBeDefined();
   });
 
-  test('getPreferredCanvasFormat() returns a known format', ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
+  test('getPreferredCanvasFormat() returns a known format', () => {
     const format = navigator.gpu.getPreferredCanvasFormat();
 
     expect(['bgra8unorm', 'rgba8unorm']).toContain(format);
@@ -64,31 +57,14 @@ describe('WebGPU API — navigator.gpu', () => {
 // ── Section 2: adapter & device ───────────────────────────────────────────
 
 describe('WebGPU API — adapter and device', () => {
-  test('requestAdapter() resolves to a non-null GPUAdapter', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
+  test('requestAdapter() resolves to a non-null GPUAdapter', async () => {
     const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: requestAdapter() returned null — no compatible GPU adapter (no hardware GPU or software fallback)');
-    }
 
     expect(adapter).not.toBeNull();
   });
 
-  test('requestDevice() returns a GPUDevice and can be destroyed', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
+  test('requestDevice() returns a GPUDevice and can be destroyed', async () => {
     const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: no adapter');
-    }
-
     const device = await adapter!.requestDevice();
 
     expect(device).toBeDefined();
@@ -97,17 +73,8 @@ describe('WebGPU API — adapter and device', () => {
     device.destroy();
   });
 
-  test('GPUDevice.lost promise resolves to a GPUDeviceLostInfo when device is destroyed', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
+  test('GPUDevice.lost promise resolves to a GPUDeviceLostInfo when device is destroyed', async () => {
     const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: no adapter');
-    }
-
     const device = await adapter!.requestDevice();
     const lostPromise = device.lost;
 
@@ -131,28 +98,14 @@ describe('WebGpuBackend — real GPU initialization', () => {
       },
     }) as unknown as Application;
 
-  test('backendType is RenderBackendType.WebGpu', ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
+  test('backendType is RenderBackendType.WebGpu', () => {
     const canvas = document.createElement('canvas');
     const backend = new WebGpuBackend(makeApp(canvas));
 
     expect(backend.backendType).toBe(RenderBackendType.WebGpu);
   });
 
-  test('initialize() resolves with the backend instance', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
-    const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: no adapter — initialize() would throw');
-    }
-
+  test('initialize() resolves with the backend instance', async () => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
@@ -163,17 +116,7 @@ describe('WebGpuBackend — real GPU initialization', () => {
     backend.destroy();
   });
 
-  test('stats object is defined after initialize()', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
-    const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: no adapter');
-    }
-
+  test('stats object is defined after initialize()', async () => {
     const canvas = document.createElement('canvas');
     const backend = new WebGpuBackend(makeApp(canvas));
 
@@ -185,17 +128,7 @@ describe('WebGpuBackend — real GPU initialization', () => {
     backend.destroy();
   });
 
-  test('clear() and flush() complete without throwing after initialize()', async ctx => {
-    if (!navigator.gpu) {
-      ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-    }
-
-    const adapter = await navigator.gpu.requestAdapter();
-
-    if (!adapter) {
-      ctx.skip('WebGPU unavailable: no adapter');
-    }
-
+  test('clear() and flush() complete without throwing after initialize()', async () => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;

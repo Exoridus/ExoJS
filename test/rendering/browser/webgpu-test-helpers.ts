@@ -1,30 +1,11 @@
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-export interface BrowserWebGpuTestContext {
-  skip: (reason: string) => void;
-}
-
-const missingDeviceReason = 'WebGPU unavailable: backend has no device';
-const uninitializedDeviceMessage = 'WebGPU device is not initialized yet.';
-
-export const getBackendDeviceOrSkip = (ctx: BrowserWebGpuTestContext, backend: WebGpuBackend): GPUDevice | null => {
-  try {
-    const device = backend.device as GPUDevice | undefined;
-
-    if (!device) {
-      ctx.skip(missingDeviceReason);
-
-      return null;
-    }
-
-    return device;
-  } catch (error) {
-    if (error instanceof Error && error.message === uninitializedDeviceMessage) {
-      ctx.skip(missingDeviceReason);
-
-      return null;
-    }
-
-    throw error;
-  }
-};
+/**
+ * Returns the backend's WebGPU device.
+ *
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe), so a missing device is a genuine test failure, not
+ * an environment gap — this throws (via the `device` getter) rather than
+ * skipping.
+ */
+export const getBackendDevice = (backend: WebGpuBackend): GPUDevice => backend.device;

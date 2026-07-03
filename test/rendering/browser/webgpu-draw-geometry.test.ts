@@ -6,7 +6,9 @@
  * transform seam. Confirms the geometry renders at its world position, that the
  * raw transform is applied verbatim, and that a tint modulates the vertex color.
  *
- * All tests skip gracefully when WebGPU is unavailable.
+ * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
+ * against Mesa lavapipe); `drawGeometries` only skips when the software adapter
+ * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -21,7 +23,7 @@ import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-import { getBackendDeviceOrSkip } from './webgpu-test-helpers';
+import { getBackendDevice } from './webgpu-test-helpers';
 
 type RgbaTuple = readonly [number, number, number, number];
 
@@ -36,17 +38,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const setupBackend = async (ctx: { skip: (reason: string) => void }): Promise<WebGpuBackend> => {
-  if (!navigator.gpu) {
-    ctx.skip('WebGPU unavailable: navigator.gpu is absent');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  if (!adapter) {
-    ctx.skip('WebGPU unavailable: requestAdapter() returned null');
-  }
-
+const setupBackend = async (): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -147,11 +139,7 @@ const drawGeometries = async (
   context: RenderingContext,
   calls: readonly DrawCall[],
 ): Promise<boolean> => {
-  const device = getBackendDeviceOrSkip(ctx, backend);
-
-  if (!device) {
-    return false;
-  }
+  const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
@@ -184,7 +172,7 @@ const drawGeometries = async (
 
 describe('WebGPU RenderingContext.drawGeometry', () => {
   test('renders a colored geometry quad at its world position', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const context = new RenderingContext(backend);
     const geometry = coloredQuad(16, 16, 48, 48, [255, 0, 0, 255]);
 
@@ -205,7 +193,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
   });
 
   test('applies the raw transform verbatim (translation)', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const context = new RenderingContext(backend);
     const geometry = coloredQuad(0, 0, 32, 32, [0, 255, 0, 255]);
 
@@ -227,7 +215,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
   });
 
   test('modulates the geometry color by the tint', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const context = new RenderingContext(backend);
     // White geometry × a fractional tint resolves to the tint color.
     const geometry = coloredQuad(16, 16, 48, 48, [255, 255, 255, 255]);
@@ -246,7 +234,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
   });
 
   test('drawBatch draws N instances of one geometry as a single instanced draw call', async ctx => {
-    const backend = await setupBackend(ctx);
+    const backend = await setupBackend();
     const context = new RenderingContext(backend);
     // A 16×16 white quad at the local origin, instanced to three positions/tints.
     const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
@@ -256,11 +244,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
       .add(new Matrix(1, 0, 0, 0, 1, 32), new Color(0, 0, 255));
 
     try {
-      const device = getBackendDeviceOrSkip(ctx, backend);
-
-      if (!device) {
-        return;
-      }
+      const device = getBackendDevice(backend);
 
       device.pushErrorScope('validation');
 
@@ -273,6 +257,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;
