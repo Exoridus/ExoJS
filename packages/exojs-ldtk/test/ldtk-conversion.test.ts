@@ -10,7 +10,7 @@ import type {
   LdtkLayerInstance,
   LdtkLevel,
 } from '../src/LdtkData';
-import { ldtkFlipNone, ldtkFlipX, ldtkFlipXy, ldtkFlipY } from '../src/LdtkData';
+import { LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y } from '../src/LdtkData';
 import { getLdtkIntGridValueAt, ldtkToTileMap } from '../src/ldtkToTileMap';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -94,18 +94,18 @@ function convertSingleField(field: LdtkFieldInstance): TileProperties {
 
 describe('LDtk flip-bit constants', () => {
   it('have the LDtk-documented values', () => {
-    expect(ldtkFlipNone).toBe(0);
-    expect(ldtkFlipX).toBe(1);
-    expect(ldtkFlipY).toBe(2);
-    expect(ldtkFlipXy).toBe(3);
+    expect(LDTK_FLIP_NONE).toBe(0);
+    expect(LDTK_FLIP_X).toBe(1);
+    expect(LDTK_FLIP_Y).toBe(2);
+    expect(LDTK_FLIP_XY).toBe(3);
   });
 
   it('compose as an X|Y bitmask', () => {
-    expect(ldtkFlipX | ldtkFlipY).toBe(ldtkFlipXy);
-    expect(ldtkFlipXy & ldtkFlipX).not.toBe(0);
-    expect(ldtkFlipXy & ldtkFlipY).not.toBe(0);
-    expect(ldtkFlipNone & ldtkFlipX).toBe(0);
-    expect(ldtkFlipNone & ldtkFlipY).toBe(0);
+    expect(LDTK_FLIP_X | LDTK_FLIP_Y).toBe(LDTK_FLIP_XY);
+    expect(LDTK_FLIP_XY & LDTK_FLIP_X).not.toBe(0);
+    expect(LDTK_FLIP_XY & LDTK_FLIP_Y).not.toBe(0);
+    expect(LDTK_FLIP_NONE & LDTK_FLIP_X).toBe(0);
+    expect(LDTK_FLIP_NONE & LDTK_FLIP_Y).toBe(0);
   });
 });
 

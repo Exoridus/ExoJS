@@ -31,7 +31,7 @@ export type {
   LdtkWorldData,
   LdtkWorldLayout,
 } from './LdtkData';
-export { ldtkFlipNone, ldtkFlipX, ldtkFlipXy, ldtkFlipY } from './LdtkData';
+export { LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y } from './LdtkData';
 
 // ── Runtime facade (re-exports from @codexo/exojs-tilemap) ───────────────────
 // These re-export the *same* module bindings — `instanceof TileMap` holds

@@ -10,7 +10,7 @@ import type {
   LdtkLevel,
   LdtkTileData,
 } from './LdtkData';
-import { ldtkFlipX, ldtkFlipY } from './LdtkData';
+import { LDTK_FLIP_X, LDTK_FLIP_Y } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import { LdtkMap } from './LdtkMap';
 
@@ -221,8 +221,8 @@ function populateTileLayer(
       tileset,
       localTileId,
       transform: {
-        flipX: (f & ldtkFlipX) !== 0,
-        flipY: (f & ldtkFlipY) !== 0,
+        flipX: (f & LDTK_FLIP_X) !== 0,
+        flipY: (f & LDTK_FLIP_Y) !== 0,
         diagonal: false,
       },
     });
