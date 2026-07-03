@@ -1,4 +1,4 @@
-import { dirname, resolve as resolvePath } from 'node:path';
+import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
@@ -192,6 +192,15 @@ const modules: RollupOptions = {
     sourcemap: true,
     preserveModules: true,
     preserveModulesRoot: 'src',
+    // The preserveModules tree emits `sources` one directory level too high
+    // (`../../../../src/…` escapes the repo), so consumers (e.g. Vite serving
+    // the site) warn about missing source files on every module. Re-anchor
+    // every `src/…` source to its real location relative to its map file.
+    sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
+      const match = /^(?:\.\.[\\/])+(src[\\/].*)$/.exec(relativeSourcePath);
+      if (!match) return relativeSourcePath;
+      return relativePath(dirname(sourcemapPath), resolvePath(rootDir, match[1])).replaceAll('\\', '/');
+    },
   },
   plugins: basePlugins({
     exportConditions: sourceConditions,
@@ -202,6 +211,9 @@ const modules: RollupOptions = {
         outDir: 'dist/esm',
         declaration: true,
         declarationDir: 'dist/esm',
+        // Embed the original TS text so the shipped maps work without src/
+        // on disk (npm consumers, and Vite's missing-source check).
+        inlineSources: true,
       },
     }),
   }),
