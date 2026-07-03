@@ -1,0 +1,211 @@
+{
+  "title": "Tiled Functions",
+  "description": "Free functions and constants exported from @codexo/exojs-tiled.",
+  "symbol": "Tiled Functions",
+  "kind": "namespace",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs-tiled. Import any of them directly, for example `import { createTiledLayer } from '@codexo/exojs-tiled'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "createTiledLayer",
+          "signature": "createTiledLayer(data: TiledLayerData): TiledLayer",
+          "signatureTokens": [
+            {
+              "text": "createTiledLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLayerData",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "TiledLayerData",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledLayer",
+          "description": "Constructs the appropriate TiledLayer subclass for data.type."
+        },
+        {
+          "name": "tiledWangSetToWangSet",
+          "signature": "tiledWangSetToWangSet(wangSet: TiledWangSetData, tilesetIndex: number): WangSet | null",
+          "signatureTokens": [
+            {
+              "text": "tiledWangSetToWangSet",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wangSet",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledWangSetData",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tilesetIndex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WangSet",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "wangSet",
+              "type": "TiledWangSetData",
+              "optional": false
+            },
+            {
+              "name": "tilesetIndex",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "WangSet | null",
+          "description": "Best-effort conversion of a TiledWangSetData to a runtime WangSet from @codexo/exojs-tilemap. ## Supported types - **'corner'** — Maps the four corner positions of each wangtile to the four corner bits of the 8-bit blob mask and returns a WangSet of type 'blob'. Only color index > 0 in the Tiled wangid is treated as \"this terrain\"; color index 0 means unset (not this terrain). Tiled corner wangid position → WangSet blob bit mapping: - wangid[7] (top-left) → bit 0 (value 1) - wangid[1] (top-right) → bit 2 (value 4) - wangid[5] (bottom-left) → bit 5 (value 32) - wangid[3] (bottom-right) → bit 7 (value 128) This is a best-effort conversion accurate for the common **single-color** corner terrain (blob-style). Multi-color terrains are accepted but only the presence/absence of any color (> 0 = set) is used; which specific color is set is ignored. - **'edge'** — Maps the four edge positions to the 4-bit edge mask and returns a WangSet of type 'edge'. Tiled edge wangid position → WangSet edge bit mapping: - wangid[0] (top) → bit 0 (value 1) - wangid[2] (right) → bit 1 (value 2) - wangid[4] (bottom) → bit 2 (value 4) - wangid[6] (left) → bit 3 (value 8) - **'mixed' / unknown** — Returns null; mixed wangsets interleave corner and edge semantics in a way that cannot be faithfully represented by a single blob or edge mask without additional heuristics."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "tiledBuildInfo",
+          "signature": "tiledBuildInfo: TiledBuildInfo",
+          "signatureTokens": [
+            {
+              "text": "tiledBuildInfo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledBuildInfo",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tiledExtension",
+          "signature": "tiledExtension: Extension",
+          "signatureTokens": [
+            {
+              "text": "tiledExtension",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default immutable Tiled extension descriptor. Registers two asset bindings: - tiledRuntimeMapBinding — loader.load(TileMap, 'world.tmj') → returns a format-independent runtime TileMap (common case). - tiledMapBinding — loader.load(TiledMap, 'world.tmj') → returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Use with ApplicationOptions.extensions or call import '@codexo/exojs-tiled/register' for global auto-registration."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}

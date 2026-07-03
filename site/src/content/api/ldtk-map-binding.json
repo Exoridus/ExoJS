@@ -1,0 +1,185 @@
+{
+  "title": "ldtkMapBinding",
+  "description": "Declarative asset binding for LdtkMap. Claims the `ldtk` file extension so that: - `loader.load(LdtkMap, 'world.ldtk')` — returns the parsed LdtkMap with all levels pre-converted to runtime import('@codexo/exojs-tilemap').TileMaps. - `loader.load('world.ldtk')` — auto-routed to `LdtkMap` via the `ExtensionTypeMap` augmentation in `public.ts`. Each loaded level's TileMap is accessible via LdtkMap.levels or LdtkMap.getLevelByName.",
+  "symbol": "ldtkMapBinding",
+  "kind": "namespace",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Declarative asset binding for LdtkMap.",
+        "Claims the `ldtk` file extension so that: - `loader.load(LdtkMap, 'world.ldtk')` — returns the parsed LdtkMap with all levels pre-converted to runtime import('@codexo/exojs-tilemap').TileMaps. - `loader.load('world.ldtk')` — auto-routed to `LdtkMap` via the `ExtensionTypeMap` augmentation in `public.ts`.",
+        "Each loaded level's TileMap is accessible via LdtkMap.levels or LdtkMap.getLevelByName."
+      ],
+      "importLine": "import { ldtkMapBinding } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(): { load: unknown }",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "{ load: unknown }",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "extensions",
+          "signature": "extensions: string[]",
+          "signatureTokens": [
+            {
+              "text": "extensions",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: typeof LdtkMap",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkMap",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "typeNames",
+          "signature": "typeNames: string[]",
+          "signatureTokens": [
+            {
+              "text": "typeNames",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/ldtkBinding.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/ldtkBinding.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/ldtkBinding.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/ldtkBinding.ts"
+}

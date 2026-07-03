@@ -29,7 +29,7 @@ type Subsystem =
     | 'tiled'
     | 'tilemap'
     | 'ui';
-type ApiKind = 'class' | 'enum' | 'interface' | 'type';
+type ApiKind = 'class' | 'enum' | 'interface' | 'type' | 'function' | 'namespace' | 'variable';
 type ApiTier = 'stable' | 'advanced';
 
 const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
@@ -123,10 +123,17 @@ const isInterface = (kind: ReflectionKind): boolean => (kind & ReflectionKind.In
 const isTypeAlias = (kind: ReflectionKind): boolean => (kind & ReflectionKind.TypeAlias) > 0;
 const isDocumentableKind = (kind: ReflectionKind): boolean =>
     isClass(kind) || isEnum(kind) || isInterface(kind) || isTypeAlias(kind);
+const isFunction = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Function) > 0;
+const isVariable = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Variable) > 0;
+
 const toApiKind = (kind: ReflectionKind): ApiKind => {
     if (isClass(kind)) return 'class';
     if (isInterface(kind)) return 'interface';
     if (isEnum(kind)) return 'enum';
+    if (isFunction(kind)) return 'function';
+    // An object-literal `const` (MathUtils, Collision, …) documents like a
+    // namespace: a bag of function/value members.
+    if (isVariable(kind)) return 'namespace';
     return 'type';
 };
 
@@ -425,6 +432,30 @@ const renderClassMembers = (reflection: any): ReflectionBody => {
 
 const EMPTY_COUNTS: ApiCounts = { constructors: 0, methods: 0, properties: 0, events: 0 };
 
+/**
+ * Sections for an object-literal `const` (MathUtils, Collision, …): its
+ * function members render as Methods, its value members as Properties.
+ */
+const buildObjectSections = (declaration: any): ReflectionBody => {
+    const children = (declaration.children ?? []).filter((child: any) => !child.name.startsWith('_'));
+    const methods = children.filter((child: any) => (child.signatures?.length ?? 0) > 0);
+    const values = children.filter((child: any) => (child.signatures?.length ?? 0) === 0);
+    const methodMembers = methods.flatMap((method: any) =>
+        (method.signatures ?? []).map((signature: any) => buildCallableMember(method.name, signature, method.comment))
+    );
+    const valueMembers = values.map((value: any) =>
+        buildValueMember(value.name, value.type ?? value.getSignature?.type, value.comment, Boolean(value.flags?.isOptional))
+    );
+    const sections: ApiSection[] = [];
+    if (methodMembers.length > 0) sections.push(toMemberSection('Methods', methodMembers));
+    if (valueMembers.length > 0) sections.push(toMemberSection('Properties', valueMembers));
+    return {
+        sections,
+        counts: { constructors: 0, methods: methodMembers.length, properties: valueMembers.length, events: 0 },
+        memberCount: methodMembers.length + valueMembers.length,
+    };
+};
+
 const renderReflectionBody = (reflection: any): ReflectionBody => {
     if (isEnum(reflection.kind)) {
         // Enum members render as a bare name with no description, matching the
@@ -452,6 +483,11 @@ const renderReflectionBody = (reflection: any): ReflectionBody => {
 
     // Type aliases have no members; show their definition as a single tokenized
     // row so its component types cross-link like any other signature.
+    // An object-literal const documents like a namespace of members.
+    if (isVariable(reflection.kind) && (reflection.type?.declaration?.children?.length ?? 0) > 0) {
+        return buildObjectSections(reflection.type.declaration);
+    }
+
     if (isTypeAlias(reflection.kind)) {
         const definitionTokens = tokenizeType(reflection.type);
         const definitionMember: ApiMember = {
@@ -509,7 +545,9 @@ interface EmitOptions {
 }
 
 const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOptions): boolean => {
-    if (!isDocumentableKind(reflection.kind)) return false;
+    // Documentable kinds plus object-literal variables (namespaces like
+    // MathUtils), which build() routes here explicitly.
+    if (!isDocumentableKind(reflection.kind) && !isVariable(reflection.kind)) return false;
 
     const source = reflection.sources?.[0];
     const sourcePath = source?.fileName ? normalizePath(source.fileName) : undefined;
@@ -524,15 +562,6 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
     const tier: ApiTier = reflection.comment?.modifierTags?.has('@advanced') ? 'advanced' : 'stable';
     const { sections: memberSections, counts, memberCount } = renderReflectionBody(reflection);
     const kind = toApiKind(reflection.kind);
-
-    const baseSlug = slugify(reflection.name);
-    let slug = baseSlug;
-    let suffix = 2;
-    while (usedSlugs.has(slug)) {
-        slug = `${baseSlug}-${suffix}`;
-        suffix += 1;
-    }
-    usedSlugs.add(slug);
 
     // Core sources live under <repo>/src; package sources under <repo>/packages/<pkg>/src.
     // Prefer the package-relative form so extension source links resolve correctly.
@@ -590,11 +619,27 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
         ...(sourceUrl ? { sourceUrl } : {}),
     };
 
-    // Validate against the shared schema so the generator can never emit data
-    // the collection would reject at build time (fail fast, here, with context).
+    return finalizeAndWrite(data, usedSlugs);
+};
+
+/**
+ * Assign a unique slug (from the symbol name), validate against the shared
+ * schema (fail fast on drift), and write the JSON. Shared by emitReflection and
+ * the synthetic emitters (object-collection variables, the functions page).
+ */
+const finalizeAndWrite = (data: ApiSymbolData, usedSlugs: Set<string>): boolean => {
+    const baseSlug = slugify(data.symbol);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (usedSlugs.has(slug)) {
+        slug = `${baseSlug}-${suffix}`;
+        suffix += 1;
+    }
+    usedSlugs.add(slug);
+
     const result = apiSymbolSchema.safeParse(data);
     if (!result.success) {
-        throw new Error(`Generated API data for "${reflection.name}" is invalid:\n${result.error.toString()}`);
+        throw new Error(`Generated API data for "${data.symbol}" is invalid:\n${result.error.toString()}`);
     }
 
     fs.writeFileSync(path.resolve(outputDir, `${slug}.json`), `${JSON.stringify(data, null, 2)}\n`, 'utf8');
@@ -656,6 +701,71 @@ const buildConstantsSection = (namespaceReflection: any): ApiSection | null => {
     return { id: 'constants', title: 'Constants', members, paragraphs: [], importLine: null, sourceLink: null };
 };
 
+/** Collect top-level free function + variable reflections (flattened). */
+const collectExtras = (project: any): any[] => {
+    const out: any[] = [];
+    for (const child of project.children ?? []) {
+        if (isFunction(child.kind) || isVariable(child.kind)) {
+            out.push(child);
+        } else if (Array.isArray(child.children) && (child.kind & ReflectionKind.Module) > 0) {
+            for (const sub of child.children) {
+                if (isFunction(sub.kind) || isVariable(sub.kind)) out.push(sub);
+            }
+        }
+    }
+    return out;
+};
+
+/**
+ * Emit one aggregate page collecting a package's free functions and simple
+ * constants (the ones that aren't object-literal namespaces or class/interface
+ * merges), so they are documented without spawning dozens of thin pages.
+ */
+const emitFunctionsPage = (
+    functions: any[],
+    simpleVars: any[],
+    importPath: string,
+    subsystem: Subsystem,
+    pageSymbol: string,
+    usedSlugs: Set<string>,
+): boolean => {
+    if (functions.length === 0 && simpleVars.length === 0) return false;
+
+    const functionMembers = functions
+        .flatMap((fn: any) => (fn.signatures ?? []).map((signature: any) => buildCallableMember(fn.name, signature, fn.comment)))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    const constMembers = simpleVars
+        .map((v: any) => buildValueMember(v.name, v.type ?? v.getSignature?.type, v.comment))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    const sections: ApiSection[] = [
+        {
+            id: 'overview',
+            title: 'Overview',
+            members: [],
+            paragraphs: [`Free functions and constants exported from ${importPath}. Import any of them directly, for example \`import { ${functionMembers[0]?.name ?? constMembers[0]?.name} } from '${importPath}'\`.`],
+            importLine: null,
+            sourceLink: null,
+        },
+    ];
+    if (functionMembers.length > 0) sections.push(toMemberSection('Functions', functionMembers));
+    if (constMembers.length > 0) sections.push(toMemberSection('Constants', constMembers));
+
+    const data: ApiSymbolData = {
+        title: pageSymbol === 'Functions' ? 'Functions & Constants' : pageSymbol,
+        description: `Free functions and constants exported from ${importPath}.`,
+        symbol: pageSymbol,
+        kind: 'namespace',
+        subsystem,
+        importPath,
+        tier: 'stable',
+        memberCount: functionMembers.length + constMembers.length,
+        counts: { constructors: 0, methods: functionMembers.length, properties: constMembers.length, events: 0 },
+        sections,
+    };
+    return finalizeAndWrite(data, usedSlugs);
+};
+
 const convertEntryPoints = async (entryPoints: ReadonlyArray<string>, tsconfig: string): Promise<any> => {
     const app = await Application.bootstrapWithPlugins({
         entryPoints: entryPoints.map(entry => toPosix(path.resolve(repoRoot, entry))),
@@ -685,9 +795,23 @@ const build = async (): Promise<void> => {
     const coreProject = await convertEntryPoints(['src/index.ts', 'src/debug/index.ts'], 'tsconfig.json');
     const coreNamespaces = new Map<string, any>(collectNamespaces(coreProject).map((ns: any) => [ns.name, ns]));
     let coreCount = 0;
-    for (const reflection of collectSymbols(coreProject)) {
+    const coreDocumentable = collectSymbols(coreProject);
+    const coreNames = new Set<string>(coreDocumentable.map((r: any) => r.name));
+    for (const reflection of coreDocumentable) {
         if (emitReflection(reflection, usedSlugs, { mergeNamespace: coreNamespaces.get(reflection.name) })) coreCount += 1;
     }
+
+    // Free functions, object-literal namespaces (MathUtils, …) and simple
+    // constants. Names that clash with a documented class/interface/type are a
+    // merge partner already handled above, so they are skipped here.
+    const coreExtras = collectExtras(coreProject).filter((e: any) => !coreNames.has(e.name));
+    const coreObjectVars = coreExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) > 0);
+    const coreSimpleVars = coreExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) === 0);
+    const coreFunctions = coreExtras.filter((e: any) => isFunction(e.kind));
+    for (const objectVar of coreObjectVars) {
+        if (emitReflection(objectVar, usedSlugs, {})) coreCount += 1;
+    }
+    if (emitFunctionsPage(coreFunctions, coreSimpleVars, '@codexo/exojs', 'core', 'Functions', usedSlugs)) coreCount += 1;
 
     if (coreCount === 0) {
         throw new Error('TypeDoc conversion produced no exportable core symbols.');
@@ -699,7 +823,9 @@ const build = async (): Promise<void> => {
         const project = await convertEntryPoints([pkg.entryPoint], pkg.tsconfig);
         const namespaces = new Map<string, any>(collectNamespaces(project).map((ns: any) => [ns.name, ns]));
         let count = 0;
-        for (const reflection of collectSymbols(project)) {
+        const documentable = collectSymbols(project);
+        const names = new Set<string>(documentable.map((r: any) => r.name));
+        for (const reflection of documentable) {
             if (
                 emitReflection(reflection, usedSlugs, {
                     importPathOverride: pkg.importPath,
@@ -711,6 +837,21 @@ const build = async (): Promise<void> => {
                 count += 1;
             }
         }
+
+        // The package's own free functions/variables (packages re-export core,
+        // so filter to this package's source and drop merge-partner names).
+        const ownExtras = collectExtras(project).filter(
+            (e: any) => !names.has(e.name) && normalizePath(e.sources?.[0]?.fileName ?? '').includes(pkg.sourceMarker),
+        );
+        const objectVars = ownExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) > 0);
+        const simpleVars = ownExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) === 0);
+        const functions = ownExtras.filter((e: any) => isFunction(e.kind));
+        for (const objectVar of objectVars) {
+            if (emitReflection(objectVar, usedSlugs, { importPathOverride: pkg.importPath, subsystemOverride: pkg.subsystem })) count += 1;
+        }
+        const pageSymbol = `${pkg.subsystem[0].toUpperCase()}${pkg.subsystem.slice(1)} Functions`;
+        if (emitFunctionsPage(functions, simpleVars, pkg.importPath, pkg.subsystem, pageSymbol, usedSlugs)) count += 1;
+
         if (count === 0) {
             throw new Error(`TypeDoc conversion produced no own symbols for ${pkg.importPath}.`);
         }

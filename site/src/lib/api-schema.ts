@@ -77,7 +77,7 @@ export const apiSymbolSchema = z.object({
     title: z.string(),
     description: z.string(),
     symbol: z.string(),
-    kind: z.enum(['class', 'enum', 'interface', 'type']),
+    kind: z.enum(['class', 'enum', 'interface', 'type', 'function', 'namespace', 'variable']),
     subsystem: z.enum(API_SUBSYSTEM_ORDER),
     importPath: z.string(),
     tier: z.enum(['stable', 'advanced']),

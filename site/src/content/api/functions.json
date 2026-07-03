@@ -1,0 +1,1227 @@
+{
+  "title": "Functions & Constants",
+  "description": "Free functions and constants exported from @codexo/exojs.",
+  "symbol": "Functions",
+  "kind": "namespace",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 23,
+  "counts": {
+    "constructors": 0,
+    "methods": 16,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs. Import any of them directly, for example `import { clamp } from '@codexo/exojs'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "clamp",
+          "signature": "clamp(value: number, min: number, max: number): number",
+          "signatureTokens": [
+            {
+              "text": "clamp",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "min",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "max",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "min",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Clamp value to the closed interval [min, max]."
+        },
+        {
+          "name": "createRenderStats",
+          "signature": "createRenderStats(): RenderStats",
+          "signatureTokens": [
+            {
+              "text": "createRenderStats",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderStats",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "RenderStats",
+          "description": "Allocate a zeroed RenderStats object for the first frame."
+        },
+        {
+          "name": "crossFade",
+          "signature": "crossFade(from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "crossFade",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "from",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "durationMs",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CrossFadeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "from",
+              "type": "Voice",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "Voice",
+              "optional": false
+            },
+            {
+              "name": "durationMs",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "CrossFadeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Cross-fade from one playing Voice to another over durationMs. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing — start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, 1000);  Returns a Promise that resolves once durationMs elapses."
+        },
+        {
+          "name": "decodeAudioData",
+          "signature": "decodeAudioData(arrayBuffer: ArrayBuffer): Promise<AudioBuffer>",
+          "signatureTokens": [
+            {
+              "text": "decodeAudioData",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "arrayBuffer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "arrayBuffer",
+              "type": "ArrayBuffer",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<AudioBuffer>",
+          "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate is derived from the live AudioContext, ensuring decoded buffers are compatible with playback nodes. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context — decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
+        },
+        {
+          "name": "defineAssetManifest",
+          "signature": "defineAssetManifest(manifest: M): M",
+          "signatureTokens": [
+            {
+              "text": "defineAssetManifest",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "manifest",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "manifest",
+              "type": "M",
+              "optional": false
+            }
+          ],
+          "returnType": "M",
+          "description": "Validates and returns a strongly-typed AssetManifest. Validates the manifest shape at runtime (non-empty bundle names, valid entry fields, no duplicate aliases per type/bundle) and preserves the literal types of the input for downstream type inference. Throws a descriptive Error on any validation failure."
+        },
+        {
+          "name": "getAudioContext",
+          "signature": "getAudioContext(): AudioContext",
+          "signatureTokens": [
+            {
+              "text": "getAudioContext",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "AudioContext",
+          "description": "Return the global singleton AudioContext, creating it if it does not yet exist. Also starts interaction-unlock monitoring so the context will resume on the first user gesture. Throws if AudioContext is not available in the current environment."
+        },
+        {
+          "name": "getOfflineAudioContext",
+          "signature": "getOfflineAudioContext(): OfflineAudioContext",
+          "signatureTokens": [
+            {
+              "text": "getOfflineAudioContext",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OfflineAudioContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "OfflineAudioContext",
+          "description": "Return the shared singleton OfflineAudioContext used for audio decoding. Its sample rate matches the live AudioContext. Creates the live context as a side effect if it does not exist yet."
+        },
+        {
+          "name": "inRange",
+          "signature": "inRange(value: number, min: number, max: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "inRange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "min",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "max",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "min",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when value lies within [min, max] (inclusive, regardless of whether min < max)."
+        },
+        {
+          "name": "isAdvancedBlendMode",
+          "signature": "isAdvancedBlendMode(mode: BlendModes): boolean",
+          "signatureTokens": [
+            {
+              "text": "isAdvancedBlendMode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mode",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mode",
+              "type": "BlendModes",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true for blend modes that require the backdrop-aware compositor (shader-side blend + GPU texture copy). Modes 0–4 use fixed-function blending and return false. Modes 5–17 return true."
+        },
+        {
+          "name": "isAudioContextReady",
+          "signature": "isAudioContextReady(): boolean",
+          "signatureTokens": [
+            {
+              "text": "isAudioContextReady",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "boolean",
+          "description": "Return true if the global AudioContext has been created and is currently in the running state. Safe to call before getAudioContext; returns false if no context exists yet."
+        },
+        {
+          "name": "isPowerOfTwo",
+          "signature": "isPowerOfTwo(value: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "isPowerOfTwo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when value is a non-zero power of two."
+        },
+        {
+          "name": "lerp",
+          "signature": "lerp(startValue: number, endValue: number, ratio: number): number",
+          "signatureTokens": [
+            {
+              "text": "lerp",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "startValue",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "endValue",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ratio",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "startValue",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "endValue",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ratio",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Linear interpolation between startValue and endValue at normalized ratio ∈ [0, 1]."
+        },
+        {
+          "name": "registerAudioWorkletProcessor",
+          "signature": "registerAudioWorkletProcessor(audioContext: BaseAudioContext, processorName: string, source: string): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "registerAudioWorkletProcessor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "audioContext",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BaseAudioContext",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "processorName",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "audioContext",
+              "type": "BaseAudioContext",
+              "optional": false
+            },
+            {
+              "name": "processorName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Registers an AudioWorkletProcessor (defined by source) with the given AudioContext under processorName. Idempotent: subsequent calls with the same context+name return immediately. Concurrent calls (race-condition protection) share a single in-flight registration promise. Source is bundled at build time as a JavaScript string and turned into a Blob URL at runtime — no separate worklet asset file is shipped."
+        },
+        {
+          "name": "registerSerializer",
+          "signature": "registerSerializer(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>, registry: SerializationRegistry): void",
+          "signatureTokens": [
+            {
+              "text": "registerSerializer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeName",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ctor",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNodeConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "serializer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NodeSerializer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "registry",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializationRegistry",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "typeName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "ctor",
+              "type": "SceneNodeConstructor<T>",
+              "optional": false
+            },
+            {
+              "name": "serializer",
+              "type": "NodeSerializer<T>",
+              "optional": false
+            },
+            {
+              "name": "registry",
+              "type": "SerializationRegistry",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Register a custom NodeSerializer. Defaults to the defaultSerializationRegistry; pass app.serializers to register the type only for that Application (it stays isolated from other apps and from the global registry, resolving through the fallback chain). Use this to make your own SceneNode subclasses serializable. Delegate to a base type's behaviour by composing with the framework helpers, or register a fully custom serializer. ts registerSerializer('PowerUp', PowerUp, { write: (node) => ({ kind: node.kind }), read: (data) => new PowerUp(typeof data.kind === 'string' ? data.kind : ''), }); "
+        },
+        {
+          "name": "resetRenderStats",
+          "signature": "resetRenderStats(stats: RenderStats): RenderStats",
+          "signatureTokens": [
+            {
+              "text": "resetRenderStats",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stats",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderStats",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderStats",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "stats",
+              "type": "RenderStats",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderStats",
+          "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame."
+        },
+        {
+          "name": "sign",
+          "signature": "sign(value: number): number",
+          "signatureTokens": [
+            {
+              "text": "sign",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Return the sign of value as -1, 0, or 1. Unlike Math.sign, returns 0 only for strict zero (not -0)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "buildInfo",
+          "signature": "buildInfo: BuildInfo",
+          "signatureTokens": [
+            {
+              "text": "buildInfo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BuildInfo",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "logger",
+          "signature": "logger: Logger",
+          "signatureTokens": [
+            {
+              "text": "logger",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Logger",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxPointers",
+          "signature": "maxPointers: 16",
+          "signatureTokens": [
+            {
+              "text": "maxPointers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "16",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum number of simultaneous tracked pointers (mouse / touch / pen)."
+        },
+        {
+          "name": "onAudioContextReady",
+          "signature": "onAudioContextReady: AudioContextReadySignal",
+          "signatureTokens": [
+            {
+              "text": "onAudioContextReady",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContextReadySignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Signal that dispatches once the global AudioContext enters the running state. Handles browser autoplay-policy by listening for user-interaction events (mousedown, touchstart, touchend) and resuming a suspended context automatically."
+        },
+        {
+          "name": "pointerSlotSize",
+          "signature": "pointerSlotSize: 16",
+          "signatureTokens": [
+            {
+              "text": "pointerSlotSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "16",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of channel slots reserved per pointer. 16 pointers × 16 slots = 256 (fills the Pointers category exactly)."
+        },
+        {
+          "name": "SERIALIZATION_VERSION",
+          "signature": "SERIALIZATION_VERSION: 1",
+          "signatureTokens": [
+            {
+              "text": "SERIALIZATION_VERSION",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "1",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current scene-serialization format version. Written into every SerializedScene and checked on deserialize so saved data can outlive the code that produced it (see the migration chain in migrate)."
+        },
+        {
+          "name": "TAU",
+          "signature": "TAU: number",
+          "signatureTokens": [
+            {
+              "text": "TAU",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "τ = 2π, the full-circle radian constant."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}
