@@ -99,7 +99,7 @@
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.js\" \"site/src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.js\" \"site/src/**/*.{ts,tsx}\"",
     "site:lint": "eslint \"site/src/**/*.{ts,tsx}\"",
-    "lint:packages": "eslint \"packages/exojs-*/src/**/*.{ts,tsx}\" \"packages/exojs-*/test/**/*.{ts,tsx}\"",
+    "lint:packages": "eslint \"packages/exojs-*/src/**/*.{ts,tsx}\" \"packages/exojs-*/test/**/*.{ts,tsx}\" \"packages/create-exo-app/src/**/*.ts\"",
     "lint:all": "pnpm lint && pnpm lint:packages",
     "lint:strict": "eslint --max-warnings=0 \"src/**/*.ts\"",
     "lint:strict:fast": "eslint --cache --cache-location .cache/eslintcache --max-warnings=0 \"src/**/*.ts\"",

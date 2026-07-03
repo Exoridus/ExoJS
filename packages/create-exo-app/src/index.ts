@@ -124,7 +124,7 @@ async function main(): Promise<void> {
   const pkgPath = join(destDir, 'package.json');
   const pkgContent = readFileSync(pkgPath, 'utf-8');
   const pkgJson = JSON.parse(pkgContent) as Record<string, unknown>;
-  pkgJson['name'] = basename(projectName);
+  pkgJson.name = basename(projectName);
   writeFileSync(pkgPath, JSON.stringify(pkgJson, null, 2) + '\n');
 
   console.log(`\nDone.\n`);
