@@ -301,11 +301,15 @@
         },
         {
           "name": "writeUniforms",
-          "signature": "writeUniforms(view: DataView, byteOffset: number, dt: number): void",
+          "signature": "writeUniforms?(view: DataView, byteOffset: number, dt: number): void",
           "signatureTokens": [
             {
               "text": "writeUniforms",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": "(",

@@ -1,0 +1,369 @@
+{
+  "title": "TextStyle",
+  "description": "Text styling options carried by a TextObject.",
+  "symbol": "TextStyle",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Text styling options carried by a TextObject."
+      ],
+      "importLine": "import { TextStyle } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bold",
+          "signature": "bold?: boolean",
+          "signatureTokens": [
+            {
+              "text": "bold",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bold text."
+        },
+        {
+          "name": "color",
+          "signature": "color?: number | null",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text colour as 0xRRGGBB, or null if default."
+        },
+        {
+          "name": "fontFamily",
+          "signature": "fontFamily?: string",
+          "signatureTokens": [
+            {
+              "text": "fontFamily",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Font family name."
+        },
+        {
+          "name": "halign",
+          "signature": "halign?: \"left\" | \"right\" | \"center\" | \"justify\"",
+          "signatureTokens": [
+            {
+              "text": "halign",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"center\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"justify\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal alignment."
+        },
+        {
+          "name": "italic",
+          "signature": "italic?: boolean",
+          "signatureTokens": [
+            {
+              "text": "italic",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Italic text."
+        },
+        {
+          "name": "pixelSize",
+          "signature": "pixelSize?: number",
+          "signatureTokens": [
+            {
+              "text": "pixelSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Font size in pixels."
+        },
+        {
+          "name": "strikeout",
+          "signature": "strikeout?: boolean",
+          "signatureTokens": [
+            {
+              "text": "strikeout",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Strikeout text."
+        },
+        {
+          "name": "text",
+          "signature": "text: string",
+          "signatureTokens": [
+            {
+              "text": "text",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The text content."
+        },
+        {
+          "name": "underline",
+          "signature": "underline?: boolean",
+          "signatureTokens": [
+            {
+              "text": "underline",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Underline text."
+        },
+        {
+          "name": "valign",
+          "signature": "valign?: \"top\" | \"bottom\" | \"center\"",
+          "signatureTokens": [
+            {
+              "text": "valign",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"top\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"bottom\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"center\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical alignment."
+        },
+        {
+          "name": "wrap",
+          "signature": "wrap?: boolean",
+          "signatureTokens": [
+            {
+              "text": "wrap",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Wrap text within the object bounds."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ObjectLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ObjectLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+}

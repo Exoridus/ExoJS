@@ -807,7 +807,7 @@
         },
         {
           "name": "keyFor",
-          "signature": "keyFor(resource: object): object | null",
+          "signature": "keyFor(resource: object): { source: string; type: AssetConstructor } | null",
           "signatureTokens": [
             {
               "text": "keyFor",
@@ -838,8 +838,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -857,7 +889,7 @@
               "optional": false
             }
           ],
-          "returnType": "object | null",
+          "returnType": "{ source: string; type: AssetConstructor } | null",
           "description": "Reverse lookup: given a loaded resource object, return the asset type and source key it was first loaded under, or null for runtime-created, unloaded, or non-object resources. When a resource is shared across several aliases, the **first** alias it was stored under is returned (the canonical key). Primitive results (parsed JSON, text, CSV rows) are not keyable. Used by scene serialization to turn a live asset reference back into a portable source key; the contract is that the same asset is pre-loaded under that key before a matching deserialize."
         },
         {
@@ -2611,7 +2643,7 @@
         },
         {
           "name": "registerAssetType",
-          "signature": "registerAssetType(typeName: K, handler: object): this",
+          "signature": "registerAssetType(typeName: K, handler: { getIdentityKey?: unknown; load: unknown }): this",
           "signatureTokens": [
             {
               "text": "registerAssetType",
@@ -2646,8 +2678,44 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "getIdentityKey",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -2670,7 +2738,7 @@
             },
             {
               "name": "handler",
-              "type": "object",
+              "type": "{ getIdentityKey?: unknown; load: unknown }",
               "optional": false
             }
           ],

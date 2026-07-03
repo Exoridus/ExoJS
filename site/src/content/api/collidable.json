@@ -1,0 +1,355 @@
+{
+  "title": "Collidable",
+  "description": "Contract for objects that participate in collision detection. Implemented by all concrete shape classes as well as `SceneNode`.",
+  "symbol": "Collidable",
+  "kind": "interface",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Contract for objects that participate in collision detection. Implemented by all concrete shape classes as well as `SceneNode`."
+      ],
+      "importLine": "import { Collidable } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "collidesWith",
+          "signature": "collidesWith(target: Collidable): CollisionResponse | null",
+          "signatureTokens": [
+            {
+              "text": "collidesWith",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionResponse",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "CollisionResponse | null",
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+        },
+        {
+          "name": "contains",
+          "signature": "contains(x: number, y: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "contains",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if the point (x, y) is inside this shape."
+        },
+        {
+          "name": "getNormals",
+          "signature": "getNormals(): Vector[]",
+          "signatureTokens": [
+            {
+              "text": "getNormals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "Vector[]",
+          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+        },
+        {
+          "name": "intersectsWith",
+          "signature": "intersectsWith(target: Collidable): boolean",
+          "signatureTokens": [
+            {
+              "text": "intersectsWith",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
+        },
+        {
+          "name": "project",
+          "signature": "project(axis: Vector, interval?: Interval): Interval",
+          "signatureTokens": [
+            {
+              "text": "project",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "axis",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "interval",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Interval",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Interval",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "axis",
+              "type": "Vector",
+              "optional": false
+            },
+            {
+              "name": "interval",
+              "type": "Interval",
+              "optional": true
+            }
+          ],
+          "returnType": "Interval",
+          "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "signatureTokens": [
+            {
+              "text": "collisionType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Collision.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Collision.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+}

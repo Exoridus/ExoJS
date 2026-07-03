@@ -1,0 +1,423 @@
+{
+  "title": "BeatDetectorOptions",
+  "description": "",
+  "symbol": "BeatDetectorOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 15,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 15,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { BeatDetectorOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "acfIntervalHops",
+          "signature": "acfIntervalHops?: number",
+          "signatureTokens": [
+            {
+              "text": "acfIntervalHops",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hops between successive autocorrelation (tempogram) recomputations. Default 15 (~160 ms at 48 kHz with the default 512-sample hop). Lower values react faster to tempo changes at the cost of more CPU."
+        },
+        {
+          "name": "barPulseHalfLife",
+          "signature": "barPulseHalfLife?: number",
+          "signatureTokens": [
+            {
+              "text": "barPulseHalfLife",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Half-life in seconds for the BeatDetector.barPulse envelope. Default 0.3 — slower than beat pulse for downbeat-emphasized visuals."
+        },
+        {
+          "name": "emitProvisionalBeats",
+          "signature": "emitProvisionalBeats?: boolean",
+          "signatureTokens": [
+            {
+              "text": "emitProvisionalBeats",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true (default), early low-confidence beats are emitted tagged status: 'provisional' (then promoted to 'locked') for snappy visual reactivity. Set false to suppress provisional beats entirely — onBeat then fires only for 'locked' beats, matching the pre-provisional behaviour."
+        },
+        {
+          "name": "enableTimeSignatureDetection",
+          "signature": "enableTimeSignatureDetection?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableTimeSignatureDetection",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true (default), the worklet runs parallel 3/4 and 4/4 posteriors and switches active time signature via hysteresis. Set false to lock to 4/4."
+        },
+        {
+          "name": "fastTempoWindowSec",
+          "signature": "fastTempoWindowSec?: number",
+          "signatureTokens": [
+            {
+              "text": "fastTempoWindowSec",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Short tempogram window (seconds) that reacts quickly to a genuine tempo change. Default 2.5. The tracked tempo follows this FAST window only when it disagrees with stableTempoWindowSec consistently over several analysis hops, so a real DJ drift is tracked without making a steady tempo nervous."
+        },
+        {
+          "name": "fftSize",
+          "signature": "fftSize?: number",
+          "signatureTokens": [
+            {
+              "text": "fftSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "FFT size for onset detection. Default 2048."
+        },
+        {
+          "name": "hopSize",
+          "signature": "hopSize?: number",
+          "signatureTokens": [
+            {
+              "text": "hopSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hop size in samples between successive FFTs. Default 512."
+        },
+        {
+          "name": "justBeatWindow",
+          "signature": "justBeatWindow?: number",
+          "signatureTokens": [
+            {
+              "text": "justBeatWindow",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time window in seconds for BeatDetector.justBeat. Default 0.03 — true for the visual frame(s) within 30ms of a beat onset."
+        },
+        {
+          "name": "maxBpm",
+          "signature": "maxBpm?: number",
+          "signatureTokens": [
+            {
+              "text": "maxBpm",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum detectable BPM. Default 300."
+        },
+        {
+          "name": "melBands",
+          "signature": "melBands?: number",
+          "signatureTokens": [
+            {
+              "text": "melBands",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of mel filterbank bands. Default 24."
+        },
+        {
+          "name": "minBpm",
+          "signature": "minBpm?: number",
+          "signatureTokens": [
+            {
+              "text": "minBpm",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Minimum detectable BPM. Default 50."
+        },
+        {
+          "name": "minSettlingMs",
+          "signature": "minSettlingMs?: number",
+          "signatureTokens": [
+            {
+              "text": "minSettlingMs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Minimum warm-up (ms) before the first beat may be emitted. Default 400. The detector starts hunting a tempo once this much analysis history exists instead of waiting a full slowest-tempo period, so early BeatInfo beats (tagged status: 'provisional') arrive with low latency for visual reactivity. A beat is promoted to status: 'locked' only once the tempo grid is trustworthy (full analysis window + sustained on-grid tracking). Replaces the former settlingMs (default 1500)."
+        },
+        {
+          "name": "pulseHalfLife",
+          "signature": "pulseHalfLife?: number",
+          "signatureTokens": [
+            {
+              "text": "pulseHalfLife",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Half-life in seconds for the BeatDetector.pulse envelope. Default 0.15 — pulse halves every 150ms after each beat."
+        },
+        {
+          "name": "source",
+          "signature": "source?: BeatDetectorSource",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatDetectorSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional initial source. Equivalent to constructing then assigning detector.source = value; provided for ergonomic one-shot construction. The setter remains usable for runtime source switches."
+        },
+        {
+          "name": "stableTempoWindowSec",
+          "signature": "stableTempoWindowSec?: number",
+          "signatureTokens": [
+            {
+              "text": "stableTempoWindowSec",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Long tempogram window (seconds) that holds the tempo grid steady against noise and octave ambiguity. Default 8. Should be ≥ fastTempoWindowSec and large enough to hold ≳ 2 periods of the slowest tempo; it also sizes the internal flux ring buffer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/BeatDetector.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/BeatDetector.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+}

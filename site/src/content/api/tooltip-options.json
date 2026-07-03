@@ -1,0 +1,246 @@
+{
+  "title": "TooltipOptions",
+  "description": "Options for Tooltip.",
+  "symbol": "TooltipOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for Tooltip."
+      ],
+      "importLine": "import { TooltipOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "background",
+          "signature": "background?: number",
+          "signatureTokens": [
+            {
+              "text": "background",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Background fill color as a packed 0xRRGGBB integer. Default 0x222222."
+        },
+        {
+          "name": "delay",
+          "signature": "delay?: number",
+          "signatureTokens": [
+            {
+              "text": "delay",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seconds to wait before the tooltip appears. Default 0.3."
+        },
+        {
+          "name": "fontSize",
+          "signature": "fontSize?: number",
+          "signatureTokens": [
+            {
+              "text": "fontSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Font size in pixels. Default 12."
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal pixel offset from the pointer position. Default 12."
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical pixel offset from the pointer position. Default -28."
+        },
+        {
+          "name": "padding",
+          "signature": "padding?: number",
+          "signatureTokens": [
+            {
+              "text": "padding",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Inner padding in pixels around the text. Default 6."
+        },
+        {
+          "name": "text",
+          "signature": "text: string",
+          "signatureTokens": [
+            {
+              "text": "text",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Label text to display."
+        },
+        {
+          "name": "textColor",
+          "signature": "textColor?: number",
+          "signatureTokens": [
+            {
+              "text": "textColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text color as a packed 0xRRGGBB integer. Default 0xffffff."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Tooltip.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Tooltip.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Tooltip.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Tooltip.ts"
+}

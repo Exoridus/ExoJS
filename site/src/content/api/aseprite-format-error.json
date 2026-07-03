@@ -107,11 +107,15 @@
       "members": [
         {
           "name": "cause",
-          "signature": "cause: unknown",
+          "signature": "cause?: unknown",
           "signatureTokens": [
             {
               "text": "cause",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -191,11 +195,15 @@
         },
         {
           "name": "stack",
-          "signature": "stack: string",
+          "signature": "stack?: string",
           "signatureTokens": [
             {
               "text": "stack",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

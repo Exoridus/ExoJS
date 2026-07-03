@@ -221,7 +221,7 @@
         },
         {
           "name": "process",
-          "signature": "process(response: Response): Promise<object>",
+          "signature": "process(response: Response): Promise<{ text: string; url: string }>",
           "signatureTokens": [
             {
               "text": "process",
@@ -260,8 +260,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "text",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -275,7 +307,7 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<object>",
+          "returnType": "Promise<{ text: string; url: string }>",
           "description": "Converts a raw HTTP response into a serialisable intermediate value suitable for cache storage and later passed to create."
         },
         {

@@ -1,0 +1,65 @@
+{
+  "title": "PackedTile",
+  "description": "Opaque packed tile data stored in a TileChunk's compact array. 0 means \"empty cell\". Any non-zero value encodes localTileId, tilesetIndex, and flip bits according to the bit-layout constants below. A `PackedTile` is **not** a source-format GID — it is a fully resolved internal compact representation. Use packTile / unpackTile (package-internal) to convert between packed form and a ResolvedTile if writing adapters. In public APIs, prefer ResolvedTile or null for queries. `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()` has a self-documenting return type.",
+  "symbol": "PackedTile",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Opaque packed tile data stored in a TileChunk's compact array. 0 means \"empty cell\". Any non-zero value encodes localTileId, tilesetIndex, and flip bits according to the bit-layout constants below.",
+        "A `PackedTile` is **not** a source-format GID — it is a fully resolved internal compact representation. Use packTile / unpackTile (package-internal) to convert between packed form and a ResolvedTile if writing adapters.",
+        "In public APIs, prefer ResolvedTile or null for queries. `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()` has a self-documenting return type."
+      ],
+      "importLine": "import { PackedTile } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PackedTile",
+          "signature": "number",
+          "signatureTokens": [
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+}

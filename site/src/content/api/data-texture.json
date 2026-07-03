@@ -40,7 +40,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: DataTextureOptions & object): DataTexture<F>",
+          "signature": "new(options: DataTextureOptions & { format: F }): DataTexture<F>",
           "signatureTokens": [
             {
               "text": "new",
@@ -67,8 +67,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
-              "kind": "keyword"
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -98,7 +114,7 @@
           "params": [
             {
               "name": "options",
-              "type": "DataTextureOptions & object",
+              "type": "DataTextureOptions & { format: F }",
               "optional": false
             }
           ],
@@ -116,7 +132,7 @@
       "members": [
         {
           "name": "addDestroyListener",
-          "signature": "addDestroyListener(listener: object): this",
+          "signature": "addDestroyListener(listener: () => void): this",
           "signatureTokens": [
             {
               "text": "addDestroyListener",
@@ -135,7 +151,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -154,7 +178,7 @@
           "params": [
             {
               "name": "listener",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             }
           ],
@@ -331,7 +355,7 @@
         },
         {
           "name": "removeDestroyListener",
-          "signature": "removeDestroyListener(listener: object): this",
+          "signature": "removeDestroyListener(listener: () => void): this",
           "signatureTokens": [
             {
               "text": "removeDestroyListener",
@@ -350,7 +374,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -369,7 +401,7 @@
           "params": [
             {
               "name": "listener",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             }
           ],

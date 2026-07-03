@@ -1,0 +1,379 @@
+{
+  "title": "Voice",
+  "description": "A live playback instance in the audio graph with a control surface. A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices. Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched, Spatializable) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one.",
+  "symbol": "Voice",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 0,
+    "methods": 4,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A live playback instance in the audio graph with a control surface.",
+        "A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices.",
+        "Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched, Spatializable) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one."
+      ],
+      "importLine": "import { Voice } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addEffect",
+          "signature": "addEffect(effect: AudioEffect): this",
+          "signatureTokens": [
+            {
+              "text": "addEffect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "effect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioEffect",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "effect",
+              "type": "AudioEffect",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Insert a per-voice AudioEffect into this voice's output chain (after the volume gain, before the bus). Effects are applied in insertion order."
+        },
+        {
+          "name": "fade",
+          "signature": "fade(to: number, ms: number): void",
+          "signatureTokens": [
+            {
+              "text": "fade",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ms",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "to",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ms",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Ramp the volume to to (clamped to [0, 1]) over ms milliseconds without stopping. Use Voice.stop with a fade argument to fade out and stop."
+        },
+        {
+          "name": "removeEffect",
+          "signature": "removeEffect(effect: AudioEffect): this",
+          "signatureTokens": [
+            {
+              "text": "removeEffect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "effect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioEffect",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "effect",
+              "type": "AudioEffect",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove a previously added per-voice effect. The caller still owns it and must destroy() it."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(fadeMs?: number): void",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "fadeMs",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "fadeMs",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Stop playback and release this voice's resources. Pass fadeMs to ramp the volume to zero over that many milliseconds before stopping; omit (or pass 0) to stop immediately. Idempotent — calling again is a no-op."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bus",
+          "signature": "bus: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "bus",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The AudioBus this voice routes into. Reassign to reroute live."
+        },
+        {
+          "name": "ended",
+          "signature": "ended: boolean",
+          "signatureTokens": [
+            {
+              "text": "ended",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once playback has ended naturally or been stopped."
+        },
+        {
+          "name": "onEnd",
+          "signature": "onEnd: Signal",
+          "signatureTokens": [
+            {
+              "text": "onEnd",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires once when this voice ends (natural end or Voice.stop)."
+        },
+        {
+          "name": "output",
+          "signature": "output: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "output",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The voice's output node — the last node before the AudioBus. Use it as a parallel tap for an analyser, or (later) as the insertion point for per-voice effects."
+        },
+        {
+          "name": "volume",
+          "signature": "volume: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Playback volume in the range [0, 1]. Bus volume (0..2) can amplify beyond this."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Playable.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Playable.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
+}

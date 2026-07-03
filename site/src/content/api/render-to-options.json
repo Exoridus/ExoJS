@@ -1,0 +1,121 @@
+{
+  "title": "RenderToOptions",
+  "description": "Caller-owned, per-frame off-screen render target. Unlike RenderingContext.capture, the RenderTexture is supplied by the caller and reused across frames (no per-call allocation).",
+  "symbol": "RenderToOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Caller-owned, per-frame off-screen render target. Unlike RenderingContext.capture, the RenderTexture is supplied by the caller and reused across frames (no per-call allocation)."
+      ],
+      "importLine": "import { RenderToOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear?: Color",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Clear the target to this colour before rendering; omitted preserves its contents."
+        },
+        {
+          "name": "target",
+          "signature": "target: RenderTexture",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination texture, owned and kept stable by the caller."
+        },
+        {
+          "name": "view",
+          "signature": "view?: View",
+          "signatureTokens": [
+            {
+              "text": "view",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "View to render with. Defaults to the target's own view."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/DrawContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/DrawContext.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/DrawContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/DrawContext.ts"
+}

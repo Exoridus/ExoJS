@@ -1,0 +1,215 @@
+{
+  "title": "DataTextureOptions",
+  "description": "Construction options for DataTexture.",
+  "symbol": "DataTextureOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for DataTexture."
+      ],
+      "importLine": "import { DataTextureOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "data",
+          "signature": "data?: ArrayBuffer | Float32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike>",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional external buffer. When omitted, an internal buffer is allocated sized exactly width * height * channels. When supplied: - A Uint8Array requires an 8-bit format (r8/rgba8). - A Float32Array requires a 32-bit float format (r32f/rgba32f). - An ArrayBuffer is accepted for any format and wrapped in the appropriate typed-array kind (zero-copy view, no allocation). In all cases the byte length must equal width * height * channels * bytesPerChannel, otherwise the constructor throws."
+        },
+        {
+          "name": "format",
+          "signature": "format: DataTextureFormat",
+          "signatureTokens": [
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DataTextureFormat",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "samplerOptions",
+          "signature": "samplerOptions?: Partial<SamplerOptions>",
+          "signatureTokens": [
+            {
+              "text": "samplerOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sampler overrides; defaults to nearest filtering and clamp-to-edge wrapping."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/DataTexture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/DataTexture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+}

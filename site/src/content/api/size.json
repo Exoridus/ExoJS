@@ -205,7 +205,7 @@
         },
         {
           "name": "copy",
-          "signature": "copy(size: object): this",
+          "signature": "copy(size: { height: number; width: number }): this",
           "signatureTokens": [
             {
               "text": "copy",
@@ -224,8 +224,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -243,7 +275,7 @@
           "params": [
             {
               "name": "size",
-              "type": "object",
+              "type": "{ height: number; width: number }",
               "optional": false
             }
           ],

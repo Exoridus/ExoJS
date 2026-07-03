@@ -1,0 +1,150 @@
+{
+  "title": "DistortionEffectOptions",
+  "description": "Construction options for DistortionEffect.",
+  "symbol": "DistortionEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for DistortionEffect."
+      ],
+      "importLine": "import { DistortionEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "drive",
+          "signature": "drive?: number",
+          "signatureTokens": [
+            {
+              "text": "drive",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Drive amount: controls the intensity of the tanh soft-clip curve. Range 0..1, default 0.4. Higher values produce heavier, more saturated distortion; lower values produce a milder soft-clip. Note that even at drive=0 the curve is not perfectly linear — the formula tanh(x) / tanh(1) has a gain of 1/tanh(1) ≈ 1.31 at the origin."
+        },
+        {
+          "name": "oversample",
+          "signature": "oversample?: OverSampleType",
+          "signatureTokens": [
+            {
+              "text": "oversample",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OverSampleType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Oversampling mode applied by the WaveShaperNode. Higher oversampling reduces aliasing artifacts at the cost of extra CPU. One of 'none', '2x', or '4x'. Default '2x'."
+        },
+        {
+          "name": "tone",
+          "signature": "tone?: number",
+          "signatureTokens": [
+            {
+              "text": "tone",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tone control: cutoff of a post-distortion low-pass filter on the wet path. Mapped logarithmically from 100 Hz (tone=0, fully dark) to 20 kHz (tone=1, fully open). Range 0..1, default 1."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 1.0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/DistortionEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DistortionEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/DistortionEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DistortionEffect.ts"
+}

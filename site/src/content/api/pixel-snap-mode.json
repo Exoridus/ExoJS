@@ -1,0 +1,81 @@
+{
+  "title": "PixelSnapMode",
+  "description": "Render-only pixel-snapping policy for a Drawable. - `'none'` — no snapping; rendered transform and geometry use existing behaviour. - `'position'` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `'geometry'` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `'position'` automatically when the transform is not axis-aligned (rotation / skew). Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state.",
+  "symbol": "PixelSnapMode",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Render-only pixel-snapping policy for a Drawable.",
+        "- `'none'` — no snapping; rendered transform and geometry use existing behaviour. - `'position'` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `'geometry'` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `'position'` automatically when the transform is not axis-aligned (rotation / skew).",
+        "Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state."
+      ],
+      "importLine": "import { PixelSnapMode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PixelSnapMode",
+          "signature": "\"none\" | \"position\" | \"geometry\"",
+          "signatureTokens": [
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"position\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"geometry\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/pixelSnap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/pixelSnap.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/pixelSnap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/pixelSnap.ts"
+}

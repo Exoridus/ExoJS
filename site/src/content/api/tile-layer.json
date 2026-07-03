@@ -89,7 +89,7 @@
       "members": [
         {
           "name": "chunkRange",
-          "signature": "chunkRange(): object",
+          "signature": "chunkRange(): { maxCx: number; maxCy: number; minCx: number; minCy: number }",
           "signatureTokens": [
             {
               "text": "chunkRange",
@@ -108,12 +108,76 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxCx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxCy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minCx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minCy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "object",
+          "returnType": "{ maxCx: number; maxCy: number; minCx: number; minCy: number }",
           "description": "Compute the range of chunk coordinates that intersect this layer."
         },
         {
@@ -814,7 +878,7 @@
         },
         {
           "name": "pixelToTile",
-          "signature": "pixelToTile(px: number, py: number): object",
+          "signature": "pixelToTile(px: number, py: number): { tx: number; ty: number }",
           "signatureTokens": [
             {
               "text": "pixelToTile",
@@ -861,8 +925,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -877,7 +973,7 @@
               "optional": false
             }
           ],
-          "returnType": "object",
+          "returnType": "{ tx: number; ty: number }",
           "description": "Convert a local pixel position to the tile coordinate that contains it. Uses floor, so a point exactly on a tile boundary maps to the tile. May return coordinates outside layer bounds."
         },
         {
@@ -971,7 +1067,7 @@
         },
         {
           "name": "tilesInRect",
-          "signature": "tilesInRect(x: number, y: number, w: number, h: number): Generator<object>",
+          "signature": "tilesInRect(x: number, y: number, w: number, h: number): Generator<{ tile: ResolvedTile; tx: number; ty: number }>",
           "signatureTokens": [
             {
               "text": "tilesInRect",
@@ -1058,8 +1154,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tile",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResolvedTile",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -1088,12 +1232,12 @@
               "optional": false
             }
           ],
-          "returnType": "Generator<object>",
+          "returnType": "Generator<{ tile: ResolvedTile; tx: number; ty: number }>",
           "description": "Iterate non-empty tiles within a rectangular region in row-major order. Yields (tx, ty, resolvedTile) tuples. Skips empty cells."
         },
         {
           "name": "tileToPixel",
-          "signature": "tileToPixel(tx: number, ty: number): object",
+          "signature": "tileToPixel(tx: number, ty: number): { x: number; y: number }",
           "signatureTokens": [
             {
               "text": "tileToPixel",
@@ -1140,8 +1284,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -1156,7 +1332,7 @@
               "optional": false
             }
           ],
-          "returnType": "object",
+          "returnType": "{ x: number; y: number }",
           "description": "Convert a tile coordinate to the pixel position of its top-left corner in the layer's local space."
         }
       ],

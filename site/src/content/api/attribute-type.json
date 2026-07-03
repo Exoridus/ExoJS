@@ -1,0 +1,95 @@
+{
+  "title": "AttributeType",
+  "description": "Scalar component type used by a geometry vertex attribute.",
+  "symbol": "AttributeType",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Scalar component type used by a geometry vertex attribute."
+      ],
+      "importLine": "import { AttributeType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AttributeType",
+          "signature": "\"f32\" | \"u8\" | \"u16\" | \"u32\" | \"i32\"",
+          "signatureTokens": [
+            {
+              "text": "\"f32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"u8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"u16\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"u32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"i32\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/geometry/GeometryAttribute.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/GeometryAttribute.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/geometry/GeometryAttribute.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/GeometryAttribute.ts"
+}

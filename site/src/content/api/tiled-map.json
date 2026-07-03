@@ -360,11 +360,15 @@
       "members": [
         {
           "name": "backgroundColor",
-          "signature": "backgroundColor: string",
+          "signature": "backgroundColor?: string",
           "signatureTokens": [
             {
               "text": "backgroundColor",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -552,11 +556,15 @@
         },
         {
           "name": "renderOrder",
-          "signature": "renderOrder: TiledRenderOrder",
+          "signature": "renderOrder?: TiledRenderOrder",
           "signatureTokens": [
             {
               "text": "renderOrder",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

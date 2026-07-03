@@ -1,0 +1,132 @@
+{
+  "title": "TileMapViewOptions",
+  "description": "Options for a TileMapView.",
+  "symbol": "TileMapViewOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for a TileMapView."
+      ],
+      "importLine": "import { TileMapViewOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bands",
+          "signature": "bands?: Readonly<Record<string, TileMapBandDefinition>>",
+          "signatureTokens": [
+            {
+              "text": "bands",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapBandDefinition",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Named bands, keyed by band name (keys are unique, so duplicate band names cannot occur). Each value lists the layers that compose the band. Layers not listed in any band remain reachable through TileMapView.getLayerNodeById and friends and are owned directly by the view (no implicit fallback band). The definition is copied and frozen; mutating the caller's object afterwards does not change band assignments."
+        },
+        {
+          "name": "cullable",
+          "signature": "cullable?: boolean",
+          "signatureTokens": [
+            {
+              "text": "cullable",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the generated TileLayerNodes' chunks participate in per-chunk view culling. Forwarded to every layer node. Default true."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/TileMapView.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapView.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/TileMapView.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapView.ts"
+}

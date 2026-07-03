@@ -1,0 +1,63 @@
+{
+  "title": "TileMapObjectKind",
+  "description": "Geometry discriminant for a TileMapObject. Structural alias of ObjectKind; retained so existing code keeps compiling. New code may prefer ObjectKind.",
+  "symbol": "TileMapObjectKind",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Geometry discriminant for a TileMapObject. Structural alias of ObjectKind; retained so existing code keeps compiling. New code may prefer ObjectKind."
+      ],
+      "importLine": "import { TileMapObjectKind } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TileMapObjectKind",
+          "signature": "ObjectKind",
+          "signatureTokens": [
+            {
+              "text": "ObjectKind",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ObjectLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ObjectLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+}

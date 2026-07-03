@@ -1,0 +1,272 @@
+{
+  "title": "CanvasApplicationOptions",
+  "description": "",
+  "symbol": "CanvasApplicationOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { CanvasApplicationOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "element",
+          "signature": "element?: HTMLCanvasElement",
+          "signatureTokens": [
+            {
+              "text": "element",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Existing canvas element to use. If omitted, Application creates one."
+        },
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical canvas height. Default: 600."
+        },
+        {
+          "name": "imageRendering",
+          "signature": "imageRendering?: \"auto\" | \"pixelated\" | \"crisp-edges\"",
+          "signatureTokens": [
+            {
+              "text": "imageRendering",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"auto\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pixelated\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"crisp-edges\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "CSS image-rendering hint applied to the canvas style."
+        },
+        {
+          "name": "mount",
+          "signature": "mount?: string | HTMLElement",
+          "signatureTokens": [
+            {
+              "text": "mount",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLElement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Element (or CSS selector) to append the canvas to on construction. If omitted, the canvas is created but not mounted — append it yourself."
+        },
+        {
+          "name": "pixelRatio",
+          "signature": "pixelRatio?: number",
+          "signatureTokens": [
+            {
+              "text": "pixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device/render pixel ratio applied to the backing buffer. Default: the host devicePixelRatio clamped to 2 (crisp on Retina/HiDPI out of the box, capped so DPR-3 phones don't pay a 9× fill-rate cost). Pass an explicit value to override — e.g. window.devicePixelRatio for full native density, or 1 to force logical-pixel rendering."
+        },
+        {
+          "name": "sizingMode",
+          "signature": "sizingMode?: CanvasSizingMode",
+          "signatureTokens": [
+            {
+              "text": "sizingMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasSizingMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the canvas is sized within its parent (needs a parent via mount, or an element already in the DOM): - 'fixed' (default): exactly width×height. - 'fill': track the parent's size via ResizeObserver and re-render to fill it; width/height are the initial size. - 'fit': render at width×height and CSS-scale to fit the parent, preserving aspect ratio (letterboxed). - 'shrink': like 'fit' but never upscale beyond width×height — shrinks on smaller screens, stays native on larger ones. - 'letterbox': track the parent's size, render the backing store at the parent size × pixelRatio (always crisp, no CSS upscale-blur), and keep the camera locked to the fixed width×height design space, centered and letterboxed with bars (no crop, no stretch). The \"author once at a reference resolution\" model."
+        },
+        {
+          "name": "tabIndex",
+          "signature": "tabIndex?: number",
+          "signatureTokens": [
+            {
+              "text": "tabIndex",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Canvas tabIndex. Default: -1, preserving current behavior."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical canvas width. Default: 800."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

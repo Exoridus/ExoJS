@@ -1,0 +1,139 @@
+{
+  "title": "AssetEntry",
+  "description": "A single asset declaration inside an AssetManifest bundle. `type` is the loadable class token (e.g. `Texture`, `Sound`), `alias` is the key used to retrieve the asset from the Loader, and `path` is the URL or relative path used to fetch it.",
+  "symbol": "AssetEntry",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single asset declaration inside an AssetManifest bundle.",
+        "`type` is the loadable class token (e.g. `Texture`, `Sound`), `alias` is the key used to retrieve the asset from the Loader, and `path` is the URL or relative path used to fetch it."
+      ],
+      "importLine": "import { AssetEntry } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "alias",
+          "signature": "alias: string",
+          "signatureTokens": [
+            {
+              "text": "alias",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "options",
+          "signature": "options?: unknown",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "path",
+          "signature": "path: string",
+          "signatureTokens": [
+            {
+              "text": "path",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: T",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/AssetManifest.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetManifest.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/AssetManifest.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetManifest.ts"
+}

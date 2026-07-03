@@ -28,7 +28,7 @@ type Subsystem =
     | 'resources'
     | 'tiled'
     | 'tilemap';
-type ApiKind = 'class' | 'enum';
+type ApiKind = 'class' | 'enum' | 'interface' | 'type';
 type ApiTier = 'stable' | 'advanced';
 
 const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
@@ -117,8 +117,16 @@ const EXTENSION_PACKAGES: ReadonlyArray<ExtensionPackage> = [
 
 const isClass = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Class) > 0;
 const isEnum = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Enum) > 0;
-const isDocumentableKind = (kind: ReflectionKind): boolean => isClass(kind) || isEnum(kind);
-const toApiKind = (kind: ReflectionKind): ApiKind => (isClass(kind) ? 'class' : 'enum');
+const isInterface = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Interface) > 0;
+const isTypeAlias = (kind: ReflectionKind): boolean => (kind & ReflectionKind.TypeAlias) > 0;
+const isDocumentableKind = (kind: ReflectionKind): boolean =>
+    isClass(kind) || isEnum(kind) || isInterface(kind) || isTypeAlias(kind);
+const toApiKind = (kind: ReflectionKind): ApiKind => {
+    if (isClass(kind)) return 'class';
+    if (isInterface(kind)) return 'interface';
+    if (isEnum(kind)) return 'enum';
+    return 'type';
+};
 
 const slugify = (input: string): string =>
     input
@@ -209,8 +217,37 @@ const tokenizeType = (type: any): ApiToken[] => {
             return [punct('['), ...joinTokenGroups((type.elements ?? []).map(tokenizeType), ', '), punct(']')];
         case 'literal':
             return [keyword(JSON.stringify(type.value))];
-        case 'reflection':
+        case 'reflection': {
+            // An inline function type — `(a: T) => R` — or object-literal type
+            // — `{ a: T; b?: U }`. Without this both collapse to a useless
+            // `object`, which matters most for function-typed aliases
+            // (EasingFunction, callbacks) and object-shaped type aliases.
+            const declaration = type.declaration;
+            const signature = declaration?.signatures?.[0];
+            if (signature) {
+                const tokens: ApiToken[] = [punct('(')];
+                (signature.parameters ?? []).forEach((parameter: any, index: number) => {
+                    if (index > 0) tokens.push(punct(', '));
+                    tokens.push({ text: parameter.name, kind: 'param' });
+                    if (parameter.flags?.isOptional) tokens.push(punct('?'));
+                    tokens.push(punct(': '), ...tokenizeType(parameter.type));
+                });
+                tokens.push(punct(') => '), ...tokenizeType(signature.type));
+                return tokens;
+            }
+            if (declaration?.children?.length) {
+                const tokens: ApiToken[] = [punct('{ ')];
+                declaration.children.forEach((child: any, index: number) => {
+                    if (index > 0) tokens.push(punct('; '));
+                    tokens.push({ text: child.name, kind: 'name' });
+                    if (child.flags?.isOptional) tokens.push(punct('?'));
+                    tokens.push(punct(': '), ...tokenizeType(child.type ?? child.getSignature?.type));
+                });
+                tokens.push(punct(' }'));
+                return tokens;
+            }
             return [keyword('object')];
+        }
         case 'query':
             return [keyword('typeof'), punct(' '), typeToken(type.queryType?.name ?? 'unknown')];
         case 'typeOperator':
@@ -252,8 +289,10 @@ const extractParams = (signature: any): ExtractedParam[] =>
     }));
 
 /** Tokenized `name(params): Return` for a constructor/method signature. */
-const tokenizeSignature = (name: string, signature: any): ApiToken[] => {
-    const tokens: ApiToken[] = [name === 'new' ? keyword('new') : { text: name, kind: 'name' }, punct('(')];
+const tokenizeSignature = (name: string, signature: any, optional = false): ApiToken[] => {
+    const tokens: ApiToken[] = [name === 'new' ? keyword('new') : { text: name, kind: 'name' }];
+    if (optional) tokens.push(punct('?'));
+    tokens.push(punct('('));
     (signature.parameters ?? []).forEach((parameter: any, index: number) => {
         if (index > 0) tokens.push(punct(', '));
         tokens.push({ text: parameter.name, kind: 'param' });
@@ -264,9 +303,13 @@ const tokenizeSignature = (name: string, signature: any): ApiToken[] => {
     return tokens;
 };
 
-/** Tokenized `name: Type` for a property/event member. */
-const tokenizeValue = (name: string, type: any): ApiToken[] =>
-    [{ text: name, kind: 'name' }, punct(': '), ...tokenizeType(type)];
+/** Tokenized `name: Type` for a property/event member (optional adds `?`). */
+const tokenizeValue = (name: string, type: any, optional = false): ApiToken[] => [
+    { text: name, kind: 'name' },
+    ...(optional ? [punct('?')] : []),
+    punct(': '),
+    ...tokenizeType(type),
+];
 
 const resolvePropertyType = (member: any): any =>
     member.type ?? member.getSignature?.type;
@@ -287,8 +330,8 @@ const toMemberDescription = (comment: any): string => {
 };
 
 /** A constructor/method member: structured params + a concrete return type. */
-const buildCallableMember = (name: string, signature: any, fallbackComment: any): ApiMember => {
-    const tokens = tokenizeSignature(name, signature);
+const buildCallableMember = (name: string, signature: any, fallbackComment: any, optional = false): ApiMember => {
+    const tokens = tokenizeSignature(name, signature, optional);
     return {
         name,
         signature: tokensToText(tokens),
@@ -300,8 +343,8 @@ const buildCallableMember = (name: string, signature: any, fallbackComment: any)
 };
 
 /** A property/event member: no params, no return type. Takes the raw type node. */
-const buildValueMember = (name: string, typeNode: any, comment: any): ApiMember => {
-    const tokens = tokenizeValue(name, typeNode);
+const buildValueMember = (name: string, typeNode: any, comment: any, optional = false): ApiMember => {
+    const tokens = tokenizeValue(name, typeNode, optional);
     return {
         name,
         signature: tokensToText(tokens),
@@ -347,13 +390,15 @@ const renderClassMembers = (reflection: any): ReflectionBody => {
         (ctor.signatures ?? []).map((signature: any) => buildCallableMember('new', signature, ctor.comment))
     );
     const methodMembers = methods.flatMap((method: any) =>
-        (method.signatures ?? []).map((signature: any) => buildCallableMember(method.name, signature, method.comment))
+        (method.signatures ?? []).map((signature: any) =>
+            buildCallableMember(method.name, signature, method.comment, Boolean(method.flags?.isOptional))
+        )
     );
     const propertyMembers = plainProperties.map((property: any) =>
-        buildValueMember(property.name, resolvePropertyType(property), resolvePropertyComment(property))
+        buildValueMember(property.name, resolvePropertyType(property), resolvePropertyComment(property), Boolean(property.flags?.isOptional))
     );
     const eventMembers = events.map((event: any) =>
-        buildValueMember(event.name, resolvePropertyType(event), resolvePropertyComment(event))
+        buildValueMember(event.name, resolvePropertyType(event), resolvePropertyComment(event), Boolean(event.flags?.isOptional))
     );
 
     const sections: ApiSection[] = [];
@@ -397,8 +442,38 @@ const renderReflectionBody = (reflection: any): ReflectionBody => {
         };
     }
 
-    if (isClass(reflection.kind)) {
+    // Interfaces expose the same member shapes as classes (methods, properties,
+    // optional members) — the class renderer handles them directly.
+    if (isClass(reflection.kind) || isInterface(reflection.kind)) {
         return renderClassMembers(reflection);
+    }
+
+    // Type aliases have no members; show their definition as a single tokenized
+    // row so its component types cross-link like any other signature.
+    if (isTypeAlias(reflection.kind)) {
+        const definitionTokens = tokenizeType(reflection.type);
+        const definitionMember: ApiMember = {
+            name: reflection.name,
+            signature: tokensToText(definitionTokens),
+            signatureTokens: definitionTokens,
+            params: [],
+            returnType: null,
+            description: '',
+        };
+        return {
+            sections: [
+                {
+                    id: 'definition',
+                    title: 'Definition',
+                    members: [definitionMember],
+                    paragraphs: [],
+                    importLine: null,
+                    sourceLink: null,
+                },
+            ],
+            counts: EMPTY_COUNTS,
+            memberCount: 0,
+        };
     }
 
     return { sections: [], counts: EMPTY_COUNTS, memberCount: 0 };

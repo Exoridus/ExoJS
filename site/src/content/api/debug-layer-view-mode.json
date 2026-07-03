@@ -1,0 +1,71 @@
+{
+  "title": "DebugLayerViewMode",
+  "description": "Determines the coordinate space a DebugLayer renders into. `'screen'` uses the overlay's pixel-space view; `'world'` uses the scene's current world-space view and renders beneath screen-space panels.",
+  "symbol": "DebugLayerViewMode",
+  "kind": "type",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Determines the coordinate space a DebugLayer renders into. `'screen'` uses the overlay's pixel-space view; `'world'` uses the scene's current world-space view and renders beneath screen-space panels."
+      ],
+      "importLine": "import { DebugLayerViewMode } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DebugLayerViewMode",
+          "signature": "\"screen\" | \"world\"",
+          "signatureTokens": [
+            {
+              "text": "\"screen\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"world\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/DebugLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/DebugLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugLayer.ts"
+}

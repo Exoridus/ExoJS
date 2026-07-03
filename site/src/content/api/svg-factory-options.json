@@ -1,0 +1,100 @@
+{
+  "title": "SvgFactoryOptions",
+  "description": "Construction options for SvgFactory.create.",
+  "symbol": "SvgFactoryOptions",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for SvgFactory.create."
+      ],
+      "importLine": "import { SvgFactoryOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Target render height in pixels. See width."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Target render width in pixels. When provided, the value is injected into the root <svg> element's width attribute before the browser rasterises the image, overriding any intrinsic width declared in the file. SVGs that carry only a viewBox (no width/height attributes) render as a 0×0 image by default; supplying width and height here fixes that."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/SvgFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SvgFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/SvgFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SvgFactory.ts"
+}

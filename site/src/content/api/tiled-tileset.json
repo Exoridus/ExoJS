@@ -311,11 +311,15 @@
         },
         {
           "name": "imageHeight",
-          "signature": "imageHeight: number",
+          "signature": "imageHeight?: number",
           "signatureTokens": [
             {
               "text": "imageHeight",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -332,11 +336,15 @@
         },
         {
           "name": "imageUrl",
-          "signature": "imageUrl: string",
+          "signature": "imageUrl?: string",
           "signatureTokens": [
             {
               "text": "imageUrl",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -353,11 +361,15 @@
         },
         {
           "name": "imageWidth",
-          "signature": "imageWidth: number",
+          "signature": "imageWidth?: number",
           "signatureTokens": [
             {
               "text": "imageWidth",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -416,11 +428,15 @@
         },
         {
           "name": "objectAlignment",
-          "signature": "objectAlignment: string",
+          "signature": "objectAlignment?: string",
           "signatureTokens": [
             {
               "text": "objectAlignment",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -470,11 +486,15 @@
         },
         {
           "name": "source",
-          "signature": "source: string",
+          "signature": "source?: string",
           "signatureTokens": [
             {
               "text": "source",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -512,11 +532,15 @@
         },
         {
           "name": "texture",
-          "signature": "texture: Texture",
+          "signature": "texture?: Texture",
           "signatureTokens": [
             {
               "text": "texture",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

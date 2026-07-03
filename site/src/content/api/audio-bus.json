@@ -307,7 +307,7 @@
         },
         {
           "name": "fadeOut",
-          "signature": "fadeOut(durationMs: number, options: object): this",
+          "signature": "fadeOut(durationMs: number, options: { stopAfter?: boolean }): this",
           "signatureTokens": [
             {
               "text": "fadeOut",
@@ -342,8 +342,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stopAfter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
               "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -366,7 +386,7 @@
             },
             {
               "name": "options",
-              "type": "object",
+              "type": "{ stopAfter?: boolean }",
               "optional": false
             }
           ],
@@ -375,7 +395,7 @@
         },
         {
           "name": "onceSetup",
-          "signature": "onceSetup(callback: object): void",
+          "signature": "onceSetup(callback: () => void): void",
           "signatureTokens": [
             {
               "text": "onceSetup",
@@ -394,7 +414,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -413,7 +441,7 @@
           "params": [
             {
               "name": "callback",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             }
           ],

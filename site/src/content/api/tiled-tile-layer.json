@@ -150,11 +150,15 @@
       "members": [
         {
           "name": "chunks",
-          "signature": "chunks: readonly TiledChunkData[]",
+          "signature": "chunks?: readonly TiledChunkData[]",
           "signatureTokens": [
             {
               "text": "chunks",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -204,11 +208,15 @@
         },
         {
           "name": "data",
-          "signature": "data: readonly number[]",
+          "signature": "data?: readonly number[]",
           "signatureTokens": [
             {
               "text": "data",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -438,11 +446,15 @@
         },
         {
           "name": "tintColor",
-          "signature": "tintColor: string",
+          "signature": "tintColor?: string",
           "signatureTokens": [
             {
               "text": "tintColor",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

@@ -1,0 +1,63 @@
+{
+  "title": "SceneTransition",
+  "description": "Discriminated union of supported SceneManager transitions.",
+  "symbol": "SceneTransition",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Discriminated union of supported SceneManager transitions."
+      ],
+      "importLine": "import { SceneTransition } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SceneTransition",
+          "signature": "FadeSceneTransition",
+          "signatureTokens": [
+            {
+              "text": "FadeSceneTransition",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+}

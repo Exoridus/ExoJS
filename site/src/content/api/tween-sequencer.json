@@ -93,7 +93,7 @@
       "members": [
         {
           "name": "onComplete",
-          "signature": "onComplete(cb: object): this",
+          "signature": "onComplete(cb: () => void): this",
           "signatureTokens": [
             {
               "text": "onComplete",
@@ -112,7 +112,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -131,7 +139,7 @@
           "params": [
             {
               "name": "cb",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             }
           ],
@@ -140,7 +148,7 @@
         },
         {
           "name": "onStart",
-          "signature": "onStart(cb: object): this",
+          "signature": "onStart(cb: () => void): this",
           "signatureTokens": [
             {
               "text": "onStart",
@@ -159,7 +167,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -178,7 +194,7 @@
           "params": [
             {
               "name": "cb",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             }
           ],

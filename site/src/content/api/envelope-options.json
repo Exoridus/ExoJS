@@ -1,0 +1,148 @@
+{
+  "title": "EnvelopeOptions",
+  "description": "",
+  "symbol": "EnvelopeOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { EnvelopeOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attackMs",
+          "signature": "attackMs?: number",
+          "signatureTokens": [
+            {
+              "text": "attackMs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Attack time in ms — gain ramps from 0 to peak (1.0). Default 10."
+        },
+        {
+          "name": "decayMs",
+          "signature": "decayMs?: number",
+          "signatureTokens": [
+            {
+              "text": "decayMs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Decay time in ms — gain ramps from peak to sustain level. Default 100."
+        },
+        {
+          "name": "releaseMs",
+          "signature": "releaseMs?: number",
+          "signatureTokens": [
+            {
+              "text": "releaseMs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Release time in ms — gain ramps from current to 0 on release(). Default 200."
+        },
+        {
+          "name": "sustainLevel",
+          "signature": "sustainLevel?: number",
+          "signatureTokens": [
+            {
+              "text": "sustainLevel",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sustain level, 0..1. Default 0.7."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Envelope.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Envelope.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts"
+}

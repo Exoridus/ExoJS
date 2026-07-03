@@ -172,11 +172,15 @@
         },
         {
           "name": "gid",
-          "signature": "gid: number",
+          "signature": "gid?: number",
           "signatureTokens": [
             {
               "text": "gid",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -277,11 +281,15 @@
         },
         {
           "name": "polygon",
-          "signature": "polygon: readonly TiledPointData[]",
+          "signature": "polygon?: readonly TiledPointData[]",
           "signatureTokens": [
             {
               "text": "polygon",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -310,11 +318,15 @@
         },
         {
           "name": "polyline",
-          "signature": "polyline: readonly TiledPointData[]",
+          "signature": "polyline?: readonly TiledPointData[]",
           "signatureTokens": [
             {
               "text": "polyline",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -397,11 +409,15 @@
         },
         {
           "name": "template",
-          "signature": "template: string",
+          "signature": "template?: string",
           "signatureTokens": [
             {
               "text": "template",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -418,11 +434,15 @@
         },
         {
           "name": "text",
-          "signature": "text: TiledTextData",
+          "signature": "text?: TiledTextData",
           "signatureTokens": [
             {
               "text": "text",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

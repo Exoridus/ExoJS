@@ -1,0 +1,127 @@
+{
+  "title": "InputApplicationOptions",
+  "description": "",
+  "symbol": "InputApplicationOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { InputApplicationOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gamepadDefinitions",
+          "signature": "gamepadDefinitions?: GamepadDefinition[]",
+          "signatureTokens": [
+            {
+              "text": "gamepadDefinitions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gamepadSlotStrategy",
+          "signature": "gamepadSlotStrategy?: GamepadSlotStrategy",
+          "signatureTokens": [
+            {
+              "text": "gamepadSlotStrategy",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadSlotStrategy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pointerDistanceThreshold",
+          "signature": "pointerDistanceThreshold?: number",
+          "signatureTokens": [
+            {
+              "text": "pointerDistanceThreshold",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

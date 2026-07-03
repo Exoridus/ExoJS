@@ -1,0 +1,234 @@
+{
+  "title": "LdtkTilesetDef",
+  "description": "Tileset definition from `defs.tilesets`.",
+  "symbol": "LdtkTilesetDef",
+  "kind": "interface",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Tileset definition from `defs.tilesets`."
+      ],
+      "importLine": "import { LdtkTilesetDef } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "identifier",
+          "signature": "identifier: string",
+          "signatureTokens": [
+            {
+              "text": "identifier",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Human-readable tileset identifier."
+        },
+        {
+          "name": "padding",
+          "signature": "padding?: number",
+          "signatureTokens": [
+            {
+              "text": "padding",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pixel padding (margin) around the atlas edges."
+        },
+        {
+          "name": "pxHei",
+          "signature": "pxHei: number",
+          "signatureTokens": [
+            {
+              "text": "pxHei",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tileset image height in pixels."
+        },
+        {
+          "name": "pxWid",
+          "signature": "pxWid: number",
+          "signatureTokens": [
+            {
+              "text": "pxWid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tileset image width in pixels."
+        },
+        {
+          "name": "relPath",
+          "signature": "relPath: string | null",
+          "signatureTokens": [
+            {
+              "text": "relPath",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Relative path to the tileset atlas image. null for internal / embedded tilesets with no image."
+        },
+        {
+          "name": "spacing",
+          "signature": "spacing?: number",
+          "signatureTokens": [
+            {
+              "text": "spacing",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pixel spacing between tiles in the atlas."
+        },
+        {
+          "name": "tileGridSize",
+          "signature": "tileGridSize: number",
+          "signatureTokens": [
+            {
+              "text": "tileGridSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile grid size (both width and height) in pixels."
+        },
+        {
+          "name": "uid",
+          "signature": "uid: number",
+          "signatureTokens": [
+            {
+              "text": "uid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

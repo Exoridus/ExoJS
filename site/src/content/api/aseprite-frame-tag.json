@@ -1,0 +1,184 @@
+{
+  "title": "AsepriteFrameTag",
+  "description": "A named animation range defined via Aseprite frame tags. `from` and `to` are inclusive zero-based frame indices.",
+  "symbol": "AsepriteFrameTag",
+  "kind": "interface",
+  "subsystem": "aseprite",
+  "importPath": "@codexo/exojs-aseprite",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A named animation range defined via Aseprite frame tags. `from` and `to` are inclusive zero-based frame indices."
+      ],
+      "importLine": "import { AsepriteFrameTag } from '@codexo/exojs-aseprite'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "color",
+          "signature": "color?: string",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "direction",
+          "signature": "direction: AsepriteDirection",
+          "signatureTokens": [
+            {
+              "text": "direction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteDirection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "from",
+          "signature": "from: number",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Inclusive start frame index."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "repeat",
+          "signature": "repeat?: string",
+          "signatureTokens": [
+            {
+              "text": "repeat",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of times the tag plays before stopping, as a numeric string (e.g. \"1\", \"2\"). Absent means the tag loops indefinitely."
+        },
+        {
+          "name": "to",
+          "signature": "to: number",
+          "signatureTokens": [
+            {
+              "text": "to",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Inclusive end frame index."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-aseprite/src/AsepriteData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-aseprite/src/AsepriteData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+}

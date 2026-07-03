@@ -1,0 +1,193 @@
+{
+  "title": "WgslContribution",
+  "description": "What an UpdateModule contributes to the system's composite compute shader. `body` runs once per particle in the inner main function, with these locals in scope: - `idx: u32` — the particle slot index (already gated on `< sim.liveCount` and skip-on-dead via `timing[idx].y < 0.0`). - `dt: f32` — frame delta in seconds (mirrors `sim.dt`). - **Packed SoA bindings** (see body of doc) — channels are packed into `vec2<f32>`-typed storage buffers to fit within WebGPU's default 8-buffer limit. Access x/y components for the per-axis values: - `positions[idx].x` / `.y` (was posX/posY) - `velocities[idx].x` / `.y` (was velX/velY) - `scales[idx].x` / `.y` (was scaleX/scaleY) - `rotInfo[idx].x` / `.y` (rotation, rotationSpeed) - `timing[idx].x` / `.y` (elapsed, lifetime — y is set to -1 when expired) - `color[idx]` — packed RGBA u32, single channel (no .x/.y) - `sim: SimUniforms` — `{ dt: f32, liveCount: u32 }`. - `modules.u_${key}: ${Key}Uniforms` — your module's uniform struct (if declared). - `u_${key}_${textureName}` and `u_${key}_${textureName}_sampler` — texture bindings (if any). The body should not declare new functions or top-level statements; it runs inline in the main function. Use comments and parentheses generously — composition concatenates several module bodies and any syntax mistake surfaces only at pipeline-creation time.",
+  "symbol": "WgslContribution",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What an UpdateModule contributes to the system's composite compute shader. `body` runs once per particle in the inner main function, with these locals in scope:",
+        "- `idx: u32` — the particle slot index (already gated on `< sim.liveCount` and skip-on-dead via `timing[idx].y < 0.0`). - `dt: f32` — frame delta in seconds (mirrors `sim.dt`). - **Packed SoA bindings** (see body of doc) — channels are packed into `vec2<f32>`-typed storage buffers to fit within WebGPU's default 8-buffer limit. Access x/y components for the per-axis values: - `positions[idx].x` / `.y` (was posX/posY) - `velocities[idx].x` / `.y` (was velX/velY) - `scales[idx].x` / `.y` (was scaleX/scaleY) - `rotInfo[idx].x` / `.y` (rotation, rotationSpeed) - `timing[idx].x` / `.y` (elapsed, lifetime — y is set to -1 when expired) - `color[idx]` — packed RGBA u32, single channel (no .x/.y) - `sim: SimUniforms` — `{ dt: f32, liveCount: u32 }`. - `modules.u_${key}: ${Key}Uniforms` — your module's uniform struct (if declared). - `u_${key}_${textureName}` and `u_${key}_${textureName}_sampler` — texture bindings (if any).",
+        "The body should not declare new functions or top-level statements; it runs inline in the main function. Use comments and parentheses generously — composition concatenates several module bodies and any syntax mistake surfaces only at pipeline-creation time."
+      ],
+      "importLine": "import { WgslContribution } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "body",
+          "signature": "body: string",
+          "signatureTokens": [
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "key",
+          "signature": "key: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Unique key per module *class* (e.g. 'ApplyForce'). Two ApplyForce instances on one system aren't supported — combine into one."
+        },
+        {
+          "name": "prelude",
+          "signature": "prelude?: string",
+          "signatureTokens": [
+            {
+              "text": "prelude",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional WGSL declarations (functions, constants) emitted at module scope before main(). Use this for noise/hash helpers or any supporting function the body calls. Multiple modules can declare preludes; they're concatenated in registration order. Naming collisions across modules are the author's problem — prefix helpers with the module key (e.g. myModule_hash) to avoid clashes."
+        },
+        {
+          "name": "textures",
+          "signature": "textures?: readonly WgslTextureBinding[]",
+          "signatureTokens": [
+            {
+              "text": "textures",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WgslTextureBinding",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms?: readonly WgslUniformField[]",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WgslUniformField",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/WgslContribution.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/WgslContribution.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/WgslContribution.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/WgslContribution.ts"
+}

@@ -1,0 +1,113 @@
+{
+  "title": "AsepriteLayer",
+  "description": "A single layer entry in the Aseprite JSON metadata.",
+  "symbol": "AsepriteLayer",
+  "kind": "interface",
+  "subsystem": "aseprite",
+  "importPath": "@codexo/exojs-aseprite",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single layer entry in the Aseprite JSON metadata."
+      ],
+      "importLine": "import { AsepriteLayer } from '@codexo/exojs-aseprite'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "blendMode",
+          "signature": "blendMode: string",
+          "signatureTokens": [
+            {
+              "text": "blendMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity: number",
+          "signatureTokens": [
+            {
+              "text": "opacity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-aseprite/src/AsepriteData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-aseprite/src/AsepriteData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+}

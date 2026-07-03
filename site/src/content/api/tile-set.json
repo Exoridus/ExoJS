@@ -184,7 +184,7 @@
         },
         {
           "name": "getTileRect",
-          "signature": "getTileRect(localTileId: number): object",
+          "signature": "getTileRect(localTileId: number): { height: number; width: number; x: number; y: number }",
           "signatureTokens": [
             {
               "text": "getTileRect",
@@ -215,8 +215,72 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -226,7 +290,7 @@
               "optional": false
             }
           ],
-          "returnType": "object",
+          "returnType": "{ height: number; width: number; x: number; y: number }",
           "description": "Compute the pixel-space source rectangle for a local tile ID within the atlas, accounting for columns, spacing, and margin."
         }
       ],

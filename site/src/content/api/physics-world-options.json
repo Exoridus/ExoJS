@@ -1,0 +1,300 @@
+{
+  "title": "PhysicsWorldOptions",
+  "description": "Construction options for a PhysicsWorld.",
+  "symbol": "PhysicsWorldOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a PhysicsWorld."
+      ],
+      "importLine": "import { PhysicsWorldOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "contactHertz",
+          "signature": "contactHertz?: number",
+          "signatureTokens": [
+            {
+              "text": "contactHertz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-contact stiffness in Hz (the contact behaves as a damped spring at this frequency). Default 30."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio?: number",
+          "signatureTokens": [
+            {
+              "text": "dampingRatio",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-contact damping ratio (≥ 1 keeps contacts from oscillating). Default 10."
+        },
+        {
+          "name": "enableSleeping",
+          "signature": "enableSleeping?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableSleeping",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Put resting bodies to sleep so they skip integration and solving. Default true."
+        },
+        {
+          "name": "fixedDelta",
+          "signature": "fixedDelta?: number",
+          "signatureTokens": [
+            {
+              "text": "fixedDelta",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fixed timestep in seconds. Default 1 / 60."
+        },
+        {
+          "name": "gravity",
+          "signature": "gravity?: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "gravity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gravity in px/s² (+Y down). Integrated each sub-step. Default (0, 0)."
+        },
+        {
+          "name": "maxSubSteps",
+          "signature": "maxSubSteps?: number",
+          "signatureTokens": [
+            {
+              "text": "maxSubSteps",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum fixed steps per step call (spiral-of-death guard). Default 8."
+        },
+        {
+          "name": "sleepAngularVelocity",
+          "signature": "sleepAngularVelocity?: number",
+          "signatureTokens": [
+            {
+              "text": "sleepAngularVelocity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Angular speed at or below which a body is a sleep candidate, rad/s. Default 0.06."
+        },
+        {
+          "name": "sleepLinearVelocity",
+          "signature": "sleepLinearVelocity?: number",
+          "signatureTokens": [
+            {
+              "text": "sleepLinearVelocity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Linear speed at or below which a body is a sleep candidate, px/s. Default 5."
+        },
+        {
+          "name": "subStepCount",
+          "signature": "subStepCount?: number",
+          "signatureTokens": [
+            {
+              "text": "subStepCount",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "TGS-Soft sub-steps per fixed step (the solver's stiffness scales with this, not iteration count). Default 4. Must be ≥ 1. Values below 2 visibly degrade tall-stack stability (a 10-box tower jitters at 1), so the default is load-bearing — do not lower it for performance."
+        },
+        {
+          "name": "timeToSleep",
+          "signature": "timeToSleep?: number",
+          "signatureTokens": [
+            {
+              "text": "timeToSleep",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seconds a body must stay below the sleep thresholds before it sleeps. Default 0.5."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/PhysicsWorld.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/PhysicsWorld.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts"
+}

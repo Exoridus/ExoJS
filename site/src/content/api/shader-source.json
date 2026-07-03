@@ -106,7 +106,7 @@
       "members": [
         {
           "name": "detectUniformDrift",
-          "signature": "detectUniformDrift(): object",
+          "signature": "detectUniformDrift(): { onlyInGlsl: readonly string[]; onlyInWgsl: readonly string[] }",
           "signatureTokens": [
             {
               "text": "detectUniformDrift",
@@ -125,17 +125,73 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "onlyInGlsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
               "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "onlyInWgsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "object",
+          "returnType": "{ onlyInGlsl: readonly string[]; onlyInWgsl: readonly string[] }",
           "description": "Compare declared uniform names between the GLSL and WGSL sources. Returns lists of names declared in only one language. Use in CI to catch drift when both languages should expose the same logical uniforms. When only one language is provided, returns empty arrays. Auto-bound uniforms (u_projection, u_translation, u_tint, u_texture) are excluded from the comparison since the GLSL source declares them at the top-level uniform scope while the WGSL source receives them via the @group(0) mesh-uniforms struct and the @group(1) texture binding."
         },
         {
           "name": "getDeclaredUniforms",
-          "signature": "getDeclaredUniforms(): object",
+          "signature": "getDeclaredUniforms(): { glsl: Record<string, string>; wgsl: Record<string, string> }",
           "signatureTokens": [
             {
               "text": "getDeclaredUniforms",
@@ -154,12 +210,84 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "object",
+          "returnType": "{ glsl: Record<string, string>; wgsl: Record<string, string> }",
           "description": "Reflect declared uniforms from each language's source. Returns a per- language map of uniform-name → declared type, parsed from the shader sources via lightweight regex (not a full GLSL/WGSL grammar). Texture uniforms (sampler2D/texture_2d) are included; sampler bindings are not (they pair with textures by binding index). Reflection is best-effort and intended for CI drift-checks and editor tooling, not for runtime uniform binding decisions. The renderers do NOT consult this map; they bind uniforms by name from Material.uniforms and let the underlying API resolve declared- but-unused entries."
         }
       ],
@@ -173,7 +301,7 @@
       "members": [
         {
           "name": "glsl",
-          "signature": "glsl: object | null",
+          "signature": "glsl: { fragment: string; vertex: string } | null",
           "signatureTokens": [
             {
               "text": "glsl",
@@ -184,8 +312,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "fragment",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "vertex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": " | ",

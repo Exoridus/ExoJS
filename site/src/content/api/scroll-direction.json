@@ -1,0 +1,79 @@
+{
+  "title": "ScrollDirection",
+  "description": "Direction(s) in which a ScrollContainer can scroll.",
+  "symbol": "ScrollDirection",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Direction(s) in which a ScrollContainer can scroll."
+      ],
+      "importLine": "import { ScrollDirection } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ScrollDirection",
+          "signature": "\"vertical\" | \"horizontal\" | \"both\"",
+          "signatureTokens": [
+            {
+              "text": "\"vertical\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"horizontal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"both\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/ScrollContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/ScrollContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts"
+}

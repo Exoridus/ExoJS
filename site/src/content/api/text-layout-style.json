@@ -1,0 +1,134 @@
+{
+  "title": "TextLayoutStyle",
+  "description": "Minimal interface consumed by layoutText and measureText. Both TextStyle and the BMFont adapter satisfy this structurally.",
+  "symbol": "TextLayoutStyle",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Minimal interface consumed by layoutText and measureText. Both TextStyle and the BMFont adapter satisfy this structurally."
+      ],
+      "importLine": "import { TextLayoutStyle } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "align",
+          "signature": "align: TextAlignment",
+          "signatureTokens": [
+            {
+              "text": "align",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextAlignment",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontSize",
+          "signature": "fontSize: number",
+          "signatureTokens": [
+            {
+              "text": "fontSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "leading",
+          "signature": "leading: number",
+          "signatureTokens": [
+            {
+              "text": "leading",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lineHeight",
+          "signature": "lineHeight: number",
+          "signatureTokens": [
+            {
+              "text": "lineHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

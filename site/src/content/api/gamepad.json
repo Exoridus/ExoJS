@@ -217,7 +217,7 @@
         },
         {
           "name": "onActive",
-          "signature": "onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "signature": "onActive(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onActive",
@@ -272,7 +272,27 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -316,7 +336,7 @@
             },
             {
               "name": "callback",
-              "type": "object",
+              "type": "(value: number) => void",
               "optional": false
             },
             {
@@ -330,7 +350,7 @@
         },
         {
           "name": "onStart",
-          "signature": "onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "signature": "onStart(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onStart",
@@ -385,7 +405,27 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -429,7 +469,7 @@
             },
             {
               "name": "callback",
-              "type": "object",
+              "type": "(value: number) => void",
               "optional": false
             },
             {
@@ -443,7 +483,7 @@
         },
         {
           "name": "onStop",
-          "signature": "onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "signature": "onStop(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onStop",
@@ -498,7 +538,27 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -542,7 +602,7 @@
             },
             {
               "name": "callback",
-              "type": "object",
+              "type": "(value: number) => void",
               "optional": false
             },
             {
@@ -556,7 +616,7 @@
         },
         {
           "name": "onTrigger",
-          "signature": "onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "signature": "onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onTrigger",
@@ -611,7 +671,27 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -655,7 +735,7 @@
             },
             {
               "name": "callback",
-              "type": "object",
+              "type": "(value: number) => void",
               "optional": false
             },
             {

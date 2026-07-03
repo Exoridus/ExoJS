@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(bundle: string, failures: object[]): BundleLoadError",
+          "signature": "new(bundle: string, failures: { alias: string; error: Error; type: Loadable }[]): BundleLoadError",
           "signatureTokens": [
             {
               "text": "new",
@@ -66,8 +66,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alias",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loadable",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": "[]",
@@ -94,7 +142,7 @@
             },
             {
               "name": "failures",
-              "type": "object[]",
+              "type": "{ alias: string; error: Error; type: Loadable }[]",
               "optional": false
             }
           ],
@@ -133,11 +181,15 @@
         },
         {
           "name": "cause",
-          "signature": "cause: unknown",
+          "signature": "cause?: unknown",
           "signatureTokens": [
             {
               "text": "cause",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -154,7 +206,7 @@
         },
         {
           "name": "failures",
-          "signature": "failures: object[]",
+          "signature": "failures: { alias: string; error: Error; type: Loadable }[]",
           "signatureTokens": [
             {
               "text": "failures",
@@ -165,8 +217,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alias",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loadable",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": "[]",
@@ -221,11 +321,15 @@
         },
         {
           "name": "stack",
-          "signature": "stack: string",
+          "signature": "stack?: string",
           "signatureTokens": [
             {
               "text": "stack",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

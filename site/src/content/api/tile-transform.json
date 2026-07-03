@@ -1,0 +1,114 @@
+{
+  "title": "TileTransform",
+  "description": "Describes the orientation of a placed tile independent of source-format flip-bit encodings. The eight legal combinations map to the eight distinct 90°-rotation-and-flip states of a rectangular texture quad. Applying the transform at geometry-build time (reordering UV corners) avoids per-tile runtime cost and per-frame matrix allocation.",
+  "symbol": "TileTransform",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Describes the orientation of a placed tile independent of source-format flip-bit encodings. The eight legal combinations map to the eight distinct 90°-rotation-and-flip states of a rectangular texture quad.",
+        "Applying the transform at geometry-build time (reordering UV corners) avoids per-tile runtime cost and per-frame matrix allocation."
+      ],
+      "importLine": "import { TileTransform } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "diagonal",
+          "signature": "diagonal: boolean",
+          "signatureTokens": [
+            {
+              "text": "diagonal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Anti-diagonal flip (transpose of the UV axes). Combined with flips produces 90° rotations."
+        },
+        {
+          "name": "flipX",
+          "signature": "flipX: boolean",
+          "signatureTokens": [
+            {
+              "text": "flipX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal flip (mirror left-right)."
+        },
+        {
+          "name": "flipY",
+          "signature": "flipY: boolean",
+          "signatureTokens": [
+            {
+              "text": "flipY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical flip (mirror top-bottom)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+}

@@ -1,0 +1,227 @@
+{
+  "title": "SerializeContext",
+  "description": "Context handed to NodeSerializer.write. Carries the framework services a type serializer needs: recursion into children and asset-key resolution. The framework writes the `SceneNode`/`RenderNode`/`Drawable` common fields and the `type` tag itself — a serializer only returns its own type-specific fields.",
+  "symbol": "SerializeContext",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Context handed to NodeSerializer.write. Carries the framework services a type serializer needs: recursion into children and asset-key resolution. The framework writes the `SceneNode`/`RenderNode`/`Drawable` common fields and the `type` tag itself — a serializer only returns its own type-specific fields."
+      ],
+      "importLine": "import { SerializeContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "keyFor",
+          "signature": "keyFor(resource: object | null | undefined): string | null",
+          "signatureTokens": [
+            {
+              "text": "keyFor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "object | null | undefined",
+              "optional": false
+            }
+          ],
+          "returnType": "string | null",
+          "description": "Resolve a loaded asset object to the loader source key it was loaded under, or null for runtime-created / unkeyed resources (a one-time warning is emitted in that case)."
+        },
+        {
+          "name": "writeNode",
+          "signature": "writeNode(node: SceneNode): SerializedNode",
+          "signatureTokens": [
+            {
+              "text": "writeNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedNode",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "SceneNode",
+              "optional": false
+            }
+          ],
+          "returnType": "SerializedNode",
+          "description": "Fully serialize a child node — writes its type tag, common fields, and type-specific fields. Use this from container-like serializers to recurse."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loader",
+          "signature": "loader: Loader | null",
+          "signatureTokens": [
+            {
+              "text": "loader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The loader used to resolve asset references, or null if none is available."
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Format version being written (SERIALIZATION_VERSION)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/NodeSerializer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/NodeSerializer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/NodeSerializer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/NodeSerializer.ts"
+}

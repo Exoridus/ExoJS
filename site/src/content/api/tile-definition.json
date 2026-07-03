@@ -1,0 +1,170 @@
+{
+  "title": "TileDefinition",
+  "description": "Optional per-tile metadata in a TileSet. Sparse — only defined tiles carry a definition.",
+  "symbol": "TileDefinition",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Optional per-tile metadata in a TileSet. Sparse — only defined tiles carry a definition."
+      ],
+      "importLine": "import { TileDefinition } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "animation",
+          "signature": "animation?: readonly TileAnimationFrame[]",
+          "signatureTokens": [
+            {
+              "text": "animation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileAnimationFrame",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Animation frame sequence for this tile, if animated. The frames are driven at runtime by a import('./TileAnimator').TileAnimator; frame[0] is the tile's resting/base frame."
+        },
+        {
+          "name": "collision",
+          "signature": "collision?: readonly TileMapObject[]",
+          "signatureTokens": [
+            {
+              "text": "collision",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapObject",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-tile collision shapes sourced from the Tiled objectgroup on the tile. Shapes are in tile-local pixel space (origin = top-left of the tile cell). Only present when the source map defines collision geometry for this tile."
+        },
+        {
+          "name": "localTileId",
+          "signature": "localTileId: number",
+          "signatureTokens": [
+            {
+              "text": "localTileId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The local tile ID this definition belongs to."
+        },
+        {
+          "name": "properties",
+          "signature": "properties?: TileProperties",
+          "signatureTokens": [
+            {
+              "text": "properties",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProperties",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile properties (copied and frozen by the tileset)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+}

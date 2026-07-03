@@ -1,0 +1,75 @@
+{
+  "title": "WebStorageStoreOptions",
+  "description": "Construction options for WebStorageStore.",
+  "symbol": "WebStorageStoreOptions",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for WebStorageStore."
+      ],
+      "importLine": "import { WebStorageStoreOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "prefix",
+          "signature": "prefix?: string",
+          "signatureTokens": [
+            {
+              "text": "prefix",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Key prefix namespacing this store within the shared Web Storage keyspace, so several stores (and other code) can coexist in one localStorage. Default ''."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/WebStorageStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/WebStorageStore.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/WebStorageStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/WebStorageStore.ts"
+}

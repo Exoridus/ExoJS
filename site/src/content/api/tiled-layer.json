@@ -352,11 +352,15 @@
         },
         {
           "name": "tintColor",
-          "signature": "tintColor: string",
+          "signature": "tintColor?: string",
           "signatureTokens": [
             {
               "text": "tintColor",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

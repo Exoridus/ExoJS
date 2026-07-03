@@ -1,0 +1,92 @@
+{
+  "title": "AsepriteSliceKey",
+  "description": "Bounds of a named slice at a specific frame.",
+  "symbol": "AsepriteSliceKey",
+  "kind": "interface",
+  "subsystem": "aseprite",
+  "importPath": "@codexo/exojs-aseprite",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Bounds of a named slice at a specific frame."
+      ],
+      "importLine": "import { AsepriteSliceKey } from '@codexo/exojs-aseprite'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bounds",
+          "signature": "bounds: AsepriteRect",
+          "signatureTokens": [
+            {
+              "text": "bounds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteRect",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "frame",
+          "signature": "frame: number",
+          "signatureTokens": [
+            {
+              "text": "frame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-aseprite/src/AsepriteData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-aseprite/src/AsepriteData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+}

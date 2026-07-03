@@ -188,7 +188,7 @@
         },
         {
           "name": "getLowMidHigh",
-          "signature": "getLowMidHigh(): object",
+          "signature": "getLowMidHigh(): { high: number; low: number; mid: number }",
           "signatureTokens": [
             {
               "text": "getLowMidHigh",
@@ -207,12 +207,60 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "high",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "low",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "object",
+          "returnType": "{ high: number; low: number; mid: number }",
           "description": "Return low (0-250 Hz), mid (250-2 kHz), and high (2 k-20 kHz) band energies (0..1 each)."
         },
         {

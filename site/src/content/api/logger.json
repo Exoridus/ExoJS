@@ -68,7 +68,7 @@
       "members": [
         {
           "name": "addSink",
-          "signature": "addSink(sink: LogSink): object",
+          "signature": "addSink(sink: LogSink): () => void",
           "signatureTokens": [
             {
               "text": "addSink",
@@ -99,7 +99,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             }
           ],
@@ -110,7 +118,7 @@
               "optional": false
             }
           ],
-          "returnType": "object",
+          "returnType": "() => void",
           "description": "Register a sink; call the returned function to unsubscribe it."
         },
         {

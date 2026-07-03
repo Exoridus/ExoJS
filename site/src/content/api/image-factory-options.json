@@ -1,0 +1,75 @@
+{
+  "title": "ImageFactoryOptions",
+  "description": "Construction options for ImageFactory.create.",
+  "symbol": "ImageFactoryOptions",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for ImageFactory.create."
+      ],
+      "importLine": "import { ImageFactoryOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "mimeType",
+          "signature": "mimeType?: string",
+          "signatureTokens": [
+            {
+              "text": "mimeType",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "MIME type used when constructing the intermediate Blob. When omitted the type is inferred from the buffer's magic bytes via determineMimeType."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/ImageFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/ImageFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts"
+}

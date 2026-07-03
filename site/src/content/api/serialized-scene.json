@@ -1,0 +1,117 @@
+{
+  "title": "SerializedScene",
+  "description": "Top-level serialized form of a Scene produced by Scene.serialize and consumed by Scene.deserialize.",
+  "symbol": "SerializedScene",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Top-level serialized form of a Scene produced by Scene.serialize and consumed by Scene.deserialize."
+      ],
+      "importLine": "import { SerializedScene } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "root",
+          "signature": "root: SerializedNode",
+          "signatureTokens": [
+            {
+              "text": "root",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene's structural root container subtree."
+        },
+        {
+          "name": "ui",
+          "signature": "ui?: SerializedNode",
+          "signatureTokens": [
+            {
+              "text": "ui",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene's screen-fixed UI layer (Scene.ui), if it was materialized."
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Format version this document was written with (SERIALIZATION_VERSION)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+}

@@ -158,7 +158,7 @@
         },
         {
           "name": "addDestroyListener",
-          "signature": "addDestroyListener(listener: object): this",
+          "signature": "addDestroyListener(listener: () => void): this",
           "signatureTokens": [
             {
               "text": "addDestroyListener",
@@ -177,7 +177,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -196,7 +204,7 @@
           "params": [
             {
               "name": "listener",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             }
           ],
@@ -417,7 +425,7 @@
         },
         {
           "name": "removeDestroyListener",
-          "signature": "removeDestroyListener(listener: object): this",
+          "signature": "removeDestroyListener(listener: () => void): this",
           "signatureTokens": [
             {
               "text": "removeDestroyListener",
@@ -436,7 +444,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -455,7 +471,7 @@
           "params": [
             {
               "name": "listener",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             }
           ],

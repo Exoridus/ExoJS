@@ -1,0 +1,224 @@
+{
+  "title": "BeatInfo",
+  "description": "",
+  "symbol": "BeatInfo",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { BeatInfo } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "audioTime",
+          "signature": "audioTime: number",
+          "signatureTokens": [
+            {
+              "text": "audioTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "audioContext.currentTime when the beat occurred."
+        },
+        {
+          "name": "beatInBar",
+          "signature": "beatInBar: number",
+          "signatureTokens": [
+            {
+              "text": "beatInBar",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Beat position within the bar (1..N)."
+        },
+        {
+          "name": "beatPhase",
+          "signature": "beatPhase: number",
+          "signatureTokens": [
+            {
+              "text": "beatPhase",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Phase within beat (0 = start)."
+        },
+        {
+          "name": "confidence",
+          "signature": "confidence: number",
+          "signatureTokens": [
+            {
+              "text": "confidence",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Confidence 0..1."
+        },
+        {
+          "name": "energy",
+          "signature": "energy: number",
+          "signatureTokens": [
+            {
+              "text": "energy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Novelty/onset strength at the beat."
+        },
+        {
+          "name": "isDownbeat",
+          "signature": "isDownbeat: boolean",
+          "signatureTokens": [
+            {
+              "text": "isDownbeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Is this beat the first in a bar?"
+        },
+        {
+          "name": "status",
+          "signature": "status: \"provisional\" | \"locked\"",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"provisional\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"locked\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Detection trust level: - 'provisional' — an early, low-latency beat emitted before the tempo grid is fully settled. Good for visual reactivity (a \"blink\"); may be revised. - 'locked' — the tempo grid is settled and trustworthy. Safe for sync-critical use. Each stable segment yields exactly one provisional→locked transition."
+        },
+        {
+          "name": "tempo",
+          "signature": "tempo: number",
+          "signatureTokens": [
+            {
+              "text": "tempo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "BPM at this beat."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/BeatDetector.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/BeatDetector.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+}

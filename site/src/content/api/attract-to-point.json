@@ -248,11 +248,15 @@
         },
         {
           "name": "uploadTextures",
-          "signature": "uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void",
+          "signature": "uploadTextures?(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void",
           "signatureTokens": [
             {
               "text": "uploadTextures",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": "(",

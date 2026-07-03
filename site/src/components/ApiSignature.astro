@@ -61,7 +61,9 @@ const { tokens, links } = Astro.props;
     }
 
     .tok-keyword {
-        color: var(--sky);
+        /* Muted accent tint using only defined tokens (the palette has no
+           standalone --sky/--rose custom properties). */
+        color: color-mix(in oklab, var(--accent), var(--fg-faint) 42%);
     }
 
     .tok-type {

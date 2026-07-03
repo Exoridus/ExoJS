@@ -1,0 +1,80 @@
+{
+  "title": "BodyType",
+  "description": "Simulation role of a PhysicsBody. - `dynamic` — fully simulated (finite mass); moved by the solver once dynamics ship, and by `setTransform` meanwhile. - `static` — never moves; infinite mass. Ground, walls, level geometry. - `kinematic` — moved only by `setTransform` (game-driven); infinite mass, unaffected by contacts. Platforms, doors.",
+  "symbol": "BodyType",
+  "kind": "type",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Simulation role of a PhysicsBody.",
+        "- `dynamic` — fully simulated (finite mass); moved by the solver once dynamics ship, and by `setTransform` meanwhile. - `static` — never moves; infinite mass. Ground, walls, level geometry. - `kinematic` — moved only by `setTransform` (game-driven); infinite mass, unaffected by contacts. Platforms, doors."
+      ],
+      "importLine": "import { BodyType } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "BodyType",
+          "signature": "\"dynamic\" | \"static\" | \"kinematic\"",
+          "signatureTokens": [
+            {
+              "text": "\"dynamic\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"static\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"kinematic\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/types.ts"
+}

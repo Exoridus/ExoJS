@@ -1,0 +1,250 @@
+{
+  "title": "SoundPlayOptions",
+  "description": "Per-call overrides for Sound.play and Sound.playSprite.",
+  "symbol": "SoundPlayOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-call overrides for Sound.play and Sound.playSprite."
+      ],
+      "importLine": "import { SoundPlayOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bus",
+          "signature": "bus?: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "bus",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Route this play through a specific AudioBus."
+        },
+        {
+          "name": "detune",
+          "signature": "detune?: number",
+          "signatureTokens": [
+            {
+              "text": "detune",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Override pitch detune (cents) for this play instance."
+        },
+        {
+          "name": "loop",
+          "signature": "loop?: boolean",
+          "signatureTokens": [
+            {
+              "text": "loop",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Override looping for this play instance."
+        },
+        {
+          "name": "muted",
+          "signature": "muted?: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Start muted (volume 0)."
+        },
+        {
+          "name": "playbackRate",
+          "signature": "playbackRate?: number",
+          "signatureTokens": [
+            {
+              "text": "playbackRate",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Override playback rate for this play instance."
+        },
+        {
+          "name": "replace",
+          "signature": "replace?: boolean",
+          "signatureTokens": [
+            {
+              "text": "replace",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, all currently-playing instances of this sound are stopped before the new one starts (singleton-replace mode). Useful for non-overlapping playback such as UI confirmation chimes. Default: false (multi-instance / pooled mode)."
+        },
+        {
+          "name": "time",
+          "signature": "time?: number",
+          "signatureTokens": [
+            {
+              "text": "time",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seek offset in seconds before starting playback."
+        },
+        {
+          "name": "volume",
+          "signature": "volume?: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Override volume for this play instance. Range [0, 1]."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Sound.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Sound.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+}

@@ -481,7 +481,7 @@
         },
         {
           "name": "toTexture",
-          "signature": "toTexture(width: number, height: number, options?: GradientToTextureOptions & object): DataTexture<\"rgba8\">",
+          "signature": "toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: \"rgba8\" }): DataTexture<\"rgba8\">",
           "signatureTokens": [
             {
               "text": "toTexture",
@@ -544,8 +544,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba8\"",
               "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -585,7 +605,7 @@
             },
             {
               "name": "options",
-              "type": "GradientToTextureOptions & object",
+              "type": "GradientToTextureOptions & { format?: \"rgba8\" }",
               "optional": true
             }
           ],
@@ -594,7 +614,7 @@
         },
         {
           "name": "toTexture",
-          "signature": "toTexture(width: number, height: number, options: GradientToTextureOptions & object): DataTexture<\"rgba32f\">",
+          "signature": "toTexture(width: number, height: number, options: GradientToTextureOptions & { format: \"rgba32f\" }): DataTexture<\"rgba32f\">",
           "signatureTokens": [
             {
               "text": "toTexture",
@@ -653,8 +673,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba32f\"",
               "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -694,7 +730,7 @@
             },
             {
               "name": "options",
-              "type": "GradientToTextureOptions & object",
+              "type": "GradientToTextureOptions & { format: \"rgba32f\" }",
               "optional": false
             }
           ],

@@ -69,11 +69,15 @@
       "members": [
         {
           "name": "_onWorkletReady",
-          "signature": "_onWorkletReady(audioContext: AudioContext): void",
+          "signature": "_onWorkletReady?(audioContext: AudioContext): void",
           "signatureTokens": [
             {
               "text": "_onWorkletReady",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": "(",

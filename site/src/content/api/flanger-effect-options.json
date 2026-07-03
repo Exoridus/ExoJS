@@ -1,0 +1,175 @@
+{
+  "title": "FlangerEffectOptions",
+  "description": "Construction options for FlangerEffect.",
+  "symbol": "FlangerEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for FlangerEffect."
+      ],
+      "importLine": "import { FlangerEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "delayMs",
+          "signature": "delayMs?: number",
+          "signatureTokens": [
+            {
+              "text": "delayMs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Base delay time in milliseconds. The LFO modulates the delay around this centre value. Range 0.5..20, default 3."
+        },
+        {
+          "name": "depthMs",
+          "signature": "depthMs?: number",
+          "signatureTokens": [
+            {
+              "text": "depthMs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LFO modulation depth in milliseconds — the peak deviation added to and subtracted from delayMs by the sine LFO. Range 0..10, default 2."
+        },
+        {
+          "name": "feedback",
+          "signature": "feedback?: number",
+          "signatureTokens": [
+            {
+              "text": "feedback",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Feedback amount — fraction of the delay output fed back to the delay input. Higher values intensify the comb-filter resonance. Range 0..0.95, default 0.5."
+        },
+        {
+          "name": "rateHz",
+          "signature": "rateHz?: number",
+          "signatureTokens": [
+            {
+              "text": "rateHz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LFO oscillation rate in Hz. Lower rates produce a slow, sweeping flange; higher rates create a faster jet-plane effect. Range 0..10, default 0.25."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 0.5 (equal mix)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/FlangerEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/FlangerEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/FlangerEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/FlangerEffect.ts"
+}

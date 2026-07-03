@@ -3489,7 +3489,7 @@
         },
         {
           "name": "setInternalSpriteFactory",
-          "signature": "setInternalSpriteFactory(factory: object | null): void",
+          "signature": "setInternalSpriteFactory(factory: () => RenderNodeSpriteLike | null): void",
           "signatureTokens": [
             {
               "text": "setInternalSpriteFactory",
@@ -3508,8 +3508,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
-              "kind": "keyword"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNodeSpriteLike",
+              "kind": "type"
             },
             {
               "text": " | ",
@@ -3535,7 +3543,7 @@
           "params": [
             {
               "name": "factory",
-              "type": "object | null",
+              "type": "() => RenderNodeSpriteLike | null",
               "optional": false
             }
           ],

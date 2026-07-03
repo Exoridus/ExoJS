@@ -36,7 +36,9 @@ const featured = FEATURED_SYMBOLS.map(id => items.find(item => item.entry.id ===
 
 const totalSymbols = items.length;
 const classCount = items.filter(item => item.kind === 'class').length;
+const interfaceCount = items.filter(item => item.kind === 'interface').length;
 const enumCount = items.filter(item => item.kind === 'enum').length;
+const typeCount = items.filter(item => item.kind === 'type').length;
 
 const sidebarGroups = [
     {
@@ -98,7 +100,9 @@ const sidebarGroups = [
         <div class="api-counts" aria-label="API totals">
             <span>Symbols <strong>{totalSymbols}</strong></span>
             <span>Classes <strong>{classCount}</strong></span>
+            <span>Interfaces <strong>{interfaceCount}</strong></span>
             <span>Enums <strong>{enumCount}</strong></span>
+            <span>Types <strong>{typeCount}</strong></span>
             <span>Subsystems <strong>{grouped.length}</strong></span>
         </div>
 
@@ -479,6 +483,18 @@ const sidebarGroups = [
         color: var(--rose);
         border-color: color-mix(in oklab, var(--rose), transparent 65%);
         background: color-mix(in oklab, var(--rose), transparent 88%);
+    }
+
+    .api-kind.kind-interface {
+        color: #5aa9e6;
+        border-color: color-mix(in oklab, #5aa9e6, transparent 62%);
+        background: color-mix(in oklab, #5aa9e6, transparent 88%);
+    }
+
+    .api-kind.kind-type {
+        color: #b58cf0;
+        border-color: color-mix(in oklab, #b58cf0, transparent 62%);
+        background: color-mix(in oklab, #b58cf0, transparent 88%);
     }
 
     .toc h6 {

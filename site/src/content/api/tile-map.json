@@ -905,7 +905,7 @@
         },
         {
           "name": "pixelToTile",
-          "signature": "pixelToTile(px: number, py: number): object",
+          "signature": "pixelToTile(px: number, py: number): { tx: number; ty: number }",
           "signatureTokens": [
             {
               "text": "pixelToTile",
@@ -952,8 +952,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -968,7 +1000,7 @@
               "optional": false
             }
           ],
-          "returnType": "object",
+          "returnType": "{ tx: number; ty: number }",
           "description": "Convert a pixel position in map-local space to the tile coordinate that contains it. Uses floor. May return coordinates outside map bounds."
         },
         {
@@ -1224,7 +1256,7 @@
         },
         {
           "name": "tileToPixel",
-          "signature": "tileToPixel(tx: number, ty: number): object",
+          "signature": "tileToPixel(tx: number, ty: number): { x: number; y: number }",
           "signatureTokens": [
             {
               "text": "tileToPixel",
@@ -1271,8 +1303,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -1287,7 +1351,7 @@
               "optional": false
             }
           ],
-          "returnType": "object",
+          "returnType": "{ x: number; y: number }",
           "description": "Convert a tile coordinate to the pixel position of its top-left corner in map-local space (ignoring layer offsets)."
         }
       ],

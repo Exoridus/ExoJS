@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "catch",
-          "signature": "catch(onrejected?: object | null): Promise<T | Caught>",
+          "signature": "catch(onrejected?: (reason: unknown) => Caught | PromiseLike<Caught> | null): Promise<T | Caught>",
           "signatureTokens": [
             {
               "text": "catch",
@@ -55,8 +55,48 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reason",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
               "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Caught",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PromiseLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Caught",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -102,7 +142,7 @@
           "params": [
             {
               "name": "onrejected",
-              "type": "object | null",
+              "type": "(reason: unknown) => Caught | PromiseLike<Caught> | null",
               "optional": true
             }
           ],
@@ -111,7 +151,7 @@
         },
         {
           "name": "finally",
-          "signature": "finally(onfinally?: object | null): Promise<T>",
+          "signature": "finally(onfinally?: () => void | null): Promise<T>",
           "signatureTokens": [
             {
               "text": "finally",
@@ -134,7 +174,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -173,7 +221,7 @@
           "params": [
             {
               "name": "onfinally",
-              "type": "object | null",
+              "type": "() => void | null",
               "optional": true
             }
           ],
@@ -182,7 +230,7 @@
         },
         {
           "name": "then",
-          "signature": "then(onfulfilled?: object | null, onrejected?: object | null): Promise<Fulfilled | Rejected>",
+          "signature": "then(onfulfilled?: (value: T) => Fulfilled | PromiseLike<Fulfilled> | null, onrejected?: (reason: unknown) => Rejected | PromiseLike<Rejected> | null): Promise<Fulfilled | Rejected>",
           "signatureTokens": [
             {
               "text": "then",
@@ -205,8 +253,48 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
-              "kind": "keyword"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Fulfilled",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PromiseLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Fulfilled",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -233,8 +321,48 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reason",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
               "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rejected",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PromiseLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rejected",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -280,12 +408,12 @@
           "params": [
             {
               "name": "onfulfilled",
-              "type": "object | null",
+              "type": "(value: T) => Fulfilled | PromiseLike<Fulfilled> | null",
               "optional": true
             },
             {
               "name": "onrejected",
-              "type": "object | null",
+              "type": "(reason: unknown) => Rejected | PromiseLike<Rejected> | null",
               "optional": true
             }
           ],

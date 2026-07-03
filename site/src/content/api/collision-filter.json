@@ -1,0 +1,113 @@
+{
+  "title": "CollisionFilter",
+  "description": "Per-collider collision filter. A pair is considered for collision only when each collider's mask includes the other's category. A non-zero group overrides category/mask: identical positive groups always collide, identical negative groups never do.",
+  "symbol": "CollisionFilter",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-collider collision filter. A pair is considered for collision only when each collider's mask includes the other's category. A non-zero group overrides category/mask: identical positive groups always collide, identical negative groups never do."
+      ],
+      "importLine": "import { CollisionFilter } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "category",
+          "signature": "category: number",
+          "signatureTokens": [
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Category bits this collider belongs to. Default 0x0001."
+        },
+        {
+          "name": "group",
+          "signature": "group: number",
+          "signatureTokens": [
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Signed override group; 0 defers to category/mask. Default 0."
+        },
+        {
+          "name": "mask",
+          "signature": "mask: number",
+          "signatureTokens": [
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Categories this collider collides with. Default 0xffff."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/types.ts"
+}

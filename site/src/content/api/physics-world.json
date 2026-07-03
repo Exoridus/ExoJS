@@ -517,7 +517,7 @@
         },
         {
           "name": "forEachAabbHit",
-          "signature": "forEachAabbHit(bounds: Aabb, filter: Partial<object> | undefined, callback: object): void",
+          "signature": "forEachAabbHit(bounds: Aabb, filter: Partial<{ category: number; group: number; mask: number }> | undefined, callback: (collider: Collider) => void): void",
           "signatureTokens": [
             {
               "text": "forEachAabbHit",
@@ -560,8 +560,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -588,7 +636,27 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "collider",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -612,12 +680,12 @@
             },
             {
               "name": "filter",
-              "type": "Partial<object> | undefined",
+              "type": "Partial<{ category: number; group: number; mask: number }> | undefined",
               "optional": false
             },
             {
               "name": "callback",
-              "type": "object",
+              "type": "(collider: Collider) => void",
               "optional": false
             }
           ],
@@ -626,7 +694,7 @@
         },
         {
           "name": "overlapShape",
-          "signature": "overlapShape(shape: AnyShape, position: VectorLike, filter?: Partial<object>, angle?: number): Collider[]",
+          "signature": "overlapShape(shape: AnyShape, position: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, angle?: number): Collider[]",
           "signatureTokens": [
             {
               "text": "overlapShape",
@@ -689,8 +757,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -746,7 +862,7 @@
             },
             {
               "name": "filter",
-              "type": "Partial<object>",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
               "optional": true
             },
             {
@@ -760,7 +876,7 @@
         },
         {
           "name": "queryAabb",
-          "signature": "queryAabb(bounds: Aabb, filter?: Partial<object>, out?: Collider[]): Collider[]",
+          "signature": "queryAabb(bounds: Aabb, filter?: Partial<{ category: number; group: number; mask: number }>, out?: Collider[]): Collider[]",
           "signatureTokens": [
             {
               "text": "queryAabb",
@@ -807,8 +923,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -863,7 +1027,7 @@
             },
             {
               "name": "filter",
-              "type": "Partial<object>",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
               "optional": true
             },
             {
@@ -877,7 +1041,7 @@
         },
         {
           "name": "queryPoint",
-          "signature": "queryPoint(point: VectorLike, filter?: Partial<object>): Collider[]",
+          "signature": "queryPoint(point: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>): Collider[]",
           "signatureTokens": [
             {
               "text": "queryPoint",
@@ -924,8 +1088,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -956,7 +1168,7 @@
             },
             {
               "name": "filter",
-              "type": "Partial<object>",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
               "optional": true
             }
           ],
@@ -965,7 +1177,7 @@
         },
         {
           "name": "rayCast",
-          "signature": "rayCast(origin: VectorLike, direction: VectorLike, filter?: Partial<object>, maxDistance?: number): RayHit | null",
+          "signature": "rayCast(origin: VectorLike, direction: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, maxDistance?: number): RayHit | null",
           "signatureTokens": [
             {
               "text": "rayCast",
@@ -1028,8 +1240,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -1089,7 +1349,7 @@
             },
             {
               "name": "filter",
-              "type": "Partial<object>",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
               "optional": true
             },
             {
@@ -1103,7 +1363,7 @@
         },
         {
           "name": "rayCastAll",
-          "signature": "rayCastAll(origin: VectorLike, direction: VectorLike, filter?: Partial<object>, out?: RayHit[], maxDistance?: number): RayHit[]",
+          "signature": "rayCastAll(origin: VectorLike, direction: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, out?: RayHit[], maxDistance?: number): RayHit[]",
           "signatureTokens": [
             {
               "text": "rayCastAll",
@@ -1166,8 +1426,56 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -1247,7 +1555,7 @@
             },
             {
               "name": "filter",
-              "type": "Partial<object>",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
               "optional": true
             },
             {

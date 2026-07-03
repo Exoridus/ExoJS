@@ -1,0 +1,87 @@
+{
+  "title": "SceneNodeConstructor",
+  "description": "Any abstract or concrete SceneNode constructor usable as a serialization key.",
+  "symbol": "SceneNodeConstructor",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Any abstract or concrete SceneNode constructor usable as a serialization key."
+      ],
+      "importLine": "import { SceneNodeConstructor } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SceneNodeConstructor",
+          "signature": "(args: any[]) => T",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/SerializationRegistry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/SerializationRegistry.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/SerializationRegistry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/SerializationRegistry.ts"
+}

@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(callback: object, width: number, height: number): ObservableSize",
+          "signature": "new(callback: () => void, width: number, height: number): ObservableSize",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,7 +50,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -101,7 +109,7 @@
           "params": [
             {
               "name": "callback",
-              "type": "object",
+              "type": "() => void",
               "optional": false
             },
             {

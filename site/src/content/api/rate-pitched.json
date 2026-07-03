@@ -1,0 +1,92 @@
+{
+  "title": "RatePitched",
+  "description": "A voice with rate / pitch controls.",
+  "symbol": "RatePitched",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A voice with rate / pitch controls."
+      ],
+      "importLine": "import { RatePitched } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "detune",
+          "signature": "detune: number",
+          "signatureTokens": [
+            {
+              "text": "detune",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fine pitch offset in cents."
+        },
+        {
+          "name": "playbackRate",
+          "signature": "playbackRate: number",
+          "signatureTokens": [
+            {
+              "text": "playbackRate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Playback rate multiplier (1 = normal)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Playable.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Playable.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
+}

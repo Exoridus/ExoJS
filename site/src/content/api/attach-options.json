@@ -1,0 +1,383 @@
+{
+  "title": "AttachOptions",
+  "description": "PhysicsWorld.attach convenience options: a body type plus a single collider, attached to a scene node in one call.",
+  "symbol": "AttachOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 13,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 13,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "PhysicsWorld.attach convenience options: a body type plus a single collider, attached to a scene node in one call."
+      ],
+      "importLine": "import { AttachOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "angle",
+          "signature": "angle?: number",
+          "signatureTokens": [
+            {
+              "text": "angle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial rotation (radians) of the body. Default 0."
+        },
+        {
+          "name": "density",
+          "signature": "density?: number",
+          "signatureTokens": [
+            {
+              "text": "density",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Collider density (mass per px²). Default 1."
+        },
+        {
+          "name": "filter",
+          "signature": "filter?: Partial<CollisionFilter>",
+          "signatureTokens": [
+            {
+              "text": "filter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionFilter",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Category/mask/group collision filter; partials merge over the defaults."
+        },
+        {
+          "name": "fixedRotation",
+          "signature": "fixedRotation?: boolean",
+          "signatureTokens": [
+            {
+              "text": "fixedRotation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the body never rotates under contacts. Default false."
+        },
+        {
+          "name": "friction",
+          "signature": "friction?: number",
+          "signatureTokens": [
+            {
+              "text": "friction",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Coulomb friction coefficient. Default 0.2."
+        },
+        {
+          "name": "gravityScale",
+          "signature": "gravityScale?: number",
+          "signatureTokens": [
+            {
+              "text": "gravityScale",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-body multiplier on world gravity. Default 1."
+        },
+        {
+          "name": "isSensor",
+          "signature": "isSensor?: boolean",
+          "signatureTokens": [
+            {
+              "text": "isSensor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the collider generates overlap events but no contact response. Default false."
+        },
+        {
+          "name": "offset",
+          "signature": "offset?: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "offset",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Body-local offset of the collider. Default (0, 0)."
+        },
+        {
+          "name": "position",
+          "signature": "position?: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial world position of the body. Default the node's position is left untouched and (0, 0) is used."
+        },
+        {
+          "name": "restitution",
+          "signature": "restitution?: number",
+          "signatureTokens": [
+            {
+              "text": "restitution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Restitution / bounciness in [0, 1]. Default 0."
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation?: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Body-local rotation of the collider (radians). Default 0."
+        },
+        {
+          "name": "shape",
+          "signature": "shape: AnyShape",
+          "signatureTokens": [
+            {
+              "text": "shape",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyShape",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The collider geometry."
+        },
+        {
+          "name": "type",
+          "signature": "type?: BodyType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BodyType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Simulation role of the created body. Default 'dynamic'."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/PhysicsWorld.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/PhysicsWorld.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts"
+}
