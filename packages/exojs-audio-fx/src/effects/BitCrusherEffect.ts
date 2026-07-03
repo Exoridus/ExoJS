@@ -1,6 +1,6 @@
 import { WorkletEffect } from '@codexo/exojs';
 
-import { bitCrusherWorkletSource } from '../worklets/bit-crusher.worklet';
+import bitCrusherWorkletSource from '../worklets/bit-crusher.worklet.ts?worklet';
 
 export interface BitCrusherEffectOptions {
   /**

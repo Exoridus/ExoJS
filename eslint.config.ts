@@ -1024,6 +1024,40 @@ export default defineConfig([
     },
   },
 
+  // The bit-crusher worklet source (Phase 1 proof-of-concept for the
+  // `.worklet.ts` → `?worklet` build plugin) runs inside AudioWorkletGlobalScope
+  // — no DOM, no module imports at runtime — and typechecks separately against
+  // packages/exojs-audio-fx/tsconfig.worklets.json (see worklet-globals.d.ts),
+  // not the package's main (DOM-lib) program covered by `projectService`
+  // above. Disable type-aware linting here (matching the test/example
+  // precedent elsewhere in this file) and supply just the AudioWorklet-
+  // specific globals so `no-undef` doesn't false-positive; DOM globals are
+  // explicitly banned via `no-restricted-globals` as a lint-level backstop.
+  {
+    files: ['packages/exojs-audio-fx/src/worklets/bit-crusher.worklet.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['packages/exojs-audio-fx/src/worklets/bit-crusher.worklet.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: { projectService: false, project: null },
+      globals: {
+        ...globals.es2024,
+        AudioWorkletProcessor: 'readonly',
+        AudioParamDescriptor: 'readonly',
+        registerProcessor: 'readonly',
+        sampleRate: 'readonly',
+        currentTime: 'readonly',
+        currentFrame: 'readonly',
+      },
+    },
+    rules: {
+      'no-restricted-globals': ['error', 'window', 'document', 'navigator', 'fetch', 'localStorage', 'sessionStorage', 'alert', 'confirm', 'prompt'],
+    },
+  },
+
   // Physics indexes flat vertex/normal buffers (`number[]`) at provably in-bounds
   // positions; those reads use `arr[i]!` — the same convention core's hot math
   // paths use. Allow the non-null assertion here (packages discourage it by

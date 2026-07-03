@@ -1,8 +1,9 @@
 // Shared Vitest building blocks for the ExoJS monorepo. The browser (WebGL2/
 // WebGPU) projects stay repository-local because they need repo path knowledge
 // and the playwright provider; this module centralizes the parts every project
-// shares: the package source conditions, the shader-stub plugin, and a jsdom
-// unit-test project factory.
+// shares: the package source conditions, the shader-stub plugin, the AudioWorklet
+// `?worklet` transform plugin, and a jsdom unit-test project factory.
+import { createWorkletPlugin } from '../worklet-plugin.js';
 
 /**
  * Conditions that activate each package's package-private `@codexo/…-source`
@@ -22,6 +23,18 @@ export const shaderStubPlugin = {
 };
 
 /**
+ * Transpiles `*.worklet.ts?worklet` imports to a real, functioning JS string
+ * (mirroring the production Rollup build — see `../rollup/index.js`) instead
+ * of stubbing them: unlike GLSL, worklet source is actually executed by tests
+ * (DSP-level `eval()` harnesses and the real-Web-Audio browser suite), so a
+ * stub would defeat the point. Shared across every jsdom test project via
+ * `createJsdomTestProject` below, and wired directly into the repo-root
+ * browser projects (`vitest.config.ts`) since those are not built from this
+ * factory.
+ */
+export const workletTransformPlugin = createWorkletPlugin();
+
+/**
  * A jsdom unit/integration test project. Used for Core and each extension.
  * @param {{ name: string, include: string[], exclude?: string[], setupFiles?: string[], alias?: unknown }} opts
  */
@@ -30,7 +43,7 @@ export function createJsdomTestProject(opts) {
   return {
     resolve: { alias, conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
-    plugins: [shaderStubPlugin],
+    plugins: [shaderStubPlugin, workletTransformPlugin],
     define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
     test: {
       name,

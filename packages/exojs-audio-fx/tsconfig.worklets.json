@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Typechecks *.worklet.ts source against the AudioWorkletGlobalScope, not the package's main (DOM-lib) program: `lib` drops `dom`/`dom.iterable` entirely and relies on the hand-rolled ambient globals in src/worklets/worklet-globals.d.ts. These files are excluded from tsconfig.json's `include` (see its comment) and typechecked here instead; `pnpm typecheck` runs both.",
+  "extends": "@codexo/exojs-config/typescript/base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "noEmit": true,
+    "rootDir": "src/worklets"
+  },
+  "include": ["src/worklets/bit-crusher.worklet.ts", "src/worklets/worklet-globals.d.ts"]
+}

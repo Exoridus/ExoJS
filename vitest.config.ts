@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
-import { createJsdomTestProject, shaderStubPlugin, srcConditions } from '@codexo/exojs-config/vitest';
+import { createJsdomTestProject, shaderStubPlugin, srcConditions, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
@@ -39,7 +39,10 @@ const aliasConfig = [
 const browserBase = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
-  plugins: [shaderStubPlugin],
+  // `workletTransformPlugin` is the real (non-stub) transform — the browser-
+  // audio-chromium project below renders converted worklets through a genuine
+  // AudioContext, so it needs functioning DSP, not an empty string.
+  plugins: [shaderStubPlugin, workletTransformPlugin],
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
 } as const;
 
