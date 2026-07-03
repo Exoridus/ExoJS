@@ -1,5 +1,3 @@
-@use '../styles/colors' as *;
-
 @keyframes dash-loading {
     0% {
         stroke-dasharray: 1, 200;
@@ -48,8 +46,8 @@
 
 .path {
     animation: dash-loading 1.5s ease-in-out infinite;
-    fill: $transparent;
-    stroke: $accent-color;
+    fill: transparent;
+    stroke: var(--accent);
     stroke-dasharray: 1, 200;
     stroke-dashoffset: 0;
     stroke-width: 6;
