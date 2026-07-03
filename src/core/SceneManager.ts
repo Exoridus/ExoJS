@@ -4,6 +4,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { Application } from './Application';
 import { Color } from './Color';
 import { logger } from './logging';
+import { Perf } from './Perf';
 import { Scene } from './Scene';
 import { Signal } from './Signal';
 import type { Time } from './Time';
@@ -56,6 +57,18 @@ const createOverlayMesh = (): TransitionOverlayMesh =>
   });
 
 const defaultFadeTransitionDuration = 220;
+
+// User Timing mark/measure names for the scene sub-phases of `update()`
+// (dev-only). Constant strings so the Performance panel groups every frame's
+// entries under a stable label instead of one row per frame.
+const sceneUpdateStartMark = 'exojs:scene-update:start';
+const sceneUpdateMeasure = 'exojs:scene-update';
+const sceneTickStartMark = 'exojs:scene-tick:start';
+const sceneTickMeasure = 'exojs:scene-tick';
+const drawStartMark = 'exojs:draw:start';
+const drawMeasure = 'exojs:draw';
+const uiStartMark = 'exojs:ui:start';
+const uiMeasure = 'exojs:ui';
 
 /**
  * Single-active-scene controller owned by {@link Application}. Holds at most one
@@ -146,8 +159,10 @@ export class SceneManager {
 
     if (scene !== null) {
       if (!scene.paused) {
+        if (__DEV__) Perf.mark(sceneUpdateStartMark);
         // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
         const updateResult = scene.update(delta);
+        if (__DEV__) Perf.measure(sceneUpdateMeasure, sceneUpdateStartMark);
 
         if (!this._asyncUpdateWarned.has(scene) && (updateResult as unknown) instanceof Promise) {
           this._asyncUpdateWarned.add(scene);
@@ -158,11 +173,15 @@ export class SceneManager {
         }
 
         // Tick the scene's systems (e.g. a physics world) after its update().
+        if (__DEV__) Perf.mark(sceneTickStartMark);
         scene._tickSystems(delta);
+        if (__DEV__) Perf.measure(sceneTickMeasure, sceneTickStartMark);
       }
 
+      if (__DEV__) Perf.mark(drawStartMark);
       // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const drawResult = scene.draw(this._app.rendering);
+      if (__DEV__) Perf.measure(drawMeasure, drawStartMark);
 
       if (!this._asyncDrawWarned.has(scene) && (drawResult as unknown) instanceof Promise) {
         this._asyncDrawWarned.add(scene);
@@ -172,7 +191,9 @@ export class SceneManager {
       }
 
       // Auto-render the scene's screen-fixed UI layer above its content.
+      if (__DEV__) Perf.mark(uiStartMark);
       scene._peekUI()?._render(this._app.rendering);
+      if (__DEV__) Perf.measure(uiMeasure, uiStartMark);
     }
 
     const transitionAlpha = this._getTransitionAlpha();
@@ -183,6 +204,17 @@ export class SceneManager {
 
     if (scene !== null) {
       this.onUpdateScene.dispatch(scene);
+    }
+
+    if (__DEV__) {
+      Perf.clearMarks(sceneUpdateStartMark);
+      Perf.clearMarks(sceneTickStartMark);
+      Perf.clearMarks(drawStartMark);
+      Perf.clearMarks(uiStartMark);
+      Perf.clearMeasures(sceneUpdateMeasure);
+      Perf.clearMeasures(sceneTickMeasure);
+      Perf.clearMeasures(drawMeasure);
+      Perf.clearMeasures(uiMeasure);
     }
 
     return this;
