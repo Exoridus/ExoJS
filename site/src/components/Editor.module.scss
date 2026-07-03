@@ -139,6 +139,45 @@
     font-family: var(--f-mono);
 }
 
+// Split layout (editor left, preview right) — desktop only; below the
+// breakpoint the stacked flow always applies regardless of the toggle.
+@media (min-width: 1120px) {
+    .root[data-layout='split'] {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-areas:
+            'editor preview'
+            'editor diag'
+            'editor errors'
+            'editor .';
+        grid-template-rows: auto auto auto 1fr;
+        gap: 0.75rem;
+        align-items: start;
+    }
+
+    .root[data-layout='split'] .editor-frame {
+        grid-area: editor;
+    }
+
+    .root[data-layout='split'] .preview-frame {
+        grid-area: preview;
+        margin: 0;
+    }
+
+    .root[data-layout='split'] .diagnostics-slot {
+        grid-area: diag;
+    }
+
+    .root[data-layout='split'] .errors-slot {
+        grid-area: errors;
+    }
+
+    .root[data-layout='split'] .error-panel {
+        margin: 0;
+    }
+}
+
 @media (max-width: 1119px) {
     .root {
         width: 100%;
