@@ -4,6 +4,7 @@ description: 'World space, canvas space, and how the active view maps between th
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Coordinates and views
 
@@ -22,6 +23,10 @@ In a typical 2D project, world space has the X axis pointing right and the Y axi
 Canvas space is what the GPU paints into: pixels of the application's canvas. `(0, 0)` is the top-left, `(canvas.width, canvas.height)` is the bottom-right. Mouse events arrive in canvas space — when the user clicks at pixel `(245, 110)`, that's a canvas-space coordinate.
 
 If you placed every sprite at its world position and the camera never moved, world space and canvas space would line up exactly. The moment you move the camera, scale the canvas, or render to a sub-region, the two diverge.
+
+<Callout type="pitfall" title="Clicks go wrong once the camera moves">
+Pointer events always arrive in canvas space. Once the camera has panned or zoomed, convert them to world space before hit-testing — otherwise a click lands on the wrong object. The world-vs-screen-coords example below shows the conversion.
+</Callout>
 
 ## The active view
 
@@ -110,6 +115,10 @@ draw(context) {
 ```
 
 The same scene graph rendered with two different view configurations, into two halves of the canvas — one tree, two views. The viewport fractions are normalized (0–1 of canvas size), so `setViewport(0, 0, 0.5, 1)` covers the left half and `setViewport(0.5, 0, 0.5, 1)` covers the right. If you continue rendering HUD elements or additional scenes afterward, reset the viewport before those passes so later rendering does not inherit the split-screen configuration.
+
+<Callout type="warning" title="Reset the viewport when the split pass ends">
+Any rendering after a split-screen or picture-in-picture pass — a HUD, another scene — inherits the last viewport you set. Call `context.view.setViewport(0, 0, 1, 1)` before those passes to paint to the full canvas again.
+</Callout>
 
 ## Examples
 

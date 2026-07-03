@@ -5,6 +5,7 @@ description: 'Inspect scene state and runtime behavior with overlay layers, and 
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Debugging & inspection
 
@@ -53,6 +54,10 @@ debug.layers.boundingBoxes.visible = true;  // or F2
 
 Use this to debug layout issues, verify sprite bounds match expectations, or spot invisible nodes taking up space. It is the fastest way to answer "where does the engine think this node is?"
 
+<Callout type="debug" title="Read the boxes as a diagnosis">
+A node that's in the tree but invisible tells you which way to look: no box means its bounds are zero (nothing to draw), while a box off in a corner means it's mis-anchored or off-screen. F2 tells the two apart instantly.
+</Callout>
+
 ## Hit-test layer
 
 The [`HitTestLayer`](/ExoJS/en/api/hit-test-layer/) color-codes interactive nodes based on their pointer state:
@@ -92,6 +97,10 @@ logger.error('Simulation step threw', { source: 'physics', error: new Error('phy
 Each call takes a `message` plus an optional options bag: `source` (rendered as `[ExoJS][source]`, or a bare `[ExoJS]` when omitted), `data` for structured context, and `error` for `error()` calls. Use `source` to identify the subsystem or class emitting the entry so your own tooling can filter by it.
 
 Severity follows `LogSeverity`: `Debug < Info < Warning < Error`. In production builds, `Debug`/`Info`/`Warning` calls are compiled out entirely — only `Error` survives — so it's safe to leave `logger.debug`/`logger.info` calls in shipped code without gating them yourself. In development builds, a console sink is registered by default and prefixes every line with a styled `[ExoJS]` (or `[ExoJS][source]`) badge.
+
+<Callout type="info" title="Leave your debug logs in">
+Only `Error` survives a production build — `Debug`, `Info` and `Warning` are stripped out. So `logger.debug(...)` and `logger.info(...)` cost nothing shipped; there's no need to remove them or gate them behind your own flag.
+</Callout>
 
 To capture log entries yourself — for an in-game console, telemetry, or a custom debug panel — register a sink with `addSink`. It returns an unsubscribe function:
 
