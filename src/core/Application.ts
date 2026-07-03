@@ -28,6 +28,7 @@ import { Color } from './Color';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
+import { Perf } from './Perf';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
@@ -155,6 +156,14 @@ const maxDeltaMs = 100;
 const defaultFixedStepMs = 1000 / 60;
 /** Max fixed steps run in one frame — the spiral-of-death guard. */
 const maxFixedSteps = 5;
+
+// User Timing mark/measure names for the per-frame loop (dev-only, see `update()`).
+// Constant strings so the Performance panel groups every frame's entries
+// under a stable label instead of one row per frame.
+const frameStartMark = 'exojs:frame:start';
+const frameMeasure = 'exojs:frame';
+const systemsStartMark = 'exojs:systems:start';
+const systemsMeasure = 'exojs:systems';
 
 const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
 
@@ -666,10 +675,14 @@ export class Application {
       const frameDelta = Time.temp.set(clampedDeltaMs);
       const frameStart = performance.now();
 
+      if (__DEV__) Perf.mark(frameStartMark);
+
       this.backend.resetStats();
       this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
+      if (__DEV__) Perf.mark(systemsStartMark);
       this.systems._tick(frameDelta);
+      if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
 
       // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
       // so they see this frame's input and before the variable update/draw.
@@ -686,6 +699,15 @@ export class Application {
       this.onFrame.dispatch(frameDelta);
       this.backend.flush();
       this.backend.stats.frameTimeMs = performance.now() - frameStart;
+
+      if (__DEV__) {
+        Perf.measure(frameMeasure, frameStartMark);
+        Perf.clearMarks(frameStartMark);
+        Perf.clearMarks(systemsStartMark);
+        Perf.clearMeasures(frameMeasure);
+        Perf.clearMeasures(systemsMeasure);
+      }
+
       this._frameRequest = requestAnimationFrame(this._updateHandler);
       this._frameClock.restart();
       this._frameCount++;
