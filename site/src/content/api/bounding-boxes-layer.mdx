@@ -24,14 +24,14 @@ RenderNode in the scene. Colours cycle by zIndex (HSL hue). World-space.
 
 ## Methods
 
-- `destroy(): void`
-- `render(backend: RenderBackend): void`
-- `update(_delta: Time): void`
+- `destroy(): void` - Release the internal Graphics primitive.
+- `render(backend: RenderBackend): void` - Walk the scene tree and draw a colored rectangle outline around every visible node that has non-zero bounds. Outline hue cycles by zIndex so overlapping nodes are visually distinguishable.
+- `update(_delta: Time): void` - No per-frame pre-computation required; all state is derived in render.
 
 ## Properties
 
 - `visible: boolean`
-- `viewMode: DebugLayerViewMode`
+- `viewMode: DebugLayerViewMode` - Renders in world-space so outlines align with scene node positions.
 
 ## Source
 

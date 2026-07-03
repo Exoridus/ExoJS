@@ -27,13 +27,13 @@ once the effect is fully initialized.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `ready: Promise<void>`
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
 
 ## Source
 

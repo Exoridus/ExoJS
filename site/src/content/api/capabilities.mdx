@@ -46,7 +46,7 @@ the same instance once `app.start()` has resolved.
 - `webgpuArchitecture: string | null`
 - `webgpuVendor: string | null`
 - `webWorkers: boolean`
-- `ready: Promise<Capabilities>`
+- `ready: Promise<Capabilities>` - Lazy-cached Promise that resolves to a frozen Capabilities instance. The first read kicks off the async probes (currently just the WebGPU adapter request); every subsequent read returns the same Promise. Concurrent callers share the in-flight detection — no double work. Early-warmup pattern for callers who want to overlap detection with other startup work: ts void Capabilities.ready; // fire-and-forget; starts probes now // ... unrelated bootstrap ... const caps = await Capabilities.ready; // typically already resolved 
 
 ## Source
 

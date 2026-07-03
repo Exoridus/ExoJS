@@ -32,26 +32,26 @@ hint and clear the flag.
 
 ## Methods
 
-- `clone(): TextStyle`
-- `consumeDirty(): StyleChangeHint | null`
-- `copy(style: TextStyle): this`
+- `clone(): TextStyle` - Return a new TextStyle with all properties copied from this one.
+- `consumeDirty(): StyleChangeHint | null` - Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's update() method.
+- `copy(style: TextStyle): this` - Copy all properties from style into this instance and return this.
 
 ## Properties
 
 - `align: TextAlignment`
-- `fillColor: Color`
-- `font: string`
+- `fillColor: Color` - Runtime fill color applied as Mesh.tint. Glyphs are always rasterized white; this color multiplies them at draw time without touching the atlas.
+- `font: string` - CSS font string used as CanvasRenderingContext2D.font during glyph rasterization. Includes fontStyle so italic fonts render correctly.
 - `fontFamily: string`
 - `fontSize: number`
 - `fontStyle: "normal" | "italic"`
 - `fontWeight: FontWeight`
 - `gradientAxis: GradientAxis`
-- `gradientColors: [Color, Color] | null`
-- `leading: number`
+- `gradientColors: [Color, Color] | null` - Two-stop fill gradient [top, bottom]. When set, overrides fillColor for the glyph interior. Assign null to disable.
+- `leading: number` - Extra pixel gap between lines, added on top of lineHeight.
 - `lineHeight: number`
-- `outlineColor: Color`
-- `outlineWidth: number`
-- `shadowAlpha: number`
+- `outlineColor: Color` - Outline color — used by BitmapText/SDF rendering as a shader uniform.
+- `outlineWidth: number` - Outline width in SDF units (0..0.5). 0 disables the outline.
+- `shadowAlpha: number` - Shadow opacity (0..1). 0 disables the shadow.
 - `shadowBlur: number`
 - `shadowColor: Color`
 - `shadowOffsetX: number`
@@ -59,7 +59,7 @@ hint and clear the flag.
 
 ## Events
 
-- `onChange: Signal<[]>`
+- `onChange: Signal<[]>` - Fires once per dirty cycle when any property changes.
 
 ## Source
 

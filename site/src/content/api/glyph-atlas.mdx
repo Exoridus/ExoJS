@@ -31,8 +31,8 @@ colour data for emoji and colour fonts.
 ## Methods
 
 - `clear(): void`
-- `getGlyph(char: string, size: number): GlyphInfo`
-- `getKerning(prev: string, next: string, fontSize: number): number`
+- `getGlyph(char: string, size: number): GlyphInfo` - Return metrics for the given character at the given font size.
+- `getKerning(prev: string, next: string, fontSize: number): number` - Return the kerning adjustment (in pixels) between two adjacent characters. Positive values add space; negative values pull glyphs together. Optional — callers treat a missing method as zero kerning.
 
 ## Properties
 
@@ -41,7 +41,7 @@ colour data for emoji and colour fonts.
 
 ## Events
 
-- `onPageAdded: Signal<[pageIndex]>`
+- `onPageAdded: Signal<[pageIndex]>` - Dispatched whenever a new atlas page is allocated. Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs or an oversized font size). The payload is the zero-based page index. ts const atlas = pool.getAtlas('Roboto', 'normal', '400'); atlas.onPageAdded.on(idx => console.warn(Atlas page $\{idx\} added)); 
 
 ## Source
 

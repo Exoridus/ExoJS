@@ -24,13 +24,13 @@ The cheapest shape for both broad- and narrow-phase.
 
 ## Properties
 
-- `area: number`
-- `boundingRadius: number`
-- `centroidX: 0`
-- `centroidY: 0`
+- `area: number` - Surface area in px². mass = density × area.
+- `boundingRadius: number` - Radius of the smallest circle about the local origin enclosing the shape.
+- `centroidX: 0` - X of the area centroid in local space.
+- `centroidY: 0` - Y of the area centroid in local space.
 - `radius: number`
 - `type: "circle"`
-- `unitInertia: number`
+- `unitInertia: number` - Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia.
 
 ## Source
 

@@ -29,15 +29,15 @@ positional properties.
 
 ## Methods
 
-- `create(source: SubtitleIntermediate): Promise<VTTCue[]>`
-- `createObjectUrl(blob: Blob): string`
-- `destroy(): void`
-- `process(response: SubtitleSource): Promise<SubtitleIntermediate>`
+- `create(source: SubtitleIntermediate): Promise<VTTCue[]>` - Parses the subtitle text into an ordered array of VTTCue instances.
+- `createObjectUrl(blob: Blob): string` - Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked.
+- `destroy(): void` - Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool.
+- `process(response: SubtitleSource): Promise<SubtitleIntermediate>` - Reads the response body as UTF-8 text and records the subtitle format derived from the response URL's file extension.
 - `revokeObjectUrl(objectUrl: string): void`
 
 ## Properties
 
-- `storageName: "subtitle"`
+- `storageName: "subtitle"` - Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore.
 
 ## Source
 

@@ -29,15 +29,15 @@ the narrow phase allocation-free; both are frozen.
 
 ## Properties
 
-- `area: number`
-- `boundingRadius: number`
-- `centroidX: number`
-- `centroidY: number`
+- `area: number` - Surface area in px². mass = density × area.
+- `boundingRadius: number` - Radius of the smallest circle about the local origin enclosing the shape.
+- `centroidX: number` - X of the area centroid in local space.
+- `centroidY: number` - Y of the area centroid in local space.
 - `count: number`
-- `normals: readonly number[]`
+- `normals: readonly number[]` - Outward unit edge normals (edge i spans vertex i → i+1), flattened.
 - `type: "polygon"`
-- `unitInertia: number`
-- `vertices: readonly number[]`
+- `unitInertia: number` - Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia.
+- `vertices: readonly number[]` - Local-space vertices, CCW, flattened.
 
 ## Source
 

@@ -42,12 +42,12 @@ without changing individual layer visibility flags.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Unsubscribe from all application events, destroy every layer, and release the overlay's internal View. Call this when you no longer need the overlay to avoid memory leaks.
 
 ## Properties
 
-- `layers: DebugLayers`
-- `visible: boolean`
+- `layers: DebugLayers` - The four built-in diagnostic layers. Toggle each layer's visible flag or use the F1–F4 keybindings.
+- `visible: boolean` - Master visibility switch. When false, no layers render regardless of their individual flags.
 
 ## Source
 

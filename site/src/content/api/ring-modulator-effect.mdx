@@ -43,16 +43,16 @@ Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`;
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `frequency: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `ready: Promise<void>`
-- `waveform: OscillatorType`
-- `wet: number`
+- `frequency: number` - Carrier oscillator frequency in Hz. Range 0..20000, default 440. Changes are ramped smoothly via setTargetAtTime.
+- `inputNode: AudioNode` - The node where audio enters this effect. Throws if the audio context is not yet initialized.
+- `outputNode: AudioNode` - The node where audio exits this effect. Throws if the audio context is not yet initialized.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `waveform: OscillatorType` - Carrier oscillator waveform shape. Default 'sine'. Changes take effect immediately (no smoothing; waveform transitions are instantaneous in Web Audio).
+- `wet: number` - Wet (ring-modulated) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0.
 
 ## Source
 

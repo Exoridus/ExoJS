@@ -34,15 +34,15 @@ fully independent (world isolation).
 
 ## Methods
 
-- `advance(frameDeltaSeconds: number): number`
-- `reset(): void`
+- `advance(frameDeltaSeconds: number): number` - Accumulate frameDeltaSeconds and return the number of fixed sub-steps to run this frame. Non-finite or non-positive deltas contribute nothing and return 0.
+- `reset(): void` - Clear the accumulator (e.g. after a teleport or a pause).
 
 ## Properties
 
 - `fixedDelta: number`
 - `maxSubSteps: number`
-- `accumulator: number`
-- `alpha: number`
+- `accumulator: number` - Unconsumed accumulated time (seconds) currently held, always \< fixedDelta after an advance.
+- `alpha: number` - Interpolation fraction in [0, 1) = accumulator / fixedDelta.
 
 ## Source
 

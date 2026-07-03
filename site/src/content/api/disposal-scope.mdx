@@ -40,15 +40,15 @@ A `DisposalScope` is itself Destroyable, so scopes can nest.
 
 ## Methods
 
-- `destroy(): void`
-- `has(item: Destroyable): boolean`
-- `track(item: T): T`
-- `untrack(item: Destroyable): boolean`
+- `destroy(): void` - Destroy every tracked item in reverse registration order, then clear the scope. Idempotent. Continues past a throwing item; in development the collected errors are rethrown as an AggregateError after teardown.
+- `has(item: Destroyable): boolean` - Whether item is currently tracked.
+- `track(item: T): T` - Register item for destruction with this scope. No-op when item is already tracked or the scope is already disposed. Returns item so it can be captured inline: const x = scope.track(new Thing()).
+- `untrack(item: Destroyable): boolean` - Stop tracking item without destroying it (ownership returns to the caller). Returns true if it was tracked. No-op after the scope is disposed.
 
 ## Properties
 
-- `disposed: boolean`
-- `size: number`
+- `disposed: boolean` - Whether destroy has already run. A disposed scope tracks nothing further.
+- `size: number` - Number of items currently tracked.
 
 ## Source
 

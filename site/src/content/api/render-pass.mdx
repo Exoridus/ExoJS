@@ -31,14 +31,14 @@ cascade-destroy possible, and prevents a pass's `enabled`/`resize`/`destroy` sta
 
 ## Methods
 
-- `destroy(): void`
-- `execute(context: RenderingContext): void`
-- `resize(_width: number, _height: number): void`
+- `destroy(): void` - Release resources this pass allocated internally. No-op by default; idempotent. Never frees injected scene nodes or caller-provided RenderTextures — those are owned by the caller / scene.
+- `execute(context: RenderingContext): void` - Run this pass against context. The active render target is the canvas unless a parent redirected it. Called directly, this runs **regardless of enabled** — enabled is evaluated by the containing RenderPipeline, not self-checked here. Subclasses must not begin execute with if (!this.enabled).
+- `resize(_width: number, _height: number): void` - React to a surface / target size change. No-op by default; size-dependent passes (effects with scratch targets) override. Called by RenderPipeline.resize, which the caller wires to app.onResize.
 
 ## Properties
 
-- `enabled: boolean`
-- `label: string`
+- `enabled: boolean` - When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent — a direct execute call runs the pass regardless.
+- `label: string` - Debug label (inspector / logging). Defaults to the constructor name. Display only — not an identity.
 
 ## Source
 

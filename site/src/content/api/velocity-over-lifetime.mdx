@@ -39,10 +39,10 @@ once per particle per frame.
 ## Methods
 
 - `apply(system: ParticleSystem, _dt: number): void`
-- `destroy(): void`
-- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
-- `wgsl(): WgslContribution`
-- `writeUniforms(view: DataView, byteOffset: number, dt: number): void`
+- `destroy(): void` - Optional cleanup hook called from ParticleSystem.destroy.
+- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void` - Upload texture data (Curve/ColorGradient lookup tables) to the GPU at compile time. Receives the GPUDevice and a map of texture bindings keyed by the name in WgslContribution.textures. Called once after pipeline creation. Required when wgsl declares textures.
+- `wgsl(): WgslContribution` - Override to declare a GPU contribution. Returning a WgslContribution makes this module GPU-eligible; omitting (or returning undefined) forces CPU mode for any system that uses this module.
+- `writeUniforms(view: DataView, byteOffset: number, dt: number): void` - Write this module's current uniform values into the shared uniform buffer at byteOffset. Layout must match the field declarations returned by wgsl (in the same order). Receives the current frame dt (seconds). Modules tracking accumulated time (e.g. noise/turbulence) should advance their internal counter here to stay in sync when running in GPU mode (where apply is not called). Required when wgsl declares uniforms. Called every frame by the system before dispatching compute.
 
 ## Properties
 

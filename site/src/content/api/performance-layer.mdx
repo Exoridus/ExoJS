@@ -27,14 +27,14 @@ Enable via DebugOverlay or by pressing F1 while the canvas has focus.
 
 ## Methods
 
-- `destroy(): void`
-- `render(backend: RenderBackend): void`
-- `update(delta: Time): void`
+- `destroy(): void` - Destroy the panel's Container subtree and release all child references.
+- `render(backend: RenderBackend): void` - Submit the panel's Container subtree to the backend for drawing.
+- `update(delta: Time): void` - Sample the current frame time, recompute the rolling FPS average, update stat text nodes, and rebuild the sparkline geometry. Lazily initializes the panel scene graph on first call to avoid touching the glyph atlas until the layer is actually shown.
 
 ## Properties
 
 - `visible: boolean`
-- `viewMode: DebugLayerViewMode`
+- `viewMode: DebugLayerViewMode` - Whether this layer renders in the scene's world-space view or in a screen-space (canvas-pixel) view. Defaults to 'screen'. Subclasses override to return 'world' when rendering at actual scene positions.
 
 ## Source
 

@@ -35,21 +35,21 @@ Schema migrations are handled in two modes:
 
 ## Methods
 
-- `clearStorage(type: string): Promise<boolean>`
-- `connect(): Promise<boolean>`
-- `delete(type: string, name: string): Promise<boolean>`
-- `deleteStorage(): Promise<boolean>`
-- `destroy(): void`
-- `disconnect(): Promise<boolean>`
-- `getObjectStore(type: string, transactionMode: IDBTransactionMode): Promise<IDBObjectStore>`
-- `load(type: string, name: string): Promise<T | null>`
-- `save(type: string, name: string, data: unknown): Promise<void>`
+- `clearStorage(type: string): Promise<boolean>` - Removes all entries from the type object store without dropping the store itself. Resolves true on success.
+- `connect(): Promise<boolean>` - Opens the database connection, running any pending schema migrations. Resolves to true when the connection is ready; rejects on error. Calling this when already connected is a no-op that resolves true.
+- `delete(type: string, name: string): Promise<boolean>` - Deletes the entry with the given name from the type object store. Resolves true on success.
+- `deleteStorage(): Promise<boolean>` - Disconnects and then permanently deletes the entire database. Resolves true on success.
+- `destroy(): void` - Synchronously closes any open handles without waiting for pending transactions to complete. Prefer disconnect for graceful teardown.
+- `disconnect(): Promise<boolean>` - Closes the live database connection and resets the connected state. Always resolves true; safe to call when not connected.
+- `getObjectStore(type: string, transactionMode: IDBTransactionMode): Promise<IDBObjectStore>` - Opens (or re-uses) an IDBObjectStore for type in the given transactionMode. Calls connect automatically if the database is not yet open. Used internally by the load/save/delete methods; protected so subclasses can extend with custom transaction shapes.
+- `load(type: string, name: string): Promise<T | null>` - Retrieves the entry with the given name from the type object store, or null if no such entry exists.
+- `save(type: string, name: string, data: unknown): Promise<void>` - Persists data under name within the type object store, replacing any existing entry with the same name.
 
 ## Properties
 
-- `name: string`
-- `version: number`
-- `connected: boolean`
+- `name: string` - Human-readable database identifier, typically an application name.
+- `version: number` - Schema version used during upgradeneeded migrations.
+- `connected: boolean` - Whether a live connection to the underlying database is open.
 
 ## Source
 

@@ -28,16 +28,16 @@ mix control instead.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `decay: number`
-- `durationSeconds: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `ready: Promise<void>`
-- `wet: number`
+- `decay: number` - Exponential decay rate of the impulse response. Higher values produce a tighter, drier reverb tail. Range 0.5..10, default 2. Changing this rebuilds the IR buffer.
+- `durationSeconds: number` - Length of the generated impulse response in seconds. Range 0.1..5, default 2. Changing this rebuilds the IR buffer.
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `wet: number` - Wet (reverberated) mix level, 0..1. The dry level is automatically 1 - wet. Default 0.4.
 
 ## Source
 

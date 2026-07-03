@@ -35,10 +35,10 @@ for (let i = 0; i \< 10; i++) \{
 
 ## Methods
 
-- `instantiate(loader: Loader | null, registry?: SerializationRegistry): SceneNode`
-- `toJSON(): SerializedNode`
-- `from(node: SceneNode, loader: Loader | null, registry?: SerializationRegistry): Prefab`
-- `fromJSON(descriptor: SerializedNode): Prefab`
+- `instantiate(loader: Loader | null, registry?: SerializationRegistry): SceneNode` - Instantiate a fresh, independent copy of the captured subtree. Referenced assets must be pre-loaded into loader. Call repeatedly for many instances. Pass app.serializers as registry to resolve app-scoped (extension) serializers; defaults to the global registry.
+- `toJSON(): SerializedNode` - The underlying JSON descriptor (JSON-serialisable). Treat as read-only. The standard JSON.stringify(prefab) hook.
+- `from(node: SceneNode, loader: Loader | null, registry?: SerializationRegistry): Prefab` - Capture node's subtree as a prefab. Pass the Loader so texture and other asset references resolve to their source keys. Pass app.serializers as registry to resolve app-scoped (extension) serializers; defaults to the global registry.
+- `fromJSON(descriptor: SerializedNode): Prefab` - Build a prefab from a previously serialized descriptor — e.g. one produced by toJSON and persisted to disk or fetched over the network.
 
 ## Source
 

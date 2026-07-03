@@ -32,17 +32,17 @@ clear through it bypasses the coordinator (the leak this type prevents).
 
 ## Methods
 
-- `clear(color: Color): void`
-- `drawBatch(batch: RenderBatch, options?: DrawBatchOptions): void`
-- `drawGeometry(geometry: Geometry, transform: Matrix, options?: DrawGeometryOptions): void`
-- `render(node: RenderNode, options?: RenderOptions): void`
-- `renderTo(node: RenderNode, options: RenderToOptions): void`
+- `clear(color: Color): void` - Clear the active target to color (coordinator-routed; no leak).
+- `drawBatch(batch: RenderBatch, options?: DrawBatchOptions): void` - Immediately draw an instanced batch.
+- `drawGeometry(geometry: Geometry, transform: Matrix, options?: DrawGeometryOptions): void` - Immediately draw a single geometry with transform as its world matrix.
+- `render(node: RenderNode, options?: RenderOptions): void` - Render node into the active target with options.view (default: the active view).
+- `renderTo(node: RenderNode, options: RenderToOptions): void` - Render node into a caller-owned off-screen target (nested when called inside a pass).
 
 ## Properties
 
-- `target: RenderTarget`
-- `view: View`
-- `backend: RenderBackend`
+- `target: RenderTarget` - The target this pass draws into (read-only).
+- `view: View` - The view this pass renders with (read-only).
+- `backend: RenderBackend` - Raw backend — draws/state only; do NOT switch target/view/clear here.
 
 ## Source
 

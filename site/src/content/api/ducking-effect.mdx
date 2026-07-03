@@ -28,19 +28,19 @@ filter coefficients.
 
 ## Methods
 
-- `_onWorkletReady(audioContext: AudioContext): void`
-- `destroy(): void`
+- `_onWorkletReady(audioContext: AudioContext): void` - Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input).
+- `destroy(): void` - Disconnects all nodes, cancels any pending worklet load, and releases resources.
 
 ## Properties
 
-- `attackMs: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `ratio: number`
-- `ready: Promise<void>`
-- `releaseMs: number`
-- `threshold: number`
-- `wet: number`
+- `attackMs: number` - Attack time in milliseconds — how quickly the ducker engages. Default 30.
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `ratio: number` - Compression ratio applied to the main signal above the threshold. Range 1..20, default 4.
+- `ready: Promise<void>` - Resolves once the worklet is loaded and inserted into the wet path.
+- `releaseMs: number` - Release time in milliseconds — how quickly the ducker disengages. Default 300.
+- `threshold: number` - Sidechain level above which the main signal is attenuated, in dBFS. Range −100..0, default −20.
+- `wet: number` - Wet (processed) mix level, 0..1. The dry level is automatically 1 - wet. Ramped smoothly.
 
 ## Source
 

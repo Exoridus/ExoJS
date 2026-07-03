@@ -27,11 +27,11 @@ asset caching with no additional configuration beyond a database name.
 
 ## Methods
 
-- `clear(storageName: string): Promise<boolean>`
-- `delete(storageName: string, key: string): Promise<boolean>`
-- `destroy(): void`
-- `load(storageName: string, key: string): Promise<unknown>`
-- `save(storageName: string, key: string, data: unknown): Promise<void>`
+- `clear(storageName: string): Promise<boolean>` - Removes all entries within storageName. Returns true on success.
+- `delete(storageName: string, key: string): Promise<boolean>` - Removes a single entry. Returns true if the entry existed and was removed.
+- `destroy(): void` - Synchronously releases any open handles held by the store.
+- `load(storageName: string, key: string): Promise<unknown>` - Loads a previously saved value, or null if the entry does not exist.
+- `save(storageName: string, key: string, data: unknown): Promise<void>` - Persists data under the given namespace and key. Implementations must tolerate failures silently when storage is full.
 
 ## Source
 

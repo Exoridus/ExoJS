@@ -41,17 +41,17 @@ Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`.
 
 ## Methods
 
-- `destroy(): void`
-- `setImpulse(ir: AudioBuffer | Sound | null): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
+- `setImpulse(ir: AudioBuffer | Sound | null): void` - Set or replace the impulse response. Accepts a decoded AudioBuffer, a Sound (its audioBuffer is used), or null to clear the IR (wet path goes silent). Safe to call before the audio context is ready — the impulse is stored and applied once nodes are created. **Web Audio note:** normalize is written to the convolver *before* buffer is assigned, as required by the spec for the value to take effect.
 
 ## Properties
 
-- `gain: number`
-- `inputNode: AudioNode`
-- `normalize: boolean`
-- `outputNode: AudioNode`
-- `ready: Promise<void>`
-- `wet: number`
+- `gain: number` - Makeup gain multiplier applied to the wet path. Range 0..4, default 1. Adjusting this changes the wet-path amplitude without altering the dry/wet balance ratio.
+- `inputNode: AudioNode` - The node where audio enters this effect. Throws if the audio context is not yet initialized.
+- `normalize: boolean` - Whether the browser normalizes the IR for equal-power loudness. Mirrors ConvolverNode.normalize. Default true. Changing this at runtime re-assigns the current buffer so the new value takes effect (a Web Audio requirement: normalize is only applied on buffer assignment).
+- `outputNode: AudioNode` - The node where audio exits this effect. Throws if the audio context is not yet initialized.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `wet: number` - Wet (convolved) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0.
 
 ## Source
 

@@ -38,11 +38,11 @@ this class yourself.
 ## Methods
 
 - `destroy(): void`
-- `getCapturedNodes(): readonly RenderNode[]`
-- `getHoveredNode(pointerId?: number): RenderNode | null`
-- `popInputCapture(): void`
-- `pushInputCapture(root: RenderNode): void`
-- `update(_delta: Time): void`
+- `getCapturedNodes(): readonly RenderNode[]` - Snapshot of nodes that currently have pointer-capture (a pointer pressed inside them and is being dragged). Used internally for drag routing; exposed read-only for diagnostic / debug consumers.
+- `getHoveredNode(pointerId?: number): RenderNode | null` - Return the deepest interactive node currently under the given pointer, or under any active pointer when pointerId is omitted (the first pointer with a hit wins). null when no pointer is hovering an interactive node.
+- `popInputCapture(): void` - Release the most recently pushed input capture (see pushInputCapture).
+- `pushInputCapture(root: RenderNode): void` - Confine pointer hit-testing to root's subtree until a matching popInputCapture. Pointer events outside the subtree hit nothing, so a modal dialog (optionally with a full-screen backdrop to swallow clicks) shields the interactive nodes beneath it. Captures stack — the most recently pushed root wins.
+- `update(_delta: Time): void` - Process all pending pointer events accumulated since the last frame. Must be called once per frame from Application.update, after input.update() has run (so signals are already dispatched and queued here) and before game-state updates so that user listeners on onPointerDown etc. fire before per-frame logic mutates state. The dirty flag ensures this is a no-op on frames with no pointer activity; every signal handler that enqueues an event sets _dirty = true, and update() clears it at the top before draining the queue.
 
 ## Source
 

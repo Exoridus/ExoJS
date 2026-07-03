@@ -38,16 +38,16 @@ scratch instance. `Matrix.identity` is a read-only identity constant.
 ## Methods
 
 - `clone(): this`
-- `combine(matrix: Matrix): this`
+- `combine(matrix: Matrix): this` - Post-multiply this matrix by matrix (i.e. this = this × matrix). Applies matrix's transform after this matrix's transform. Mutates in place and returns this for chaining.
 - `copy(matrix: Matrix): this`
 - `destroy(): void`
 - `equals(__namedParameters: Partial<Matrix>): boolean`
-- `getInverse(result: Matrix): Matrix`
-- `rotate(angle: number, centerX: number, centerY: number): Matrix`
-- `scale(scaleX: number, scaleY: number, centerX: number, centerY: number): Matrix`
+- `getInverse(result: Matrix): Matrix` - Compute the inverse of this matrix and write it into result. Defaults to this (in-place inversion). When the matrix is singular (determinant = 0) result is set to the identity. Returns result.
+- `rotate(angle: number, centerX: number, centerY: number): Matrix` - Apply a rotation of angle **degrees** around (centerX, centerY) to this matrix. Mutates in place and returns this for chaining.
+- `scale(scaleX: number, scaleY: number, centerX: number, centerY: number): Matrix` - Apply a scale of (scaleX, scaleY) around (centerX, centerY) to this matrix. Mutates in place and returns this for chaining.
 - `set(a: number, b: number, x: number, c: number, d: number, y: number, e: number, f: number, z: number): this`
-- `toArray(transpose: boolean): Float32Array`
-- `translate(x: number, y: number): Matrix`
+- `toArray(transpose: boolean): Float32Array` - Serialise this matrix into a Float32Array suitable for a WebGL uniform. The internal Float32Array is lazily allocated and reused across calls. When transpose is false (default) the array is in column-major order (as OpenGL expects). When true it is row-major.
+- `translate(x: number, y: number): Matrix` - Apply a translation of (x, y) to this matrix. Mutates in place and returns this for chaining.
 
 ## Properties
 

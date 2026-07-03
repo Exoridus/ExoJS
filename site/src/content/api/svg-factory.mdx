@@ -29,15 +29,15 @@ when you need an SVG as a static sprite or texture source.
 
 ## Methods
 
-- `create(source: string, options: SvgFactoryOptions): Promise<HTMLImageElement>`
-- `createObjectUrl(blob: Blob): string`
-- `destroy(): void`
-- `process(response: Response): Promise<string>`
+- `create(source: string, options: SvgFactoryOptions): Promise<HTMLImageElement>` - Renders the SVG markup into a fully loaded HTMLImageElement. When options.width or options.height are provided, the values are injected into the root \<svg> element before rasterisation so the browser renders at the requested pixel dimensions rather than the intrinsic size. Creates a temporary image/svg+xml object URL, assigns it to an \<img> element, and revokes the URL once loading settles. Rejects on load error or abort.
+- `createObjectUrl(blob: Blob): string` - Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked.
+- `destroy(): void` - Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool.
+- `process(response: Response): Promise<string>` - Reads the response body as UTF-8 text containing the raw SVG markup.
 - `revokeObjectUrl(objectUrl: string): void`
 
 ## Properties
 
-- `storageName: "svg"`
+- `storageName: "svg"` - Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore.
 
 ## Source
 

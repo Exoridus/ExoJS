@@ -28,23 +28,23 @@ RenderTextures. Adding a pass that would create a direct or indirect cycle throw
 
 ## Methods
 
-- `[iterator](): IterableIterator<RenderPass>`
-- `addPass(pass: RenderPass): this`
-- `at(index: number): RenderPass | undefined`
-- `clear(): this`
-- `destroy(): void`
-- `execute(context: RenderingContext): void`
-- `hasPass(pass: RenderPass): boolean`
-- `indexOf(pass: RenderPass): number`
-- `insertPass(pass: RenderPass, index: number): this`
-- `removePass(pass: RenderPass): boolean`
-- `resize(width: number, height: number): void`
+- `[iterator](): IterableIterator<RenderPass>` - Iterate registered passes in play order.
+- `addPass(pass: RenderPass): this` - Append a pass and take exclusive ownership of it. Throws if the pass already belongs to any pipeline, if adding it would create a direct/indirect cycle, during execute, or after destroy.
+- `at(index: number): RenderPass | undefined` - The pass at index in play order, or undefined if out of range.
+- `clear(): this` - Remove all passes and release their ownership. Does not destroy them. The pipeline stays usable.
+- `destroy(): void` - Cascade destroy() to every pass, release their ownership, then clear the list. Idempotent. Throws during execute (before any teardown begins). Best-effort teardown: the pipeline is marked destroyed and detached from its passes up front, so it always ends in a single, consistent destroyed-and-empty state — every child gets a destroy() attempt and has its owner slot released even if an earlier child throws. If one or more children throw, the first error is re-thrown after the cascade completes.
+- `execute(context: RenderingContext): void` - Play every enabled pass in order against context. No-op if this.enabled === false (a pipeline is itself a directly-executable pass, so disabling it skips its whole subtree). Not re-entrant. Throws after destroy.
+- `hasPass(pass: RenderPass): boolean` - Whether pass is registered in this pipeline.
+- `indexOf(pass: RenderPass): number` - Index of pass in play order, or -1 if absent.
+- `insertPass(pass: RenderPass, index: number): this` - Insert a pass at index (clamped to [0, size]). Same ownership / cycle / execute / destroy throws as addPass.
+- `removePass(pass: RenderPass): boolean` - Remove a pass by identity and release its ownership. Returns false if absent. Does not destroy it.
+- `resize(width: number, height: number): void` - Cascade resize(width, height) to every pass (enabled and disabled).
 
 ## Properties
 
-- `enabled: boolean`
-- `label: string`
-- `size: number`
+- `enabled: boolean` - When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent — a direct execute call runs the pass regardless.
+- `label: string` - Debug label (inspector / logging). Defaults to the constructor name. Display only — not an identity.
+- `size: number` - Number of registered passes (enabled and disabled).
 
 ## Source
 

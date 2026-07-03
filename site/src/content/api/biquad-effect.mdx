@@ -29,18 +29,18 @@ The single node serves as both inputNode and outputNode.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `detune: number`
-- `frequency: number`
-- `gain: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `ready: Promise<void>`
-- `resonance: number`
-- `type: BiquadFilterType`
+- `detune: number` - Fine frequency offset in cents.
+- `frequency: number` - Center / cutoff frequency in Hz.
+- `gain: number` - Gain in dB — applies to peaking, lowshelf, and highshelf types.
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `resonance: number` - Quality factor (resonance / bandwidth).
+- `type: BiquadFilterType` - Filter response type.
 
 ## Source
 

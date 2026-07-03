@@ -34,7 +34,7 @@ the canonical channel offsets used to address each button.
 
 ## Methods
 
-- `transformValue(value: number): number`
+- `transformValue(value: number): number` - Apply the button's transform pipeline to a raw browser button value (typically Gamepad.buttons[i].value, in 0..1). Pipeline: clamp to [0, 1] → optional invert → deadzone (returns 0 when the result is at or below threshold).
 
 ## Properties
 

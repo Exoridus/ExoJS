@@ -31,11 +31,11 @@ across further accumulation.
 
 ## Methods
 
-- `addCoords(x: number, y: number): this`
-- `addRect(rectangle: Rectangle, transform?: Matrix): this`
+- `addCoords(x: number, y: number): this` - Expand the bounds to include (x, y).
+- `addRect(rectangle: Rectangle, transform?: Matrix): this` - Expand the bounds to include rectangle. When transform is provided the rectangle's corners are transformed into the bounds' coordinate space first (via Rectangle.temp — does not mutate rectangle).
 - `destroy(): void`
-- `getRect(): Rectangle`
-- `reset(): this`
+- `getRect(): Rectangle` - Materialize the accumulated min/max as a Rectangle. Returns the same instance across calls — copy if you need to retain it past the next mutation.
+- `reset(): this` - Restore the empty-bounds state for reuse across frames.
 
 ## Properties
 

@@ -26,13 +26,13 @@ rigid; set `linearHertz`/`angularHertz` for a springy weld.
 
 ## Properties
 
-- `angularHertz: number`
-- `bodyA: PhysicsBody`
-- `bodyB: PhysicsBody`
-- `dampingRatio: number`
-- `enabled: boolean`
-- `linearHertz: number`
-- `referenceAngle: number`
+- `angularHertz: number` - Soft frequency for the angle lock (0 = rigid).
+- `bodyA: PhysicsBody` - First constrained body.
+- `bodyB: PhysicsBody` - Second constrained body.
+- `dampingRatio: number` - Soft damping ratio.
+- `enabled: boolean` - When false, the joint is skipped by the solver (but still tracked by the world).
+- `linearHertz: number` - Soft frequency for the position lock (0 = rigid).
+- `referenceAngle: number` - Locked relative angle angleB − angleA.
 
 ## Source
 

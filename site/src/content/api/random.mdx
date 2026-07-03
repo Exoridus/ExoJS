@@ -34,14 +34,14 @@ to replay from the current seed without changing it.
 ## Methods
 
 - `destroy(): void`
-- `next(min: number, max: number): number`
-- `reset(): this`
-- `setSeed(seed: number): this`
+- `next(min: number, max: number): number` - Advance the generator and return a uniformly-distributed float in the half-open interval [min, max). Defaults to [0, 1).
+- `reset(): this` - Reinitialise the generator from the current seed without changing it — equivalent to rewinding to the start of the sequence. Returns this for chaining.
+- `setSeed(seed: number): this` - Set a new seed and reset the generator state. Returns this for chaining.
 
 ## Properties
 
-- `seed: number`
-- `value: number`
+- `seed: number` - The seed value currently in use.
+- `value: number` - The last value produced by next, normalised to its requested range.
 
 ## Source
 

@@ -26,10 +26,10 @@ scene node, has no transform state, and cannot render itself.
 
 ## Methods
 
-- `destroy(): void`
-- `getLocalBounds(out: Rectangle): Rectangle`
-- `invalidate(): this`
-- `recomputeLocalBounds(): this`
+- `destroy(): void` - Release backend-owned resources associated with this geometry instance.
+- `getLocalBounds(out: Rectangle): Rectangle` - Return local-space bounds; when out is provided it is populated and returned.
+- `invalidate(): this` - Mark vertex data as mutated in place so backends can re-upload GPU buffers.
+- `recomputeLocalBounds(): this` - Force local-space AABB recomputation from the current position attribute data.
 
 ## Properties
 

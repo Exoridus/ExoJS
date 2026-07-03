@@ -28,32 +28,32 @@ tileset owns within its owning TiledMap.
 
 ## Methods
 
-- `getProperty(name: string): TiledPropertyData | undefined`
-- `getTile(localId: number): TiledTileData | undefined`
+- `getProperty(name: string): TiledPropertyData | undefined` - Looks up a custom property by name.
+- `getTile(localId: number): TiledTileData | undefined` - Looks up a per-tile definition by local tile id.
 
 ## Properties
 
 - `class: string`
 - `columns: number`
-- `firstGid: number`
+- `firstGid: number` - First global tile id owned by this tileset.
 - `imageHeight: number`
-- `imageUrl: string`
+- `imageUrl: string` - Resolved URL of the tileset's atlas image, or undefined for a collection-of-images tileset.
 - `imageWidth: number`
 - `margin: number`
 - `name: string`
 - `objectAlignment: string`
 - `properties: readonly TiledPropertyData[]`
-- `source: string`
+- `source: string` - Resolved URL of the external .tsj file, or undefined for an embedded tileset.
 - `spacing: number`
-- `texture: Texture`
+- `texture: Texture` - Texture loaded for imageUrl. Loader-owned; not destroyed by TiledMap.destroy.
 - `tileCount: number`
 - `tileHeight: number`
 - `tileOffset: TiledPointData`
 - `tiles: readonly TiledTileData[]`
-- `tileTextures: ReadonlyMap<number, Texture>`
+- `tileTextures: ReadonlyMap<number, Texture>` - Textures loaded for collection-of-images tiles, keyed by local tile id. Loader-owned.
 - `tileWidth: number`
-- `wangSets: readonly TiledWangSetData[]`
-- `lastGid: number`
+- `wangSets: readonly TiledWangSetData[]` - Wang sets (terrain/auto-tile definitions) declared on this tileset. Empty when none are defined.
+- `lastGid: number` - Last global tile id (inclusive) owned by this tileset. Empty (lastGid \< firstGid) when tileCount is 0.
 
 ## Source
 

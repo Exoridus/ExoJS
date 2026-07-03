@@ -36,17 +36,17 @@ lfoOscillator ── lfoGain (depth) ── delayNode.delayTime
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `delayMs: number`
-- `depthMs: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `rateHz: number`
-- `ready: Promise<void>`
-- `wet: number`
+- `delayMs: number` - Base delay time in milliseconds. Default 25.
+- `depthMs: number` - LFO modulation depth in milliseconds (peak deviation from base delay). Default 5.
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `rateHz: number` - LFO oscillation rate in Hz. Typical chorus range is 0.1–5 Hz; 5–15 Hz produces a vibrato effect. Default 1.5.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `wet: number` - Wet (modulated) mix level, 0..1. The dry level is automatically 1 - wet. Default 0.5.
 
 ## Source
 

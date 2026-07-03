@@ -33,12 +33,12 @@ configure the child's velocity distribution to match.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Optional cleanup hook called from ParticleSystem.destroy.
 - `onDeath(parent: ParticleSystem, slot: number): void`
 
 ## Properties
 
-- `count: number`
+- `count: number` - Number of times to invoke the spawner per dying particle. Default 1.
 - `spawner: SpawnModule`
 - `targetSystem: ParticleSystem`
 

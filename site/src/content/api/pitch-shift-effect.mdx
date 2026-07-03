@@ -39,16 +39,16 @@ Use cases:
 
 ## Methods
 
-- `_onWorkletReady(): void`
-- `destroy(): void`
+- `_onWorkletReady(): void` - Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input).
+- `destroy(): void` - Disconnects all nodes, cancels any pending worklet load, and releases resources.
 
 ## Properties
 
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `pitch: number`
-- `ready: Promise<void>`
-- `wet: number`
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `pitch: number` - Pitch ratio relative to the original. 1.0 = no change, 0.5 = one octave down, 2.0 = one octave up. Range 0.25..4.0, default 1.0.
+- `ready: Promise<void>` - Resolves once the worklet is loaded and inserted into the wet path.
+- `wet: number` - Wet (processed) mix level, 0..1. The dry level is automatically 1 - wet. Ramped smoothly.
 
 ## Source
 

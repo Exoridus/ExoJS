@@ -57,9 +57,9 @@ The TypeScript type system narrows `buffer` based on `format`:
 
 ## Methods
 
-- `addDestroyListener(listener: object): this`
-- `commit(): this`
-- `commitRect(x: number, y: number, width: number, height: number): this`
+- `addDestroyListener(listener: object): this` - Register a callback to be invoked just before this texture is destroyed. Useful for backends to release their GPU-side texture objects.
+- `commit(): this` - Mark the entire buffer for re-upload on next backend sync. Call after mutating buffer contents to flush changes to the GPU.
+- `commitRect(x: number, y: number, width: number, height: number): this` - Mark a sub-region of the buffer dirty for partial upload. More efficient than commit for ring-buffer patterns where only one row or column changes per frame. If a region was already pending, the union is uploaded. Coordinates are pixel-space with origin at the top-left. Bounds are clamped to the texture dimensions; out-of-range rectangles throw.
 - `destroy(): void`
 - `removeDestroyListener(listener: object): this`
 - `setPremultiplyAlpha(premultiplyAlpha: boolean): this`
@@ -67,7 +67,7 @@ The TypeScript type system narrows `buffer` based on `format`:
 - `setSize(width: number, height: number): this`
 - `setSource(source: TextureSource): this`
 - `setWrapMode(wrapMode: WrapModes): this`
-- `updateSource(): this`
+- `updateSource(): this` - DataTexture has no external image source. Override the base implementation so Sprite/Mesh texture assignment does not collapse dimensions to 0x0.
 
 ## Properties
 
@@ -78,12 +78,12 @@ The TypeScript type system narrows `buffer` based on `format`:
 - `flipY: boolean`
 - `generateMipMap: boolean`
 - `height: number`
-- `powerOfTwo: boolean`
+- `powerOfTwo: boolean` - Whether both dimensions are powers of two. Non-power-of-two textures may have limited wrap-mode support on some hardware.
 - `premultiplyAlpha: boolean`
 - `scaleMode: ScaleModes`
 - `size: Size`
 - `source: TextureSource`
-- `version: number`
+- `version: number` - Monotonically increasing version counter. Incremented by any mutation that requires a GPU re-upload (source change, size change, or sampler parameter change). Backends compare this value to their cached version to decide whether to re-upload the texture.
 - `width: number`
 - `wrapMode: WrapModes`
 - `black: Texture`

@@ -42,19 +42,19 @@ Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `attack: number`
-- `inputNode: AudioNode`
-- `knee: number`
-- `outputNode: AudioNode`
-- `ratio: number`
-- `ready: Promise<void>`
-- `release: number`
-- `threshold: number`
-- `wet: number`
+- `attack: number` - Attack time in seconds for the limiter to engage. Range 0..1, default 0.003. Changes are ramped smoothly via setTargetAtTime.
+- `inputNode: AudioNode` - The node where audio enters this effect. Throws if the audio context is not yet initialized.
+- `knee: number` - Width in dB of the transition region around the threshold (soft knee). Range 0..40, default 0 (hard knee). Raise for a gentler transition into limiting. Changes are ramped smoothly via setTargetAtTime.
+- `outputNode: AudioNode` - The node where audio exits this effect. Throws if the audio context is not yet initialized.
+- `ratio: number` - Input-to-output dB ratio above the threshold. Range 1..20, default 20 (brick-wall). Lower for a softer, more compressor-like limiter. Changes are ramped smoothly via setTargetAtTime.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `release: number` - Release time in seconds for the limiter to disengage. Range 0..1, default 0.25. Changes are ramped smoothly via setTargetAtTime.
+- `threshold: number` - Threshold in dBFS above which limiting is applied. Range −60..0, default −3. Changes are ramped smoothly via setTargetAtTime.
+- `wet: number` - Dry/wet mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0.
 
 ## Source
 

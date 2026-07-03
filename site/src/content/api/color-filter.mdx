@@ -27,8 +27,8 @@ without recreating the filter.
 
 ## Methods
 
-- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void`
-- `destroy(): void`
+- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void` - Execute one filter pass: sample from input, write the result to output. Both textures are the same dimensions as the filtered drawable's bounding box.
+- `destroy(): void` - Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). Default is a no-op for stateless filters; subclasses with state (BlurFilter, ColorFilter) override.
 
 ## Properties
 

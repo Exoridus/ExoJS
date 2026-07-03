@@ -26,15 +26,15 @@ bounded by a translation limit. Solved in the sub-step loop, warm-started.
 
 ## Properties
 
-- `bodyA: PhysicsBody`
-- `bodyB: PhysicsBody`
-- `enabled: boolean`
-- `enableLimit: boolean`
-- `enableMotor: boolean`
-- `lowerTranslation: number`
-- `maxMotorForce: number`
-- `motorSpeed: number`
-- `upperTranslation: number`
+- `bodyA: PhysicsBody` - First constrained body.
+- `bodyB: PhysicsBody` - Second constrained body.
+- `enabled: boolean` - When false, the joint is skipped by the solver (but still tracked by the world).
+- `enableLimit: boolean` - When true, the axis translation is constrained to [lowerTranslation, upperTranslation].
+- `enableMotor: boolean` - When true, the motor drives the axis translation toward motorSpeed.
+- `lowerTranslation: number` - Lower translation limit along the axis.
+- `maxMotorForce: number` - Maximum motor force.
+- `motorSpeed: number` - Target translation speed along the axis (px/s).
+- `upperTranslation: number` - Upper translation limit along the axis.
 
 ## Source
 

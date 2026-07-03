@@ -27,15 +27,15 @@ JSON is intrinsic here because the backend can only hold strings.
 
 ## Constructors
 
-- `new(storage: Storage, options: WebStorageStoreOptions): WebStorageStore`
+- `new(storage: Storage, options: WebStorageStoreOptions): WebStorageStore` - Wrap a Storage object (localStorage/sessionStorage, or a compatible polyfill).
 
 ## Methods
 
-- `clear(): Promise<boolean>`
-- `delete(key: string): Promise<boolean>`
-- `get(key: string): Promise<T | null>`
-- `has(key: string): Promise<boolean>`
-- `set(key: string, value: unknown): Promise<void>`
+- `clear(): Promise<boolean>` - Remove every entry owned by this store. Resolves true on success.
+- `delete(key: string): Promise<boolean>` - Remove the entry at key. Resolves true if one existed and was removed.
+- `get(key: string): Promise<T | null>` - Read the value at key, or null when absent.
+- `has(key: string): Promise<boolean>` - Whether an entry exists at key.
+- `set(key: string, value: unknown): Promise<void>` - Write value at key, replacing any existing entry.
 
 ## Source
 

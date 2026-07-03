@@ -27,15 +27,15 @@ The `resonance` (Q) parameter controls the sharpness of the roll-off peak.
 
 ## Methods
 
-- `destroy(): void`
+- `destroy(): void` - Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed.
 
 ## Properties
 
-- `frequency: number`
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `ready: Promise<void>`
-- `resonance: number`
+- `frequency: number` - Cutoff frequency in Hz. Signals above this frequency are attenuated. Range 20..20000, default 1000.
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `ready: Promise<void>` - Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects.
+- `resonance: number` - Q (resonance) at the cutoff. Higher values create a sharper, resonant peak. Minimum 0.0001, default 1.
 
 ## Source
 

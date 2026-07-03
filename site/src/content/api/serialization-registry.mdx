@@ -30,8 +30,8 @@ the Extension.serializers binding.
 
 ## Methods
 
-- `hasType(typeName: string): boolean`
-- `register(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>): void`
+- `hasType(typeName: string): boolean` - Returns true if a serializer is registered under typeName.
+- `register(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>): void` - Register serializer for ctor under typeName. Re-registering the same (typeName, ctor) pair overwrites silently; registering an existing typeName against a **different** constructor throws.
 
 ## Source
 

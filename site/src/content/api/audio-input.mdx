@@ -30,12 +30,12 @@ mic.close();                           // release the device
 
 ## Methods
 
-- `close(): void`
-- `open(options: AudioInputOptions): Promise<AudioInput>`
+- `close(): void` - Stop every track in the stream, releasing the input device.
+- `open(options: AudioInputOptions): Promise<AudioInput>` - Request microphone access and resolve with an AudioInput. Throws / rejects if the user denies permission or no input device is available.
 
 ## Properties
 
-- `stream: MediaStream`
+- `stream: MediaStream` - The underlying MediaStream.
 
 ## Source
 

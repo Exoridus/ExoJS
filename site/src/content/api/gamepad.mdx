@@ -34,36 +34,36 @@ the slot was empty will automatically activate when a pad connects.
 
 ## Methods
 
-- `destroy(): void`
-- `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean`
-- `onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
-- `resolveChannelOffset(channel: GamepadButtonChannel | GamepadAxisChannel): number`
-- `stopVibration(): void`
-- `vibrate(options: GamepadVibrationOptions): Promise<void>`
-- `resolveChannelOffset(slot: number, channel: GamepadButtonChannel | GamepadAxisChannel): number`
+- `destroy(): void` - Tear down this gamepad slot. Called on application shutdown.
+- `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean` - Returns true when this pad's mapping declares the requested channel. Use to gate listener registration on optional hardware (e.g. Joy-Con solo lacks a right stick — pad.hasChannel(GamepadAxis.RightStickX) returns false).
+- `onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired every frame while any of channels is active. Receives the channel value (0..1 for buttons, -1..1 for bipolar axes).
+- `onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired once when any of channels becomes active. Listener survives disconnect/reconnect; call .unbind() on the returned InputBinding to detach.
+- `onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired once when all of channels become inactive.
+- `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding` - Register a callback fired when the input is released within InputBindingOptions.threshold ms of activation (a "tap").
+- `resolveChannelOffset(channel: GamepadButtonChannel | GamepadAxisChannel): number` - Convert a slot-relative channel value to its absolute index in the shared channel buffer for this slot.
+- `stopVibration(): void` - Stop any active rumble on this pad. Silent no-op when unsupported.
+- `vibrate(options: GamepadVibrationOptions): Promise<void>` - Trigger a rumble effect on this pad. Resolves when the effect finishes. Silent no-op when the pad is disconnected or the platform does not support haptic feedback. Use canVibrate to detect support.
+- `resolveChannelOffset(slot: number, channel: GamepadButtonChannel | GamepadAxisChannel): number` - Static counterpart to Gamepad.resolveChannelOffset — resolves an absolute channel-buffer offset for a given slot index without requiring a Gamepad instance.
 
 ## Properties
 
-- `browserGamepad: Gamepad | null`
-- `canVibrate: boolean`
-- `connected: boolean`
-- `info: GamepadInfo | null`
-- `internalIndex: number | null`
-- `mapping: GamepadMapping | null`
-- `mappingFamily: GamepadMappingFamily | null`
-- `slot: 0 | 1 | 2 | 3`
+- `browserGamepad: Gamepad | null` - The underlying browser gamepad object, or null when disconnected.
+- `canVibrate: boolean` - true when the connected pad supports rumble via the Web Gamepad API.
+- `connected: boolean` - true while a physical pad is attached to this slot.
+- `info: GamepadInfo | null` - Identity metadata, or null when disconnected.
+- `internalIndex: number | null` - Browser-assigned hardware index from navigator.getGamepads() (i.e. Gamepad.index), or null when no pad is attached. Stable for the lifetime of a single physical connection but may change across disconnect/reconnect. Low-level escape hatch for advanced consumers that need to correlate slots with the raw browser API; prefer slot for stable per-application pad identity.
+- `mapping: GamepadMapping | null` - The active mapping, or null when disconnected.
+- `mappingFamily: GamepadMappingFamily | null` - The GamepadMappingFamily, or null when disconnected.
+- `slot: 0 | 1 | 2 | 3` - This pad's stable slot (0..3).
 
 ## Events
 
-- `onAxisChange: Signal<[GamepadAxis, number]>`
-- `onButtonDown: Signal<[GamepadButton, number]>`
-- `onButtonUp: Signal<[GamepadButton, number]>`
-- `onConnect: Signal<[]>`
-- `onDisconnect: Signal<[]>`
-- `onPadReassigned: Signal<[fromSlot]>`
+- `onAxisChange: Signal<[GamepadAxis, number]>` - Fires whenever an axis crosses its activation threshold.
+- `onButtonDown: Signal<[GamepadButton, number]>` - Fires for every button transition from inactive to active.
+- `onButtonUp: Signal<[GamepadButton, number]>` - Fires for every button transition from active to inactive.
+- `onConnect: Signal<[]>` - Fires when a physical pad connects to this slot.
+- `onDisconnect: Signal<[]>` - Fires when the physical pad in this slot disconnects.
+- `onPadReassigned: Signal<[fromSlot]>` - Fires when this slot's physical pad has been replaced by a previously higher-numbered slot's pad, after a 'compact'-strategy disconnect. Dispatched with the source slot index the pad came from. Listeners remain attached and the channel buffer is preserved across the move.
 
 ## Source
 

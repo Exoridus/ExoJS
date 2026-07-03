@@ -32,12 +32,12 @@ updated every frame and mip generation is expensive.
 ## Methods
 
 - `_touch(): void`
-- `addDestroyListener(listener: object): this`
+- `addDestroyListener(listener: object): this` - Subscribe to the moment this target (or any subclass — including RenderTexture) is destroyed. Backends use this to release GPU-side resources (framebuffer + attached texture) tied to the target. Listeners fire exactly once.
 - `destroy(): void`
 - `getViewport(view: View): Rectangle`
 - `mapCoordsToPixel(point: Vector, view: View): Vector`
 - `mapPixelToCoords(point: Vector, view: View): Vector`
-- `removeDestroyListener(listener: object): this`
+- `removeDestroyListener(listener: object): this` - Remove a previously registered destroy listener. No-op if absent.
 - `resize(width: number, height: number): this`
 - `setPremultiplyAlpha(premultiplyAlpha: boolean): this`
 - `setScaleMode(scaleMode: ScaleModes): this`
@@ -50,18 +50,18 @@ updated every frame and mip generation is expensive.
 
 ## Properties
 
-- `needsStencil: boolean`
+- `needsStencil: boolean` - Whether this target needs a stencil attachment for geometric stencil clipping (RenderNode.clip with a Geometry clipShape). Set by the WebGL2 backend when such a clip is rendered into an offscreen RenderTexture, so its framebuffer gets a depth/stencil renderbuffer; the WebGL2 on-screen root uses the default framebuffer's stencil (requested at context creation), so the flag only affects offscreen WebGL2 targets. The WebGPU backend does not consult this flag: it allocates a separate depth24plus-stencil8 attachment per clipped target (root included) on demand, sized to the colour attachment's physical pixels.
 - `defaultSamplerOptions: SamplerOptions`
 - `flipY: boolean`
 - `generateMipMap: boolean`
 - `height: number`
-- `powerOfTwo: boolean`
+- `powerOfTwo: boolean` - Whether both dimensions are powers of two.
 - `premultiplyAlpha: boolean`
 - `root: boolean`
 - `scaleMode: ScaleModes`
 - `size: Size`
 - `source: DataView<ArrayBufferLike> | null`
-- `textureVersion: number`
+- `textureVersion: number` - Monotonically increasing counter incremented whenever a sampler parameter changes or the source data is updated. Backends use this to detect stale GPU texture state.
 - `version: number`
 - `view: View`
 - `width: number`

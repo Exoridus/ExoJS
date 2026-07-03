@@ -28,14 +28,14 @@ and are not loaded unless explicitly imported.
 
 ## Methods
 
-- `destroy(): void`
-- `render(backend: RenderBackend): void`
-- `update(delta: Time): void`
+- `destroy(): void` - Release any scene-graph nodes or resources owned by this layer. Called by DebugOverlay.destroy. The base implementation is a no-op; subclasses override to tear down their Container subtrees.
+- `render(backend: RenderBackend): void` - Render the layer's content using the backend. The DebugOverlay manages the active view based on this layer's viewMode; restore is handled by the overlay. Called only when visible.
+- `update(delta: Time): void` - Update internal state from this frame's data. Called only when visible.
 
 ## Properties
 
 - `visible: boolean`
-- `viewMode: DebugLayerViewMode`
+- `viewMode: DebugLayerViewMode` - Whether this layer renders in the scene's world-space view or in a screen-space (canvas-pixel) view. Defaults to 'screen'. Subclasses override to return 'world' when rendering at actual scene positions.
 
 ## Source
 

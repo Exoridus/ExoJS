@@ -35,80 +35,80 @@ operate on the exact rotated quad rather than the AABB.
 
 ## Methods
 
-- `_invalidateChildrenTransform(): void`
+- `_invalidateChildrenTransform(): void` - Hook for Container to override. Default: no-op (leaf node has no children).
 - `addFilter(filter: Filter): this`
-- `blur(): this`
+- `blur(): this` - Release keyboard focus from this node if it currently holds it.
 - `clearFilters(): this`
-- `collidesWith(target: Collidable): CollisionResponse | null`
-- `contains(x: number, y: number): boolean`
+- `collidesWith(target: Collidable): CollisionResponse | null` - Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs.
+- `contains(x: number, y: number): boolean` - Return true if the world-space point (x, y) lies inside the quad. Uses a fast AABB check for axis-aligned quads, and a cross-product sign test for rotated or skewed quads.
 - `destroy(): void`
-- `focus(): this`
+- `focus(): this` - Request keyboard focus for this node through its owning focus service.
 - `getBounds(): Rectangle`
 - `getGlobalTransform(): Matrix`
 - `getLocalBounds(): Rectangle`
-- `getNormals(): Vector[]`
+- `getNormals(): Vector[]` - Return the four outward-facing edge normals of the rotated quad, lazily computed from vertices. Used by the SAT collision system.
 - `getTransform(): Matrix`
-- `intersectsWith(target: Collidable): boolean`
+- `intersectsWith(target: Collidable): boolean` - Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed.
 - `invalidateCache(): this`
 - `inView(view: View): boolean`
 - `move(x: number, y: number): this`
-- `project(axis: Vector, result: Interval): Interval`
+- `project(axis: Vector, result: Interval): Interval` - Project all four quad vertices onto axis and return the resulting scalar interval. Used by the SAT collision system.
 - `removeFilter(filter: Filter): this`
-- `render(backend: RenderBackend): this`
-- `resetTextureFrame(): this`
+- `render(backend: RenderBackend): this` - Raw rendering entry point. Direct backend access — bypasses the RenderPlan pipeline machinery. Prefer the high-level RenderingContext.render path via the owning RenderingContext wherever possible.
+- `resetTextureFrame(): this` - Reset the texture frame to the full dimensions of the current texture. Throws if no texture is set.
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
-- `setBlendMode(blendMode: BlendModes): this`
+- `setBlendMode(blendMode: BlendModes): this` - Change the blend mode. No-ops if the value is unchanged. Invalidates the render cache when the blend mode actually changes.
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
 - `setSkew(x: number, y: number): this`
-- `setTexture(texture: Texture | RenderTexture | null): this`
-- `setTextureFrame(frame: Rectangle, resetSize: boolean): this`
-- `setTint(color: Color): this`
+- `setTexture(texture: Texture | RenderTexture | null): this` - Assign a new texture, refreshing the texture frame to the full texture dimensions. Does **not** bump the texture's version. That signal means "the source data has been mutated"; replacing the sprite's texture reference is not that. Bumping it here would force the backend to re-allocate the GPU texture on the next bind — destroying any FBO content already rendered into a RenderTexture (the cacheAsBitmap and filter capture pipelines). Call updateTexture explicitly when you mutate the source.
+- `setTextureFrame(frame: Rectangle, resetSize: boolean): this` - Set a sub-region of the texture to render. When resetSize is true (default) the sprite's logical size snaps to the new frame dimensions; pass false to keep the current pixel size (useful for animation playback where the frame changes but the display size should stay constant).
+- `setTint(color: Color): this` - Set the tint colour by copying color into the internal Color instance. Invalidates the render cache so the change is picked up on the next frame.
 - `updateBounds(): this`
 - `updateParentTransform(): this`
-- `updateTexture(): this`
+- `updateTexture(): this` - Signal the GPU backend that the underlying texture source has changed and reset the frame to full dimensions.
 - `updateTransform(): this`
 - `setInternalSpriteFactory(factory: object | null): void`
 
 ## Properties
 
-- `clip: boolean`
-- `clipShape: Rectangle | Geometry | null`
+- `clip: boolean` - When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null — clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle — clip to that world-space rectangle via scissor. - clipShape is a Geometry — clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary.
+- `clipShape: Rectangle | Geometry | null` - Clip region used when clip is true. A Rectangle (or null for the node's bounds) maps to the scissor fast path; a Geometry maps to the stencil path. Has no effect while clip is false.
 - `collisionType: CollisionType`
 - `cursor: string | null`
-- `draggable: boolean`
+- `draggable: boolean` - When true and interactive is also true, this node will be automatically repositioned to follow the pointer during a drag gesture. The framework captures the pointer offset at drag-start so the node doesn't snap to the cursor position. Both interactive and draggable must be set for dragging to work — a draggable but non-interactive node will never receive pointerdown and therefore cannot start a drag.
 - `flags: Flags<SceneNodeTransformFlags>`
-- `focusable: boolean`
-- `name: string | null`
-- `preserveDrawOrder: boolean`
-- `tabIndex: number`
-- `anchor: ObservableVector`
+- `focusable: boolean` - When true, this node can receive keyboard focus — via focus, Tab traversal, or app.focus.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused.
+- `name: string | null` - Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique.
+- `preserveDrawOrder: boolean` - When true, material-aware overlap reordering is disabled for this node's draw-order scope. Draw commands are submitted in exact document order (after scope-local z-sorting), preserving the painter's guarantee irrespective of material compatibility or AABB safety analysis. Adjacency coalescing of consecutive same-material draws still applies; it does not change visual output order.
+- `tabIndex: number` - Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order.
+- `anchor: ObservableVector` - Normalized anchor in 0..1 along each axis that derives origin from the current bounds size. (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right. Updates origin whenever the anchor or the local bounds change.
 - `blendMode: BlendModes`
 - `cacheAsBitmap: boolean`
-- `cullable: boolean`
-- `cullArea: Rectangle | null`
+- `cullable: boolean` - When false, this node is never culled by the viewport check and is always considered in-view. Defaults to true.
+- `cullArea: Rectangle | null` - Custom rectangle used for viewport cull intersection test. When set, replaces the default node bounds in cull checks. Set to null to restore default bounds-based culling.
 - `filters: readonly Filter[]`
 - `height: number`
 - `interactive: boolean`
 - `isAlignedBox: boolean`
-- `mask: MaskSource`
-- `material: SpriteMaterial | null`
+- `mask: MaskSource` - The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself); other cycles (mask of mask of self) are not detected.
+- `material: SpriteMaterial | null` - Custom material giving this sprite its own fragment program, uniforms, and extra texture bindings, or null for the default multi-texture sprite path. Sprites that share the same material instance and base texture still batch into a single instanced draw call; the base texture stays on the sprite and is bound per batch. Assigning a non-sprite material throws.
 - `origin: ObservableVector`
 - `parent: Container | null`
-- `pixelSnapMode: PixelSnapMode`
+- `pixelSnapMode: PixelSnapMode` - Render-only pixel-snapping policy for this drawable. Aligns the rendered origin ('position') or origin plus shared geometry boundaries ('geometry') to the active render target's device-pixel grid. Purely visual: logical x/y, transforms, bounds, collision, tween and physics state are never affected, and getBounds/getGlobalTransform keep returning logical values. 'geometry' is guaranteed only for axis-aligned transforms; rotation or skew (on this node, an ancestor, or the view) downgrade it to 'position' for the affected frame, with no logical-state change. Snapping targets device pixels (× view scale × pixel ratio), not integer world units. Setting the current value is a no-op. Setting a value outside the PixelSnapMode union throws and leaves the prior mode unchanged.
 - `position: ObservableVector`
-- `rotation: number`
+- `rotation: number` - Rotation angle in degrees. Wraps via trimRotation on assignment.
 - `scale: ObservableVector`
-- `skewX: number`
-- `skewY: number`
-- `texCoords: Uint32Array`
+- `skewX: number` - Horizontal skew angle in degrees. Shears the node along the X axis (positive values lean the top edge right). Combines correctly with rotation and scale.
+- `skewY: number` - Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale.
+- `texCoords: Uint32Array` - Packed UV coordinates for the four quad corners, encoded as two 16-bit fixed-point values per element (low 16 bits = U, high 16 bits = V, each in the range 0–65535). Accounts for Texture.flipY. Throws if no texture is assigned.
 - `texture: Texture | RenderTexture | null`
 - `textureFrame: Rectangle`
 - `tint: Color`
-- `vertices: Float32Array`
+- `vertices: Float32Array` - World-space corner positions of the sprite quad, computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated.
 - `visible: boolean`
 - `width: number`
 - `x: number`
@@ -117,13 +117,13 @@ operate on the exact rotated quad rather than the AABB.
 
 ## Events
 
-- `onBlur: Signal<[RenderNode]>`
-- `onDrag: Signal<[InteractionEvent]>`
-- `onDragEnd: Signal<[InteractionEvent]>`
-- `onDragStart: Signal<[InteractionEvent]>`
-- `onFocus: Signal<[RenderNode]>`
-- `onKeyDown: Signal<[KeyEvent]>`
-- `onKeyUp: Signal<[KeyEvent]>`
+- `onBlur: Signal<[RenderNode]>` - Fired when this node loses keyboard focus.
+- `onDrag: Signal<[InteractionEvent]>` - Fired on every pointer-move while this node is being dragged. Does not bubble.
+- `onDragEnd: Signal<[InteractionEvent]>` - Fired when the drag gesture ends (pointer-up or cancel). Does not bubble.
+- `onDragStart: Signal<[InteractionEvent]>` - Fired once when a drag gesture begins on this node. Does not bubble.
+- `onFocus: Signal<[RenderNode]>` - Fired when this node gains keyboard focus.
+- `onKeyDown: Signal<[KeyEvent]>` - Fired for each key pressed while this node holds focus.
+- `onKeyUp: Signal<[KeyEvent]>` - Fired for each key released while this node holds focus.
 - `onPointerDown: Signal<[InteractionEvent]>`
 - `onPointerMove: Signal<[InteractionEvent]>`
 - `onPointerOut: Signal<[InteractionEvent]>`

@@ -29,47 +29,47 @@ directly; reposition it (teleport, no velocity) with setTransform.
 
 ## Methods
 
-- `_markDestroyed(): void`
-- `_removeCollider(collider: Collider): void`
-- `addCollider(collider: Collider | ColliderOptions): Collider`
-- `applyForce(forceX: number, forceY: number): this`
-- `applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this`
-- `applyTorque(torque: number): this`
-- `setTransform(position: VectorLike, angle: number): this`
-- `synchronizeColliders(): void`
-- `wake(): this`
+- `_markDestroyed(): void` - Internal: mark destroyed (called by the world).
+- `_removeCollider(collider: Collider): void` - Internal: detach a collider (called by the world during destruction).
+- `addCollider(collider: Collider | ColliderOptions): Collider` - Attach a collider to this body. Accepts a Collider instance or its ColliderOptions (a convenience that constructs the collider for you). When the body is already in a world, the collider is id-allocated, registered, the mass model is recomputed and the world geometry synchronised immediately; on a free-standing body the collider is simply held until world.add(). Returns the collider.
+- `applyForce(forceX: number, forceY: number): this` - Accumulate a world-space force at the centre of mass; integrated on the next sub-step and then cleared. No-op on static/kinematic bodies. Returns this.
+- `applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this` - Apply an instantaneous world-space impulse at (pointX, pointY) (world space; defaults to the centre of mass), changing velocity immediately. No-op on static/kinematic bodies (infinite mass). Returns this.
+- `applyTorque(torque: number): this` - Accumulate a torque; integrated on the next sub-step and then cleared. No-op on static/kinematic bodies (and fixed-rotation bodies). Returns this.
+- `setTransform(position: VectorLike, angle: number): this` - Set the body's world transform. Resets the body's cached collider geometry immediately so subsequent queries see the new placement. Returns this.
+- `synchronizeColliders(): void` - Refresh every collider's world geometry from the current transform.
+- `wake(): this` - Wake the body if it is asleep, resetting its sleep timer. The rest of its island wakes with it on the next step (a contact to an awake body keeps the whole island awake). Returns this.
 
 ## Properties
 
-- `allowSleep: boolean`
-- `angularDamping: number`
-- `angularVelocity: number`
-- `fixedRotation: boolean`
-- `gravityScale: number`
-- `inertia: number`
-- `invInertia: number`
-- `invMass: number`
-- `isBullet: boolean`
-- `linearDamping: number`
-- `linearVelocityX: number`
-- `linearVelocityY: number`
-- `mass: number`
+- `allowSleep: boolean` - When false, this body is never put to sleep. Default true.
+- `angularDamping: number` - Angular damping applied to the angular velocity each sub-step.
+- `angularVelocity: number` - Angular velocity in rad/s.
+- `fixedRotation: boolean` - When true, rotational inertia is treated as infinite.
+- `gravityScale: number` - Per-body multiplier on world gravity (e.g. 0 to ignore gravity).
+- `inertia: number` - Rotational inertia about the centre of mass (0 for static/kinematic or fixed rotation).
+- `invInertia: number` - Inverse rotational inertia (0 = no angular response).
+- `invMass: number` - Inverse mass (0 = immovable).
+- `isBullet: boolean` - When true, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls.
+- `linearDamping: number` - Linear damping applied to the velocity each sub-step.
+- `linearVelocityX: number` - Linear velocity X in px/s.
+- `linearVelocityY: number` - Linear velocity Y in px/s.
+- `mass: number` - Total mass (0 for static/kinematic).
 - `type: BodyType`
-- `angle: number`
-- `attached: boolean`
-- `centerOfMassX: number`
-- `centerOfMassY: number`
-- `colliders: readonly Collider[]`
-- `destroyed: boolean`
-- `id: number`
-- `isMassReady: boolean`
-- `isSleeping: boolean`
-- `position: Vector`
-- `transform: Readonly<Transform>`
-- `worldCenterOfMassX: number`
-- `worldCenterOfMassY: number`
-- `x: number`
-- `y: number`
+- `angle: number` - Rotation in radians.
+- `attached: boolean` - true once the body has been added to a world (guards against double-add).
+- `centerOfMassX: number` - Centre of mass in body-local space (relative to the body origin).
+- `centerOfMassY: number` - Centre of mass in body-local space (relative to the body origin).
+- `colliders: readonly Collider[]` - The body's colliders (read-only view).
+- `destroyed: boolean` - true after the owning world has destroyed this body.
+- `id: number` - Stable id, assigned when the body joins a world via world.add(); -1 until then.
+- `isMassReady: boolean` - true when the body is ready to simulate. Static/kinematic bodies are always ready (infinite-mass semantics); a dynamic body is ready only once it has at least one positive-density collider.
+- `isSleeping: boolean` - true when the body is asleep — skipped by the integrator and solver until woken.
+- `position: Vector` - A fresh Vector copy of the body's world position.
+- `transform: Readonly<Transform>` - The body's world transform (read-only; mutate via setTransform).
+- `worldCenterOfMassX: number` - World-space centre of mass X (body origin + rotated local centre of mass).
+- `worldCenterOfMassY: number` - World-space centre of mass Y.
+- `x: number` - World X.
+- `y: number` - World Y.
 
 ## Source
 

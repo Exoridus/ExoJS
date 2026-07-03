@@ -32,15 +32,15 @@ the effect is a clean passthrough (no volume dip) until it is ready.
 
 ## Methods
 
-- `_onWorkletReady(audioContext: AudioContext): void`
-- `destroy(): void`
+- `_onWorkletReady(audioContext: AudioContext): void` - Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input).
+- `destroy(): void` - Disconnects all nodes, cancels any pending worklet load, and releases resources.
 
 ## Properties
 
-- `inputNode: AudioNode`
-- `outputNode: AudioNode`
-- `ready: Promise<void>`
-- `wet: number`
+- `inputNode: AudioNode` - The node where audio enters this effect.
+- `outputNode: AudioNode` - The node where audio exits this effect.
+- `ready: Promise<void>` - Resolves once the worklet is loaded and inserted into the wet path.
+- `wet: number` - Wet (processed) mix level, 0..1. The dry level is automatically 1 - wet. Ramped smoothly.
 
 ## Source
 

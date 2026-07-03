@@ -105,3 +105,129 @@ export const compactDescription = (value: string, maxLength = 140): string => {
 
 export const toApiHref = (baseUrl: string, symbol: string): string => `${baseUrl}en/api/${symbol}/`;
 
+export type ApiRow = {
+    signature: string;
+    description: string;
+};
+
+export type ParsedSection = {
+    id: string;
+    title: string;
+    rows: ApiRow[];
+    paragraphs: string[];
+    importLine: string | null;
+    sourceLink: { label: string; href: string } | null;
+};
+
+export const toAnchor = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+
+/**
+ * Inverse of the generator's `escapeMdxText` (site/scripts/build-api.ts):
+ * that function doubles backslashes, then escapes `{`, `}`, and `<` with a
+ * leading backslash. Undo in the opposite order — first drop the
+ * single-backslash escapes in front of `{`, `}`, `<`, then collapse the
+ * remaining doubled backslashes back to single ones.
+ */
+export const cleanText = (value: string): string => value.replace(/\\([{}<])/g, '$1').replace(/\\\\/g, '\\');
+
+const parseParagraphs = (lines: string[]): string[] => {
+    const paragraphs: string[] = [];
+    let buffer: string[] = [];
+
+    const flush = () => {
+        if (buffer.length === 0) return;
+        paragraphs.push(cleanText(buffer.join(' ').trim()));
+        buffer = [];
+    };
+
+    for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) {
+            flush();
+            continue;
+        }
+        if (line.startsWith('- `')) {
+            flush();
+            continue;
+        }
+        if (/^`[^`]+`$/.test(line)) {
+            flush();
+            continue;
+        }
+        if (/^\[[^\]]+\]\(([^)]+)\)$/.test(line)) {
+            flush();
+            continue;
+        }
+        buffer.push(line);
+    }
+
+    flush();
+    return paragraphs;
+};
+
+export const parseSections = (body: string): ParsedSection[] => {
+    const sections: Array<{ title: string; lines: string[] }> = [];
+    let active: { title: string; lines: string[] } | null = null;
+
+    for (const rawLine of body.split('\n')) {
+        const headingMatch = /^##\s+(.+)$/.exec(rawLine.trim());
+        if (headingMatch) {
+            if (active) sections.push(active);
+            active = { title: headingMatch[1].trim(), lines: [] };
+            continue;
+        }
+        if (active) active.lines.push(rawLine);
+    }
+
+    if (active) sections.push(active);
+
+    return sections.map(section => {
+        const rows: ApiRow[] = [];
+        let importLine: string | null = null;
+        let sourceLink: { label: string; href: string } | null = null;
+
+        for (const rawLine of section.lines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+
+            if (!importLine) {
+                const importMatch = /^`([^`]+)`$/.exec(line);
+                if (importMatch) {
+                    importLine = cleanText(importMatch[1]);
+                    continue;
+                }
+            }
+
+            if (!sourceLink) {
+                const sourceMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(line);
+                if (sourceMatch) {
+                    sourceLink = { label: cleanText(sourceMatch[1]), href: sourceMatch[2] };
+                    continue;
+                }
+            }
+
+            const rowMatch = /^-\s+`([^`]+)`(?:\s*[-:]\s*(.+))?$/.exec(line);
+            if (rowMatch) {
+                rows.push({
+                    signature: cleanText(rowMatch[1]),
+                    description: cleanText(rowMatch[2] ?? ''),
+                });
+            }
+        }
+
+        return {
+            id: toAnchor(section.title),
+            title: section.title,
+            rows,
+            paragraphs: parseParagraphs(section.lines),
+            importLine,
+            sourceLink,
+        };
+    });
+};
+

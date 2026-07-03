@@ -29,14 +29,14 @@ consumes to create playback clips.
 
 ## Methods
 
-- `addFrame(name: string, data: SpritesheetFrame): void`
-- `clear(): this`
-- `defineAnimation(name: string, frameNames: readonly string[]): this`
+- `addFrame(name: string, data: SpritesheetFrame): void` - Register a single frame by name, creating its Rectangle and pre-configured Sprite.
+- `clear(): this` - Destroy all registered frames, sprites, and animations, resetting the spritesheet to an empty state.
+- `defineAnimation(name: string, frameNames: readonly string[]): this` - Register an animation sequence as an ordered list of frame names. All referenced frames must already exist.
 - `destroy(): void`
-- `getAnimationFrameNames(name: string): readonly string[]`
-- `getFrame(name: string): Rectangle`
-- `getFrameSprite(name: string): Sprite`
-- `parse(data: SpritesheetData, keepFrames: boolean): void`
+- `getAnimationFrameNames(name: string): readonly string[]` - Return the ordered frame-name list for the named animation. Throws if the animation does not exist.
+- `getFrame(name: string): Rectangle` - Return the Rectangle for the named frame. Throws if the frame does not exist.
+- `getFrameSprite(name: string): Sprite` - Return the pre-configured Sprite for the named frame. Throws if the frame does not exist.
+- `parse(data: SpritesheetData, keepFrames: boolean): void` - Parse a SpritesheetData descriptor, populating frames, sprites, and animations. When keepFrames is false (default), all existing frames and sprites are destroyed before parsing.
 
 ## Properties
 

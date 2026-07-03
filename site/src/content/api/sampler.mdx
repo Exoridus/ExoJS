@@ -29,7 +29,7 @@ only manages filter and wrap state.
 
 ## Methods
 
-- `bind(textureUnit: number): this`
+- `bind(textureUnit: number): this` - Bind this sampler to textureUnit for the next draw call. Must be called each time the active texture unit changes.
 - `destroy(): void`
 - `setScaleMode(scaleMode: ScaleModes): this`
 - `setWrapMode(wrapMode: WrapModes): this`

@@ -33,26 +33,26 @@ parameter reproduces the original untyped behaviour, so
 
 ## Methods
 
-- `byKind(kind: K): Extract<RectangleObject<TileProperties>, object> | Extract<EllipseObject<TileProperties>, object> | Extract<PointObject<TileProperties>, object> | Extract<PolygonObject<TileProperties>, object> | Extract<PolylineObject<TileProperties>, object> | Extract<TileObject<TileProperties>, object> | Extract<TextObject<TileProperties>, object>[]`
-- `byType(type: T): TypedObject<S, T>[]`
-- `getObjectById(id: number): TileMapObject<TileProperties> | undefined`
-- `getObjectByName(name: string): TileMapObject<TileProperties> | undefined`
-- `query(filter: ObjectQuery): TileMapObject<TileProperties>[]`
-- `where(type: T, predicate: object): TypedObject<S, T>[]`
+- `byKind(kind: K): Extract<RectangleObject<TileProperties>, object> | Extract<EllipseObject<TileProperties>, object> | Extract<PointObject<TileProperties>, object> | Extract<PolygonObject<TileProperties>, object> | Extract<PolylineObject<TileProperties>, object> | Extract<TileObject<TileProperties>, object> | Extract<TextObject<TileProperties>, object>[]` - Objects of the given geometry ObjectKind, narrowed to that geometry's member type (e.g. byKind(ObjectKind.Polygon) yields PolygonObjects with their points). Returns a fresh array.
+- `byType(type: T): TypedObject<S, T>[]` - Objects whose type equals type, with properties narrowed to the schema shape S[T]. Returns a fresh array (insertion order). The narrowing is a static convenience only — no runtime validation is performed (see ObjectSchema). On an unschematised layer this behaves like query(\{ type \}) with TileProperties properties.
+- `getObjectById(id: number): TileMapObject<TileProperties> | undefined` - First object with the given id, or undefined.
+- `getObjectByName(name: string): TileMapObject<TileProperties> | undefined` - First object with the given name, or undefined.
+- `query(filter: ObjectQuery): TileMapObject<TileProperties>[]` - Objects matching every specified criterion of filter. Returns a fresh array.
+- `where(type: T, predicate: object): TypedObject<S, T>[]` - Objects of type (typed as in byType) that also satisfy predicate. A convenience combination of byType and Array.filter that keeps the narrowed properties type inside the predicate. Returns a fresh array.
 
 ## Properties
 
-- `class: string`
-- `drawOrder: "index" | "topdown"`
-- `id: number`
-- `kind: "object"`
-- `name: string`
-- `objects: readonly TileMapObject<TileProperties>[]`
-- `offsetX: number`
-- `offsetY: number`
-- `opacity: number`
-- `properties: TileProperties`
-- `visible: boolean`
+- `class: string` - Layer class string.
+- `drawOrder: "index" | "topdown"` - Draw order for the objects (Tiled draworder). Informational.
+- `id: number` - Layer id (unique within the map).
+- `kind: "object"` - Layer-kind discriminant (distinguishes object layers from tile layers).
+- `name: string` - Layer name.
+- `objects: readonly TileMapObject<TileProperties>[]` - The objects in this layer (insertion order).
+- `offsetX: number` - Layer pixel offset X.
+- `offsetY: number` - Layer pixel offset Y.
+- `opacity: number` - Layer opacity in [0, 1].
+- `properties: TileProperties` - Immutable layer-level properties.
+- `visible: boolean` - Whether the layer is visible.
 
 ## Source
 
