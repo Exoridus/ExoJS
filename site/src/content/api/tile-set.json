@@ -33,6 +33,40 @@
         {
           "name": "new",
           "signature": "new(options: TileSetOptions): TileSet",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSetOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -55,6 +89,40 @@
         {
           "name": "definedTiles",
           "signature": "definedTiles(): IterableIterator<TileDefinition>",
+          "signatureTokens": [
+            {
+              "text": "definedTiles",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "IterableIterator",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileDefinition",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": "IterableIterator<TileDefinition>",
           "description": "Iterate over all defined tiles (sparse)."
@@ -62,6 +130,48 @@
         {
           "name": "getTileDefinition",
           "signature": "getTileDefinition(localTileId: number): TileDefinition | undefined",
+          "signatureTokens": [
+            {
+              "text": "getTileDefinition",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileDefinition",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "localTileId",
@@ -75,6 +185,40 @@
         {
           "name": "getTileRect",
           "signature": "getTileRect(localTileId: number): object",
+          "signatureTokens": [
+            {
+              "text": "getTileRect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "localTileId",
@@ -97,6 +241,20 @@
         {
           "name": "class",
           "signature": "class: string",
+          "signatureTokens": [
+            {
+              "text": "class",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Tileset class/type string (Tiled class; may be empty)."
@@ -104,6 +262,20 @@
         {
           "name": "columns",
           "signature": "columns: number",
+          "signatureTokens": [
+            {
+              "text": "columns",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Number of columns in the atlas grid."
@@ -111,6 +283,20 @@
         {
           "name": "margin",
           "signature": "margin: number",
+          "signatureTokens": [
+            {
+              "text": "margin",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Pixel margin around the atlas."
@@ -118,6 +304,20 @@
         {
           "name": "name",
           "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Stable runtime name."
@@ -125,6 +325,20 @@
         {
           "name": "offsetX",
           "signature": "offsetX: number",
+          "signatureTokens": [
+            {
+              "text": "offsetX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Visual drawing offset X in pixels, applied to every tile of this set."
@@ -132,6 +346,20 @@
         {
           "name": "offsetY",
           "signature": "offsetY: number",
+          "signatureTokens": [
+            {
+              "text": "offsetY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Visual drawing offset Y in pixels, applied to every tile of this set."
@@ -139,6 +367,20 @@
         {
           "name": "rows",
           "signature": "rows: number",
+          "signatureTokens": [
+            {
+              "text": "rows",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Number of rows implied by tileCount and columns."
@@ -146,6 +388,20 @@
         {
           "name": "spacing",
           "signature": "spacing: number",
+          "signatureTokens": [
+            {
+              "text": "spacing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Pixel spacing between tiles in the atlas."
@@ -153,6 +409,20 @@
         {
           "name": "texture",
           "signature": "texture: TextureRegion",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegion",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Atlas texture region — Loader-owned, never destroyed by the tileset."
@@ -160,6 +430,20 @@
         {
           "name": "tileCount",
           "signature": "tileCount: number",
+          "signatureTokens": [
+            {
+              "text": "tileCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Total number of tiles in the tileset."
@@ -167,6 +451,20 @@
         {
           "name": "tileHeight",
           "signature": "tileHeight: number",
+          "signatureTokens": [
+            {
+              "text": "tileHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Tile height in pixels."
@@ -174,6 +472,20 @@
         {
           "name": "tileWidth",
           "signature": "tileWidth: number",
+          "signatureTokens": [
+            {
+              "text": "tileWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Tile width in pixels."
@@ -181,6 +493,60 @@
         {
           "name": "allDefinitions",
           "signature": "allDefinitions: Readonly<Record<number, TileProperties | undefined>>",
+          "signatureTokens": [
+            {
+              "text": "allDefinitions",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProperties",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Read-only snapshot of all per-tile definitions. The returned record is a caller-owned copy."

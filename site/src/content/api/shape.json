@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): Shape",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Shape",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "Shape",
           "description": ""
@@ -48,6 +70,20 @@
         {
           "name": "area",
           "signature": "area: number",
+          "signatureTokens": [
+            {
+              "text": "area",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Surface area in px². mass = density × area."
@@ -55,6 +91,20 @@
         {
           "name": "boundingRadius",
           "signature": "boundingRadius: number",
+          "signatureTokens": [
+            {
+              "text": "boundingRadius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Radius of the smallest circle about the local origin enclosing the shape."
@@ -62,6 +112,20 @@
         {
           "name": "centroidX",
           "signature": "centroidX: number",
+          "signatureTokens": [
+            {
+              "text": "centroidX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "X of the area centroid in local space."
@@ -69,6 +133,20 @@
         {
           "name": "centroidY",
           "signature": "centroidY: number",
+          "signatureTokens": [
+            {
+              "text": "centroidY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Y of the area centroid in local space."
@@ -76,6 +154,20 @@
         {
           "name": "type",
           "signature": "type: ShapeType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeType",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -83,6 +175,20 @@
         {
           "name": "unitInertia",
           "signature": "unitInertia: number",
+          "signatureTokens": [
+            {
+              "text": "unitInertia",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."

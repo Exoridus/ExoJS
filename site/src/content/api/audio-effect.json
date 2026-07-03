@@ -31,6 +31,28 @@
         {
           "name": "new",
           "signature": "new(): AudioEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioEffect",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "AudioEffect",
           "description": ""
@@ -47,6 +69,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
@@ -63,6 +107,20 @@
         {
           "name": "inputNode",
           "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio enters this effect."
@@ -70,6 +128,20 @@
         {
           "name": "outputNode",
           "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio exits this effect."
@@ -77,6 +149,32 @@
         {
           "name": "ready",
           "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."

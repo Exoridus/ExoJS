@@ -34,6 +34,40 @@
         {
           "name": "new",
           "signature": "new(options: PitchShiftEffectOptions): PitchShiftEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PitchShiftEffectOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PitchShiftEffect",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -56,6 +90,28 @@
         {
           "name": "_onWorkletReady",
           "signature": "_onWorkletReady(): void",
+          "signatureTokens": [
+            {
+              "text": "_onWorkletReady",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
@@ -63,6 +119,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Disconnects all nodes, cancels any pending worklet load, and releases resources."
@@ -79,6 +157,20 @@
         {
           "name": "inputNode",
           "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio enters this effect."
@@ -86,6 +178,20 @@
         {
           "name": "outputNode",
           "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio exits this effect."
@@ -93,6 +199,20 @@
         {
           "name": "pitch",
           "signature": "pitch: number",
+          "signatureTokens": [
+            {
+              "text": "pitch",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Pitch ratio relative to the original. 1.0 = no change, 0.5 = one octave down, 2.0 = one octave up. Range 0.25..4.0, default 1.0."
@@ -100,6 +220,32 @@
         {
           "name": "ready",
           "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Resolves once the worklet is loaded and inserted into the wet path."
@@ -107,6 +253,20 @@
         {
           "name": "wet",
           "signature": "wet: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Wet (processed) mix level, 0..1. The dry level is automatically 1 - wet. Ramped smoothly."

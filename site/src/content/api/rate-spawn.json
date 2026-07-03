@@ -32,6 +32,40 @@
         {
           "name": "new",
           "signature": "new(config: RateSpawnConfig): RateSpawn",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "config",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RateSpawnConfig",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RateSpawn",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "config",
@@ -54,6 +88,56 @@
         {
           "name": "apply",
           "signature": "apply(system: ParticleSystem, dt: number): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "dt",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "system",
@@ -72,6 +156,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Optional cleanup hook called from ParticleSystem.destroy."
@@ -88,6 +194,20 @@
         {
           "name": "config",
           "signature": "config: RateSpawnConfig",
+          "signatureTokens": [
+            {
+              "text": "config",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RateSpawnConfig",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

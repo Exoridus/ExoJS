@@ -31,6 +31,12 @@
         {
           "name": "Active",
           "signature": "Active",
+          "signatureTokens": [
+            {
+              "text": "Active",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "Complete",
           "signature": "Complete",
+          "signatureTokens": [
+            {
+              "text": "Complete",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "Idle",
           "signature": "Idle",
+          "signatureTokens": [
+            {
+              "text": "Idle",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "Paused",
           "signature": "Paused",
+          "signatureTokens": [
+            {
+              "text": "Paused",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "Stopped",
           "signature": "Stopped",
+          "signatureTokens": [
+            {
+              "text": "Stopped",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

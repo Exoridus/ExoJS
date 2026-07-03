@@ -33,6 +33,40 @@
         {
           "name": "new",
           "signature": "new(options: TextStyleOptions): TextStyle",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -55,6 +89,28 @@
         {
           "name": "clone",
           "signature": "clone(): TextStyle",
+          "signatureTokens": [
+            {
+              "text": "clone",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "TextStyle",
           "description": "Return a new TextStyle with all properties copied from this one."
@@ -62,6 +118,36 @@
         {
           "name": "consumeDirty",
           "signature": "consumeDirty(): StyleChangeHint | null",
+          "signatureTokens": [
+            {
+              "text": "consumeDirty",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StyleChangeHint",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "StyleChangeHint | null",
           "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's update() method."
@@ -69,6 +155,40 @@
         {
           "name": "copy",
           "signature": "copy(style: TextStyle): this",
+          "signatureTokens": [
+            {
+              "text": "copy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "style",
@@ -91,6 +211,20 @@
         {
           "name": "align",
           "signature": "align: TextAlignment",
+          "signatureTokens": [
+            {
+              "text": "align",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextAlignment",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -98,6 +232,20 @@
         {
           "name": "fillColor",
           "signature": "fillColor: Color",
+          "signatureTokens": [
+            {
+              "text": "fillColor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Runtime fill color applied as Mesh.tint. Glyphs are always rasterized white; this color multiplies them at draw time without touching the atlas."
@@ -105,6 +253,20 @@
         {
           "name": "font",
           "signature": "font: string",
+          "signatureTokens": [
+            {
+              "text": "font",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "CSS font string used as CanvasRenderingContext2D.font during glyph rasterization. Includes fontStyle so italic fonts render correctly."
@@ -112,6 +274,20 @@
         {
           "name": "fontFamily",
           "signature": "fontFamily: string",
+          "signatureTokens": [
+            {
+              "text": "fontFamily",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -119,6 +295,20 @@
         {
           "name": "fontSize",
           "signature": "fontSize: number",
+          "signatureTokens": [
+            {
+              "text": "fontSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -126,6 +316,28 @@
         {
           "name": "fontStyle",
           "signature": "fontStyle: \"normal\" | \"italic\"",
+          "signatureTokens": [
+            {
+              "text": "fontStyle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"italic\"",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -133,6 +345,20 @@
         {
           "name": "fontWeight",
           "signature": "fontWeight: FontWeight",
+          "signatureTokens": [
+            {
+              "text": "fontWeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontWeight",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -140,6 +366,20 @@
         {
           "name": "gradientAxis",
           "signature": "gradientAxis: GradientAxis",
+          "signatureTokens": [
+            {
+              "text": "gradientAxis",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GradientAxis",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -147,6 +387,44 @@
         {
           "name": "gradientColors",
           "signature": "gradientColors: [Color, Color] | null",
+          "signatureTokens": [
+            {
+              "text": "gradientColors",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Two-stop fill gradient [top, bottom]. When set, overrides fillColor for the glyph interior. Assign null to disable."
@@ -154,6 +432,20 @@
         {
           "name": "leading",
           "signature": "leading: number",
+          "signatureTokens": [
+            {
+              "text": "leading",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Extra pixel gap between lines, added on top of lineHeight."
@@ -161,6 +453,20 @@
         {
           "name": "lineHeight",
           "signature": "lineHeight: number",
+          "signatureTokens": [
+            {
+              "text": "lineHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -168,6 +474,20 @@
         {
           "name": "outlineColor",
           "signature": "outlineColor: Color",
+          "signatureTokens": [
+            {
+              "text": "outlineColor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Outline color — used by BitmapText/SDF rendering as a shader uniform."
@@ -175,6 +495,20 @@
         {
           "name": "outlineWidth",
           "signature": "outlineWidth: number",
+          "signatureTokens": [
+            {
+              "text": "outlineWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Outline width in SDF units (0..0.5). 0 disables the outline."
@@ -182,6 +516,20 @@
         {
           "name": "shadowAlpha",
           "signature": "shadowAlpha: number",
+          "signatureTokens": [
+            {
+              "text": "shadowAlpha",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Shadow opacity (0..1). 0 disables the shadow."
@@ -189,6 +537,20 @@
         {
           "name": "shadowBlur",
           "signature": "shadowBlur: number",
+          "signatureTokens": [
+            {
+              "text": "shadowBlur",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -196,6 +558,20 @@
         {
           "name": "shadowColor",
           "signature": "shadowColor: Color",
+          "signatureTokens": [
+            {
+              "text": "shadowColor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -203,6 +579,20 @@
         {
           "name": "shadowOffsetX",
           "signature": "shadowOffsetX: number",
+          "signatureTokens": [
+            {
+              "text": "shadowOffsetX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -210,6 +600,20 @@
         {
           "name": "shadowOffsetY",
           "signature": "shadowOffsetY: number",
+          "signatureTokens": [
+            {
+              "text": "shadowOffsetY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -226,6 +630,36 @@
         {
           "name": "onChange",
           "signature": "onChange: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Fires once per dirty cycle when any property changes."

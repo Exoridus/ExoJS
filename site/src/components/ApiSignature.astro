@@ -1,0 +1,137 @@
+---
+/**
+ * Renders a member signature from its structured tokens (emitted by the API
+ * generator). Each token carries a `kind` that drives its color; a `type`
+ * token whose text matches a documented symbol becomes a cross-link with a
+ * CSS-only hover preview of that symbol's summary.
+ *
+ * Self-contained styling on purpose: Astro scopes a parent's `<style>` to the
+ * parent's own elements, so the `<code>` this component renders would not pick
+ * up the page's `.name code` rules. Everything the code element needs lives
+ * here instead.
+ */
+import type { ApiToken } from '../lib/api-schema';
+
+export interface SignatureLink {
+    href: string;
+    summary: string;
+}
+
+interface Props {
+    tokens: ApiToken[];
+    /** Map from a documented symbol name to its link + summary, for cross-links. */
+    links: Map<string, SignatureLink>;
+}
+
+const { tokens, links } = Astro.props;
+---
+
+<code class="api-sig">{
+    tokens.map(token => {
+        const link = token.kind === 'type' ? links.get(token.text) : undefined;
+        if (link) {
+            return (
+                <a class="tok tok-type tok-link" href={link.href}>
+                    {token.text}
+                    {link.summary && <span class="tok-preview" role="tooltip">{link.summary}</span>}
+                </a>
+            );
+        }
+        return <span class={`tok tok-${token.kind}`}>{token.text}</span>;
+    })
+}</code>
+
+<style>
+    .api-sig {
+        font-family: var(--f-mono);
+        font-size: 13.5px;
+        color: var(--fg);
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+
+    .tok-name {
+        color: var(--fg);
+    }
+
+    .tok-param {
+        color: var(--fg-muted);
+        font-style: italic;
+    }
+
+    .tok-keyword {
+        color: var(--sky);
+    }
+
+    .tok-type {
+        color: var(--fg);
+    }
+
+    .tok-punctuation {
+        color: var(--fg-faint);
+    }
+
+    .tok-link {
+        position: relative;
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px dotted var(--accent-line);
+        cursor: pointer;
+    }
+
+    .tok-link:hover,
+    .tok-link:focus-visible {
+        border-bottom-style: solid;
+        outline: none;
+    }
+
+    /* CSS-only hover/focus preview of the target symbol's summary. */
+    .tok-preview {
+        position: absolute;
+        left: 0;
+        top: calc(100% + 6px);
+        z-index: 20;
+        width: max-content;
+        max-width: 320px;
+        padding: 8px 10px;
+        border-radius: var(--r-3);
+        border: 1px solid var(--line);
+        background: var(--bg-elevated);
+        color: var(--fg-muted);
+        font-family: var(--f-sans, sans-serif);
+        font-style: normal;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: normal;
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-3px);
+        transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+        pointer-events: none;
+    }
+
+    .tok-link:hover .tok-preview,
+    .tok-link:focus-visible .tok-preview {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 760px) {
+        .api-sig {
+            display: inline-block;
+            min-width: max-content;
+            white-space: nowrap;
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+
+        /* On narrow screens the row scrolls horizontally; anchor the preview to
+           the viewport-left of the token instead of risking overflow clipping. */
+        .tok-preview {
+            max-width: min(320px, 78vw);
+        }
+    }
+</style>

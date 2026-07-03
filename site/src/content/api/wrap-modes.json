@@ -31,6 +31,12 @@
         {
           "name": "ClampToEdge",
           "signature": "ClampToEdge",
+          "signatureTokens": [
+            {
+              "text": "ClampToEdge",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "MirroredRepeat",
           "signature": "MirroredRepeat",
+          "signatureTokens": [
+            {
+              "text": "MirroredRepeat",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "Repeat",
           "signature": "Repeat",
+          "signatureTokens": [
+            {
+              "text": "Repeat",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

@@ -32,6 +32,12 @@
         {
           "name": "FirstInFirstOut",
           "signature": "FirstInFirstOut",
+          "signatureTokens": [
+            {
+              "text": "FirstInFirstOut",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -39,6 +45,12 @@
         {
           "name": "LeastRecentlyUsed",
           "signature": "LeastRecentlyUsed",
+          "signatureTokens": [
+            {
+              "text": "LeastRecentlyUsed",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -46,6 +58,12 @@
         {
           "name": "LowestPriority",
           "signature": "LowestPriority",
+          "signatureTokens": [
+            {
+              "text": "LowestPriority",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

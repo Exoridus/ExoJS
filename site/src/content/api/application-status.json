@@ -29,6 +29,12 @@
         {
           "name": "Halting",
           "signature": "Halting",
+          "signatureTokens": [
+            {
+              "text": "Halting",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -36,6 +42,12 @@
         {
           "name": "Loading",
           "signature": "Loading",
+          "signatureTokens": [
+            {
+              "text": "Loading",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -43,6 +55,12 @@
         {
           "name": "Running",
           "signature": "Running",
+          "signatureTokens": [
+            {
+              "text": "Running",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -50,6 +68,12 @@
         {
           "name": "Stopped",
           "signature": "Stopped",
+          "signatureTokens": [
+            {
+              "text": "Stopped",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

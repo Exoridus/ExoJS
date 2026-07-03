@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): SubtitleAsset",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SubtitleAsset",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "SubtitleAsset",
           "description": ""

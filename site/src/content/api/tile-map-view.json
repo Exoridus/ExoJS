@@ -35,6 +35,60 @@
         {
           "name": "new",
           "signature": "new(map: TileMap, options?: TileMapViewOptions): TileMapView",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "map",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapViewOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapView",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "map",
@@ -62,6 +116,40 @@
         {
           "name": "band",
           "signature": "band(name: string): TileMapBand",
+          "signatureTokens": [
+            {
+              "text": "band",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapBand",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "name",
@@ -75,6 +163,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Destroy the view: every band and generated layer node is destroyed (and detached from its application parent), freeing cached chunk geometry. Idempotent. Application actors, sibling content, the TileMap, its TileLayers, and Loader-owned tileset textures all survive."
@@ -82,6 +192,48 @@
         {
           "name": "getLayerNodeById",
           "signature": "getLayerNodeById(id: number): TileLayerNode | undefined",
+          "signatureTokens": [
+            {
+              "text": "getLayerNodeById",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "id",
@@ -95,6 +247,52 @@
         {
           "name": "getLayerNodesByName",
           "signature": "getLayerNodesByName(name: string): readonly TileLayerNode[]",
+          "signatureTokens": [
+            {
+              "text": "getLayerNodesByName",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [
             {
               "name": "name",
@@ -108,6 +306,40 @@
         {
           "name": "hasBand",
           "signature": "hasBand(name: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasBand",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "name",
@@ -121,6 +353,28 @@
         {
           "name": "refreshLayers",
           "signature": "refreshLayers(): this",
+          "signatureTokens": [
+            {
+              "text": "refreshLayers",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": "Rebuild the view after **structural** map changes (layers added to or removed from the map). Ordinary tile edits and chunk creation/removal do NOT need this — those are handled by chunk revisions and TileLayerNode.refresh respectively. - Removed layers: their generated layer node is detached and destroyed. - Unchanged layers: keep their existing layer node (stable identity). - Added layers: a new layer node is created and assigned to the first band whose definition selects it (by id, or by a currently-unambiguous name), otherwise owned directly by the view. - Every band's children are re-ordered to map document order. Application actors are never touched, and bands keep their placement in the application scene graph."
@@ -137,6 +391,32 @@
         {
           "name": "bands",
           "signature": "bands: readonly TileMapBand[]",
+          "signatureTokens": [
+            {
+              "text": "bands",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapBand",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The bands, in definition (insertion) order."
@@ -144,6 +424,20 @@
         {
           "name": "destroyed",
           "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Whether this view has been destroyed."
@@ -151,6 +445,32 @@
         {
           "name": "layers",
           "signature": "layers: readonly TileLayerNode[]",
+          "signatureTokens": [
+            {
+              "text": "layers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "All canonical layer nodes, one per map layer, in map document order."
@@ -158,6 +478,20 @@
         {
           "name": "map",
           "signature": "map: TileMap",
+          "signatureTokens": [
+            {
+              "text": "map",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The runtime map this view composes. Referenced, never owned."
@@ -165,6 +499,20 @@
         {
           "name": "pixelSnapMode",
           "signature": "pixelSnapMode: PixelSnapMode",
+          "signatureTokens": [
+            {
+              "text": "pixelSnapMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PixelSnapMode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Render-only pixel-snap mode applied to every layer node this view owns (and forwarded to every chunk drawable, current and rebuilt by refreshLayers). Snaps tile chunk origins to the active render target's device-pixel grid for crisp tiles; with integer tile pitch the grid stays exact and adjacent chunks cannot drift apart. Purely visual — tile data, layer offsets, chunk revisions, and culling are unchanged. Setting the current value is a no-op; an invalid value throws and leaves the prior mode unchanged."

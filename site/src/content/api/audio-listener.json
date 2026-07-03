@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): AudioListener",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioListener",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "AudioListener",
           "description": ""
@@ -48,6 +70,28 @@
         {
           "name": "_tick",
           "signature": "_tick(): void",
+          "signatureTokens": [
+            {
+              "text": "_tick",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Internal: called by AudioManager.update() once per frame."
@@ -55,6 +99,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": ""
@@ -71,6 +137,20 @@
         {
           "name": "position",
           "signature": "position: Vector",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -78,6 +158,20 @@
         {
           "name": "target",
           "signature": "target: AudioListenerTarget",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioListenerTarget",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -85,6 +179,20 @@
         {
           "name": "velocity",
           "signature": "velocity: Vector",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

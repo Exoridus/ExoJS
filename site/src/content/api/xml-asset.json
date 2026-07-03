@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): XmlAsset",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "XmlAsset",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "XmlAsset",
           "description": ""

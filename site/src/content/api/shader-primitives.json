@@ -31,6 +31,12 @@
         {
           "name": "Bool",
           "signature": "Bool",
+          "signatureTokens": [
+            {
+              "text": "Bool",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "BoolVec2",
           "signature": "BoolVec2",
+          "signatureTokens": [
+            {
+              "text": "BoolVec2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "BoolVec3",
           "signature": "BoolVec3",
+          "signatureTokens": [
+            {
+              "text": "BoolVec3",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "BoolVec4",
           "signature": "BoolVec4",
+          "signatureTokens": [
+            {
+              "text": "BoolVec4",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "Float",
           "signature": "Float",
+          "signatureTokens": [
+            {
+              "text": "Float",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "FloatMat2",
           "signature": "FloatMat2",
+          "signatureTokens": [
+            {
+              "text": "FloatMat2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "FloatMat3",
           "signature": "FloatMat3",
+          "signatureTokens": [
+            {
+              "text": "FloatMat3",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -80,6 +122,12 @@
         {
           "name": "FloatMat4",
           "signature": "FloatMat4",
+          "signatureTokens": [
+            {
+              "text": "FloatMat4",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -87,6 +135,12 @@
         {
           "name": "FloatVec2",
           "signature": "FloatVec2",
+          "signatureTokens": [
+            {
+              "text": "FloatVec2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -94,6 +148,12 @@
         {
           "name": "FloatVec3",
           "signature": "FloatVec3",
+          "signatureTokens": [
+            {
+              "text": "FloatVec3",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -101,6 +161,12 @@
         {
           "name": "FloatVec4",
           "signature": "FloatVec4",
+          "signatureTokens": [
+            {
+              "text": "FloatVec4",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -108,6 +174,12 @@
         {
           "name": "Int",
           "signature": "Int",
+          "signatureTokens": [
+            {
+              "text": "Int",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -115,6 +187,12 @@
         {
           "name": "IntVec2",
           "signature": "IntVec2",
+          "signatureTokens": [
+            {
+              "text": "IntVec2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -122,6 +200,12 @@
         {
           "name": "IntVec3",
           "signature": "IntVec3",
+          "signatureTokens": [
+            {
+              "text": "IntVec3",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -129,6 +213,12 @@
         {
           "name": "IntVec4",
           "signature": "IntVec4",
+          "signatureTokens": [
+            {
+              "text": "IntVec4",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -136,6 +226,12 @@
         {
           "name": "Sampler2D",
           "signature": "Sampler2D",
+          "signatureTokens": [
+            {
+              "text": "Sampler2D",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -143,6 +239,12 @@
         {
           "name": "UnsignedInt",
           "signature": "UnsignedInt",
+          "signatureTokens": [
+            {
+              "text": "UnsignedInt",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -150,6 +252,12 @@
         {
           "name": "UnsignedIntVec2",
           "signature": "UnsignedIntVec2",
+          "signatureTokens": [
+            {
+              "text": "UnsignedIntVec2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -157,6 +265,12 @@
         {
           "name": "UnsignedIntVec3",
           "signature": "UnsignedIntVec3",
+          "signatureTokens": [
+            {
+              "text": "UnsignedIntVec3",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -164,6 +278,12 @@
         {
           "name": "UnsignedIntVec4",
           "signature": "UnsignedIntVec4",
+          "signatureTokens": [
+            {
+              "text": "UnsignedIntVec4",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

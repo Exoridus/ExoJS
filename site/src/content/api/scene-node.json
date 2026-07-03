@@ -35,6 +35,28 @@
         {
           "name": "new",
           "signature": "new(): SceneNode",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "SceneNode",
           "description": ""
@@ -51,6 +73,28 @@
         {
           "name": "_invalidateBoundsCascade",
           "signature": "_invalidateBoundsCascade(): void",
+          "signatureTokens": [
+            {
+              "text": "_invalidateBoundsCascade",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Mark own Bounds dirty AND propagate up to Container ancestors' Bounds."
@@ -58,6 +102,28 @@
         {
           "name": "_invalidateChildrenTransform",
           "signature": "_invalidateChildrenTransform(): void",
+          "signatureTokens": [
+            {
+              "text": "_invalidateChildrenTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Hook for Container to override. Default: no-op (leaf node has no children)."
@@ -65,6 +131,28 @@
         {
           "name": "_invalidateSubtreeTransform",
           "signature": "_invalidateSubtreeTransform(): void",
+          "signatureTokens": [
+            {
+              "text": "_invalidateSubtreeTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Mark own + all descendants' GlobalTransform + Bounds dirty."
@@ -72,6 +160,48 @@
         {
           "name": "collidesWith",
           "signature": "collidesWith(target: Collidable): CollisionResponse | null",
+          "signatureTokens": [
+            {
+              "text": "collidesWith",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionResponse",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "target",
@@ -85,6 +215,56 @@
         {
           "name": "contains",
           "signature": "contains(x: number, y: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "contains",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "x",
@@ -103,6 +283,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": ""
@@ -110,6 +312,28 @@
         {
           "name": "getBounds",
           "signature": "getBounds(): Rectangle",
+          "signatureTokens": [
+            {
+              "text": "getBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "Rectangle",
           "description": ""
@@ -117,6 +341,28 @@
         {
           "name": "getGlobalTransform",
           "signature": "getGlobalTransform(): Matrix",
+          "signatureTokens": [
+            {
+              "text": "getGlobalTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "Matrix",
           "description": ""
@@ -124,6 +370,28 @@
         {
           "name": "getLocalBounds",
           "signature": "getLocalBounds(): Rectangle",
+          "signatureTokens": [
+            {
+              "text": "getLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "Rectangle",
           "description": ""
@@ -131,6 +399,32 @@
         {
           "name": "getNormals",
           "signature": "getNormals(): Vector[]",
+          "signatureTokens": [
+            {
+              "text": "getNormals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": "Vector[]",
           "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
@@ -138,6 +432,28 @@
         {
           "name": "getTransform",
           "signature": "getTransform(): Matrix",
+          "signatureTokens": [
+            {
+              "text": "getTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "Matrix",
           "description": ""
@@ -145,6 +461,40 @@
         {
           "name": "intersectsWith",
           "signature": "intersectsWith(target: Collidable): boolean",
+          "signatureTokens": [
+            {
+              "text": "intersectsWith",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "target",
@@ -158,6 +508,40 @@
         {
           "name": "inView",
           "signature": "inView(view: View): boolean",
+          "signatureTokens": [
+            {
+              "text": "inView",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "view",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "view",
@@ -171,6 +555,56 @@
         {
           "name": "move",
           "signature": "move(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "move",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "x",
@@ -189,6 +623,56 @@
         {
           "name": "project",
           "signature": "project(axis: Vector, result: Interval): Interval",
+          "signatureTokens": [
+            {
+              "text": "project",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "axis",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "result",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Interval",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Interval",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "axis",
@@ -207,6 +691,40 @@
         {
           "name": "rotate",
           "signature": "rotate(degrees: number): this",
+          "signatureTokens": [
+            {
+              "text": "rotate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "degrees",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "degrees",
@@ -220,6 +738,56 @@
         {
           "name": "setAnchor",
           "signature": "setAnchor(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setAnchor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "x",
@@ -238,6 +806,56 @@
         {
           "name": "setOrigin",
           "signature": "setOrigin(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "x",
@@ -256,6 +874,56 @@
         {
           "name": "setPosition",
           "signature": "setPosition(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setPosition",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "x",
@@ -274,6 +942,40 @@
         {
           "name": "setRotation",
           "signature": "setRotation(degrees: number): this",
+          "signatureTokens": [
+            {
+              "text": "setRotation",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "degrees",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "degrees",
@@ -287,6 +989,56 @@
         {
           "name": "setScale",
           "signature": "setScale(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setScale",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "x",
@@ -305,6 +1057,56 @@
         {
           "name": "setSkew",
           "signature": "setSkew(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setSkew",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "x",
@@ -323,6 +1125,28 @@
         {
           "name": "updateBounds",
           "signature": "updateBounds(): this",
+          "signatureTokens": [
+            {
+              "text": "updateBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": ""
@@ -330,6 +1154,28 @@
         {
           "name": "updateParentTransform",
           "signature": "updateParentTransform(): this",
+          "signatureTokens": [
+            {
+              "text": "updateParentTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": ""
@@ -337,6 +1183,28 @@
         {
           "name": "updateTransform",
           "signature": "updateTransform(): this",
+          "signatureTokens": [
+            {
+              "text": "updateTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": ""
@@ -353,6 +1221,20 @@
         {
           "name": "collisionType",
           "signature": "collisionType: CollisionType",
+          "signatureTokens": [
+            {
+              "text": "collisionType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionType",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -360,6 +1242,32 @@
         {
           "name": "flags",
           "signature": "flags: Flags<SceneNodeTransformFlags>",
+          "signatureTokens": [
+            {
+              "text": "flags",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Flags",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNodeTransformFlags",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -367,6 +1275,28 @@
         {
           "name": "name",
           "signature": "name: string | null",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique."
@@ -374,6 +1304,20 @@
         {
           "name": "anchor",
           "signature": "anchor: ObservableVector",
+          "signatureTokens": [
+            {
+              "text": "anchor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Normalized anchor in 0..1 along each axis that derives origin from the current bounds size. (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right. Updates origin whenever the anchor or the local bounds change."
@@ -381,6 +1325,20 @@
         {
           "name": "cullable",
           "signature": "cullable: boolean",
+          "signatureTokens": [
+            {
+              "text": "cullable",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "When false, this node is never culled by the viewport check and is always considered in-view. Defaults to true."
@@ -388,6 +1346,28 @@
         {
           "name": "cullArea",
           "signature": "cullArea: Rectangle | null",
+          "signatureTokens": [
+            {
+              "text": "cullArea",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Custom rectangle used for viewport cull intersection test. When set, replaces the default node bounds in cull checks. Set to null to restore default bounds-based culling."
@@ -395,6 +1375,20 @@
         {
           "name": "isAlignedBox",
           "signature": "isAlignedBox: boolean",
+          "signatureTokens": [
+            {
+              "text": "isAlignedBox",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -402,6 +1396,20 @@
         {
           "name": "origin",
           "signature": "origin: ObservableVector",
+          "signatureTokens": [
+            {
+              "text": "origin",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -409,6 +1417,28 @@
         {
           "name": "parent",
           "signature": "parent: Container | null",
+          "signatureTokens": [
+            {
+              "text": "parent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Container",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -416,6 +1446,20 @@
         {
           "name": "position",
           "signature": "position: ObservableVector",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -423,6 +1467,20 @@
         {
           "name": "rotation",
           "signature": "rotation: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Rotation angle in degrees. Wraps via trimRotation on assignment."
@@ -430,6 +1488,20 @@
         {
           "name": "scale",
           "signature": "scale: ObservableVector",
+          "signatureTokens": [
+            {
+              "text": "scale",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -437,6 +1509,20 @@
         {
           "name": "skewX",
           "signature": "skewX: number",
+          "signatureTokens": [
+            {
+              "text": "skewX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Horizontal skew angle in degrees. Shears the node along the X axis (positive values lean the top edge right). Combines correctly with rotation and scale."
@@ -444,6 +1530,20 @@
         {
           "name": "skewY",
           "signature": "skewY: number",
+          "signatureTokens": [
+            {
+              "text": "skewY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
@@ -451,6 +1551,20 @@
         {
           "name": "visible",
           "signature": "visible: boolean",
+          "signatureTokens": [
+            {
+              "text": "visible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -458,6 +1572,20 @@
         {
           "name": "x",
           "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -465,6 +1593,20 @@
         {
           "name": "y",
           "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -472,6 +1614,20 @@
         {
           "name": "zIndex",
           "signature": "zIndex: number",
+          "signatureTokens": [
+            {
+              "text": "zIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

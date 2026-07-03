@@ -31,6 +31,56 @@
         {
           "name": "new",
           "signature": "new(radius: number, angle: number): PolarVector",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "angle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PolarVector",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "radius",
@@ -58,6 +108,28 @@
         {
           "name": "toVector",
           "signature": "toVector(): Vector",
+          "signatureTokens": [
+            {
+              "text": "toVector",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "Vector",
           "description": "Convert to a Cartesian Vector. Returns Vector.temp — do not store the reference across calls."
@@ -65,6 +137,40 @@
         {
           "name": "fromVector",
           "signature": "fromVector(vector: Vector): PolarVector",
+          "signatureTokens": [
+            {
+              "text": "fromVector",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "vector",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PolarVector",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "vector",
@@ -87,6 +193,20 @@
         {
           "name": "phi",
           "signature": "phi: number",
+          "signatureTokens": [
+            {
+              "text": "phi",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Angle in radians, measured from the positive X-axis."
@@ -94,6 +214,20 @@
         {
           "name": "radius",
           "signature": "radius: number",
+          "signatureTokens": [
+            {
+              "text": "radius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

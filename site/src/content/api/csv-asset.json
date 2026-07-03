@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): CsvAsset",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CsvAsset",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "CsvAsset",
           "description": ""

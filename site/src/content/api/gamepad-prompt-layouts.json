@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): GamepadPromptLayouts",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptLayouts",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "GamepadPromptLayouts",
           "description": ""
@@ -48,6 +70,48 @@
         {
           "name": "getControlChannelMap",
           "signature": "getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadButtonChannel>",
+          "signatureTokens": [
+            {
+              "text": "getControlChannelMap",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": "ReadonlyMap<GamepadPromptControl, GamepadButtonChannel>",
           "description": "Returns the static mapping from each GamepadPromptControl to its corresponding GamepadButton channel. The composite 'DPad' control has no channel entry and is absent from the returned map."
@@ -55,6 +119,60 @@
         {
           "name": "getControlLabels",
           "signature": "getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string>",
+          "signatureTokens": [
+            {
+              "text": "getControlLabels",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "family",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMappingFamily",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [
             {
               "name": "family",
@@ -68,6 +186,64 @@
         {
           "name": "getControlPosition",
           "signature": "getControlPosition(control: GamepadPromptControl): readonly [number, number]",
+          "signatureTokens": [
+            {
+              "text": "getControlPosition",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "control",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [
             {
               "name": "control",
@@ -90,6 +266,24 @@
         {
           "name": "controls",
           "signature": "controls: GamepadPromptControl[]",
+          "signatureTokens": [
+            {
+              "text": "controls",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Complete ordered list of every GamepadPromptControl token."

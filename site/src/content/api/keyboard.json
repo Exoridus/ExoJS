@@ -31,6 +31,12 @@
         {
           "name": "A",
           "signature": "A",
+          "signatureTokens": [
+            {
+              "text": "A",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "Alt",
           "signature": "Alt",
+          "signatureTokens": [
+            {
+              "text": "Alt",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "B",
           "signature": "B",
+          "signatureTokens": [
+            {
+              "text": "B",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "Backspace",
           "signature": "Backspace",
+          "signatureTokens": [
+            {
+              "text": "Backspace",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "BackwardSlash",
           "signature": "BackwardSlash",
+          "signatureTokens": [
+            {
+              "text": "BackwardSlash",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "C",
           "signature": "C",
+          "signatureTokens": [
+            {
+              "text": "C",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "CapsLock",
           "signature": "CapsLock",
+          "signatureTokens": [
+            {
+              "text": "CapsLock",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -80,6 +122,12 @@
         {
           "name": "Clear",
           "signature": "Clear",
+          "signatureTokens": [
+            {
+              "text": "Clear",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -87,6 +135,12 @@
         {
           "name": "ClosedBracket",
           "signature": "ClosedBracket",
+          "signatureTokens": [
+            {
+              "text": "ClosedBracket",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -94,6 +148,12 @@
         {
           "name": "Colon",
           "signature": "Colon",
+          "signatureTokens": [
+            {
+              "text": "Colon",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -101,6 +161,12 @@
         {
           "name": "Comma",
           "signature": "Comma",
+          "signatureTokens": [
+            {
+              "text": "Comma",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -108,6 +174,12 @@
         {
           "name": "Control",
           "signature": "Control",
+          "signatureTokens": [
+            {
+              "text": "Control",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -115,6 +187,12 @@
         {
           "name": "D",
           "signature": "D",
+          "signatureTokens": [
+            {
+              "text": "D",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -122,6 +200,12 @@
         {
           "name": "Dash",
           "signature": "Dash",
+          "signatureTokens": [
+            {
+              "text": "Dash",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -129,6 +213,12 @@
         {
           "name": "Delete",
           "signature": "Delete",
+          "signatureTokens": [
+            {
+              "text": "Delete",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -136,6 +226,12 @@
         {
           "name": "Down",
           "signature": "Down",
+          "signatureTokens": [
+            {
+              "text": "Down",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -143,6 +239,12 @@
         {
           "name": "E",
           "signature": "E",
+          "signatureTokens": [
+            {
+              "text": "E",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -150,6 +252,12 @@
         {
           "name": "Eight",
           "signature": "Eight",
+          "signatureTokens": [
+            {
+              "text": "Eight",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -157,6 +265,12 @@
         {
           "name": "End",
           "signature": "End",
+          "signatureTokens": [
+            {
+              "text": "End",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -164,6 +278,12 @@
         {
           "name": "Enter",
           "signature": "Enter",
+          "signatureTokens": [
+            {
+              "text": "Enter",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -171,6 +291,12 @@
         {
           "name": "Equals",
           "signature": "Equals",
+          "signatureTokens": [
+            {
+              "text": "Equals",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -178,6 +304,12 @@
         {
           "name": "Escape",
           "signature": "Escape",
+          "signatureTokens": [
+            {
+              "text": "Escape",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -185,6 +317,12 @@
         {
           "name": "F",
           "signature": "F",
+          "signatureTokens": [
+            {
+              "text": "F",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -192,6 +330,12 @@
         {
           "name": "F1",
           "signature": "F1",
+          "signatureTokens": [
+            {
+              "text": "F1",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -199,6 +343,12 @@
         {
           "name": "F10",
           "signature": "F10",
+          "signatureTokens": [
+            {
+              "text": "F10",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -206,6 +356,12 @@
         {
           "name": "F11",
           "signature": "F11",
+          "signatureTokens": [
+            {
+              "text": "F11",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -213,6 +369,12 @@
         {
           "name": "F12",
           "signature": "F12",
+          "signatureTokens": [
+            {
+              "text": "F12",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -220,6 +382,12 @@
         {
           "name": "F2",
           "signature": "F2",
+          "signatureTokens": [
+            {
+              "text": "F2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -227,6 +395,12 @@
         {
           "name": "F3",
           "signature": "F3",
+          "signatureTokens": [
+            {
+              "text": "F3",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -234,6 +408,12 @@
         {
           "name": "F4",
           "signature": "F4",
+          "signatureTokens": [
+            {
+              "text": "F4",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -241,6 +421,12 @@
         {
           "name": "F5",
           "signature": "F5",
+          "signatureTokens": [
+            {
+              "text": "F5",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -248,6 +434,12 @@
         {
           "name": "F6",
           "signature": "F6",
+          "signatureTokens": [
+            {
+              "text": "F6",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -255,6 +447,12 @@
         {
           "name": "F7",
           "signature": "F7",
+          "signatureTokens": [
+            {
+              "text": "F7",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -262,6 +460,12 @@
         {
           "name": "F8",
           "signature": "F8",
+          "signatureTokens": [
+            {
+              "text": "F8",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -269,6 +473,12 @@
         {
           "name": "F9",
           "signature": "F9",
+          "signatureTokens": [
+            {
+              "text": "F9",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -276,6 +486,12 @@
         {
           "name": "Five",
           "signature": "Five",
+          "signatureTokens": [
+            {
+              "text": "Five",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -283,6 +499,12 @@
         {
           "name": "Four",
           "signature": "Four",
+          "signatureTokens": [
+            {
+              "text": "Four",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -290,6 +512,12 @@
         {
           "name": "G",
           "signature": "G",
+          "signatureTokens": [
+            {
+              "text": "G",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -297,6 +525,12 @@
         {
           "name": "H",
           "signature": "H",
+          "signatureTokens": [
+            {
+              "text": "H",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -304,6 +538,12 @@
         {
           "name": "Help",
           "signature": "Help",
+          "signatureTokens": [
+            {
+              "text": "Help",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -311,6 +551,12 @@
         {
           "name": "Home",
           "signature": "Home",
+          "signatureTokens": [
+            {
+              "text": "Home",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -318,6 +564,12 @@
         {
           "name": "I",
           "signature": "I",
+          "signatureTokens": [
+            {
+              "text": "I",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -325,6 +577,12 @@
         {
           "name": "Insert",
           "signature": "Insert",
+          "signatureTokens": [
+            {
+              "text": "Insert",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -332,6 +590,12 @@
         {
           "name": "J",
           "signature": "J",
+          "signatureTokens": [
+            {
+              "text": "J",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -339,6 +603,12 @@
         {
           "name": "K",
           "signature": "K",
+          "signatureTokens": [
+            {
+              "text": "K",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -346,6 +616,12 @@
         {
           "name": "L",
           "signature": "L",
+          "signatureTokens": [
+            {
+              "text": "L",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -353,6 +629,12 @@
         {
           "name": "Left",
           "signature": "Left",
+          "signatureTokens": [
+            {
+              "text": "Left",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -360,6 +642,12 @@
         {
           "name": "M",
           "signature": "M",
+          "signatureTokens": [
+            {
+              "text": "M",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -367,6 +655,12 @@
         {
           "name": "N",
           "signature": "N",
+          "signatureTokens": [
+            {
+              "text": "N",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -374,6 +668,12 @@
         {
           "name": "Nine",
           "signature": "Nine",
+          "signatureTokens": [
+            {
+              "text": "Nine",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -381,6 +681,12 @@
         {
           "name": "NumLock",
           "signature": "NumLock",
+          "signatureTokens": [
+            {
+              "text": "NumLock",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -388,6 +694,12 @@
         {
           "name": "NumPad0",
           "signature": "NumPad0",
+          "signatureTokens": [
+            {
+              "text": "NumPad0",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -395,6 +707,12 @@
         {
           "name": "NumPad1",
           "signature": "NumPad1",
+          "signatureTokens": [
+            {
+              "text": "NumPad1",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -402,6 +720,12 @@
         {
           "name": "NumPad2",
           "signature": "NumPad2",
+          "signatureTokens": [
+            {
+              "text": "NumPad2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -409,6 +733,12 @@
         {
           "name": "NumPad3",
           "signature": "NumPad3",
+          "signatureTokens": [
+            {
+              "text": "NumPad3",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -416,6 +746,12 @@
         {
           "name": "NumPad4",
           "signature": "NumPad4",
+          "signatureTokens": [
+            {
+              "text": "NumPad4",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -423,6 +759,12 @@
         {
           "name": "NumPad5",
           "signature": "NumPad5",
+          "signatureTokens": [
+            {
+              "text": "NumPad5",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -430,6 +772,12 @@
         {
           "name": "NumPad6",
           "signature": "NumPad6",
+          "signatureTokens": [
+            {
+              "text": "NumPad6",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -437,6 +785,12 @@
         {
           "name": "NumPad7",
           "signature": "NumPad7",
+          "signatureTokens": [
+            {
+              "text": "NumPad7",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -444,6 +798,12 @@
         {
           "name": "NumPad8",
           "signature": "NumPad8",
+          "signatureTokens": [
+            {
+              "text": "NumPad8",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -451,6 +811,12 @@
         {
           "name": "NumPad9",
           "signature": "NumPad9",
+          "signatureTokens": [
+            {
+              "text": "NumPad9",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -458,6 +824,12 @@
         {
           "name": "NumPadAdd",
           "signature": "NumPadAdd",
+          "signatureTokens": [
+            {
+              "text": "NumPadAdd",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -465,6 +837,12 @@
         {
           "name": "NumPadDecimal",
           "signature": "NumPadDecimal",
+          "signatureTokens": [
+            {
+              "text": "NumPadDecimal",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -472,6 +850,12 @@
         {
           "name": "NumPadDivide",
           "signature": "NumPadDivide",
+          "signatureTokens": [
+            {
+              "text": "NumPadDivide",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -479,6 +863,12 @@
         {
           "name": "NumPadEnter",
           "signature": "NumPadEnter",
+          "signatureTokens": [
+            {
+              "text": "NumPadEnter",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -486,6 +876,12 @@
         {
           "name": "NumPadMultiply",
           "signature": "NumPadMultiply",
+          "signatureTokens": [
+            {
+              "text": "NumPadMultiply",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -493,6 +889,12 @@
         {
           "name": "NumPadSubtract",
           "signature": "NumPadSubtract",
+          "signatureTokens": [
+            {
+              "text": "NumPadSubtract",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -500,6 +902,12 @@
         {
           "name": "O",
           "signature": "O",
+          "signatureTokens": [
+            {
+              "text": "O",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -507,6 +915,12 @@
         {
           "name": "One",
           "signature": "One",
+          "signatureTokens": [
+            {
+              "text": "One",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -514,6 +928,12 @@
         {
           "name": "OpenBracket",
           "signature": "OpenBracket",
+          "signatureTokens": [
+            {
+              "text": "OpenBracket",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -521,6 +941,12 @@
         {
           "name": "P",
           "signature": "P",
+          "signatureTokens": [
+            {
+              "text": "P",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -528,6 +954,12 @@
         {
           "name": "PageDown",
           "signature": "PageDown",
+          "signatureTokens": [
+            {
+              "text": "PageDown",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -535,6 +967,12 @@
         {
           "name": "PageUp",
           "signature": "PageUp",
+          "signatureTokens": [
+            {
+              "text": "PageUp",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -542,6 +980,12 @@
         {
           "name": "Pause",
           "signature": "Pause",
+          "signatureTokens": [
+            {
+              "text": "Pause",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -549,6 +993,12 @@
         {
           "name": "Period",
           "signature": "Period",
+          "signatureTokens": [
+            {
+              "text": "Period",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -556,6 +1006,12 @@
         {
           "name": "Q",
           "signature": "Q",
+          "signatureTokens": [
+            {
+              "text": "Q",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -563,6 +1019,12 @@
         {
           "name": "QuestionMark",
           "signature": "QuestionMark",
+          "signatureTokens": [
+            {
+              "text": "QuestionMark",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -570,6 +1032,12 @@
         {
           "name": "Quotes",
           "signature": "Quotes",
+          "signatureTokens": [
+            {
+              "text": "Quotes",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -577,6 +1045,12 @@
         {
           "name": "R",
           "signature": "R",
+          "signatureTokens": [
+            {
+              "text": "R",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -584,6 +1058,12 @@
         {
           "name": "Right",
           "signature": "Right",
+          "signatureTokens": [
+            {
+              "text": "Right",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -591,6 +1071,12 @@
         {
           "name": "S",
           "signature": "S",
+          "signatureTokens": [
+            {
+              "text": "S",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -598,6 +1084,12 @@
         {
           "name": "ScrollLock",
           "signature": "ScrollLock",
+          "signatureTokens": [
+            {
+              "text": "ScrollLock",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -605,6 +1097,12 @@
         {
           "name": "Seven",
           "signature": "Seven",
+          "signatureTokens": [
+            {
+              "text": "Seven",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -612,6 +1110,12 @@
         {
           "name": "Shift",
           "signature": "Shift",
+          "signatureTokens": [
+            {
+              "text": "Shift",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -619,6 +1123,12 @@
         {
           "name": "Six",
           "signature": "Six",
+          "signatureTokens": [
+            {
+              "text": "Six",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -626,6 +1136,12 @@
         {
           "name": "Space",
           "signature": "Space",
+          "signatureTokens": [
+            {
+              "text": "Space",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -633,6 +1149,12 @@
         {
           "name": "T",
           "signature": "T",
+          "signatureTokens": [
+            {
+              "text": "T",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -640,6 +1162,12 @@
         {
           "name": "Tab",
           "signature": "Tab",
+          "signatureTokens": [
+            {
+              "text": "Tab",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -647,6 +1175,12 @@
         {
           "name": "Three",
           "signature": "Three",
+          "signatureTokens": [
+            {
+              "text": "Three",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -654,6 +1188,12 @@
         {
           "name": "Tilde",
           "signature": "Tilde",
+          "signatureTokens": [
+            {
+              "text": "Tilde",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -661,6 +1201,12 @@
         {
           "name": "Two",
           "signature": "Two",
+          "signatureTokens": [
+            {
+              "text": "Two",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -668,6 +1214,12 @@
         {
           "name": "U",
           "signature": "U",
+          "signatureTokens": [
+            {
+              "text": "U",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -675,6 +1227,12 @@
         {
           "name": "Up",
           "signature": "Up",
+          "signatureTokens": [
+            {
+              "text": "Up",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -682,6 +1240,12 @@
         {
           "name": "V",
           "signature": "V",
+          "signatureTokens": [
+            {
+              "text": "V",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -689,6 +1253,12 @@
         {
           "name": "W",
           "signature": "W",
+          "signatureTokens": [
+            {
+              "text": "W",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -696,6 +1266,12 @@
         {
           "name": "X",
           "signature": "X",
+          "signatureTokens": [
+            {
+              "text": "X",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -703,6 +1279,12 @@
         {
           "name": "Y",
           "signature": "Y",
+          "signatureTokens": [
+            {
+              "text": "Y",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -710,6 +1292,12 @@
         {
           "name": "Z",
           "signature": "Z",
+          "signatureTokens": [
+            {
+              "text": "Z",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -717,6 +1305,12 @@
         {
           "name": "Zero",
           "signature": "Zero",
+          "signatureTokens": [
+            {
+              "text": "Zero",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

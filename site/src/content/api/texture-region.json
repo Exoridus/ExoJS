@@ -34,6 +34,56 @@
         {
           "name": "new",
           "signature": "new(texture: Texture, options: TextureRegionOptions): TextureRegion",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegionOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegion",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "texture",
@@ -61,6 +111,32 @@
         {
           "name": "extrusion",
           "signature": "extrusion: Readonly<TextureRegionInsets>",
+          "signatureTokens": [
+            {
+              "text": "extrusion",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegionInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Per-edge extrusion/padding metadata (engine-owned, frozen)."
@@ -68,6 +144,20 @@
         {
           "name": "height",
           "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Height of the region in texture pixels."
@@ -75,6 +165,20 @@
         {
           "name": "texture",
           "signature": "texture: Texture",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The underlying Texture this region belongs to."
@@ -82,6 +186,20 @@
         {
           "name": "u0",
           "signature": "u0: number",
+          "signatureTokens": [
+            {
+              "text": "u0",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Normalised left texture coordinate (U-min)."
@@ -89,6 +207,20 @@
         {
           "name": "u1",
           "signature": "u1: number",
+          "signatureTokens": [
+            {
+              "text": "u1",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Normalised right texture coordinate (U-max)."
@@ -96,6 +228,20 @@
         {
           "name": "v0",
           "signature": "v0: number",
+          "signatureTokens": [
+            {
+              "text": "v0",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Normalised top texture coordinate (V-min)."
@@ -103,6 +249,20 @@
         {
           "name": "v1",
           "signature": "v1: number",
+          "signatureTokens": [
+            {
+              "text": "v1",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Normalised bottom texture coordinate (V-max)."
@@ -110,6 +270,20 @@
         {
           "name": "width",
           "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Width of the region in texture pixels."
@@ -117,6 +291,20 @@
         {
           "name": "x",
           "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Left edge of the region in texture pixels."
@@ -124,6 +312,20 @@
         {
           "name": "y",
           "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Top edge of the region in texture pixels."

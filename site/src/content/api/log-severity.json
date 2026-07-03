@@ -29,6 +29,12 @@
         {
           "name": "Debug",
           "signature": "Debug",
+          "signatureTokens": [
+            {
+              "text": "Debug",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -36,6 +42,12 @@
         {
           "name": "Error",
           "signature": "Error",
+          "signatureTokens": [
+            {
+              "text": "Error",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -43,6 +55,12 @@
         {
           "name": "Info",
           "signature": "Info",
+          "signatureTokens": [
+            {
+              "text": "Info",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -50,6 +68,12 @@
         {
           "name": "Warning",
           "signature": "Warning",
+          "signatureTokens": [
+            {
+              "text": "Warning",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

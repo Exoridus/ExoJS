@@ -33,6 +33,44 @@
         {
           "name": "new",
           "signature": "new(options?: BeatDetectorOptions): BeatDetector",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatDetectorOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatDetector",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -55,6 +93,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": ""
@@ -62,6 +122,40 @@
         {
           "name": "subdivisionPhase",
           "signature": "subdivisionPhase(division: number): number",
+          "signatureTokens": [
+            {
+              "text": "subdivisionPhase",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "division",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "division",
@@ -84,6 +178,20 @@
         {
           "name": "barPulseHalfLife",
           "signature": "barPulseHalfLife: number",
+          "signatureTokens": [
+            {
+              "text": "barPulseHalfLife",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Half-life for the barPulse envelope. Mutable; default 0.3."
@@ -91,6 +199,20 @@
         {
           "name": "justBeatWindow",
           "signature": "justBeatWindow: number",
+          "signatureTokens": [
+            {
+              "text": "justBeatWindow",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Time window for justBeat. Mutable; default 0.03 (30ms)."
@@ -98,6 +220,20 @@
         {
           "name": "pulseHalfLife",
           "signature": "pulseHalfLife: number",
+          "signatureTokens": [
+            {
+              "text": "pulseHalfLife",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Half-life in seconds for the pulse envelope. Mutable; default 0.15. Smaller values give a snappier pulse, larger values a longer afterglow."
@@ -105,6 +241,20 @@
         {
           "name": "bandEnergy",
           "signature": "bandEnergy: BandEnergy",
+          "signatureTokens": [
+            {
+              "text": "bandEnergy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BandEnergy",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -112,6 +262,20 @@
         {
           "name": "barLength",
           "signature": "barLength: number",
+          "signatureTokens": [
+            {
+              "text": "barLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -119,6 +283,20 @@
         {
           "name": "barPosition",
           "signature": "barPosition: number",
+          "signatureTokens": [
+            {
+              "text": "barPosition",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -126,6 +304,20 @@
         {
           "name": "barPulse",
           "signature": "barPulse: number",
+          "signatureTokens": [
+            {
+              "text": "barPulse",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Like pulse but resets on downbeats and decays per barPulseHalfLife. Useful for emphasizing the first beat of each bar (e.g. brighter flash on \"1\" vs \"2,3,4\")."
@@ -133,6 +325,20 @@
         {
           "name": "beatPhase",
           "signature": "beatPhase: number",
+          "signatureTokens": [
+            {
+              "text": "beatPhase",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -140,6 +346,20 @@
         {
           "name": "confidence",
           "signature": "confidence: number",
+          "signatureTokens": [
+            {
+              "text": "confidence",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -147,6 +367,20 @@
         {
           "name": "gridStability",
           "signature": "gridStability: number",
+          "signatureTokens": [
+            {
+              "text": "gridStability",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -154,6 +388,20 @@
         {
           "name": "justBeat",
           "signature": "justBeat: boolean",
+          "signatureTokens": [
+            {
+              "text": "justBeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "True for the visual frame(s) within justBeatWindow seconds of a beat onset. Use for one-shot triggers (strobe flash, particle burst, sample retrigger). Default window 30ms covers a typical 60fps frame."
@@ -161,6 +409,32 @@
         {
           "name": "lookahead",
           "signature": "lookahead: readonly UpcomingBeat[]",
+          "signatureTokens": [
+            {
+              "text": "lookahead",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UpcomingBeat",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -168,6 +442,20 @@
         {
           "name": "nextBeatTime",
           "signature": "nextBeatTime: number",
+          "signatureTokens": [
+            {
+              "text": "nextBeatTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -175,6 +463,20 @@
         {
           "name": "nextDownbeatTime",
           "signature": "nextDownbeatTime: number",
+          "signatureTokens": [
+            {
+              "text": "nextDownbeatTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -182,6 +484,20 @@
         {
           "name": "onsetStrength",
           "signature": "onsetStrength: number",
+          "signatureTokens": [
+            {
+              "text": "onsetStrength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -189,6 +505,20 @@
         {
           "name": "pulse",
           "signature": "pulse: number",
+          "signatureTokens": [
+            {
+              "text": "pulse",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "0..1 envelope, peaks at 1.0 the moment a beat fires and halves every pulseHalfLife seconds. Drives \"pulse on the beat\" visuals with a single multiplication: sprite.scale = 1 + clock.pulse * 0.3."
@@ -196,6 +526,32 @@
         {
           "name": "ready",
           "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -203,6 +559,20 @@
         {
           "name": "rms",
           "signature": "rms: number",
+          "signatureTokens": [
+            {
+              "text": "rms",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -210,6 +580,20 @@
         {
           "name": "secondsSinceLastBeat",
           "signature": "secondsSinceLastBeat: number",
+          "signatureTokens": [
+            {
+              "text": "secondsSinceLastBeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Seconds elapsed since the most recent beat, derived from beatPhase and tempo. Returns 0 when the detector hasn't locked yet."
@@ -217,6 +601,20 @@
         {
           "name": "source",
           "signature": "source: BeatDetectorSource",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatDetectorSource",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -224,6 +622,20 @@
         {
           "name": "tempo",
           "signature": "tempo: number",
+          "signatureTokens": [
+            {
+              "text": "tempo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -231,6 +643,32 @@
         {
           "name": "tempoCandidates",
           "signature": "tempoCandidates: readonly TempoCandidate[]",
+          "signatureTokens": [
+            {
+              "text": "tempoCandidates",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TempoCandidate",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -238,6 +676,20 @@
         {
           "name": "timeSignature",
           "signature": "timeSignature: TimeSignature",
+          "signatureTokens": [
+            {
+              "text": "timeSignature",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TimeSignature",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -254,6 +706,40 @@
         {
           "name": "onBarStart",
           "signature": "onBarStart: Signal<[BarInfo]>",
+          "signatureTokens": [
+            {
+              "text": "onBarStart",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BarInfo",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -261,6 +747,40 @@
         {
           "name": "onBeat",
           "signature": "onBeat: Signal<[BeatInfo]>",
+          "signatureTokens": [
+            {
+              "text": "onBeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatInfo",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -268,6 +788,40 @@
         {
           "name": "onBeatPredicted",
           "signature": "onBeatPredicted: Signal<[UpcomingBeat]>",
+          "signatureTokens": [
+            {
+              "text": "onBeatPredicted",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UpcomingBeat",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -275,6 +829,40 @@
         {
           "name": "onDownbeat",
           "signature": "onDownbeat: Signal<[BeatInfo]>",
+          "signatureTokens": [
+            {
+              "text": "onDownbeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatInfo",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -282,6 +870,48 @@
         {
           "name": "onTempoChange",
           "signature": "onTempoChange: Signal<[number, number]>",
+          "signatureTokens": [
+            {
+              "text": "onTempoChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

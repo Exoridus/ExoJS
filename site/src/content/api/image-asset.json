@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): ImageAsset",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageAsset",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "ImageAsset",
           "description": ""

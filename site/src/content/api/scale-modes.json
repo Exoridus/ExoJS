@@ -31,6 +31,12 @@
         {
           "name": "Linear",
           "signature": "Linear",
+          "signatureTokens": [
+            {
+              "text": "Linear",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "LinearMipmapLinear",
           "signature": "LinearMipmapLinear",
+          "signatureTokens": [
+            {
+              "text": "LinearMipmapLinear",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "LinearMipmapNearest",
           "signature": "LinearMipmapNearest",
+          "signatureTokens": [
+            {
+              "text": "LinearMipmapNearest",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "Nearest",
           "signature": "Nearest",
+          "signatureTokens": [
+            {
+              "text": "Nearest",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "NearestMipmapLinear",
           "signature": "NearestMipmapLinear",
+          "signatureTokens": [
+            {
+              "text": "NearestMipmapLinear",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "NearestMipmapNearest",
           "signature": "NearestMipmapNearest",
+          "signatureTokens": [
+            {
+              "text": "NearestMipmapNearest",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

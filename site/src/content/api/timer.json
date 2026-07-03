@@ -31,6 +31,56 @@
         {
           "name": "new",
           "signature": "new(limit: Time, autoStart: boolean): Timer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "limit",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "autoStart",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Timer",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "limit",
@@ -58,6 +108,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": ""
@@ -65,6 +137,28 @@
         {
           "name": "reset",
           "signature": "reset(): this",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": "Halt and zero the accumulated time. The clock is left stopped."
@@ -72,6 +166,28 @@
         {
           "name": "restart",
           "signature": "restart(): this",
+          "signatureTokens": [
+            {
+              "text": "restart",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": "Reset accumulated time to zero, then immediately start. Common per-frame pattern."
@@ -79,6 +195,28 @@
         {
           "name": "start",
           "signature": "start(): this",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": "Begin accumulating time. No-op when already running."
@@ -86,6 +224,28 @@
         {
           "name": "stop",
           "signature": "stop(): this",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": "Halt accumulation. Elapsed time stays at the moment of stopping."
@@ -102,6 +262,20 @@
         {
           "name": "elapsedHours",
           "signature": "elapsedHours: number",
+          "signatureTokens": [
+            {
+              "text": "elapsedHours",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -109,6 +283,20 @@
         {
           "name": "elapsedMilliseconds",
           "signature": "elapsedMilliseconds: number",
+          "signatureTokens": [
+            {
+              "text": "elapsedMilliseconds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -116,6 +304,20 @@
         {
           "name": "elapsedMinutes",
           "signature": "elapsedMinutes: number",
+          "signatureTokens": [
+            {
+              "text": "elapsedMinutes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -123,6 +325,20 @@
         {
           "name": "elapsedSeconds",
           "signature": "elapsedSeconds: number",
+          "signatureTokens": [
+            {
+              "text": "elapsedSeconds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -130,6 +346,20 @@
         {
           "name": "elapsedTime",
           "signature": "elapsedTime: Time",
+          "signatureTokens": [
+            {
+              "text": "elapsedTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance — read the scalar fields if you need an unchanging snapshot."
@@ -137,6 +367,20 @@
         {
           "name": "expired",
           "signature": "expired: boolean",
+          "signatureTokens": [
+            {
+              "text": "expired",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "true once the elapsed time has reached or exceeded the configured limit."
@@ -144,6 +388,20 @@
         {
           "name": "limit",
           "signature": "limit: Time",
+          "signatureTokens": [
+            {
+              "text": "limit",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -151,6 +409,20 @@
         {
           "name": "remainingHours",
           "signature": "remainingHours: number",
+          "signatureTokens": [
+            {
+              "text": "remainingHours",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -158,6 +430,20 @@
         {
           "name": "remainingMilliseconds",
           "signature": "remainingMilliseconds: number",
+          "signatureTokens": [
+            {
+              "text": "remainingMilliseconds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -165,6 +451,20 @@
         {
           "name": "remainingMinutes",
           "signature": "remainingMinutes: number",
+          "signatureTokens": [
+            {
+              "text": "remainingMinutes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -172,6 +472,20 @@
         {
           "name": "remainingSeconds",
           "signature": "remainingSeconds: number",
+          "signatureTokens": [
+            {
+              "text": "remainingSeconds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -179,6 +493,20 @@
         {
           "name": "running",
           "signature": "running: boolean",
+          "signatureTokens": [
+            {
+              "text": "running",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

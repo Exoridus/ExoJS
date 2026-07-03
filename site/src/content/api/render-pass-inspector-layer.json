@@ -34,6 +34,40 @@
         {
           "name": "new",
           "signature": "new(app: Application): RenderPassInspectorLayer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPassInspectorLayer",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "app",
@@ -56,6 +90,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Release any scene-graph nodes or resources owned by this layer. Called by DebugOverlay.destroy. The base implementation is a no-op; subclasses override to tear down their Container subtrees."
@@ -63,6 +119,32 @@
         {
           "name": "pipelineRows",
           "signature": "pipelineRows(): RenderPipelineRow[]",
+          "signatureTokens": [
+            {
+              "text": "pipelineRows",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPipelineRow",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": "RenderPipelineRow[]",
           "description": "Depth-tagged rows for the inspected pipeline (empty if none is set)."
@@ -70,6 +152,40 @@
         {
           "name": "render",
           "signature": "render(backend: RenderBackend): void",
+          "signatureTokens": [
+            {
+              "text": "render",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "backend",
@@ -83,6 +199,48 @@
         {
           "name": "setPipeline",
           "signature": "setPipeline(pipeline: RenderPipeline | null): this",
+          "signatureTokens": [
+            {
+              "text": "setPipeline",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pipeline",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPipeline",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "pipeline",
@@ -96,6 +254,40 @@
         {
           "name": "update",
           "signature": "update(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "_delta",
@@ -109,6 +301,44 @@
         {
           "name": "describePipeline",
           "signature": "describePipeline(pipeline: RenderPipeline): RenderPipelineRow[]",
+          "signatureTokens": [
+            {
+              "text": "describePipeline",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pipeline",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPipeline",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPipelineRow",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [
             {
               "name": "pipeline",
@@ -131,6 +361,20 @@
         {
           "name": "visible",
           "signature": "visible: boolean",
+          "signatureTokens": [
+            {
+              "text": "visible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -138,6 +382,32 @@
         {
           "name": "entries",
           "signature": "entries: readonly RenderPassInspectorEntry[]",
+          "signatureTokens": [
+            {
+              "text": "entries",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPassInspectorEntry",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Read-only snapshot of the entries collected on the most recent update call. Useful for tests and for external tooling that wants to render its own visualisation rather than use the built-in panel."
@@ -145,6 +415,28 @@
         {
           "name": "pipeline",
           "signature": "pipeline: RenderPipeline | null",
+          "signatureTokens": [
+            {
+              "text": "pipeline",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPipeline",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The pipeline currently being inspected, or null."
@@ -152,6 +444,20 @@
         {
           "name": "totalPasses",
           "signature": "totalPasses: number",
+          "signatureTokens": [
+            {
+              "text": "totalPasses",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Total pass count across all collected entries."
@@ -159,6 +465,20 @@
         {
           "name": "viewMode",
           "signature": "viewMode: DebugLayerViewMode",
+          "signatureTokens": [
+            {
+              "text": "viewMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DebugLayerViewMode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Whether this layer renders in the scene's world-space view or in a screen-space (canvas-pixel) view. Defaults to 'screen'. Subclasses override to return 'world' when rendering at actual scene positions."

@@ -32,6 +32,28 @@
         {
           "name": "close",
           "signature": "close(): void",
+          "signatureTokens": [
+            {
+              "text": "close",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Stop every track in the stream, releasing the input device."
@@ -39,6 +61,52 @@
         {
           "name": "open",
           "signature": "open(options: AudioInputOptions): Promise<AudioInput>",
+          "signatureTokens": [
+            {
+              "text": "open",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioInputOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioInput",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -61,6 +129,20 @@
         {
           "name": "stream",
           "signature": "stream: MediaStream",
+          "signatureTokens": [
+            {
+              "text": "stream",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MediaStream",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The underlying MediaStream."

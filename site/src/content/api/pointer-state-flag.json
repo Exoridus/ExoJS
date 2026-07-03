@@ -31,6 +31,12 @@
         {
           "name": "Cancel",
           "signature": "Cancel",
+          "signatureTokens": [
+            {
+              "text": "Cancel",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "Down",
           "signature": "Down",
+          "signatureTokens": [
+            {
+              "text": "Down",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "Leave",
           "signature": "Leave",
+          "signatureTokens": [
+            {
+              "text": "Leave",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "Move",
           "signature": "Move",
+          "signatureTokens": [
+            {
+              "text": "Move",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "None",
           "signature": "None",
+          "signatureTokens": [
+            {
+              "text": "None",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "Over",
           "signature": "Over",
+          "signatureTokens": [
+            {
+              "text": "Over",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "Up",
           "signature": "Up",
+          "signatureTokens": [
+            {
+              "text": "Up",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

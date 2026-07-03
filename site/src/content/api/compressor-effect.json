@@ -31,6 +31,40 @@
         {
           "name": "new",
           "signature": "new(options: CompressorEffectOptions): CompressorEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressorEffectOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressorEffect",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -53,6 +87,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
@@ -69,6 +125,20 @@
         {
           "name": "attack",
           "signature": "attack: number",
+          "signatureTokens": [
+            {
+              "text": "attack",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Time in seconds for the compressor to engage after the signal exceeds the threshold. Range 0..1, default 0.003."
@@ -76,6 +146,20 @@
         {
           "name": "inputNode",
           "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio enters this effect."
@@ -83,6 +167,20 @@
         {
           "name": "knee",
           "signature": "knee: number",
+          "signatureTokens": [
+            {
+              "text": "knee",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Width in dB of the transition region around the threshold (soft knee). Range 0..40, default 30."
@@ -90,6 +188,20 @@
         {
           "name": "outputNode",
           "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio exits this effect."
@@ -97,6 +209,20 @@
         {
           "name": "ratio",
           "signature": "ratio: number",
+          "signatureTokens": [
+            {
+              "text": "ratio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 12."
@@ -104,6 +230,32 @@
         {
           "name": "ready",
           "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
@@ -111,6 +263,20 @@
         {
           "name": "reduction",
           "signature": "reduction: number",
+          "signatureTokens": [
+            {
+              "text": "reduction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Live gain reduction in dB applied by the compressor right now. Always <= 0 (or 0 when the compressor isn't engaging). Read-only — drive input level meters / sidechain visualisations off this value. Returns 0 until the underlying node has been created (before the audio context is ready)."
@@ -118,6 +284,20 @@
         {
           "name": "release",
           "signature": "release: number",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Time in seconds for the compressor to disengage after the signal drops below the threshold. Range 0..1, default 0.25."
@@ -125,6 +305,20 @@
         {
           "name": "threshold",
           "signature": "threshold: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Level above which compression begins, in dBFS. Range −100..0, default −24."

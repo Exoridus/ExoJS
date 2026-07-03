@@ -31,6 +31,40 @@
         {
           "name": "new",
           "signature": "new(radius: number): CircleShape",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CircleShape",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "radius",
@@ -53,6 +87,20 @@
         {
           "name": "area",
           "signature": "area: number",
+          "signatureTokens": [
+            {
+              "text": "area",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Surface area in px². mass = density × area."
@@ -60,6 +108,20 @@
         {
           "name": "boundingRadius",
           "signature": "boundingRadius: number",
+          "signatureTokens": [
+            {
+              "text": "boundingRadius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Radius of the smallest circle about the local origin enclosing the shape."
@@ -67,6 +129,20 @@
         {
           "name": "centroidX",
           "signature": "centroidX: 0",
+          "signatureTokens": [
+            {
+              "text": "centroidX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "0",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "X of the area centroid in local space."
@@ -74,6 +150,20 @@
         {
           "name": "centroidY",
           "signature": "centroidY: 0",
+          "signatureTokens": [
+            {
+              "text": "centroidY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "0",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Y of the area centroid in local space."
@@ -81,6 +171,20 @@
         {
           "name": "radius",
           "signature": "radius: number",
+          "signatureTokens": [
+            {
+              "text": "radius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -88,6 +192,20 @@
         {
           "name": "type",
           "signature": "type: \"circle\"",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"circle\"",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -95,6 +213,20 @@
         {
           "name": "unitInertia",
           "signature": "unitInertia: number",
+          "signatureTokens": [
+            {
+              "text": "unitInertia",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."

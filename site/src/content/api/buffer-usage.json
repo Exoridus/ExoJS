@@ -31,6 +31,12 @@
         {
           "name": "DynamicCopy",
           "signature": "DynamicCopy",
+          "signatureTokens": [
+            {
+              "text": "DynamicCopy",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "DynamicDraw",
           "signature": "DynamicDraw",
+          "signatureTokens": [
+            {
+              "text": "DynamicDraw",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "DynamicRead",
           "signature": "DynamicRead",
+          "signatureTokens": [
+            {
+              "text": "DynamicRead",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "StaticCopy",
           "signature": "StaticCopy",
+          "signatureTokens": [
+            {
+              "text": "StaticCopy",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "StaticDraw",
           "signature": "StaticDraw",
+          "signatureTokens": [
+            {
+              "text": "StaticDraw",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "StaticRead",
           "signature": "StaticRead",
+          "signatureTokens": [
+            {
+              "text": "StaticRead",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "StreamCopy",
           "signature": "StreamCopy",
+          "signatureTokens": [
+            {
+              "text": "StreamCopy",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -80,6 +122,12 @@
         {
           "name": "StreamDraw",
           "signature": "StreamDraw",
+          "signatureTokens": [
+            {
+              "text": "StreamDraw",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -87,6 +135,12 @@
         {
           "name": "StreamRead",
           "signature": "StreamRead",
+          "signatureTokens": [
+            {
+              "text": "StreamRead",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

@@ -31,6 +31,12 @@
         {
           "name": "WebGl2",
           "signature": "WebGl2",
+          "signatureTokens": [
+            {
+              "text": "WebGl2",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "WebGpu",
           "signature": "WebGpu",
+          "signatureTokens": [
+            {
+              "text": "WebGpu",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

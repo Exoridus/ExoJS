@@ -31,6 +31,12 @@
         {
           "name": "Cancelled",
           "signature": "Cancelled",
+          "signatureTokens": [
+            {
+              "text": "Cancelled",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "InsideCanvas",
           "signature": "InsideCanvas",
+          "signatureTokens": [
+            {
+              "text": "InsideCanvas",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "Moving",
           "signature": "Moving",
+          "signatureTokens": [
+            {
+              "text": "Moving",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "OutsideCanvas",
           "signature": "OutsideCanvas",
+          "signatureTokens": [
+            {
+              "text": "OutsideCanvas",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "Pressed",
           "signature": "Pressed",
+          "signatureTokens": [
+            {
+              "text": "Pressed",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "Released",
           "signature": "Released",
+          "signatureTokens": [
+            {
+              "text": "Released",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "Unknown",
           "signature": "Unknown",
+          "signatureTokens": [
+            {
+              "text": "Unknown",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

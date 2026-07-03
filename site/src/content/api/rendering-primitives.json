@@ -31,6 +31,12 @@
         {
           "name": "LineLoop",
           "signature": "LineLoop",
+          "signatureTokens": [
+            {
+              "text": "LineLoop",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "Lines",
           "signature": "Lines",
+          "signatureTokens": [
+            {
+              "text": "Lines",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "LineStrip",
           "signature": "LineStrip",
+          "signatureTokens": [
+            {
+              "text": "LineStrip",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "Points",
           "signature": "Points",
+          "signatureTokens": [
+            {
+              "text": "Points",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "TriangleFan",
           "signature": "TriangleFan",
+          "signatureTokens": [
+            {
+              "text": "TriangleFan",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "Triangles",
           "signature": "Triangles",
+          "signatureTokens": [
+            {
+              "text": "Triangles",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "TriangleStrip",
           "signature": "TriangleStrip",
+          "signatureTokens": [
+            {
+              "text": "TriangleStrip",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

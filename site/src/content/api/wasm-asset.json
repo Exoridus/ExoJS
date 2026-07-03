@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): WasmAsset",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WasmAsset",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "WasmAsset",
           "description": ""

@@ -32,6 +32,52 @@
         {
           "name": "new",
           "signature": "new(vertices: readonly VectorLike[]): PolygonShape",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "vertices",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PolygonShape",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "vertices",
@@ -54,6 +100,20 @@
         {
           "name": "area",
           "signature": "area: number",
+          "signatureTokens": [
+            {
+              "text": "area",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Surface area in px². mass = density × area."
@@ -61,6 +121,20 @@
         {
           "name": "boundingRadius",
           "signature": "boundingRadius: number",
+          "signatureTokens": [
+            {
+              "text": "boundingRadius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Radius of the smallest circle about the local origin enclosing the shape."
@@ -68,6 +142,20 @@
         {
           "name": "centroidX",
           "signature": "centroidX: number",
+          "signatureTokens": [
+            {
+              "text": "centroidX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "X of the area centroid in local space."
@@ -75,6 +163,20 @@
         {
           "name": "centroidY",
           "signature": "centroidY: number",
+          "signatureTokens": [
+            {
+              "text": "centroidY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Y of the area centroid in local space."
@@ -82,6 +184,20 @@
         {
           "name": "count",
           "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -89,6 +205,32 @@
         {
           "name": "normals",
           "signature": "normals: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "normals",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Outward unit edge normals (edge i spans vertex i → i+1), flattened."
@@ -96,6 +238,20 @@
         {
           "name": "type",
           "signature": "type: \"polygon\"",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"polygon\"",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -103,6 +259,20 @@
         {
           "name": "unitInertia",
           "signature": "unitInertia: number",
+          "signatureTokens": [
+            {
+              "text": "unitInertia",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."
@@ -110,6 +280,32 @@
         {
           "name": "vertices",
           "signature": "vertices: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "vertices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Local-space vertices, CCW, flattened."

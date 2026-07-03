@@ -33,6 +33,40 @@
         {
           "name": "new",
           "signature": "new(options: DistortionEffectOptions): DistortionEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DistortionEffectOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DistortionEffect",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -55,6 +89,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
@@ -71,6 +127,20 @@
         {
           "name": "drive",
           "signature": "drive: number",
+          "signatureTokens": [
+            {
+              "text": "drive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Drive amount controlling the soft-clip intensity. Range 0..1, default 0.4. Changing this rebuilds the wave-shaper curve immediately (sample-accurate on the next render quantum)."
@@ -78,6 +148,20 @@
         {
           "name": "inputNode",
           "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
@@ -85,6 +169,20 @@
         {
           "name": "outputNode",
           "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
@@ -92,6 +190,20 @@
         {
           "name": "oversample",
           "signature": "oversample: OverSampleType",
+          "signatureTokens": [
+            {
+              "text": "oversample",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OverSampleType",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Oversampling mode for the WaveShaperNode. One of 'none', '2x', or '4x'. Higher values reduce aliasing but increase CPU usage. Default '2x'."
@@ -99,6 +211,32 @@
         {
           "name": "ready",
           "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
@@ -106,6 +244,20 @@
         {
           "name": "tone",
           "signature": "tone: number",
+          "signatureTokens": [
+            {
+              "text": "tone",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Tone control: low-pass cutoff on the wet path. 0 = fully dark (~100 Hz), 1 = fully open (~20 kHz). Mapped logarithmically. Default 1. Changes are ramped smoothly via setTargetAtTime."
@@ -113,6 +265,20 @@
         {
           "name": "wet",
           "signature": "wet: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Wet (distorted) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0."

@@ -31,6 +31,12 @@
         {
           "name": "Category",
           "signature": "Category",
+          "signatureTokens": [
+            {
+              "text": "Category",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "Container",
           "signature": "Container",
+          "signatureTokens": [
+            {
+              "text": "Container",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "Gamepad",
           "signature": "Gamepad",
+          "signatureTokens": [
+            {
+              "text": "Gamepad",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

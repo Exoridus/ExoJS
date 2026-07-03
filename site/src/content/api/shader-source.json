@@ -51,6 +51,40 @@
         {
           "name": "new",
           "signature": "new(options: ShaderSourceOptions): ShaderSource",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSourceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -73,6 +107,28 @@
         {
           "name": "detectUniformDrift",
           "signature": "detectUniformDrift(): object",
+          "signatureTokens": [
+            {
+              "text": "detectUniformDrift",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "object",
           "description": "Compare declared uniform names between the GLSL and WGSL sources. Returns lists of names declared in only one language. Use in CI to catch drift when both languages should expose the same logical uniforms. When only one language is provided, returns empty arrays. Auto-bound uniforms (u_projection, u_translation, u_tint, u_texture) are excluded from the comparison since the GLSL source declares them at the top-level uniform scope while the WGSL source receives them via the @group(0) mesh-uniforms struct and the @group(1) texture binding."
@@ -80,6 +136,28 @@
         {
           "name": "getDeclaredUniforms",
           "signature": "getDeclaredUniforms(): object",
+          "signatureTokens": [
+            {
+              "text": "getDeclaredUniforms",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "object",
           "description": "Reflect declared uniforms from each language's source. Returns a per- language map of uniform-name → declared type, parsed from the shader sources via lightweight regex (not a full GLSL/WGSL grammar). Texture uniforms (sampler2D/texture_2d) are included; sampler bindings are not (they pair with textures by binding index). Reflection is best-effort and intended for CI drift-checks and editor tooling, not for runtime uniform binding decisions. The renderers do NOT consult this map; they bind uniforms by name from Material.uniforms and let the underlying API resolve declared- but-unused entries."
@@ -96,6 +174,28 @@
         {
           "name": "glsl",
           "signature": "glsl: object | null",
+          "signatureTokens": [
+            {
+              "text": "glsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "GLSL source pair for the WebGL2 backend, or null if not provided."
@@ -103,6 +203,28 @@
         {
           "name": "wgsl",
           "signature": "wgsl: string | null",
+          "signatureTokens": [
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "WGSL source for the WebGPU backend, or null if not provided."
@@ -110,6 +232,20 @@
         {
           "name": "id",
           "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Stable per-instance identity. Identical id ⇒ same compiled program/ pipeline can be reused. Monotonic across the session; never reused."

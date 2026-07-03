@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): AudioManager",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioManager",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "AudioManager",
           "description": ""
@@ -48,6 +70,40 @@
         {
           "name": "_applyVisibility",
           "signature": "_applyVisibility(visible: boolean): void",
+          "signatureTokens": [
+            {
+              "text": "_applyVisibility",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "visible",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "visible",
@@ -61,6 +117,40 @@
         {
           "name": "_registerSpatial",
           "signature": "_registerSpatial(voice: SpatialVoice): void",
+          "signatureTokens": [
+            {
+              "text": "_registerSpatial",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "voice",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpatialVoice",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "voice",
@@ -74,6 +164,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": ""
@@ -81,6 +193,40 @@
         {
           "name": "getBus",
           "signature": "getBus(name: string): AudioBus",
+          "signatureTokens": [
+            {
+              "text": "getBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "name",
@@ -94,6 +240,40 @@
         {
           "name": "hasBus",
           "signature": "hasBus(name: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "name",
@@ -107,6 +287,40 @@
         {
           "name": "open",
           "signature": "open(input: AudioInput): InputVoice",
+          "signatureTokens": [
+            {
+              "text": "open",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioInput",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputVoice",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "input",
@@ -120,6 +334,60 @@
         {
           "name": "play",
           "signature": "play(source: Playable, options?: PlayOptions): Voice",
+          "signatureTokens": [
+            {
+              "text": "play",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Playable",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "source",
@@ -138,6 +406,40 @@
         {
           "name": "registerBus",
           "signature": "registerBus(bus: AudioBus): this",
+          "signatureTokens": [
+            {
+              "text": "registerBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bus",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "bus",
@@ -151,6 +453,40 @@
         {
           "name": "unregisterBus",
           "signature": "unregisterBus(bus: AudioBus): this",
+          "signatureTokens": [
+            {
+              "text": "unregisterBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bus",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "bus",
@@ -164,6 +500,40 @@
         {
           "name": "update",
           "signature": "update(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "_delta",
@@ -186,6 +556,20 @@
         {
           "name": "listener",
           "signature": "listener: AudioListener",
+          "signatureTokens": [
+            {
+              "text": "listener",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioListener",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -193,6 +577,20 @@
         {
           "name": "master",
           "signature": "master: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "master",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -200,6 +598,20 @@
         {
           "name": "music",
           "signature": "music: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "music",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -207,6 +619,20 @@
         {
           "name": "sound",
           "signature": "sound: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "sound",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -214,6 +640,20 @@
         {
           "name": "locked",
           "signature": "locked: boolean",
+          "signatureTokens": [
+            {
+              "text": "locked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "true while audio is blocked by the browser's autoplay policy — no user gesture has resumed the AudioContext yet. Voices played while locked are deferred (streams) or skipped (generators) until that gesture."
@@ -221,6 +661,20 @@
         {
           "name": "muteOnHidden",
           "signature": "muteOnHidden: boolean",
+          "signatureTokens": [
+            {
+              "text": "muteOnHidden",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "When true, the master bus is muted while document.hidden is true. Wired to Application.onVisibilityChange via AudioManager._applyVisibility; the application calls that hook automatically — set this flag to opt in to the behavior."
@@ -237,6 +691,36 @@
         {
           "name": "onUnlock",
           "signature": "onUnlock: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onUnlock",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Fires once when the AudioContext transitions to \"running\" — i.e. the first user gesture unlocks audio under the browser's autoplay policy. Check AudioManager.locked for the current state; sounds played while locked are deferred and start automatically on that gesture."

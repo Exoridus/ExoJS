@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Application, ReflectionKind } from 'typedoc';
 
 import { apiSymbolSchema } from '../src/lib/api-schema';
-import type { ApiCounts, ApiMember, ApiSection, ApiSymbolData } from '../src/lib/api-schema';
+import type { ApiCounts, ApiMember, ApiSection, ApiToken, ApiSymbolData } from '../src/lib/api-schema';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -167,37 +167,76 @@ const toParagraphs = (value: string): string[] =>
         .map(part => toSingleLine(part))
         .filter(part => part.length > 0);
 
-const renderType = (type: any): string => {
-    if (!type) return 'unknown';
+const punct = (text: string): ApiToken => ({ text, kind: 'punctuation' });
+const keyword = (text: string): ApiToken => ({ text, kind: 'keyword' });
+const typeToken = (text: string): ApiToken => ({ text, kind: 'type' });
+
+/** Concatenate token groups, inserting a punctuation separator between them. */
+const joinTokenGroups = (groups: ApiToken[][], separator: string): ApiToken[] => {
+    const out: ApiToken[] = [];
+    groups.forEach((group, index) => {
+        if (index > 0) out.push(punct(separator));
+        out.push(...group);
+    });
+    return out;
+};
+
+/**
+ * Tokenize a TypeDoc type into colored/linkable pieces. Mirrors the old
+ * renderType string output exactly (tokensToText below reproduces it byte for
+ * byte), but every reference name is its own `type` token so the page can turn
+ * documented ones into cross-links. Intrinsics/literals are keywords.
+ */
+const tokenizeType = (type: any): ApiToken[] => {
+    if (!type) return [keyword('unknown')];
     switch (type.type) {
         case 'intrinsic':
-            return type.name;
-        case 'reference':
-            return `${type.name}${type.typeArguments?.length ? `<${type.typeArguments.map(renderType).join(', ')}>` : ''}`;
+            return [keyword(type.name)];
+        case 'reference': {
+            const tokens: ApiToken[] = [typeToken(type.name)];
+            if (type.typeArguments?.length) {
+                tokens.push(punct('<'), ...joinTokenGroups(type.typeArguments.map(tokenizeType), ', '), punct('>'));
+            }
+            return tokens;
+        }
         case 'union':
-            return type.types?.map(renderType).join(' | ') ?? 'unknown';
+            return type.types?.length ? joinTokenGroups(type.types.map(tokenizeType), ' | ') : [keyword('unknown')];
         case 'intersection':
-            return type.types?.map(renderType).join(' & ') ?? 'unknown';
+            return type.types?.length ? joinTokenGroups(type.types.map(tokenizeType), ' & ') : [keyword('unknown')];
         case 'array':
-            return `${renderType(type.elementType)}[]`;
+            return [...tokenizeType(type.elementType), punct('[]')];
         case 'tuple':
-            return `[${(type.elements ?? []).map(renderType).join(', ')}]`;
+            return [punct('['), ...joinTokenGroups((type.elements ?? []).map(tokenizeType), ', '), punct(']')];
         case 'literal':
-            return JSON.stringify(type.value);
+            return [keyword(JSON.stringify(type.value))];
         case 'reflection':
-            return 'object';
+            return [keyword('object')];
         case 'query':
-            return `typeof ${type.queryType?.name ?? 'unknown'}`;
+            return [keyword('typeof'), punct(' '), typeToken(type.queryType?.name ?? 'unknown')];
         case 'typeOperator':
-            return `${type.operator} ${renderType(type.target)}`;
+            return [keyword(type.operator), punct(' '), ...tokenizeType(type.target)];
         case 'conditional':
-            return `${renderType(type.checkType)} extends ${renderType(type.extendsType)} ? ${renderType(type.trueType)} : ${renderType(type.falseType)}`;
+            return [
+                ...tokenizeType(type.checkType),
+                punct(' '),
+                keyword('extends'),
+                punct(' '),
+                ...tokenizeType(type.extendsType),
+                punct(' ? '),
+                ...tokenizeType(type.trueType),
+                punct(' : '),
+                ...tokenizeType(type.falseType),
+            ];
         case 'indexedAccess':
-            return `${renderType(type.objectType)}[${renderType(type.indexType)}]`;
+            return [...tokenizeType(type.objectType), punct('['), ...tokenizeType(type.indexType), punct(']')];
         default:
-            return type.name ?? type.type ?? 'unknown';
+            return [type.name ? typeToken(type.name) : keyword(type.type ?? 'unknown')];
     }
 };
+
+const tokensToText = (tokens: ApiToken[]): string => tokens.map(token => token.text).join('');
+
+const renderType = (type: any): string => tokensToText(tokenizeType(type));
 
 interface ExtractedParam {
     name: string;
@@ -212,12 +251,22 @@ const extractParams = (signature: any): ExtractedParam[] =>
         optional: Boolean(parameter.flags?.isOptional),
     }));
 
-const renderSignature = (name: string, signature: any): string => {
-    const params = extractParams(signature)
-        .map(parameter => `${parameter.name}${parameter.optional ? '?' : ''}: ${parameter.type}`)
-        .join(', ');
-    return `${name}(${params}): ${renderType(signature.type)}`;
+/** Tokenized `name(params): Return` for a constructor/method signature. */
+const tokenizeSignature = (name: string, signature: any): ApiToken[] => {
+    const tokens: ApiToken[] = [name === 'new' ? keyword('new') : { text: name, kind: 'name' }, punct('(')];
+    (signature.parameters ?? []).forEach((parameter: any, index: number) => {
+        if (index > 0) tokens.push(punct(', '));
+        tokens.push({ text: parameter.name, kind: 'param' });
+        if (parameter.flags?.isOptional) tokens.push(punct('?'));
+        tokens.push(punct(': '), ...tokenizeType(parameter.type));
+    });
+    tokens.push(punct(')'), punct(': '), ...tokenizeType(signature.type));
+    return tokens;
 };
+
+/** Tokenized `name: Type` for a property/event member. */
+const tokenizeValue = (name: string, type: any): ApiToken[] =>
+    [{ text: name, kind: 'name' }, punct(': '), ...tokenizeType(type)];
 
 const resolvePropertyType = (member: any): any =>
     member.type ?? member.getSignature?.type;
@@ -238,22 +287,30 @@ const toMemberDescription = (comment: any): string => {
 };
 
 /** A constructor/method member: structured params + a concrete return type. */
-const buildCallableMember = (name: string, signature: any, fallbackComment: any): ApiMember => ({
-    name,
-    signature: renderSignature(name, signature),
-    params: extractParams(signature),
-    returnType: renderType(signature.type),
-    description: toMemberDescription(signature.comment ?? fallbackComment),
-});
+const buildCallableMember = (name: string, signature: any, fallbackComment: any): ApiMember => {
+    const tokens = tokenizeSignature(name, signature);
+    return {
+        name,
+        signature: tokensToText(tokens),
+        signatureTokens: tokens,
+        params: extractParams(signature),
+        returnType: renderType(signature.type),
+        description: toMemberDescription(signature.comment ?? fallbackComment),
+    };
+};
 
-/** A property/event member: no params, no return type. */
-const buildValueMember = (name: string, type: string, comment: any): ApiMember => ({
-    name,
-    signature: `${name}: ${type}`,
-    params: [],
-    returnType: null,
-    description: toMemberDescription(comment),
-});
+/** A property/event member: no params, no return type. Takes the raw type node. */
+const buildValueMember = (name: string, typeNode: any, comment: any): ApiMember => {
+    const tokens = tokenizeValue(name, typeNode);
+    return {
+        name,
+        signature: tokensToText(tokens),
+        signatureTokens: tokens,
+        params: [],
+        returnType: null,
+        description: toMemberDescription(comment),
+    };
+};
 
 /** Wrap ordered members into a section with a slug id derived from the title. */
 const toMemberSection = (title: string, members: ApiMember[]): ApiSection => ({
@@ -293,10 +350,10 @@ const renderClassMembers = (reflection: any): ReflectionBody => {
         (method.signatures ?? []).map((signature: any) => buildCallableMember(method.name, signature, method.comment))
     );
     const propertyMembers = plainProperties.map((property: any) =>
-        buildValueMember(property.name, renderType(resolvePropertyType(property)), resolvePropertyComment(property))
+        buildValueMember(property.name, resolvePropertyType(property), resolvePropertyComment(property))
     );
     const eventMembers = events.map((event: any) =>
-        buildValueMember(event.name, renderType(resolvePropertyType(event)), resolvePropertyComment(event))
+        buildValueMember(event.name, resolvePropertyType(event), resolvePropertyComment(event))
     );
 
     const sections: ApiSection[] = [];
@@ -328,6 +385,7 @@ const renderReflectionBody = (reflection: any): ReflectionBody => {
         const members = (reflection.children ?? []).map((member: any): ApiMember => ({
             name: member.name,
             signature: member.name,
+            signatureTokens: [{ text: member.name, kind: 'name' }],
             params: [],
             returnType: null,
             description: '',

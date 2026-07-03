@@ -31,6 +31,12 @@
         {
           "name": "Circle",
           "signature": "Circle",
+          "signatureTokens": [
+            {
+              "text": "Circle",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "Ellipse",
           "signature": "Ellipse",
+          "signatureTokens": [
+            {
+              "text": "Ellipse",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "Line",
           "signature": "Line",
+          "signatureTokens": [
+            {
+              "text": "Line",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "Point",
           "signature": "Point",
+          "signatureTokens": [
+            {
+              "text": "Point",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "Polygon",
           "signature": "Polygon",
+          "signatureTokens": [
+            {
+              "text": "Polygon",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "Rectangle",
           "signature": "Rectangle",
+          "signatureTokens": [
+            {
+              "text": "Rectangle",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "SceneNode",
           "signature": "SceneNode",
+          "signatureTokens": [
+            {
+              "text": "SceneNode",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

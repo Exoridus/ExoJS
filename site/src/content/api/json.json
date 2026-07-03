@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): Json",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Json",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "Json",
           "description": ""

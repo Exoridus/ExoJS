@@ -3,7 +3,9 @@ import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../../components/DocsSidebar.astro';
-import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, toApiHref } from '../../../lib/api-reference';
+import ApiSignature from '../../../components/ApiSignature.astro';
+import type { SignatureLink } from '../../../components/ApiSignature.astro';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, compactDescription, toApiHref } from '../../../lib/api-reference';
 import type { ApiSection } from '../../../lib/api-schema';
 
 type ApiEntry = CollectionEntry<'api'>;
@@ -29,6 +31,18 @@ if (!entry) {
 const sections = entry.data.sections;
 const { methods: methodsCount, properties: propertiesCount, events: eventsCount } = entry.data.counts;
 const currentSubsystem = entry.data.subsystem as keyof typeof API_SUBSYSTEM_META;
+
+// Build-time cross-link map: a documented symbol name -> its page + summary.
+// Signature `type` tokens whose text is a key become links with a hover
+// preview. Exclude this page's own symbol so it doesn't self-link.
+const typeLinks = new Map<string, SignatureLink>(
+    apiEntries
+        .filter((item: ApiEntry) => item.id !== entry.id)
+        .map((item: ApiEntry) => [
+            item.data.symbol,
+            { href: toApiHref(import.meta.env.BASE_URL, item.id), summary: compactDescription(item.data.description ?? '', 160) },
+        ]),
+);
 
 const kindGlyph = entry.data.kind === 'enum' ? 'E' : entry.data.kind === 'class' ? 'C' : entry.data.kind.slice(0, 1).toUpperCase();
 const kindLabel = entry.data.kind.toLowerCase();
@@ -183,7 +197,7 @@ const sidebarGroups = [
                                 <div class="api-row">
                                     <div class="sig">
                                         <div class="name">
-                                            <code>{member.signature}</code>
+                                            <ApiSignature tokens={member.signatureTokens} links={typeLinks} />
                                         </div>
                                     </div>
                                     <div class="desc">{member.description}</div>

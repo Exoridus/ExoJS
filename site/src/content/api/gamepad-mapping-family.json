@@ -31,6 +31,12 @@
         {
           "name": "ArcadeStick",
           "signature": "ArcadeStick",
+          "signatureTokens": [
+            {
+              "text": "ArcadeStick",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "GameCube",
           "signature": "GameCube",
+          "signatureTokens": [
+            {
+              "text": "GameCube",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "GenericDualAnalog",
           "signature": "GenericDualAnalog",
+          "signatureTokens": [
+            {
+              "text": "GenericDualAnalog",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "JoyConLeft",
           "signature": "JoyConLeft",
+          "signatureTokens": [
+            {
+              "text": "JoyConLeft",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "JoyConRight",
           "signature": "JoyConRight",
+          "signatureTokens": [
+            {
+              "text": "JoyConRight",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "PlayStation",
           "signature": "PlayStation",
+          "signatureTokens": [
+            {
+              "text": "PlayStation",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "SteamController",
           "signature": "SteamController",
+          "signatureTokens": [
+            {
+              "text": "SteamController",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -80,6 +122,12 @@
         {
           "name": "SteamDeck",
           "signature": "SteamDeck",
+          "signatureTokens": [
+            {
+              "text": "SteamDeck",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -87,6 +135,12 @@
         {
           "name": "SwitchPro",
           "signature": "SwitchPro",
+          "signatureTokens": [
+            {
+              "text": "SwitchPro",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -94,6 +148,12 @@
         {
           "name": "Xbox",
           "signature": "Xbox",
+          "signatureTokens": [
+            {
+              "text": "Xbox",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

@@ -33,6 +33,40 @@
         {
           "name": "new",
           "signature": "new(options: TimeStepperOptions): TimeStepper",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TimeStepperOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TimeStepper",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -55,6 +89,40 @@
         {
           "name": "advance",
           "signature": "advance(frameDeltaSeconds: number): number",
+          "signatureTokens": [
+            {
+              "text": "advance",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "frameDeltaSeconds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "frameDeltaSeconds",
@@ -68,6 +136,28 @@
         {
           "name": "reset",
           "signature": "reset(): void",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Clear the accumulator (e.g. after a teleport or a pause)."
@@ -84,6 +174,20 @@
         {
           "name": "fixedDelta",
           "signature": "fixedDelta: number",
+          "signatureTokens": [
+            {
+              "text": "fixedDelta",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -91,6 +195,20 @@
         {
           "name": "maxSubSteps",
           "signature": "maxSubSteps: number",
+          "signatureTokens": [
+            {
+              "text": "maxSubSteps",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -98,6 +216,20 @@
         {
           "name": "accumulator",
           "signature": "accumulator: number",
+          "signatureTokens": [
+            {
+              "text": "accumulator",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Unconsumed accumulated time (seconds) currently held, always < fixedDelta after an advance."
@@ -105,6 +237,20 @@
         {
           "name": "alpha",
           "signature": "alpha: number",
+          "signatureTokens": [
+            {
+              "text": "alpha",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Interpolation fraction in [0, 1) = accumulator / fixedDelta."

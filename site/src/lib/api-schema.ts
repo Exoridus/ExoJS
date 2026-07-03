@@ -18,6 +18,17 @@ export const apiParamSchema = z.object({
 });
 
 /**
+ * One lexical piece of a rendered signature. `kind` drives the color class;
+ * `text` is the literal characters. A `type` token whose `text` matches a
+ * documented symbol name becomes a cross-link at render time — the generator
+ * marks what is a type from the AST, the page decides what actually has a page.
+ */
+export const apiTokenSchema = z.object({
+    text: z.string(),
+    kind: z.enum(['name', 'param', 'keyword', 'type', 'punctuation']),
+});
+
+/**
  * One documented member: a constructor/method (with structured params +
  * returnType) or a property/event/enum member (params empty, returnType null).
  * `signature` is the fully rendered, human-readable form the page shows today;
@@ -26,6 +37,7 @@ export const apiParamSchema = z.object({
 export const apiMemberSchema = z.object({
     name: z.string(),
     signature: z.string(),
+    signatureTokens: z.array(apiTokenSchema),
     params: z.array(apiParamSchema),
     returnType: z.string().nullable(),
     description: z.string(),
@@ -77,6 +89,7 @@ export const apiSymbolSchema = z.object({
 });
 
 export type ApiParam = z.infer<typeof apiParamSchema>;
+export type ApiToken = z.infer<typeof apiTokenSchema>;
 export type ApiMember = z.infer<typeof apiMemberSchema>;
 export type ApiSection = z.infer<typeof apiSectionSchema>;
 export type ApiCounts = z.infer<typeof apiCountsSchema>;

@@ -34,6 +34,40 @@
         {
           "name": "new",
           "signature": "new(options: AudioGeneratorOptions): AudioGenerator",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioGeneratorOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioGenerator",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -56,6 +90,56 @@
         {
           "name": "_createVoice",
           "signature": "_createVoice(manager: AudioManager, options: PlayOptions): Voice",
+          "signatureTokens": [
+            {
+              "text": "_createVoice",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "manager",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioManager",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "manager",
@@ -74,6 +158,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Stop all active voices."
@@ -81,6 +187,40 @@
         {
           "name": "setNote",
           "signature": "setNote(midiNote: number): this",
+          "signatureTokens": [
+            {
+              "text": "setNote",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "midiNote",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "midiNote",
@@ -94,6 +234,28 @@
         {
           "name": "stopAll",
           "signature": "stopAll(): this",
+          "signatureTokens": [
+            {
+              "text": "stopAll",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": "Stop every currently active voice from this generator."
@@ -101,6 +263,40 @@
         {
           "name": "midiToFrequency",
           "signature": "midiToFrequency(midiNote: number): number",
+          "signatureTokens": [
+            {
+              "text": "midiToFrequency",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "midiNote",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "midiNote",
@@ -123,6 +319,20 @@
         {
           "name": "detune",
           "signature": "detune: number",
+          "signatureTokens": [
+            {
+              "text": "detune",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Current pitch detune in cents."
@@ -130,6 +340,28 @@
         {
           "name": "envelope",
           "signature": "envelope: Envelope | null",
+          "signatureTokens": [
+            {
+              "text": "envelope",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Envelope",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Optional ADSR envelope applied to each voice."
@@ -137,6 +369,20 @@
         {
           "name": "frequency",
           "signature": "frequency: number",
+          "signatureTokens": [
+            {
+              "text": "frequency",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Current oscillator frequency in Hz. Snapshotted into each new voice."
@@ -144,6 +390,20 @@
         {
           "name": "muted",
           "signature": "muted: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Default muted flag (starts a voice at volume 0)."
@@ -151,6 +411,20 @@
         {
           "name": "priority",
           "signature": "priority: number",
+          "signatureTokens": [
+            {
+              "text": "priority",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Priority for the LowestPriority eviction strategy."
@@ -158,6 +432,20 @@
         {
           "name": "type",
           "signature": "type: OscillatorType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OscillatorType",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Current oscillator waveform."
@@ -165,6 +453,20 @@
         {
           "name": "volume",
           "signature": "volume: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Default volume for new voices. Range [0, 1]."
@@ -172,6 +474,20 @@
         {
           "name": "poolSize",
           "signature": "poolSize: number",
+          "signatureTokens": [
+            {
+              "text": "poolSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -179,6 +495,20 @@
         {
           "name": "poolStrategy",
           "signature": "poolStrategy: SoundPoolStrategy",
+          "signatureTokens": [
+            {
+              "text": "poolStrategy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SoundPoolStrategy",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

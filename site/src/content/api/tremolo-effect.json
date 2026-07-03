@@ -37,6 +37,40 @@
         {
           "name": "new",
           "signature": "new(options: TremoloEffectOptions): TremoloEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TremoloEffectOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TremoloEffect",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -59,6 +93,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
@@ -75,6 +131,20 @@
         {
           "name": "autoPan",
           "signature": "autoPan: boolean",
+          "signatureTokens": [
+            {
+              "text": "autoPan",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Whether auto-pan is enabled. Set at construction time via TremoloEffectOptions.autoPan; read-only at runtime. Default false."
@@ -82,6 +152,20 @@
         {
           "name": "depth",
           "signature": "depth: number",
+          "signatureTokens": [
+            {
+              "text": "depth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Modulation depth, 0..1. At 0 the effect is transparent; at 0.5 the gain briefly reaches zero at the trough; at depth>0.5 the gain goes negative (phase inversion). Default 0.7. Ramped via setTargetAtTime."
@@ -89,6 +173,20 @@
         {
           "name": "inputNode",
           "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
@@ -96,6 +194,20 @@
         {
           "name": "outputNode",
           "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
@@ -103,6 +215,20 @@
         {
           "name": "rateHz",
           "signature": "rateHz: number",
+          "signatureTokens": [
+            {
+              "text": "rateHz",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "LFO oscillation rate in Hz. Range 0..20, default 5. Ramped via setTargetAtTime when changed at runtime."
@@ -110,6 +236,32 @@
         {
           "name": "ready",
           "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
@@ -117,6 +269,20 @@
         {
           "name": "wet",
           "signature": "wet: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Wet (tremolo) mix level, 0..1. The dry level is automatically 1 - wet. Default 1. Ramped via setTargetAtTime when changed at runtime."

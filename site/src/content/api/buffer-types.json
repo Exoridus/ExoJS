@@ -31,6 +31,12 @@
         {
           "name": "ArrayBuffer",
           "signature": "ArrayBuffer",
+          "signatureTokens": [
+            {
+              "text": "ArrayBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -38,6 +44,12 @@
         {
           "name": "CopyReadBuffer",
           "signature": "CopyReadBuffer",
+          "signatureTokens": [
+            {
+              "text": "CopyReadBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -45,6 +57,12 @@
         {
           "name": "CopyWriteBuffer",
           "signature": "CopyWriteBuffer",
+          "signatureTokens": [
+            {
+              "text": "CopyWriteBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -52,6 +70,12 @@
         {
           "name": "ElementArrayBuffer",
           "signature": "ElementArrayBuffer",
+          "signatureTokens": [
+            {
+              "text": "ElementArrayBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -59,6 +83,12 @@
         {
           "name": "PixelPackBuffer",
           "signature": "PixelPackBuffer",
+          "signatureTokens": [
+            {
+              "text": "PixelPackBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -66,6 +96,12 @@
         {
           "name": "PixelUnpackBuffer",
           "signature": "PixelUnpackBuffer",
+          "signatureTokens": [
+            {
+              "text": "PixelUnpackBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -73,6 +109,12 @@
         {
           "name": "TransformFeedbackBuffer",
           "signature": "TransformFeedbackBuffer",
+          "signatureTokens": [
+            {
+              "text": "TransformFeedbackBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -80,6 +122,12 @@
         {
           "name": "UniformBuffer",
           "signature": "UniformBuffer",
+          "signatureTokens": [
+            {
+              "text": "UniformBuffer",
+              "kind": "name"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

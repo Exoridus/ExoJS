@@ -31,6 +31,40 @@
         {
           "name": "new",
           "signature": "new(options: BodyOptions): PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BodyOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "options",
@@ -53,6 +87,28 @@
         {
           "name": "_markDestroyed",
           "signature": "_markDestroyed(): void",
+          "signatureTokens": [
+            {
+              "text": "_markDestroyed",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Internal: mark destroyed (called by the world)."
@@ -60,6 +116,40 @@
         {
           "name": "_removeCollider",
           "signature": "_removeCollider(collider: Collider): void",
+          "signatureTokens": [
+            {
+              "text": "_removeCollider",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "collider",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "collider",
@@ -73,6 +163,48 @@
         {
           "name": "addCollider",
           "signature": "addCollider(collider: Collider | ColliderOptions): Collider",
+          "signatureTokens": [
+            {
+              "text": "addCollider",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "collider",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColliderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "collider",
@@ -86,6 +218,56 @@
         {
           "name": "applyForce",
           "signature": "applyForce(forceX: number, forceY: number): this",
+          "signatureTokens": [
+            {
+              "text": "applyForce",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "forceX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "forceY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "forceX",
@@ -104,6 +286,96 @@
         {
           "name": "applyImpulse",
           "signature": "applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this",
+          "signatureTokens": [
+            {
+              "text": "applyImpulse",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "impulseX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "impulseY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointX",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointY",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "impulseX",
@@ -132,6 +404,40 @@
         {
           "name": "applyTorque",
           "signature": "applyTorque(torque: number): this",
+          "signatureTokens": [
+            {
+              "text": "applyTorque",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "torque",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "torque",
@@ -145,6 +451,56 @@
         {
           "name": "setTransform",
           "signature": "setTransform(position: VectorLike, angle: number): this",
+          "signatureTokens": [
+            {
+              "text": "setTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "position",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "angle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "position",
@@ -163,6 +519,28 @@
         {
           "name": "synchronizeColliders",
           "signature": "synchronizeColliders(): void",
+          "signatureTokens": [
+            {
+              "text": "synchronizeColliders",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": "Refresh every collider's world geometry from the current transform."
@@ -170,6 +548,28 @@
         {
           "name": "wake",
           "signature": "wake(): this",
+          "signatureTokens": [
+            {
+              "text": "wake",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": "Wake the body if it is asleep, resetting its sleep timer. The rest of its island wakes with it on the next step (a contact to an awake body keeps the whole island awake). Returns this."
@@ -186,6 +586,20 @@
         {
           "name": "allowSleep",
           "signature": "allowSleep: boolean",
+          "signatureTokens": [
+            {
+              "text": "allowSleep",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "When false, this body is never put to sleep. Default true."
@@ -193,6 +607,20 @@
         {
           "name": "angularDamping",
           "signature": "angularDamping: number",
+          "signatureTokens": [
+            {
+              "text": "angularDamping",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Angular damping applied to the angular velocity each sub-step."
@@ -200,6 +628,20 @@
         {
           "name": "angularVelocity",
           "signature": "angularVelocity: number",
+          "signatureTokens": [
+            {
+              "text": "angularVelocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Angular velocity in rad/s."
@@ -207,6 +649,20 @@
         {
           "name": "fixedRotation",
           "signature": "fixedRotation: boolean",
+          "signatureTokens": [
+            {
+              "text": "fixedRotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "When true, rotational inertia is treated as infinite."
@@ -214,6 +670,20 @@
         {
           "name": "gravityScale",
           "signature": "gravityScale: number",
+          "signatureTokens": [
+            {
+              "text": "gravityScale",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Per-body multiplier on world gravity (e.g. 0 to ignore gravity)."
@@ -221,6 +691,20 @@
         {
           "name": "inertia",
           "signature": "inertia: number",
+          "signatureTokens": [
+            {
+              "text": "inertia",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Rotational inertia about the centre of mass (0 for static/kinematic or fixed rotation)."
@@ -228,6 +712,20 @@
         {
           "name": "invInertia",
           "signature": "invInertia: number",
+          "signatureTokens": [
+            {
+              "text": "invInertia",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Inverse rotational inertia (0 = no angular response)."
@@ -235,6 +733,20 @@
         {
           "name": "invMass",
           "signature": "invMass: number",
+          "signatureTokens": [
+            {
+              "text": "invMass",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Inverse mass (0 = immovable)."
@@ -242,6 +754,20 @@
         {
           "name": "isBullet",
           "signature": "isBullet: boolean",
+          "signatureTokens": [
+            {
+              "text": "isBullet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "When true, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls."
@@ -249,6 +775,20 @@
         {
           "name": "linearDamping",
           "signature": "linearDamping: number",
+          "signatureTokens": [
+            {
+              "text": "linearDamping",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Linear damping applied to the velocity each sub-step."
@@ -256,6 +796,20 @@
         {
           "name": "linearVelocityX",
           "signature": "linearVelocityX: number",
+          "signatureTokens": [
+            {
+              "text": "linearVelocityX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Linear velocity X in px/s."
@@ -263,6 +817,20 @@
         {
           "name": "linearVelocityY",
           "signature": "linearVelocityY: number",
+          "signatureTokens": [
+            {
+              "text": "linearVelocityY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Linear velocity Y in px/s."
@@ -270,6 +838,20 @@
         {
           "name": "mass",
           "signature": "mass: number",
+          "signatureTokens": [
+            {
+              "text": "mass",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Total mass (0 for static/kinematic)."
@@ -277,6 +859,20 @@
         {
           "name": "type",
           "signature": "type: BodyType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BodyType",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -284,6 +880,20 @@
         {
           "name": "angle",
           "signature": "angle: number",
+          "signatureTokens": [
+            {
+              "text": "angle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Rotation in radians."
@@ -291,6 +901,20 @@
         {
           "name": "attached",
           "signature": "attached: boolean",
+          "signatureTokens": [
+            {
+              "text": "attached",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "true once the body has been added to a world (guards against double-add)."
@@ -298,6 +922,20 @@
         {
           "name": "centerOfMassX",
           "signature": "centerOfMassX: number",
+          "signatureTokens": [
+            {
+              "text": "centerOfMassX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Centre of mass in body-local space (relative to the body origin)."
@@ -305,6 +943,20 @@
         {
           "name": "centerOfMassY",
           "signature": "centerOfMassY: number",
+          "signatureTokens": [
+            {
+              "text": "centerOfMassY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Centre of mass in body-local space (relative to the body origin)."
@@ -312,6 +964,32 @@
         {
           "name": "colliders",
           "signature": "colliders: readonly Collider[]",
+          "signatureTokens": [
+            {
+              "text": "colliders",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The body's colliders (read-only view)."
@@ -319,6 +997,20 @@
         {
           "name": "destroyed",
           "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "true after the owning world has destroyed this body."
@@ -326,6 +1018,20 @@
         {
           "name": "id",
           "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "Stable id, assigned when the body joins a world via world.add(); -1 until then."
@@ -333,6 +1039,20 @@
         {
           "name": "isMassReady",
           "signature": "isMassReady: boolean",
+          "signatureTokens": [
+            {
+              "text": "isMassReady",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "true when the body is ready to simulate. Static/kinematic bodies are always ready (infinite-mass semantics); a dynamic body is ready only once it has at least one positive-density collider."
@@ -340,6 +1060,20 @@
         {
           "name": "isSleeping",
           "signature": "isSleeping: boolean",
+          "signatureTokens": [
+            {
+              "text": "isSleeping",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "true when the body is asleep — skipped by the integrator and solver until woken."
@@ -347,6 +1081,20 @@
         {
           "name": "position",
           "signature": "position: Vector",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "A fresh Vector copy of the body's world position."
@@ -354,6 +1102,32 @@
         {
           "name": "transform",
           "signature": "transform: Readonly<Transform>",
+          "signatureTokens": [
+            {
+              "text": "transform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Transform",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "The body's world transform (read-only; mutate via setTransform)."
@@ -361,6 +1135,20 @@
         {
           "name": "worldCenterOfMassX",
           "signature": "worldCenterOfMassX: number",
+          "signatureTokens": [
+            {
+              "text": "worldCenterOfMassX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "World-space centre of mass X (body origin + rotated local centre of mass)."
@@ -368,6 +1156,20 @@
         {
           "name": "worldCenterOfMassY",
           "signature": "worldCenterOfMassY: number",
+          "signatureTokens": [
+            {
+              "text": "worldCenterOfMassY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "World-space centre of mass Y."
@@ -375,6 +1177,20 @@
         {
           "name": "x",
           "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "World X."
@@ -382,6 +1198,20 @@
         {
           "name": "y",
           "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": "World Y."

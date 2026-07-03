@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): TextAsset",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextAsset",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "TextAsset",
           "description": ""

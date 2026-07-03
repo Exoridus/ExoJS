@@ -33,6 +33,88 @@
         {
           "name": "new",
           "signature": "new(r: number, g: number, b: number, a: number): Color",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "r",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "g",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "b",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "a",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "r",
@@ -70,6 +152,28 @@
         {
           "name": "clone",
           "signature": "clone(): this",
+          "signatureTokens": [
+            {
+              "text": "clone",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "this",
           "description": ""
@@ -77,6 +181,40 @@
         {
           "name": "copy",
           "signature": "copy(color: Color): this",
+          "signatureTokens": [
+            {
+              "text": "copy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "color",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "color",
@@ -90,6 +228,28 @@
         {
           "name": "destroy",
           "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "void",
           "description": ""
@@ -97,6 +257,52 @@
         {
           "name": "equals",
           "signature": "equals(__namedParameters: Partial<Color>): boolean",
+          "signatureTokens": [
+            {
+              "text": "equals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "__namedParameters",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "__namedParameters",
@@ -110,6 +316,88 @@
         {
           "name": "set",
           "signature": "set(r: number, g: number, b: number, a: number): this",
+          "signatureTokens": [
+            {
+              "text": "set",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "r",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "g",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "b",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "a",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "r",
@@ -138,6 +426,40 @@
         {
           "name": "toArray",
           "signature": "toArray(normalized: boolean): Float32Array",
+          "signatureTokens": [
+            {
+              "text": "toArray",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "normalized",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            }
+          ],
           "params": [
             {
               "name": "normalized",
@@ -151,6 +473,28 @@
         {
           "name": "toRgba",
           "signature": "toRgba(): number",
+          "signatureTokens": [
+            {
+              "text": "toRgba",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": "number",
           "description": "Return the color packed into a single 32-bit RGBA value (R in low byte, A in high byte). Cached after first call until any channel is written. RGB is preserved at every alpha — a fully transparent red and a fully transparent black pack to different values."
@@ -158,6 +502,40 @@
         {
           "name": "toString",
           "signature": "toString(prefixed: boolean): string",
+          "signatureTokens": [
+            {
+              "text": "toString",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "prefixed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
           "params": [
             {
               "name": "prefixed",
@@ -180,6 +558,20 @@
         {
           "name": "aliceBlue",
           "signature": "aliceBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "aliceBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -187,6 +579,20 @@
         {
           "name": "antiqueWhite",
           "signature": "antiqueWhite: Color",
+          "signatureTokens": [
+            {
+              "text": "antiqueWhite",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -194,6 +600,20 @@
         {
           "name": "aqua",
           "signature": "aqua: Color",
+          "signatureTokens": [
+            {
+              "text": "aqua",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -201,6 +621,20 @@
         {
           "name": "aquamarine",
           "signature": "aquamarine: Color",
+          "signatureTokens": [
+            {
+              "text": "aquamarine",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -208,6 +642,20 @@
         {
           "name": "azure",
           "signature": "azure: Color",
+          "signatureTokens": [
+            {
+              "text": "azure",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -215,6 +663,20 @@
         {
           "name": "beige",
           "signature": "beige: Color",
+          "signatureTokens": [
+            {
+              "text": "beige",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -222,6 +684,20 @@
         {
           "name": "bisque",
           "signature": "bisque: Color",
+          "signatureTokens": [
+            {
+              "text": "bisque",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -229,6 +705,20 @@
         {
           "name": "black",
           "signature": "black: Color",
+          "signatureTokens": [
+            {
+              "text": "black",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -236,6 +726,20 @@
         {
           "name": "blanchedAlmond",
           "signature": "blanchedAlmond: Color",
+          "signatureTokens": [
+            {
+              "text": "blanchedAlmond",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -243,6 +747,20 @@
         {
           "name": "blue",
           "signature": "blue: Color",
+          "signatureTokens": [
+            {
+              "text": "blue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -250,6 +768,20 @@
         {
           "name": "blueViolet",
           "signature": "blueViolet: Color",
+          "signatureTokens": [
+            {
+              "text": "blueViolet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -257,6 +789,20 @@
         {
           "name": "brown",
           "signature": "brown: Color",
+          "signatureTokens": [
+            {
+              "text": "brown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -264,6 +810,20 @@
         {
           "name": "burlyWood",
           "signature": "burlyWood: Color",
+          "signatureTokens": [
+            {
+              "text": "burlyWood",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -271,6 +831,20 @@
         {
           "name": "cadetBlue",
           "signature": "cadetBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "cadetBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -278,6 +852,20 @@
         {
           "name": "chartreuse",
           "signature": "chartreuse: Color",
+          "signatureTokens": [
+            {
+              "text": "chartreuse",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -285,6 +873,20 @@
         {
           "name": "chocolate",
           "signature": "chocolate: Color",
+          "signatureTokens": [
+            {
+              "text": "chocolate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -292,6 +894,20 @@
         {
           "name": "coral",
           "signature": "coral: Color",
+          "signatureTokens": [
+            {
+              "text": "coral",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -299,6 +915,20 @@
         {
           "name": "cornflowerBlue",
           "signature": "cornflowerBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "cornflowerBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -306,6 +936,20 @@
         {
           "name": "cornsilk",
           "signature": "cornsilk: Color",
+          "signatureTokens": [
+            {
+              "text": "cornsilk",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -313,6 +957,20 @@
         {
           "name": "crimson",
           "signature": "crimson: Color",
+          "signatureTokens": [
+            {
+              "text": "crimson",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -320,6 +978,20 @@
         {
           "name": "cyan",
           "signature": "cyan: Color",
+          "signatureTokens": [
+            {
+              "text": "cyan",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -327,6 +999,20 @@
         {
           "name": "darkBlue",
           "signature": "darkBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "darkBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -334,6 +1020,20 @@
         {
           "name": "darkCyan",
           "signature": "darkCyan: Color",
+          "signatureTokens": [
+            {
+              "text": "darkCyan",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -341,6 +1041,20 @@
         {
           "name": "darkGoldenrod",
           "signature": "darkGoldenrod: Color",
+          "signatureTokens": [
+            {
+              "text": "darkGoldenrod",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -348,6 +1062,20 @@
         {
           "name": "darkGray",
           "signature": "darkGray: Color",
+          "signatureTokens": [
+            {
+              "text": "darkGray",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -355,6 +1083,20 @@
         {
           "name": "darkGreen",
           "signature": "darkGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "darkGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -362,6 +1104,20 @@
         {
           "name": "darkKhaki",
           "signature": "darkKhaki: Color",
+          "signatureTokens": [
+            {
+              "text": "darkKhaki",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -369,6 +1125,20 @@
         {
           "name": "darkMagenta",
           "signature": "darkMagenta: Color",
+          "signatureTokens": [
+            {
+              "text": "darkMagenta",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -376,6 +1146,20 @@
         {
           "name": "darkOliveGreen",
           "signature": "darkOliveGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "darkOliveGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -383,6 +1167,20 @@
         {
           "name": "darkOrange",
           "signature": "darkOrange: Color",
+          "signatureTokens": [
+            {
+              "text": "darkOrange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -390,6 +1188,20 @@
         {
           "name": "darkOrchid",
           "signature": "darkOrchid: Color",
+          "signatureTokens": [
+            {
+              "text": "darkOrchid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -397,6 +1209,20 @@
         {
           "name": "darkRed",
           "signature": "darkRed: Color",
+          "signatureTokens": [
+            {
+              "text": "darkRed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -404,6 +1230,20 @@
         {
           "name": "darkSalmon",
           "signature": "darkSalmon: Color",
+          "signatureTokens": [
+            {
+              "text": "darkSalmon",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -411,6 +1251,20 @@
         {
           "name": "darkSeaGreen",
           "signature": "darkSeaGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "darkSeaGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -418,6 +1272,20 @@
         {
           "name": "darkSlateBlue",
           "signature": "darkSlateBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "darkSlateBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -425,6 +1293,20 @@
         {
           "name": "darkSlateGray",
           "signature": "darkSlateGray: Color",
+          "signatureTokens": [
+            {
+              "text": "darkSlateGray",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -432,6 +1314,20 @@
         {
           "name": "darkTurquoise",
           "signature": "darkTurquoise: Color",
+          "signatureTokens": [
+            {
+              "text": "darkTurquoise",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -439,6 +1335,20 @@
         {
           "name": "darkViolet",
           "signature": "darkViolet: Color",
+          "signatureTokens": [
+            {
+              "text": "darkViolet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -446,6 +1356,20 @@
         {
           "name": "deepPink",
           "signature": "deepPink: Color",
+          "signatureTokens": [
+            {
+              "text": "deepPink",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -453,6 +1377,20 @@
         {
           "name": "deepSkyBlue",
           "signature": "deepSkyBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "deepSkyBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -460,6 +1398,20 @@
         {
           "name": "dimGray",
           "signature": "dimGray: Color",
+          "signatureTokens": [
+            {
+              "text": "dimGray",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -467,6 +1419,20 @@
         {
           "name": "dodgerBlue",
           "signature": "dodgerBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "dodgerBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -474,6 +1440,20 @@
         {
           "name": "firebrick",
           "signature": "firebrick: Color",
+          "signatureTokens": [
+            {
+              "text": "firebrick",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -481,6 +1461,20 @@
         {
           "name": "floralWhite",
           "signature": "floralWhite: Color",
+          "signatureTokens": [
+            {
+              "text": "floralWhite",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -488,6 +1482,20 @@
         {
           "name": "forestGreen",
           "signature": "forestGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "forestGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -495,6 +1503,20 @@
         {
           "name": "fuchsia",
           "signature": "fuchsia: Color",
+          "signatureTokens": [
+            {
+              "text": "fuchsia",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -502,6 +1524,20 @@
         {
           "name": "gainsboro",
           "signature": "gainsboro: Color",
+          "signatureTokens": [
+            {
+              "text": "gainsboro",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -509,6 +1545,20 @@
         {
           "name": "ghostWhite",
           "signature": "ghostWhite: Color",
+          "signatureTokens": [
+            {
+              "text": "ghostWhite",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -516,6 +1566,20 @@
         {
           "name": "gold",
           "signature": "gold: Color",
+          "signatureTokens": [
+            {
+              "text": "gold",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -523,6 +1587,20 @@
         {
           "name": "goldenrod",
           "signature": "goldenrod: Color",
+          "signatureTokens": [
+            {
+              "text": "goldenrod",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -530,6 +1608,20 @@
         {
           "name": "gray",
           "signature": "gray: Color",
+          "signatureTokens": [
+            {
+              "text": "gray",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -537,6 +1629,20 @@
         {
           "name": "green",
           "signature": "green: Color",
+          "signatureTokens": [
+            {
+              "text": "green",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -544,6 +1650,20 @@
         {
           "name": "greenYellow",
           "signature": "greenYellow: Color",
+          "signatureTokens": [
+            {
+              "text": "greenYellow",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -551,6 +1671,20 @@
         {
           "name": "honeydew",
           "signature": "honeydew: Color",
+          "signatureTokens": [
+            {
+              "text": "honeydew",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -558,6 +1692,20 @@
         {
           "name": "hotPink",
           "signature": "hotPink: Color",
+          "signatureTokens": [
+            {
+              "text": "hotPink",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -565,6 +1713,20 @@
         {
           "name": "indianRed",
           "signature": "indianRed: Color",
+          "signatureTokens": [
+            {
+              "text": "indianRed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -572,6 +1734,20 @@
         {
           "name": "indigo",
           "signature": "indigo: Color",
+          "signatureTokens": [
+            {
+              "text": "indigo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -579,6 +1755,20 @@
         {
           "name": "ivory",
           "signature": "ivory: Color",
+          "signatureTokens": [
+            {
+              "text": "ivory",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -586,6 +1776,20 @@
         {
           "name": "khaki",
           "signature": "khaki: Color",
+          "signatureTokens": [
+            {
+              "text": "khaki",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -593,6 +1797,20 @@
         {
           "name": "lavender",
           "signature": "lavender: Color",
+          "signatureTokens": [
+            {
+              "text": "lavender",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -600,6 +1818,20 @@
         {
           "name": "lavenderBlush",
           "signature": "lavenderBlush: Color",
+          "signatureTokens": [
+            {
+              "text": "lavenderBlush",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -607,6 +1839,20 @@
         {
           "name": "lawnGreen",
           "signature": "lawnGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "lawnGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -614,6 +1860,20 @@
         {
           "name": "lemonChiffon",
           "signature": "lemonChiffon: Color",
+          "signatureTokens": [
+            {
+              "text": "lemonChiffon",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -621,6 +1881,20 @@
         {
           "name": "lightBlue",
           "signature": "lightBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "lightBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -628,6 +1902,20 @@
         {
           "name": "lightCoral",
           "signature": "lightCoral: Color",
+          "signatureTokens": [
+            {
+              "text": "lightCoral",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -635,6 +1923,20 @@
         {
           "name": "lightCyan",
           "signature": "lightCyan: Color",
+          "signatureTokens": [
+            {
+              "text": "lightCyan",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -642,6 +1944,20 @@
         {
           "name": "lightGoldenrodYellow",
           "signature": "lightGoldenrodYellow: Color",
+          "signatureTokens": [
+            {
+              "text": "lightGoldenrodYellow",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -649,6 +1965,20 @@
         {
           "name": "lightGray",
           "signature": "lightGray: Color",
+          "signatureTokens": [
+            {
+              "text": "lightGray",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -656,6 +1986,20 @@
         {
           "name": "lightGreen",
           "signature": "lightGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "lightGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -663,6 +2007,20 @@
         {
           "name": "lightPink",
           "signature": "lightPink: Color",
+          "signatureTokens": [
+            {
+              "text": "lightPink",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -670,6 +2028,20 @@
         {
           "name": "lightSalmon",
           "signature": "lightSalmon: Color",
+          "signatureTokens": [
+            {
+              "text": "lightSalmon",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -677,6 +2049,20 @@
         {
           "name": "lightSeaGreen",
           "signature": "lightSeaGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "lightSeaGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -684,6 +2070,20 @@
         {
           "name": "lightSkyBlue",
           "signature": "lightSkyBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "lightSkyBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -691,6 +2091,20 @@
         {
           "name": "lightSlateGray",
           "signature": "lightSlateGray: Color",
+          "signatureTokens": [
+            {
+              "text": "lightSlateGray",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -698,6 +2112,20 @@
         {
           "name": "lightSteelBlue",
           "signature": "lightSteelBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "lightSteelBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -705,6 +2133,20 @@
         {
           "name": "lightYellow",
           "signature": "lightYellow: Color",
+          "signatureTokens": [
+            {
+              "text": "lightYellow",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -712,6 +2154,20 @@
         {
           "name": "lime",
           "signature": "lime: Color",
+          "signatureTokens": [
+            {
+              "text": "lime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -719,6 +2175,20 @@
         {
           "name": "limeGreen",
           "signature": "limeGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "limeGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -726,6 +2196,20 @@
         {
           "name": "linen",
           "signature": "linen: Color",
+          "signatureTokens": [
+            {
+              "text": "linen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -733,6 +2217,20 @@
         {
           "name": "magenta",
           "signature": "magenta: Color",
+          "signatureTokens": [
+            {
+              "text": "magenta",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -740,6 +2238,20 @@
         {
           "name": "maroon",
           "signature": "maroon: Color",
+          "signatureTokens": [
+            {
+              "text": "maroon",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -747,6 +2259,20 @@
         {
           "name": "mediumAquamarine",
           "signature": "mediumAquamarine: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumAquamarine",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -754,6 +2280,20 @@
         {
           "name": "mediumBlue",
           "signature": "mediumBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -761,6 +2301,20 @@
         {
           "name": "mediumOrchid",
           "signature": "mediumOrchid: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumOrchid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -768,6 +2322,20 @@
         {
           "name": "mediumPurple",
           "signature": "mediumPurple: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumPurple",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -775,6 +2343,20 @@
         {
           "name": "mediumSeaGreen",
           "signature": "mediumSeaGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumSeaGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -782,6 +2364,20 @@
         {
           "name": "mediumSlateBlue",
           "signature": "mediumSlateBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumSlateBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -789,6 +2385,20 @@
         {
           "name": "mediumSpringGreen",
           "signature": "mediumSpringGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumSpringGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -796,6 +2406,20 @@
         {
           "name": "mediumTurquoise",
           "signature": "mediumTurquoise: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumTurquoise",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -803,6 +2427,20 @@
         {
           "name": "mediumVioletRed",
           "signature": "mediumVioletRed: Color",
+          "signatureTokens": [
+            {
+              "text": "mediumVioletRed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -810,6 +2448,20 @@
         {
           "name": "midnightBlue",
           "signature": "midnightBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "midnightBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -817,6 +2469,20 @@
         {
           "name": "mintCream",
           "signature": "mintCream: Color",
+          "signatureTokens": [
+            {
+              "text": "mintCream",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -824,6 +2490,20 @@
         {
           "name": "mistyRose",
           "signature": "mistyRose: Color",
+          "signatureTokens": [
+            {
+              "text": "mistyRose",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -831,6 +2511,20 @@
         {
           "name": "moccasin",
           "signature": "moccasin: Color",
+          "signatureTokens": [
+            {
+              "text": "moccasin",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -838,6 +2532,20 @@
         {
           "name": "navajoWhite",
           "signature": "navajoWhite: Color",
+          "signatureTokens": [
+            {
+              "text": "navajoWhite",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -845,6 +2553,20 @@
         {
           "name": "navy",
           "signature": "navy: Color",
+          "signatureTokens": [
+            {
+              "text": "navy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -852,6 +2574,20 @@
         {
           "name": "oldLace",
           "signature": "oldLace: Color",
+          "signatureTokens": [
+            {
+              "text": "oldLace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -859,6 +2595,20 @@
         {
           "name": "olive",
           "signature": "olive: Color",
+          "signatureTokens": [
+            {
+              "text": "olive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -866,6 +2616,20 @@
         {
           "name": "oliveDrab",
           "signature": "oliveDrab: Color",
+          "signatureTokens": [
+            {
+              "text": "oliveDrab",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -873,6 +2637,20 @@
         {
           "name": "orange",
           "signature": "orange: Color",
+          "signatureTokens": [
+            {
+              "text": "orange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -880,6 +2658,20 @@
         {
           "name": "orangeRed",
           "signature": "orangeRed: Color",
+          "signatureTokens": [
+            {
+              "text": "orangeRed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -887,6 +2679,20 @@
         {
           "name": "orchid",
           "signature": "orchid: Color",
+          "signatureTokens": [
+            {
+              "text": "orchid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -894,6 +2700,20 @@
         {
           "name": "paleGoldenrod",
           "signature": "paleGoldenrod: Color",
+          "signatureTokens": [
+            {
+              "text": "paleGoldenrod",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -901,6 +2721,20 @@
         {
           "name": "paleGreen",
           "signature": "paleGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "paleGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -908,6 +2742,20 @@
         {
           "name": "paleTurquoise",
           "signature": "paleTurquoise: Color",
+          "signatureTokens": [
+            {
+              "text": "paleTurquoise",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -915,6 +2763,20 @@
         {
           "name": "paleVioletRed",
           "signature": "paleVioletRed: Color",
+          "signatureTokens": [
+            {
+              "text": "paleVioletRed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -922,6 +2784,20 @@
         {
           "name": "papayaWhip",
           "signature": "papayaWhip: Color",
+          "signatureTokens": [
+            {
+              "text": "papayaWhip",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -929,6 +2805,20 @@
         {
           "name": "peachPuff",
           "signature": "peachPuff: Color",
+          "signatureTokens": [
+            {
+              "text": "peachPuff",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -936,6 +2826,20 @@
         {
           "name": "peru",
           "signature": "peru: Color",
+          "signatureTokens": [
+            {
+              "text": "peru",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -943,6 +2847,20 @@
         {
           "name": "pink",
           "signature": "pink: Color",
+          "signatureTokens": [
+            {
+              "text": "pink",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -950,6 +2868,20 @@
         {
           "name": "plum",
           "signature": "plum: Color",
+          "signatureTokens": [
+            {
+              "text": "plum",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -957,6 +2889,20 @@
         {
           "name": "powderBlue",
           "signature": "powderBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "powderBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -964,6 +2910,20 @@
         {
           "name": "purple",
           "signature": "purple: Color",
+          "signatureTokens": [
+            {
+              "text": "purple",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -971,6 +2931,20 @@
         {
           "name": "red",
           "signature": "red: Color",
+          "signatureTokens": [
+            {
+              "text": "red",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -978,6 +2952,20 @@
         {
           "name": "rosyBrown",
           "signature": "rosyBrown: Color",
+          "signatureTokens": [
+            {
+              "text": "rosyBrown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -985,6 +2973,20 @@
         {
           "name": "royalBlue",
           "signature": "royalBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "royalBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -992,6 +2994,20 @@
         {
           "name": "saddleBrown",
           "signature": "saddleBrown: Color",
+          "signatureTokens": [
+            {
+              "text": "saddleBrown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -999,6 +3015,20 @@
         {
           "name": "salmon",
           "signature": "salmon: Color",
+          "signatureTokens": [
+            {
+              "text": "salmon",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1006,6 +3036,20 @@
         {
           "name": "sandyBrown",
           "signature": "sandyBrown: Color",
+          "signatureTokens": [
+            {
+              "text": "sandyBrown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1013,6 +3057,20 @@
         {
           "name": "seaGreen",
           "signature": "seaGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "seaGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1020,6 +3078,20 @@
         {
           "name": "seaShell",
           "signature": "seaShell: Color",
+          "signatureTokens": [
+            {
+              "text": "seaShell",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1027,6 +3099,20 @@
         {
           "name": "sienna",
           "signature": "sienna: Color",
+          "signatureTokens": [
+            {
+              "text": "sienna",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1034,6 +3120,20 @@
         {
           "name": "silver",
           "signature": "silver: Color",
+          "signatureTokens": [
+            {
+              "text": "silver",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1041,6 +3141,20 @@
         {
           "name": "skyBlue",
           "signature": "skyBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "skyBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1048,6 +3162,20 @@
         {
           "name": "slateBlue",
           "signature": "slateBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "slateBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1055,6 +3183,20 @@
         {
           "name": "slateGray",
           "signature": "slateGray: Color",
+          "signatureTokens": [
+            {
+              "text": "slateGray",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1062,6 +3204,20 @@
         {
           "name": "snow",
           "signature": "snow: Color",
+          "signatureTokens": [
+            {
+              "text": "snow",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1069,6 +3225,20 @@
         {
           "name": "springGreen",
           "signature": "springGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "springGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1076,6 +3246,20 @@
         {
           "name": "steelBlue",
           "signature": "steelBlue: Color",
+          "signatureTokens": [
+            {
+              "text": "steelBlue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1083,6 +3267,20 @@
         {
           "name": "tan",
           "signature": "tan: Color",
+          "signatureTokens": [
+            {
+              "text": "tan",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1090,6 +3288,20 @@
         {
           "name": "teal",
           "signature": "teal: Color",
+          "signatureTokens": [
+            {
+              "text": "teal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1097,6 +3309,20 @@
         {
           "name": "thistle",
           "signature": "thistle: Color",
+          "signatureTokens": [
+            {
+              "text": "thistle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1104,6 +3330,20 @@
         {
           "name": "tomato",
           "signature": "tomato: Color",
+          "signatureTokens": [
+            {
+              "text": "tomato",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1111,6 +3351,20 @@
         {
           "name": "transparentBlack",
           "signature": "transparentBlack: Color",
+          "signatureTokens": [
+            {
+              "text": "transparentBlack",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1118,6 +3372,20 @@
         {
           "name": "transparentWhite",
           "signature": "transparentWhite: Color",
+          "signatureTokens": [
+            {
+              "text": "transparentWhite",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1125,6 +3393,20 @@
         {
           "name": "turquoise",
           "signature": "turquoise: Color",
+          "signatureTokens": [
+            {
+              "text": "turquoise",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1132,6 +3414,20 @@
         {
           "name": "violet",
           "signature": "violet: Color",
+          "signatureTokens": [
+            {
+              "text": "violet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1139,6 +3435,20 @@
         {
           "name": "wheat",
           "signature": "wheat: Color",
+          "signatureTokens": [
+            {
+              "text": "wheat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1146,6 +3456,20 @@
         {
           "name": "white",
           "signature": "white: Color",
+          "signatureTokens": [
+            {
+              "text": "white",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1153,6 +3477,20 @@
         {
           "name": "whiteSmoke",
           "signature": "whiteSmoke: Color",
+          "signatureTokens": [
+            {
+              "text": "whiteSmoke",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1160,6 +3498,20 @@
         {
           "name": "yellow",
           "signature": "yellow: Color",
+          "signatureTokens": [
+            {
+              "text": "yellow",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1167,6 +3519,20 @@
         {
           "name": "yellowGreen",
           "signature": "yellowGreen: Color",
+          "signatureTokens": [
+            {
+              "text": "yellowGreen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1174,6 +3540,20 @@
         {
           "name": "a",
           "signature": "a: number",
+          "signatureTokens": [
+            {
+              "text": "a",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1181,6 +3561,20 @@
         {
           "name": "b",
           "signature": "b: number",
+          "signatureTokens": [
+            {
+              "text": "b",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1188,6 +3582,20 @@
         {
           "name": "g",
           "signature": "g: number",
+          "signatureTokens": [
+            {
+              "text": "g",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""
@@ -1195,6 +3603,20 @@
         {
           "name": "r",
           "signature": "r: number",
+          "signatureTokens": [
+            {
+              "text": "r",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
           "params": [],
           "returnType": null,
           "description": ""

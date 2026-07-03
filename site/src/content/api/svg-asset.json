@@ -32,6 +32,28 @@
         {
           "name": "new",
           "signature": "new(): SvgAsset",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SvgAsset",
+              "kind": "type"
+            }
+          ],
           "params": [],
           "returnType": "SvgAsset",
           "description": ""
