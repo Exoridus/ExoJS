@@ -56,6 +56,18 @@
     --shadow-1: var(--shadow-sm);
     --shadow-2: var(--shadow-md);
     --transition-fast: 160ms cubic-bezier(0.2, 0.6, 0.2, 1);
+
+    // Semantic colours — fixed across every accent theme. These carry meaning
+    // (companion/callout states, API-kind badges), so they must never be
+    // re-tinted by the user-selectable UI accent, and they never enter the
+    // wordmark/mark (which stays lime). cyan/mint match the live Callout
+    // values; violet/amber/rose/sky are the API-kind badge palette.
+    --cyan: oklch(80% 0.1 195); // info / hint / pitfall / debug — companion #52D9D4
+    --mint: oklch(78% 0.12 162); // success — #62D29A
+    --amber: oklch(82% 0.14 70); // warning
+    --rose: oklch(74% 0.16 20); // error / broken / enum-kind
+    --sky: oklch(78% 0.13 230); // property-kind
+    --violet: oklch(75% 0.16 290); // method-kind
 }
 
 html[data-theme='dark'] {
