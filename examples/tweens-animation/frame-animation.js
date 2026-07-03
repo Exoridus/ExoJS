@@ -29,7 +29,7 @@ class FrameAnimationScene extends Scene {
         const sheet = new Spritesheet(texture, data);
         const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));
         this.frameCount = walkFrames.length;
-        this.sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: walkFps, loop: true } });
+        this.sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: walkFps } });
         this.sprite.setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
         this.hud = mountControls({
             title: 'Frame Animation',
