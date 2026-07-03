@@ -774,10 +774,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     this._device = backend.device;
-    this._shaderModule = this._device.createShaderModule({ code: meshShaderSource });
-    this._instancedShaderModule = this._device.createShaderModule({ code: instancedMeshShaderSource });
+    this._shaderModule = this._device.createShaderModule({ label: 'mesh:shader', code: meshShaderSource });
+    this._instancedShaderModule = this._device.createShaderModule({ label: 'mesh:instanced-shader', code: instancedMeshShaderSource });
 
     this._uniformBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'mesh:bind-group-layout:uniform',
       entries: [
         {
           binding: 0,
@@ -787,6 +788,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       ],
     });
     this._textureBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'mesh:bind-group-layout:texture',
       entries: [
         {
           binding: 0,
@@ -801,9 +803,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       ],
     });
     this._pipelineLayout = this._device.createPipelineLayout({
+      label: 'mesh:pipeline-layout',
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
     this._instancedTransformBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'mesh:instanced-bind-group-layout:transform',
       entries: [
         {
           binding: 0,
@@ -818,6 +822,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       ],
     });
     this._instancedPipelineLayout = this._device.createPipelineLayout({
+      label: 'mesh:instanced-pipeline-layout',
       bindGroupLayouts: [this._instancedTransformBindGroupLayout, this._textureBindGroupLayout],
     });
   }
@@ -939,6 +944,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
   private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
+      label: 'mesh:render-pipeline',
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,
@@ -994,6 +1000,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     const group = this._device!.createBindGroup({
+      label: 'mesh:bind-group',
       layout: this._textureBindGroupLayout!,
       entries: [
         { binding: 0, resource: binding.view },
@@ -1108,6 +1115,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       this._instancedNodeIndexBuffer?.destroy();
       this._instancedNodeIndexBufferCapacity = Math.max(requiredBytes, this._instancedNodeIndexBufferCapacity * 2 || Uint32Array.BYTES_PER_ELEMENT);
       this._instancedNodeIndexBuffer = this._device!.createBuffer({
+        label: 'mesh:instanced-node-index-buffer',
         size: this._instancedNodeIndexBufferCapacity,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
@@ -1125,6 +1133,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       this._instancedUniformBuffer?.destroy();
       this._instancedUniformBufferCapacity = Math.max(requiredBytes, this._instancedUniformBufferCapacity * 2 || this._uniformAlignment);
       this._instancedUniformBuffer = this._device!.createBuffer({
+        label: 'mesh:instanced-uniform-buffer',
         size: this._instancedUniformBufferCapacity,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
@@ -1157,6 +1166,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     this._instancedTransformStorageBuffer = storageBuffer;
     this._instancedTransformBindGroup = this._device!.createBindGroup({
+      label: 'mesh:instanced-transform-bind-group',
       layout: this._instancedTransformBindGroupLayout!,
       entries: [
         {
@@ -1192,6 +1202,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
   private _buildInstancedPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
+      label: 'mesh:instanced-render-pipeline',
       layout: this._instancedPipelineLayout!,
       vertex: {
         module: this._instancedShaderModule!,
@@ -1272,10 +1283,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const alignedIndexByteLen = (indexByteLen + 3) & ~3;
 
     const vertexBuffer = this._device!.createBuffer({
+      label: 'mesh:static-geometry-vertex-buffer',
       size: vertexData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     const indexBuffer = this._device!.createBuffer({
+      label: 'mesh:static-geometry-index-buffer',
       size: alignedIndexByteLen,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
@@ -1324,6 +1337,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       this._vertexBuffer?.destroy();
       this._vertexBufferCapacity = Math.max(requiredBytes, this._vertexBufferCapacity === 0 ? vertexStrideBytes : this._vertexBufferCapacity * 2);
       this._vertexBuffer = this._device!.createBuffer({
+        label: 'mesh:vertex-buffer',
         size: this._vertexBufferCapacity,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
@@ -1346,6 +1360,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       this._indexBuffer?.destroy();
       this._indexBufferCapacity = Math.max(requiredBytes, this._indexBufferCapacity === 0 ? 4 : this._indexBufferCapacity * 2);
       this._indexBuffer = this._device!.createBuffer({
+        label: 'mesh:index-buffer',
         size: this._indexBufferCapacity,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
       });
@@ -1363,10 +1378,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       this._uniformBuffer?.destroy();
       this._uniformBufferCapacity = Math.max(requiredBytes, this._uniformBufferCapacity === 0 ? this._uniformAlignment : this._uniformBufferCapacity * 2);
       this._uniformBuffer = this._device!.createBuffer({
+        label: 'mesh:uniform-buffer',
         size: this._uniformBufferCapacity,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
       this._uniformBindGroup = this._device!.createBindGroup({
+        label: 'mesh:uniform-bind-group',
         layout: this._uniformBindGroupLayout!,
         entries: [
           {
@@ -1414,9 +1431,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     const device = this._device;
-    const shaderModule = device.createShaderModule({ code: material.shader.wgsl });
+    const shaderModule = device.createShaderModule({ label: 'mesh:material-shader', code: material.shader.wgsl });
 
     const meshUniformLayout = device.createBindGroupLayout({
+      label: 'mesh:material-bind-group-layout:uniform',
       entries: [
         {
           binding: 0,
@@ -1427,6 +1445,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     });
 
     const meshTextureLayout = device.createBindGroupLayout({
+      label: 'mesh:material-bind-group-layout:texture',
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
@@ -1436,10 +1455,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const userLayout = this._buildUserBindGroupLayout(device, material);
 
     const pipelineLayout = device.createPipelineLayout({
+      label: 'mesh:material-pipeline-layout',
       bindGroupLayouts: [meshUniformLayout, meshTextureLayout, userLayout],
     });
 
     const sampler = device.createSampler({
+      label: 'mesh:material-sampler',
       magFilter: 'linear',
       minFilter: 'linear',
       addressModeU: 'clamp-to-edge',
@@ -1506,6 +1527,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       resources.vertexBuffer?.destroy();
       resources.vertexBufferCapacity = Math.max(vertexBytes, resources.vertexBufferCapacity * 2 || vertexStrideBytes);
       resources.vertexBuffer = device.createBuffer({
+        label: 'mesh:material-vertex-buffer',
         size: resources.vertexBufferCapacity,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
@@ -1520,6 +1542,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       resources.indexBuffer?.destroy();
       resources.indexBufferCapacity = Math.max(indexBytes, resources.indexBufferCapacity * 2 || 4);
       resources.indexBuffer = device.createBuffer({
+        label: 'mesh:material-index-buffer',
         size: resources.indexBufferCapacity,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
       });
@@ -1531,10 +1554,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       resources.meshUniformBuffer?.destroy();
       resources.meshUniformBufferCapacity = Math.max(meshUniformBytes, resources.meshUniformBufferCapacity * 2 || meshUniformAlignment);
       resources.meshUniformBuffer = device.createBuffer({
+        label: 'mesh:material-uniform-buffer',
         size: resources.meshUniformBufferCapacity,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
       resources.meshUniformBindGroup = device.createBindGroup({
+        label: 'mesh:material-bind-group:uniform',
         layout: resources.meshUniformLayout,
         entries: [
           {
@@ -1635,6 +1660,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     if (pipeline === undefined) {
       const descriptor: GPURenderPipelineDescriptor = {
+        label: 'mesh:material-render-pipeline',
         layout: resources.pipelineLayout,
         vertex: {
           module: resources.shaderModule,
@@ -1694,6 +1720,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     const group = this._device!.createBindGroup({
+      label: 'mesh:material-bind-group:texture',
       layout: resources.meshTextureLayout,
       entries: [
         { binding: 0, resource: binding.view },
@@ -1740,7 +1767,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       bindingIndex++;
     }
 
-    return device.createBindGroupLayout({ entries });
+    return device.createBindGroupLayout({ label: 'mesh:material-bind-group-layout:user', entries });
   }
 
   private _uploadUserUniforms(material: Material, resources: CustomShaderResources): void {
@@ -1756,6 +1783,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       resources.userUniformBuffer?.destroy();
       resources.userUniformBufferCapacity = bufferBytes;
       resources.userUniformBuffer = device.createBuffer({
+        label: 'mesh:material-user-uniform-buffer',
         size: bufferBytes,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
@@ -1805,6 +1833,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     return device.createBindGroup({
+      label: 'mesh:material-user-bind-group',
       layout: resources.userLayout,
       entries,
     });

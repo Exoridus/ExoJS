@@ -238,9 +238,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     this._device = backend.device;
-    this._shaderModule = this._device.createShaderModule({ code: spriteShaderSource });
+    this._shaderModule = this._device.createShaderModule({ label: 'sprite:shader', code: spriteShaderSource });
 
     this._uniformBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'sprite:bind-group-layout:uniform',
       entries: [
         {
           binding: 0,
@@ -259,6 +260,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       ],
     });
     this._textureBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'sprite:bind-group-layout:texture',
       entries: [
         ...Array.from({ length: maxBatchTextures }, (_, index) => ({
           binding: index,
@@ -277,16 +279,19 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       ],
     });
     this._pipelineLayout = this._device.createPipelineLayout({
+      label: 'sprite:pipeline-layout',
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
     // Single base-texture layout for the custom-material path (group 1).
     this._customBaseTextureLayout = this._device.createBindGroupLayout({
+      label: 'sprite:bind-group-layout:custom-base-texture',
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       ],
     });
     this._uniformBuffer = this._device.createBuffer({
+      label: 'sprite:uniform-buffer',
       size: projectionByteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -297,6 +302,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // Static index buffer for the quad. Allocated once at connect; its
     // contents never change.
     this._indexBuffer = this._device.createBuffer({
+      label: 'sprite:index-buffer',
       size: quadIndices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
@@ -539,6 +545,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     this._transformStorageBuffer = storageBuffer;
     this._transformBindGroup = device.createBindGroup({
+      label: 'sprite:transform-bind-group',
       layout: this._uniformBindGroupLayout!,
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
@@ -677,6 +684,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     const instanceBuffer = this._device.createBuffer({
+      label: 'sprite:instance-buffer',
       size: instanceData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
@@ -734,6 +742,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     return device.createBindGroup({
+      label: 'sprite:texture-bind-group',
       layout: this._textureBindGroupLayout!,
       entries,
     });
@@ -764,6 +773,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     const descriptor: GPURenderPipelineDescriptor = {
+      label: 'sprite:render-pipeline',
       layout: this._pipelineLayout,
       vertex: {
         module: this._shaderModule,
@@ -870,9 +880,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // The engine owns the vertex stage: prepend the canonical sprite vertex
     // module (VertexInput/VertexOutput, group(0) projection + transform storage,
     // group(1) base texture + sampler) to the material's fragment WGSL.
-    const shaderModule = device.createShaderModule({ code: `${spriteVertexWgsl}\n${wgsl}` });
+    const shaderModule = device.createShaderModule({ label: 'sprite:material-shader', code: `${spriteVertexWgsl}\n${wgsl}` });
     const userLayout = this._buildUserBindGroupLayout(device, material);
     const pipelineLayout = device.createPipelineLayout({
+      label: 'sprite:material-pipeline-layout',
       bindGroupLayouts: [this._uniformBindGroupLayout!, this._customBaseTextureLayout!, userLayout],
     });
 
@@ -915,6 +926,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     const descriptor: GPURenderPipelineDescriptor = {
+      label: 'sprite:material-render-pipeline',
       layout: resources.pipelineLayout,
       vertex: {
         module: resources.shaderModule,
@@ -977,6 +989,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     const group = device.createBindGroup({
+      label: 'sprite:material-base-texture-bind-group',
       layout: this._customBaseTextureLayout!,
       entries: [
         { binding: 0, resource: binding.view },
@@ -1015,7 +1028,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       bindingIndex++;
     }
 
-    return device.createBindGroupLayout({ entries });
+    return device.createBindGroupLayout({ label: 'sprite:material-bind-group-layout', entries });
   }
 
   private _uploadUserUniforms(material: SpriteMaterial, resources: CustomSpriteResources, device: GPUDevice): void {
@@ -1030,6 +1043,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       resources.userUniformBuffer?.destroy();
       resources.userUniformBufferCapacity = bufferBytes;
       resources.userUniformBuffer = device.createBuffer({
+        label: 'sprite:material-user-uniform-buffer',
         size: bufferBytes,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
@@ -1079,7 +1093,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       bindingIndex++;
     }
 
-    return device.createBindGroup({ layout: resources.userLayout, entries });
+    return device.createBindGroup({ label: 'sprite:material-user-bind-group', layout: resources.userLayout, entries });
   }
 
   private _releaseCustomResources(resources: CustomSpriteResources): void {

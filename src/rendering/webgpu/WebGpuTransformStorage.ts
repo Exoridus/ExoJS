@@ -166,6 +166,7 @@ export class WebGpuTransformStorage {
 
     this._storageBuffer?.destroy();
     this._storageBuffer = device.createBuffer({
+      label: 'transform:storage-buffer',
       size: nextCapacity,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
