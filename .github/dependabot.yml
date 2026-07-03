@@ -1,5 +1,18 @@
 version: 2
 updates:
+  # Single npm entry for the whole pnpm workspace: Dependabot's npm ecosystem is
+  # pnpm-workspace-aware from the root manifest + pnpm-lock.yaml + pnpm-
+  # workspace.yaml, so this one entry already covers every workspace member's
+  # package.json — every packages/exojs-* extension, packages/create-exo-app,
+  # AND site/ (the Astro examples app). No per-package or per-`site` entry is
+  # needed or wanted (it would just double-PR the same dependency).
+  #
+  # There used to be a second entry here for `/examples`, added in #127
+  # (2026-06-13) — but examples/package.json was deleted over a month earlier
+  # when examples/ was split into examples/ (pure sources, no manifest) +
+  # site/ (the Astro app) (commit a11264e6, 2026-05-08). That entry pointed at a
+  # directory with no manifest and produced nothing but a failed Dependabot job
+  # every week; removed. `site/` needs no entry of its own — see above.
   - package-ecosystem: npm
     directory: '/'
     schedule:
@@ -29,29 +42,6 @@ updates:
           - 'typescript-eslint'
           - 'eslint-plugin-*'
           - 'eslint-config-*'
-      patch-only:
-        update-types:
-          - patch
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-major
-
-  - package-ecosystem: npm
-    directory: '/examples'
-    schedule:
-      interval: weekly
-      day: monday
-      time: '06:15'
-      timezone: 'Europe/Berlin'
-    open-pull-requests-limit: 10
-    cooldown:
-      semver-patch-days: 3
-      semver-minor-days: 7
-    labels:
-      - dependencies
-      - examples
-    groups:
       patch-only:
         update-types:
           - patch

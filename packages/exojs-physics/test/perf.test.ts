@@ -134,6 +134,17 @@ describe('physics dynamics performance', () => {
     // Baseline: the identical field with sleeping disabled stays fully active.
     const awake = buildField(1000, 5, { enableSleeping: false });
 
+    // Skipped entirely under istanbul coverage: instrumentation inflates the
+    // per-step cost enough (see the identical `cov_` guard above) that the full
+    // 840-step awake+sleeping budget across two 5,000-body fields blows even the
+    // 60s timeout below. The sharp gate runs in the normal `pnpm test` run +
+    // `verify:ci`.
+    if (awake.world.step.toString().includes('cov_')) {
+      console.log('sleeping-vs-awake perf gate skipped under coverage (instrumentation slows the measurement past the timeout)');
+
+      return;
+    }
+
     for (let i = 0; i < 240; i++) {
       awake.world.step(FRAME);
     }
