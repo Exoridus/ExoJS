@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '#math/Matrix';

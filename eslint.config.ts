@@ -866,6 +866,17 @@ export default defineConfig([
   },
 
   {
+    files: ['src/rendering/webgpu/WebGpuBackend.ts', 'src/rendering/webgpu/WebGpuMeshRenderer.ts'],
+    rules: {
+      // Cohesive WebGPU backend/renderer surface; each file is a single
+      // tightly-coupled unit (device/pipeline state, draw submission).
+      // Splitting would scatter that state across files for no readability
+      // gain. Known deviation, candidate for a later extraction.
+      'max-lines': 'off',
+    },
+  },
+
+  {
     files: ['src/resources/CacheStore.ts'],
     rules: {
       '@typescript-eslint/no-redundant-type-constituents': 'off',

@@ -964,8 +964,8 @@ describe('TileMap', () => {
       ],
     });
     expect(map.layers.length).toBe(2);
-    expect(map.getLayerById(0)!.name).toBe('ground');
-    expect(map.getLayerById(1)!.name).toBe('walls');
+    expect(map.getTileLayerById(0)!.name).toBe('ground');
+    expect(map.getTileLayerById(1)!.name).toBe('walls');
   });
 
   it('layers maintain insertion order', () => {
@@ -1002,7 +1002,7 @@ describe('TileMap', () => {
     });
     const layer = new TileLayer({ id: 5, name: 'added', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     map.addLayer(layer);
-    expect(map.getLayerById(5)).toBeDefined();
+    expect(map.getTileLayerById(5)).toBeDefined();
   });
 
   it('removeLayer destroys the layer', () => {
@@ -1014,7 +1014,7 @@ describe('TileMap', () => {
     const layer = new TileLayer({ id: 1, name: 'removable', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     map.addLayer(layer);
     expect(map.removeLayer(1)).toBe(true);
-    expect(map.getLayerById(1)).toBeUndefined();
+    expect(map.getTileLayerById(1)).toBeUndefined();
     expect(layer.destroyed).toBe(true);
   });
 
@@ -1095,7 +1095,7 @@ describe('TileMap', () => {
     expect(map.removeImageLayer(999)).toBe(false);
   });
 
-  it('getLayerByName returns first match', () => {
+  it('getTileLayer returns first match by name', () => {
     const map = new TileMap({
       width: 64, height: 64,
       tileWidth: 32, tileHeight: 32,
@@ -1105,21 +1105,9 @@ describe('TileMap', () => {
         new TileLayer({ id: 2, name: 'dup', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] }),
       ],
     });
-    const found = map.getLayerByName('dup');
+    const found = map.getTileLayer('dup');
     expect(found).toBeDefined();
     expect(found!.id).toBe(1);
-  });
-
-  it('getTileLayer is an alias for getLayerByName', () => {
-    const map = new TileMap({
-      width: 64, height: 64,
-      tileWidth: 32, tileHeight: 32,
-      tilesets: [ts],
-      layers: [
-        new TileLayer({ id: 1, name: 'test', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] }),
-      ],
-    });
-    expect(map.getTileLayer('test')).toBe(map.getLayerByName('test'));
   });
 
   it('getTileAt convenience', () => {

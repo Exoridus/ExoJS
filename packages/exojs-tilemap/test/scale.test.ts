@@ -50,7 +50,7 @@ describe('scale / storage', () => {
     expect(map.width).toBe(512);
     expect(map.height).toBe(512);
 
-    const layer = map.getLayerById(0)!;
+    const layer = map.getTileLayerById(0)!;
     expect([...layer.loadedChunks()]).toHaveLength(0);
 
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };

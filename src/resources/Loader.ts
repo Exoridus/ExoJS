@@ -151,7 +151,7 @@ type TokenTypesFor<E> = E extends keyof ExtensionTokenTypeMap ? ExtensionTokenTy
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ConstrainedLoadable<T extends abstract new (...args: any[]) => any, S extends string> = [PathExtension<S>] extends [never]
+export type ConstrainedLoadable<T extends abstract new (...args: any[]) => unknown, S extends string> = [PathExtension<S>] extends [never]
   ? T
   : PathExtension<S> extends keyof ExtensionTypeMap
     ? LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>] | TokenTypesFor<PathExtension<S>>
@@ -741,8 +741,7 @@ export class Loader {
   // Loading — implementation
   // -----------------------------------------------------------------------
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<any> {
+  public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
     // 1. Single Asset<T>
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;

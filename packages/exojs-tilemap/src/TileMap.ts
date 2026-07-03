@@ -206,24 +206,17 @@ export class TileMap {
   }
 
   /**
-   * Get a layer by ID.
+   * Get a tile layer by ID.
    */
-  public getLayerById(id: number): TileLayer | undefined {
+  public getTileLayerById(id: number): TileLayer | undefined {
     return this._layerById.get(id);
   }
 
   /**
-   * Get a layer by name. Returns the first match in insertion order.
-   */
-  public getLayerByName(name: string): TileLayer | undefined {
-    return this._layers.find(l => l.name === name);
-  }
-
-  /**
-   * Get a tile layer by name. Convenience alias for {@link getLayerByName}.
+   * Get a tile layer by name. Returns the first match in insertion order.
    */
   public getTileLayer(name: string): TileLayer | undefined {
-    return this.getLayerByName(name);
+    return this._layers.find(l => l.name === name);
   }
 
   /**
@@ -352,7 +345,7 @@ export class TileMap {
 
   /**
    * Get a resolved tile from a given layer at tile coordinates.
-   * Convenience for `map.getLayerById(id)?.getTileAt(tx, ty)`.
+   * Convenience for `map.getTileLayerById(id)?.getTileAt(tx, ty)`.
    * Returns null for an empty cell, out-of-bounds, or missing layer.
    */
   public getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null {
@@ -363,7 +356,7 @@ export class TileMap {
 
   /**
    * Set a tile on a given layer at tile coordinates.
-   * Convenience for `map.getLayerById(id)?.setTileAt(tx, ty, tile)`.
+   * Convenience for `map.getTileLayerById(id)?.setTileAt(tx, ty, tile)`.
    * @throws If the layer does not exist, coordinates are out of bounds,
    *         or the tile reference is invalid.
    */
@@ -375,7 +368,7 @@ export class TileMap {
 
   /**
    * Clear a tile on a given layer at tile coordinates.
-   * Convenience for `map.getLayerById(id)?.clearTileAt(tx, ty)`.
+   * Convenience for `map.getTileLayerById(id)?.clearTileAt(tx, ty)`.
    * @throws If the layer does not exist or coordinates are out of bounds.
    */
   public clearTileAt(layerId: number, tx: number, ty: number): void {

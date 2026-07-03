@@ -67,6 +67,64 @@ export interface TileLayerOptions {
 const DEFAULT_CHUNK_SIZE = 32;
 
 /**
+ * Resolved, defaulted subset of {@link TileLayerOptions} produced by
+ * {@link validateTileLayerOptions}.
+ */
+interface ResolvedTileLayerOptions {
+  readonly chunkWidth: number;
+  readonly chunkHeight: number;
+  readonly opacity: number;
+  readonly offsetX: number;
+  readonly offsetY: number;
+  readonly parallaxX: number;
+  readonly parallaxY: number;
+}
+
+/**
+ * Validate a {@link TileLayerOptions} bag and resolve its optional fields
+ * (chunk size, opacity, offset, parallax) to concrete defaults.
+ * @throws When dimensions, chunk size, or other options are invalid.
+ */
+function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerOptions {
+  validateNonNegativeInteger(options.id, 'layer.id');
+  if (!options.name || typeof options.name !== 'string') {
+    throw new Error('TileLayer name must be a non-empty string.');
+  }
+  validatePositiveInteger(options.width, 'layer.width');
+  validatePositiveInteger(options.height, 'layer.height');
+  validatePositiveInteger(options.tileWidth, 'layer.tileWidth');
+  validatePositiveInteger(options.tileHeight, 'layer.tileHeight');
+
+  const chunkWidth = options.chunkWidth ?? DEFAULT_CHUNK_SIZE;
+  const chunkHeight = options.chunkHeight ?? DEFAULT_CHUNK_SIZE;
+  validatePositiveInteger(chunkWidth, 'chunkWidth');
+  validatePositiveInteger(chunkHeight, 'chunkHeight');
+
+  if (!Array.isArray(options.tilesets)) {
+    throw new Error('TileLayer tilesets must be an array.');
+  }
+
+  const opacity = options.opacity ?? 1;
+  if (typeof opacity !== 'number' || opacity < 0 || opacity > 1) {
+    throw new Error(`TileLayer opacity must be 0..1 (got ${opacity}).`);
+  }
+
+  const offsetX = options.offsetX ?? 0;
+  const offsetY = options.offsetY ?? 0;
+  if (!Number.isFinite(offsetX) || !Number.isFinite(offsetY)) {
+    throw new Error('TileLayer offset must be finite numbers.');
+  }
+
+  const parallaxX = options.parallaxX ?? 1;
+  const parallaxY = options.parallaxY ?? 1;
+  if (!Number.isFinite(parallaxX) || !Number.isFinite(parallaxY)) {
+    throw new Error('TileLayer parallax must be finite numbers.');
+  }
+
+  return { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY };
+}
+
+/**
  * A generic, format-independent tile layer with chunk-first storage.
  *
  * Tile data is stored in fixed-size {@link TileChunk}s indexed by signed
@@ -156,42 +214,9 @@ export class TileLayer {
   /**
    * @throws When dimensions, chunk size, or other options are invalid.
    */
-  // eslint-disable-next-line complexity -- straight-line option validation + defaulting
   public constructor(options: TileLayerOptions) {
-    validateNonNegativeInteger(options.id, 'layer.id');
-    if (!options.name || typeof options.name !== 'string') {
-      throw new Error('TileLayer name must be a non-empty string.');
-    }
-    validatePositiveInteger(options.width, 'layer.width');
-    validatePositiveInteger(options.height, 'layer.height');
-    validatePositiveInteger(options.tileWidth, 'layer.tileWidth');
-    validatePositiveInteger(options.tileHeight, 'layer.tileHeight');
-
-    const chunkWidth = options.chunkWidth ?? DEFAULT_CHUNK_SIZE;
-    const chunkHeight = options.chunkHeight ?? DEFAULT_CHUNK_SIZE;
-    validatePositiveInteger(chunkWidth, 'chunkWidth');
-    validatePositiveInteger(chunkHeight, 'chunkHeight');
-
-    if (!Array.isArray(options.tilesets)) {
-      throw new Error('TileLayer tilesets must be an array.');
-    }
-
-    const opacity = options.opacity ?? 1;
-    if (typeof opacity !== 'number' || opacity < 0 || opacity > 1) {
-      throw new Error(`TileLayer opacity must be 0..1 (got ${opacity}).`);
-    }
-
-    const offsetX = options.offsetX ?? 0;
-    const offsetY = options.offsetY ?? 0;
-    if (!Number.isFinite(offsetX) || !Number.isFinite(offsetY)) {
-      throw new Error('TileLayer offset must be finite numbers.');
-    }
-
-    const parallaxX = options.parallaxX ?? 1;
-    const parallaxY = options.parallaxY ?? 1;
-    if (!Number.isFinite(parallaxX) || !Number.isFinite(parallaxY)) {
-      throw new Error('TileLayer parallax must be finite numbers.');
-    }
+    const { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY } =
+      validateTileLayerOptions(options);
 
     this.id = options.id;
     this.name = options.name;

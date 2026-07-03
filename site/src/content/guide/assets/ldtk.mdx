@@ -227,7 +227,7 @@ IntGrid layers classify each grid cell with a small integer you assign meaning t
 ```ts no-check
 import { getLdtkIntGridValueAt } from '@codexo/exojs-ldtk';
 
-const collision = level.getLayerByName('Collision');
+const collision = level.getTileLayer('Collision');
 const cell = collision && getLdtkIntGridValueAt(collision, 3, 5);
 
 if (cell) {
