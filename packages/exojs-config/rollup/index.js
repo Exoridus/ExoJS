@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { createBuildDefinesFromRepo } from '../build-defines/index.js';
+import { createWorkletPlugin } from '../worklet-plugin.js';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
@@ -60,6 +61,10 @@ export function createExtensionConfig(opts) {
       // skipped when the package has no internal `#` imports.
       ...(sourceCondition ? [nodeResolve({ exportConditions: [sourceCondition, 'browser', 'module', 'import', 'default'], extensions: ['.ts', '.js'] })] : []),
       string({ include: ['**/*.vert', '**/*.frag'] }),
+      // Real, typed AudioWorklet sources imported via `?worklet` (see
+      // `../worklet-plugin.js`); untouched worklets keep exporting a plain
+      // template-string constant and are unaffected.
+      createWorkletPlugin(),
       typescript({
         compilerOptions: {
           incremental: false,

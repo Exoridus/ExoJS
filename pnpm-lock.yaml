@@ -173,6 +173,9 @@ importers:
       '@rollup/plugin-typescript':
         specifier: ^12.3.0
         version: 12.3.0(rollup@4.62.2)(tslib@2.8.1)(typescript@6.0.3)
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
       rollup-plugin-string:
         specifier: ^3.0.0
         version: 3.0.0

@@ -10,7 +10,7 @@
  *     changes, so the output is a constant-zero buffer.
  */
 
-import { bitCrusherWorkletSource } from '../../src/worklets/bit-crusher.worklet';
+import bitCrusherWorkletSource from '../../src/worklets/bit-crusher.worklet.ts?worklet';
 import { renderWorklet, rms, tail } from './_audio-harness';
 
 describe('BitCrusher worklet — real Web Audio', () => {

@@ -12,7 +12,7 @@
  *  - bits=16 is nearly transparent (max quantization error ≤ step/2).
  */
 
-import { bitCrusherWorkletSource } from '../../src/worklets/bit-crusher.worklet';
+import bitCrusherWorkletSource from '../../src/worklets/bit-crusher.worklet.ts?worklet';
 
 // ─── Worklet bootstrap ────────────────────────────────────────────────────────
 

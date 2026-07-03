@@ -9,6 +9,7 @@
     "./prettier": "./prettier/index.js",
     "./vitest": "./vitest/index.js",
     "./rollup": "./rollup/index.js",
+    "./worklet-plugin": "./worklet-plugin.js",
     "./build-defines": "./build-defines/index.js",
     "./package-policy": "./package-policy/index.js",
     "./typescript/base.json": "./typescript/base.json",
@@ -20,6 +21,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
+    "esbuild": "^0.25.0",
     "rollup-plugin-string": "^3.0.0"
   },
   "license": "MIT"

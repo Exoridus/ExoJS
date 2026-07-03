@@ -10,5 +10,13 @@
     }
   },
   "include": ["src/**/*", "src/typings.d.ts", "../../src/typings.d.ts"],
-  "exclude": ["dist", "node_modules", "test"]
+  // `bit-crusher.worklet.ts` typechecks against the AudioWorkletGlobalScope
+  // (no DOM), via the dedicated tsconfig.worklets.json, instead of this
+  // package's main DOM-lib program. It has no importers here — consumers
+  // reach it exclusively through the `?worklet` query, which resolves to the
+  // ambient `*?worklet` module declaration (src/typings.d.ts) rather than
+  // this file — so excluding it from `include` fully removes it from this
+  // program. The other (not yet converted) `*.worklet.ts` files are untouched
+  // and remain part of this program via their direct named-export imports.
+  "exclude": ["dist", "node_modules", "test", "src/worklets/bit-crusher.worklet.ts"]
 }
