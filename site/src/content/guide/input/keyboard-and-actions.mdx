@@ -5,6 +5,7 @@ description: 'Capture keys, support configurable bindings, and map multiple devi
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Keyboard & actions
 
@@ -78,6 +79,10 @@ app.input.onKeyUp.add(channel => {
 ```
 
 These are raw — no threshold, no auto-disposal. Use them for global shortcuts that should work across every scene (dev tools, screenshot capture) or as the listener layer for a custom key-rebinding UI.
+
+<Callout type="info" title="Even raw key signals need canvas focus">
+`onKeyDown`/`onKeyUp` fire across every scene, but they're still gated on canvas focus like all keyboard input — nothing fires while the canvas is blurred, and any held key is released automatically when focus leaves. Subscribe to `onCanvasFocusChange` if you need to pause on blur.
+</Callout>
 
 ## Key rebinding
 
@@ -180,6 +185,10 @@ The callback receives the sampled value (0..1 for buttons, -1..1 for bipolar axe
 ### Combined keyboard and gamepad
 
 Per-pad bindings on `Gamepad` (`pad.onTrigger`, `pad.onActive`, etc.) coexist with scene-scoped keyboard bindings. The typical pattern is to set up both in `init`, track the input state in simple variables, and let `update` consume whichever device is active:
+
+<Callout type="pitfall" title="Per-pad bindings don't auto-dispose">
+Scene-scoped bindings from `this.inputs` are cleaned up when the scene unloads, but `pad.onTrigger`/`pad.onActive` bindings live on the long-lived `Gamepad` and are not. Keep their `InputBinding` handles and call `unbind()` in `destroy`, or they stack up across scene changes.
+</Callout>
 
 ```js
 import { GamepadAxis, GamepadButton, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';

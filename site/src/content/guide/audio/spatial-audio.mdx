@@ -4,10 +4,15 @@ description: 'Place listener and sources in space for directional sound behavior
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Spatial audio
 
 Spatial audio in ExoJS is 2D: a single shared listener and any number of sound sources, each with a world-space position. The engine maps the 2D coordinates to the Web Audio API's 3D panner behind the scenes — you work in the same pixel coordinates your sprites and containers use, and the audio system pans and attenuates accordingly.
+
+<Callout type="info" title="Spatialisation is 2D and equalpower">
+The listener and every source sit on one plane (Z=0), panned with the Web Audio `equalpower` model — right for a top-down or side-on scene, but not a precise stereo mixer. When you need an exact, listener-independent left/right balance, keep the sound non-spatial (`position = null`) and set the bus `pan` instead.
+</Callout>
 
 ## The listener
 
@@ -118,6 +123,10 @@ update(delta) {
     }
 }
 ```
+
+<Callout type="hint" title="Only spatialise the sounds that need it">
+A `Sound` you never give a `position` plays non-spatially — full volume in both channels, ignoring the listener. Assign a position only to sources that live in the world, and set a live voice's `position` back to `null` to drop it out of the pan field again.
+</Callout>
 
 For ambient sounds that should follow the listener's general area but not overlap, set a large `refDistance`:
 
