@@ -33,7 +33,6 @@ codexo-bg-*
 !.gitattributes
 !.gitignore
 !.gitkeep
-!.gitmojirc.json
 !.prettierignore
 !.prettierrc
 !.size-limit.cjs
