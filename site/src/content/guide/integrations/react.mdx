@@ -3,6 +3,8 @@ title: 'React integration'
 description: 'Mount an ExoJS Application inside a React tree and drive scenes declaratively with the @codexo/exojs-react bindings.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # React integration
 
 The official `@codexo/exojs-react` package lets you host an ExoJS
@@ -78,10 +80,9 @@ app down:
 On unmount the hook calls `app.destroy()`. The engine never removes a canvas it did not create,
 so React stays the sole owner of the `<canvas>` element.
 
-> **Note:** With the default `'fixed'` sizing mode the engine never touches the canvas CSS, so
-> you may style it freely. The `'fill'`, `'fit'`, `'shrink'`, and `'letterbox'` modes manage
-> `canvas.style` themselves — size the container and let them observe it, rather than fighting
-> them with an inline `style`.
+<Callout type="pitfall" title="Don't fight the sizing modes with inline style">
+With the default `'fixed'` sizing mode the engine never touches the canvas CSS, so you may style it freely. The `'fill'`, `'fit'`, `'shrink'`, and `'letterbox'` modes manage `canvas.style` themselves — size the container and let them observe it, rather than setting your own inline `style`.
+</Callout>
 
 ## The batteries-included canvas
 
@@ -113,6 +114,10 @@ Props:
 - `canvasProps` — forwarded to the inner `<canvas>` (its own `style`/`className`); `ref`,
   `width`, and `height` are managed by the engine and cannot be set here.
 - `children` — rendered as an overlay once the app exists, with the app available via context.
+
+<Callout type="warning" title="Changing backend recreates the whole app">
+Every reactive option re-syncs in place except one: switching `backend` tears the app down and rebuilds it, because WebGL2 and WebGPU can't hot-swap within a single instance. The active scene, GPU resources, and frame count all reset — treat `backend` as fixed for an app's lifetime.
+</Callout>
 
 For full control with no wrapper element, drop down to `useExoApplication`.
 

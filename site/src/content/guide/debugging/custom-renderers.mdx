@@ -4,6 +4,7 @@ description: 'Extend rendering with custom passes and backend-specific logic.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Custom renderers
 
@@ -14,6 +15,10 @@ The distinction: a custom renderer controls *when* and *how* things are drawn. A
 ## CallbackRenderPass
 
 [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) wraps an arbitrary draw callback as one [`RenderPass`](/ExoJS/en/api/render-pass/) and slots it into a [`RenderPipeline`](/ExoJS/en/api/render-pipeline/) between other passes. The callback receives the [`RenderingContext`](/ExoJS/en/api/rendering-context/) — the same high-level object your scene's `draw` method gets. For low-level draws (rendering a `Graphics` directly, immediate-mode geometry), reach through `context.backend` to the active `RenderBackend`:
+
+<Callout type="hint" title="CallbackRenderPass first, raw device last">
+Reach for `CallbackRenderPass` for almost all custom draw work — it slots into the normal pipeline and hands you the high-level `RenderingContext`. Drop to raw `backend.device` only when no pass primitive can express what you need.
+</Callout>
 
 ```ts
 import { CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite, Texture } from '@codexo/exojs';
@@ -126,6 +131,10 @@ The scene's `draw` method would call `this._triangleRenderer.draw()` instead of 
 Direct backend access is deliberately unabstracted — you are writing raw WebGPU code. On WebGL2 backends, a different renderer class would use `backend.context` (`WebGL2RenderingContext`) and branch by `backend.backendType`. For most projects, `MeshMaterial` + `CallbackRenderPass` + custom shader filters (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) cover custom rendering needs without reaching for raw GPU APIs.
 
 ## Renderer registration
+
+<Callout type="warning" title="Extend the abstract SDK renderers, not the concrete ones">
+Build a custom renderer by subclassing the abstract base renderers from `@codexo/exojs/renderer-sdk` (`AbstractWebGpuRenderer`, `AbstractWebGl2Renderer` / `AbstractWebGl2BatchedRenderer`). The engine's concrete renderers such as `WebGl2SpriteRenderer` are internal, coupled to private data paths, and not part of the SDK surface — subclassing them will break.
+</Callout>
 
 ExoJS resolves a renderer for each drawable type through the `RendererRegistry` (available from `@codexo/exojs/renderer-sdk`). You can register a custom renderer for an existing drawable type via `backend.rendererRegistry.registerRenderer(drawableConstructor, renderer)`. A renderer implements `connect(backend)`, `disconnect()`, `render(drawable)`, and `flush()` — these map to GPU resource acquisition, release, per-drawable recording, and batch submission respectively.
 

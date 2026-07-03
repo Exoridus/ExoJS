@@ -4,6 +4,7 @@ description: 'Compare backend behavior and decide what to ship.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Backend comparison
 
@@ -25,6 +26,10 @@ const glApp = new Application({ backend: { type: 'webgl2' } });
 ```
 
 At any point, check `app.backend.backendType` (a [`RenderBackendType`](/ExoJS/en/api/render-backend-type/) enum with values `WebGl2` and `WebGpu`) to branch backend-specific code.
+
+<Callout type="invalid" title="Pin a backend only when you truly must">
+`auto` (the default) picks WebGPU where `navigator.gpu` exists and WebGL2 everywhere else, so most projects never set `type` at all. Pinning `type: 'webgpu'` turns availability into a hard requirement — it throws on browsers without WebGPU instead of falling back.
+</Callout>
 
 ## Feature parity
 
@@ -64,6 +69,10 @@ The WebGPU backend exposes `backend.device` (`GPUDevice`), `backend.context` (`G
 ## Device loss
 
 Both backends handle loss events. On WebGL2, the engine attempts context restore automatically. On WebGPU, ExoJS also attempts automatic device recovery and emits `onBackendLost` / `onBackendRestored` on the `Application`.
+
+<Callout type="broken" title="Device loss reclaims your raw GPU resources">
+The engine restores the resources it owns, but anything you allocated through direct `backend.device` access is gone after a loss. Recreate those raw pipelines and buffers in an `onBackendRestored` handler, or the scene comes back missing your custom rendering.
+</Callout>
 
 ## Choosing for production
 

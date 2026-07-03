@@ -5,6 +5,7 @@ description: 'Measure scene limits with focused stress examples.'
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Performance
 
@@ -22,6 +23,10 @@ debug.layers.performance.visible = true;
 ```
 
 Watch the FPS number while you add sprites, enable filters, or spawn particles. The sparkline shows frame-time stability — a flat line is good, spikes indicate intermittent work. The draw-call count tells you how many GPU-level draw calls the renderer issued this frame.
+
+<Callout type="debug" title="Change one thing, then measure again">
+Isolate a single change per measurement — stacking several optimizations at once hides which one actually helped, or masks one that made things worse. Reach for the overlay before you edit, not after a hunch.
+</Callout>
 
 ## Sprite batching
 
@@ -55,6 +60,10 @@ Check `system.gpuMode` at runtime to know which path is active. Measure with the
 
 ## Scene-graph churn
 
+<Callout type="hint" title="Pool and toggle instead of rebuilding">
+For scenes that spawn and retire objects constantly — bullets, hit sparks, floating damage numbers — keep a fixed pool sized to your peak concurrent count and recycle nodes by flipping `visible`, rather than constructing and destroying them each frame.
+</Callout>
+
 Adding and removing many children from a container each frame triggers transform-dirty propagation and bounds recomputation. For dynamic scenes where objects appear and disappear frequently, prefer:
 
 - `sprite.visible = false` over `container.removeChild(sprite)` — keeps the node in the tree, skips rendering.
@@ -67,6 +76,10 @@ Updating a texture source (e.g. a canvas, video frame, or `DataTexture` buffer) 
 - Use `DataTexture.commitRect()` for partial uploads (cheaper than full `commit()`).
 - Avoid creating new `Texture` instances per frame — reuse one texture and update its source.
 - Keep `RenderTexture` dimensions stable — `resize()` triggers framebuffer recreation.
+
+<Callout type="pitfall" title="Per-frame new Color() / new Vector() feeds the GC">
+Allocating a fresh `Color`, `Vector`, or `Matrix` inside `update` or `draw` runs every frame and hands the garbage collector a steady stream of short-lived objects, which surfaces as periodic frame-time spikes. Allocate once and mutate in place (`color.set(...)`, `vec.set(...)`) on hot paths.
+</Callout>
 
 ## View culling
 
