@@ -139,8 +139,7 @@
     "perf:profile": "tsx test/perf/profile-benchmark.ts",
     "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "size": "size-limit",
-    "prepare": "husky",
-    "commit": "gitmoji -c"
+    "prepare": "husky"
   },
   "license": "MIT",
   "publishConfig": {
@@ -181,7 +180,6 @@
     "eslint-plugin-simple-import-sort": "^13.0.0",
     "eslint-plugin-unicorn": "^64.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
-    "gitmoji-cli": "^9.7.0",
     "globals": "^17.5.0",
     "husky": "^9.1.7",
     "jiti": "^2.7.0",
