@@ -1,0 +1,155 @@
+{
+  "title": "SweptHit",
+  "description": "Result of a swept-collision query. The moving shape's reference point is at `(x, y)` at impact, having travelled fraction `t` ∈ [0..1] of the requested move (where 0 = no movement, 1 = full move). The `(normalX, normalY)` vector is the contact normal pointing AWAY from the target (suitable for sliding response: project the remaining velocity onto the perpendicular).",
+  "symbol": "SweptHit",
+  "kind": "interface",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Result of a swept-collision query. The moving shape's reference point is at `(x, y)` at impact, having travelled fraction `t` ∈ [0..1] of the requested move (where 0 = no movement, 1 = full move). The `(normalX, normalY)` vector is the contact normal pointing AWAY from the target (suitable for sliding response: project the remaining velocity onto the perpendicular)."
+      ],
+      "importLine": "import { SweptHit } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "normalX",
+          "signature": "normalX: number",
+          "signatureTokens": [
+            {
+              "text": "normalX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "normalY",
+          "signature": "normalY: number",
+          "signatureTokens": [
+            {
+              "text": "normalY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "t",
+          "signature": "t: number",
+          "signatureTokens": [
+            {
+              "text": "t",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/swept-collision.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/swept-collision.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/swept-collision.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/swept-collision.ts"
+}

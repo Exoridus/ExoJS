@@ -1,0 +1,141 @@
+{
+  "title": "PointerStateFlag",
+  "description": "Bit flags accumulated on a Pointer between frames so consumers can detect transient events (entered the canvas, was released, was cancelled) even if the pointer's `currentState` has already moved on. Cleared each frame by the InteractionManager.",
+  "symbol": "PointerStateFlag",
+  "kind": "enum",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Bit flags accumulated on a Pointer between frames so consumers can detect transient events (entered the canvas, was released, was cancelled) even if the pointer's `currentState` has already moved on. Cleared each frame by the InteractionManager."
+      ],
+      "importLine": "import { PointerStateFlag } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Cancel",
+          "signature": "Cancel",
+          "signatureTokens": [
+            {
+              "text": "Cancel",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Down",
+          "signature": "Down",
+          "signatureTokens": [
+            {
+              "text": "Down",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Leave",
+          "signature": "Leave",
+          "signatureTokens": [
+            {
+              "text": "Leave",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Move",
+          "signature": "Move",
+          "signatureTokens": [
+            {
+              "text": "Move",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "None",
+          "signature": "None",
+          "signatureTokens": [
+            {
+              "text": "None",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Over",
+          "signature": "Over",
+          "signatureTokens": [
+            {
+              "text": "Over",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Up",
+          "signature": "Up",
+          "signatureTokens": [
+            {
+              "text": "Up",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Pointer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Pointer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+}

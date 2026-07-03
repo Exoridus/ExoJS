@@ -1,0 +1,183 @@
+{
+  "title": "RenderNodePassOptions",
+  "description": "Options for RenderNodePass.",
+  "symbol": "RenderNodePassOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for RenderNodePass."
+      ],
+      "importLine": "import { RenderNodePassOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear?: Color",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Clear the destination (the target, else the active target) to this colour immediately before the node renders."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial enabled state. Default true. Toggle later via the RenderPass.enabled field."
+        },
+        {
+          "name": "label",
+          "signature": "label?: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional debug label for the inspector / logging. Default: the constructor name. Display only — not an identity."
+        },
+        {
+          "name": "target",
+          "signature": "target?: RenderTexture | null",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Off-screen destination. When set, the node is rendered into this RenderTexture through the internal target-redirect path (save / restore). null / omitted → the active target (canvas by default). Caller-owned and must be stable across frames; the pass never allocates, pools, resizes, or destroys it."
+        },
+        {
+          "name": "view",
+          "signature": "view?: View",
+          "signatureTokens": [
+            {
+              "text": "view",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "View to render the node with. Default: target.view when target is set, else context.view."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/RenderNodePass.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNodePass.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/RenderNodePass.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNodePass.ts"
+}

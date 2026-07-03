@@ -1,0 +1,97 @@
+{
+  "title": "AssetLoadRequest",
+  "description": "Per-load request passed to AssetHandler.load and AssetHandler.getIdentityKey. `Options` is `undefined` by default — a handler without typed options receives `request.options: undefined`. A handler with typed options receives `request.options: Options | undefined` (options remain optional even when typed).",
+  "symbol": "AssetLoadRequest",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-load request passed to AssetHandler.load and AssetHandler.getIdentityKey.",
+        "`Options` is `undefined` by default — a handler without typed options receives `request.options: undefined`. A handler with typed options receives `request.options: Options | undefined` (options remain optional even when typed)."
+      ],
+      "importLine": "import { AssetLoadRequest } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "options",
+          "signature": "options?: Options",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

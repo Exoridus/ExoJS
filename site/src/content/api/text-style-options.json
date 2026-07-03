@@ -1,0 +1,532 @@
+{
+  "title": "TextStyleOptions",
+  "description": "Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor.",
+  "symbol": "TextStyleOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 18,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor."
+      ],
+      "importLine": "import { TextStyleOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "align",
+          "signature": "align?: TextAlignment",
+          "signatureTokens": [
+            {
+              "text": "align",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextAlignment",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fillColor",
+          "signature": "fillColor?: Color",
+          "signatureTokens": [
+            {
+              "text": "fillColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "font",
+          "signature": "font?: FontFace",
+          "signatureTokens": [
+            {
+              "text": "font",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "A pre-constructed FontFace to use as the font for this node. When passed to Text, the face is automatically registered with document.fonts. Load the face via FontFactory before constructing the node so glyphs render immediately. Takes precedence over fontFamily when both are set. ts const face = await loader.load(FontFactory, 'roboto.woff2', { family: 'Roboto' }); const label = new Text('Score: 0', { font: face, fontSize: 24 }); "
+        },
+        {
+          "name": "fontFamily",
+          "signature": "fontFamily?: string",
+          "signatureTokens": [
+            {
+              "text": "fontFamily",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontSize",
+          "signature": "fontSize?: number",
+          "signatureTokens": [
+            {
+              "text": "fontSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontStyle",
+          "signature": "fontStyle?: \"normal\" | \"italic\"",
+          "signatureTokens": [
+            {
+              "text": "fontStyle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"italic\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontWeight",
+          "signature": "fontWeight?: FontWeight",
+          "signatureTokens": [
+            {
+              "text": "fontWeight",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontWeight",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "CSS font-weight. Defaults to 'normal' so that single-weight custom fonts render without browser-synthesised bold artefacts. Set explicitly to 'bold' for display / title text that intentionally requires bold."
+        },
+        {
+          "name": "gradientAxis",
+          "signature": "gradientAxis?: GradientAxis",
+          "signatureTokens": [
+            {
+              "text": "gradientAxis",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GradientAxis",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gradient orientation. Defaults to 'vertical'."
+        },
+        {
+          "name": "gradientColors",
+          "signature": "gradientColors?: [Color, Color] | null",
+          "signatureTokens": [
+            {
+              "text": "gradientColors",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Two-stop fill gradient [top, bottom]. When set, overrides fillColor for the glyph interior. null disables the gradient."
+        },
+        {
+          "name": "leading",
+          "signature": "leading?: number",
+          "signatureTokens": [
+            {
+              "text": "leading",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extra pixel gap between lines, added on top of lineHeight."
+        },
+        {
+          "name": "lineHeight",
+          "signature": "lineHeight?: number",
+          "signatureTokens": [
+            {
+              "text": "lineHeight",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "outlineColor",
+          "signature": "outlineColor?: Color",
+          "signatureTokens": [
+            {
+              "text": "outlineColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "outlineWidth",
+          "signature": "outlineWidth?: number",
+          "signatureTokens": [
+            {
+              "text": "outlineWidth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Outline width in SDF units (0..0.5). 0 disables the outline."
+        },
+        {
+          "name": "shadowAlpha",
+          "signature": "shadowAlpha?: number",
+          "signatureTokens": [
+            {
+              "text": "shadowAlpha",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shadow opacity (0..1). 0 disables the shadow."
+        },
+        {
+          "name": "shadowBlur",
+          "signature": "shadowBlur?: number",
+          "signatureTokens": [
+            {
+              "text": "shadowBlur",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shadow blur softness (0..1). Larger values soften the shadow edge."
+        },
+        {
+          "name": "shadowColor",
+          "signature": "shadowColor?: Color",
+          "signatureTokens": [
+            {
+              "text": "shadowColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Drop-shadow color."
+        },
+        {
+          "name": "shadowOffsetX",
+          "signature": "shadowOffsetX?: number",
+          "signatureTokens": [
+            {
+              "text": "shadowOffsetX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal shadow offset in pixels."
+        },
+        {
+          "name": "shadowOffsetY",
+          "signature": "shadowOffsetY?: number",
+          "signatureTokens": [
+            {
+              "text": "shadowOffsetY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical shadow offset in pixels."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/TextStyle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/TextStyle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+}

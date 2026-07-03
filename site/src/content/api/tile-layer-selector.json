@@ -1,0 +1,71 @@
+{
+  "title": "TileLayerSelector",
+  "description": "A layer selector inside a TileMapBandDefinition: either a stable layer **id** (`number`) or a **unique** layer **name** (`string`). Names that are shared by more than one layer are rejected as ambiguous — reference such layers by id.",
+  "symbol": "TileLayerSelector",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A layer selector inside a TileMapBandDefinition: either a stable layer **id** (`number`) or a **unique** layer **name** (`string`). Names that are shared by more than one layer are rejected as ambiguous — reference such layers by id."
+      ],
+      "importLine": "import { TileLayerSelector } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TileLayerSelector",
+          "signature": "number | string",
+          "signatureTokens": [
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/TileMapView.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapView.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/TileMapView.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapView.ts"
+}

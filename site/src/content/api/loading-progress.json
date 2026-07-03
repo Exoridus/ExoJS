@@ -1,0 +1,132 @@
+{
+  "title": "LoadingProgress",
+  "description": "",
+  "symbol": "LoadingProgress",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { LoadingProgress } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "failed",
+          "signature": "failed: number",
+          "signatureTokens": [
+            {
+              "text": "failed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "loaded",
+          "signature": "loaded: number",
+          "signatureTokens": [
+            {
+              "text": "loaded",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pending",
+          "signature": "pending: number",
+          "signatureTokens": [
+            {
+              "text": "pending",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "total",
+          "signature": "total: number",
+          "signatureTokens": [
+            {
+              "text": "total",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/LoadingQueue.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/LoadingQueue.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts"
+}

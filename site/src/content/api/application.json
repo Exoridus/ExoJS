@@ -1,0 +1,1535 @@
+{
+  "title": "Application",
+  "description": "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the app system registry (input, interaction, audio, tweens, rendering), asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations.",
+  "symbol": "Application",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 48,
+  "counts": {
+    "constructors": 1,
+    "methods": 8,
+    "properties": 31,
+    "events": 8
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the app system registry (input, interaction, audio, tweens, rendering), asset loader, and the per-frame loop.",
+        "Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved.",
+        "The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing.",
+        "`pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations."
+      ],
+      "importLine": "import { Application } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(appSettings: ApplicationOptions): Application",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "appSettings",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ApplicationOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "appSettings",
+              "type": "ApplicationOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Application",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "capture",
+          "signature": "capture(node: RenderNode, options: CaptureOptions): RenderTexture",
+          "signatureTokens": [
+            {
+              "text": "capture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CaptureOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "CaptureOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderTexture",
+          "description": "Captures node into a freshly allocated off-screen RenderTexture and returns it. Convenience wrapper that delegates to RenderingContext.capture."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tear down every owned subsystem (loader, the app systems — input, interaction, audio, tweens, rendering — backend, scene manager, all clocks, all signals) and release event listeners. The application instance is unusable after this call."
+        },
+        {
+          "name": "resize",
+          "signature": "resize(width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "resize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Resize the canvas and the active backend's root render target. Dispatches Application.onResize after the backend has been notified."
+        },
+        {
+          "name": "screenToWorld",
+          "signature": "screenToWorld(x: number, y: number): PointLike",
+          "signatureTokens": [
+            {
+              "text": "screenToWorld",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PointLike",
+          "description": "Convert a logical/design-space pixel coordinate — the space of Pointer.x/Pointer.y and node positions, e.g. 0..app.width — to a world position using the active camera. At the default centered camera this is the identity; with a panned/zoomed/rotated camera it undoes the transform. Equivalent to app.rendering.view.screenToWorld(x, y)."
+        },
+        {
+          "name": "setCursor",
+          "signature": "setCursor(cursor: string | HTMLCanvasElement | HTMLImageElement | Texture): this",
+          "signatureTokens": [
+            {
+              "text": "setCursor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cursor",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLImageElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cursor",
+              "type": "string | HTMLCanvasElement | HTMLImageElement | Texture",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set the canvas cursor. Strings are passed through to canvas.style.cursor verbatim (CSS values like 'pointer', 'crosshair', or url(...)). Image-based sources are rasterized to a data: URL via the shared scratch canvas and used as the cursor image."
+        },
+        {
+          "name": "start",
+          "signature": "start(scene: Scene): Promise<Application>",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scene",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "scene",
+              "type": "Scene",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Application>",
+          "description": "Initialize the render backend, await capability detection, set the initial scene, and start the per-frame loop. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): this",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Halt the per-frame loop, unload the active scene, and stop the active + frame clocks. Leaves backend, input, audio, etc. intact — call Application.destroy to release everything."
+        },
+        {
+          "name": "update",
+          "signature": "update(): this",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped — preventing a large delta spike on the first visible frame after resume. Each normal frame runs two distinct phases: **Update phase** — the app systems tick in ascending order (input, interaction, audio, tweens, rendering, plus any user systems at 600+), then scene.update(delta) for each participating scene in stack order. **Render phase** — scene.draw(context) for each participating scene in stack order, followed by the transition overlay when active. **Frame dispatch / flush** — onFrame signal, backend GPU flush, frame-time stat write, RAF reschedule. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "canvas",
+          "signature": "canvas: HTMLCanvasElement",
+          "signatureTokens": [
+            {
+              "text": "canvas",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "focus",
+          "signature": "focus: FocusManager",
+          "signatureTokens": [
+            {
+              "text": "focus",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FocusManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "input",
+          "signature": "input: InputManager",
+          "signatureTokens": [
+            {
+              "text": "input",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "interaction",
+          "signature": "interaction: InteractionManager",
+          "signatureTokens": [
+            {
+              "text": "interaction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InteractionManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "loader",
+          "signature": "loader: Loader",
+          "signatureTokens": [
+            {
+              "text": "loader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "options",
+          "signature": "options: ApplicationOptions",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ApplicationOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pauseOnHidden",
+          "signature": "pauseOnHidden: boolean",
+          "signatureTokens": [
+            {
+              "text": "pauseOnHidden",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "random",
+          "signature": "random: Random",
+          "signatureTokens": [
+            {
+              "text": "random",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Random",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-Application seedable RNG. Isolated from other Applications and from the global rand()."
+        },
+        {
+          "name": "scene",
+          "signature": "scene: SceneManager",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "serializers",
+          "signature": "serializers: SerializationRegistry",
+          "signatureTokens": [
+            {
+              "text": "serializers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializationRegistry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "App-scoped serializer registry, chained to the global defaultSerializationRegistry. Extension serializers materialise here rather than globally, so two Application instances in one process keep their extension serializers isolated; core and globally-registered (via registerSerializer) serializers remain shared through the fallback."
+        },
+        {
+          "name": "systems",
+          "signature": "systems: SystemRegistry",
+          "signatureTokens": [
+            {
+              "text": "systems",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemRegistry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "App-level system registry, ticked once per frame in ascending order. The core managers occupy reserved bands (input 100, interaction 200, audio 300, tweens 400, rendering 500); register your own app-wide systems at order 600+ via app.systems.add(...). Scene-scoped systems live on scene.systems."
+        },
+        {
+          "name": "tweens",
+          "signature": "tweens: TweenManager",
+          "signatureTokens": [
+            {
+              "text": "tweens",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "activeTime",
+          "signature": "activeTime: Time",
+          "signatureTokens": [
+            {
+              "text": "activeTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "audio",
+          "signature": "audio: AudioManager",
+          "signatureTokens": [
+            {
+              "text": "audio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "backend",
+          "signature": "backend: RenderBackend",
+          "signatureTokens": [
+            {
+              "text": "backend",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Low-level render backend. Prefer the high-level Application.rendering render context for normal rendering. Direct backend access is an escape hatch for custom render passes and advanced GPU work."
+        },
+        {
+          "name": "canvasFocused",
+          "signature": "canvasFocused: boolean",
+          "signatureTokens": [
+            {
+              "text": "canvasFocused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "capabilities",
+          "signature": "capabilities: Capabilities",
+          "signatureTokens": [
+            {
+              "text": "capabilities",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Capabilities",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolved capabilities for the host browser. Available after Application.start resolves; reading before that throws. For pre-start access use Capabilities.ready directly."
+        },
+        {
+          "name": "clearColor",
+          "signature": "clearColor: Color",
+          "signatureTokens": [
+            {
+              "text": "clearColor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The colour the canvas is cleared to each frame, as a live Color. Assigning copies into the backend's clear colour (effective next frame); you may also mutate it in place via app.clearColor.set(...)."
+        },
+        {
+          "name": "cursor",
+          "signature": "cursor: string",
+          "signatureTokens": [
+            {
+              "text": "cursor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "documentVisible",
+          "signature": "documentVisible: boolean",
+          "signatureTokens": [
+            {
+              "text": "documentVisible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fixedTimeStep",
+          "signature": "fixedTimeStep: number",
+          "signatureTokens": [
+            {
+              "text": "fixedTimeStep",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fixed-timestep size in seconds (see ApplicationOptions.fixedTimeStep)."
+        },
+        {
+          "name": "frameAlpha",
+          "signature": "frameAlpha: number",
+          "signatureTokens": [
+            {
+              "text": "frameAlpha",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Interpolation factor [0, 1) — the leftover sub-step fraction after this frame's fixed steps. Lerp rendered state between its previous and current fixed-step values by this to smooth motion when the fixed rate is below the frame rate."
+        },
+        {
+          "name": "frameCount",
+          "signature": "frameCount: number",
+          "signatureTokens": [
+            {
+              "text": "frameCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "frameTime",
+          "signature": "frameTime: Time",
+          "signatureTokens": [
+            {
+              "text": "frameTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical (design-space) canvas height. See Application.width."
+        },
+        {
+          "name": "pixelRatio",
+          "signature": "pixelRatio: number",
+          "signatureTokens": [
+            {
+              "text": "pixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device/render pixel ratio applied to the backing buffer. Defaults to the host devicePixelRatio clamped to 2 (crisp on HiDPI out of the box, but capped to avoid a runaway fill-rate cost on DPR-3 phones) unless an explicit canvas.pixelRatio option was given. Holds the invariant app.canvas.width === Math.round(app.width × app.pixelRatio)."
+        },
+        {
+          "name": "rendering",
+          "signature": "rendering: RenderingContext",
+          "signatureTokens": [
+            {
+              "text": "rendering",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "High-level rendering context. Routes scene drawing through the RenderPlan pipeline (build → optimize → play) and provides off-screen capture via RenderingContext.renderTo. Exposes the raw RenderBackend for advanced / custom-renderer use."
+        },
+        {
+          "name": "sizingMode",
+          "signature": "sizingMode: CanvasSizingMode",
+          "signatureTokens": [
+            {
+              "text": "sizingMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasSizingMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The active CanvasSizingMode. Assigning a new mode re-applies the sizing strategy live: the previous mode's ResizeObserver (if any) is disconnected and the new mode's CSS / observer is installed. Assigning the current value is a no-op."
+        },
+        {
+          "name": "startupTime",
+          "signature": "startupTime: Time",
+          "signatureTokens": [
+            {
+              "text": "startupTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "signature": "status: ApplicationStatus",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ApplicationStatus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical (design-space) canvas width — the value passed as canvas.width at construction / resize, independent of pixelRatio. Use this for layout math (e.g. app.width / 2 to center) instead of app.canvas.width, which is the physical backing-store size (app.width × app.pixelRatio) and therefore larger on HiDPI displays."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onBackendLost",
+          "signature": "onBackendLost: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onBackendLost",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onBackendRestored",
+          "signature": "onBackendRestored: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onBackendRestored",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onCanvasFocusChange",
+          "signature": "onCanvasFocusChange: Signal<[focused]>",
+          "signatureTokens": [
+            {
+              "text": "onCanvasFocusChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "focused",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onError",
+          "signature": "onError: Signal<[error]>",
+          "signatureTokens": [
+            {
+              "text": "onError",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when an unhandled error occurs in scene lifecycle."
+        },
+        {
+          "name": "onFixedFrame",
+          "signature": "onFixedFrame: Signal<[Time]>",
+          "signatureTokens": [
+            {
+              "text": "onFixedFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched once per fixed-timestep step (zero or more times per frame), ahead of onFrame."
+        },
+        {
+          "name": "onFrame",
+          "signature": "onFrame: Signal<[Time]>",
+          "signatureTokens": [
+            {
+              "text": "onFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onResize",
+          "signature": "onResize: Signal<[number, number, Application]>",
+          "signatureTokens": [
+            {
+              "text": "onResize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onVisibilityChange",
+          "signature": "onVisibilityChange: Signal<[visible]>",
+          "signatureTokens": [
+            {
+              "text": "onVisibilityChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "visible",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

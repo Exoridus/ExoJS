@@ -1,0 +1,310 @@
+{
+  "title": "GamepadPromptLayouts",
+  "description": "Static utility that drives in-game controller-prompt UI. Provides the canonical set of prompt controls, their normalised [x, y] positions on a generic controller silhouette, device-family label strings (e.g. \"A\" for Xbox, \"Cross\" for PlayStation, \"B\" for Switch), and the mapping from prompt control names to GamepadButton channel values.",
+  "symbol": "GamepadPromptLayouts",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Static utility that drives in-game controller-prompt UI.",
+        "Provides the canonical set of prompt controls, their normalised [x, y] positions on a generic controller silhouette, device-family label strings (e.g. \"A\" for Xbox, \"Cross\" for PlayStation, \"B\" for Switch), and the mapping from prompt control names to GamepadButton channel values."
+      ],
+      "importLine": "import { GamepadPromptLayouts } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): GamepadPromptLayouts",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptLayouts",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadPromptLayouts",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "getControlChannelMap",
+          "signature": "getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadButtonChannel>",
+          "signatureTokens": [
+            {
+              "text": "getControlChannelMap",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "ReadonlyMap<GamepadPromptControl, GamepadButtonChannel>",
+          "description": "Returns the static mapping from each GamepadPromptControl to its corresponding GamepadButton channel. The composite 'DPad' control has no channel entry and is absent from the returned map."
+        },
+        {
+          "name": "getControlLabels",
+          "signature": "getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string>",
+          "signatureTokens": [
+            {
+              "text": "getControlLabels",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "family",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMappingFamily",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "family",
+              "type": "GamepadMappingFamily",
+              "optional": false
+            }
+          ],
+          "returnType": "ReadonlyMap<GamepadPromptControl, string>",
+          "description": "Returns the label map for the given device family, e.g. { ButtonSouth → \"A\" } for Xbox or { ButtonSouth → \"Cross\" } for PlayStation. Falls back to generic labels when family has no registered label set."
+        },
+        {
+          "name": "getControlPosition",
+          "signature": "getControlPosition(control: GamepadPromptControl): readonly [number, number]",
+          "signatureTokens": [
+            {
+              "text": "getControlPosition",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "control",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "control",
+              "type": "GamepadPromptControl",
+              "optional": false
+            }
+          ],
+          "returnType": "readonly [number, number]",
+          "description": "Returns the normalised [x, y] position of control on a generic controller silhouette, where (0, 0) is the top-left and (1, 1) the bottom-right. Falls back to [0.5, 0.5] (centre) when the control has no registered position."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "controls",
+          "signature": "controls: GamepadPromptControl[]",
+          "signatureTokens": [
+            {
+              "text": "controls",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Complete ordered list of every GamepadPromptControl token."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadPromptLayouts.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadPromptLayouts.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadPromptLayouts.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadPromptLayouts.ts"
+}

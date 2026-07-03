@@ -1,0 +1,313 @@
+{
+  "title": "RevoluteJointOptions",
+  "description": "Construction options for a RevoluteJoint.",
+  "symbol": "RevoluteJointOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a RevoluteJoint."
+      ],
+      "importLine": "import { RevoluteJointOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "anchor",
+          "signature": "anchor: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "anchor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shared world-space pivot point at creation. The two bodies are pinned here and may rotate freely about it."
+        },
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First body (often a static anchor)."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Second body."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio?: number",
+          "signatureTokens": [
+            {
+              "text": "dampingRatio",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring damping ratio (used when hertz > 0). Default 1."
+        },
+        {
+          "name": "enableLimit",
+          "signature": "enableLimit?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableLimit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enable the angle limit (keeps the relative angle in [lowerAngle, upperAngle]). Default false."
+        },
+        {
+          "name": "enableMotor",
+          "signature": "enableMotor?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableMotor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enable the angular motor (drives ωB − ωA toward motorSpeed). Default false."
+        },
+        {
+          "name": "hertz",
+          "signature": "hertz?: number",
+          "signatureTokens": [
+            {
+              "text": "hertz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring frequency in Hz; 0 (default) makes it a rigid pin."
+        },
+        {
+          "name": "lowerAngle",
+          "signature": "lowerAngle?: number",
+          "signatureTokens": [
+            {
+              "text": "lowerAngle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lower relative-angle limit in radians (relative to the angle at creation). Default 0."
+        },
+        {
+          "name": "maxMotorTorque",
+          "signature": "maxMotorTorque?: number",
+          "signatureTokens": [
+            {
+              "text": "maxMotorTorque",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum motor torque — clamps the per-step motor impulse. Default 0."
+        },
+        {
+          "name": "motorSpeed",
+          "signature": "motorSpeed?: number",
+          "signatureTokens": [
+            {
+              "text": "motorSpeed",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Target relative angular velocity in rad/s when the motor is enabled. Default 0."
+        },
+        {
+          "name": "upperAngle",
+          "signature": "upperAngle?: number",
+          "signatureTokens": [
+            {
+              "text": "upperAngle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper relative-angle limit in radians. Default 0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/RevoluteJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/RevoluteJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/RevoluteJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/RevoluteJoint.ts"
+}

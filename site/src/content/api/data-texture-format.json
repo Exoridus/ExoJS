@@ -1,0 +1,89 @@
+{
+  "title": "DataTextureFormat",
+  "description": "Pixel format for DataTexture. - `r8` — single-channel 8-bit unsigned. Buffer is `Uint8Array`. 1 byte/pixel. - `r32f` — single-channel 32-bit float. Buffer is `Float32Array`. 4 bytes/pixel. - `rgba8` — 4-channel 8-bit unsigned. Buffer is `Uint8Array`. 4 bytes/pixel. - `rgba32f`— 4-channel 32-bit float. Buffer is `Float32Array`. 16 bytes/pixel. Float formats are core in WebGL2 and WebGPU; no extension probe required.",
+  "symbol": "DataTextureFormat",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Pixel format for DataTexture.",
+        "- `r8` — single-channel 8-bit unsigned. Buffer is `Uint8Array`. 1 byte/pixel. - `r32f` — single-channel 32-bit float. Buffer is `Float32Array`. 4 bytes/pixel. - `rgba8` — 4-channel 8-bit unsigned. Buffer is `Uint8Array`. 4 bytes/pixel. - `rgba32f`— 4-channel 32-bit float. Buffer is `Float32Array`. 16 bytes/pixel.",
+        "Float formats are core in WebGL2 and WebGPU; no extension probe required."
+      ],
+      "importLine": "import { DataTextureFormat } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DataTextureFormat",
+          "signature": "\"r8\" | \"r32f\" | \"rgba8\" | \"rgba32f\"",
+          "signatureTokens": [
+            {
+              "text": "\"r8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"r32f\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba32f\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/DataTexture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/DataTexture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+}

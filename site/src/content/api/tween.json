@@ -1,0 +1,891 @@
+{
+  "title": "Tween",
+  "description": "Animates numeric properties of `target` from their current value to a configured end value over a duration in seconds. Supports easing, delay, repeat (with optional yoyo), chaining, and lifecycle callbacks (Tween.onStart, Tween.onUpdate, Tween.onComplete, Tween.onRepeat). Tweens are typically created via TweenManager.create, which attaches them to the manager so they advance once per frame. Stand-alone usage is supported by calling Tween.update manually with a frame delta. Start values are captured lazily on the first update after Tween.start, so target properties may be mutated between configuration and start without affecting the captured baseline. Only number-typed properties on `target` are interpolated; non-number properties listed in Tween.to emit a console warning and are skipped.",
+  "symbol": "Tween",
+  "kind": "class",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 19,
+  "counts": {
+    "constructors": 1,
+    "methods": 15,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Animates numeric properties of `target` from their current value to a configured end value over a duration in seconds. Supports easing, delay, repeat (with optional yoyo), chaining, and lifecycle callbacks (Tween.onStart, Tween.onUpdate, Tween.onComplete, Tween.onRepeat).",
+        "Tweens are typically created via TweenManager.create, which attaches them to the manager so they advance once per frame. Stand-alone usage is supported by calling Tween.update manually with a frame delta.",
+        "Start values are captured lazily on the first update after Tween.start, so target properties may be mutated between configuration and start without affecting the captured baseline.",
+        "Only number-typed properties on `target` are interpolated; non-number properties listed in Tween.to emit a console warning and are skipped."
+      ],
+      "importLine": "import { Tween } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(target: T): Tween<T>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "Tween<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "chain",
+          "signature": "chain(next: Tween): Tween",
+          "signatureTokens": [
+            {
+              "text": "chain",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "next",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "next",
+              "type": "Tween",
+              "optional": false
+            }
+          ],
+          "returnType": "Tween",
+          "description": "When this tween completes naturally, automatically start next. Returns next for fluent chaining: fadeIn.chain(moveOut).start() — note that start() here starts moveOut, so typically you only call start() on the first tween."
+        },
+        {
+          "name": "delay",
+          "signature": "delay(seconds: number): this",
+          "signatureTokens": [
+            {
+              "text": "delay",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "seconds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "seconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Delay in seconds before the tween begins interpolating. Default 0."
+        },
+        {
+          "name": "easing",
+          "signature": "easing(easingFunction: EasingFunction): this",
+          "signatureTokens": [
+            {
+              "text": "easing",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "easingFunction",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "EasingFunction",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "easingFunction",
+              "type": "EasingFunction",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Easing function applied to the normalized time. Default Ease.linear."
+        },
+        {
+          "name": "onComplete",
+          "signature": "onComplete(callback: TweenLifecycleCallback): this",
+          "signatureTokens": [
+            {
+              "text": "onComplete",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenLifecycleCallback",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "TweenLifecycleCallback",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a callback fired when the tween finishes naturally (all repeat cycles exhausted). Does NOT fire when the tween is stopped via Tween.stop."
+        },
+        {
+          "name": "onRepeat",
+          "signature": "onRepeat(callback: TweenLifecycleCallback): this",
+          "signatureTokens": [
+            {
+              "text": "onRepeat",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenLifecycleCallback",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "TweenLifecycleCallback",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a callback fired at the boundary of each repeat cycle, after the cycle counter is decremented and before the next cycle begins. Not fired on the final cycle's completion (use Tween.onComplete for that)."
+        },
+        {
+          "name": "onStart",
+          "signature": "onStart(callback: TweenLifecycleCallback): this",
+          "signatureTokens": [
+            {
+              "text": "onStart",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenLifecycleCallback",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "TweenLifecycleCallback",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a callback fired once when the tween begins interpolating (after any configured delay has elapsed). Fires only on the first cycle — repeats do not re-trigger it."
+        },
+        {
+          "name": "onUpdate",
+          "signature": "onUpdate(callback: TweenUpdateCallback): this",
+          "signatureTokens": [
+            {
+              "text": "onUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenUpdateCallback",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "TweenUpdateCallback",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a callback fired on every active update. Receives the eased progress in 0..1 — already direction-flipped for yoyo cycles."
+        },
+        {
+          "name": "pause",
+          "signature": "pause(): this",
+          "signatureTokens": [
+            {
+              "text": "pause",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Pause the tween. update() calls are ignored while paused."
+        },
+        {
+          "name": "repeat",
+          "signature": "repeat(count: number): this",
+          "signatureTokens": [
+            {
+              "text": "repeat",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "count",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "count",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Number of additional repeat cycles. -1 = infinite. Default 0 (runs once). The argument counts cycles **after** the first, not the total cycle count — repeat(2) runs the animation three times total (the initial pass plus two repeats)."
+        },
+        {
+          "name": "resume",
+          "signature": "resume(): this",
+          "signatureTokens": [
+            {
+              "text": "resume",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Resume a paused tween from where it left off."
+        },
+        {
+          "name": "start",
+          "signature": "start(): this",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Start or restart the tween. Resets all elapsed time, the start-value snapshot, playback direction, and repeat counter. If this tween was previously owned by a manager but was evicted after natural completion or Tween.stop, it is automatically re-registered so it continues to receive frame updates. Stand-alone tweens (no manager) are unaffected."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): this",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Stop the tween without finishing. Target properties stay at their current interpolated values. onComplete does NOT fire. The tween is removed from its manager if one is assigned."
+        },
+        {
+          "name": "to",
+          "signature": "to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this",
+          "signatureTokens": [
+            {
+              "text": "to",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "properties",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NumericKeys",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "duration",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "properties",
+              "type": "Partial<Record<NumericKeys<T>, number>>",
+              "optional": false
+            },
+            {
+              "name": "duration",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set target end-values and duration in seconds. Replaces any prior to(). The starting values are captured lazily on first update() after start(), so mutating target between to() and start() is safe. Only numeric properties of target are accepted. Non-numeric keys are rejected at compile time; the runtime guard in update() remains as a safety net for untyped callers."
+        },
+        {
+          "name": "update",
+          "signature": "update(deltaSeconds: number): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "deltaSeconds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "deltaSeconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance the tween by deltaSeconds. Called by TweenManager each frame, or manually for stand-alone usage. No-ops when Paused, Stopped, or Complete."
+        },
+        {
+          "name": "yoyo",
+          "signature": "yoyo(enabled: boolean): this",
+          "signatureTokens": [
+            {
+              "text": "yoyo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "enabled",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Reverse playback direction on each repeat cycle. Only meaningful when combined with repeat(). Calling yoyo() without repeat() is a no-op."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "progress",
+          "signature": "progress: number",
+          "signatureTokens": [
+            {
+              "text": "progress",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current eased progress in 0..1. Reflects the eased t after applying the easing function, not the raw elapsed/duration ratio. Returns 0 while the tween is in the delay phase (state is Active but the configured delay has not yet elapsed)."
+        },
+        {
+          "name": "state",
+          "signature": "state: TweenState",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "target",
+          "signature": "target: T",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/Tween.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/Tween.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts"
+}

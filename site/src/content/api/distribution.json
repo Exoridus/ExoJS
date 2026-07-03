@@ -1,0 +1,103 @@
+{
+  "title": "Distribution",
+  "description": "Value distribution sampled at particle spawn time. Each `sample()` call may return a different value — used to randomize spawn properties (lifetime, position, velocity, scale, tint, ...) without per-particle subclassing. Implementations come in two flavours: - **Stateless / scalar** (e.g. Constant, Range) just return a `T` directly. - **Mutable-target** (Vector / Color distributions) accept an optional `out` parameter and write into it in place. Pass your own scratch instance to avoid per-spawn heap allocations; omit it to use the distribution's internal scratch (only valid until the next call).",
+  "symbol": "Distribution",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Value distribution sampled at particle spawn time. Each `sample()` call may return a different value — used to randomize spawn properties (lifetime, position, velocity, scale, tint, ...) without per-particle subclassing.",
+        "Implementations come in two flavours:",
+        "- **Stateless / scalar** (e.g. Constant, Range) just return a `T` directly. - **Mutable-target** (Vector / Color distributions) accept an optional `out` parameter and write into it in place. Pass your own scratch instance to avoid per-spawn heap allocations; omit it to use the distribution's internal scratch (only valid until the next call)."
+      ],
+      "importLine": "import { Distribution } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "sample",
+          "signature": "sample(out?: T): T",
+          "signatureTokens": [
+            {
+              "text": "sample",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "out",
+              "type": "T",
+              "optional": true
+            }
+          ],
+          "returnType": "T",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/Distribution.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Distribution.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/Distribution.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Distribution.ts"
+}

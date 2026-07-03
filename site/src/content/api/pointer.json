@@ -1,0 +1,2297 @@
+{
+  "title": "Pointer",
+  "description": "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes. Coordinates are stored in logical/design pixel space — i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling. Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants.",
+  "symbol": "Pointer",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 92,
+  "counts": {
+    "constructors": 1,
+    "methods": 7,
+    "properties": 20,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes.",
+        "Coordinates are stored in logical/design pixel space — i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling.",
+        "Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants."
+      ],
+      "importLine": "import { Pointer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(event: PointerEvent, app: Application, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number): Pointer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerEvent",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "canvas",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channels",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotIndex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pointer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            },
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            },
+            {
+              "name": "canvas",
+              "type": "HTMLCanvasElement",
+              "optional": false
+            },
+            {
+              "name": "channels",
+              "type": "Float32Array",
+              "optional": false
+            },
+            {
+              "name": "slotIndex",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Pointer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleCancel",
+          "signature": "handleCancel(event: PointerEvent): void",
+          "signatureTokens": [
+            {
+              "text": "handleCancel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerEvent",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleEnter",
+          "signature": "handleEnter(event: PointerEvent): void",
+          "signatureTokens": [
+            {
+              "text": "handleEnter",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerEvent",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleLeave",
+          "signature": "handleLeave(event: PointerEvent): void",
+          "signatureTokens": [
+            {
+              "text": "handleLeave",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerEvent",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleMove",
+          "signature": "handleMove(event: PointerEvent): void",
+          "signatureTokens": [
+            {
+              "text": "handleMove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerEvent",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handlePress",
+          "signature": "handlePress(event: PointerEvent): void",
+          "signatureTokens": [
+            {
+              "text": "handlePress",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerEvent",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleRelease",
+          "signature": "handleRelease(event: PointerEvent): void",
+          "signatureTokens": [
+            {
+              "text": "handleRelease",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerEvent",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "id",
+          "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "position",
+          "signature": "position: Vector",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "size",
+          "signature": "size: Size",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Size",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "startPos",
+          "signature": "startPos: Vector",
+          "signatureTokens": [
+            {
+              "text": "startPos",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stateFlags",
+          "signature": "stateFlags: Flags<PointerStateFlag>",
+          "signatureTokens": [
+            {
+              "text": "stateFlags",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Flags",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerStateFlag",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tilt",
+          "signature": "tilt: Vector",
+          "signatureTokens": [
+            {
+              "text": "tilt",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "buttons",
+          "signature": "buttons: number",
+          "signatureTokens": [
+            {
+              "text": "buttons",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "currentState",
+          "signature": "currentState: PointerState",
+          "signatureTokens": [
+            {
+              "text": "currentState",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "isPrimary",
+          "signature": "isPrimary: boolean",
+          "signatureTokens": [
+            {
+              "text": "isPrimary",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pressure",
+          "signature": "pressure: number",
+          "signatureTokens": [
+            {
+              "text": "pressure",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "slotIndex",
+          "signature": "slotIndex: number",
+          "signatureTokens": [
+            {
+              "text": "slotIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tiltX",
+          "signature": "tiltX: number",
+          "signatureTokens": [
+            {
+              "text": "tiltX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tiltY",
+          "signature": "tiltY: number",
+          "signatureTokens": [
+            {
+              "text": "tiltY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "twist",
+          "signature": "twist: number",
+          "signatureTokens": [
+            {
+              "text": "twist",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "Active",
+          "signature": "Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Height",
+          "signature": "Height: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IsMouse",
+          "signature": "IsMouse: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "IsMouse",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IsPen",
+          "signature": "IsPen: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "IsPen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IsPrimary",
+          "signature": "IsPrimary: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "IsPrimary",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IsTouch",
+          "signature": "IsTouch: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "IsTouch",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Left",
+          "signature": "Left: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Left",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Middle",
+          "signature": "Middle: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Middle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Pressure",
+          "signature": "Pressure: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Pressure",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Right",
+          "signature": "Right: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Right",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot0Active",
+          "signature": "Slot0Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot0Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot0X",
+          "signature": "Slot0X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot0X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot0Y",
+          "signature": "Slot0Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot0Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot10Active",
+          "signature": "Slot10Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot10Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot10X",
+          "signature": "Slot10X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot10X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot10Y",
+          "signature": "Slot10Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot10Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot11Active",
+          "signature": "Slot11Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot11Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot11X",
+          "signature": "Slot11X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot11X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot11Y",
+          "signature": "Slot11Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot11Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot12Active",
+          "signature": "Slot12Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot12Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot12X",
+          "signature": "Slot12X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot12X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot12Y",
+          "signature": "Slot12Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot12Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot13Active",
+          "signature": "Slot13Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot13Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot13X",
+          "signature": "Slot13X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot13X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot13Y",
+          "signature": "Slot13Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot13Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot14Active",
+          "signature": "Slot14Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot14Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot14X",
+          "signature": "Slot14X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot14X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot14Y",
+          "signature": "Slot14Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot14Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot15Active",
+          "signature": "Slot15Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot15Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot15X",
+          "signature": "Slot15X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot15X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot15Y",
+          "signature": "Slot15Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot15Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot1Active",
+          "signature": "Slot1Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot1Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot1X",
+          "signature": "Slot1X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot1X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot1Y",
+          "signature": "Slot1Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot1Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot2Active",
+          "signature": "Slot2Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot2Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot2X",
+          "signature": "Slot2X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot2X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot2Y",
+          "signature": "Slot2Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot2Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot3Active",
+          "signature": "Slot3Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot3Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot3X",
+          "signature": "Slot3X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot3X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot3Y",
+          "signature": "Slot3Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot3Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot4Active",
+          "signature": "Slot4Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot4Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot4X",
+          "signature": "Slot4X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot4X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot4Y",
+          "signature": "Slot4Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot4Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot5Active",
+          "signature": "Slot5Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot5Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot5X",
+          "signature": "Slot5X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot5X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot5Y",
+          "signature": "Slot5Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot5Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot6Active",
+          "signature": "Slot6Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot6Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot6X",
+          "signature": "Slot6X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot6X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot6Y",
+          "signature": "Slot6Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot6Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot7Active",
+          "signature": "Slot7Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot7Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot7X",
+          "signature": "Slot7X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot7X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot7Y",
+          "signature": "Slot7Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot7Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot8Active",
+          "signature": "Slot8Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot8Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot8X",
+          "signature": "Slot8X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot8X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot8Y",
+          "signature": "Slot8Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot8Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot9Active",
+          "signature": "Slot9Active: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot9Active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot9X",
+          "signature": "Slot9X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot9X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Slot9Y",
+          "signature": "Slot9Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Slot9Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "TiltX",
+          "signature": "TiltX: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "TiltX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "TiltY",
+          "signature": "TiltY: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "TiltY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Twist",
+          "signature": "Twist: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Twist",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Width",
+          "signature": "Width: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "X",
+          "signature": "X: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Y",
+          "signature": "Y: PointerChannel",
+          "signatureTokens": [
+            {
+              "text": "Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Pointer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Pointer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+}

@@ -1,0 +1,154 @@
+{
+  "title": "BufferTypes",
+  "description": "GPU buffer binding targets. Values are WebGL2 GLenum constants used when calling `gl.bindBuffer`.",
+  "symbol": "BufferTypes",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "GPU buffer binding targets. Values are WebGL2 GLenum constants used when calling `gl.bindBuffer`."
+      ],
+      "importLine": "import { BufferTypes } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "ArrayBuffer",
+          "signature": "ArrayBuffer",
+          "signatureTokens": [
+            {
+              "text": "ArrayBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CopyReadBuffer",
+          "signature": "CopyReadBuffer",
+          "signatureTokens": [
+            {
+              "text": "CopyReadBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CopyWriteBuffer",
+          "signature": "CopyWriteBuffer",
+          "signatureTokens": [
+            {
+              "text": "CopyWriteBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ElementArrayBuffer",
+          "signature": "ElementArrayBuffer",
+          "signatureTokens": [
+            {
+              "text": "ElementArrayBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "PixelPackBuffer",
+          "signature": "PixelPackBuffer",
+          "signatureTokens": [
+            {
+              "text": "PixelPackBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "PixelUnpackBuffer",
+          "signature": "PixelUnpackBuffer",
+          "signatureTokens": [
+            {
+              "text": "PixelUnpackBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "TransformFeedbackBuffer",
+          "signature": "TransformFeedbackBuffer",
+          "signatureTokens": [
+            {
+              "text": "TransformFeedbackBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "UniformBuffer",
+          "signature": "UniformBuffer",
+          "signatureTokens": [
+            {
+              "text": "UniformBuffer",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

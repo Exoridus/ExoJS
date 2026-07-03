@@ -1,0 +1,202 @@
+{
+  "title": "tiledRuntimeMapBinding",
+  "description": "Declarative asset binding for the runtime TileMap produced from a `.tmj` Tiled map file. This is the common-case binding: `loader.load(TileMap, 'world.tmj')` fetches and validates the TMJ, resolves external `.tsj` tilesets, loads tileset textures via the sub-load `loader.load(TiledMap, source)`, and synchronously converts the parsed TiledMap source model into a format-independent runtime TileMap via TiledMap.toTileMap. The sub-load flow guarantees that calling both `load(TileMap)` and `load(TiledMap)` for the same URL shares the Loader's cached `TiledMap` (no duplicate JSON fetches). Claiming the `tmj` extension enables the auto-routing shorthand `loader.load('world.tmj')` — the ExtensionTypeMap augmentation in this package maps `'tmj' → TileMap`.",
+  "symbol": "tiledRuntimeMapBinding",
+  "kind": "namespace",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Declarative asset binding for the runtime TileMap produced from a `.tmj` Tiled map file.",
+        "This is the common-case binding: `loader.load(TileMap, 'world.tmj')` fetches and validates the TMJ, resolves external `.tsj` tilesets, loads tileset textures via the sub-load `loader.load(TiledMap, source)`, and synchronously converts the parsed TiledMap source model into a format-independent runtime TileMap via TiledMap.toTileMap.",
+        "The sub-load flow guarantees that calling both `load(TileMap)` and `load(TiledMap)` for the same URL shares the Loader's cached `TiledMap` (no duplicate JSON fetches).",
+        "Claiming the `tmj` extension enables the auto-routing shorthand `loader.load('world.tmj')` — the ExtensionTypeMap augmentation in this package maps `'tmj' → TileMap`."
+      ],
+      "importLine": "import { tiledRuntimeMapBinding } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(): { getIdentityKey: unknown; load: unknown }",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "getIdentityKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "{ getIdentityKey: unknown; load: unknown }",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "extensions",
+          "signature": "extensions: string[]",
+          "signatureTokens": [
+            {
+              "text": "extensions",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: typeof TileMap",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "typeNames",
+          "signature": "typeNames: string[]",
+          "signatureTokens": [
+            {
+              "text": "typeNames",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/tiledRuntimeMapBinding.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledRuntimeMapBinding.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/tiledRuntimeMapBinding.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledRuntimeMapBinding.ts"
+}

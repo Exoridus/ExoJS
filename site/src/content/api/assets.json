@@ -1,0 +1,96 @@
+{
+  "title": "Assets",
+  "description": "A reusable, typed asset container. Plain configs are converted to `Asset<T>` instances; already-created `Asset<T>` values are passed through. The container exposes direct typed properties and an `entries` record for spread loading.",
+  "symbol": "Assets",
+  "kind": "type",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A reusable, typed asset container.",
+        "Plain configs are converted to `Asset<T>` instances; already-created `Asset<T>` values are passed through. The container exposes direct typed properties and an `entries` record for spread loading."
+      ],
+      "importLine": "import { Assets } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "Assets",
+          "signature": "AssetsImpl<M> & InferAssetsProperties<M>",
+          "signatureTokens": [
+            {
+              "text": "AssetsImpl",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InferAssetsProperties",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Assets.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Assets.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Assets.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Assets.ts"
+}

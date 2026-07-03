@@ -1,0 +1,337 @@
+{
+  "title": "RevoluteJoint",
+  "description": "Pins a shared anchor point on two bodies (a hinge): the bodies may rotate freely about the pivot but the anchor points stay coincident. Solved as a 2-DOF point constraint (a 2×2 block) in the sub-step loop, warm-started.",
+  "symbol": "RevoluteJoint",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Pins a shared anchor point on two bodies (a hinge): the bodies may rotate freely about the pivot but the anchor points stay coincident. Solved as a 2-DOF point constraint (a 2×2 block) in the sub-step loop, warm-started."
+      ],
+      "importLine": "import { RevoluteJoint } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: RevoluteJointOptions): RevoluteJoint",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RevoluteJointOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RevoluteJoint",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "RevoluteJointOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "RevoluteJoint",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First constrained body."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Second constrained body."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio: number",
+          "signatureTokens": [
+            {
+              "text": "dampingRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring damping ratio."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When false, the joint is skipped by the solver (but still tracked by the world)."
+        },
+        {
+          "name": "enableLimit",
+          "signature": "enableLimit: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableLimit",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the relative angle is constrained to [lowerAngle, upperAngle]."
+        },
+        {
+          "name": "enableMotor",
+          "signature": "enableMotor: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableMotor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the motor drives ωB − ωA toward motorSpeed."
+        },
+        {
+          "name": "hertz",
+          "signature": "hertz: number",
+          "signatureTokens": [
+            {
+              "text": "hertz",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring frequency in Hz (0 = rigid)."
+        },
+        {
+          "name": "lowerAngle",
+          "signature": "lowerAngle: number",
+          "signatureTokens": [
+            {
+              "text": "lowerAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lower relative-angle limit (radians, relative to the creation angle)."
+        },
+        {
+          "name": "maxMotorTorque",
+          "signature": "maxMotorTorque: number",
+          "signatureTokens": [
+            {
+              "text": "maxMotorTorque",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum motor torque."
+        },
+        {
+          "name": "motorSpeed",
+          "signature": "motorSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "motorSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Target relative angular velocity (rad/s) for the motor."
+        },
+        {
+          "name": "upperAngle",
+          "signature": "upperAngle: number",
+          "signatureTokens": [
+            {
+              "text": "upperAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper relative-angle limit (radians)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/RevoluteJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/RevoluteJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/RevoluteJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/RevoluteJoint.ts"
+}

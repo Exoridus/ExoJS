@@ -1,0 +1,642 @@
+{
+  "title": "Collider",
+  "description": "Geometry attached to a PhysicsBody: a Shape plus a body-local offset/rotation, material (friction/restitution/density) and a collision filter. A body may own several colliders (compound). The collider also caches its world-space geometry — refreshed by synchronize — which the broad phase, narrow phase and queries read directly. Material fields and the filter are mutable; the shape and local placement are immutable (rebuild the collider to change geometry).",
+  "symbol": "Collider",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 21,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 18,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Geometry attached to a PhysicsBody: a Shape plus a body-local offset/rotation, material (friction/restitution/density) and a collision filter. A body may own several colliders (compound). The collider also caches its world-space geometry — refreshed by synchronize — which the broad phase, narrow phase and queries read directly.",
+        "Material fields and the filter are mutable; the shape and local placement are immutable (rebuild the collider to change geometry)."
+      ],
+      "importLine": "import { Collider } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: ColliderOptions): Collider",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColliderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "ColliderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Collider",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_markDestroyed",
+          "signature": "_markDestroyed(): void",
+          "signatureTokens": [
+            {
+              "text": "_markDestroyed",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Internal: mark destroyed (called by the world)."
+        },
+        {
+          "name": "synchronize",
+          "signature": "synchronize(bodyTransform: Transform): void",
+          "signatureTokens": [
+            {
+              "text": "synchronize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bodyTransform",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Transform",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bodyTransform",
+              "type": "Transform",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Recompute the cached world geometry from the body's transform. Called by the body on setTransform, on collider creation, and by the world before each detection pass."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "density",
+          "signature": "density: number",
+          "signatureTokens": [
+            {
+              "text": "density",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "filter",
+          "signature": "filter: CollisionFilter",
+          "signatureTokens": [
+            {
+              "text": "filter",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionFilter",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "friction",
+          "signature": "friction: number",
+          "signatureTokens": [
+            {
+              "text": "friction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "isSensor",
+          "signature": "isSensor: boolean",
+          "signatureTokens": [
+            {
+              "text": "isSensor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "localRotation",
+          "signature": "localRotation: number",
+          "signatureTokens": [
+            {
+              "text": "localRotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX: number",
+          "signatureTokens": [
+            {
+              "text": "offsetX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY: number",
+          "signatureTokens": [
+            {
+              "text": "offsetY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "restitution",
+          "signature": "restitution: number",
+          "signatureTokens": [
+            {
+              "text": "restitution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "shape",
+          "signature": "shape: AnyShape",
+          "signatureTokens": [
+            {
+              "text": "shape",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyShape",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable id, assigned when the owning body joins a world (-1 until then)."
+        },
+        {
+          "name": "aabb",
+          "signature": "aabb: Readonly<Aabb>",
+          "signatureTokens": [
+            {
+              "text": "aabb",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Aabb",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The collider's world AABB (valid after the latest synchronize)."
+        },
+        {
+          "name": "body",
+          "signature": "body: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The body this collider belongs to. null until the collider has been added to a body that has joined a world (free-standing colliders have no body yet)."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true after the owning world has destroyed this collider."
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable id, assigned when the owning body joins a world via world.add(); -1 until then."
+        },
+        {
+          "name": "localTransform",
+          "signature": "localTransform: Readonly<Transform>",
+          "signatureTokens": [
+            {
+              "text": "localTransform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Transform",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The collider's body-local transform (offset + local rotation)."
+        },
+        {
+          "name": "worldCenter",
+          "signature": "worldCenter: Readonly<Mutable2D>",
+          "signatureTokens": [
+            {
+              "text": "worldCenter",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Mutable2D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World-space circle centre (only meaningful for circle shapes)."
+        },
+        {
+          "name": "worldNormals",
+          "signature": "worldNormals: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "worldNormals",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World-space polygon outward normals [x0, y0, …] (only meaningful for polygon shapes)."
+        },
+        {
+          "name": "worldTransform",
+          "signature": "worldTransform: Readonly<Transform>",
+          "signatureTokens": [
+            {
+              "text": "worldTransform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Transform",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The collider's world transform (offset/rotation composed with the body's)."
+        },
+        {
+          "name": "worldVertices",
+          "signature": "worldVertices: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "worldVertices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World-space polygon vertices [x0, y0, …] (only meaningful for polygon shapes)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/Collider.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/Collider.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/Collider.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/Collider.ts"
+}

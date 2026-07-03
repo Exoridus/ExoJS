@@ -1,0 +1,747 @@
+{
+  "title": "AudioManager",
+  "description": "Per-Application owner of the audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single AudioListener for spatial audio, and a registry of any extra busses the user constructs. The `AudioContext` is shared process-wide, but each Application owns its own bus subtree, so multiple Applications mix independently. Access it via `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial voice, and propagates visibility-driven mute when AudioManager.muteOnHidden is enabled.",
+  "symbol": "AudioManager",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 1,
+    "methods": 10,
+    "properties": 6,
+    "events": 1
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-Application owner of the audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single AudioListener for spatial audio, and a registry of any extra busses the user constructs.",
+        "The `AudioContext` is shared process-wide, but each Application owns its own bus subtree, so multiple Applications mix independently. Access it via `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial voice, and propagates visibility-driven mute when AudioManager.muteOnHidden is enabled."
+      ],
+      "importLine": "import { AudioManager } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): AudioManager",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "AudioManager",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_applyVisibility",
+          "signature": "_applyVisibility(visible: boolean): void",
+          "signatureTokens": [
+            {
+              "text": "_applyVisibility",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "visible",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "visible",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Internal: called by Application when visibility changes."
+        },
+        {
+          "name": "_registerSpatial",
+          "signature": "_registerSpatial(voice: SpatialVoice): void",
+          "signatureTokens": [
+            {
+              "text": "_registerSpatial",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "voice",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpatialVoice",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "voice",
+              "type": "SpatialVoice",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Internal: register a spatial voice for per-frame position updates. Called by a Voice the first time it is spatialized (position set or follow)."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "getBus",
+          "signature": "getBus(name: string): AudioBus",
+          "signatureTokens": [
+            {
+              "text": "getBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "AudioBus",
+          "description": "Look up a bus by name. Throws if the name is not registered."
+        },
+        {
+          "name": "hasBus",
+          "signature": "hasBus(name: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "true when a bus with name has been registered."
+        },
+        {
+          "name": "open",
+          "signature": "open(input: AudioInput): InputVoice",
+          "signatureTokens": [
+            {
+              "text": "open",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioInput",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputVoice",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "AudioInput",
+              "optional": false
+            }
+          ],
+          "returnType": "InputVoice",
+          "description": "Open a live AudioInput (microphone / WebRTC stream) and return an InputVoice. The input is analysis-only by default (not audible) — tap it with an analyser, route it to a bus to monitor, or record it."
+        },
+        {
+          "name": "play",
+          "signature": "play(source: Playable, options?: PlayOptions): Voice",
+          "signatureTokens": [
+            {
+              "text": "play",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Playable",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "Playable",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PlayOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Voice",
+          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities)."
+        },
+        {
+          "name": "registerBus",
+          "signature": "registerBus(bus: AudioBus): this",
+          "signatureTokens": [
+            {
+              "text": "registerBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bus",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bus",
+              "type": "AudioBus",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a user-constructed AudioBus so it can be looked up by name via AudioManager.getBus. Throws if a bus with the same name is already registered."
+        },
+        {
+          "name": "unregisterBus",
+          "signature": "unregisterBus(bus: AudioBus): this",
+          "signatureTokens": [
+            {
+              "text": "unregisterBus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bus",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bus",
+              "type": "AudioBus",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Unregister and AudioBus.destroy a previously registered bus. Throws if you attempt to unregister one of the three built-ins (master, music, sound). No-op if the bus is unknown."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Called once per frame from Application.update(). The frame delta is unused here (hence _delta); present for System contract compliance."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "listener",
+          "signature": "listener: AudioListener",
+          "signatureTokens": [
+            {
+              "text": "listener",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioListener",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "master",
+          "signature": "master: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "master",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "music",
+          "signature": "music: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "music",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sound",
+          "signature": "sound: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "sound",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "locked",
+          "signature": "locked: boolean",
+          "signatureTokens": [
+            {
+              "text": "locked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true while audio is blocked by the browser's autoplay policy — no user gesture has resumed the AudioContext yet. Voices played while locked are deferred (streams) or skipped (generators) until that gesture."
+        },
+        {
+          "name": "muteOnHidden",
+          "signature": "muteOnHidden: boolean",
+          "signatureTokens": [
+            {
+              "text": "muteOnHidden",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the master bus is muted while document.hidden is true. Wired to Application.onVisibilityChange via AudioManager._applyVisibility; the application calls that hook automatically — set this flag to opt in to the behavior."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onUnlock",
+          "signature": "onUnlock: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onUnlock",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires once when the AudioContext transitions to \"running\" — i.e. the first user gesture unlocks audio under the browser's autoplay policy. Check AudioManager.locked for the current state; sounds played while locked are deferred and start automatically on that gesture."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts"
+}

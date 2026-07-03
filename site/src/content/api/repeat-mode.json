@@ -1,0 +1,80 @@
+{
+  "title": "RepeatMode",
+  "description": "How a scalable sprite fills its destination span. Shared by NineSliceSprite edges/center and RepeatingSprite.",
+  "symbol": "RepeatMode",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How a scalable sprite fills its destination span.",
+        "Shared by NineSliceSprite edges/center and RepeatingSprite."
+      ],
+      "importLine": "import { RepeatMode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "RepeatMode",
+          "signature": "\"stretch\" | \"repeat\" | \"mirror-repeat\"",
+          "signatureTokens": [
+            {
+              "text": "\"stretch\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"repeat\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"mirror-repeat\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/repeat.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/repeat.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/repeat.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/repeat.ts"
+}

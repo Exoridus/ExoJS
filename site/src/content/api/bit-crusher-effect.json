@@ -1,0 +1,313 @@
+{
+  "title": "BitCrusherEffect",
+  "description": "Lo-fi bit-crusher effect implemented as a WorkletEffect. Applies two classic degradation stages in series: 1. **Bit-depth reduction** — each sample is quantized to `2^bits` discrete levels, adding harmonic distortion characteristic of low-resolution audio. 2. **Sample-rate reduction** — a phase-accumulator sample-and-hold circuit re-latches the (quantized) input only `normFreq` times per input sample on average, producing aliasing artefacts reminiscent of early digital hardware. The worklet emits a pure wet signal; dry/wet mixing is handled by the base class.",
+  "symbol": "BitCrusherEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lo-fi bit-crusher effect implemented as a WorkletEffect. Applies two classic degradation stages in series:",
+        "1. **Bit-depth reduction** — each sample is quantized to `2^bits` discrete levels, adding harmonic distortion characteristic of low-resolution audio. 2. **Sample-rate reduction** — a phase-accumulator sample-and-hold circuit re-latches the (quantized) input only `normFreq` times per input sample on average, producing aliasing artefacts reminiscent of early digital hardware.",
+        "The worklet emits a pure wet signal; dry/wet mixing is handled by the base class."
+      ],
+      "importLine": "import { BitCrusherEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: BitCrusherEffectOptions): BitCrusherEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BitCrusherEffectOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BitCrusherEffect",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "BitCrusherEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "BitCrusherEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_onWorkletReady",
+          "signature": "_onWorkletReady(): void",
+          "signatureTokens": [
+            {
+              "text": "_onWorkletReady",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all nodes, cancels any pending worklet load, and releases resources."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bits",
+          "signature": "bits: number",
+          "signatureTokens": [
+            {
+              "text": "bits",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bit depth for sample quantization. Lower values produce more distortion. Range 1..16, default 8."
+        },
+        {
+          "name": "frequencyReduction",
+          "signature": "frequencyReduction: number",
+          "signatureTokens": [
+            {
+              "text": "frequencyReduction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fraction of the sample rate retained (0 = never re-latch, 1 = every sample). Lower values create more aliasing artefacts. Maps to the worklet normFreq AudioParam. Range 0..1, default 0.5."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolves once the worklet is loaded and inserted into the wet path."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Wet (processed) mix level, 0..1. The dry level is automatically 1 - wet. Ramped smoothly."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/BitCrusherEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/BitCrusherEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/BitCrusherEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/BitCrusherEffect.ts"
+}

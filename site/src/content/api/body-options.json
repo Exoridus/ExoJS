@@ -1,0 +1,287 @@
+{
+  "title": "BodyOptions",
+  "description": "Construction options for a body.",
+  "symbol": "BodyOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a body."
+      ],
+      "importLine": "import { BodyOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "angle",
+          "signature": "angle?: number",
+          "signatureTokens": [
+            {
+              "text": "angle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial rotation in radians. Default 0."
+        },
+        {
+          "name": "angularDamping",
+          "signature": "angularDamping?: number",
+          "signatureTokens": [
+            {
+              "text": "angularDamping",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Angular damping applied to the angular velocity each sub-step. Default 0."
+        },
+        {
+          "name": "colliders",
+          "signature": "colliders?: Collider | ColliderOptions[]",
+          "signatureTokens": [
+            {
+              "text": "colliders",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColliderOptions",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Colliders to attach up-front. Each may be a Collider instance or its ColliderOptions."
+        },
+        {
+          "name": "fixedRotation",
+          "signature": "fixedRotation?: boolean",
+          "signatureTokens": [
+            {
+              "text": "fixedRotation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the body never rotates under contacts (infinite rotational inertia). Default false."
+        },
+        {
+          "name": "gravityScale",
+          "signature": "gravityScale?: number",
+          "signatureTokens": [
+            {
+              "text": "gravityScale",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-body multiplier on world gravity (e.g. 0 to ignore gravity). Default 1."
+        },
+        {
+          "name": "isBullet",
+          "signature": "isBullet?: boolean",
+          "signatureTokens": [
+            {
+              "text": "isBullet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. Default false."
+        },
+        {
+          "name": "linearDamping",
+          "signature": "linearDamping?: number",
+          "signatureTokens": [
+            {
+              "text": "linearDamping",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Linear damping applied to the velocity each sub-step. Default 0."
+        },
+        {
+          "name": "position",
+          "signature": "position?: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial world position. Default (0, 0)."
+        },
+        {
+          "name": "type",
+          "signature": "type?: BodyType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BodyType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Simulation role. Default 'dynamic'."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/PhysicsBody.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsBody.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/PhysicsBody.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsBody.ts"
+}

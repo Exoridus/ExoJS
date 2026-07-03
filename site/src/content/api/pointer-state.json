@@ -1,0 +1,141 @@
+{
+  "title": "PointerState",
+  "description": "High-level lifecycle state of a Pointer.",
+  "symbol": "PointerState",
+  "kind": "enum",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "High-level lifecycle state of a Pointer."
+      ],
+      "importLine": "import { PointerState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Cancelled",
+          "signature": "Cancelled",
+          "signatureTokens": [
+            {
+              "text": "Cancelled",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "InsideCanvas",
+          "signature": "InsideCanvas",
+          "signatureTokens": [
+            {
+              "text": "InsideCanvas",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Moving",
+          "signature": "Moving",
+          "signatureTokens": [
+            {
+              "text": "Moving",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "OutsideCanvas",
+          "signature": "OutsideCanvas",
+          "signatureTokens": [
+            {
+              "text": "OutsideCanvas",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Pressed",
+          "signature": "Pressed",
+          "signatureTokens": [
+            {
+              "text": "Pressed",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Released",
+          "signature": "Released",
+          "signatureTokens": [
+            {
+              "text": "Released",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Unknown",
+          "signature": "Unknown",
+          "signatureTokens": [
+            {
+              "text": "Unknown",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Pointer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Pointer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+}

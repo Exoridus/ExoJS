@@ -1,0 +1,283 @@
+{
+  "title": "AudioGeneratorOptions",
+  "description": "Construction options for AudioGenerator.",
+  "symbol": "AudioGeneratorOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for AudioGenerator."
+      ],
+      "importLine": "import { AudioGeneratorOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "detune",
+          "signature": "detune?: number",
+          "signatureTokens": [
+            {
+              "text": "detune",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pitch detune in cents. Default 0."
+        },
+        {
+          "name": "envelope",
+          "signature": "envelope?: Envelope | null",
+          "signatureTokens": [
+            {
+              "text": "envelope",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Envelope",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional ADSR envelope. Default null (no envelope)."
+        },
+        {
+          "name": "frequency",
+          "signature": "frequency?: number",
+          "signatureTokens": [
+            {
+              "text": "frequency",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Oscillator frequency in Hz. Default 440 (A4)."
+        },
+        {
+          "name": "muted",
+          "signature": "muted?: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default muted flag (starts a voice at volume 0). Default false."
+        },
+        {
+          "name": "poolSize",
+          "signature": "poolSize?: number",
+          "signatureTokens": [
+            {
+              "text": "poolSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum concurrent voices. Default 8."
+        },
+        {
+          "name": "poolStrategy",
+          "signature": "poolStrategy?: SoundPoolStrategy",
+          "signatureTokens": [
+            {
+              "text": "poolStrategy",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SoundPoolStrategy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Eviction strategy when the pool is full. Default FirstInFirstOut."
+        },
+        {
+          "name": "priority",
+          "signature": "priority?: number",
+          "signatureTokens": [
+            {
+              "text": "priority",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Priority for the LowestPriority strategy. Default 0."
+        },
+        {
+          "name": "type",
+          "signature": "type?: OscillatorType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OscillatorType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Oscillator waveform. Default 'sine'."
+        },
+        {
+          "name": "volume",
+          "signature": "volume?: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default volume applied to new voices. Range [0, 1]. Default 1."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioGenerator.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioGenerator.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioGenerator.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioGenerator.ts"
+}

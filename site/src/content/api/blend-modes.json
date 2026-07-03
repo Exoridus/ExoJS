@@ -1,0 +1,285 @@
+{
+  "title": "BlendModes",
+  "description": "Compositing blend modes applied when drawing a Drawable over the current render target. Modes 0–4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5–17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path.",
+  "symbol": "BlendModes",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Compositing blend modes applied when drawing a Drawable over the current render target.",
+        "Modes 0–4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5–17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path."
+      ],
+      "importLine": "import { BlendModes } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Additive",
+          "signature": "Additive",
+          "signatureTokens": [
+            {
+              "text": "Additive",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Color",
+          "signature": "Color",
+          "signatureTokens": [
+            {
+              "text": "Color",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ColorBurn",
+          "signature": "ColorBurn",
+          "signatureTokens": [
+            {
+              "text": "ColorBurn",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ColorDodge",
+          "signature": "ColorDodge",
+          "signatureTokens": [
+            {
+              "text": "ColorDodge",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Darken",
+          "signature": "Darken",
+          "signatureTokens": [
+            {
+              "text": "Darken",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Difference",
+          "signature": "Difference",
+          "signatureTokens": [
+            {
+              "text": "Difference",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Exclusion",
+          "signature": "Exclusion",
+          "signatureTokens": [
+            {
+              "text": "Exclusion",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "HardLight",
+          "signature": "HardLight",
+          "signatureTokens": [
+            {
+              "text": "HardLight",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Hue",
+          "signature": "Hue",
+          "signatureTokens": [
+            {
+              "text": "Hue",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Lighten",
+          "signature": "Lighten",
+          "signatureTokens": [
+            {
+              "text": "Lighten",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Luminosity",
+          "signature": "Luminosity",
+          "signatureTokens": [
+            {
+              "text": "Luminosity",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Multiply",
+          "signature": "Multiply",
+          "signatureTokens": [
+            {
+              "text": "Multiply",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Normal",
+          "signature": "Normal",
+          "signatureTokens": [
+            {
+              "text": "Normal",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Overlay",
+          "signature": "Overlay",
+          "signatureTokens": [
+            {
+              "text": "Overlay",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Saturation",
+          "signature": "Saturation",
+          "signatureTokens": [
+            {
+              "text": "Saturation",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Screen",
+          "signature": "Screen",
+          "signatureTokens": [
+            {
+              "text": "Screen",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "SoftLight",
+          "signature": "SoftLight",
+          "signatureTokens": [
+            {
+              "text": "SoftLight",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Subtract",
+          "signature": "Subtract",
+          "signatureTokens": [
+            {
+              "text": "Subtract",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

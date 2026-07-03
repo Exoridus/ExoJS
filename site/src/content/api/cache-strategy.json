@@ -1,0 +1,144 @@
+{
+  "title": "CacheStrategy",
+  "description": "Strategy interface that decides how assets are fetched and cached. Implementations own the full pipeline: cache check (if applicable) → network fetch (if needed) → factory.process → factory.create → cache write (if applicable). The returned value is the fully constructed resource (post-AssetFactory.create), not the intermediate source. ExoJS ships CacheFirstStrategy (default) and NetworkOnlyStrategy; implement this interface to add custom policies such as network-first, stale-while-revalidate, or cache-only / offline-first.",
+  "symbol": "CacheStrategy",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Strategy interface that decides how assets are fetched and cached.",
+        "Implementations own the full pipeline: cache check (if applicable) → network fetch (if needed) → factory.process → factory.create → cache write (if applicable). The returned value is the fully constructed resource (post-AssetFactory.create), not the intermediate source.",
+        "ExoJS ships CacheFirstStrategy (default) and NetworkOnlyStrategy; implement this interface to add custom policies such as network-first, stale-while-revalidate, or cache-only / offline-first."
+      ],
+      "importLine": "import { CacheStrategy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "resolve",
+          "signature": "resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown>",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "request",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRequest",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stores",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "request",
+              "type": "CacheRequest",
+              "optional": false
+            },
+            {
+              "name": "stores",
+              "type": "readonly CacheStore[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<unknown>",
+          "description": "Resolves a single asset according to the strategy's caching policy and returns the fully constructed resource."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/CacheStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/CacheStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts"
+}

@@ -1,0 +1,114 @@
+{
+  "title": "TiledBuildInfo",
+  "description": "Immutable compile-time build metadata for `@codexo/exojs-tiled`. `development` mirrors the `__DEV__` compile-time constant and is statically replaced before tree shaking. `version` is the exact `package.json` version of the Tiled package at build time. `revision` is the short source-control revision (appended with `-dirty` when uncommitted changes are present) or `\"unknown\"` when no revision information is available.",
+  "symbol": "TiledBuildInfo",
+  "kind": "interface",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Immutable compile-time build metadata for `@codexo/exojs-tiled`.",
+        "`development` mirrors the `__DEV__` compile-time constant and is statically replaced before tree shaking. `version` is the exact `package.json` version of the Tiled package at build time. `revision` is the short source-control revision (appended with `-dirty` when uncommitted changes are present) or `\"unknown\"` when no revision information is available."
+      ],
+      "importLine": "import { TiledBuildInfo } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "development",
+          "signature": "development: boolean",
+          "signatureTokens": [
+            {
+              "text": "development",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "revision",
+          "signature": "revision: string",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "version",
+          "signature": "version: string",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/tiledBuildInfo.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledBuildInfo.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/tiledBuildInfo.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledBuildInfo.ts"
+}

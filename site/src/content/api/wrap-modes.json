@@ -1,0 +1,89 @@
+{
+  "title": "WrapModes",
+  "description": "Texture coordinate wrap behaviour when UV values fall outside [0, 1]. Values are WebGL2 GLenum constants passed directly to the GPU sampler.",
+  "symbol": "WrapModes",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Texture coordinate wrap behaviour when UV values fall outside [0, 1]. Values are WebGL2 GLenum constants passed directly to the GPU sampler."
+      ],
+      "importLine": "import { WrapModes } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "ClampToEdge",
+          "signature": "ClampToEdge",
+          "signatureTokens": [
+            {
+              "text": "ClampToEdge",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "MirroredRepeat",
+          "signature": "MirroredRepeat",
+          "signatureTokens": [
+            {
+              "text": "MirroredRepeat",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Repeat",
+          "signature": "Repeat",
+          "signatureTokens": [
+            {
+              "text": "Repeat",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

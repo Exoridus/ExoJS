@@ -1,0 +1,387 @@
+{
+  "title": "Envelope",
+  "description": "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`: attack: 0 → 1.0 (peak) over attackMs decay: 1.0 → sustainLevel over decayMs sustain: held at sustainLevel release: current → 0 over releaseMs (triggered by `release()`) Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed).",
+  "symbol": "Envelope",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`:",
+        "attack: 0 → 1.0 (peak) over attackMs decay: 1.0 → sustainLevel over decayMs sustain: held at sustainLevel release: current → 0 over releaseMs (triggered by `release()`)",
+        "Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed)."
+      ],
+      "importLine": "import { Envelope } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: EnvelopeOptions): Envelope",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "EnvelopeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Envelope",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "EnvelopeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Envelope",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "release",
+          "signature": "release(gainParam: AudioParam, atTime: number): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "gainParam",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioParam",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "atTime",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "gainParam",
+              "type": "AudioParam",
+              "optional": false
+            },
+            {
+              "name": "atTime",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Schedule release → 0 starting at atTime. Call this when the note should stop (e.g., key release, sound dismissed)."
+        },
+        {
+          "name": "trigger",
+          "signature": "trigger(gainParam: AudioParam, atTime: number): void",
+          "signatureTokens": [
+            {
+              "text": "trigger",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "gainParam",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioParam",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "atTime",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "gainParam",
+              "type": "AudioParam",
+              "optional": false
+            },
+            {
+              "name": "atTime",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Schedule attack → decay → sustain on the target gain parameter starting at atTime (audioContext.currentTime)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attackMs",
+          "signature": "attackMs: number",
+          "signatureTokens": [
+            {
+              "text": "attackMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "decayMs",
+          "signature": "decayMs: number",
+          "signatureTokens": [
+            {
+              "text": "decayMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "releaseMs",
+          "signature": "releaseMs: number",
+          "signatureTokens": [
+            {
+              "text": "releaseMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sustainLevel",
+          "signature": "sustainLevel: number",
+          "signatureTokens": [
+            {
+              "text": "sustainLevel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "totalDurationMs",
+          "signature": "totalDurationMs: number",
+          "signatureTokens": [
+            {
+              "text": "totalDurationMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Total time from trigger to fully-released (attack + decay + release)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Envelope.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Envelope.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts"
+}

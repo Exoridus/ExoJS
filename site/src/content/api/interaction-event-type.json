@@ -1,0 +1,127 @@
+{
+  "title": "InteractionEventType",
+  "description": "String literal union of every interaction event the InteractionManager can deliver to a RenderNode. Handlers attach via the node's `interactive*` API.",
+  "symbol": "InteractionEventType",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "String literal union of every interaction event the InteractionManager can deliver to a RenderNode. Handlers attach via the node's `interactive*` API."
+      ],
+      "importLine": "import { InteractionEventType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "InteractionEventType",
+          "signature": "\"pointerdown\" | \"pointerup\" | \"pointermove\" | \"pointerover\" | \"pointerout\" | \"pointertap\" | \"dragstart\" | \"drag\" | \"dragend\"",
+          "signatureTokens": [
+            {
+              "text": "\"pointerdown\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointerup\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointermove\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointerover\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointerout\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointertap\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dragstart\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"drag\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dragend\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/InteractionEvent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionEvent.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/InteractionEvent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionEvent.ts"
+}

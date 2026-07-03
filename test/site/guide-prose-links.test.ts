@@ -24,7 +24,7 @@ const GUIDE_DIR = join(ROOT, 'site', 'src', 'content', 'guide');
 const API_DIR = join(ROOT, 'site', 'src', 'content', 'api');
 
 // Non-symbol API routes that exist as pages (en/api/index.astro, en/api/all.astro)
-// rather than as a generated api/<slug>.mdx entry.
+// rather than as a generated api/<slug>.json entry.
 const API_INDEX_SLUGS = new Set(['', 'all']);
 
 // Part slugs back the /guide/<part>/ index route (en/guide/[part]/index.astro).
@@ -86,7 +86,7 @@ function resolveInternal(path: string): Resolution {
   const seg = path.split('/');
   if (seg[0] === 'api') {
     const slug = seg.slice(1).join('/');
-    const ok = API_INDEX_SLUGS.has(slug) || existsSync(join(API_DIR, `${slug}.mdx`));
+    const ok = API_INDEX_SLUGS.has(slug) || existsSync(join(API_DIR, `${slug}.json`));
     return { kind: 'api', ok, target: slug };
   }
   if (seg[0] === 'guide') {
@@ -211,7 +211,7 @@ describe('guide prose links', () => {
       const body = readFileSync(file, 'utf8');
       const { api, examples } = collectTryItRefs(body);
       for (const slug of api) {
-        if (!existsSync(join(API_DIR, `${slug}.mdx`))) brokenApi.push(`${rel(file)} → ${slug}`);
+        if (!existsSync(join(API_DIR, `${slug}.json`))) brokenApi.push(`${rel(file)} → ${slug}`);
       }
       for (const ref of examples) {
         if (!exampleExists(ref)) brokenExamples.push(`${rel(file)} → ${ref}`);

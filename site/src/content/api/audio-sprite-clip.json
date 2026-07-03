@@ -1,0 +1,117 @@
+{
+  "title": "AudioSpriteClip",
+  "description": "Named sub-region of an AudioBuffer used as an audio sprite sheet. `start` / `end` are seconds into the buffer; `loop` makes Sound.playSprite loop the sprite indefinitely.",
+  "symbol": "AudioSpriteClip",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Named sub-region of an AudioBuffer used as an audio sprite sheet. `start` / `end` are seconds into the buffer; `loop` makes Sound.playSprite loop the sprite indefinitely."
+      ],
+      "importLine": "import { AudioSpriteClip } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "end",
+          "signature": "end: number",
+          "signatureTokens": [
+            {
+              "text": "end",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "loop",
+          "signature": "loop?: boolean",
+          "signatureTokens": [
+            {
+              "text": "loop",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "start",
+          "signature": "start: number",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Sound.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Sound.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+}

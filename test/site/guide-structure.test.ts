@@ -128,7 +128,7 @@ describe('guide metadata', () => {
 
   it('resolves every API link to an existing API page', () => {
     const broken = GUIDE_CHAPTERS.flatMap(chapter =>
-      chapter.apiLinks.filter(slug => !existsSync(join(API_DIR, `${slug}.mdx`))).map(slug => `${chapter.path} → ${slug}`),
+      chapter.apiLinks.filter(slug => !existsSync(join(API_DIR, `${slug}.json`))).map(slug => `${chapter.path} → ${slug}`),
     );
     expect(broken).toEqual([]);
   });

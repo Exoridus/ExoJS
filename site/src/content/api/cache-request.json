@@ -1,0 +1,181 @@
+{
+  "title": "CacheRequest",
+  "description": "All the information a CacheStrategy needs to resolve a single asset. Bundles the target factory, cache namespace, lookup key, the fetch parameters, and any factory-specific options into one value so strategies remain stateless.",
+  "symbol": "CacheRequest",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "All the information a CacheStrategy needs to resolve a single asset.",
+        "Bundles the target factory, cache namespace, lookup key, the fetch parameters, and any factory-specific options into one value so strategies remain stateless."
+      ],
+      "importLine": "import { CacheRequest } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "factory",
+          "signature": "factory: AssetFactory",
+          "signatureTokens": [
+            {
+              "text": "factory",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetFactory",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "key",
+          "signature": "key: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The per-asset lookup key (typically the alias)."
+        },
+        {
+          "name": "options",
+          "signature": "options?: unknown",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Factory-specific options forwarded to AssetFactory.create."
+        },
+        {
+          "name": "requestOptions",
+          "signature": "requestOptions: RequestInit",
+          "signatureTokens": [
+            {
+              "text": "requestOptions",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RequestInit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "storageName",
+          "signature": "storageName: string",
+          "signatureTokens": [
+            {
+              "text": "storageName",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The AssetFactory.storageName used as the cache namespace."
+        },
+        {
+          "name": "url",
+          "signature": "url: string",
+          "signatureTokens": [
+            {
+              "text": "url",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The fully resolved URL to fetch from the network if the cache misses."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/CacheStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/CacheStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts"
+}

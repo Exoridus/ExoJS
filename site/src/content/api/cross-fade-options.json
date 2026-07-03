@@ -1,0 +1,98 @@
+{
+  "title": "CrossFadeOptions",
+  "description": "",
+  "symbol": "CrossFadeOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { CrossFadeOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "stopAfter",
+          "signature": "stopAfter?: boolean",
+          "signatureTokens": [
+            {
+              "text": "stopAfter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stop the from voice once the fade completes (default true) — the right choice for a one-shot transition, since it frees the outgoing voice. Pass false to leave from playing at volume 0, e.g. when you crossfade back and forth between two looping tracks."
+        },
+        {
+          "name": "toVolume",
+          "signature": "toVolume?: number",
+          "signatureTokens": [
+            {
+              "text": "toVolume",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Volume to fade the to voice up to. Range [0, 1]. Default 1."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/crossFade.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/crossFade.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/crossFade.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/crossFade.ts"
+}

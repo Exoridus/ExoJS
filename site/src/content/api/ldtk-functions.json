@@ -1,0 +1,362 @@
+{
+  "title": "Ldtk Functions",
+  "description": "Free functions and constants exported from @codexo/exojs-ldtk.",
+  "symbol": "Ldtk Functions",
+  "kind": "namespace",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs-ldtk. Import any of them directly, for example `import { getLdtkIntGridValueAt } from '@codexo/exojs-ldtk'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "getLdtkIntGridValueAt",
+          "signature": "getLdtkIntGridValueAt(layer: TileLayer, x: number, y: number): LdtkIntGridValueDef | undefined",
+          "signatureTokens": [
+            {
+              "text": "getLdtkIntGridValueAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkIntGridValueDef",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "LdtkIntGridValueDef | undefined",
+          "description": "Look up the named/coloured LdtkIntGridValueDef at a tile coordinate on a TileLayer converted from an LDtk IntGrid layer instance. Returns undefined when the coordinate is out of bounds, the cell's raw value is 0 (empty), the raw value has no matching definition, or layer was not converted from an IntGrid layer instance (no IntGrid data attached via ldtkIntGridCsvProperty / ldtkIntGridValuesProperty). The underlying JSON-encoded CSV/value-defs properties are parsed once per layer and cached (see getParsedIntGridData) — safe to call from a hot path (e.g. per-cell or per-frame collision/classification checks)."
+        },
+        {
+          "name": "ldtkToTileMap",
+          "signature": "ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): LdtkMap",
+          "signatureTokens": [
+            {
+              "text": "ldtkToTileMap",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkData",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkToTileMapOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkMap",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "LdtkData",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LdtkToTileMapOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "LdtkMap",
+          "description": "Convert a raw LdtkData document into an LdtkMap containing one runtime TileMap per LDtk level. Tile layers (Tiles / AutoLayer) become renderable TileLayers. IntGrid layers become dimension-correct TileLayers — tile data is placed only when the layer carries autoLayerTiles. Entity layers become data-only ObjectLayers with entity position, size, and scalar field properties. Pass options.tilesets to populate tile data; omit it for structure-only conversion (useful in unit tests that do not need textures). Transparently handles both LDtk root shapes via getLdtkLevelEntries: single-world (data.levels) and multi-world (data.worlds[].levels) — in the latter case every converted level's TileMap.properties is additionally tagged with its owning world's iid under the reserved ldtkWorldIid key."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "LDTK_FLIP_NONE",
+          "signature": "LDTK_FLIP_NONE: 0",
+          "signatureTokens": [
+            {
+              "text": "LDTK_FLIP_NONE",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "0",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Flip-bit constants for LdtkTileData.f."
+        },
+        {
+          "name": "LDTK_FLIP_X",
+          "signature": "LDTK_FLIP_X: 1",
+          "signatureTokens": [
+            {
+              "text": "LDTK_FLIP_X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "1",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LDTK_FLIP_XY",
+          "signature": "LDTK_FLIP_XY: 3",
+          "signatureTokens": [
+            {
+              "text": "LDTK_FLIP_XY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "3",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LDTK_FLIP_Y",
+          "signature": "LDTK_FLIP_Y: 2",
+          "signatureTokens": [
+            {
+              "text": "LDTK_FLIP_Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "2",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ldtkExtension",
+          "signature": "ldtkExtension: Extension",
+          "signatureTokens": [
+            {
+              "text": "ldtkExtension",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default immutable LDtk extension descriptor. Registers one asset binding: - ldtkMapBinding — loader.load(LdtkMap, 'world.ldtk') → fetches the .ldtk JSON, loads all referenced tileset images, and returns a fully assembled LdtkMap with one runtime import('@codexo/exojs-tilemap').TileMap per level. Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the LDtk adapter. Use with ApplicationOptions.extensions or call import '@codexo/exojs-ldtk/register' for global auto-registration."
+        },
+        {
+          "name": "ldtkIntGridCsvProperty",
+          "signature": "ldtkIntGridCsvProperty: \"ldtkIntGridCsv\"",
+          "signatureTokens": [
+            {
+              "text": "ldtkIntGridCsvProperty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ldtkIntGridCsv\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Reserved TileLayer.properties key holding the JSON-encoded raw IntGrid CSV array (readonly number[]) for a TileLayer converted from an LDtk IntGrid layer instance. Index = y * layer.width + x; 0 = empty. Prefer getLdtkIntGridValueAt over reading this directly."
+        },
+        {
+          "name": "ldtkIntGridValuesProperty",
+          "signature": "ldtkIntGridValuesProperty: \"ldtkIntGridValues\"",
+          "signatureTokens": [
+            {
+              "text": "ldtkIntGridValuesProperty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ldtkIntGridValues\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Reserved TileLayer.properties key holding the JSON-encoded LdtkIntGridValueDef array for a TileLayer converted from an LDtk IntGrid layer instance — the raw-int → named/coloured mapping declared on the owning layer definition (data.defs.layers[].intGridValues). Prefer getLdtkIntGridValueAt over reading this directly."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}

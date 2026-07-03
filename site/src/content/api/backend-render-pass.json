@@ -1,0 +1,98 @@
+{
+  "title": "BackendRenderPass",
+  "description": "A low-level, backend-only render command. Implement this for custom passes that need direct RenderBackend access (custom shaders, backend-specific draw logic), and run it via RenderBackend.execute. This is the advanced escape hatch beneath the high-level, context-aware render-pass tree. It receives the backend (no camera) and is not a frame phase. High-level code composes `RenderPass` objects in a `RenderPipeline` instead; to run a `BackendRenderPass` inside a pipeline, bridge it from a `CallbackRenderPass` (`context.backend.execute(myBackendPass)`).",
+  "symbol": "BackendRenderPass",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A low-level, backend-only render command. Implement this for custom passes that need direct RenderBackend access (custom shaders, backend-specific draw logic), and run it via RenderBackend.execute.",
+        "This is the advanced escape hatch beneath the high-level, context-aware render-pass tree. It receives the backend (no camera) and is not a frame phase. High-level code composes `RenderPass` objects in a `RenderPipeline` instead; to run a `BackendRenderPass` inside a pipeline, bridge it from a `CallbackRenderPass` (`context.backend.execute(myBackendPass)`)."
+      ],
+      "importLine": "import { BackendRenderPass } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "execute",
+          "signature": "execute(backend: RenderBackend): void",
+          "signatureTokens": [
+            {
+              "text": "execute",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Execute this pass, issuing draw calls through backend."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/BackendRenderPass.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/BackendRenderPass.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/BackendRenderPass.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/BackendRenderPass.ts"
+}

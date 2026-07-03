@@ -4,14 +4,15 @@ import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../../components/DocsSidebar.astro';
 import EnglishFallbackNotice from '../../../components/EnglishFallbackNotice.astro';
-import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, FEATURED_SYMBOLS, compactDescription, parseMemberCounts, toApiHref } from '../../../lib/api-reference';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, FEATURED_SYMBOLS, compactDescription, toApiHref } from '../../../lib/api-reference';
+import type { ApiCounts } from '../../../lib/api-schema';
 
 type ApiListItem = {
     entry: CollectionEntry<'api'>;
     href: string;
     kind: string;
     shortDescription: string;
-    counts: ReturnType<typeof parseMemberCounts>;
+    counts: ApiCounts;
 };
 
 const apiEntries = await getCollection('api');
@@ -22,7 +23,7 @@ const items: ApiListItem[] = sortedEntries.map(entry => ({
     href: toApiHref(import.meta.env.BASE_URL, entry.id),
     kind: entry.data.kind.toLowerCase(),
     shortDescription: compactDescription(entry.data.description ?? '', 138),
-    counts: parseMemberCounts(entry.body ?? ''),
+    counts: entry.data.counts,
 }));
 
 const grouped = API_SUBSYSTEM_ORDER.map(subsystem => ({
@@ -36,7 +37,9 @@ const featured = FEATURED_SYMBOLS.map(id => items.find(item => item.entry.id ===
 
 const totalSymbols = items.length;
 const classCount = items.filter(item => item.kind === 'class').length;
+const interfaceCount = items.filter(item => item.kind === 'interface').length;
 const enumCount = items.filter(item => item.kind === 'enum').length;
+const typeCount = items.filter(item => item.kind === 'type').length;
 
 const sidebarGroups = [
     {
@@ -99,7 +102,9 @@ const sidebarGroups = [
         <div class="api-counts" aria-label="API totals">
             <span>Symbols <strong>{totalSymbols}</strong></span>
             <span>Classes <strong>{classCount}</strong></span>
+            <span>Interfaces <strong>{interfaceCount}</strong></span>
             <span>Enums <strong>{enumCount}</strong></span>
+            <span>Types <strong>{typeCount}</strong></span>
             <span>Subsystems <strong>{grouped.length}</strong></span>
         </div>
 
@@ -470,16 +475,29 @@ const sidebarGroups = [
         line-height: 1.3;
     }
 
+    /* Badge hues come from the central API palette in styles/global.scss (--api-kind-*). */
     .api-kind.kind-class {
-        color: var(--accent);
-        border-color: var(--accent-line);
-        background: var(--accent-soft);
+        color: var(--api-kind-class);
+        border-color: color-mix(in oklab, var(--api-kind-class), transparent 65%);
+        background: color-mix(in oklab, var(--api-kind-class), transparent 88%);
+    }
+
+    .api-kind.kind-interface {
+        color: var(--api-kind-interface);
+        border-color: color-mix(in oklab, var(--api-kind-interface), transparent 62%);
+        background: color-mix(in oklab, var(--api-kind-interface), transparent 88%);
     }
 
     .api-kind.kind-enum {
-        color: var(--rose);
-        border-color: color-mix(in oklab, var(--rose), transparent 65%);
-        background: color-mix(in oklab, var(--rose), transparent 88%);
+        color: var(--api-kind-enum);
+        border-color: color-mix(in oklab, var(--api-kind-enum), transparent 65%);
+        background: color-mix(in oklab, var(--api-kind-enum), transparent 88%);
+    }
+
+    .api-kind.kind-type {
+        color: var(--api-kind-type);
+        border-color: color-mix(in oklab, var(--api-kind-type), transparent 62%);
+        background: color-mix(in oklab, var(--api-kind-type), transparent 88%);
     }
 
     .toc h6 {

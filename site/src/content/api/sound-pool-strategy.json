@@ -1,0 +1,90 @@
+{
+  "title": "SoundPoolStrategy",
+  "description": "Eviction strategy used when the pool is full and a new play is requested. At the per-Sound level all pooled instances share the same priority, so `LowestPriority` degenerates to `FirstInFirstOut` in V1. The enum is forward-compatible with a future global voice manager that culls across multiple Sound instances.",
+  "symbol": "SoundPoolStrategy",
+  "kind": "enum",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Eviction strategy used when the pool is full and a new play is requested.",
+        "At the per-Sound level all pooled instances share the same priority, so `LowestPriority` degenerates to `FirstInFirstOut` in V1. The enum is forward-compatible with a future global voice manager that culls across multiple Sound instances."
+      ],
+      "importLine": "import { SoundPoolStrategy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "FirstInFirstOut",
+          "signature": "FirstInFirstOut",
+          "signatureTokens": [
+            {
+              "text": "FirstInFirstOut",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LeastRecentlyUsed",
+          "signature": "LeastRecentlyUsed",
+          "signatureTokens": [
+            {
+              "text": "LeastRecentlyUsed",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LowestPriority",
+          "signature": "LowestPriority",
+          "signatureTokens": [
+            {
+              "text": "LowestPriority",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Sound.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Sound.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+}

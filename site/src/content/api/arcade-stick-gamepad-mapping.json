@@ -1,0 +1,269 @@
+{
+  "title": "ArcadeStickGamepadMapping",
+  "description": "Mapping for generic arcade-stick controllers. Covers the standard 8-button + shoulder/trigger layout common to most fightsticks. No analog sticks are present; the axes array is empty. D-pad inputs are exposed as discrete buttons (indices 12–15).",
+  "symbol": "ArcadeStickGamepadMapping",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mapping for generic arcade-stick controllers.",
+        "Covers the standard 8-button + shoulder/trigger layout common to most fightsticks. No analog sticks are present; the axes array is empty. D-pad inputs are exposed as discrete buttons (indices 12–15)."
+      ],
+      "importLine": "import { ArcadeStickGamepadMapping } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): ArcadeStickGamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArcadeStickGamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "ArcadeStickGamepadMapping",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Releases all button and axis control references held by this mapping. Call when the associated gamepad disconnects to allow garbage collection."
+        },
+        {
+          "name": "hasChannel",
+          "signature": "hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasChannel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channel",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true when this mapping declares at least one button or axis control that writes to channel. Use to detect device-specific capabilities at runtime — e.g. before binding an input to a right-stick channel that may not exist on a single Joy-Con."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "axes",
+          "signature": "axes: readonly GamepadAxis[]",
+          "signatureTokens": [
+            {
+              "text": "axes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxis",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of axes, indexed by the Gamepad API axis index."
+        },
+        {
+          "name": "buttons",
+          "signature": "buttons: readonly GamepadButton[]",
+          "signatureTokens": [
+            {
+              "text": "buttons",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButton",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of buttons, indexed by the Gamepad API button index."
+        },
+        {
+          "name": "family",
+          "signature": "family: ArcadeStick",
+          "signatureTokens": [
+            {
+              "text": "family",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArcadeStick",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Identifies the device family this mapping targets."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/ArcadeStickGamepadMapping.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/ArcadeStickGamepadMapping.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/ArcadeStickGamepadMapping.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/ArcadeStickGamepadMapping.ts"
+}

@@ -1,0 +1,668 @@
+{
+  "title": "AudioBus",
+  "description": "Hierarchical mixer node in the engine's audio routing graph. Each bus owns three Web Audio nodes (input gain, optional effect chain, stereo pan, output gain) and routes its output into its parent's input — the root bus connects to the destination. The three engine-built-in busses are constructed by AudioManager: `master` (root), `music` (child of master), `sound` (child of master). User code creates additional busses via `new AudioBus(name, { parent })` and registers them via AudioManager.registerBus. Volume is in 0..2 (1 = unity), pan is -1..1, mute is a boolean override. AudioBus.fadeIn / AudioBus.fadeOut produce smooth ramps over the output gain. Effect changes via AudioBus.addEffect / AudioBus.removeEffect rebuild the chain in place. Setup is deferred until the global `AudioContext` is unlocked (browser autoplay policy); operations that need live nodes are no-ops until that happens.",
+  "symbol": "AudioBus",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 15,
+  "counts": {
+    "constructors": 1,
+    "methods": 8,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Hierarchical mixer node in the engine's audio routing graph. Each bus owns three Web Audio nodes (input gain, optional effect chain, stereo pan, output gain) and routes its output into its parent's input — the root bus connects to the destination.",
+        "The three engine-built-in busses are constructed by AudioManager: `master` (root), `music` (child of master), `sound` (child of master). User code creates additional busses via `new AudioBus(name, { parent })` and registers them via AudioManager.registerBus.",
+        "Volume is in 0..2 (1 = unity), pan is -1..1, mute is a boolean override. AudioBus.fadeIn / AudioBus.fadeOut produce smooth ramps over the output gain. Effect changes via AudioBus.addEffect / AudioBus.removeEffect rebuild the chain in place.",
+        "Setup is deferred until the global `AudioContext` is unlocked (browser autoplay policy); operations that need live nodes are no-ops until that happens."
+      ],
+      "importLine": "import { AudioBus } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(name: string, options: AudioBusOptions): AudioBus",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBusOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "AudioBusOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "AudioBus",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_getInputNode",
+          "signature": "_getInputNode(): GainNode | null",
+          "signatureTokens": [
+            {
+              "text": "_getInputNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GainNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "GainNode | null",
+          "description": "Internal: returns the input GainNode where children should connect."
+        },
+        {
+          "name": "_getOutputNode",
+          "signature": "_getOutputNode(): GainNode | null",
+          "signatureTokens": [
+            {
+              "text": "_getOutputNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GainNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "GainNode | null",
+          "description": "Internal: returns the output GainNode that connects upstream."
+        },
+        {
+          "name": "addEffect",
+          "signature": "addEffect(effect: AudioEffect): this",
+          "signatureTokens": [
+            {
+              "text": "addEffect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "effect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioEffect",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "effect",
+              "type": "AudioEffect",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Append a effect to the end of the chain (before the pan stage). The chain is rebuilt in place; existing audio routes through the new effect on the next frame."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "fadeIn",
+          "signature": "fadeIn(durationMs: number): this",
+          "signatureTokens": [
+            {
+              "text": "fadeIn",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "durationMs",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "durationMs",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Linearly ramp the output gain from 0 to the current volume over durationMs. Cancels any in-flight ramps on the same gain node."
+        },
+        {
+          "name": "fadeOut",
+          "signature": "fadeOut(durationMs: number, options: { stopAfter?: boolean }): this",
+          "signatureTokens": [
+            {
+              "text": "fadeOut",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "durationMs",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stopAfter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "durationMs",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "{ stopAfter?: boolean }",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Linearly ramp the output gain to 0 over durationMs. By default mutes the bus once the ramp completes (stopAfter: true); pass stopAfter: false to let the ramp finish silently while leaving muted unchanged."
+        },
+        {
+          "name": "onceSetup",
+          "signature": "onceSetup(callback: () => void): void",
+          "signatureTokens": [
+            {
+              "text": "onceSetup",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Subscribe to the moment this bus's audio nodes are ready. Internal use."
+        },
+        {
+          "name": "removeEffect",
+          "signature": "removeEffect(effect: AudioEffect): this",
+          "signatureTokens": [
+            {
+              "text": "removeEffect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "effect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioEffect",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "effect",
+              "type": "AudioEffect",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove effect from the chain. No-op if not present. Caller still owns + must destroy() it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: GainNode | null",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GainNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "muted",
+          "signature": "muted: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pan",
+          "signature": "pan: number",
+          "signatureTokens": [
+            {
+              "text": "pan",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parent",
+          "signature": "parent: AudioBus | null",
+          "signatureTokens": [
+            {
+              "text": "parent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "volume",
+          "signature": "volume: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioBus.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioBus.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioBus.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioBus.ts"
+}

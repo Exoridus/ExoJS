@@ -1,0 +1,80 @@
+{
+  "title": "DistanceModel",
+  "description": "Distance-attenuation model used by spatial sounds. Mirrors Web Audio's `PannerNode.distanceModel`: - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`, clamped to [0, 1]. Reaches silence at `maxDistance`. - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`. Physically realistic; never reaches absolute silence. - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near the listener; useful for very intimate sources.",
+  "symbol": "DistanceModel",
+  "kind": "type",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Distance-attenuation model used by spatial sounds.",
+        "Mirrors Web Audio's `PannerNode.distanceModel`: - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`, clamped to [0, 1]. Reaches silence at `maxDistance`. - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`. Physically realistic; never reaches absolute silence. - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near the listener; useful for very intimate sources."
+      ],
+      "importLine": "import { DistanceModel } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DistanceModel",
+          "signature": "\"linear\" | \"inverse\" | \"exponential\"",
+          "signatureTokens": [
+            {
+              "text": "\"linear\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"inverse\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"exponential\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Sound.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Sound.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+}

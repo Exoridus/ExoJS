@@ -1,0 +1,661 @@
+{
+  "title": "TweenSequencer",
+  "description": "Composes multiple Tween instances into a multi-stage animation. Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete. Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween. The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually — in that mode the sequencer also advances its child tweens.",
+  "symbol": "TweenSequencer",
+  "kind": "class",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 14,
+  "counts": {
+    "constructors": 1,
+    "methods": 11,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Composes multiple Tween instances into a multi-stage animation.",
+        "Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete.",
+        "Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween.",
+        "The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually — in that mode the sequencer also advances its child tweens."
+      ],
+      "importLine": "import { TweenSequencer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(manager?: TweenManager): TweenSequencer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "manager",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenManager",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenSequencer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "manager",
+              "type": "TweenManager",
+              "optional": true
+            }
+          ],
+          "returnType": "TweenSequencer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "onComplete",
+          "signature": "onComplete(cb: () => void): this",
+          "signatureTokens": [
+            {
+              "text": "onComplete",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cb",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cb",
+              "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a callback fired when the sequence finishes naturally (all stages and repeat cycles exhausted). Does NOT fire when stopped via TweenSequencer.stop."
+        },
+        {
+          "name": "onStart",
+          "signature": "onStart(cb: () => void): this",
+          "signatureTokens": [
+            {
+              "text": "onStart",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cb",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cb",
+              "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a callback fired once on the first TweenSequencer.update call after TweenSequencer.start."
+        },
+        {
+          "name": "pause",
+          "signature": "pause(): this",
+          "signatureTokens": [
+            {
+              "text": "pause",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Pause the sequence. Tweens in the current stage are also paused. The elapsed timer in delay stages is frozen."
+        },
+        {
+          "name": "repeat",
+          "signature": "repeat(count: number): this",
+          "signatureTokens": [
+            {
+              "text": "repeat",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "count",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "count",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Number of additional repeat cycles. -1 = infinite. Default 0 (plays once). repeat(2) plays the full sequence three times total (initial pass + 2 repeats)."
+        },
+        {
+          "name": "resume",
+          "signature": "resume(): this",
+          "signatureTokens": [
+            {
+              "text": "resume",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Resume a paused sequence (and its current-stage tweens) from where they left off."
+        },
+        {
+          "name": "start",
+          "signature": "start(): this",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Start (or restart) the sequence from stage 0. Resets all internal state and re-registers with the manager if one is attached."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): this",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Stop the sequence without finishing. Active tweens are stopped. TweenSequencer.onComplete does NOT fire. The sequencer is removed from its manager if one is assigned."
+        },
+        {
+          "name": "then",
+          "signature": "then(tween: Tween<object> | Tween<object>[]): this",
+          "signatureTokens": [
+            {
+              "text": "then",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tween",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "tween",
+              "type": "Tween<object> | Tween<object>[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Append a stage to the sequence. - **Single tween**: the stage plays that tween, then advances. - **Array of tweens**: all start simultaneously; the stage advances when every tween in the array has completed."
+        },
+        {
+          "name": "update",
+          "signature": "update(deltaSeconds: number): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "deltaSeconds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "deltaSeconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance the sequencer by deltaSeconds. Called automatically by the attached TweenManager each frame. When used stand-alone (no manager), call this manually and child tweens will also be advanced."
+        },
+        {
+          "name": "wait",
+          "signature": "wait(seconds: number): this",
+          "signatureTokens": [
+            {
+              "text": "wait",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "seconds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "seconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Insert a fixed pause of seconds between stages."
+        },
+        {
+          "name": "yoyo",
+          "signature": "yoyo(enabled: boolean): this",
+          "signatureTokens": [
+            {
+              "text": "yoyo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "enabled",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Reverse stage order on each repeat cycle. Only meaningful when combined with TweenSequencer.repeat."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "progress",
+          "signature": "progress: number",
+          "signatureTokens": [
+            {
+              "text": "progress",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Playback progress in 0..1, advancing in discrete steps as each stage completes. Equals 1 when the entire sequence has finished."
+        },
+        {
+          "name": "state",
+          "signature": "state: TweenSequencerState",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenSequencerState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current lifecycle state of the sequencer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/TweenSequencer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSequencer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/TweenSequencer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSequencer.ts"
+}

@@ -1,0 +1,290 @@
+{
+  "title": "AsepriteSheet",
+  "description": "Parsed representation of an Aseprite JSON sprite sheet export. `AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, …). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered.",
+  "symbol": "AsepriteSheet",
+  "kind": "class",
+  "subsystem": "aseprite",
+  "importPath": "@codexo/exojs-aseprite",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Parsed representation of an Aseprite JSON sprite sheet export.",
+        "`AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, …). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag.",
+        "Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered."
+      ],
+      "importLine": "import { AsepriteSheet } from '@codexo/exojs-aseprite'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "createAnimatedSprite",
+          "signature": "createAnimatedSprite(): AnimatedSprite",
+          "signatureTokens": [
+            {
+              "text": "createAnimatedSprite",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnimatedSprite",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "AnimatedSprite",
+          "description": "Create an AnimatedSprite with all frame-tag clips pre-defined. Each clip is registered via AnimatedSprite.defineClip, which clones the frame Rectangles so the sprite owns its own copies. Call AnimatedSprite.play with a tag name to start playback."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy the underlying Spritesheet and release its frame resources."
+        },
+        {
+          "name": "parse",
+          "signature": "parse(data: AsepriteData, texture: Texture): AsepriteSheet",
+          "signatureTokens": [
+            {
+              "text": "parse",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteData",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteSheet",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "AsepriteData",
+              "optional": false
+            },
+            {
+              "name": "texture",
+              "type": "Texture",
+              "optional": false
+            }
+          ],
+          "returnType": "AsepriteSheet",
+          "description": "Parse a raw AsepriteData document and the already-loaded Texture into an AsepriteSheet. Supports both Aseprite array mode and hash mode. Frame indices from frameTags are resolved against the ordered frame array; out-of-range indices are silently skipped. A tag's direction determines the expanded frame sequence fed into the clip — forward and reverse play the [from, to] range in order or in reverse, while pingpong/pingpong_reverse append a backward pass (excluding both endpoints) so the bounce plays back correctly on the engine's forward-only AnimatedSprite playback. The tag's repeat field maps directly onto AnimatedSpriteClipDefinition.repeat: absent means the clip loops indefinitely (repeat: -1); a numeric string (\"1\", \"2\", …) means it plays exactly that many full cycles before stopping. Each clip's frameDurations carries the real per-frame duration from the export (falling back to the tag's average when a frame's duration is non-positive), so uneven hold-frames survive into playback instead of being flattened to a uniform fps. frameOffsets carries each frame's spriteSourceSize {x,y} — its trimmed content's offset within the untrimmed canvas — whenever any frame in the tag is trimmed, so frames trimmed by different amounts stay anchored instead of jittering; it's omitted entirely for tags with no trimmed frames."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "clips",
+          "signature": "clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>",
+          "signatureTokens": [
+            {
+              "text": "clips",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnimatedSpriteClipDefinition",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Animation clips derived from the Aseprite frameTags metadata. Each clip's frames are live references into spritesheet.frames; they are cloned automatically when passed to AnimatedSprite.defineClip."
+        },
+        {
+          "name": "slices",
+          "signature": "slices: ReadonlyMap<string, AsepriteSlice>",
+          "signatureTokens": [
+            {
+              "text": "slices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteSlice",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Named slices from the Aseprite meta.slices metadata, keyed by slice name. Slices describe editor-defined regions — hitboxes, nine-patch borders, UI anchor points — that aren't part of the frame/animation data itself. Each AsepriteSlice carries one AsepriteSliceKey per frame at which its bounds change; consumers resolve the applicable key for a given frame index themselves."
+        },
+        {
+          "name": "spritesheet",
+          "signature": "spritesheet: Spritesheet",
+          "signatureTokens": [
+            {
+              "text": "spritesheet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Spritesheet",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The underlying Spritesheet whose frames are keyed by index string."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-aseprite/src/AsepriteSheet.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteSheet.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-aseprite/src/AsepriteSheet.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteSheet.ts"
+}

@@ -1,0 +1,277 @@
+{
+  "title": "ConstrainedLoadable",
+  "description": "Constrains a Loadable token against the types registered for a given path's extension. When the extension is in ExtensionTypeMap, `T` must produce a value assignable to the registered union (including any extra token types from ExtensionTokenTypeMap) — otherwise resolves to `never`, triggering a compile-time error. For paths with an unregistered extension — including non-literal `string` paths and extension-less paths, where no extension can be derived — the constraint is skipped and any `T` is accepted (runtime behaviour is unchanged). ```ts // ExtensionTypeMap: { ogg: Sound | Video } loader.load(Sound, 'effect.ogg') // ✓ Sound ∈ Sound | Video loader.load(BitmapText, 'effect.ogg') // ✗ BitmapText ∉ Sound | Video loader.load(Sound, 'theme.custom') // ✓ .custom not in map → unconstrained loader.load(Sound, dynamicPath) // ✓ string path → unconstrained ```",
+  "symbol": "ConstrainedLoadable",
+  "kind": "type",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Constrains a Loadable token against the types registered for a given path's extension. When the extension is in ExtensionTypeMap, `T` must produce a value assignable to the registered union (including any extra token types from ExtensionTokenTypeMap) — otherwise resolves to `never`, triggering a compile-time error.",
+        "For paths with an unregistered extension — including non-literal `string` paths and extension-less paths, where no extension can be derived — the constraint is skipped and any `T` is accepted (runtime behaviour is unchanged).",
+        "```ts // ExtensionTypeMap: { ogg: Sound | Video } loader.load(Sound, 'effect.ogg') // ✓ Sound ∈ Sound | Video loader.load(BitmapText, 'effect.ogg') // ✗ BitmapText ∉ Sound | Video loader.load(Sound, 'theme.custom') // ✓ .custom not in map → unconstrained loader.load(Sound, dynamicPath) // ✓ string path → unconstrained ```"
+      ],
+      "importLine": "import { ConstrainedLoadable } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ConstrainedLoadable",
+          "signature": "[PathExtension<S>] extends [never] ? T : PathExtension<S> extends keyof ExtensionTypeMap ? LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>] | TokenTypesFor<PathExtension<S>> ? T : never : T",
+          "signatureTokens": [
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathExtension",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathExtension",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ExtensionTypeMap",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadReturn",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ExtensionTypeMap",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathExtension",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TokenTypesFor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathExtension",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

@@ -4,6 +4,8 @@ import react from '@astrojs/react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { SHIKI_THEMES } from './src/lib/shiki-theme';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -22,10 +24,7 @@ export default defineConfig({
     markdown: {
         syntaxHighlight: 'shiki',
         shikiConfig: {
-            themes: {
-                light: 'github-light',
-                dark: 'github-dark',
-            },
+            themes: SHIKI_THEMES,
         },
     },
     build: {

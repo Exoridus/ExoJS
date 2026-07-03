@@ -1,0 +1,42 @@
+{
+  "title": "TileProperties",
+  "description": "An immutable, flat key-value bag of generic tile properties. Adapters copy and freeze source properties; the runtime never retains a caller-owned mutable object. Declared as an interface (not a `Record<...>` type alias) so it can mutually recurse with TilePropertyValue — a nested-bag member of that union — without TypeScript's \"circularly references itself\" alias restriction; structurally it behaves exactly like `Readonly<Record<string, TilePropertyValue>>`.",
+  "symbol": "TileProperties",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An immutable, flat key-value bag of generic tile properties. Adapters copy and freeze source properties; the runtime never retains a caller-owned mutable object.",
+        "Declared as an interface (not a `Record<...>` type alias) so it can mutually recurse with TilePropertyValue — a nested-bag member of that union — without TypeScript's \"circularly references itself\" alias restriction; structurally it behaves exactly like `Readonly<Record<string, TilePropertyValue>>`."
+      ],
+      "importLine": "import { TileProperties } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+}

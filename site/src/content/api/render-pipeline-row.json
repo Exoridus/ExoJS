@@ -1,0 +1,134 @@
+{
+  "title": "RenderPipelineRow",
+  "description": "One row of a RenderPipeline listing produced by RenderPassInspectorLayer.describePipeline. Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`.",
+  "symbol": "RenderPipelineRow",
+  "kind": "interface",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One row of a RenderPipeline listing produced by RenderPassInspectorLayer.describePipeline. Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`."
+      ],
+      "importLine": "import { RenderPipelineRow } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "depth",
+          "signature": "depth: number",
+          "signatureTokens": [
+            {
+              "text": "depth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Nesting depth (0 = top-level pass)."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the pass is enabled."
+        },
+        {
+          "name": "isPipeline",
+          "signature": "isPipeline: boolean",
+          "signatureTokens": [
+            {
+              "text": "isPipeline",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the pass is itself a RenderPipeline."
+        },
+        {
+          "name": "label",
+          "signature": "label: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The pass's label (defaults to its constructor name)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/RenderPassInspectorLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/RenderPassInspectorLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts"
+}

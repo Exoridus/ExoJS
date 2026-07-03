@@ -1,0 +1,378 @@
+{
+  "title": "AudioStream",
+  "description": "Streaming long-form audio backed by an `HTMLAudioElement` — background tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM). Decoded lazily via the browser's media pipeline, so memory cost scales with the decode buffer rather than total duration. `AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioManager.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial). Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** — playing again stops the previous voice. Routes through the manager's `music` bus by default (override via PlayOptions.bus). Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback.",
+  "symbol": "AudioStream",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Streaming long-form audio backed by an `HTMLAudioElement` — background tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM). Decoded lazily via the browser's media pipeline, so memory cost scales with the decode buffer rather than total duration.",
+        "`AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioManager.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial).",
+        "Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** — playing again stops the previous voice. Routes through the manager's `music` bus by default (override via PlayOptions.bus).",
+        "Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback."
+      ],
+      "importLine": "import { AudioStream } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>): AudioStream",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "audioElement",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLAudioElement",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlaybackOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStream",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "audioElement",
+              "type": "HTMLAudioElement",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Partial<PlaybackOptions>",
+              "optional": true
+            }
+          ],
+          "returnType": "AudioStream",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_createVoice",
+          "signature": "_createVoice(manager: AudioManager, options: PlayOptions): Voice",
+          "signatureTokens": [
+            {
+              "text": "_createVoice",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "manager",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioManager",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "manager",
+              "type": "AudioManager",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PlayOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Voice",
+          "description": "Implements Playable. Called by AudioManager.play. Stops any previously active voice (a stream has a single playhead), then starts a fresh AudioStreamVoice."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stop the active voice and release the media graph."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loop",
+          "signature": "loop: boolean",
+          "signatureTokens": [
+            {
+              "text": "loop",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default loop flag applied to new voices."
+        },
+        {
+          "name": "muted",
+          "signature": "muted: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default muted flag (starts a voice at volume 0)."
+        },
+        {
+          "name": "playbackRate",
+          "signature": "playbackRate: number",
+          "signatureTokens": [
+            {
+              "text": "playbackRate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default playback rate applied to new voices."
+        },
+        {
+          "name": "volume",
+          "signature": "volume: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default volume applied to new voices. Range [0, 1]."
+        },
+        {
+          "name": "audioElement",
+          "signature": "audioElement: HTMLMediaElement",
+          "signatureTokens": [
+            {
+              "text": "audioElement",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLMediaElement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The backing HTMLAudioElement."
+        },
+        {
+          "name": "duration",
+          "signature": "duration: number",
+          "signatureTokens": [
+            {
+              "text": "duration",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Total media duration in seconds (NaN until metadata has loaded)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioStream.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioStream.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+}
