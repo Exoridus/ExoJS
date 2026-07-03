@@ -63,7 +63,7 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         </div>
     </aside>
 
-    <div class="prose guide-index-prose">
+    <div class="prose guide-index-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
         {locale === 'de' && <EnglishFallbackNotice />}
         <section class="guide-hero" id="start">
             <h1>Build your first ExoJS project</h1>

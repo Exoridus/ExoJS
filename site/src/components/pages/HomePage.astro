@@ -126,7 +126,11 @@ const examples = [
 
 <AppShell title="ExoJS" description="A TypeScript-first 2D runtime for games and interactive apps.">
     {locale === 'de' && <EnglishFallbackNotice />}
-    <div class="home">
+    <div
+        class="home"
+        data-pagefind-body={locale === 'en' ? true : undefined}
+        data-pagefind-meta={locale === 'en' ? 'title:ExoJS — TypeScript-first 2D runtime' : undefined}
+    >
         <section class="hero">
             <div class="hero-inner">
                 <div class="hero-copy">

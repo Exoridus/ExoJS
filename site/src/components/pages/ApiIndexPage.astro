@@ -88,7 +88,7 @@ const sidebarGroups = [
         </div>
     </aside>
 
-    <div class="prose api-prose">
+    <div class="prose api-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
         {locale === 'de' && <EnglishFallbackNotice />}
         <header class="api-head">
             <div>

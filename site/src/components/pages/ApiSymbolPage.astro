@@ -230,7 +230,13 @@ const sidebarGroups = [
         </div>
     </aside>
 
-    <div class="prose api-prose">
+    {/* en-only index feed; the explicit meta title makes results read
+        "Application" instead of the page's generic "API reference" h1. */}
+    <div
+        class="prose api-prose"
+        data-pagefind-body={locale === 'en' ? true : undefined}
+        data-pagefind-meta={locale === 'en' ? `title:${entry.data.title}` : undefined}
+    >
         {locale === 'de' && <EnglishFallbackNotice />}
         <div class="api-head">
             <div>

@@ -133,7 +133,9 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         </div>
     </aside>
 
-    <article class="prose chapter-prose">
+    {/* Only the en tree feeds the Pagefind index — de routes render the same
+        English content behind a fallback notice and would only duplicate it. */}
+    <article class="prose chapter-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
         {locale === 'de' && <EnglishFallbackNotice />}
         <div class="crumbs">
                 <a href={`${import.meta.env.BASE_URL}${locale}/guide/`}>Guide</a>
