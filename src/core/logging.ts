@@ -79,7 +79,7 @@ if (__DEV__) {
     let method: 'log' | 'warn' | 'error' = 'log';
     if (entry.severity >= LogSeverity.Error) method = 'error';
     else if (entry.severity >= LogSeverity.Warning) method = 'warn';
-    /* eslint-disable no-console -- DEV-only handler: the single sanctioned console sink that all logging routes through (#216). */
+    /* eslint-disable no-console -- DEV-only handler: the single sanctioned console sink that all logging routes through. */
     if (entry.error) {
       console[method](prefix, entry.message, entry.error);
     } else if (entry.data) {

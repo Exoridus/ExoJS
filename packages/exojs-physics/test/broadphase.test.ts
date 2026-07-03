@@ -22,7 +22,7 @@ const grid = (cols: number, rows: number, spacing: number): Collider[] => {
   return colliders;
 };
 
-describe('SweepAndPrune (gate B-3)', () => {
+describe('SweepAndPrune', () => {
   it('reports every true AABB overlap (zero false negatives) and no false positives', () => {
     const colliders = grid(8, 5, 8); // 10px boxes 8px apart → neighbours overlap
     const sap = new SweepAndPrune();

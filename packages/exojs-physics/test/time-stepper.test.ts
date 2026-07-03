@@ -4,7 +4,7 @@ import { TimeStepper } from '../src/TimeStepper';
 
 const DT = 1 / 60;
 
-describe('TimeStepper — fixed-step accumulator (gate A-1)', () => {
+describe('TimeStepper — fixed-step accumulator', () => {
   it('rejects invalid options', () => {
     expect(() => new TimeStepper({ fixedDelta: 0 })).toThrow(RangeError);
     expect(() => new TimeStepper({ fixedDelta: -1 })).toThrow(RangeError);

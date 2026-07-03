@@ -422,7 +422,7 @@ describe('BeatDetector', () => {
     });
   });
 
-  // ---- Settling / provisional emission (T7) ----
+  // ---- Settling / provisional emission ----
 
   describe('provisional emission options', () => {
     function captureProcessorOptions(): { get: () => Record<string, unknown> | undefined } {

@@ -293,9 +293,9 @@ describe('computeMetrics — lock time', () => {
   });
 });
 
-// ── T7 provisional/locked metrics ──────────────────────────────────────────────
+// ── Provisional/locked metrics ──────────────────────────────────────────────
 
-describe('computeMetrics — T7 provisional/locked stats', () => {
+describe('computeMetrics — provisional/locked stats', () => {
   const bpm = 120;
   const ibi = 60 / bpm;
   const durationSec = 10;

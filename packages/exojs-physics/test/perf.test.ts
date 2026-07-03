@@ -5,18 +5,18 @@ import { PhysicsBody } from '../src/PhysicsBody';
 import { measureAllocationRate } from './allocationSampler';
 
 /**
- * Phase-2B performance gates (spec `04` §3): P-1 steady-state allocation and P-2
- * 1,000-body step time. The 1,000-body scene is a wide field of 200 independent
- * 5-box columns settled on a static floor — ~1,000 dynamic bodies generating
- * ~1,000 persistent contacts plus the broad-phase load of 1,000 AABBs.
+ * Performance gates: steady-state allocation and 1,000-body step time. The
+ * 1,000-body scene is a wide field of 200 independent 5-box columns settled on
+ * a static floor — ~1,000 dynamic bodies generating ~1,000 persistent contacts
+ * plus the broad-phase load of 1,000 AABBs.
  *
- * P-2 (step time) is **recorded** on the reference machine, not enforced as a
+ * Step time is **recorded** on the reference machine, not enforced as a
  * tight CI threshold (machine-dependent) — only a generous catastrophic-
- * regression guard is asserted. P-1 (allocation) is measured with V8's
+ * regression guard is asserted. Allocation is measured with V8's
  * allocation sampling profiler (see allocationSampler.ts — a heapUsed delta
  * cannot see the short-lived per-step garbage; it previously read ~0 and made
- * the engine look allocation-free when it was not). Scratch reuse (W4) plus the
- * W7 allocation-free ContactGraph iterators and in-place sorts bring the steady-
+ * the engine look allocation-free when it was not). Scratch reuse plus
+ * allocation-free ContactGraph iterators and in-place sorts bring the steady-
  * state rate ~1560 → ~810 → ~484 KB/step. The remainder is V8 double-boxing in
  * the scalar float hot loops (solver block LCP, narrow-phase clip — both verified
  * allocation-free), removable only by an invasive typed-array rewrite (post-1.0).
@@ -67,7 +67,7 @@ const stepTimes = (world: PhysicsWorld, steps: number): number => {
   return (performance.now() - start) / steps;
 };
 
-describe('physics dynamics performance (P-1 / P-2)', () => {
+describe('physics dynamics performance', () => {
   it('1,000-body settled field: step time + steady-state allocation', async () => {
     const { world, bodies } = buildField(200, 5);
 
@@ -78,10 +78,10 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
       world.step(FRAME);
     }
 
-    // P-2 — steady-state step time.
+    // Steady-state step time.
     const msPerStep = stepTimes(world, 180);
 
-    console.log(`[P-2] ${msPerStep.toFixed(3)} ms/step · 1,000 bodies (${(1000 / msPerStep).toFixed(0)} body-steps/ms · ${(16.67 / msPerStep).toFixed(0)}× headroom at 60fps)`);
+    console.log(`${msPerStep.toFixed(3)} ms/step · 1,000 bodies (${(1000 / msPerStep).toFixed(0)} body-steps/ms · ${(16.67 / msPerStep).toFixed(0)}× headroom at 60fps)`);
 
     // Sanity: nothing exploded.
     for (const body of bodies) {
@@ -89,10 +89,10 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
       expect(Number.isFinite(body.y)).toBe(true);
     }
 
-    // Catastrophic-regression guard only (P-2 is recorded, not tightly enforced).
+    // Catastrophic-regression guard only (step time is recorded, not tightly enforced).
     expect(msPerStep).toBeLessThan(100);
 
-    // P-1 — steady-state allocation rate via the sampling profiler. The scene is
+    // Steady-state allocation rate via the sampling profiler. The scene is
     // already settled (every contact persistent, no begin/end events allocate in
     // the window), so the sampler measures only the per-step narrow/broad-phase
     // and solver work.
@@ -106,7 +106,7 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
     // test time. The render-perf gate needs no guard — its src resolves via
     // #*-subpath imports istanbul leaves alone.)
     if (world.step.toString().includes('cov_')) {
-      console.log('[P-1] allocation gate skipped under coverage (instrumentation inflates + slows the measurement)');
+      console.log('allocation gate skipped under coverage (instrumentation inflates + slows the measurement)');
 
       return;
     }
@@ -114,9 +114,9 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
     const alloc = await measureAllocationRate(() => world.step(FRAME), { iterations: 200 });
     const bytesPerStep = alloc.bytesPerIteration;
 
-    console.log(`[P-1] ${(bytesPerStep / 1024).toFixed(2)} KB/step allocation (sampling profiler)`);
+    console.log(`${(bytesPerStep / 1024).toFixed(2)} KB/step allocation (sampling profiler)`);
 
-    // Sharp gate (W7): the ContactGraph iterators + broad-phase/contact sorts are
+    // Sharp gate: the ContactGraph iterators + broad-phase/contact sorts are
     // now allocation-free (forEach with a bound method instead of entry-tuple
     // destructuring; an in-place heap sort instead of Array.prototype.sort's temp
     // buffer), dropping the steady-state rate ~810 → ~484 KB/step. The remainder
@@ -125,12 +125,12 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
     // verified allocation-free — see _solveNormalBlock/collide), removable only by
     // an invasive typed-array solver rewrite (post-1.0 follow-up). Measured ~484
     // KB/step (±1, very stable); the gate sits at 600 KB — tight enough that
-    // reverting the W7 reuse (≈810) trips it, with headroom for cross-machine V8
+    // reverting that reuse (≈810) trips it, with headroom for cross-machine V8
     // boxing variance.
     expect(bytesPerStep).toBeLessThan(600 * 1024);
   });
 
-  it('5,000-mostly-sleeping field: sleeping sharply cuts step time (P-3)', () => {
+  it('5,000-mostly-sleeping field: sleeping sharply cuts step time', () => {
     // Baseline: the identical field with sleeping disabled stays fully active.
     const awake = buildField(1000, 5, { enableSleeping: false });
 
@@ -152,7 +152,7 @@ describe('physics dynamics performance (P-1 / P-2)', () => {
 
     expect(sleeping.bodies.length).toBe(5000);
     console.log(
-      `[P-3] awake ${awakeMs.toFixed(3)} ms/step vs sleeping ${sleepingMs.toFixed(3)} ms/step · ${sleptCount}/5000 asleep (${(awakeMs / sleepingMs).toFixed(1)}× faster)`,
+      `awake ${awakeMs.toFixed(3)} ms/step vs sleeping ${sleepingMs.toFixed(3)} ms/step · ${sleptCount}/5000 asleep (${(awakeMs / sleepingMs).toFixed(1)}× faster)`,
     );
 
     // The vast majority of a settled field naps, and skipping their integration

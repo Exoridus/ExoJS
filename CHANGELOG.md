@@ -3931,7 +3931,7 @@ optimisations are internal to the renderer subsystem.
 
 ## [0.5.0] - 2026-04-28
 
-Three focused breaking changes targeted at the first pre-1.0 minor: a hierarchy-semantics boundary slice (per `.workspace/reviews/opus-pre-1.0-architecture-review/09-b1-implementation-rfc.md`), a unified mask API with full multi-source support (per `.workspace/reviews/opus-pre-1.0-architecture-review/10-mask-api-decision.md`), and a Scene API simplification that collapses the static factory into the constructor. No aliases.
+Three focused breaking changes targeted at the first pre-1.0 minor: a hierarchy-semantics boundary slice, a unified mask API with full multi-source support, and a Scene API simplification that collapses the static factory into the constructor. No aliases.
 
 ### Removed
 

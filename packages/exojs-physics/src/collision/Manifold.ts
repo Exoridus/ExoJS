@@ -9,7 +9,7 @@ export interface ManifoldPoint {
   /**
    * Stable feature id identifying which geometric features produced this point.
    * Constant across frames while the contact features are unchanged — the basis
-   * for warm-starting the solver later (gate B-2 / SG-M*).
+   * for warm-starting the solver later.
    */
   id: number;
 }

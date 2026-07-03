@@ -20,7 +20,7 @@ describe('CircleShape', () => {
   });
 });
 
-describe('PolygonShape — convex validation (gate B-2 foundation)', () => {
+describe('PolygonShape — convex validation', () => {
   it('accepts a convex quad and computes area/centroid/unit normals', () => {
     const p = new PolygonShape([
       { x: 0, y: 0 },

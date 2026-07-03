@@ -6,7 +6,7 @@
 // packages: `@codexo/exojs-tilemap` (data-only object layers) and
 // `@codexo/exojs-physics` (the simulation world). Neither package depends on
 // the other — tilemap never imports physics, physics never imports tilemap
-// (see the B4/D4 ADR on shared geometry vs. separate collision detection). The
+// (this is a deliberate architectural decision, not an oversight). The
 // glue therefore lives here, in example/app land, where depending on both is
 // legitimate. Copy it into your own project and adapt as needed; it is a
 // recipe, not engine API.

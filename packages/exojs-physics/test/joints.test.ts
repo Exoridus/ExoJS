@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { BoxShape, CircleShape, DistanceJoint, MouseJoint, PhysicsBody, PhysicsWorld, PrismaticJoint, RevoluteJoint, WeldJoint, WheelJoint } from '../src/index';
 
 /**
- * Joints (spec `02-joints.md`). Soft constraints solved in the sub-step loop
- * alongside contacts. SG-J prefix, default solver config, +Y down.
+ * Joints. Soft constraints solved in the sub-step loop
+ * alongside contacts. Default solver config, +Y down.
  */
 
 const GRAVITY = 1000; // px/s²
@@ -18,8 +18,8 @@ const advance = (world: PhysicsWorld, seconds: number): void => {
   }
 };
 
-describe('SG-J — joints', () => {
-  it('SG-J1: a distance joint holds a hanging body at the rest length', () => {
+describe('joints', () => {
+  it('a distance joint holds a hanging body at the rest length', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // Bob starts straight below the anchor, past the rest length: the joint pulls
@@ -37,7 +37,7 @@ describe('SG-J — joints', () => {
     expect(bob.y).toBeGreaterThan(50); // below the anchor (+Y down)
   });
 
-  it('SG-J2: a soft distance joint (hertz>0) settles bounded near the rest length', () => {
+  it('a soft distance joint (hertz>0) settles bounded near the rest length', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 100 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
@@ -53,7 +53,7 @@ describe('SG-J — joints', () => {
     expect(bob.x).toBeCloseTo(0, 0);
   });
 
-  it('SG-J3: waking one jointed body wakes the other (island edge)', () => {
+  it('waking one jointed body wakes the other (island edge)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
     const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 100, y: 0 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
@@ -71,7 +71,7 @@ describe('SG-J — joints', () => {
     expect(b.isSleeping).toBe(false);
   });
 
-  it('SG-J4: joint simulation is deterministic across identical runs', () => {
+  it('joint simulation is deterministic across identical runs', () => {
     const run = (): string => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
       const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
@@ -92,7 +92,7 @@ describe('SG-J — joints', () => {
     expect(run()).toBe(run());
   });
 
-  it('SG-J5: removeJoint releases the body (it falls freely)', () => {
+  it('removeJoint releases the body (it falls freely)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 100 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
@@ -107,7 +107,7 @@ describe('SG-J — joints', () => {
     expect(bob.y).toBeGreaterThan(250); // now falls freely under gravity
   });
 
-  it('SG-J6: a revolute joint pins the bob to the pivot as it swings', () => {
+  it('a revolute joint pins the bob to the pivot as it swings', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // Bob hangs down-right of the pivot at the world origin; it swings under gravity.
@@ -128,7 +128,7 @@ describe('SG-J — joints', () => {
     expect(minX).toBeLessThan(-30); // it swung through the bottom to the far side
   });
 
-  it('SG-J7: a two-link revolute chain keeps its shared hinge coincident', () => {
+  it('a two-link revolute chain keeps its shared hinge coincident', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const link1 = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, colliders: [{ shape: new BoxShape(100, 8) }] }));
@@ -149,7 +149,7 @@ describe('SG-J — joints', () => {
     expect(Number.isFinite(link2.y)).toBe(true);
   });
 
-  it('SG-J8: a weld joint holds a body rigidly to a static anchor (position + angle)', () => {
+  it('a weld joint holds a body rigidly to a static anchor (position + angle)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 30 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
@@ -164,7 +164,7 @@ describe('SG-J — joints', () => {
     expect(Math.abs(box.angle)).toBeLessThan(0.02);
   });
 
-  it('SG-J9: two welded dynamic bodies keep their relative pose while swinging', () => {
+  it('two welded dynamic bodies keep their relative pose while swinging', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 60, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
@@ -183,7 +183,7 @@ describe('SG-J — joints', () => {
     expect(Math.abs(b.angle - a.angle - relativeAngle0)).toBeLessThan(0.05);
   });
 
-  it('SG-J10: a distance joint with maxLength acts as a rope — slack allowed, clamped at max', () => {
+  it('a distance joint with maxLength acts as a rope — slack allowed, clamped at max', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // Bob starts above the rope's full length → slack → falls freely until taut.
@@ -201,7 +201,7 @@ describe('SG-J — joints', () => {
     expect(distance).toBeGreaterThan(95); // hangs taut at ~max
   });
 
-  it('SG-J11: a motorized revolute joint reaches and holds its target speed', () => {
+  it('a motorized revolute joint reaches and holds its target speed', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(40, 40) }] }));
@@ -213,7 +213,7 @@ describe('SG-J — joints', () => {
     expect(wheel.angularVelocity).toBeCloseTo(5, 0); // driven to the target rad/s and held
   });
 
-  it('SG-J12: a revolute joint angle limit caps the swing', () => {
+  it('a revolute joint angle limit caps the swing', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // A bar pinned at its left end; gravity swings it until the limit blocks it.
@@ -228,7 +228,7 @@ describe('SG-J — joints', () => {
     expect(Math.abs(bar.angle)).toBeGreaterThan(limit - 0.15); // swung to and rests at the limit
   });
 
-  it('SG-J13: a prismatic joint constrains a body to its axis (no perpendicular drift, no rotation)', () => {
+  it('a prismatic joint constrains a body to its axis (no perpendicular drift, no rotation)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // Horizontal slide axis (1,0); gravity is perpendicular → must not move the body.
@@ -242,7 +242,7 @@ describe('SG-J — joints', () => {
     expect(Math.abs(slider.angle)).toBeLessThan(0.02); // rotation locked
   });
 
-  it('SG-J14: a prismatic limit caps travel along the axis', () => {
+  it('a prismatic limit caps travel along the axis', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // Vertical slide axis (0,1) = gravity → the body slides down but the limit caps it at 100.
@@ -259,7 +259,7 @@ describe('SG-J — joints', () => {
     expect(Math.abs(slider.x)).toBeLessThan(1); // perpendicular locked
   });
 
-  it('SG-J15: a prismatic motor drives the body along its axis', () => {
+  it('a prismatic motor drives the body along its axis', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
@@ -274,7 +274,7 @@ describe('SG-J — joints', () => {
     expect(Math.abs(slider.y)).toBeLessThan(1); // stayed on the axis
   });
 
-  it('SG-J16: a wheel joint locks lateral motion but lets the wheel spin', () => {
+  it('a wheel joint locks lateral motion but lets the wheel spin', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
@@ -291,7 +291,7 @@ describe('SG-J — joints', () => {
     expect(Math.abs(wheel.angularVelocity)).toBeGreaterThan(5); // rotation is free — still spinning
   });
 
-  it('SG-J17: a mouse joint drags a body to its target and tracks it when moved', () => {
+  it('a mouse joint drags a body to its target and tracks it when moved', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
 
@@ -308,7 +308,7 @@ describe('SG-J — joints', () => {
     expect(body.y).toBeGreaterThan(45);
   });
 
-  it('SG-J18: maxForce caps how hard a mouse joint can pull', () => {
+  it('maxForce caps how hard a mouse joint can pull', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const heavy = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), density: 100 }] }));
 
@@ -322,7 +322,7 @@ describe('SG-J — joints', () => {
     expect(heavy.x).toBeLessThan(200); // but maxForce kept it from reaching the far target
   });
 
-  it('SG-J19: a motorized wheel joint reaches and holds its target spin speed', () => {
+  it('a motorized wheel joint reaches and holds its target spin speed', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
@@ -336,7 +336,7 @@ describe('SG-J — joints', () => {
     expect(wheel.angularVelocity).toBeCloseTo(5, 0); // driven to the target rad/s and held
   });
 
-  it('SG-J20: a wheel suspension spring settles to a bounded rest sag under gravity', () => {
+  it('a wheel suspension spring settles to a bounded rest sag under gravity', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // Suspension axis vertical (0,1) = gravity: an unloaded soft spring sags then settles.
@@ -355,10 +355,10 @@ describe('SG-J — joints', () => {
     expect(Math.abs(wheel.y - settledY)).toBeLessThan(1); // at rest — no longer moving
   });
 
-  it('SG-J21: a wheel suspension-travel limit caps how far the spring compresses', () => {
+  it('a wheel suspension-travel limit caps how far the spring compresses', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-    // The same spring as SG-J20 would sag to ~55 (translation ~25) under gravity
+    // The same spring that settles to a bounded rest sag above would sag to ~55 (translation ~25) under gravity
     // alone, but the travel limit caps the compression at upperTranslation (20).
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 

@@ -9,7 +9,7 @@ export interface CandidatePair {
 /**
  * Broad-phase contract: reduce the O(n²) all-pairs test to a candidate set of
  * AABB-overlapping pairs. The candidate set must contain **every** truly
- * overlapping pair (zero false negatives, gate B-3); false positives are
+ * overlapping pair (zero false negatives); false positives are
  * resolved by the narrow phase. This interface is the seam behind which the MVP
  * ships {@link SweepAndPrune} and a future dynamic-AABB-tree can be swapped in
  * without touching callers.

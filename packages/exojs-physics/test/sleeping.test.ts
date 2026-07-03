@@ -4,9 +4,9 @@ import { BoxShape, PhysicsWorld } from '../src/index';
 import { PhysicsBody } from '../src/PhysicsBody';
 
 /**
- * Sleeping & islands (spec `01-sleeping-islands.md`, gate P-3). Bodies that come
+ * Sleeping & islands. Bodies that come
  * to rest stop integrating/solving; connected bodies sleep and wake as a unit
- * via an island graph. SG-SL prefix, default solver config, +Y down.
+ * via an island graph. Default solver config, +Y down.
  */
 
 const GRAVITY = 1000; // px/s²
@@ -39,8 +39,8 @@ const addStack = (world: PhysicsWorld, count: number, floorTopY: number): Physic
   return boxes;
 };
 
-describe('SG-SL — sleeping', () => {
-  it('SG-SL1: a box that comes to rest falls asleep after timeToSleep', () => {
+describe('sleeping', () => {
+  it('a box that comes to rest falls asleep after timeToSleep', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     addFloor(world, 300);
     const box = addBox(world, 0, 300 - 16 - 2); // 2px above its resting height
@@ -57,7 +57,7 @@ describe('SG-SL — sleeping', () => {
     expect(box.angularVelocity).toBe(0);
   });
 
-  it('SG-SL2: a body dropped onto a sleeping body wakes it and is supported (no tunnelling)', () => {
+  it('a body dropped onto a sleeping body wakes it and is supported (no tunnelling)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     addFloor(world, 300);
     const bottom = addBox(world, 0, 300 - 16 - 2);
@@ -76,7 +76,7 @@ describe('SG-SL — sleeping', () => {
     expect(bottom.y).toBeLessThan(300 - 16 + 5);
   });
 
-  it('SG-SL3: an impulse wakes a sleeping body immediately', () => {
+  it('an impulse wakes a sleeping body immediately', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     addFloor(world, 300);
     const box = addBox(world, 0, 300 - 16 - 2);
@@ -89,7 +89,7 @@ describe('SG-SL — sleeping', () => {
     expect(box.linearVelocityX).toBeGreaterThan(0);
   });
 
-  it('SG-SL4: a settling stack falls asleep', () => {
+  it('a settling stack falls asleep', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     addFloor(world, 300);
     const boxes = addStack(world, 4, 300);
@@ -101,7 +101,7 @@ describe('SG-SL — sleeping', () => {
     }
   });
 
-  it('SG-SL5: allowSleep=false on one stack member keeps the whole island awake', () => {
+  it('allowSleep=false on one stack member keeps the whole island awake', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     addFloor(world, 300);
     const boxes = addStack(world, 3, 300);
@@ -115,7 +115,7 @@ describe('SG-SL — sleeping', () => {
     }
   });
 
-  it('SG-SL6: sleep transitions are deterministic across identical runs', () => {
+  it('sleep transitions are deterministic across identical runs', () => {
     const run = (): string => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
       addFloor(world, 300);

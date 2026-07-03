@@ -153,7 +153,7 @@ describe('Sprite.getNormals() — dirty-flag cache', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sprite.contains() — skew regression (T6)
+// Sprite.contains() — skew regression
 // ---------------------------------------------------------------------------
 
 describe('Sprite.contains() — skew regression', () => {

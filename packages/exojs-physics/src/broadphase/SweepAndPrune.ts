@@ -8,7 +8,7 @@ import type { BroadPhase, CandidatePair } from './BroadPhase';
  * those whose X intervals still overlap and confirming the Y interval. This is
  * an exact AABB-overlap broad phase (zero false negatives) with a deterministic,
  * id-sorted output. The recompute-each-step design keeps it stateless between
- * frames — two worlds never share sweep state (gate I-1).
+ * frames — two worlds never share sweep state.
  */
 export class SweepAndPrune implements BroadPhase {
   private readonly _sorted: Collider[] = [];

@@ -406,7 +406,7 @@ describe('SceneNode getBounds caching contract', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — API surface (T1)
+// Skew — API surface
 // ---------------------------------------------------------------------------
 
 describe('SceneNode.skewX / skewY / setSkew — API surface', () => {
@@ -462,7 +462,7 @@ describe('SceneNode.skewX / skewY / setSkew — API surface', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — isAlignedBox gating (T2)
+// Skew — isAlignedBox gating
 // ---------------------------------------------------------------------------
 
 describe('SceneNode.isAlignedBox — skew gating', () => {
@@ -531,7 +531,7 @@ describe('SceneNode.isAlignedBox — skew gating', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — local transform matrix (T3)
+// Skew — local transform matrix
 // ---------------------------------------------------------------------------
 
 describe('SceneNode.updateTransform() — skew matrix coefficients', () => {
@@ -598,7 +598,7 @@ describe('SceneNode.updateTransform() — skew matrix coefficients', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — dirty-flag / lazy recomputation (T4)
+// Skew — dirty-flag / lazy recomputation
 // ---------------------------------------------------------------------------
 
 describe('SceneNode skew — dirty-flag invalidation', () => {
@@ -664,7 +664,7 @@ describe('SceneNode skew — dirty-flag invalidation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — bounds under shear (T5)
+// Skew — bounds under shear
 // ---------------------------------------------------------------------------
 
 describe('SceneNode skew — bounds under shear', () => {

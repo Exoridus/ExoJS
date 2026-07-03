@@ -32,7 +32,7 @@ export interface ContactRecord {
  * touching collider pairs against the previous pass and produces immutable
  * begin/end (and sensor enter/exit) event snapshots. Duplicate begin/end churn
  * is suppressed by the persistent records, and the produced event arrays are
- * sorted by collider id for deterministic dispatch (gate SG-D1/SG-X4).
+ * sorted by collider id for deterministic dispatch.
  *
  * Touching solid contacts are also collected into {@link solidContacts} (with a
  * warm-start impulse cache) for the dynamics solver. The graph holds no
@@ -67,7 +67,7 @@ export class ContactGraph {
     this.sensorExit.length = 0;
     this.solidContacts.length = 0;
 
-    // eslint-disable-next-line unicorn/no-array-for-each -- forEach is the allocation-free path; for…of over a Map allocates an iterator every step (W7 10a).
+    // eslint-disable-next-line unicorn/no-array-for-each -- forEach is the allocation-free path; for…of over a Map allocates an iterator every step.
     this._records.forEach(resetSeen);
 
     for (const pair of pairs) {
@@ -112,7 +112,7 @@ export class ContactGraph {
     // Pairs that left the broad phase entirely while touching → fire end. forEach
     // + thisArg is the allocation-free iteration (for…of allocates an entry tuple
     // per record each step); the thisArg binds `this`, so unbound-method is a
-    // false positive here (W7 10a).
+    // false positive here.
     // eslint-disable-next-line unicorn/no-array-for-each, @typescript-eslint/unbound-method
     this._records.forEach(this._removeIfUnseen, this);
 

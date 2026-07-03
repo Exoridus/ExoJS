@@ -16,7 +16,7 @@ const overlappingPair = (world: PhysicsWorld): CollisionEvent[] => {
   return events;
 };
 
-describe('multi-world isolation (gate I-1)', () => {
+describe('multi-world isolation', () => {
   it('two concurrent worlds produce independent, identical-to-solo results', () => {
     const solo = new PhysicsWorld();
     const soloEvents = overlappingPair(solo);

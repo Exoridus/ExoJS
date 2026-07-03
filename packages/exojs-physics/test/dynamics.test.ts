@@ -4,7 +4,7 @@ import { BoxShape, CircleShape, PhysicsWorld } from '../src/index';
 import { PhysicsBody } from '../src/PhysicsBody';
 
 /**
- * The Solver Correctness & Stability matrix (spec `04` §2), exercised over the
+ * The Solver Correctness & Stability matrix, exercised over the
  * native **TGS-Soft** solver (Box2D-v3 "soft step": sub-stepping + soft-constraint
  * bias + relax pass + a 2-point block normal solve, with a separate restitution
  * pass). All run in the **default solver config** (`subStepCount = 4`,
@@ -12,7 +12,7 @@ import { PhysicsBody } from '../src/PhysicsBody';
  * threshold) at the default `fixedDelta = 1/60 s`. Coordinates are ExoJS pixels
  * with +Y down, so gravity is `(0, +g)` and "up" is decreasing y.
  *
- * SG-S2 (a 20-box tower) — the gate the previous sequential-impulse + NGS solver
+ * A 20-box tower — the case the previous sequential-impulse + NGS solver
  * could not meet (lateral tipping past ~10 boxes) — is now asserted here: TGS-Soft
  * decouples stiffness from the iteration count and holds it stable.
  */
@@ -67,10 +67,10 @@ const expectAllFinite = (world: PhysicsWorld): void => {
   }
 };
 
-// ── SG-A: angular response ────────────────────────────────────────────────
+// ── Angular response ────────────────────────────────────────────────
 
-describe('SG-A — angular response', () => {
-  it('SG-A2: an impulse through the centre of mass induces no spin', () => {
+describe('angular response', () => {
+  it('an impulse through the centre of mass induces no spin', () => {
     const world = new PhysicsWorld();
     const box = addBox(world, 0, 0, 32);
 
@@ -83,7 +83,7 @@ describe('SG-A — angular response', () => {
     expect(box.linearVelocityX).toBe(0);
   });
 
-  it('SG-A1: an off-centre impulse spins the body by (r×J)/I', () => {
+  it('an off-centre impulse spins the body by (r×J)/I', () => {
     const world = new PhysicsWorld();
     const box = addBox(world, 0, 0, 32);
 
@@ -100,7 +100,7 @@ describe('SG-A — angular response', () => {
     expect(box.angularVelocity).toBeCloseTo(expectedOmega, 6);
   });
 
-  it('SG-A4: a box on two symmetric supports stays flat', () => {
+  it('a box on two symmetric supports stays flat', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const supportY = 300;
 
@@ -117,10 +117,10 @@ describe('SG-A — angular response', () => {
   });
 });
 
-// ── SG-R: restitution ─────────────────────────────────────────────────────
+// ── Restitution ─────────────────────────────────────────────────────
 
-describe('SG-R — restitution', () => {
-  it('SG-R1: rebounds to ≈ e²·h after a 200px drop (e = 0.8)', () => {
+describe('restitution', () => {
+  it('rebounds to ≈ e²·h after a 200px drop (e = 0.8)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const radius = 10;
     const floorTop = 300;
@@ -161,7 +161,7 @@ describe('SG-R — restitution', () => {
     expect(reboundHeight).toBeLessThan(expected * 1.1);
   });
 
-  it('SG-R2: a low-restitution box at rest does not perpetually bounce', () => {
+  it('a low-restitution box at rest does not perpetually bounce', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const floorTop = 300;
 
@@ -182,7 +182,7 @@ describe('SG-R — restitution', () => {
     expect(maxUpward).toBeLessThanOrEqual(1);
   });
 
-  it('SG-R3: a slow contact below the velocity threshold does not bounce', () => {
+  it('a slow contact below the velocity threshold does not bounce', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const floorTop = 300;
 
@@ -197,7 +197,7 @@ describe('SG-R — restitution', () => {
     expect(Math.abs(box.y - (floorTop - 16))).toBeLessThanOrEqual(0.5);
   });
 
-  it('SG-R4: repeated bounces have strictly decreasing peak heights', () => {
+  it('repeated bounces have strictly decreasing peak heights', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const radius = 10;
     const floorTop = 300;
@@ -239,10 +239,10 @@ describe('SG-R — restitution', () => {
   });
 });
 
-// ── SG-F: friction ────────────────────────────────────────────────────────
+// ── Friction ────────────────────────────────────────────────────────
 
-describe('SG-F — friction', () => {
-  it('SG-F1: a box at rest does not drift or rotate over 5s', () => {
+describe('friction', () => {
+  it('a box at rest does not drift or rotate over 5s', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const floorTop = 300;
 
@@ -256,7 +256,7 @@ describe('SG-F — friction', () => {
     expect(Math.abs(box.angle)).toBeLessThanOrEqual(1e-3);
   });
 
-  it('SG-F2: a sliding box decelerates and stops near the analytic distance', () => {
+  it('a sliding box decelerates and stops near the analytic distance', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const floorTop = 300;
     const mu = 0.4;
@@ -300,7 +300,7 @@ describe('SG-F — friction', () => {
     expect(stopDistance).toBeLessThan(analytic * 1.15);
   });
 
-  it('SG-F3: a box on a slope below the friction angle stays put', () => {
+  it('a box on a slope below the friction angle stays put', () => {
     // Equivalent to a 20° ramp via tilted gravity: tan20° ≈ 0.36 < μ = 0.6.
     const angle = (20 * Math.PI) / 180;
     const world = new PhysicsWorld({ gravity: { x: GRAVITY * Math.sin(angle), y: GRAVITY * Math.cos(angle) } });
@@ -320,10 +320,10 @@ describe('SG-F — friction', () => {
   });
 });
 
-// ── SG-S: stacking ────────────────────────────────────────────────────────
+// ── Stacking ────────────────────────────────────────────────────────
 
-describe('SG-S — stacking', () => {
-  it('SG-S1: a 10-box tower settles without jitter, drift or interpenetration', () => {
+describe('stacking', () => {
+  it('a 10-box tower settles without jitter, drift or interpenetration', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const size = 32;
     const gap = 1;
@@ -362,7 +362,7 @@ describe('SG-S — stacking', () => {
     expect(maxPenetration).toBeLessThanOrEqual(0.5);
   });
 
-  it('SG-S2: a 20-box tower stays upright and settles (the old solver tipped past ~10)', () => {
+  it('a 20-box tower stays upright and settles (the old solver tipped past ~10)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const size = 32;
     const gap = 1;
@@ -400,7 +400,7 @@ describe('SG-S — stacking', () => {
     expect(maxPenetration).toBeLessThanOrEqual(1);
   });
 
-  it('SG-S5: a stack shoved horizontally leans but stays bounded (no explosion)', () => {
+  it('a stack shoved horizontally leans but stays bounded (no explosion)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const size = 32;
     const floorTop = 300;
@@ -430,10 +430,10 @@ describe('SG-S — stacking', () => {
   });
 });
 
-// ── SG-MR: mass ratios ────────────────────────────────────────────────────
+// ── Mass ratios ────────────────────────────────────────────────────
 
-describe('SG-MR — mass ratios', () => {
-  it('SG-MR2: a heavy box (10:1) does not crush a light box through the floor', () => {
+describe('mass ratios', () => {
+  it('a heavy box (10:1) does not crush a light box through the floor', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const size = 32;
     const floorTop = 300;
@@ -452,7 +452,7 @@ describe('SG-MR — mass ratios', () => {
     expect(light.y).toBeLessThan(floorTop); // light box centre still above the floor surface
   });
 
-  it('SG-MR3: characterises the ~100:1 envelope edge — a crushed light box stays shallowly bounded above the floor (no tunnelling)', () => {
+  it('characterises the ~100:1 envelope edge — a crushed light box stays shallowly bounded above the floor (no tunnelling)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const size = 32;
     const floorTop = 300;
@@ -481,10 +481,10 @@ describe('SG-MR — mass ratios', () => {
   });
 });
 
-// ── SG-K: kinematic interaction ───────────────────────────────────────────
+// ── Kinematic interaction ───────────────────────────────────────────
 
-describe('SG-K — kinematic interaction', () => {
-  it('SG-K1: a moving kinematic platform carries a dynamic rider', () => {
+describe('kinematic interaction', () => {
+  it('a moving kinematic platform carries a dynamic rider', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const platformTop = 300;
 
@@ -506,7 +506,7 @@ describe('SG-K — kinematic interaction', () => {
     expect(Math.abs(rider.y - (platformTop - 16))).toBeLessThanOrEqual(0.5);
   });
 
-  it('SG-K2: a kinematic body ignores impulses from piled dynamics', () => {
+  it('a kinematic body ignores impulses from piled dynamics', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const platformTop = 300;
 
@@ -528,10 +528,10 @@ describe('SG-K — kinematic interaction', () => {
   });
 });
 
-// ── SG-X: failure safety ──────────────────────────────────────────────────
+// ── Failure safety ──────────────────────────────────────────────────
 
-describe('SG-X — failure safety', () => {
-  it('SG-X1: keeps every body finite every frame while a rough pile settles', () => {
+describe('failure safety', () => {
+  it('keeps every body finite every frame while a rough pile settles', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const size = 24;
     const floorTop = 300;
@@ -550,7 +550,7 @@ describe('SG-X — failure safety', () => {
     }
   });
 
-  it('SG-X3: a resting scene does not gain kinetic energy after settling', () => {
+  it('a resting scene does not gain kinetic energy after settling', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const size = 32;
     const floorTop = 300;
@@ -584,7 +584,7 @@ describe('SG-X — failure safety', () => {
     }
   });
 
-  it('SG-X4: a resting contact emits one start and no repeated start/end churn', () => {
+  it('a resting contact emits one start and no repeated start/end churn', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const floorTop = 300;
 
@@ -603,7 +603,7 @@ describe('SG-X — failure safety', () => {
     expect(ends).toBe(0);
   });
 
-  it('SG-X5: a body faster than the floor thickness per frame tunnels but stays finite (no CCD)', () => {
+  it('a body faster than the floor thickness per frame tunnels but stays finite (no CCD)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const floorTop = 300;
 
@@ -624,10 +624,10 @@ describe('SG-X — failure safety', () => {
   });
 });
 
-// ── SG-D: deterministic replay ────────────────────────────────────────────
+// ── Deterministic replay ────────────────────────────────────────────
 
-describe('SG-D — deterministic replay', () => {
-  it('SG-D1: the same scene with scripted impulses replays bit-identically ×3', () => {
+describe('deterministic replay', () => {
+  it('the same scene with scripted impulses replays bit-identically ×3', () => {
     const runScene = (): number[] => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
       const floorTop = 300;
